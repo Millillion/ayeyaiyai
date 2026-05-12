@@ -52,9 +52,6 @@ impl<'a> FunctionCompiler<'a> {
         if self.with_scope_blocks_static_identifier_resolution(name) {
             return None;
         }
-        if self.is_current_arguments_binding_name(name) && self.has_arguments_object() {
-            return Some(StaticValueKind::Object);
-        }
         if parse_test262_realm_identifier(name).is_some()
             || parse_test262_realm_global_identifier(name).is_some()
         {
@@ -76,6 +73,9 @@ impl<'a> FunctionCompiler<'a> {
                     .local_kind(&resolved_name)
                     .unwrap_or(StaticValueKind::Unknown),
             );
+        }
+        if self.is_current_arguments_binding_name(name) && self.has_arguments_object() {
+            return Some(StaticValueKind::Object);
         }
         if let Some(hidden_name) = self.resolve_user_function_capture_hidden_name(name)
             && let Some(kind) = self.global_binding_kind(&hidden_name)

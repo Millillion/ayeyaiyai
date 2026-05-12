@@ -21,7 +21,10 @@ impl VisibleRuntimeBindingSnapshot {
             .filter(|name| compiler.should_sync_async_delegate_snapshot_binding(name))
             .map(|name| {
                 let identifier = Expression::Identifier(name.clone());
-                (name, compiler.materialize_static_expression(&identifier))
+                (
+                    name,
+                    compiler.reference_preserving_static_value_expression(&identifier),
+                )
             })
             .collect::<HashMap<_, _>>();
         VisibleRuntimeBindingSnapshot { bindings }
@@ -73,7 +76,22 @@ impl VisibleRuntimeBindingSnapshot {
             .collect::<Vec<_>>();
         visible_bindings.sort_by(|left, right| left.0.cmp(&right.0));
         for (name, value) in visible_bindings {
-            let synced_value = compiler.materialize_static_expression(&value);
+            if matches!(&value, Expression::Identifier(identifier_name) if identifier_name == &name)
+                && compiler
+                    .runtime_array_binding_name_for_expression(&value)
+                    .is_some()
+            {
+                continue;
+            }
+            let synced_value = if matches!(value, Expression::Identifier(_))
+                && compiler
+                    .resolve_static_reference_identity_key(&value)
+                    .is_some()
+            {
+                value.clone()
+            } else {
+                compiler.materialize_static_expression(&value)
+            };
             let value_local = compiler.allocate_temp_local();
             compiler.emit_numeric_expression(&synced_value)?;
             compiler.push_local_set(value_local);
@@ -186,6 +204,35 @@ impl<'a> FunctionCompiler<'a> {
         statements: &[Statement],
     ) -> DirectResult<()> {
         VisibleRuntimeBindingSnapshot::from_statements(self, statements).sync_into_runtime(self)
+    }
+
+    pub(in crate::backend::direct_wasm) fn apply_async_delegate_snapshot_bindings_to_visible_state(
+        &mut self,
+        bindings: &HashMap<String, Expression>,
+        current_function_name: Option<&str>,
+    ) -> DirectResult<()> {
+        let mut resolved_bindings = bindings.clone();
+        let mut visible_names = resolved_bindings
+            .keys()
+            .filter(|name| {
+                self.should_sync_async_delegate_snapshot_binding(name)
+                    && !name.starts_with("__ayy_async_delegate_")
+            })
+            .cloned()
+            .collect::<Vec<_>>();
+        visible_names.sort();
+        for name in visible_names {
+            let value = self
+                .evaluate_bound_snapshot_expression(
+                    &Expression::Identifier(name.clone()),
+                    &mut resolved_bindings,
+                    current_function_name,
+                )
+                .or_else(|| resolved_bindings.get(&name).cloned())
+                .unwrap_or(Expression::Undefined);
+            self.update_capture_slot_binding_from_expression(&name, &value)?;
+        }
+        Ok(())
     }
 
     pub(in crate::backend::direct_wasm) fn push_async_delegate_snapshot_scope_bindings(

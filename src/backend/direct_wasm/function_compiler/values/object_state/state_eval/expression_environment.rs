@@ -19,4 +19,14 @@ impl StaticEnvironmentObjectBindingSource for FunctionStaticEvalContext<'_, '_> 
     }
 }
 
-impl StaticMissingMemberPolicySource for FunctionStaticEvalContext<'_, '_> {}
+impl StaticMissingMemberPolicySource for FunctionStaticEvalContext<'_, '_> {
+    fn static_preserve_missing_member_expression(
+        &self,
+        _full_expression: &Expression,
+        _object: &Expression,
+        property: &Expression,
+        _environment: &Self::Environment,
+    ) -> bool {
+        is_private_property_name_expression(property)
+    }
+}

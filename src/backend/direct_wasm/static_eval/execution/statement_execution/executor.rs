@@ -120,7 +120,8 @@ where
     ) -> Option<()> {
         let property = self
             .evaluate_expression(property, environment)
-            .or_else(|| self.materialize_expression(property, environment))?;
+            .or_else(|| self.materialize_expression(property, environment))
+            .or_else(|| is_symbol_iterator_expression(property).then(|| property.clone()))?;
         let value = self
             .evaluate_expression(value, environment)
             .or_else(|| self.materialize_expression(value, environment))?;
@@ -132,7 +133,11 @@ where
         expression: &Expression,
         environment: &mut Self::Environment,
     ) -> Option<()> {
-        self.evaluate_expression(expression, environment)?;
+        if matches!(expression, Expression::SuperCall { .. }) {
+            self.evaluate_fallback_expression(expression, environment)?;
+        } else {
+            self.evaluate_expression(expression, environment)?;
+        }
         Some(())
     }
 

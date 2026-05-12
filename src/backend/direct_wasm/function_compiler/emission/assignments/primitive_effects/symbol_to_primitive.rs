@@ -6,6 +6,9 @@ impl<'a> FunctionCompiler<'a> {
         expression: &Expression,
         default_argument: &Expression,
     ) -> DirectResult<SymbolToPrimitiveHandling> {
+        if self.expression_depends_on_active_loop_assignment(expression) {
+            return Ok(SymbolToPrimitiveHandling::NotHandled);
+        }
         let symbol_property = symbol_to_primitive_expression();
         if let Some(getter_binding) =
             self.resolve_member_getter_binding(expression, &symbol_property)
@@ -29,6 +32,9 @@ impl<'a> FunctionCompiler<'a> {
                     &[],
                     expression,
                 )
+                .or_else(|| {
+                    self.resolve_function_binding_static_return_expression(&getter_binding, &[])
+                })
             {
                 if let Some(primitive) = self.resolve_static_primitive_expression_with_context(
                     &return_expression,
@@ -71,8 +77,11 @@ impl<'a> FunctionCompiler<'a> {
             .or_else(|| {
                 self.resolve_object_binding_from_expression(expression)
                     .and_then(|object_binding| {
-                        object_binding_lookup_value(&object_binding, &symbol_property)
-                            .and_then(|value| self.resolve_function_binding_from_expression(value))
+                        self.resolve_object_binding_property_value(
+                            &object_binding,
+                            &symbol_property,
+                        )
+                        .and_then(|value| self.resolve_function_binding_from_expression(&value))
                     })
             })
         {
@@ -94,9 +103,9 @@ impl<'a> FunctionCompiler<'a> {
 
         if let Some(object_binding) = self.resolve_object_binding_from_expression(expression)
             && let Some(method_value) =
-                object_binding_lookup_value(&object_binding, &symbol_property)
+                self.resolve_object_binding_property_value(&object_binding, &symbol_property)
             && let Some(primitive) = self.resolve_static_primitive_expression_with_context(
-                method_value,
+                &method_value,
                 self.current_function_name(),
             )
         {
@@ -115,10 +124,16 @@ impl<'a> FunctionCompiler<'a> {
         left: &Expression,
         right: &Expression,
     ) -> DirectResult<bool> {
+        if self.expression_depends_on_active_loop_assignment(left)
+            || self.expression_depends_on_active_loop_assignment(right)
+        {
+            return Ok(false);
+        }
         let default_argument = Expression::String("default".to_string());
         let left_handling =
             self.emit_effectful_symbol_to_primitive_for_operand(left, &default_argument)?;
         if left_handling == SymbolToPrimitiveHandling::AlwaysThrows {
+            self.push_i32_const(JS_UNDEFINED_TAG);
             return Ok(true);
         }
         let right_handling =

@@ -104,6 +104,12 @@ impl<'a> FunctionCompiler<'a> {
                     arguments_binding,
                 ),
             ))),
+            Expression::Unary {
+                op: UnaryOp::Delete,
+                expression,
+            } if call_frame_delete_targets_arguments_binding(expression, user_function) => {
+                Some(Expression::Bool(false))
+            }
             Expression::Unary { op, expression } => Some(Expression::Unary {
                 op: *op,
                 expression: Box::new(self.substitute_call_frame_special_bindings(
@@ -168,4 +174,25 @@ impl<'a> FunctionCompiler<'a> {
             _ => None,
         }
     }
+}
+
+fn call_frame_delete_targets_arguments_binding(
+    expression: &Expression,
+    user_function: &UserFunction,
+) -> bool {
+    let Expression::Identifier(name) = expression else {
+        return false;
+    };
+    if name != "arguments"
+        && !scoped_binding_source_name(name).is_some_and(|source_name| source_name == "arguments")
+    {
+        return false;
+    }
+    !user_function.lexical_this
+        || user_function.body_declares_arguments_binding
+        || user_function.params.iter().any(|param| {
+            param == "arguments"
+                || scoped_binding_source_name(param)
+                    .is_some_and(|source_name| source_name == "arguments")
+        })
 }

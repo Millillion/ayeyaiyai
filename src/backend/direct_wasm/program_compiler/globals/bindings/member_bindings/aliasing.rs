@@ -23,6 +23,27 @@ impl DirectWasmCompiler {
         source_name: &str,
     ) {
         self.clear_global_member_bindings_for_name(name);
+        let source_prototype_object_binding =
+            self.global_prototype_object_binding(source_name).cloned();
+        let source_object_prototype_expression = self
+            .global_object_prototype_expression(source_name)
+            .cloned();
+        let source_prototype_parent_expression = self
+            .global_object_prototype_expression(&format!("{source_name}.prototype"))
+            .cloned();
+        self.state
+            .sync_global_prototype_object_binding(name, source_prototype_object_binding);
+        self.state
+            .global_semantics
+            .values
+            .sync_object_prototype_expression(name, source_object_prototype_expression);
+        self.state
+            .global_semantics
+            .values
+            .sync_object_prototype_expression(
+                &format!("{name}.prototype"),
+                source_prototype_parent_expression,
+            );
 
         let mut function_bindings = Vec::new();
         let mut function_capture_slots = Vec::new();

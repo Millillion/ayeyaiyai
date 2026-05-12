@@ -29,8 +29,23 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         user_function: &UserFunction,
     ) -> HashSet<String> {
-        self.backend
-            .collect_user_function_assigned_nonlocal_bindings(user_function)
+        let mut names = self
+            .backend
+            .collect_user_function_assigned_nonlocal_bindings(user_function);
+        if let Some(snapshot_results) = self.assigned_nonlocal_binding_results(&user_function.name)
+        {
+            for name in snapshot_results.keys() {
+                let source_name = scoped_binding_source_name(name).unwrap_or(name).to_string();
+                if source_name == "this" || source_name == "arguments" {
+                    continue;
+                }
+                if user_function.scope_bindings.contains(&source_name) {
+                    continue;
+                }
+                names.insert(source_name);
+            }
+        }
+        names
     }
 
     pub(in crate::backend::direct_wasm) fn invalidate_user_function_assigned_nonlocal_bindings(

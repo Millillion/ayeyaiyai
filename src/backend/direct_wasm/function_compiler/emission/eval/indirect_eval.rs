@@ -31,13 +31,13 @@ impl<'a> FunctionCompiler<'a> {
                     emit_argument_discard(self, argument)?;
                 }
 
-                let mut program = if let Ok(program) = frontend::parse_script_goal(argument_source)
-                {
+                let program = if let Ok(program) = frontend::parse_script_goal(argument_source) {
                     program
                 } else {
                     self.emit_named_error_throw("SyntaxError")?;
                     return Ok(true);
                 };
+                let mut program = lower_eval_static_function_constructors(program);
                 namespace_eval_program_internal_function_names(
                     &mut program,
                     self.current_function_name(),

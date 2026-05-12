@@ -1,5 +1,6 @@
 use super::super::*;
 use super::{
+    bindings::{collect_using_decl_bound_names, collect_var_decl_bound_names},
     expressions::validate_expression_syntax_with_restrictions,
     functions::{validate_class_syntax, validate_function_syntax},
 };
@@ -8,6 +9,7 @@ use super::{
 pub(super) struct BindingRestrictions {
     pub(super) await_reserved: bool,
     pub(super) yield_reserved: bool,
+    pub(super) await_expression_forbidden: bool,
 }
 
 pub(super) fn is_await_like_identifier(name: &str) -> bool {
@@ -70,7 +72,7 @@ fn decode_identifier_escape(raw: &str, characters: &mut std::str::Chars<'_>) -> 
         .with_context(|| format!("invalid unicode escape in identifier `{raw}`"))
 }
 
-fn validate_escaped_identifier_text(raw: &str) -> Result<()> {
+pub(super) fn validate_escaped_identifier_text(raw: &str) -> Result<()> {
     let mut decoded = Vec::new();
     let mut characters = raw.chars();
 
@@ -133,7 +135,35 @@ pub(crate) fn validate_declaration_syntax(
         Decl::Var(variable_declaration) => {
             validate_variable_declaration_syntax(variable_declaration, file)?;
         }
+        Decl::Using(using_declaration) => {
+            validate_using_declaration_syntax_with_restrictions(
+                using_declaration,
+                file,
+                BindingRestrictions::default(),
+            )?;
+        }
         _ => {}
+    }
+
+    Ok(())
+}
+
+pub(super) fn validate_using_declaration_syntax_with_restrictions(
+    declaration: &swc_ecma_ast::UsingDecl,
+    file: &swc_common::SourceFile,
+    restrictions: BindingRestrictions,
+) -> Result<()> {
+    let mut seen = HashSet::new();
+    for name in collect_using_decl_bound_names(declaration)? {
+        ensure!(name != "let", "using declarations cannot bind `let`");
+        ensure!(seen.insert(name.clone()), "duplicate lexical name `{name}`");
+    }
+
+    for declarator in &declaration.decls {
+        validate_pattern_syntax_with_restrictions(&declarator.name, file, restrictions)?;
+        if let Some(initializer) = &declarator.init {
+            validate_expression_syntax_with_restrictions(initializer, file, restrictions)?;
+        }
     }
 
     Ok(())
@@ -155,6 +185,13 @@ pub(super) fn validate_variable_declaration_syntax_with_restrictions(
     file: &swc_common::SourceFile,
     restrictions: BindingRestrictions,
 ) -> Result<()> {
+    if !matches!(declaration.kind, VarDeclKind::Var) {
+        let mut seen = HashSet::new();
+        for name in collect_var_decl_bound_names(declaration)? {
+            ensure!(seen.insert(name.clone()), "duplicate lexical name `{name}`");
+        }
+    }
+
     for declarator in &declaration.decls {
         validate_pattern_syntax_with_restrictions(&declarator.name, file, restrictions)?;
         if let Some(initializer) = &declarator.init {
@@ -188,7 +225,20 @@ pub(super) fn validate_for_head_syntax_with_restrictions(
         ForHead::Pat(pattern) => {
             validate_pattern_syntax_with_restrictions(pattern, file, restrictions)?
         }
-        ForHead::UsingDecl(_) => {}
+        ForHead::UsingDecl(using_declaration) => {
+            let mut seen = HashSet::new();
+            for name in collect_using_decl_bound_names(using_declaration)? {
+                ensure!(name != "let", "for-of using declarations cannot bind `let`");
+                ensure!(seen.insert(name.clone()), "duplicate lexical name `{name}`");
+            }
+            for declarator in &using_declaration.decls {
+                ensure!(
+                    declarator.init.is_none(),
+                    "for-of using declarations cannot have initializers"
+                );
+                validate_pattern_syntax_with_restrictions(&declarator.name, file, restrictions)?;
+            }
+        }
     }
 
     Ok(())
@@ -230,12 +280,12 @@ pub(super) fn validate_pattern_syntax_with_restrictions(
                         let raw = source_slice_for_span(file, property.key.span)?;
                         if raw.contains('\\') {
                             validate_escaped_identifier_text(raw)?;
-                            ensure!(
-                                !property.key.is_reserved(),
-                                "reserved word `{}` cannot be escaped in a binding identifier",
-                                property.key.sym
-                            );
                         }
+                        ensure!(
+                            !property.key.is_reserved(),
+                            "reserved word `{}` cannot be used as a binding identifier",
+                            property.key.sym
+                        );
                         ensure!(
                             !(restrictions.await_reserved
                                 && is_await_like_identifier(property.key.sym.as_ref())),

@@ -1,8 +1,12 @@
 use super::super::*;
 use super::{
-    directives::is_strict_mode_restricted_identifier,
+    directives::{is_strict_mode_reserved_identifier, is_strict_mode_restricted_identifier},
     expressions::validate_strict_mode_early_errors_in_expression,
 };
+
+pub(super) fn is_strict_mode_forbidden_binding_identifier(name: &str) -> bool {
+    is_strict_mode_restricted_identifier(name) || is_strict_mode_reserved_identifier(name)
+}
 
 pub(super) fn validate_strict_mode_early_errors_in_variable_declaration(
     declaration: &swc_ecma_ast::VarDecl,
@@ -43,7 +47,7 @@ pub(super) fn validate_strict_mode_early_errors_in_pattern(
     match pattern {
         Pat::Ident(identifier) => {
             ensure!(
-                !strict || !is_strict_mode_restricted_identifier(identifier.id.sym.as_ref()),
+                !strict || !is_strict_mode_forbidden_binding_identifier(identifier.id.sym.as_ref()),
                 "strict mode forbids binding `{}`",
                 identifier.id.sym
             );
@@ -67,7 +71,9 @@ pub(super) fn validate_strict_mode_early_errors_in_pattern(
                     ObjectPatProp::Assign(property) => {
                         ensure!(
                             !strict
-                                || !is_strict_mode_restricted_identifier(property.key.sym.as_ref()),
+                                || !is_strict_mode_forbidden_binding_identifier(
+                                    property.key.sym.as_ref()
+                                ),
                             "strict mode forbids binding `{}`",
                             property.key.sym
                         );
@@ -82,6 +88,9 @@ pub(super) fn validate_strict_mode_early_errors_in_pattern(
             }
         }
         Pat::Rest(rest) => validate_strict_mode_early_errors_in_pattern(&rest.arg, strict)?,
+        Pat::Expr(expression) => {
+            validate_strict_mode_early_errors_in_expression(expression, strict)?
+        }
         _ => {}
     }
 
@@ -105,7 +114,7 @@ pub(super) fn validate_strict_mode_assignment_target(
 ) -> Result<()> {
     if strict && let AssignTarget::Simple(SimpleAssignTarget::Ident(identifier)) = target {
         ensure!(
-            !is_strict_mode_restricted_identifier(identifier.id.sym.as_ref()),
+            !is_strict_mode_forbidden_binding_identifier(identifier.id.sym.as_ref()),
             "strict mode forbids assigning to `{}`",
             identifier.id.sym
         );
@@ -118,7 +127,11 @@ pub(super) fn validate_strict_mode_assignment_target(
                 validate_strict_mode_early_errors_in_expression(&property.expr, strict)?;
             }
         }
-        AssignTarget::Pat(_) | AssignTarget::Simple(_) => {}
+        AssignTarget::Pat(pattern) => {
+            let pattern: Pat = pattern.clone().into();
+            validate_strict_mode_early_errors_in_pattern(&pattern, strict)?;
+        }
+        AssignTarget::Simple(_) => {}
     }
 
     Ok(())

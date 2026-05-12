@@ -15,7 +15,8 @@ pub(crate) use strict_mode::{
 pub(crate) use syntax::{
     collect_module_declared_names, collect_pattern_binding_names, collect_var_decl_bound_names,
     ensure_module_lexical_names_are_unique, validate_class_syntax, validate_declaration_syntax,
-    validate_expression_syntax, validate_function_syntax, validate_statement_syntax,
+    validate_expression_syntax, validate_function_syntax, validate_script_body_early_errors,
+    validate_statement_syntax,
 };
 
 fn source_slice_for_span<'a>(

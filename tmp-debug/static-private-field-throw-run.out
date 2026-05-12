@@ -1,0 +1,1 @@
+throw_site name=TypeError fn=Some("__ayy_fnstmt_assertions_10") instruction=351746 caller=src/backend/direct_wasm/function_compiler/calls/user_calls/dispatch/dynamic_calls.rs:248

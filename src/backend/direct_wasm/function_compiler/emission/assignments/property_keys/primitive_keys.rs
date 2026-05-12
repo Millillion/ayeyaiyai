@@ -5,10 +5,26 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         expression: &Expression,
     ) -> Option<Expression> {
+        if matches!(expression, Expression::Identifier(name) if name.starts_with("__ayy_generator_sent_"))
+        {
+            return Some(Expression::String("undefined".to_string()));
+        }
+        if let Some(property_name) = static_property_name_from_expression(expression) {
+            return Some(Expression::String(property_name));
+        }
+        if self.well_known_symbol_name(expression).is_some() {
+            return Some(expression.clone());
+        }
+        if let Some(symbol_identity) = self.resolve_symbol_identity_expression(expression) {
+            return Some(symbol_identity);
+        }
         if let Some(resolved) = self
             .resolve_bound_alias_expression(expression)
             .filter(|resolved| !static_expression_matches(resolved, expression))
         {
+            if let Some(property_name) = static_property_name_from_expression(&resolved) {
+                return Some(Expression::String(property_name));
+            }
             if self.well_known_symbol_name(&resolved).is_some() {
                 return Some(resolved);
             }
@@ -23,7 +39,12 @@ impl<'a> FunctionCompiler<'a> {
                 Some(CallArgument::Expression(argument)) | Some(CallArgument::Spread(argument)) => {
                     let materialized_argument = self.materialize_static_expression(argument);
                     let current_function_name = self.current_function_name();
-                    if let Some(primitive) = self
+                    if let Some(Expression::String(property_name)) = self
+                        .resolve_primitive_property_key_expression(&materialized_argument)
+                        .or_else(|| self.resolve_primitive_property_key_expression(argument))
+                    {
+                        property_name
+                    } else if let Some(primitive) = self
                         .resolve_static_primitive_expression_with_context(
                             &materialized_argument,
                             current_function_name,
@@ -52,10 +73,22 @@ impl<'a> FunctionCompiler<'a> {
                     {
                         self.synthesize_static_function_binding_to_string(&binding)
                     } else {
-                        self.resolve_static_string_value_with_context(
+                        self.resolve_static_symbol_to_string_value_with_context(
                             &materialized_argument,
                             current_function_name,
                         )
+                        .or_else(|| {
+                            self.resolve_static_symbol_to_string_value_with_context(
+                                argument,
+                                current_function_name,
+                            )
+                        })
+                        .or_else(|| {
+                            self.resolve_static_string_value_with_context(
+                                &materialized_argument,
+                                current_function_name,
+                            )
+                        })
                         .or_else(|| {
                             self.resolve_static_string_value_with_context(
                                 argument,

@@ -17,16 +17,30 @@ impl DirectWasmCompiler {
             .map(|function| function.name.clone())
             .collect::<HashSet<_>>();
         for function in functions {
+            let parameter_default_expressions = function
+                .params
+                .iter()
+                .filter_map(|parameter| parameter.default.as_ref());
             let arguments_usage = if function.lexical_this {
                 ArgumentsUsage::default()
             } else {
-                collect_arguments_usage_from_statements(&function.body)
+                collect_arguments_usage_from_statements_and_expressions(
+                    &function.body,
+                    parameter_default_expressions,
+                )
             };
             let extra_argument_indices = arguments_usage
                 .indexed_slots
                 .into_iter()
                 .filter(|index| *index >= function.params.len() as u32)
                 .collect::<Vec<_>>();
+            let declared_bindings =
+                collect_declared_bindings_from_statements_recursive(&function.body);
+            let body_declares_arguments_binding = declared_bindings.iter().any(|binding| {
+                binding == "arguments"
+                    || scoped_binding_source_name(binding)
+                        .is_some_and(|source_name| source_name == "arguments")
+            });
             let arity = function.params.len() as u32 + 1 + extra_argument_indices.len() as u32;
             let type_index = self.user_type_index_for_arity(arity);
             let user_function = UserFunction {
@@ -43,9 +57,7 @@ impl DirectWasmCompiler {
                     .iter()
                     .map(|parameter| parameter.default.clone())
                     .collect(),
-                body_declares_arguments_binding:
-                    collect_declared_bindings_from_statements_recursive(&function.body)
-                        .contains("arguments"),
+                body_declares_arguments_binding,
                 length: function.length as u32,
                 extra_argument_indices,
                 enumerated_keys_param_index: collect_enumerated_keys_param_index(function),
@@ -60,6 +72,7 @@ impl DirectWasmCompiler {
                 ),
                 inline_summary: collect_inline_function_summary(function),
                 home_object_binding: None,
+                private_brand_binding: function.private_brand_binding.clone(),
                 strict: function.strict,
                 lexical_this: function.lexical_this,
                 function_index: self.next_user_function_index(),

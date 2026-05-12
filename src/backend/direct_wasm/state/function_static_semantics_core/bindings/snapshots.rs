@@ -37,8 +37,11 @@ impl FunctionStaticSemanticsState {
             objects: self.objects.clone(),
             arrays: self.arrays.clone(),
             materializing_expression_keys: self.materializing_expression_keys.borrow().clone(),
+            local_lexical_initialized_locals: self.local_lexical_initialized_locals.clone(),
+            immutable_local_bindings: self.immutable_local_bindings.clone(),
             eval_lexical_initialized_locals: self.eval_lexical_initialized_locals.clone(),
             capture_slot_source_bindings: self.capture_slot_source_bindings.clone(),
+            capture_slot_initial_source_bindings: self.capture_slot_initial_source_bindings.clone(),
             last_bound_user_function_call: self.last_bound_user_function_call.clone(),
         }
     }

@@ -6,7 +6,14 @@ impl<'a> FunctionCompiler<'a> {
         specialized: &SpecializedFunctionValue,
         arguments: &[CallArgument],
     ) -> DirectResult<bool> {
+        let trace_capture_bindings = std::env::var_os("AYY_TRACE_CAPTURE_BINDINGS").is_some();
         let LocalFunctionBinding::User(function_name) = &specialized.binding else {
+            if trace_capture_bindings {
+                eprintln!(
+                    "capture_bindings specialized_call:non_user binding={:?}",
+                    specialized.binding
+                );
+            }
             return Ok(false);
         };
         let Some(user_function) = self
@@ -16,13 +23,33 @@ impl<'a> FunctionCompiler<'a> {
             .user_function(function_name)
             .cloned()
         else {
+            if trace_capture_bindings {
+                eprintln!(
+                    "capture_bindings specialized_call:missing_user function={function_name}"
+                );
+            }
             return Ok(false);
         };
-        if user_function.is_async()
-            || user_function.is_generator()
-            || user_function.has_parameter_defaults()
-        {
+        if !self.user_function_supports_emitted_specialized_function_summary(
+            &user_function,
+            &specialized.summary,
+        ) {
+            if trace_capture_bindings {
+                eprintln!(
+                    "capture_bindings specialized_call:unsupported function={function_name} return={:?} effects={}",
+                    specialized.summary.return_value,
+                    specialized.summary.effects.len()
+                );
+            }
             return Ok(false);
+        }
+        if trace_capture_bindings {
+            eprintln!(
+                "capture_bindings specialized_call:emit function={function_name} return={:?} effects={} args={}",
+                specialized.summary.return_value,
+                specialized.summary.effects.len(),
+                arguments.len()
+            );
         }
         let result_expression = specialized
             .summary
@@ -42,6 +69,7 @@ impl<'a> FunctionCompiler<'a> {
             function_name: function_name.clone(),
             source_expression: None,
             result_expression,
+            prototype_source_expression: None,
             updated_bindings: HashMap::new(),
         });
         self.emit_inline_summary_with_call_arguments(

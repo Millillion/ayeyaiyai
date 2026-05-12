@@ -1,3 +1,5 @@
+use std::collections::BTreeSet;
+
 use super::*;
 
 impl Lowerer {
@@ -76,14 +78,25 @@ impl Lowerer {
             Expr::Ident(identifier) => Ok(Expression::Identifier(
                 self.resolve_binding_name(identifier.sym.as_ref()),
             )),
-            Expr::This(_) => Ok(Expression::This),
+            Expr::This(_) => Ok(self.current_this_replacement().unwrap_or(Expression::This)),
+            Expr::OptChain(optional_chain) => self.lower_optional_chain_expression(optional_chain),
             Expr::Member(member) => Ok(Expression::Member {
                 object: Box::new(self.lower_expression(&member.obj)?),
                 property: Box::new(self.lower_member_property(&member.prop)?),
             }),
-            Expr::SuperProp(super_property) => Ok(Expression::SuperMember {
-                property: Box::new(self.lower_super_property(super_property)?),
-            }),
+            Expr::SuperProp(super_property) => {
+                let property = self.lower_super_property(super_property)?;
+                if let Some(object) = self.current_super_member_replacement() {
+                    Ok(Expression::Member {
+                        object: Box::new(object),
+                        property: Box::new(property),
+                    })
+                } else {
+                    Ok(Expression::SuperMember {
+                        property: Box::new(property),
+                    })
+                }
+            }
             Expr::Paren(parenthesized) => {
                 self.lower_expression_with_name_hint(&parenthesized.expr, name_hint)
             }
@@ -112,14 +125,21 @@ impl Lowerer {
                     .collect::<Result<Vec<_>>>()?,
             )),
             Expr::Assign(assignment) => {
+                if assignment.op == AssignOp::Assign
+                    && let swc_ecma_ast::AssignTarget::Pat(pattern) = &assignment.left
+                {
+                    let value = self.lower_expression(&assignment.right)?;
+                    let pattern: Pat = pattern.clone().into();
+                    return self.lower_assignment_pattern_expression(&pattern, value);
+                }
+
+                let target_name_hint = self.assignment_target_name_hint(&assignment.left);
                 let target = self.lower_assignment_target(&assignment.left)?;
-                let right = match &target {
-                    AssignmentTarget::Identifier(name) => {
-                        self.lower_expression_with_name_hint(&assignment.right, Some(name))?
+                let right = match target_name_hint.as_deref() {
+                    Some(name_hint) => {
+                        self.lower_expression_with_name_hint(&assignment.right, Some(name_hint))?
                     }
-                    AssignmentTarget::Member { .. } | AssignmentTarget::SuperMember { .. } => {
-                        self.lower_expression(&assignment.right)?
-                    }
+                    None => self.lower_expression(&assignment.right)?,
                 };
 
                 match assignment.op {
@@ -264,20 +284,60 @@ impl Lowerer {
                 self.lower_arrow_expression(arrow_expression, name_hint)
             }
             Expr::Update(update) => {
-                let name = match &*update.arg {
-                    Expr::Ident(identifier) => self.resolve_binding_name(identifier.sym.as_ref()),
-                    other => self
-                        .try_lower_top_level_this_member_update(other)?
-                        .context("only identifier update expressions are supported")?,
-                };
+                if let Expr::Ident(identifier) = &*update.arg {
+                    let name = self.resolve_binding_name(identifier.sym.as_ref());
+                    return Ok(Expression::Update {
+                        name,
+                        op: lower_update_operator(update.op),
+                        prefix: update.prefix,
+                    });
+                }
 
-                Ok(Expression::Update {
-                    name,
-                    op: lower_update_operator(update.op),
-                    prefix: update.prefix,
-                })
+                if let Some(name) = self.try_lower_top_level_this_member_update(&update.arg)? {
+                    return Ok(Expression::Update {
+                        name,
+                        op: lower_update_operator(update.op),
+                        prefix: update.prefix,
+                    });
+                }
+
+                let target = self.lower_update_assignment_target(&update.arg)?;
+                let value =
+                    Self::update_assignment_value(&target, lower_update_operator(update.op));
+                Ok(target.into_expression(value))
             }
             _ => bail!("unsupported expression: {expression:?}"),
+        }
+    }
+
+    pub(super) fn lower_update_assignment_target(
+        &mut self,
+        target: &Expr,
+    ) -> Result<AssignmentTarget> {
+        match target {
+            Expr::Ident(identifier) => Ok(AssignmentTarget::Identifier(
+                self.resolve_binding_name(identifier.sym.as_ref()),
+            )),
+            Expr::Member(member) => Ok(AssignmentTarget::Member {
+                object: self.lower_expression(&member.obj)?,
+                property: self.lower_member_property(&member.prop)?,
+            }),
+            Expr::SuperProp(super_property) => Ok(AssignmentTarget::SuperMember {
+                property: self.lower_super_property(super_property)?,
+            }),
+            Expr::Paren(parenthesized) => self.lower_update_assignment_target(&parenthesized.expr),
+            _ => bail!("unsupported update target"),
+        }
+    }
+
+    pub(super) fn update_assignment_value(target: &AssignmentTarget, op: UpdateOp) -> Expression {
+        Expression::Binary {
+            op: match op {
+                UpdateOp::Increment => BinaryOp::Add,
+                UpdateOp::Decrement => BinaryOp::Subtract,
+            },
+            left: Box::new(target.as_expression()),
+            right: Box::new(Expression::Number(1.0)),
         }
     }
 
@@ -350,7 +410,8 @@ impl Lowerer {
                     self.next_function_expression_id += 1;
                     let generated_name =
                         format!("__ayy_method_{}", self.next_function_expression_id);
-                    let (params, body) = self.lower_function_parts(&method.function, &[])?;
+                    let (params, body, captured_private_brand_bindings) =
+                        self.lower_function_parts(&method.function, &[])?;
 
                     self.functions.push(FunctionDeclaration {
                         name: generated_name.clone(),
@@ -367,6 +428,8 @@ impl Lowerer {
                         strict: self.function_strict_mode(&method.function),
                         lexical_this: false,
                         derived_constructor: false,
+                        direct_eval_in_class_field_initializer: self.class_field_initializer_depth
+                            > 0,
                         length: expected_argument_count(
                             method
                                 .function
@@ -374,6 +437,11 @@ impl Lowerer {
                                 .iter()
                                 .map(|parameter| &parameter.pat),
                         ),
+                        synthetic_capture_bindings: captured_private_brand_bindings
+                            .into_iter()
+                            .collect::<Vec<_>>(),
+                        immutable_class_bindings: Vec::new(),
+                        private_brand_binding: None,
                     });
 
                     Ok(ObjectEntry::Data {
@@ -389,7 +457,16 @@ impl Lowerer {
                     let strict_mode =
                         self.current_strict_mode() || script_has_use_strict_directive(&body.stmts);
                     self.strict_modes.push(strict_mode);
-                    let lowered_body = self.lower_statements(&body.stmts, true, false);
+                    self.pending_private_brand_captures.push(BTreeSet::new());
+                    let lowered_body = self.with_this_replacement(None, |lowerer| {
+                        lowerer.with_super_member_replacement(None, |lowerer| {
+                            lowerer.lower_statements(&body.stmts, true, false)
+                        })
+                    });
+                    let captured_private_brand_bindings = self
+                        .pending_private_brand_captures
+                        .pop()
+                        .expect("getter private brand capture collector should exist");
                     self.strict_modes.pop();
                     let lowered_body = lowered_body?;
 
@@ -405,7 +482,14 @@ impl Lowerer {
                         strict: strict_mode,
                         lexical_this: false,
                         derived_constructor: false,
+                        direct_eval_in_class_field_initializer: self.class_field_initializer_depth
+                            > 0,
                         length: 0,
+                        synthetic_capture_bindings: captured_private_brand_bindings
+                            .into_iter()
+                            .collect::<Vec<_>>(),
+                        immutable_class_bindings: Vec::new(),
+                        private_brand_binding: None,
                     });
 
                     Ok(ObjectEntry::Getter {
@@ -421,12 +505,21 @@ impl Lowerer {
                     let strict_mode =
                         self.current_strict_mode() || script_has_use_strict_directive(&body.stmts);
                     self.strict_modes.push(strict_mode);
-                    let lowered = (|| -> Result<(Parameter, Vec<Statement>)> {
-                        let (params, mut param_setup) = lower_parameter(self, &setter.param)?;
-                        let mut lowered_body = self.lower_statements(&body.stmts, true, false)?;
-                        lowered_body.splice(0..0, param_setup.drain(..));
-                        Ok((params, lowered_body))
-                    })();
+                    self.pending_private_brand_captures.push(BTreeSet::new());
+                    let lowered = self.with_this_replacement(None, |lowerer| {
+                        lowerer.with_super_member_replacement(None, |lowerer| {
+                            let (params, mut param_setup) =
+                                lower_parameter(lowerer, &setter.param)?;
+                            let mut lowered_body =
+                                lowerer.lower_statements(&body.stmts, true, false)?;
+                            lowered_body.splice(0..0, param_setup.drain(..));
+                            Ok((params, lowered_body))
+                        })
+                    });
+                    let captured_private_brand_bindings = self
+                        .pending_private_brand_captures
+                        .pop()
+                        .expect("setter private brand capture collector should exist");
                     self.strict_modes.pop();
                     let (params, lowered_body) = lowered?;
 
@@ -442,7 +535,14 @@ impl Lowerer {
                         strict: strict_mode,
                         lexical_this: false,
                         derived_constructor: false,
+                        direct_eval_in_class_field_initializer: self.class_field_initializer_depth
+                            > 0,
                         length: 1,
+                        synthetic_capture_bindings: captured_private_brand_bindings
+                            .into_iter()
+                            .collect::<Vec<_>>(),
+                        immutable_class_bindings: Vec::new(),
+                        private_brand_binding: None,
                     });
 
                     Ok(ObjectEntry::Setter {
@@ -535,10 +635,142 @@ impl Lowerer {
         })
     }
 
+    fn lower_optional_chain_expression(
+        &mut self,
+        optional_chain: &swc_ecma_ast::OptChainExpr,
+    ) -> Result<Expression> {
+        match optional_chain.base.as_ref() {
+            swc_ecma_ast::OptChainBase::Member(member) => {
+                let object = self.lower_expression(&member.obj)?;
+                let property = self.lower_member_property(&member.prop)?;
+                Ok(
+                    self.build_optional_member_expression(
+                        object,
+                        property,
+                        optional_chain.optional,
+                    ),
+                )
+            }
+            swc_ecma_ast::OptChainBase::Call(call) => {
+                let callee = self.lower_expression(&call.callee)?;
+                let arguments = call
+                    .args
+                    .iter()
+                    .map(|argument| {
+                        let expression = self.lower_expression(&argument.expr)?;
+                        Ok(if argument.spread.is_some() {
+                            CallArgument::Spread(expression)
+                        } else {
+                            CallArgument::Expression(expression)
+                        })
+                    })
+                    .collect::<Result<Vec<_>>>()?;
+                Ok(self.build_optional_call_expression(callee, arguments, optional_chain.optional))
+            }
+        }
+    }
+
+    fn build_optional_chain_nullish_check(&self, expression: &Expression) -> Expression {
+        Expression::Binary {
+            op: BinaryOp::LogicalOr,
+            left: Box::new(Expression::Binary {
+                op: BinaryOp::Equal,
+                left: Box::new(expression.clone()),
+                right: Box::new(Expression::Null),
+            }),
+            right: Box::new(Expression::Binary {
+                op: BinaryOp::Equal,
+                left: Box::new(expression.clone()),
+                right: Box::new(Expression::Undefined),
+            }),
+        }
+    }
+
+    fn build_optional_member_expression(
+        &self,
+        object: Expression,
+        property: Expression,
+        optional: bool,
+    ) -> Expression {
+        if let Expression::Conditional {
+            condition,
+            then_expression,
+            else_expression,
+        } = &object
+            && matches!(then_expression.as_ref(), Expression::Undefined)
+        {
+            return Expression::Conditional {
+                condition: condition.clone(),
+                then_expression: then_expression.clone(),
+                else_expression: Box::new(self.build_optional_member_expression(
+                    else_expression.as_ref().clone(),
+                    property,
+                    optional,
+                )),
+            };
+        }
+
+        let member = Expression::Member {
+            object: Box::new(object.clone()),
+            property: Box::new(property),
+        };
+        if optional {
+            Expression::Conditional {
+                condition: Box::new(self.build_optional_chain_nullish_check(&object)),
+                then_expression: Box::new(Expression::Undefined),
+                else_expression: Box::new(member),
+            }
+        } else {
+            member
+        }
+    }
+
+    fn build_optional_call_expression(
+        &self,
+        callee: Expression,
+        arguments: Vec<CallArgument>,
+        optional: bool,
+    ) -> Expression {
+        if let Expression::Conditional {
+            condition,
+            then_expression,
+            else_expression,
+        } = &callee
+            && matches!(then_expression.as_ref(), Expression::Undefined)
+        {
+            return Expression::Conditional {
+                condition: condition.clone(),
+                then_expression: then_expression.clone(),
+                else_expression: Box::new(self.build_optional_call_expression(
+                    else_expression.as_ref().clone(),
+                    arguments,
+                    optional,
+                )),
+            };
+        }
+
+        let call = Expression::Call {
+            callee: Box::new(callee.clone()),
+            arguments,
+        };
+        if optional {
+            Expression::Conditional {
+                condition: Box::new(self.build_optional_chain_nullish_check(&callee)),
+                then_expression: Box::new(Expression::Undefined),
+                else_expression: Box::new(call),
+            }
+        } else {
+            call
+        }
+    }
+
     pub(crate) fn lower_member_property(&mut self, property: &MemberProp) -> Result<Expression> {
         Ok(match property {
             MemberProp::Ident(identifier) => Expression::String(identifier.sym.to_string()),
-            MemberProp::Computed(computed) => self.lower_expression(&computed.expr)?,
+            MemberProp::Computed(computed) => {
+                let expression = self.lower_expression(&computed.expr)?;
+                Self::member_property_value_expression(expression)
+            }
             MemberProp::PrivateName(private_name) => self.lower_private_name(private_name)?,
         })
     }
@@ -546,8 +778,21 @@ impl Lowerer {
     pub(crate) fn lower_super_property(&mut self, property: &SuperPropExpr) -> Result<Expression> {
         Ok(match &property.prop {
             SuperProp::Ident(identifier) => Expression::String(identifier.sym.to_string()),
-            SuperProp::Computed(computed) => self.lower_expression(&computed.expr)?,
+            SuperProp::Computed(computed) => {
+                let expression = self.lower_expression(&computed.expr)?;
+                Self::member_property_value_expression(expression)
+            }
         })
+    }
+
+    fn member_property_value_expression(expression: Expression) -> Expression {
+        match expression {
+            Expression::Sequence(expressions) => expressions
+                .into_iter()
+                .last()
+                .unwrap_or(Expression::Undefined),
+            other => other,
+        }
     }
 
     pub(crate) fn try_lower_top_level_this_member_update(

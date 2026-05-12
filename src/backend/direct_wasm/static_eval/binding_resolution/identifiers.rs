@@ -27,7 +27,9 @@ pub(in crate::backend::direct_wasm) fn materialize_identifier_in_environment<
         {
             return Some(Expression::Identifier(name.to_string()));
         }
-        return recurse(value, environment);
+        if !matches!(value, Expression::Identifier(alias) if alias == name) {
+            return recurse(value, environment);
+        }
     }
     if let Some(value) = environment.global_value_binding(name) {
         if environment.contains_object_binding(name)

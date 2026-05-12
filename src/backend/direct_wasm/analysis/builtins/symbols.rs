@@ -1,7 +1,20 @@
 use super::*;
 
 pub(in crate::backend::direct_wasm) fn is_arguments_identifier(expression: &Expression) -> bool {
-    matches!(expression, Expression::Identifier(name) if name == "arguments")
+    matches!(
+        expression,
+        Expression::Identifier(name)
+            if name == "arguments" || scoped_identifier_source_name(name) == Some("arguments")
+    )
+}
+
+fn scoped_identifier_source_name(name: &str) -> Option<&str> {
+    let rest = name.strip_prefix("__ayy_scope$")?;
+    let (source_name, scope_id) = rest.rsplit_once('$')?;
+    scope_id
+        .chars()
+        .all(|character| character.is_ascii_digit())
+        .then_some(source_name)
 }
 
 pub(in crate::backend::direct_wasm) fn is_symbol_iterator_expression(

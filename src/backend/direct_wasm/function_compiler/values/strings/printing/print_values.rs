@@ -46,6 +46,9 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         value: &Expression,
     ) -> DirectResult<()> {
+        if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+            eprintln!("runtime_shadow_print_value value={value:?}");
+        }
         match value {
             Expression::Number(number) => self.emit_print_string(&format_static_number(*number)),
             Expression::String(text) => {
@@ -150,6 +153,9 @@ impl<'a> FunctionCompiler<'a> {
                 }
                 if let Some(text) = self.resolve_static_string_value(value) {
                     self.emit_print_string(&text)?;
+                    return Ok(());
+                }
+                if self.emit_runtime_print_known_string_value(value)? {
                     return Ok(());
                 }
                 if self.infer_value_kind(value) == Some(StaticValueKind::Bool) {

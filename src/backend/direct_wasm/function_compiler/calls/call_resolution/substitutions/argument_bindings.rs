@@ -7,19 +7,36 @@ impl<'a> FunctionCompiler<'a> {
         user_function: &UserFunction,
         arguments: &[CallArgument],
     ) -> Expression {
-        let expanded_arguments = self
-            .expand_call_arguments(arguments)
-            .into_iter()
-            .map(CallArgument::Expression)
-            .collect::<Vec<_>>();
+        let expanded_arguments = self.expand_call_arguments(arguments);
         let mut bindings = HashMap::new();
-        for (index, param_name) in user_function.params.iter().enumerate() {
-            let value = match expanded_arguments.get(index) {
-                Some(CallArgument::Expression(expression))
-                | Some(CallArgument::Spread(expression)) => expression.clone(),
-                None => Expression::Undefined,
-            };
-            bindings.insert(param_name.clone(), value);
+        if let Some(declaration) = self.resolve_registered_function_declaration(&user_function.name)
+        {
+            for (index, parameter) in declaration.params.iter().enumerate() {
+                let value = if parameter.rest {
+                    Expression::Array(
+                        expanded_arguments
+                            .iter()
+                            .skip(index)
+                            .cloned()
+                            .map(ArrayElement::Expression)
+                            .collect(),
+                    )
+                } else {
+                    expanded_arguments
+                        .get(index)
+                        .cloned()
+                        .unwrap_or(Expression::Undefined)
+                };
+                bindings.insert(parameter.name.clone(), value);
+            }
+        } else {
+            for (index, param_name) in user_function.params.iter().enumerate() {
+                let value = match expanded_arguments.get(index) {
+                    Some(expression) => expression.clone(),
+                    None => Expression::Undefined,
+                };
+                bindings.insert(param_name.clone(), value);
+            }
         }
         self.substitute_expression_bindings(expression, &bindings)
     }

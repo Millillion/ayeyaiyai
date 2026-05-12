@@ -13,7 +13,8 @@ pub(in crate::backend::direct_wasm) fn statement_returns_arguments_object(
         Statement::Return(Expression::Identifier(name)) => name == "arguments",
         Statement::Declaration { body }
         | Statement::Block { body }
-        | Statement::Labeled { body, .. } => body.iter().any(statement_returns_arguments_object),
+        | Statement::Labeled { body, .. }
+        | Statement::With { body, .. } => body.iter().any(statement_returns_arguments_object),
         Statement::If {
             then_branch,
             else_branch,

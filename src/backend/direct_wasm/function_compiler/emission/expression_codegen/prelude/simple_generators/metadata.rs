@@ -1,6 +1,16 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    pub(in crate::backend::direct_wasm) fn simple_generator_has_eager_call_time_prefix(
+        &self,
+        expression: &Expression,
+    ) -> bool {
+        matches!(expression, Expression::Call { .. })
+            && self
+                .simple_generator_call_time_prefix_effects(expression)
+                .is_some_and(|effects| !effects.is_empty())
+    }
+
     pub(in crate::backend::direct_wasm) fn is_async_generator_iterator_expression(
         &self,
         expression: &Expression,
@@ -30,6 +40,9 @@ impl<'a> FunctionCompiler<'a> {
         let Expression::Call { callee, .. } = expression else {
             return false;
         };
+        if self.simple_generator_has_eager_call_time_prefix(expression) {
+            return false;
+        }
         let Some(LocalFunctionBinding::User(function_name)) =
             self.resolve_function_binding_from_expression(callee)
         else {
@@ -43,6 +56,9 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         object: &Expression,
     ) -> Option<(bool, Vec<SimpleGeneratorStep>, Vec<Statement>, Expression)> {
+        if self.simple_generator_has_eager_call_time_prefix(object) {
+            return None;
+        }
         if let Expression::Identifier(name) = object
             && let Some(binding_name) = self.resolve_local_array_iterator_binding_name(name)
             && let Some(ArrayIteratorBinding {

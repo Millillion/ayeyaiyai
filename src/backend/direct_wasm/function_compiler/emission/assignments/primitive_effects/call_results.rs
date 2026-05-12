@@ -19,6 +19,20 @@ impl<'a> FunctionCompiler<'a> {
                 let Some(user_function) = self.user_function(function_name).cloned() else {
                     return Ok(false);
                 };
+                if self.can_inline_primitive_effect_user_function_call_with_explicit_call_frame(
+                    &user_function,
+                    arguments,
+                    this_expression,
+                ) && self
+                    .emit_inline_primitive_effect_user_function_summary_with_explicit_call_frame(
+                        &user_function,
+                        arguments,
+                        this_expression,
+                        result_local,
+                    )?
+                {
+                    return Ok(true);
+                }
                 if self.can_inline_user_function_call_with_explicit_call_frame(
                     &user_function,
                     arguments,

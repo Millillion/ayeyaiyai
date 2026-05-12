@@ -17,6 +17,18 @@ impl<'a> FunctionCompiler<'a> {
                 has_set: false,
             });
         }
+        if self.implicit_global_binding(property_name).is_some() {
+            return Some(PropertyDescriptorBinding {
+                value: Some(Expression::Identifier(property_name.to_string())),
+                configurable: true,
+                enumerable: true,
+                writable: Some(true),
+                getter: None,
+                setter: None,
+                has_get: false,
+                has_set: false,
+            });
+        }
         builtin_identifier_kind(property_name)?;
         Some(PropertyDescriptorBinding {
             value: Some(if property_name == "globalThis" {

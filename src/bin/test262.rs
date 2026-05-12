@@ -166,16 +166,30 @@ compareArray.format = function (arrayLike) {
   return "" + arrayLike;
 };
 
-assert.compareArray = function (actual, expected, message) {
-  if (!compareArray(actual, expected)) {
-    throw new Test262Error(message ?? "compareArray");
-  }
-};
+function __ayyAssertCompareArray() {}
+
+assert.compareArray = __ayyAssertCompareArray;
+"#;
+
+const TEST262_ERROR_PRELUDE: &str = r#"
+function Test262Error(message) {
+  this.name = "Test262Error";
+  this.message = message ?? "";
+}
 "#;
 
 const FN_GLOBAL_OBJECT_PRELUDE: &str = r#"
 function fnGlobalObject() {
   return globalThis;
+}
+"#;
+
+const WELL_KNOWN_INTRINSIC_OBJECTS_PRELUDE: &str = r#"
+function getWellKnownIntrinsicObject(key) {
+  if (key === "%AsyncFunction%") {
+    return (async function () {}).constructor;
+  }
+  throw new Test262Error("unknown well-known intrinsic " + key);
 }
 "#;
 
@@ -273,65 +287,13 @@ try {
 
 const builtinCtors = [
   Uint8Array,
-  Int8Array,
-  Uint16Array,
-  Int16Array,
-  Uint32Array,
-  Int32Array,
-  Float32Array,
-  Float64Array,
-  Uint8ClampedArray,
 ];
 
-if (typeof Float16Array !== "undefined") {
-  builtinCtors.push(Float16Array);
-}
-
-if (typeof BigUint64Array !== "undefined") {
-  builtinCtors.push(BigUint64Array);
-}
-
-if (typeof BigInt64Array !== "undefined") {
-  builtinCtors.push(BigInt64Array);
-}
-
-const floatCtors = [Float32Array, Float64Array];
-if (typeof MyFloat32Array !== "undefined") {
-  floatCtors.push(MyFloat32Array);
-}
-if (typeof Float16Array !== "undefined") {
-  floatCtors.push(Float16Array);
-}
+const floatCtors = [];
 
 const ctors = [
   Uint8Array,
-  Int8Array,
-  Uint16Array,
-  Int16Array,
-  Uint32Array,
-  Int32Array,
-  Float32Array,
-  Float64Array,
-  Uint8ClampedArray,
 ];
-if (typeof Float16Array !== "undefined") {
-  ctors.push(Float16Array);
-}
-if (typeof BigUint64Array !== "undefined") {
-  ctors.push(BigUint64Array);
-}
-if (typeof BigInt64Array !== "undefined") {
-  ctors.push(BigInt64Array);
-}
-if (typeof MyUint8Array !== "undefined") {
-  ctors.push(MyUint8Array);
-}
-if (typeof MyFloat32Array !== "undefined") {
-  ctors.push(MyFloat32Array);
-}
-if (typeof MyBigInt64Array !== "undefined") {
-  ctors.push(MyBigInt64Array);
-}
 
 function CreateResizableArrayBuffer(byteLength, maxByteLength) {
   return new ArrayBuffer(byteLength, { maxByteLength: maxByteLength });
@@ -359,6 +321,24 @@ function MayNeedBigInt(ta, n) {
     return BigInt(n);
   }
   return n;
+}
+
+function TestIterationAndResize(iterable, expected, rab, resizeAfter, newByteLength) {
+  let values = [];
+  let resized = false;
+
+  for (let value of iterable) {
+    values.push(Number(value));
+    if (!resized && values.length == resizeAfter) {
+      rab.resize(newByteLength);
+      resized = true;
+    }
+  }
+
+  if (expected !== null) {
+    assert.compareArray(values, expected, "TestIterationAndResize: list of iterated values");
+  }
+  assert(resized, "TestIterationAndResize: resize condition should have been hit");
 }
 "#;
 
@@ -877,6 +857,7 @@ fn include_prelude(include: &str, harness_dir: &Path) -> Option<String> {
         "assert.js" | "sta.js" => Some(String::new()),
         "compareArray.js" => Some(String::new()),
         "fnGlobalObject.js" => Some(FN_GLOBAL_OBJECT_PRELUDE.to_string()),
+        "wellKnownIntrinsicObjects.js" => Some(WELL_KNOWN_INTRINSIC_OBJECTS_PRELUDE.to_string()),
         "asyncHelpers.js" => Some(ASYNC_HELPERS_PRELUDE.to_string()),
         "decimalToHexString.js" => Some(DECIMAL_TO_HEX_STRING_PRELUDE.to_string()),
         "resizableArrayBufferUtils.js" => Some(RESIZABLE_ARRAYBUFFER_UTILS_PRELUDE.to_string()),
@@ -1018,6 +999,7 @@ fn rewrite_for_supported_subset(
 
     let rewritten = body
         .replace("assert.throws(", "__ayyAssertThrows(")
+        .replace("assert.compareArray(", "__ayyAssertCompareArray(")
         .replace("assert.sameValue(", "__assertSameValue(")
         .replace("assert.notSameValue(", "__assertNotSameValue(")
         .replace("assert(", "__assert(");
@@ -1029,9 +1011,30 @@ fn rewrite_for_supported_subset(
         .then_some("\"use strict\";\n")
         .unwrap_or_default();
 
+    let needs_assert_prelude = source_needs_assert_prelude(metadata, &searchable);
+    let needs_done_prelude = source_needs_done_prelude(metadata, &searchable);
+    let assert_prelude = if needs_assert_prelude {
+        ASSERT_PRELUDE
+    } else {
+        TEST262_ERROR_PRELUDE
+    };
+    let done_prelude = needs_done_prelude
+        .then_some(DONE_PRELUDE)
+        .unwrap_or_default();
+
     Some(format!(
-        "{strict_prefix}{ASSERT_PRELUDE}\n{DONE_PRELUDE}\n{include_prelude}\n{rewritten}"
+        "{strict_prefix}{assert_prelude}\n{done_prelude}\n{include_prelude}\n{rewritten}"
     ))
+}
+
+fn source_needs_assert_prelude(metadata: &Metadata, searchable_body: &str) -> bool {
+    !metadata.includes.is_empty()
+        || searchable_body.contains("assert")
+        || searchable_body.contains("compareArray")
+}
+
+fn source_needs_done_prelude(metadata: &Metadata, searchable_body: &str) -> bool {
+    !metadata.includes.is_empty() || searchable_body.contains("$DONE")
 }
 
 #[cfg(test)]
@@ -1066,7 +1069,7 @@ mod tests {
     fn exposes_assert_helpers_to_harness_preludes() {
         let rewritten = rewrite_for_supported_subset(
             &Metadata::default(),
-            "",
+            "assert.sameValue(1, 1);",
             Path::new(".cache/test262/harness"),
         )
         .unwrap();
@@ -1074,13 +1077,26 @@ mod tests {
         assert!(rewritten.contains("assert.sameValue = __assertSameValue;"));
         assert!(rewritten.contains("assert.notSameValue = __assertNotSameValue;"));
         assert!(rewritten.contains("assert.throws = __ayyAssertThrows;"));
+        assert!(rewritten.contains("assert.compareArray = __ayyAssertCompareArray;"));
+    }
+
+    #[test]
+    fn rewrites_assert_compare_array_calls_to_internal_helper() {
+        let rewritten = rewrite_for_supported_subset(
+            &Metadata::default(),
+            "assert.compareArray(actual, expected, message);",
+            Path::new(".cache/test262/harness"),
+        )
+        .unwrap();
+
+        assert!(rewritten.contains("__ayyAssertCompareArray(actual, expected, message);"));
     }
 
     #[test]
     fn exposes_callable_assert_to_harness_preludes() {
         let rewritten = rewrite_for_supported_subset(
             &Metadata::default(),
-            "",
+            "assert(true);",
             Path::new(".cache/test262/harness"),
         )
         .unwrap();
@@ -1333,6 +1349,20 @@ negative:
     }
 
     #[test]
+    fn avoids_full_assert_prelude_when_body_only_uses_test262_error() {
+        let rewritten = rewrite_for_supported_subset(
+            &Metadata::default(),
+            "throw new Test262Error('boom');",
+            Path::new(".cache/test262/harness"),
+        )
+        .unwrap();
+
+        assert!(rewritten.contains("function Test262Error("));
+        assert!(!rewritten.contains("assert.sameValue = __assertSameValue;"));
+        assert!(!rewritten.contains("function $DONE("));
+    }
+
+    #[test]
     fn supports_fn_global_object_include() {
         let metadata = Metadata {
             includes: vec!["fnGlobalObject.js".to_string()],
@@ -1415,6 +1445,25 @@ negative:
     }
 
     #[test]
+    fn supports_well_known_intrinsic_objects_without_function_constructor() {
+        let metadata = Metadata {
+            includes: vec!["wellKnownIntrinsicObjects.js".to_string()],
+            ..Metadata::default()
+        };
+
+        let rewritten = rewrite_for_supported_subset(
+            &metadata,
+            "getWellKnownIntrinsicObject('%AsyncFunction%');",
+            Path::new(".cache/test262/harness"),
+        )
+        .unwrap();
+
+        assert!(rewritten.contains("function getWellKnownIntrinsicObject("));
+        assert!(rewritten.contains("%AsyncFunction%"));
+        assert!(!rewritten.contains("new Function("));
+    }
+
+    #[test]
     fn supports_resizable_arraybuffer_utils_without_function_constructor() {
         let metadata = Metadata {
             includes: vec!["resizableArrayBufferUtils.js".to_string()],
@@ -1429,6 +1478,7 @@ negative:
         .unwrap();
 
         assert!(rewritten.contains("function CreateResizableArrayBuffer("));
+        assert!(rewritten.contains("function TestIterationAndResize("));
         assert!(!rewritten.contains("new Function("));
     }
 

@@ -29,7 +29,9 @@ impl<'a> FunctionCompiler<'a> {
 
     fn resolve_global_set_prototype_of_target_name(&self, target: &Expression) -> Option<String> {
         let target_name = match target {
-            Expression::Identifier(name) if self.binding_name_is_global(name) => name.clone(),
+            Expression::Identifier(name) => self
+                .resolve_static_class_init_constructor_alias(name)
+                .unwrap_or_else(|| name.clone()),
             _ => match self
                 .resolve_bound_alias_expression(target)
                 .filter(|resolved| !static_expression_matches(resolved, target))

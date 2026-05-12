@@ -1,6 +1,29 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn resolve_static_native_error_to_string_from_binding(
+        &self,
+        object_binding: &ObjectValueBinding,
+        current_function_name: Option<&str>,
+    ) -> Option<String> {
+        let name_property = Expression::String("name".to_string());
+        let message_property = Expression::String("message".to_string());
+        let name = object_binding_lookup_value(object_binding, &name_property)
+            .and_then(|value| self.resolve_static_string_concat_value(value, current_function_name))
+            .unwrap_or_else(|| "Error".to_string());
+        let message = object_binding_lookup_value(object_binding, &message_property)
+            .and_then(|value| self.resolve_static_string_concat_value(value, current_function_name))
+            .unwrap_or_default();
+
+        if name.is_empty() {
+            Some(message)
+        } else if message.is_empty() {
+            Some(name)
+        } else {
+            Some(format!("{name}: {message}"))
+        }
+    }
+
     pub(in crate::backend::direct_wasm) fn resolve_static_member_call_outcome_with_context(
         &self,
         object: &Expression,
@@ -8,6 +31,62 @@ impl<'a> FunctionCompiler<'a> {
         current_function_name: Option<&str>,
     ) -> Option<StaticEvalOutcome> {
         let property = Expression::String(property_name.to_string());
+        if is_private_property_name_expression(&property) {
+            return None;
+        }
+        if let Some(binding) = self.resolve_member_function_binding(object, &property) {
+            if let LocalFunctionBinding::User(function_name) = &binding
+                && let Some(user_function) = self.user_function(function_name)
+                && self.user_function_mentions_private_member_access(user_function)
+            {
+                return None;
+            }
+            let capture_slots = self.resolve_member_function_capture_slots(object, &property);
+            if capture_slots
+                .as_ref()
+                .is_some_and(|capture_slots| capture_slots.contains_key("new.target"))
+            {
+                return None;
+            }
+            if let Some(outcome) = self
+                .resolve_static_function_outcome_from_binding_with_call_frame_and_context(
+                    &binding,
+                    &[],
+                    object,
+                    current_function_name,
+                )
+            {
+                return Some(match outcome {
+                    StaticEvalOutcome::Value(expression) => {
+                        let expression = capture_slots
+                            .as_ref()
+                            .map(|capture_slots| {
+                                self.substitute_capture_slot_bindings(&expression, capture_slots)
+                            })
+                            .unwrap_or(expression);
+                        StaticEvalOutcome::Value(self.materialize_static_expression(&expression))
+                    }
+                    StaticEvalOutcome::Throw(throw_value) => StaticEvalOutcome::Throw(throw_value),
+                });
+            }
+            if let Some(result) = self
+                .resolve_function_binding_static_return_expression_with_call_frame(
+                    &binding,
+                    &[],
+                    object,
+                )
+            {
+                let result = capture_slots
+                    .as_ref()
+                    .map(|capture_slots| {
+                        self.substitute_capture_slot_bindings(&result, capture_slots)
+                    })
+                    .unwrap_or(result);
+                return Some(StaticEvalOutcome::Value(
+                    self.materialize_static_expression(&result),
+                ));
+            }
+        }
         if let Some(object_binding) = self.resolve_object_binding_from_expression(object)
             && let Some(method_value) = object_binding_lookup_value(&object_binding, &property)
         {
@@ -15,9 +94,10 @@ impl<'a> FunctionCompiler<'a> {
                 method_value,
                 current_function_name,
             )?;
-            return self.resolve_static_function_outcome_from_binding_with_context(
+            return self.resolve_static_function_outcome_from_binding_with_call_frame_and_context(
                 &binding,
                 &[],
+                object,
                 current_function_name,
             );
         }
@@ -51,6 +131,10 @@ impl<'a> FunctionCompiler<'a> {
                     self.synthesize_static_date_string(timestamp),
                 ))),
                 "valueOf" => Some(StaticEvalOutcome::Value(Expression::Number(timestamp))),
+                "getFullYear" | "getUTCFullYear" | "getMonth" | "getUTCMonth" | "getDate"
+                | "getUTCDate" => Some(StaticEvalOutcome::Value(Expression::Number(
+                    self.resolve_static_date_component(timestamp, property_name)?,
+                ))),
                 _ => None,
             };
         }
@@ -71,6 +155,23 @@ impl<'a> FunctionCompiler<'a> {
             .resolve_object_binding_from_expression(object)
             .is_some()
         {
+            if property_name == "toString"
+                && let Some(object_binding) = self.resolve_object_binding_from_expression(object)
+                && object_binding_lookup_value(
+                    &object_binding,
+                    &Expression::String("constructor".to_string()),
+                )
+                .is_some_and(|constructor| {
+                    matches!(constructor, Expression::Identifier(name) if native_error_runtime_value(name).is_some())
+                })
+            {
+                return Some(StaticEvalOutcome::Value(Expression::String(
+                    self.resolve_static_native_error_to_string_from_binding(
+                        &object_binding,
+                        current_function_name,
+                    )?,
+                )));
+            }
             return match property_name {
                 "toString" => Some(StaticEvalOutcome::Value(Expression::String(
                     "[object Object]".to_string(),
@@ -224,6 +325,21 @@ impl<'a> FunctionCompiler<'a> {
             }
         };
 
+        if self
+            .resolve_static_symbol_to_string_value_with_context(&left_value, current_function_name)
+            .is_some()
+            || self
+                .resolve_static_symbol_to_string_value_with_context(
+                    &right_value,
+                    current_function_name,
+                )
+                .is_some()
+        {
+            return Some(StaticEvalOutcome::Throw(StaticThrowValue::NamedError(
+                "TypeError",
+            )));
+        }
+
         if self.infer_value_kind(&left_value) == Some(StaticValueKind::String)
             || self.infer_value_kind(&right_value) == Some(StaticValueKind::String)
         {
@@ -263,6 +379,11 @@ impl<'a> FunctionCompiler<'a> {
         right: &Expression,
         current_function_name: Option<&str>,
     ) -> Option<String> {
+        if self.expression_depends_on_active_loop_assignment(left)
+            || self.expression_depends_on_active_loop_assignment(right)
+        {
+            return None;
+        }
         let left_primitive = match self.resolve_static_to_primitive_outcome_with_context(
             left,
             PrimitiveHint::Default,

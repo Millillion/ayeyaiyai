@@ -29,6 +29,23 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         object_binding: &ObjectValueBinding,
     ) -> Option<(LocalFunctionBinding, Expression)> {
+        let symbol_property = symbol_to_primitive_expression();
+        if let Some(method_value) = object_binding_lookup_value(object_binding, &symbol_property) {
+            if matches!(
+                self.resolve_static_primitive_expression_with_context(
+                    method_value,
+                    self.current_function_name(),
+                ),
+                Some(Expression::Null | Expression::Undefined)
+            ) {
+                // Fall through to ordinary coercion when @@toPrimitive is absent.
+            } else {
+                let binding = self.resolve_function_binding_from_expression(method_value)?;
+                let key = self.resolve_property_key_from_function_binding(&binding)?;
+                return Some((binding, key));
+            }
+        }
+
         for method_name in ["toString", "valueOf"] {
             let method_value = object_binding_lookup_value(
                 object_binding,

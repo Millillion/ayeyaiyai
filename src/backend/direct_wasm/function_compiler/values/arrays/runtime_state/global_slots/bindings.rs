@@ -6,7 +6,8 @@ impl<'a> FunctionCompiler<'a> {
         name: &str,
     ) -> bool {
         self.resolve_current_local_binding(name).is_none()
-            && self.backend.global_array_binding(name).is_some()
+            && (self.backend.global_array_binding(name).is_some()
+                || self.uses_global_runtime_array_state(name))
     }
 
     pub(in crate::backend::direct_wasm) fn uses_global_runtime_array_state(

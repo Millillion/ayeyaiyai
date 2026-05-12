@@ -71,9 +71,11 @@ fn validate_strict_mode_early_errors_in_statement(statement: &Stmt, strict: bool
             validate_strict_mode_early_errors_in_expression(&expression.expr, strict)?;
         }
         Stmt::If(statement) => {
+            validate_strict_if_branch_statement_position(&statement.cons, strict)?;
             validate_strict_mode_early_errors_in_expression(&statement.test, strict)?;
             validate_strict_mode_early_errors_in_statement(&statement.cons, strict)?;
             if let Some(alternate) = &statement.alt {
+                validate_strict_if_branch_statement_position(alternate, strict)?;
                 validate_strict_mode_early_errors_in_statement(alternate, strict)?;
             }
         }
@@ -151,10 +153,35 @@ fn validate_strict_mode_early_errors_in_statement(statement: &Stmt, strict: bool
             validate_strict_mode_early_errors_in_expression(&statement.arg, strict)?;
         }
         Stmt::Labeled(statement) => {
+            validate_strict_labeled_body_statement_position(&statement.body, strict)?;
             validate_strict_mode_early_errors_in_statement(&statement.body, strict)?;
         }
         _ => {}
     }
 
     Ok(())
+}
+
+fn validate_strict_if_branch_statement_position(statement: &Stmt, strict: bool) -> Result<()> {
+    if strict && matches!(statement, Stmt::Decl(Decl::Fn(_))) {
+        bail!(
+            "function declaration is not allowed directly in if statement position in strict mode"
+        );
+    }
+    Ok(())
+}
+
+fn validate_strict_labeled_body_statement_position(statement: &Stmt, strict: bool) -> Result<()> {
+    if !strict {
+        return Ok(());
+    }
+    match statement {
+        Stmt::Decl(Decl::Fn(_)) => {
+            bail!("function declaration is not allowed as a labeled statement body in strict mode")
+        }
+        Stmt::Labeled(labelled) => {
+            validate_strict_labeled_body_statement_position(&labelled.body, strict)
+        }
+        _ => Ok(()),
+    }
 }

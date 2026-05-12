@@ -11,6 +11,9 @@ pub(in crate::backend::direct_wasm) fn materialize_object_member_from_binding(
     if static_property_name_from_expression(property).is_some()
         || object_binding_has_property(object_binding, property)
     {
+        if is_private_property_name_expression(property) {
+            return None;
+        }
         return Some(Expression::Undefined);
     }
     None
@@ -47,6 +50,27 @@ pub(in crate::backend::direct_wasm) fn materialize_missing_member_expression_wit
     } else {
         recurse(&materialized, environment)
     }
+}
+
+pub(in crate::backend::direct_wasm) fn materialize_literal_string_member(
+    object: &Expression,
+    property: &Expression,
+) -> Option<Expression> {
+    let Expression::String(text) = object else {
+        return None;
+    };
+    if let Some(index) = argument_index_from_expression(property) {
+        return Some(
+            text.chars()
+                .nth(index as usize)
+                .map(|character| Expression::String(character.to_string()))
+                .unwrap_or(Expression::Undefined),
+        );
+    }
+    if matches!(property, Expression::String(name) if name == "length") {
+        return Some(Expression::Number(text.chars().count() as f64));
+    }
+    None
 }
 
 pub(in crate::backend::direct_wasm) fn preserves_missing_member_function_capture<Key>(

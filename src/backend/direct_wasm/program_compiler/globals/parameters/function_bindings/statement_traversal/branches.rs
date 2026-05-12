@@ -11,30 +11,34 @@ impl DirectWasmCompiler {
         bindings: &mut HashMap<String, HashMap<String, Option<LocalFunctionBinding>>>,
         array_bindings: &mut HashMap<String, HashMap<String, Option<ArrayValueBinding>>>,
         object_bindings: &mut HashMap<String, HashMap<String, Option<ObjectValueBinding>>>,
+        current_function_name: Option<&str>,
     ) {
-        self.collect_parameter_bindings_from_expression(
+        self.collect_parameter_bindings_from_expression_in_function(
             condition,
             aliases,
             bindings,
             array_bindings,
             object_bindings,
+            current_function_name,
         );
         let baseline_aliases = aliases.clone();
         let mut then_aliases = baseline_aliases.clone();
         let mut else_aliases = baseline_aliases.clone();
-        self.collect_parameter_bindings_from_statements(
+        self.collect_parameter_bindings_from_statements_in_function(
             then_branch,
             &mut then_aliases,
             bindings,
             array_bindings,
             object_bindings,
+            current_function_name,
         );
-        self.collect_parameter_bindings_from_statements(
+        self.collect_parameter_bindings_from_statements_in_function(
             else_branch,
             &mut else_aliases,
             bindings,
             array_bindings,
             object_bindings,
+            current_function_name,
         );
         *aliases =
             self.merge_aliases_for_branches(&baseline_aliases, &[&then_aliases, &else_aliases]);
@@ -48,22 +52,25 @@ impl DirectWasmCompiler {
         bindings: &mut HashMap<String, HashMap<String, Option<LocalFunctionBinding>>>,
         array_bindings: &mut HashMap<String, HashMap<String, Option<ArrayValueBinding>>>,
         object_bindings: &mut HashMap<String, HashMap<String, Option<ObjectValueBinding>>>,
+        current_function_name: Option<&str>,
     ) {
-        self.collect_parameter_bindings_from_expression(
+        self.collect_parameter_bindings_from_expression_in_function(
             object,
             aliases,
             bindings,
             array_bindings,
             object_bindings,
+            current_function_name,
         );
         let baseline_aliases = aliases.clone();
         let mut with_aliases = baseline_aliases.clone();
-        self.collect_parameter_bindings_from_statements(
+        self.collect_parameter_bindings_from_statements_in_function(
             body,
             &mut with_aliases,
             bindings,
             array_bindings,
             object_bindings,
+            current_function_name,
         );
         *aliases = self.merge_aliases_for_optional_body(&baseline_aliases, &with_aliases);
     }
@@ -78,6 +85,7 @@ impl DirectWasmCompiler {
         bindings: &mut HashMap<String, HashMap<String, Option<LocalFunctionBinding>>>,
         array_bindings: &mut HashMap<String, HashMap<String, Option<ArrayValueBinding>>>,
         object_bindings: &mut HashMap<String, HashMap<String, Option<ObjectValueBinding>>>,
+        current_function_name: Option<&str>,
     ) {
         let baseline_aliases = aliases.clone();
         let mut try_aliases = baseline_aliases.clone();
@@ -85,26 +93,29 @@ impl DirectWasmCompiler {
         if let Some(catch_binding) = catch_binding {
             catch_aliases.insert(catch_binding.clone(), None);
         }
-        self.collect_parameter_bindings_from_statements(
+        self.collect_parameter_bindings_from_statements_in_function(
             body,
             &mut try_aliases,
             bindings,
             array_bindings,
             object_bindings,
+            current_function_name,
         );
-        self.collect_parameter_bindings_from_statements(
+        self.collect_parameter_bindings_from_statements_in_function(
             catch_setup,
             &mut catch_aliases,
             bindings,
             array_bindings,
             object_bindings,
+            current_function_name,
         );
-        self.collect_parameter_bindings_from_statements(
+        self.collect_parameter_bindings_from_statements_in_function(
             catch_body,
             &mut catch_aliases,
             bindings,
             array_bindings,
             object_bindings,
+            current_function_name,
         );
         *aliases =
             self.merge_aliases_for_branches(&baseline_aliases, &[&try_aliases, &catch_aliases]);
@@ -119,13 +130,15 @@ impl DirectWasmCompiler {
         bindings: &mut HashMap<String, HashMap<String, Option<LocalFunctionBinding>>>,
         array_bindings: &mut HashMap<String, HashMap<String, Option<ArrayValueBinding>>>,
         object_bindings: &mut HashMap<String, HashMap<String, Option<ObjectValueBinding>>>,
+        current_function_name: Option<&str>,
     ) {
-        self.collect_parameter_bindings_from_expression(
+        self.collect_parameter_bindings_from_expression_in_function(
             discriminant,
             aliases,
             bindings,
             array_bindings,
             object_bindings,
+            current_function_name,
         );
         let baseline_aliases = aliases.clone();
         let mut merged_aliases = baseline_aliases.clone();
@@ -135,20 +148,22 @@ impl DirectWasmCompiler {
         for case in cases {
             let mut case_aliases = merged_aliases.clone();
             if let Some(test) = &case.test {
-                self.collect_parameter_bindings_from_expression(
+                self.collect_parameter_bindings_from_expression_in_function(
                     test,
                     &mut case_aliases,
                     bindings,
                     array_bindings,
                     object_bindings,
+                    current_function_name,
                 );
             }
-            self.collect_parameter_bindings_from_statements(
+            self.collect_parameter_bindings_from_statements_in_function(
                 &case.body,
                 &mut case_aliases,
                 bindings,
                 array_bindings,
                 object_bindings,
+                current_function_name,
             );
             merged_aliases = self.merge_aliases_for_branches(&merged_aliases, &[&case_aliases]);
         }

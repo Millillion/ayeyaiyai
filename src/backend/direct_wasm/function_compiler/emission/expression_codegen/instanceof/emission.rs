@@ -73,11 +73,25 @@ impl<'a> FunctionCompiler<'a> {
 
         if let Expression::Identifier(name) = &materialized_right {
             if let Some(expected_values) = native_error_instanceof_values(name) {
+                let static_result = !self.expression_is_known_non_object_value_for_instanceof(left)
+                    && self.expression_inherits_from_prototype_for_instanceof(
+                        left,
+                        &Self::prototype_member_expression(name),
+                    );
+                if std::env::var_os("AYY_TRACE_INSTANCEOF").is_some() {
+                    eprintln!(
+                        "instanceof:native_error left={left:?} right={right:?} materialized_right={materialized_right:?} static_result={static_result}"
+                    );
+                }
                 let left_local = self.allocate_temp_local();
                 self.emit_numeric_expression(left)?;
                 self.push_local_set(left_local);
                 self.emit_numeric_expression(right)?;
                 self.state.emission.output.instructions.push(0x1a);
+                if static_result {
+                    self.push_i32_const(1);
+                    return Ok(());
+                }
                 if expected_values.len() == 1 {
                     let expected_value = expected_values[0];
                     self.push_local_get(left_local);
@@ -121,6 +135,11 @@ impl<'a> FunctionCompiler<'a> {
             } else {
                 self.expression_inherits_from_prototype_for_instanceof(left, &prototype_expression)
             };
+            if std::env::var_os("AYY_TRACE_INSTANCEOF").is_some() {
+                eprintln!(
+                    "instanceof:prototype left={left:?} right={right:?} materialized_right={materialized_right:?} prototype={prototype_expression:?} static_result={static_result}"
+                );
+            }
             if let Some(getter_binding) = self.resolve_member_getter_binding(
                 &materialized_right,
                 &Expression::String("prototype".to_string()),

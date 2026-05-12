@@ -14,11 +14,18 @@ impl<'a> FunctionCompiler<'a> {
             || !self
                 .user_function_parameter_iterator_consumption_indices(user_function)
                 .is_empty();
+        let has_member_source_capture =
+            self.bound_capture_slots_include_member_source(capture_slots);
+        let allow_static_snapshot = !self
+            .user_function_mentions_private_member_access(user_function)
+            && !has_member_source_capture
+            && !self.user_function_mentions_direct_eval(user_function);
         let (
             prepared_capture_bindings,
             synced_capture_source_bindings,
             saved_new_target_local,
             saved_this_local,
+            saved_this_shadow_owner,
         ) = self.prepare_bound_user_function_call_context(
             user_function,
             capture_slots,
@@ -44,12 +51,43 @@ impl<'a> FunctionCompiler<'a> {
                     .locals
                     .iter()
                     .find_map(|(name, local)| {
-                        (*local == *argument_local).then_some(Expression::Identifier(name.clone()))
+                        (*local == *argument_local).then_some(
+                            self.state
+                                .speculation
+                                .static_semantics
+                                .local_value_binding(name)
+                                .cloned()
+                                .or_else(|| {
+                                    self.resolve_object_binding_from_expression(
+                                        &Expression::Identifier(name.clone()),
+                                    )
+                                    .map(|binding| object_binding_to_expression(&binding))
+                                })
+                                .or_else(|| {
+                                    self.resolve_array_binding_from_expression(
+                                        &Expression::Identifier(name.clone()),
+                                    )
+                                    .map(|binding| {
+                                        Expression::Array(
+                                            binding
+                                                .values
+                                                .into_iter()
+                                                .map(|value| {
+                                                    ArrayElement::Expression(
+                                                        value.unwrap_or(Expression::Undefined),
+                                                    )
+                                                })
+                                                .collect(),
+                                        )
+                                    })
+                                })
+                                .unwrap_or(Expression::Identifier(name.clone())),
+                        )
                     })
                     .unwrap_or(Expression::Undefined)
             })
             .collect::<Vec<_>>();
-        let static_result = if runtime_only_parameter_iterator_call {
+        let static_result = if runtime_only_parameter_iterator_call || !allow_static_snapshot {
             None
         } else {
             self.resolve_bound_snapshot_user_function_result_with_arguments_and_this(
@@ -59,19 +97,29 @@ impl<'a> FunctionCompiler<'a> {
                 this_expression,
             )
         };
+        let reliable_updated_bindings = static_result
+            .as_ref()
+            .map(|(_, updated_bindings)| updated_bindings.clone());
+        let existing_snapshot = self
+            .state
+            .speculation
+            .static_semantics
+            .last_bound_user_function_call
+            .clone()
+            .filter(|snapshot| snapshot.function_name == user_function.name);
         self.state
             .speculation
             .static_semantics
-            .last_bound_user_function_call =
-            (!runtime_only_parameter_iterator_call).then(|| BoundUserFunctionCallSnapshot {
+            .last_bound_user_function_call = (!runtime_only_parameter_iterator_call
+            && allow_static_snapshot)
+            .then(|| BoundUserFunctionCallSnapshot {
                 function_name: user_function.name.clone(),
                 source_expression: None,
                 result_expression: static_result.as_ref().map(|(result, _)| result.clone()),
-                updated_bindings: static_result
-                    .as_ref()
-                    .map(|(_, updated_bindings)| updated_bindings.clone())
-                    .unwrap_or_else(|| capture_snapshot.clone()),
-            });
+                prototype_source_expression: None,
+                updated_bindings: reliable_updated_bindings.clone().unwrap_or_default(),
+            })
+            .or(existing_snapshot);
         let mut call_effect_nonlocal_bindings = if runtime_only_parameter_iterator_call {
             HashSet::new()
         } else {
@@ -96,7 +144,12 @@ impl<'a> FunctionCompiler<'a> {
         } else {
             let mut names = call_effect_nonlocal_bindings
                 .iter()
-                .filter(|name| !synced_capture_source_bindings.contains(*name))
+                .filter(|name| {
+                    !synced_capture_source_bindings.contains(*name)
+                        || !reliable_updated_bindings
+                            .as_ref()
+                            .is_some_and(|bindings| bindings.contains_key(*name))
+                })
                 .cloned()
                 .collect::<HashSet<_>>();
             names.extend(
@@ -111,11 +164,19 @@ impl<'a> FunctionCompiler<'a> {
         };
 
         self.emit_prepare_bound_user_function_capture_globals(&prepared_capture_bindings)?;
+        let parameter_object_shadow_writebacks = self
+            .emit_user_function_parameter_object_shadow_setup(
+                user_function,
+                &bound_argument_expressions,
+            )?;
 
         let visible_param_count = user_function.visible_param_count() as usize;
+        let rest_parameter_index = self.user_function_rest_parameter_index(user_function);
 
         for argument_index in 0..visible_param_count {
-            if let Some(argument_local) = argument_locals.get(argument_index).copied() {
+            if Some(argument_index) == rest_parameter_index {
+                self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
+            } else if let Some(argument_local) = argument_locals.get(argument_index).copied() {
                 self.push_local_get(argument_local);
             } else {
                 self.push_i32_const(JS_UNDEFINED_TAG);
@@ -131,28 +192,34 @@ impl<'a> FunctionCompiler<'a> {
                 self.push_i32_const(JS_UNDEFINED_TAG);
             }
         }
-        self.push_call(user_function.function_index);
+        self.push_user_function_call(user_function);
         let return_value_local = self.allocate_temp_local();
         self.push_local_set(return_value_local);
-        let updated_bindings = self
-            .state
-            .speculation
-            .static_semantics
-            .last_bound_user_function_call
-            .as_ref()
-            .and_then(|snapshot| {
-                (snapshot.function_name == user_function.name)
-                    .then_some(snapshot.updated_bindings.clone())
-            });
+        self.emit_user_function_parameter_object_shadow_writeback(
+            &parameter_object_shadow_writebacks,
+        )?;
+        let receiver_updated_via_parameter_writeback = self
+            .receiver_shadow_updated_via_parameter_writebacks(
+                this_expression,
+                &parameter_object_shadow_writebacks,
+            );
+        let updated_bindings = reliable_updated_bindings;
+        self.sync_user_function_parameter_object_shadow_writeback_static_metadata(
+            &parameter_object_shadow_writebacks,
+            updated_bindings.as_ref(),
+        );
 
         self.finalize_bound_user_function_call(
             user_function,
+            this_expression,
+            receiver_updated_via_parameter_writeback,
             &prepared_capture_bindings,
             updated_bindings,
             additional_call_effect_nonlocal_bindings,
             assigned_nonlocal_binding_results,
             saved_new_target_local,
             saved_this_local,
+            saved_this_shadow_owner.as_deref(),
             return_value_local,
             &bound_argument_expressions,
         )

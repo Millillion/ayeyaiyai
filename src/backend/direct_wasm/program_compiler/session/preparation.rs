@@ -44,7 +44,7 @@ impl<'a> ProgramCompilationSession<'a> {
 
     pub(super) fn prepare_user_function_compilations(
         &mut self,
-        program: &Program,
+        _program: &Program,
         global_binding_environment: &GlobalBindingEnvironment,
         global_static_semantics: GlobalStaticSemanticsSnapshot,
     ) -> DirectResult<(
@@ -55,9 +55,16 @@ impl<'a> ProgramCompilationSession<'a> {
         let mut ordered_user_function_names = Vec::new();
         let mut assigned_nonlocal_binding_results = HashMap::new();
         let mut user_function_metadata = HashMap::new();
-        for declaration in &program.functions {
+        let registered_declarations = self
+            .compiler
+            .state
+            .user_functions()
+            .iter()
+            .filter_map(|function| self.compiler.registered_function(&function.name).cloned())
+            .collect::<Vec<_>>();
+        for declaration in registered_declarations {
             let Some((prepared_function, prepared_results)) =
-                self.prepare_user_function_compilation(declaration, global_binding_environment)?
+                self.prepare_user_function_compilation(&declaration, global_binding_environment)?
             else {
                 continue;
             };
@@ -68,7 +75,7 @@ impl<'a> ProgramCompilationSession<'a> {
             );
             if !prepared_results.is_empty() {
                 assigned_nonlocal_binding_results
-                    .insert(declaration.name.clone(), prepared_results);
+                    .insert(prepared_function.metadata.name.clone(), prepared_results);
             }
             user_functions.push(prepared_function);
         }

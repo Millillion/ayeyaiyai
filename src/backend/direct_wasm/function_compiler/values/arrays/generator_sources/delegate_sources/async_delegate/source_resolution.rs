@@ -1,6 +1,23 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn static_iterator_method_result_is_object(
+        &self,
+        value: &Expression,
+        current_function_name: Option<&str>,
+    ) -> bool {
+        matches!(value, Expression::Object(_) | Expression::Array(_))
+            || self.resolve_object_binding_from_expression(value).is_some()
+            || self.resolve_array_binding_from_expression(value).is_some()
+            || self
+                .resolve_function_binding_from_expression_with_context(value, current_function_name)
+                .is_some()
+            || matches!(
+                self.infer_value_kind(value),
+                Some(StaticValueKind::Object | StaticValueKind::Function)
+            )
+    }
+
     pub(in crate::backend::direct_wasm) fn resolve_simple_async_yield_delegate_source(
         &self,
         expression: &Expression,
@@ -12,6 +29,7 @@ impl<'a> FunctionCompiler<'a> {
                     .into_iter()
                     .map(|value| SimpleGeneratorStep {
                         effects: Vec::new(),
+                        close_effects: Vec::new(),
                         outcome: SimpleGeneratorStepOutcome::Yield(
                             value.unwrap_or(Expression::Undefined),
                         ),
@@ -95,16 +113,19 @@ impl<'a> FunctionCompiler<'a> {
         match call_outcome {
             StaticEvalOutcome::Throw(throw_value) => self.simple_generator_throw_step(throw_value),
             StaticEvalOutcome::Value(iterator_value) => {
+                if !self.static_iterator_method_result_is_object(
+                    &iterator_value,
+                    current_function_name,
+                ) {
+                    return self
+                        .simple_generator_throw_step(StaticThrowValue::NamedError("TypeError"));
+                }
                 if let Some(source) = self.resolve_iterator_source_kind(&iterator_value) {
                     if let Some(flattened) =
                         self.flatten_simple_yield_delegate_iterator_source(&source)
                     {
                         return Some(flattened);
                     }
-                }
-                if !self.static_expression_is_object_like(&iterator_value) {
-                    return self
-                        .simple_generator_throw_step(StaticThrowValue::NamedError("TypeError"));
                 }
                 let return_property = Expression::String("return".to_string());
                 let throw_property = Expression::String("throw".to_string());

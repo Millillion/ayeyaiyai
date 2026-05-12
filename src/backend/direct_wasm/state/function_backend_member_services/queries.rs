@@ -32,6 +32,11 @@ impl<'a> GlobalMemberCaptureQueryAccess for FunctionCompilerBackend<'a> {
         self.global_semantics
             .global_members()
             .function_capture_slots(key)
+            .or_else(|| {
+                self.shared_global_semantics
+                    .global_members()
+                    .function_capture_slots(key)
+            })
     }
 
     fn global_member_function_capture_slot_entries(

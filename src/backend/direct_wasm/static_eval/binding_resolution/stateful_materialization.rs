@@ -87,6 +87,9 @@ where
             | Expression::Sent => Some(expression.clone()),
             Expression::Member { object, property } => {
                 let resolved_property = recurse_fn(property, environment)?;
+                if let Some(value) = materialize_literal_string_member(object, &resolved_property) {
+                    return Some(value);
+                }
                 if let Some(value) = materialize_member_from_object_binding(
                     resolve_object_binding(object, environment),
                     &resolved_property,

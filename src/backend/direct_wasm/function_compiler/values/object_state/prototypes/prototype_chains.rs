@@ -8,12 +8,27 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    pub(in crate::backend::direct_wasm) fn generator_intrinsic_default_prototype_expression(
+        kind: FunctionKind,
+    ) -> Option<Expression> {
+        let constructor_name = match kind {
+            FunctionKind::Generator => "GeneratorFunction",
+            FunctionKind::AsyncGenerator => "AsyncGeneratorFunction",
+            _ => return None,
+        };
+        Some(Expression::Member {
+            object: Box::new(Self::prototype_member_expression(constructor_name)),
+            property: Box::new(Expression::String("prototype".to_string())),
+        })
+    }
+
     pub(in crate::backend::direct_wasm) fn builtin_constructor_object_prototype_expression(
         name: &str,
     ) -> Option<Expression> {
         if matches!(
             name,
             "AggregateError"
+                | "SuppressedError"
                 | "EvalError"
                 | "RangeError"
                 | "ReferenceError"
@@ -40,6 +55,7 @@ impl<'a> FunctionCompiler<'a> {
         if matches!(
             name,
             "AggregateError"
+                | "SuppressedError"
                 | "EvalError"
                 | "RangeError"
                 | "ReferenceError"
@@ -48,6 +64,12 @@ impl<'a> FunctionCompiler<'a> {
                 | "URIError"
         ) {
             return Some(Self::prototype_member_expression("Error"));
+        }
+        if matches!(
+            name,
+            "AsyncFunction" | "GeneratorFunction" | "AsyncGeneratorFunction"
+        ) {
+            return Some(Self::prototype_member_expression("Function"));
         }
         if name == "Error"
             || builtin_identifier_kind(name) == Some(StaticValueKind::Function)

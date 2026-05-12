@@ -22,12 +22,17 @@ impl<'a> FunctionCompiler<'a> {
             }
             None => return Some(false),
         };
-        Some(
-            !matches!(argument, Expression::Identifier(name) if self.state.speculation.static_semantics.has_local_typed_array_view_binding(name))
-                && self
-                    .resolve_array_binding_from_expression(argument)
-                    .is_some(),
-        )
+        let typed_array = matches!(argument, Expression::Identifier(name) if self.state.speculation.static_semantics.has_local_typed_array_view_binding(name));
+        let static_array = self
+            .resolve_array_binding_from_expression(argument)
+            .is_some();
+        let runtime_array = self.runtime_array_binding_name_for_expression(argument);
+        if std::env::var_os("AYY_TRACE_ARRAY_IS_ARRAY").is_some() {
+            eprintln!(
+                "array_is_array:static expression={argument:?} typed_array={typed_array} static_array={static_array} runtime_array={runtime_array:?}"
+            );
+        }
+        Some(!typed_array && (static_array || runtime_array.is_some()))
     }
 
     pub(in crate::backend::direct_wasm) fn resolve_static_is_nan_call_result(

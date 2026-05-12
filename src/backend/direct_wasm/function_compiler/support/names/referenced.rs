@@ -10,6 +10,100 @@ pub(in crate::backend::direct_wasm) fn collect_referenced_binding_names_from_sta
     names
 }
 
+pub(in crate::backend::direct_wasm) fn statements_reference_this(statements: &[Statement]) -> bool {
+    statements.iter().any(statement_references_this)
+}
+
+pub(in crate::backend::direct_wasm) fn statement_references_this(statement: &Statement) -> bool {
+    match statement {
+        Statement::Declaration { body }
+        | Statement::Block { body }
+        | Statement::Labeled { body, .. } => body.iter().any(statement_references_this),
+        Statement::Var { value, .. }
+        | Statement::Let { value, .. }
+        | Statement::Expression(value)
+        | Statement::Throw(value)
+        | Statement::Return(value)
+        | Statement::Yield { value }
+        | Statement::YieldDelegate { value } => expression_references_this(value),
+        Statement::Assign { value, .. } => expression_references_this(value),
+        Statement::AssignMember {
+            object,
+            property,
+            value,
+        } => {
+            expression_references_this(object)
+                || expression_references_this(property)
+                || expression_references_this(value)
+        }
+        Statement::Print { values } => values.iter().any(expression_references_this),
+        Statement::With { object, body } => {
+            expression_references_this(object) || body.iter().any(statement_references_this)
+        }
+        Statement::If {
+            condition,
+            then_branch,
+            else_branch,
+        } => {
+            expression_references_this(condition)
+                || then_branch.iter().any(statement_references_this)
+                || else_branch.iter().any(statement_references_this)
+        }
+        Statement::Try {
+            body,
+            catch_setup,
+            catch_body,
+            ..
+        } => {
+            body.iter().any(statement_references_this)
+                || catch_setup.iter().any(statement_references_this)
+                || catch_body.iter().any(statement_references_this)
+        }
+        Statement::Switch {
+            discriminant,
+            cases,
+            ..
+        } => {
+            expression_references_this(discriminant)
+                || cases.iter().any(|case| {
+                    case.test.as_ref().is_some_and(expression_references_this)
+                        || case.body.iter().any(statement_references_this)
+                })
+        }
+        Statement::For {
+            init,
+            condition,
+            update,
+            break_hook,
+            body,
+            ..
+        } => {
+            init.iter().any(statement_references_this)
+                || condition.as_ref().is_some_and(expression_references_this)
+                || update.as_ref().is_some_and(expression_references_this)
+                || break_hook.as_ref().is_some_and(expression_references_this)
+                || body.iter().any(statement_references_this)
+        }
+        Statement::While {
+            condition,
+            break_hook,
+            body,
+            ..
+        }
+        | Statement::DoWhile {
+            condition,
+            break_hook,
+            body,
+            ..
+        } => {
+            expression_references_this(condition)
+                || break_hook.as_ref().is_some_and(expression_references_this)
+                || body.iter().any(statement_references_this)
+        }
+        Statement::Break { .. } | Statement::Continue { .. } => false,
+    }
+}
+
 pub(in crate::backend::direct_wasm) fn collect_referenced_binding_names_from_statement(
     statement: &Statement,
     names: &mut HashSet<String>,
@@ -144,6 +238,83 @@ pub(in crate::backend::direct_wasm) fn collect_referenced_binding_names_from_sta
             }
         }
         Statement::Break { .. } | Statement::Continue { .. } => {}
+    }
+}
+
+pub(in crate::backend::direct_wasm) fn expression_references_this(expression: &Expression) -> bool {
+    match expression {
+        Expression::This => true,
+        Expression::Identifier(_)
+        | Expression::Update { .. }
+        | Expression::Number(_)
+        | Expression::BigInt(_)
+        | Expression::String(_)
+        | Expression::Bool(_)
+        | Expression::Null
+        | Expression::Undefined
+        | Expression::NewTarget
+        | Expression::Sent => false,
+        Expression::Member { object, property } => {
+            expression_references_this(object) || expression_references_this(property)
+        }
+        Expression::SuperMember { .. } => true,
+        Expression::Assign { value, .. } => expression_references_this(value),
+        Expression::AssignMember {
+            object,
+            property,
+            value,
+        } => {
+            expression_references_this(object)
+                || expression_references_this(property)
+                || expression_references_this(value)
+        }
+        Expression::AssignSuperMember { .. } => true,
+        Expression::Await(value)
+        | Expression::EnumerateKeys(value)
+        | Expression::GetIterator(value)
+        | Expression::IteratorClose(value)
+        | Expression::Unary {
+            expression: value, ..
+        } => expression_references_this(value),
+        Expression::Binary { left, right, .. } => {
+            expression_references_this(left) || expression_references_this(right)
+        }
+        Expression::Conditional {
+            condition,
+            then_expression,
+            else_expression,
+        } => {
+            expression_references_this(condition)
+                || expression_references_this(then_expression)
+                || expression_references_this(else_expression)
+        }
+        Expression::Sequence(expressions) => expressions.iter().any(expression_references_this),
+        Expression::SuperCall { .. } => true,
+        Expression::Call { callee, arguments } | Expression::New { callee, arguments } => {
+            expression_references_this(callee)
+                || arguments.iter().any(|argument| match argument {
+                    CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                        expression_references_this(expression)
+                    }
+                })
+        }
+        Expression::Array(elements) => elements.iter().any(|element| match element {
+            ArrayElement::Expression(expression) | ArrayElement::Spread(expression) => {
+                expression_references_this(expression)
+            }
+        }),
+        Expression::Object(entries) => entries.iter().any(|entry| match entry {
+            ObjectEntry::Data { key, value } => {
+                expression_references_this(key) || expression_references_this(value)
+            }
+            ObjectEntry::Getter { key, getter } => {
+                expression_references_this(key) || expression_references_this(getter)
+            }
+            ObjectEntry::Setter { key, setter } => {
+                expression_references_this(key) || expression_references_this(setter)
+            }
+            ObjectEntry::Spread(expression) => expression_references_this(expression),
+        }),
     }
 }
 

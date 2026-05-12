@@ -1,0 +1,495 @@
+Program {
+    strict: false,
+    functions: [
+        FunctionDeclaration {
+            name: "__ayy_class_ctor___ayy_ctor_1__name_C",
+            top_level_binding: None,
+            params: [],
+            body: [
+                Labeled {
+                    labels: [
+                        "__ayy_instance_field_initializers",
+                    ],
+                    body: [
+                        Expression(
+                            Call {
+                                callee: Member {
+                                    object: Identifier(
+                                        "Object",
+                                    ),
+                                    property: String(
+                                        "defineProperty",
+                                    ),
+                                },
+                                arguments: [
+                                    Expression(
+                                        This,
+                                    ),
+                                    Expression(
+                                        String(
+                                            "func",
+                                        ),
+                                    ),
+                                    Expression(
+                                        Object(
+                                            [
+                                                Data {
+                                                    key: String(
+                                                        "value",
+                                                    ),
+                                                    value: Identifier(
+                                                        "__ayy_arrow_1__name_func",
+                                                    ),
+                                                },
+                                                Data {
+                                                    key: String(
+                                                        "writable",
+                                                    ),
+                                                    value: Bool(
+                                                        true,
+                                                    ),
+                                                },
+                                                Data {
+                                                    key: String(
+                                                        "enumerable",
+                                                    ),
+                                                    value: Bool(
+                                                        true,
+                                                    ),
+                                                },
+                                                Data {
+                                                    key: String(
+                                                        "configurable",
+                                                    ),
+                                                    value: Bool(
+                                                        true,
+                                                    ),
+                                                },
+                                            ],
+                                        ),
+                                    ),
+                                ],
+                            },
+                        ),
+                    ],
+                },
+                If {
+                    condition: Binary {
+                        op: Equal,
+                        left: NewTarget,
+                        right: Undefined,
+                    },
+                    then_branch: [
+                        Throw(
+                            New {
+                                callee: Identifier(
+                                    "TypeError",
+                                ),
+                                arguments: [],
+                            },
+                        ),
+                    ],
+                    else_branch: [],
+                },
+            ],
+            register_global: false,
+            kind: Ordinary,
+            self_binding: Some(
+                "C",
+            ),
+            mapped_arguments: false,
+            strict: true,
+            lexical_this: false,
+            derived_constructor: false,
+            direct_eval_in_class_field_initializer: true,
+            length: 0,
+            synthetic_capture_bindings: [],
+            private_brand_binding: None,
+        },
+        FunctionDeclaration {
+            name: "__ayy_arrow_1__name_func",
+            top_level_binding: None,
+            params: [],
+            body: [
+                Expression(
+                    AssignSuperMember {
+                        property: String(
+                            "prop",
+                        ),
+                        value: String(
+                            "test262",
+                        ),
+                    },
+                ),
+            ],
+            register_global: false,
+            kind: Ordinary,
+            self_binding: None,
+            mapped_arguments: false,
+            strict: false,
+            lexical_this: true,
+            derived_constructor: false,
+            direct_eval_in_class_field_initializer: true,
+            length: 0,
+            synthetic_capture_bindings: [],
+            private_brand_binding: None,
+        },
+        FunctionDeclaration {
+            name: "__ayy_arrow_2__name_staticFunc",
+            top_level_binding: None,
+            params: [],
+            body: [
+                Expression(
+                    AssignSuperMember {
+                        property: String(
+                            "staticProp",
+                        ),
+                        value: String(
+                            "static test262",
+                        ),
+                    },
+                ),
+            ],
+            register_global: false,
+            kind: Ordinary,
+            self_binding: None,
+            mapped_arguments: false,
+            strict: false,
+            lexical_this: true,
+            derived_constructor: false,
+            direct_eval_in_class_field_initializer: true,
+            length: 0,
+            synthetic_capture_bindings: [],
+            private_brand_binding: None,
+        },
+    ],
+    statements: [
+        Declaration {
+            body: [
+                Let {
+                    name: "C",
+                    mutable: true,
+                    value: Identifier(
+                        "__ayy_class_ctor___ayy_ctor_1__name_C",
+                    ),
+                },
+                Expression(
+                    Call {
+                        callee: Member {
+                            object: Identifier(
+                                "Object",
+                            ),
+                            property: String(
+                                "defineProperty",
+                            ),
+                        },
+                        arguments: [
+                            Expression(
+                                Identifier(
+                                    "C",
+                                ),
+                            ),
+                            Expression(
+                                String(
+                                    "name",
+                                ),
+                            ),
+                            Expression(
+                                Object(
+                                    [
+                                        Data {
+                                            key: String(
+                                                "value",
+                                            ),
+                                            value: String(
+                                                "C",
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "writable",
+                                            ),
+                                            value: Bool(
+                                                false,
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "enumerable",
+                                            ),
+                                            value: Bool(
+                                                false,
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "configurable",
+                                            ),
+                                            value: Bool(
+                                                true,
+                                            ),
+                                        },
+                                    ],
+                                ),
+                            ),
+                        ],
+                    },
+                ),
+                AssignMember {
+                    object: Identifier(
+                        "C",
+                    ),
+                    property: String(
+                        "prototype",
+                    ),
+                    value: Call {
+                        callee: Member {
+                            object: Identifier(
+                                "Object",
+                            ),
+                            property: String(
+                                "create",
+                            ),
+                        },
+                        arguments: [
+                            Expression(
+                                Member {
+                                    object: Identifier(
+                                        "Object",
+                                    ),
+                                    property: String(
+                                        "prototype",
+                                    ),
+                                },
+                            ),
+                        ],
+                    },
+                },
+                Expression(
+                    Call {
+                        callee: Member {
+                            object: Identifier(
+                                "Object",
+                            ),
+                            property: String(
+                                "defineProperty",
+                            ),
+                        },
+                        arguments: [
+                            Expression(
+                                Member {
+                                    object: Identifier(
+                                        "C",
+                                    ),
+                                    property: String(
+                                        "prototype",
+                                    ),
+                                },
+                            ),
+                            Expression(
+                                String(
+                                    "constructor",
+                                ),
+                            ),
+                            Expression(
+                                Object(
+                                    [
+                                        Data {
+                                            key: String(
+                                                "value",
+                                            ),
+                                            value: Identifier(
+                                                "C",
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "writable",
+                                            ),
+                                            value: Bool(
+                                                true,
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "enumerable",
+                                            ),
+                                            value: Bool(
+                                                false,
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "configurable",
+                                            ),
+                                            value: Bool(
+                                                true,
+                                            ),
+                                        },
+                                    ],
+                                ),
+                            ),
+                        ],
+                    },
+                ),
+                Expression(
+                    Call {
+                        callee: Member {
+                            object: Identifier(
+                                "Object",
+                            ),
+                            property: String(
+                                "defineProperty",
+                            ),
+                        },
+                        arguments: [
+                            Expression(
+                                Identifier(
+                                    "C",
+                                ),
+                            ),
+                            Expression(
+                                String(
+                                    "staticFunc",
+                                ),
+                            ),
+                            Expression(
+                                Object(
+                                    [
+                                        Data {
+                                            key: String(
+                                                "value",
+                                            ),
+                                            value: Identifier(
+                                                "__ayy_arrow_2__name_staticFunc",
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "writable",
+                                            ),
+                                            value: Bool(
+                                                true,
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "enumerable",
+                                            ),
+                                            value: Bool(
+                                                true,
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "configurable",
+                                            ),
+                                            value: Bool(
+                                                true,
+                                            ),
+                                        },
+                                    ],
+                                ),
+                            ),
+                        ],
+                    },
+                ),
+            ],
+        },
+        Let {
+            name: "c",
+            mutable: true,
+            value: New {
+                callee: Identifier(
+                    "C",
+                ),
+                arguments: [],
+            },
+        },
+        Expression(
+            Call {
+                callee: Member {
+                    object: Identifier(
+                        "c",
+                    ),
+                    property: String(
+                        "func",
+                    ),
+                },
+                arguments: [],
+            },
+        ),
+        Expression(
+            Call {
+                callee: Member {
+                    object: Identifier(
+                        "assert",
+                    ),
+                    property: String(
+                        "sameValue",
+                    ),
+                },
+                arguments: [
+                    Expression(
+                        Member {
+                            object: Identifier(
+                                "c",
+                            ),
+                            property: String(
+                                "prop",
+                            ),
+                        },
+                    ),
+                    Expression(
+                        String(
+                            "test262",
+                        ),
+                    ),
+                ],
+            },
+        ),
+        Expression(
+            Call {
+                callee: Member {
+                    object: Identifier(
+                        "C",
+                    ),
+                    property: String(
+                        "staticFunc",
+                    ),
+                },
+                arguments: [],
+            },
+        ),
+        Expression(
+            Call {
+                callee: Member {
+                    object: Identifier(
+                        "assert",
+                    ),
+                    property: String(
+                        "sameValue",
+                    ),
+                },
+                arguments: [
+                    Expression(
+                        Member {
+                            object: Identifier(
+                                "C",
+                            ),
+                            property: String(
+                                "staticProp",
+                            ),
+                        },
+                    ),
+                    Expression(
+                        String(
+                            "static test262",
+                        ),
+                    ),
+                ],
+            },
+        ),
+    ],
+}
+ok

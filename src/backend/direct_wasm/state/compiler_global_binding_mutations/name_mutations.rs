@@ -10,8 +10,14 @@ impl CompilerState {
             .ensure_global_binding_index(name, next_global_index);
     }
 
-    pub(in crate::backend::direct_wasm) fn mark_global_lexical_binding(&mut self, name: &str) {
-        self.global_semantics.mark_global_lexical_binding(name);
+    pub(in crate::backend::direct_wasm) fn mark_global_lexical_binding(
+        &mut self,
+        name: &str,
+        mutable: bool,
+        next_global_index: &mut u32,
+    ) {
+        self.global_semantics
+            .mark_global_lexical_binding(name, mutable, next_global_index);
     }
 
     pub(in crate::backend::direct_wasm) fn clear_global_binding_state(&mut self, name: &str) {

@@ -1,0 +1,5 @@
+first private_shadow_copy C->this __ayy$private$C$f -1073639999
+private_shadow_copy this->C __ayy$private$C$f -1073639999
+private_shadow_prefix_copy this->C __ayy$private$C$f -1073639999
+42
+caught 0

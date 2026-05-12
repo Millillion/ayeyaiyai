@@ -1,5 +1,17 @@
 use super::*;
 
+fn collect_member_assignment_target_name(expression: &Expression, names: &mut HashSet<String>) {
+    match expression {
+        Expression::Identifier(name) => {
+            names.insert(name.clone());
+        }
+        Expression::This => {
+            names.insert("this".to_string());
+        }
+        _ => {}
+    }
+}
+
 pub(super) fn collect_updated_names_from_expression(
     expression: &Expression,
     names: &mut HashSet<String>,
@@ -15,8 +27,11 @@ pub(super) fn collect_updated_names_from_expression(
         Expression::SuperMember { property } => {
             collect_updated_names_from_expression(property, names);
         }
-        Expression::Assign { value, .. }
-        | Expression::Await(value)
+        Expression::Assign { name, value } => {
+            names.insert(name.clone());
+            collect_updated_names_from_expression(value, names);
+        }
+        Expression::Await(value)
         | Expression::EnumerateKeys(value)
         | Expression::GetIterator(value)
         | Expression::IteratorClose(value)
@@ -28,11 +43,13 @@ pub(super) fn collect_updated_names_from_expression(
             property,
             value,
         } => {
+            collect_member_assignment_target_name(object, names);
             collect_updated_names_from_expression(object, names);
             collect_updated_names_from_expression(property, names);
             collect_updated_names_from_expression(value, names);
         }
         Expression::AssignSuperMember { property, value } => {
+            names.insert("this".to_string());
             collect_updated_names_from_expression(property, names);
             collect_updated_names_from_expression(value, names);
         }

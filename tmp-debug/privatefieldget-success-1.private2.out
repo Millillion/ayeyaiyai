@@ -1,0 +1,24 @@
+test262 directory: /home/lastmjs/development/ayeyaiyai/.cache/test262
+log file: /home/lastmjs/development/ayeyaiyai/.artifacts/test262/run-20260423-212514.log
+
+RUNTIME_FAIL /home/lastmjs/development/ayeyaiyai/.cache/test262/test/language/statements/class/elements/privatefieldget-success-1.js
+stdout:
+missing identifier self in None
+
+stderr:
+ReferenceError
+Error: failed to run main module `/tmp/.tmpbYhcOH/test.wasm`
+
+Caused by:
+    0: failed to invoke command default
+    1: error while executing at wasm backtrace:
+           0: 0x28e3 - <unknown>!<wasm function 5>
+    2: wasm trap: wasm `unreachable` instruction executed
+
+SUMMARY discovered=1 attempted=1 passed=0 compile_failed=0 runtime_failed=1 skipped_metadata=0 skipped_content=0 attempt_rate_percent=100.00 compliance_percent=0.00
+
+Compliance: 0.00% (0 / 1 discovered tests passed)
+Attempt rate: 100.00% (1 / 1 discovered tests executed)
+Failures: compile=0 runtime=1
+Skipped: metadata=0 content=0
+Latest log: /home/lastmjs/development/ayeyaiyai/.artifacts/test262/latest.log

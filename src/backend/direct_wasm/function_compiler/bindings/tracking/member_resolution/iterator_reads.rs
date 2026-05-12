@@ -76,16 +76,12 @@ impl<'a> FunctionCompiler<'a> {
             _ => return None,
         };
         let next_property = Expression::String("next".to_string());
-        let has_next_binding = self
-            .resolve_member_function_binding(iterated, &next_property)
-            .is_some();
-        let has_iterator_source_kind = self.resolve_iterator_source_kind(iterated).is_some();
         let has_next_property = self
             .resolve_object_binding_from_expression(iterated)
             .is_some_and(|object_binding| {
                 object_binding_has_property(&object_binding, &next_property)
             });
-        if has_next_binding || has_iterator_source_kind || has_next_property {
+        if has_next_property {
             return Some(iterated);
         }
         None

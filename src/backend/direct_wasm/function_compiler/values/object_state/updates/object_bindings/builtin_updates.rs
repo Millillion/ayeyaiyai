@@ -2,6 +2,8 @@ use super::super::super::*;
 
 #[path = "builtin_updates/define_property.rs"]
 mod define_property;
+#[path = "builtin_updates/prevent_extensions.rs"]
+mod prevent_extensions;
 #[path = "builtin_updates/set_prototype.rs"]
 mod set_prototype;
 
@@ -16,11 +18,21 @@ impl<'a> FunctionCompiler<'a> {
         let Expression::Member { object, property } = callee.as_ref() else {
             return;
         };
-        if !matches!(object.as_ref(), Expression::Identifier(name) if name == "Object") {
+        if let Expression::String(property_name) = property.as_ref()
+            && self.apply_static_map_mutation_metadata(object, property_name, arguments)
+        {
+            return;
+        }
+        if !matches!(object.as_ref(), Expression::Identifier(name) if name == "Object" || name == "Reflect")
+        {
             return;
         }
         if matches!(property.as_ref(), Expression::String(name) if name == "setPrototypeOf") {
             self.apply_object_set_prototype_of_update(arguments);
+            return;
+        }
+        if matches!(property.as_ref(), Expression::String(name) if name == "preventExtensions") {
+            self.apply_object_prevent_extensions_update(object, arguments);
             return;
         }
         if matches!(property.as_ref(), Expression::String(name) if name == "defineProperty") {

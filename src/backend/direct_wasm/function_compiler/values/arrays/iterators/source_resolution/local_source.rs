@@ -8,6 +8,24 @@ impl<'a> FunctionCompiler<'a> {
         let current_function_is_async_generator = self
             .async_generator_domain()
             .current_function_is_async_generator();
+        let iterated_is_internal_iterator_value = matches!(
+            value,
+            Expression::GetIterator(iterated)
+                if matches!(
+                    iterated.as_ref(),
+                    Expression::Identifier(name)
+                        if name.starts_with("__ayy_array_iter_value_")
+                            || name.starts_with("__ayy_for_of_iter_value_")
+                )
+        );
+        if !iterated_is_internal_iterator_value
+            && let Expression::GetIterator(iterated) = value
+            && self
+                .resolve_static_get_iterator_throw_value(iterated, &[])
+                .is_some()
+        {
+            return None;
+        }
         let source_expression = match value {
             Expression::GetIterator(iterated) => iterated.as_ref(),
             Expression::Call { .. }
@@ -26,6 +44,11 @@ impl<'a> FunctionCompiler<'a> {
             _ => return None,
         };
         if let Some(source) = self.resolve_iterator_source_kind(source_expression) {
+            return Some(source);
+        }
+        if let Some(source) =
+            self.resolve_for_await_step_value_iterator_source_kind(source_expression)
+        {
             return Some(source);
         }
         if let Expression::GetIterator(iterated) = value

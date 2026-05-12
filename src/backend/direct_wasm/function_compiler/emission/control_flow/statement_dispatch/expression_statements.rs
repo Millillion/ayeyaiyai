@@ -2,6 +2,10 @@ use super::*;
 
 impl<'a> FunctionCompiler<'a> {
     pub(super) fn emit_expression_statement(&mut self, statement: &Statement) -> DirectResult<()> {
+        let trace_expression_statement =
+            std::env::var_os("AYY_TRACE_EXPRESSION_STATEMENT").is_some();
+        let class_field_initializer_eval_rules =
+            self.statement_uses_class_field_initializer_eval_rules(statement);
         match statement {
             Statement::Expression(expression) => {
                 if self.emit_assert_throws_statement(expression)? {
@@ -36,7 +40,15 @@ impl<'a> FunctionCompiler<'a> {
                     && arguments.is_empty()
                     && let Expression::Member { object, property } = callee.as_ref()
                     && matches!(property.as_ref(), Expression::String(name) if name == "next")
-                    && matches!(object.as_ref(), Expression::Identifier(name) if self.state.speculation.static_semantics.has_local_array_iterator_binding(name))
+                    && matches!(object.as_ref(), Expression::Identifier(name) if self
+                    .state
+                    .speculation
+                    .static_semantics
+                    .local_array_iterator_binding(name)
+                    .is_some_and(|binding| !matches!(
+                        &binding.source,
+                        IteratorSourceKind::SimpleGenerator { .. }
+                    )))
                 {
                     let hidden_name = self.allocate_named_hidden_local(
                         "direct_iterator_step_stmt",
@@ -59,9 +71,31 @@ impl<'a> FunctionCompiler<'a> {
                     self.state.emission.output.instructions.push(0x1a);
                     return Ok(());
                 }
-                self.emit_numeric_expression(expression)?;
-                self.update_member_function_binding_from_expression(expression);
-                self.update_object_binding_from_expression(expression);
+                if trace_expression_statement {
+                    eprintln!("expression_statement:emit_numeric start expr={expression:?}");
+                }
+                self.with_class_field_initializer_eval_scope(
+                    class_field_initializer_eval_rules,
+                    |compiler| {
+                        compiler.emit_numeric_expression(expression)?;
+                        if trace_expression_statement {
+                            eprintln!(
+                                "expression_statement:update_member_bindings start expr={expression:?}"
+                            );
+                        }
+                        compiler.update_member_function_binding_from_expression(expression);
+                        if trace_expression_statement {
+                            eprintln!(
+                                "expression_statement:update_object_bindings start expr={expression:?}"
+                            );
+                        }
+                        compiler.update_object_binding_from_expression(expression);
+                        Ok(())
+                    },
+                )?;
+                if trace_expression_statement {
+                    eprintln!("expression_statement:drop expr={expression:?}");
+                }
                 self.state.emission.output.instructions.push(0x1a);
                 Ok(())
             }

@@ -1,28 +1,91 @@
 use super::*;
 
+const NULL_SUPER_CONSTRUCTOR_BINDING: &str = "__ayy_null_super_constructor";
+
 impl<'a> FunctionCompiler<'a> {
+    pub(in crate::backend::direct_wasm) fn emit_declared_global_binding_read(
+        &mut self,
+        name: &str,
+        global_index: u32,
+    ) -> DirectResult<()> {
+        if let Some(binding) = self.backend.lexical_global_binding(name) {
+            self.push_global_get(binding.initialized_index);
+            self.state.emission.output.instructions.push(0x04);
+            self.state.emission.output.instructions.push(I32_TYPE);
+            self.push_control_frame();
+            self.push_global_get(global_index);
+            self.state.emission.output.instructions.push(0x05);
+            self.emit_named_error_throw("ReferenceError")?;
+            self.state.emission.output.instructions.push(0x0b);
+            self.pop_control_frame();
+            return Ok(());
+        }
+
+        self.push_global_get(global_index);
+        Ok(())
+    }
+
     pub(in crate::backend::direct_wasm) fn emit_plain_identifier_read_fallback(
         &mut self,
         name: &str,
     ) -> DirectResult<()> {
+        let trace_identifier_reads = std::env::var_os("AYY_TRACE_IDENTIFIER_READS").is_some();
+        if trace_identifier_reads {
+            eprintln!(
+                "identifier_read:fallback:start current_fn={:?} name={name}",
+                self.current_function_name()
+            );
+        }
         if self.emit_eval_lexical_binding_read(name)? {
+            if trace_identifier_reads {
+                eprintln!("identifier_read:fallback:path eval_lexical name={name}");
+            }
             return Ok(());
         }
         if self.emit_parameter_default_binding_read(name)? {
+            if trace_identifier_reads {
+                eprintln!("identifier_read:fallback:path parameter_default name={name}");
+            }
             return Ok(());
         }
         if let Some(parameter_scope_arguments_local) =
             self.parameter_scope_arguments_local_for(name)
         {
+            if trace_identifier_reads {
+                eprintln!("identifier_read:fallback:path parameter_scope_arguments name={name}");
+            }
             self.push_local_get(parameter_scope_arguments_local);
         } else if parse_test262_realm_identifier(name).is_some()
             || parse_test262_realm_global_identifier(name).is_some()
         {
-            self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
-        } else if self.is_current_arguments_binding_name(name) && self.has_arguments_object() {
+            if trace_identifier_reads {
+                eprintln!("identifier_read:fallback:path test262_realm name={name}");
+            }
             self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
         } else if let Some((_, local_index)) = self.resolve_current_local_binding(name) {
-            self.push_local_get(local_index);
+            if trace_identifier_reads {
+                eprintln!(
+                    "identifier_read:fallback:path local name={name} local_index={local_index}",
+                );
+            }
+            if let Some(initialized_local) = self.local_lexical_initialized_local(name) {
+                self.push_local_get(initialized_local);
+                self.state.emission.output.instructions.push(0x04);
+                self.state.emission.output.instructions.push(I32_TYPE);
+                self.push_control_frame();
+                self.push_local_get(local_index);
+                self.state.emission.output.instructions.push(0x05);
+                self.emit_named_error_throw("ReferenceError")?;
+                self.state.emission.output.instructions.push(0x0b);
+                self.pop_control_frame();
+            } else {
+                self.push_local_get(local_index);
+            }
+        } else if self.is_current_arguments_binding_name(name) && self.has_arguments_object() {
+            if trace_identifier_reads {
+                eprintln!("identifier_read:fallback:path current_arguments name={name}");
+            }
+            self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
         } else if let Some(function_binding) = self
             .state
             .speculation
@@ -30,6 +93,9 @@ impl<'a> FunctionCompiler<'a> {
             .local_function_binding(name)
             .cloned()
         {
+            if trace_identifier_reads {
+                eprintln!("identifier_read:fallback:path local_function name={name}");
+            }
             match function_binding {
                 LocalFunctionBinding::User(function_name) => {
                     if let Some(runtime_value) = self.user_function_runtime_value(&function_name) {
@@ -46,25 +112,86 @@ impl<'a> FunctionCompiler<'a> {
                     );
                 }
             }
-        } else if let Some(global_index) = self.resolve_global_binding_index(name) {
-            self.push_global_get(global_index);
         } else if self.emit_user_function_capture_binding_read(name)? {
+            if trace_identifier_reads {
+                eprintln!("identifier_read:fallback:path user_capture name={name}");
+            }
+        } else if let Some(global_index) = self.resolve_global_binding_index(name) {
+            if trace_identifier_reads {
+                eprintln!(
+                    "identifier_read:fallback:path global name={name} global_index={global_index}",
+                );
+            }
+            self.emit_declared_global_binding_read(name, global_index)?;
         } else if self.emit_eval_local_function_binding_read(name)? {
+            if trace_identifier_reads {
+                eprintln!("identifier_read:fallback:path eval_local_function name={name}");
+            }
         } else if name == "NaN" && self.is_unshadowed_builtin_identifier(name) {
+            if trace_identifier_reads {
+                eprintln!("identifier_read:fallback:path nan name={name}");
+            }
             self.push_i32_const(JS_NAN_TAG);
+        } else if name == "Infinity" && self.is_unshadowed_builtin_identifier(name) {
+            if trace_identifier_reads {
+                eprintln!("identifier_read:fallback:path infinity name={name}");
+            }
+            self.emit_numeric_expression(&Expression::Number(f64::INFINITY))?;
         } else if name == "undefined" {
+            if trace_identifier_reads {
+                eprintln!("identifier_read:fallback:path undefined name={name}");
+            }
             self.push_i32_const(JS_UNDEFINED_TAG);
         } else if let Some(runtime_value) = builtin_function_runtime_value(name) {
+            if trace_identifier_reads {
+                eprintln!("identifier_read:fallback:path builtin_function name={name}");
+            }
             self.push_i32_const(runtime_value);
         } else if is_internal_user_function_identifier(name)
             && let Some(runtime_value) = self.user_function_runtime_value(name)
         {
+            if trace_identifier_reads {
+                eprintln!("identifier_read:fallback:path internal_user_function name={name}");
+            }
             self.emit_prepare_user_function_capture_globals(name)?;
             self.push_i32_const(runtime_value);
         } else if let Some(kind) = self.lookup_identifier_kind(name) {
+            if trace_identifier_reads {
+                let _ = kind;
+                eprintln!("identifier_read:fallback:path inferred_kind name={name}");
+            }
             let tag = kind.as_typeof_tag().unwrap_or(JS_UNDEFINED_TAG);
             self.push_i32_const(tag);
+        } else if let Some(private_brand_offset) = name.find("__ayy_class_brand_") {
+            if trace_identifier_reads {
+                eprintln!("identifier_read:fallback:path synthetic_private_brand name={name}");
+            }
+            self.push_i32_const(Self::synthetic_private_brand_runtime_value(
+                &name[private_brand_offset..],
+            ));
+        } else if name.starts_with("__ayy_class_super_")
+            && let Some(resolved) = self
+                .resolve_static_class_init_local_alias_expression(name)
+                .filter(|resolved| {
+                    !static_expression_matches(resolved, &Expression::Identifier(name.to_string()))
+                })
+        {
+            if trace_identifier_reads {
+                eprintln!(
+                    "identifier_read:fallback:path class_init_super_alias name={name} resolved={resolved:?}"
+                );
+            }
+            self.emit_numeric_expression(&resolved)?;
+        } else if name == NULL_SUPER_CONSTRUCTOR_BINDING {
+            if trace_identifier_reads {
+                eprintln!("identifier_read:fallback:path null_super_constructor name={name}");
+            }
+            self.emit_named_error_throw("TypeError")?;
+            self.push_i32_const(JS_UNDEFINED_TAG);
         } else {
+            if trace_identifier_reads {
+                eprintln!("identifier_read:fallback:path missing name={name}");
+            }
             self.emit_print(&[Expression::String(format!(
                 "missing identifier {name} in {:?}",
                 self.state
@@ -74,6 +201,9 @@ impl<'a> FunctionCompiler<'a> {
             ))])?;
             self.emit_named_error_throw("ReferenceError")?;
         }
+        if trace_identifier_reads {
+            eprintln!("identifier_read:fallback:done name={name}");
+        }
         Ok(())
     }
 
@@ -81,6 +211,13 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         name: &str,
     ) -> DirectResult<()> {
+        let trace_identifier_reads = std::env::var_os("AYY_TRACE_IDENTIFIER_READS").is_some();
+        if trace_identifier_reads {
+            eprintln!(
+                "identifier_read:start current_fn={:?} name={name}",
+                self.current_function_name()
+            );
+        }
         if self.parameter_scope_arguments_local_for(name).is_some()
             || (self.is_current_arguments_binding_name(name) && self.has_arguments_object())
             || self.resolve_current_local_binding(name).is_some()
@@ -95,13 +232,22 @@ impl<'a> FunctionCompiler<'a> {
                 .is_some()
             || self.resolve_eval_local_function_hidden_name(name).is_some()
         {
+            if trace_identifier_reads {
+                eprintln!("identifier_read:path direct_fallback name={name}");
+            }
             return self.emit_plain_identifier_read_fallback(name);
         }
 
         let Some(binding) = self.backend.implicit_global_binding(name) else {
+            if trace_identifier_reads {
+                eprintln!("identifier_read:path no_implicit_global name={name}");
+            }
             return self.emit_plain_identifier_read_fallback(name);
         };
 
+        if trace_identifier_reads {
+            eprintln!("identifier_read:path implicit_global name={name}");
+        }
         self.push_global_get(binding.present_index);
         self.state.emission.output.instructions.push(0x04);
         self.state.emission.output.instructions.push(I32_TYPE);
@@ -111,6 +257,9 @@ impl<'a> FunctionCompiler<'a> {
         self.emit_plain_identifier_read_fallback(name)?;
         self.state.emission.output.instructions.push(0x0b);
         self.pop_control_frame();
+        if trace_identifier_reads {
+            eprintln!("identifier_read:done name={name}");
+        }
         Ok(())
     }
 }

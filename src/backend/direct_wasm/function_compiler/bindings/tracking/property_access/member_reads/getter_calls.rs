@@ -34,10 +34,72 @@ impl<'a> FunctionCompiler<'a> {
         object: &Expression,
         property: &Expression,
     ) -> DirectResult<bool> {
+        if !matches!(property, Expression::String(_) | Expression::Number(_))
+            && self.resolve_property_key_expression(property).is_none()
+        {
+            return Ok(false);
+        }
+        if std::env::var_os("AYY_TRACE_PRIVATE_MEMBER_LOOKUP").is_some()
+            && matches!(property, Expression::String(name) if name.starts_with("__ayy$private$"))
+        {
+            eprintln!(
+                "private_member_binding_read current_fn={:?} object={object:?} property={property:?}",
+                self.current_function_name(),
+            );
+        }
+        let private_receiver_requires_runtime_brand_check = self
+            .is_private_member_read_property(property)
+            && (matches!(object, Expression::This)
+                || self
+                    .resolve_bound_alias_expression(object)
+                    .is_some_and(|resolved| {
+                        !static_expression_matches(&resolved, object)
+                            && matches!(resolved, Expression::This)
+                    })
+                || self.expression_uses_runtime_dynamic_binding(object));
+        if private_receiver_requires_runtime_brand_check {
+            return Ok(false);
+        }
+        let can_resolve_private_binding_from_receiver = !self
+            .is_private_member_read_property(property)
+            || matches!(object, Expression::This)
+            || self
+                .resolve_bound_alias_expression(object)
+                .is_some_and(|resolved| matches!(resolved, Expression::This));
+        if !can_resolve_private_binding_from_receiver {
+            return Ok(false);
+        }
         if let Some(function_binding) = self.resolve_member_getter_binding(object, property) {
+            if std::env::var_os("AYY_TRACE_RESTRICTED_PROPERTIES").is_some()
+                && matches!(property, Expression::String(property_name) if property_name == "caller" || property_name == "arguments")
+            {
+                eprintln!(
+                    "restricted_property_read getter current_fn={:?} object={object:?} property={property:?} binding={function_binding:?}",
+                    self.current_function_name(),
+                );
+            }
             let capture_slots = self.resolve_member_function_capture_slots(object, property);
             match function_binding {
                 LocalFunctionBinding::User(function_name) => {
+                    let static_this_expression =
+                        self.resolve_static_snapshot_this_expression(object);
+                    let static_getter_binding = LocalFunctionBinding::User(function_name.clone());
+                    let can_use_static_getter_return = self
+                        .user_function(&function_name)
+                        .and_then(|user_function| user_function.inline_summary.as_ref())
+                        .is_some_and(|summary| summary.effects.is_empty());
+                    if can_use_static_getter_return {
+                        if let Some(return_value) = self
+                            .resolve_function_binding_static_return_expression_with_call_frame(
+                                &static_getter_binding,
+                                &[],
+                                &static_this_expression,
+                            )
+                        {
+                            self.emit_numeric_expression(&return_value)?;
+                            return Ok(true);
+                        }
+                    }
                     self.emit_member_getter_call_with_bound_this(
                         &function_name,
                         object,
@@ -54,6 +116,14 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(true);
         }
         if let Some(function_binding) = self.resolve_member_function_binding(object, property) {
+            if std::env::var_os("AYY_TRACE_RESTRICTED_PROPERTIES").is_some()
+                && matches!(property, Expression::String(property_name) if property_name == "caller" || property_name == "arguments")
+            {
+                eprintln!(
+                    "restricted_property_read method current_fn={:?} object={object:?} property={property:?} binding={function_binding:?}",
+                    self.current_function_name(),
+                );
+            }
             match function_binding {
                 LocalFunctionBinding::User(function_name) => {
                     if let Some(user_function) = self.user_function(&function_name) {
@@ -62,8 +132,11 @@ impl<'a> FunctionCompiler<'a> {
                         self.push_i32_const(JS_UNDEFINED_TAG);
                     }
                 }
-                LocalFunctionBinding::Builtin(_) => {
-                    self.push_i32_const(JS_TYPEOF_FUNCTION_TAG);
+                LocalFunctionBinding::Builtin(function_name) => {
+                    self.push_i32_const(
+                        builtin_function_runtime_value(&function_name)
+                            .unwrap_or(JS_TYPEOF_FUNCTION_TAG),
+                    );
                 }
             }
             return Ok(true);
@@ -77,7 +150,13 @@ impl<'a> FunctionCompiler<'a> {
                 return Ok(true);
             }
         }
-        if self.is_restricted_arrow_function_property(object, property) {
+        if self.is_restricted_function_property(object, property) {
+            if std::env::var_os("AYY_TRACE_RESTRICTED_PROPERTIES").is_some() {
+                eprintln!(
+                    "restricted_property_read throw current_fn={:?} object={object:?} property={property:?}",
+                    self.current_function_name(),
+                );
+            }
             self.emit_numeric_expression(object)?;
             self.state.emission.output.instructions.push(0x1a);
             return self.emit_named_error_throw("TypeError").map(|()| true);

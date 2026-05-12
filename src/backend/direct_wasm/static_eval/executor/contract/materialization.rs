@@ -9,11 +9,28 @@ use super::StaticExecutorContext;
 pub(in crate::backend::direct_wasm) trait StaticExpressionMaterialization:
     StaticExecutorContext
 {
+    fn materialize_member_expression(
+        &self,
+        _expression: &Expression,
+        _object: &Expression,
+        _property: &Expression,
+        _environment: &mut Self::Environment,
+    ) -> Option<Expression> {
+        None
+    }
+
     fn materialize_expression(
         &self,
         expression: &Expression,
         environment: &mut Self::Environment,
     ) -> Option<Expression> {
+        if let Expression::Member { object, property } = expression
+            && let Some(value) =
+                self.materialize_member_expression(expression, object, property, environment)
+        {
+            return Some(value);
+        }
+
         materialize_stateful_expression_in_environment(
             self,
             expression,

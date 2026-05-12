@@ -7,11 +7,22 @@ impl Lowerer {
         allow_return: bool,
     ) -> Result<Vec<Statement>> {
         let mut lowered = Vec::new();
+        let mut using_finalizer = Vec::new();
 
         for statement in statements {
-            lowered.extend(self.lower_generator_statement(statement, allow_return)?);
+            if let Stmt::Decl(Decl::Using(using_declaration)) = statement {
+                let (mut prelude, mut using_bindings, mut finalizer) =
+                    self.lower_using_declaration(using_declaration, false)?;
+                lowered.append(&mut prelude);
+                lowered.append(&mut using_bindings);
+                using_finalizer.append(&mut finalizer);
+            } else {
+                lowered.extend(self.lower_generator_statement(statement, allow_return)?);
+            }
         }
 
+        using_finalizer.reverse();
+        lowered.extend(using_finalizer);
         Ok(lowered)
     }
 
@@ -39,9 +50,12 @@ impl Lowerer {
                 self.lower_generator_class_declaration(class_declaration)
             }
             Stmt::Block(BlockStmt { stmts, .. })
-                if stmts
-                    .iter()
-                    .all(|statement| matches!(statement, Stmt::Expr(_) | Stmt::Empty(_))) =>
+                if stmts.iter().all(|statement| {
+                    matches!(
+                        statement,
+                        Stmt::Expr(_) | Stmt::Debugger(_) | Stmt::Empty(_)
+                    )
+                }) =>
             {
                 self.lower_generator_statements(stmts, allow_return)
             }
@@ -102,16 +116,23 @@ impl Lowerer {
             Stmt::With(with_statement) => {
                 self.lower_generator_with_statement(with_statement, allow_return)
             }
+            Stmt::Try(try_statement) => {
+                self.lower_generator_try_statement(try_statement, allow_return)
+            }
             Stmt::Return(return_statement) => {
                 ensure!(allow_return, "`return` is only supported inside functions");
-                Ok(vec![Statement::Return(
-                    match return_statement.arg.as_deref() {
-                        Some(expression) => self.lower_expression(expression)?,
-                        None => Expression::Undefined,
-                    },
-                )])
+                let Some(expression) = return_statement.arg.as_deref() else {
+                    return Ok(vec![Statement::Return(Expression::Undefined)]);
+                };
+                if let Some((mut lowered, expression)) =
+                    self.lower_generator_assignment_value(expression)?
+                {
+                    lowered.push(Statement::Return(expression));
+                    return Ok(lowered);
+                }
+                Ok(vec![Statement::Return(self.lower_expression(expression)?)])
             }
-            Stmt::Empty(_) => Ok(Vec::new()),
+            Stmt::Debugger(_) | Stmt::Empty(_) => Ok(Vec::new()),
             other => self.lower_statement(other, allow_return, false),
         }
     }
@@ -123,10 +144,13 @@ impl Lowerer {
         let mut lowered = Vec::new();
 
         for declarator in &variable_declaration.decls {
+            let name_hint = pattern_name_hint(&declarator.name);
             let generator_value = declarator
                 .init
                 .as_deref()
-                .map(|initializer| self.lower_generator_assignment_value(initializer))
+                .map(|initializer| {
+                    self.lower_generator_assignment_value_with_name_hint(initializer, name_hint)
+                })
                 .transpose()?
                 .flatten();
 
@@ -203,6 +227,136 @@ impl Lowerer {
         Ok(lowered)
     }
 
+    pub(crate) fn lower_generator_try_statement(
+        &mut self,
+        try_statement: &swc_ecma_ast::TryStmt,
+        allow_return: bool,
+    ) -> Result<Vec<Statement>> {
+        let lowered_body =
+            self.lower_generator_scoped_statements(&try_statement.block.stmts, allow_return)?;
+        let lowered_handler = try_statement
+            .handler
+            .as_ref()
+            .map(|handler| self.lower_generator_catch_clause(handler, allow_return))
+            .transpose()?;
+
+        if let Some(finalizer) = &try_statement.finalizer {
+            let threw_name = self.fresh_temporary_name("finally_threw");
+            let error_name = self.fresh_temporary_name("finally_error");
+            let outer_catch_name = self.fresh_temporary_name("finally_catch");
+            let mut statements = vec![
+                Statement::Let {
+                    name: threw_name.clone(),
+                    mutable: true,
+                    value: Expression::Bool(false),
+                },
+                Statement::Let {
+                    name: error_name.clone(),
+                    mutable: true,
+                    value: Expression::Undefined,
+                },
+            ];
+
+            let protected_body =
+                if let Some((catch_binding, catch_setup, catch_body)) = lowered_handler {
+                    vec![Statement::Try {
+                        body: lowered_body,
+                        catch_binding,
+                        catch_setup,
+                        catch_body,
+                    }]
+                } else {
+                    lowered_body
+                };
+
+            statements.push(Statement::Try {
+                body: protected_body,
+                catch_binding: Some(outer_catch_name.clone()),
+                catch_setup: Vec::new(),
+                catch_body: vec![
+                    Statement::Assign {
+                        name: threw_name.clone(),
+                        value: Expression::Bool(true),
+                    },
+                    Statement::Assign {
+                        name: error_name.clone(),
+                        value: Expression::Identifier(outer_catch_name),
+                    },
+                ],
+            });
+            statements
+                .extend(self.lower_generator_scoped_statements(&finalizer.stmts, allow_return)?);
+            statements.push(Statement::If {
+                condition: Expression::Identifier(threw_name),
+                then_branch: vec![Statement::Throw(Expression::Identifier(error_name))],
+                else_branch: Vec::new(),
+            });
+            return Ok(statements);
+        }
+
+        let (catch_binding, catch_setup, catch_body) =
+            lowered_handler.context("`try` without `catch` is not supported yet")?;
+        Ok(vec![Statement::Try {
+            body: lowered_body,
+            catch_binding,
+            catch_setup,
+            catch_body,
+        }])
+    }
+
+    fn lower_generator_scoped_statements(
+        &mut self,
+        statements: &[Stmt],
+        allow_return: bool,
+    ) -> Result<Vec<Statement>> {
+        let scope_bindings = collect_direct_statement_lexical_bindings(statements)?;
+        self.push_renaming_binding_scope(scope_bindings);
+        let lowered = self.lower_generator_statements(statements, allow_return);
+        self.pop_binding_scope();
+        lowered
+    }
+
+    pub(crate) fn lower_generator_catch_clause(
+        &mut self,
+        handler: &swc_ecma_ast::CatchClause,
+        allow_return: bool,
+    ) -> Result<(Option<String>, Vec<Statement>, Vec<Statement>)> {
+        let mut scope_bindings = Vec::new();
+        if let Some(pattern) = handler.param.as_ref() {
+            collect_pattern_binding_names(pattern, &mut scope_bindings)?;
+        }
+
+        self.push_renaming_binding_scope(scope_bindings);
+        let lowered = (|| -> Result<(Option<String>, Vec<Statement>, Vec<Statement>)> {
+            let (catch_binding, catch_setup) = match handler.param.as_ref() {
+                Some(Pat::Ident(binding)) => (
+                    Some(self.resolve_binding_name(binding.id.sym.as_ref())),
+                    Vec::new(),
+                ),
+                None => (None, Vec::new()),
+                Some(pattern) => {
+                    let temporary_name = self.fresh_temporary_name("catch");
+                    let mut setup = Vec::new();
+                    self.lower_for_of_pattern_binding(
+                        pattern,
+                        Expression::Identifier(temporary_name.clone()),
+                        ForOfPatternBindingKind::Lexical { mutable: true },
+                        &mut setup,
+                    )?;
+                    (Some(temporary_name), setup)
+                }
+            };
+
+            Ok((
+                catch_binding,
+                catch_setup,
+                self.lower_generator_scoped_statements(&handler.body.stmts, allow_return)?,
+            ))
+        })();
+        self.pop_binding_scope();
+        lowered
+    }
+
     pub(crate) fn lower_generator_loop_body(
         &mut self,
         statement: &Stmt,
@@ -235,7 +389,10 @@ impl Lowerer {
         allow_return: bool,
     ) -> Result<Vec<Statement>> {
         let Expr::Object(object) = &*with_statement.obj else {
-            bail!("only object literal `with` is supported in generator functions")
+            return Ok(vec![Statement::With {
+                object: self.lower_expression(&with_statement.obj)?,
+                body: self.lower_generator_loop_body(&with_statement.body, allow_return)?,
+            }]);
         };
 
         let mut bindings = HashMap::new();
@@ -370,8 +527,39 @@ impl Lowerer {
             return Ok(None);
         }
 
+        if let AssignTarget::Pat(pattern) = &assignment.left {
+            let mut lowered = Vec::new();
+            let value = if let Some((mut prefix, value)) =
+                self.lower_generator_assignment_value(&assignment.right)?
+            {
+                lowered.append(&mut prefix);
+                value
+            } else {
+                self.lower_expression(&assignment.right)?
+            };
+            let value_name = self.fresh_temporary_name("destructure_value");
+            lowered.push(Statement::Let {
+                name: value_name.clone(),
+                mutable: true,
+                value,
+            });
+            let pattern: Pat = pattern.clone().into();
+            self.lower_for_of_pattern_binding_with_generator_defaults(
+                &pattern,
+                Expression::Identifier(value_name),
+                ForOfPatternBindingKind::Assignment,
+                &mut lowered,
+                true,
+            )?;
+            return Ok(Some(lowered));
+        }
+
+        let target_name_hint = self.assignment_target_name_hint(&assignment.left);
         let target = self.lower_generator_assignment_target(&assignment.left)?;
-        let value = self.lower_generator_assignment_value(&assignment.right)?;
+        let value = self.lower_generator_assignment_value_with_name_hint(
+            &assignment.right,
+            target_name_hint.as_deref(),
+        )?;
 
         if target.is_none() && value.is_none() {
             return Ok(None);
@@ -388,7 +576,7 @@ impl Lowerer {
             lowered.append(&mut prefix);
             value
         } else {
-            self.lower_expression(&assignment.right)?
+            self.lower_expression_with_name_hint(&assignment.right, target_name_hint.as_deref())?
         };
         lowered.push(target.into_statement(value));
         Ok(Some(lowered))
@@ -398,17 +586,38 @@ impl Lowerer {
         &mut self,
         expression: &Expr,
     ) -> Result<Option<(Vec<Statement>, Expression)>> {
+        self.lower_generator_assignment_value_with_name_hint(expression, None)
+    }
+
+    pub(crate) fn lower_generator_assignment_value_with_name_hint(
+        &mut self,
+        expression: &Expr,
+        name_hint: Option<&str>,
+    ) -> Result<Option<(Vec<Statement>, Expression)>> {
         match expression {
-            Expr::Yield(yield_expression) => Ok(Some((
-                self.lower_generator_yield_statement(yield_expression)?,
-                Expression::Sent,
-            ))),
+            Expr::Yield(yield_expression) => {
+                Ok(Some(self.lower_generator_yield_value(yield_expression)?))
+            }
             Expr::Paren(parenthesized) => {
-                self.lower_generator_assignment_value(&parenthesized.expr)
+                self.lower_generator_assignment_value_with_name_hint(&parenthesized.expr, name_hint)
             }
             Expr::Tpl(template) => self.lower_generator_template_value(template),
-            _ => self.lower_generator_nested_yield_value(expression),
+            _ => self.lower_generator_nested_yield_value_with_name_hint(expression, name_hint),
         }
+    }
+
+    fn lower_generator_yield_value(
+        &mut self,
+        yield_expression: &swc_ecma_ast::YieldExpr,
+    ) -> Result<(Vec<Statement>, Expression)> {
+        let mut lowered = self.lower_generator_yield_statement(yield_expression)?;
+        let temporary_name = self.fresh_temporary_name("generator_sent");
+        lowered.push(Statement::Let {
+            name: temporary_name.clone(),
+            mutable: false,
+            value: Expression::Sent,
+        });
+        Ok((lowered, Expression::Identifier(temporary_name)))
     }
 
     pub(crate) fn lower_generator_effect_expression(
@@ -563,29 +772,31 @@ impl Lowerer {
             return Ok(None);
         };
 
-        let lowered = self.lower_generator_yield_statement(
-            yield_expression.expect("yield expression must exist"),
-        )?;
-        let expression = self.lower_template_expression_with_substitution(
-            template,
-            yield_index,
-            Expression::Sent,
-        )?;
+        let (lowered, substitution) = self
+            .lower_generator_yield_value(yield_expression.expect("yield expression must exist"))?;
+        let expression =
+            self.lower_template_expression_with_substitution(template, yield_index, substitution)?;
         Ok(Some((lowered, expression)))
     }
 
-    fn lower_generator_nested_yield_value(
+    pub(super) fn lower_generator_nested_yield_value(
         &mut self,
         expression: &Expr,
     ) -> Result<Option<(Vec<Statement>, Expression)>> {
+        self.lower_generator_nested_yield_value_with_name_hint(expression, None)
+    }
+
+    fn lower_generator_nested_yield_value_with_name_hint(
+        &mut self,
+        expression: &Expr,
+        name_hint: Option<&str>,
+    ) -> Result<Option<(Vec<Statement>, Expression)>> {
         match expression {
-            Expr::Yield(yield_expression) => Ok(Some((
-                self.lower_generator_yield_statement(yield_expression)?,
-                Expression::Sent,
-            ))),
-            Expr::Paren(parenthesized) => {
-                self.lower_generator_nested_yield_value(&parenthesized.expr)
+            Expr::Yield(yield_expression) => {
+                Ok(Some(self.lower_generator_yield_value(yield_expression)?))
             }
+            Expr::Paren(parenthesized) => self
+                .lower_generator_nested_yield_value_with_name_hint(&parenthesized.expr, name_hint),
             Expr::Array(array) => {
                 let mut lowered = Vec::new();
                 let mut handled = false;
@@ -715,6 +926,33 @@ impl Lowerer {
                 Ok(handled.then_some((lowered, callee)))
             }
             Expr::Assign(assignment) if assignment.op == AssignOp::Assign => {
+                if let AssignTarget::Pat(pattern) = &assignment.left {
+                    let mut lowered = Vec::new();
+                    let value = if let Some((mut nested, value)) =
+                        self.lower_generator_nested_yield_value(&assignment.right)?
+                    {
+                        lowered.append(&mut nested);
+                        value
+                    } else {
+                        self.lower_expression(&assignment.right)?
+                    };
+                    let value_name = self.fresh_temporary_name("destructure_value");
+                    lowered.push(Statement::Let {
+                        name: value_name.clone(),
+                        mutable: true,
+                        value,
+                    });
+                    let pattern: Pat = pattern.clone().into();
+                    self.lower_for_of_pattern_binding_with_generator_defaults(
+                        &pattern,
+                        Expression::Identifier(value_name.clone()),
+                        ForOfPatternBindingKind::Assignment,
+                        &mut lowered,
+                        true,
+                    )?;
+                    return Ok(Some((lowered, Expression::Identifier(value_name))));
+                }
+
                 let mut lowered = Vec::new();
                 let mut handled = false;
                 let target = if let Some((mut nested, target)) =
@@ -726,20 +964,26 @@ impl Lowerer {
                 } else {
                     self.lower_assignment_target(&assignment.left)?
                 };
-                let value = if let Some((mut nested, value)) =
-                    self.lower_generator_nested_yield_value(&assignment.right)?
-                {
+                let target_name_hint = self.assignment_target_name_hint(&assignment.left);
+                let value = if let Some((mut nested, value)) = self
+                    .lower_generator_nested_yield_value_with_name_hint(
+                        &assignment.right,
+                        target_name_hint.as_deref(),
+                    )? {
                     handled = true;
                     lowered.append(&mut nested);
                     value
                 } else {
-                    self.lower_expression(&assignment.right)?
+                    self.lower_expression_with_name_hint(
+                        &assignment.right,
+                        target_name_hint.as_deref(),
+                    )?
                 };
                 Ok(handled.then_some((lowered, target.into_expression(value))))
             }
             Expr::Class(class_expression) => {
                 let (lowered, expression) =
-                    self.lower_generator_class_expression(class_expression, None)?;
+                    self.lower_generator_class_expression(class_expression, name_hint)?;
                 Ok(Some((lowered, expression)))
             }
             _ => Ok(None),

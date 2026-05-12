@@ -18,17 +18,47 @@ impl Lowerer {
         source.get(start..end)
     }
 
+    fn array_pattern_inner_source(&self, array: &swc_ecma_ast::ArrayPat) -> Option<&str> {
+        let source = self.source_text.as_deref()?;
+        if array.span.lo.is_dummy() {
+            return None;
+        }
+        let mut start = array.span.lo.0.saturating_sub(1) as usize;
+        start += source.get(start..)?.find('[')?;
+        let mut depth = 0usize;
+        let mut inner_start = None;
+        for (relative_index, character) in source.get(start..)?.char_indices() {
+            let index = start + relative_index;
+            match character {
+                '[' => {
+                    depth = depth.saturating_add(1);
+                    if inner_start.is_none() {
+                        inner_start = Some(index + character.len_utf8());
+                    }
+                }
+                ']' => {
+                    depth = depth.saturating_sub(1);
+                    if depth == 0 {
+                        return source.get(inner_start?..index);
+                    }
+                }
+                _ => {}
+            }
+        }
+        None
+    }
+
     pub(crate) fn pure_array_pattern_elision_count(&self, array: &swc_ecma_ast::ArrayPat) -> usize {
         if !array.elems.is_empty() {
             return 0;
         }
-        let Some(snippet) = self.source_span_snippet(array.span) else {
-            return 0;
-        };
-        let Some(inner) = snippet
-            .strip_prefix('[')
-            .and_then(|text| text.strip_suffix(']'))
-        else {
+        let Some(inner) = self.array_pattern_inner_source(array).or_else(|| {
+            self.source_span_snippet(array.span).and_then(|snippet| {
+                snippet
+                    .strip_prefix('[')
+                    .and_then(|text| text.strip_suffix(']'))
+            })
+        }) else {
             return 0;
         };
         if inner
@@ -39,6 +69,47 @@ impl Lowerer {
         } else {
             0
         }
+    }
+
+    pub(crate) fn array_pattern_has_non_elision_trailing_comma(
+        &self,
+        array: &swc_ecma_ast::ArrayPat,
+    ) -> bool {
+        let Some(inner) = self.array_pattern_inner_source(array).or_else(|| {
+            self.source_span_snippet(array.span).and_then(|snippet| {
+                snippet
+                    .strip_prefix('[')
+                    .and_then(|text| text.strip_suffix(']'))
+            })
+        }) else {
+            return false;
+        };
+        let trimmed = inner.trim_end();
+        let Some(before_comma) = trimmed.strip_suffix(',') else {
+            return false;
+        };
+        before_comma
+            .chars()
+            .rev()
+            .find(|character| !character.is_whitespace())
+            .is_some_and(|character| character != ',')
+    }
+
+    pub(crate) fn array_pattern_trailing_elision_count(
+        &self,
+        array: &swc_ecma_ast::ArrayPat,
+    ) -> usize {
+        let Some(inner) = self.array_pattern_inner_source(array).or_else(|| {
+            self.source_span_snippet(array.span).and_then(|snippet| {
+                snippet
+                    .strip_prefix('[')
+                    .and_then(|text| text.strip_suffix(']'))
+            })
+        }) else {
+            return 0;
+        };
+        let comma_count = inner.chars().filter(|&character| character == ',').count();
+        comma_count.saturating_sub(array.elems.len())
     }
 
     pub(crate) fn lower_program(&mut self, program: &SwcProgram) -> Result<Program> {
@@ -111,7 +182,20 @@ impl Lowerer {
         format!("__ayy_scope${name}${}", self.next_temporary_id)
     }
 
+    pub(crate) fn fresh_isolated_binding_name(&mut self, name: &str) -> String {
+        self.next_temporary_id += 1;
+        format!("__ayy_local${name}${}", self.next_temporary_id)
+    }
+
     pub(crate) fn push_binding_scope(&mut self, names: Vec<String>) {
+        self.push_binding_scope_with_mode(names, false);
+    }
+
+    pub(crate) fn push_renaming_binding_scope(&mut self, names: Vec<String>) {
+        self.push_binding_scope_with_mode(names, true);
+    }
+
+    fn push_binding_scope_with_mode(&mut self, names: Vec<String>, force_renames: bool) {
         let mut scope = BindingScope::default();
 
         for name in names {
@@ -119,7 +203,11 @@ impl Lowerer {
                 continue;
             }
 
-            if self.active_binding_counts.contains_key(&name) {
+            if force_renames {
+                scope
+                    .renames
+                    .insert(name.clone(), self.fresh_isolated_binding_name(&name));
+            } else if self.active_binding_counts.contains_key(&name) {
                 scope
                     .renames
                     .insert(name.clone(), self.fresh_scoped_binding_name(&name));
@@ -158,6 +246,52 @@ impl Lowerer {
         name.to_string()
     }
 
+    pub(crate) fn current_this_replacement(&self) -> Option<Expression> {
+        self.this_replacements.last().cloned().flatten()
+    }
+
+    pub(crate) fn push_this_replacement(&mut self, replacement: Option<Expression>) {
+        self.this_replacements.push(replacement);
+    }
+
+    pub(crate) fn pop_this_replacement(&mut self) {
+        self.this_replacements.pop();
+    }
+
+    pub(crate) fn with_this_replacement<T>(
+        &mut self,
+        replacement: Option<Expression>,
+        operation: impl FnOnce(&mut Self) -> Result<T>,
+    ) -> Result<T> {
+        self.push_this_replacement(replacement);
+        let result = operation(self);
+        self.pop_this_replacement();
+        result
+    }
+
+    pub(crate) fn current_super_member_replacement(&self) -> Option<Expression> {
+        self.super_member_replacements.last().cloned().flatten()
+    }
+
+    pub(crate) fn push_super_member_replacement(&mut self, replacement: Option<Expression>) {
+        self.super_member_replacements.push(replacement);
+    }
+
+    pub(crate) fn pop_super_member_replacement(&mut self) {
+        self.super_member_replacements.pop();
+    }
+
+    pub(crate) fn with_super_member_replacement<T>(
+        &mut self,
+        replacement: Option<Expression>,
+        operation: impl FnOnce(&mut Self) -> Result<T>,
+    ) -> Result<T> {
+        self.push_super_member_replacement(replacement);
+        let result = operation(self);
+        self.pop_super_member_replacement();
+        result
+    }
+
     pub(crate) fn lower_dynamic_import_expression(
         &mut self,
         call: &swc_ecma_ast::CallExpr,
@@ -192,12 +326,21 @@ impl Lowerer {
     }
 
     pub(crate) fn lower_private_name(
-        &self,
+        &mut self,
         private_name: &swc_ecma_ast::PrivateName,
     ) -> Result<Expression> {
         let name = private_name.name.to_string();
-        for scope in self.private_name_scopes.iter().rev() {
+        for (index, scope) in self.private_name_scopes.iter().enumerate().rev() {
             if let Some(mapped) = scope.get(&name) {
+                if let Some(brand_binding) = self
+                    .private_name_brand_scopes
+                    .get(index)
+                    .and_then(|scope| scope.get(&name))
+                    .cloned()
+                    && let Some(captures) = self.pending_private_brand_captures.last_mut()
+                {
+                    captures.insert(brand_binding);
+                }
                 return Ok(Expression::String(mapped.clone()));
             }
         }
@@ -224,6 +367,51 @@ impl Lowerer {
                         method.key.name.to_string(),
                         format!("__ayy$private${binding_name}${}", method.key.name),
                     );
+                }
+                ClassMember::AutoAccessor(accessor) => {
+                    if let Key::Private(private_name) = &accessor.key {
+                        names.insert(
+                            private_name.name.to_string(),
+                            format!("__ayy$private${binding_name}${}", private_name.name),
+                        );
+                    }
+                }
+                _ => {}
+            }
+        }
+        names
+    }
+
+    pub(crate) fn class_private_brand_map(
+        &self,
+        class: &Class,
+        instance_private_brand_binding: Option<&str>,
+    ) -> HashMap<String, String> {
+        let Some(instance_private_brand_binding) = instance_private_brand_binding else {
+            return HashMap::new();
+        };
+        let mut names = HashMap::new();
+        for member in &class.body {
+            match member {
+                ClassMember::PrivateProp(property) if !property.is_static => {
+                    names.insert(
+                        property.key.name.to_string(),
+                        instance_private_brand_binding.to_string(),
+                    );
+                }
+                ClassMember::PrivateMethod(method) if !method.is_static => {
+                    names.insert(
+                        method.key.name.to_string(),
+                        instance_private_brand_binding.to_string(),
+                    );
+                }
+                ClassMember::AutoAccessor(accessor) if !accessor.is_static => {
+                    if let Key::Private(private_name) = &accessor.key {
+                        names.insert(
+                            private_name.name.to_string(),
+                            instance_private_brand_binding.to_string(),
+                        );
+                    }
                 }
                 _ => {}
             }

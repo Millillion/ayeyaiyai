@@ -109,6 +109,12 @@ impl<'a> FunctionCompiler<'a> {
                 if let Expression::Call { callee, arguments } = &substituted
                     && let Expression::Identifier(name) = callee.as_ref()
                 {
+                    if name == "__ayyAssertCompareArray"
+                        && self.emit_assert_compare_array_call(arguments)?
+                    {
+                        self.state.emission.output.instructions.push(0x1a);
+                        return Ok(true);
+                    }
                     if name == "compareArray" && self.emit_compare_array_call(arguments)? {
                         self.state.emission.output.instructions.push(0x1a);
                         return Ok(true);

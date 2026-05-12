@@ -6,6 +6,7 @@ impl<'a> FunctionCompiler<'a> {
         function_name: Option<String>,
         callback: impl FnOnce(&mut Self) -> DirectResult<T>,
     ) -> DirectResult<T> {
+        let previous_strict_mode = self.state.speculation.execution_context.strict_mode;
         let previous_user_function_name = self
             .state
             .speculation
@@ -26,16 +27,35 @@ impl<'a> FunctionCompiler<'a> {
             .clone();
         let previous_derived_constructor =
             self.state.speculation.execution_context.derived_constructor;
+        let previous_direct_eval_in_class_field_initializer = self
+            .state
+            .speculation
+            .execution_context
+            .direct_eval_in_class_field_initializer;
         let previous_arguments_callee_present = self
             .state
             .speculation
             .execution_context
             .current_arguments_callee_present;
+        let previous_arguments_callee_override = self
+            .state
+            .speculation
+            .execution_context
+            .current_arguments_callee_override
+            .clone();
         let previous_arguments_length_present = self
             .state
             .speculation
             .execution_context
             .current_arguments_length_present;
+        let previous_arguments_length_override = self
+            .state
+            .speculation
+            .execution_context
+            .current_arguments_length_override
+            .clone();
+        let previous_top_level_function =
+            self.state.speculation.execution_context.top_level_function;
 
         let next_user_function = function_name
             .as_deref()
@@ -44,6 +64,15 @@ impl<'a> FunctionCompiler<'a> {
             .as_deref()
             .and_then(|name| self.resolve_registered_function_declaration(name).cloned());
 
+        self.state.speculation.execution_context.strict_mode = next_user_function
+            .as_ref()
+            .map(|function| function.strict)
+            .or_else(|| {
+                next_function_declaration
+                    .as_ref()
+                    .map(|declaration| declaration.strict)
+            })
+            .unwrap_or(previous_strict_mode);
         self.state
             .speculation
             .execution_context
@@ -62,16 +91,32 @@ impl<'a> FunctionCompiler<'a> {
         self.state
             .speculation
             .execution_context
+            .direct_eval_in_class_field_initializer = next_function_declaration
+            .as_ref()
+            .is_some_and(|declaration| declaration.direct_eval_in_class_field_initializer);
+        self.state
+            .speculation
+            .execution_context
             .current_arguments_callee_present = next_user_function
             .as_ref()
             .is_some_and(|function| !function.lexical_this);
         self.state
             .speculation
             .execution_context
+            .current_arguments_callee_override = None;
+        self.state
+            .speculation
+            .execution_context
             .current_arguments_length_present = next_user_function
             .as_ref()
             .is_some_and(|function| !function.lexical_this);
+        self.state
+            .speculation
+            .execution_context
+            .current_arguments_length_override = None;
+        self.state.speculation.execution_context.top_level_function = next_user_function.is_none();
         let result = callback(self);
+        self.state.speculation.execution_context.strict_mode = previous_strict_mode;
         self.state
             .speculation
             .execution_context
@@ -88,11 +133,25 @@ impl<'a> FunctionCompiler<'a> {
         self.state
             .speculation
             .execution_context
+            .direct_eval_in_class_field_initializer =
+            previous_direct_eval_in_class_field_initializer;
+        self.state
+            .speculation
+            .execution_context
             .current_arguments_callee_present = previous_arguments_callee_present;
         self.state
             .speculation
             .execution_context
+            .current_arguments_callee_override = previous_arguments_callee_override;
+        self.state
+            .speculation
+            .execution_context
             .current_arguments_length_present = previous_arguments_length_present;
+        self.state
+            .speculation
+            .execution_context
+            .current_arguments_length_override = previous_arguments_length_override;
+        self.state.speculation.execution_context.top_level_function = previous_top_level_function;
         result
     }
 
@@ -113,13 +172,7 @@ impl<'a> FunctionCompiler<'a> {
         user_function: &UserFunction,
         callback: impl FnOnce(&mut Self) -> DirectResult<T>,
     ) -> DirectResult<T> {
-        let saved_execution_context = self.state.snapshot_user_function_execution_context();
-        self.state
-            .enter_user_function_execution_context(user_function);
-        let result = callback(self);
-        self.state
-            .restore_user_function_execution_context(saved_execution_context);
-        result
+        self.with_current_user_function_name(Some(user_function.name.clone()), callback)
     }
 
     pub(in crate::backend::direct_wasm) fn with_named_function_execution_context<T>(

@@ -1,0 +1,11 @@
+emit_dynamic_user_function_call:no-match-fallback callee=Identifier("__defineProperty") instruction=27113
+emit_dynamic_user_function_call:no-match-fallback callee=Member { object: Identifier("C"), property: String("_") } instruction=336071
+emit_dynamic_user_function_call:no-match-fallback callee=Member { object: Identifier("C"), property: String("o") } instruction=669732
+emit_dynamic_user_function_call:no-match-fallback callee=Member { object: Identifier("C"), property: String("℘") } instruction=1003405
+emit_dynamic_user_function_call:no-match-fallback callee=Member { object: Identifier("C"), property: String("ZW_\u{200c}_NJ") } instruction=1337078
+emit_dynamic_user_function_call:no-match-fallback callee=Member { object: Identifier("C"), property: String("ZW_\u{200d}_J") } instruction=1670751
+emit_dynamic_user_function_call:no-match-fallback callee=Member { object: Identifier("C"), property: String("_") } instruction=351067
+emit_dynamic_user_function_call:no-match-fallback callee=Member { object: Identifier("C"), property: String("o") } instruction=706955
+emit_dynamic_user_function_call:no-match-fallback callee=Member { object: Identifier("C"), property: String("℘") } instruction=1062915
+emit_dynamic_user_function_call:no-match-fallback callee=Member { object: Identifier("C"), property: String("ZW_\u{200c}_NJ") } instruction=1418875
+emit_dynamic_user_function_call:no-match-fallback callee=Member { object: Identifier("C"), property: String("ZW_\u{200d}_J") } instruction=1775465

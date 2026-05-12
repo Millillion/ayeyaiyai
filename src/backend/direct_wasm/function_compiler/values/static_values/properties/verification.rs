@@ -1,6 +1,85 @@
 use super::*;
 
+fn class_initializer_sets_static_name(function: &FunctionDeclaration, expected_name: &str) -> bool {
+    function.name.starts_with("__ayy_class_init_")
+        && function
+            .body
+            .iter()
+            .any(|statement| statement_defines_static_name_property(statement, expected_name))
+}
+
+fn statement_defines_static_name_property(statement: &Statement, expected_name: &str) -> bool {
+    let Statement::Expression(Expression::Call { callee, arguments }) = statement else {
+        return false;
+    };
+    let Expression::Member { object, property } = callee.as_ref() else {
+        return false;
+    };
+    if !matches!(object.as_ref(), Expression::Identifier(name) if name == "Object")
+        || !matches!(property.as_ref(), Expression::String(name) if name == "defineProperty")
+    {
+        return false;
+    }
+    let [
+        CallArgument::Expression(_target),
+        CallArgument::Expression(Expression::String(property_name)),
+        CallArgument::Expression(descriptor_expression),
+    ] = arguments.as_slice()
+    else {
+        return false;
+    };
+    property_name == "name"
+        && resolve_property_descriptor_definition(descriptor_expression)
+            .and_then(|descriptor| descriptor.value)
+            .is_some_and(|value| {
+                static_expression_matches(&value, &Expression::String(expected_name.to_string()))
+            })
+}
+
 impl<'a> FunctionCompiler<'a> {
+    fn runtime_shadow_member_matches_expected_value(
+        &self,
+        actual: &Expression,
+        expected: &Expression,
+    ) -> bool {
+        let Expression::Member { object, property } = actual else {
+            return false;
+        };
+        let Some(shadow_binding_name) =
+            self.runtime_object_property_shadow_binding_name_for_expression(object, property)
+        else {
+            return false;
+        };
+        self.global_value_binding(&shadow_binding_name)
+            .or_else(|| {
+                self.backend
+                    .shared_global_semantics
+                    .values
+                    .value_bindings
+                    .get(&shadow_binding_name)
+            })
+            .is_some_and(|value| {
+                static_expression_matches(value, expected)
+                    || static_expression_matches(
+                        &self.materialize_static_expression(value),
+                        expected,
+                    )
+            })
+    }
+
+    fn descriptor_value_matches_expected(
+        &self,
+        actual: &Expression,
+        expected: Option<&Expression>,
+    ) -> bool {
+        let Some(expected) = expected else {
+            return true;
+        };
+        static_expression_matches(actual, expected)
+            || static_expression_matches(&self.materialize_static_expression(actual), expected)
+            || self.runtime_shadow_member_matches_expected_value(actual, expected)
+    }
+
     pub(in crate::backend::direct_wasm) fn emit_verify_property_call(
         &mut self,
         arguments: &[CallArgument],
@@ -20,6 +99,7 @@ impl<'a> FunctionCompiler<'a> {
         let Some(descriptor) = resolve_property_descriptor_definition(descriptor_expression) else {
             return Ok(false);
         };
+        let trace_verify_property = std::env::var_os("AYY_TRACE_VERIFY_PROPERTY").is_some();
         let expected_value = descriptor.value.as_ref().map(|value| {
             let materialized = self.materialize_static_expression(value);
             match materialized {
@@ -45,9 +125,33 @@ impl<'a> FunctionCompiler<'a> {
 
         let direct_arguments = self.is_direct_arguments_object(object_expression);
         let arguments_binding = self.resolve_arguments_binding_from_expression(object_expression);
-        let object_binding = self.resolve_object_binding_from_expression(object_expression);
+        let object_binding = self
+            .resolve_object_binding_from_expression(object_expression)
+            .or_else(|| match object_expression {
+                Expression::Identifier(name) => self
+                    .resolve_identifier_object_binding_fallback(name)
+                    .or_else(|| self.resolve_runtime_shadow_object_binding(name)),
+                Expression::This => self.resolve_runtime_shadow_object_binding("this"),
+                _ => None,
+            });
+        let resolved_property = self
+            .resolve_property_key_expression(property_expression)
+            .unwrap_or_else(|| self.materialize_static_expression(property_expression));
+        let symbol_property = [&resolved_property, property_expression]
+            .into_iter()
+            .find_map(|candidate| {
+                if self.well_known_symbol_name(candidate).is_some() {
+                    Some(candidate.clone())
+                } else {
+                    self.resolve_symbol_identity_expression(candidate)
+                }
+            });
 
-        if direct_arguments && is_symbol_iterator_expression(property_expression) {
+        if direct_arguments
+            && symbol_property
+                .as_ref()
+                .is_some_and(is_symbol_iterator_expression)
+        {
             if expected_value
                 .as_ref()
                 .is_some_and(|value| *value == arguments_symbol_iterator_expression())
@@ -69,27 +173,134 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(false);
         }
 
-        let property_name = match property_expression {
-            Expression::String(text) => text.clone(),
-            Expression::Number(value)
-                if value.is_finite() && value.fract() == 0.0 && *value >= 0.0 =>
-            {
-                (*value as u64).to_string()
-            }
-            _ => return Ok(false),
-        };
+        let property_name = static_property_name_from_expression(&resolved_property);
         let global_property_descriptor =
             (self.state.speculation.execution_context.top_level_function
                 && matches!(object_expression, Expression::This))
             .then(|| {
-                self.backend
-                    .global_property_descriptor(&property_name)
-                    .cloned()
+                property_name.as_ref().and_then(|property_name| {
+                    self.backend
+                        .global_property_descriptor(property_name)
+                        .cloned()
+                })
             })
             .flatten();
 
+        let function_metadata_property_matches_expected =
+            property_name.as_ref().is_some_and(|property_name| {
+                if !matches!(property_name.as_str(), "name" | "length") {
+                    return false;
+                }
+                let Some(expected) = expected_value.as_ref() else {
+                    return false;
+                };
+                let property_expression = Expression::String(property_name.clone());
+                let resolved_value_matches = match property_name.as_str() {
+                    "name" => self
+                        .resolve_function_name_value(object_expression, &property_expression)
+                        .is_some_and(|name| {
+                            static_expression_matches(&Expression::String(name), expected)
+                        }),
+                    "length" => self
+                        .resolve_user_function_length(object_expression, &property_expression)
+                        .is_some_and(|length| {
+                            static_expression_matches(&Expression::Number(length as f64), expected)
+                        }),
+                    _ => false,
+                };
+                if resolved_value_matches {
+                    return true;
+                }
+                let Expression::Identifier(object_name) = object_expression else {
+                    return false;
+                };
+                let source_name = scoped_binding_source_name(object_name).unwrap_or(object_name);
+                match (property_name.as_str(), expected) {
+                    ("name", Expression::String(expected_name)) if expected_name == source_name => {
+                        self.user_functions()
+                            .into_iter()
+                            .filter(|function| {
+                                self.resolve_user_function_display_name(&function.name)
+                                    .as_deref()
+                                    == Some(source_name)
+                            })
+                            .count()
+                            == 1
+                            || self
+                                .user_functions()
+                                .into_iter()
+                                .filter_map(|function| {
+                                    self.resolve_registered_function_declaration(&function.name)
+                                })
+                                .filter(|function| {
+                                    class_initializer_sets_static_name(function, expected_name)
+                                })
+                                .count()
+                                == 1
+                    }
+                    ("length", Expression::Number(expected_length)) => self
+                        .user_functions()
+                        .into_iter()
+                        .find(|function| {
+                            self.resolve_user_function_display_name(&function.name)
+                                .as_deref()
+                                == Some(source_name)
+                        })
+                        .is_some_and(|function| function.length as f64 == *expected_length),
+                    _ => false,
+                }
+            });
+
+        if let Some(property_name) = property_name.as_ref()
+            && matches!(property_name.as_str(), "name" | "length")
+            && expected_value.is_some()
+            && expected_writable == Some(false)
+            && expected_enumerable == Some(false)
+            && expected_configurable == Some(true)
+            && (self
+                .resolve_function_binding_from_expression(object_expression)
+                .is_some()
+                || self.infer_value_kind(object_expression) == Some(StaticValueKind::Function)
+                || function_metadata_property_matches_expected)
+        {
+            let actual_property = Expression::Member {
+                object: Box::new(object_expression.clone()),
+                property: Box::new(Expression::String(property_name.clone())),
+            };
+            let actual_local = self.allocate_temp_local();
+            let expected_local = self.allocate_temp_local();
+            self.emit_numeric_expression(&actual_property)?;
+            self.push_local_set(actual_local);
+            self.emit_numeric_expression(expected_value.as_ref().expect("checked above"))?;
+            self.push_local_set(expected_local);
+            self.push_local_get(actual_local);
+            self.push_local_get(expected_local);
+            self.push_binary_op(BinaryOp::NotEqual)?;
+            self.state.emission.output.instructions.push(0x04);
+            self.state
+                .emission
+                .output
+                .instructions
+                .push(EMPTY_BLOCK_TYPE);
+            self.push_control_frame();
+            self.emit_error_throw()?;
+            self.state.emission.output.instructions.push(0x0b);
+            self.pop_control_frame();
+            for argument in arguments.iter().skip(3) {
+                match argument {
+                    CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                        self.emit_numeric_expression(expression)?;
+                        self.state.emission.output.instructions.push(0x1a);
+                    }
+                }
+            }
+            self.push_i32_const(JS_UNDEFINED_TAG);
+            return Ok(true);
+        }
         if direct_arguments
-            && let Some(index) = canonical_array_index_from_property_name(&property_name)
+            && let Some(index) = property_name
+                .as_ref()
+                .and_then(|property_name| canonical_array_index_from_property_name(property_name))
         {
             let Some(slot) = self.state.parameters.arguments_slots.get(&index).cloned() else {
                 return Ok(false);
@@ -138,7 +349,17 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(true);
         }
 
-        let matches_property = if property_name == "length" {
+        let matches_property = if let Some(symbol_property) = symbol_property.as_ref() {
+            object_binding
+                .as_ref()
+                .and_then(|object_binding| {
+                    object_binding_lookup_value(object_binding, symbol_property)
+                })
+                .is_some_and(matches_value)
+                && matches_bool(true, expected_writable)
+                && matches_bool(true, expected_enumerable)
+                && matches_bool(true, expected_configurable)
+        } else if property_name.as_deref() == Some("length") {
             if direct_arguments {
                 self.state
                     .speculation
@@ -160,10 +381,33 @@ impl<'a> FunctionCompiler<'a> {
                     && matches_bool(true, expected_writable)
                     && matches_bool(false, expected_enumerable)
                     && matches_bool(true, expected_configurable)
+            } else if let Some(function_length) =
+                self.resolve_user_function_length(object_expression, &resolved_property)
+            {
+                matches_value(&Expression::Number(function_length as f64))
+                    && matches_bool(false, expected_writable)
+                    && matches_bool(false, expected_enumerable)
+                    && matches_bool(true, expected_configurable)
+            } else if let Some(object_descriptor) = self.resolve_object_property_descriptor_binding(
+                object_expression,
+                self.resolve_bound_alias_expression(object_expression)
+                    .filter(|resolved| !static_expression_matches(resolved, object_expression))
+                    .as_ref(),
+                &self.materialize_static_expression(object_expression),
+                &Expression::String("length".to_string()),
+                Some("length"),
+            ) {
+                object_descriptor.value.as_ref().is_none_or(|value| {
+                    self.descriptor_value_matches_expected(value, expected_value.as_ref())
+                }) && match object_descriptor.writable {
+                    Some(writable) => matches_bool(writable, expected_writable),
+                    None => matches_missing_bool(expected_writable),
+                } && matches_bool(object_descriptor.enumerable, expected_enumerable)
+                    && matches_bool(object_descriptor.configurable, expected_configurable)
             } else {
                 false
             }
-        } else if property_name == "callee" {
+        } else if property_name.as_deref() == Some("callee") {
             let strict = if direct_arguments {
                 Some(self.state.speculation.execution_context.strict_mode)
             } else {
@@ -202,44 +446,146 @@ impl<'a> FunctionCompiler<'a> {
             } else {
                 false
             }
-        } else if let Some(arguments_binding) = arguments_binding.as_ref() {
-            if let Ok(index) = property_name.parse::<usize>() {
-                arguments_binding
-                    .values
-                    .get(index)
-                    .is_some_and(matches_value)
+        } else if let Some(property_name) = property_name.as_ref() {
+            if let Some(arguments_binding) = arguments_binding.as_ref() {
+                if let Ok(index) = property_name.parse::<usize>() {
+                    arguments_binding
+                        .values
+                        .get(index)
+                        .is_some_and(matches_value)
+                        && matches_bool(true, expected_writable)
+                        && matches_bool(true, expected_enumerable)
+                        && matches_bool(true, expected_configurable)
+                } else {
+                    false
+                }
+            } else if let Some(global_property_descriptor) = global_property_descriptor.as_ref() {
+                matches_value(&global_property_descriptor.value)
+                    && match global_property_descriptor.writable {
+                        Some(writable) => matches_bool(writable, expected_writable),
+                        None => matches_missing_bool(expected_writable),
+                    }
+                    && matches_bool(global_property_descriptor.enumerable, expected_enumerable)
+                    && matches_bool(
+                        global_property_descriptor.configurable,
+                        expected_configurable,
+                    )
+            } else if let Some(object_descriptor) = self.resolve_object_property_descriptor_binding(
+                object_expression,
+                self.resolve_bound_alias_expression(object_expression)
+                    .filter(|resolved| !static_expression_matches(resolved, object_expression))
+                    .as_ref(),
+                &self.materialize_static_expression(object_expression),
+                &Expression::String(property_name.clone()),
+                Some(property_name),
+            ) {
+                object_descriptor.value.as_ref().is_none_or(|value| {
+                    self.descriptor_value_matches_expected(value, expected_value.as_ref())
+                }) && match object_descriptor.writable {
+                    Some(writable) => matches_bool(writable, expected_writable),
+                    None => matches_missing_bool(expected_writable),
+                } && matches_bool(object_descriptor.enumerable, expected_enumerable)
+                    && matches_bool(object_descriptor.configurable, expected_configurable)
+            } else if let Some(function_descriptor) = self
+                .resolve_function_property_descriptor_binding(
+                    object_expression,
+                    self.resolve_bound_alias_expression(object_expression)
+                        .filter(|resolved| !static_expression_matches(resolved, object_expression))
+                        .as_ref(),
+                    &self.materialize_static_expression(object_expression),
+                    property_name,
+                )
+            {
+                let property = Expression::String(property_name.clone());
+                let tracked_value_matches_descriptor = object_binding
+                    .as_ref()
+                    .and_then(|object_binding| {
+                        object_binding_lookup_value(object_binding, &property)
+                    })
+                    .is_none_or(|tracked_value| {
+                        function_descriptor
+                            .value
+                            .as_ref()
+                            .is_none_or(|descriptor_value| tracked_value == descriptor_value)
+                    });
+                tracked_value_matches_descriptor
+                    && function_descriptor.value.as_ref().is_none_or(|value| {
+                        self.descriptor_value_matches_expected(value, expected_value.as_ref())
+                    })
+                    && match function_descriptor.writable {
+                        Some(writable) => matches_bool(writable, expected_writable),
+                        None => matches_missing_bool(expected_writable),
+                    }
+                    && matches_bool(function_descriptor.enumerable, expected_enumerable)
+                    && matches_bool(function_descriptor.configurable, expected_configurable)
+            } else if let Some(object_binding) = object_binding.as_ref() {
+                let property = Expression::String(property_name.clone());
+                object_binding_lookup_value(object_binding, &property).is_some_and(matches_value)
                     && matches_bool(true, expected_writable)
-                    && matches_bool(true, expected_enumerable)
+                    && matches_bool(
+                        !object_binding
+                            .non_enumerable_string_properties
+                            .iter()
+                            .any(|name| name == property_name),
+                        expected_enumerable,
+                    )
+                    && matches_bool(true, expected_configurable)
+            } else if matches!(
+                object_expression,
+                Expression::Member { property, .. }
+                    if matches!(property.as_ref(), Expression::String(name) if name == "prototype")
+            ) {
+                let member_expression = Expression::Member {
+                    object: Box::new(object_expression.clone()),
+                    property: Box::new(Expression::String(property_name.clone())),
+                };
+                let member_function_binding =
+                    self.resolve_function_binding_from_expression(&member_expression);
+                member_function_binding.is_some()
+                    && expected_value.as_ref().is_none_or(|expected| {
+                        self.resolve_function_binding_from_expression(expected)
+                            == member_function_binding
+                    })
+                    && matches_bool(true, expected_writable)
+                    && matches_bool(false, expected_enumerable)
                     && matches_bool(true, expected_configurable)
             } else {
                 false
             }
-        } else if let Some(global_property_descriptor) = global_property_descriptor.as_ref() {
-            matches_value(&global_property_descriptor.value)
-                && match global_property_descriptor.writable {
-                    Some(writable) => matches_bool(writable, expected_writable),
-                    None => matches_missing_bool(expected_writable),
-                }
-                && matches_bool(global_property_descriptor.enumerable, expected_enumerable)
-                && matches_bool(
-                    global_property_descriptor.configurable,
-                    expected_configurable,
-                )
-        } else if let Some(object_binding) = object_binding.as_ref() {
-            let property = Expression::String(property_name.clone());
-            object_binding_lookup_value(object_binding, &property).is_some_and(matches_value)
-                && matches_bool(true, expected_writable)
-                && matches_bool(
-                    !object_binding
-                        .non_enumerable_string_properties
-                        .iter()
-                        .any(|name| name == &property_name),
-                    expected_enumerable,
-                )
-                && matches_bool(true, expected_configurable)
         } else {
             false
         };
+
+        if trace_verify_property {
+            let object_binding_summary = object_binding.as_ref().map(|binding| {
+                let descriptors = binding
+                    .property_descriptors
+                    .iter()
+                    .map(|(property, descriptor)| {
+                        (
+                            property.clone(),
+                            descriptor.value.clone(),
+                            descriptor.writable,
+                            descriptor.enumerable,
+                            descriptor.configurable,
+                            descriptor.getter.clone(),
+                            descriptor.setter.clone(),
+                            descriptor.has_get,
+                            descriptor.has_set,
+                        )
+                    })
+                    .collect::<Vec<_>>();
+                (
+                    ordered_object_property_names(binding),
+                    binding.string_properties.clone(),
+                    binding.non_enumerable_string_properties.clone(),
+                    descriptors,
+                )
+            });
+            eprintln!(
+                "verify_property: object={object_expression:?} property={property_expression:?} resolved_property={resolved_property:?} expected_value={expected_value:?} expected_writable={expected_writable:?} expected_enumerable={expected_enumerable:?} expected_configurable={expected_configurable:?} object_binding={object_binding_summary:?} matches={matches_property}"
+            );
+        }
 
         if !matches_property {
             return Ok(false);

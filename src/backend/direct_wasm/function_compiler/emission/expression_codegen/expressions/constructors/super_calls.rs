@@ -1,16 +1,41 @@
 use super::*;
 
+const NULL_SUPER_CONSTRUCTOR_BINDING: &str = "__ayy_null_super_constructor";
+
 impl<'a> FunctionCompiler<'a> {
+    pub(in crate::backend::direct_wasm) fn emit_null_super_constructor_call(
+        &mut self,
+        arguments: &[CallArgument],
+    ) -> DirectResult<()> {
+        for argument in arguments {
+            match argument {
+                CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                    self.emit_numeric_expression(expression)?;
+                }
+            }
+            self.state.emission.output.instructions.push(0x1a);
+        }
+        self.emit_named_error_throw("TypeError")?;
+        self.push_i32_const(JS_UNDEFINED_TAG);
+        Ok(())
+    }
+
     pub(in crate::backend::direct_wasm) fn emit_super_call_expression(
         &mut self,
         callee: &Expression,
         arguments: &[CallArgument],
     ) -> DirectResult<()> {
+        if matches!(callee, Expression::Identifier(name) if name == NULL_SUPER_CONSTRUCTOR_BINDING)
+        {
+            return self.emit_null_super_constructor_call(arguments);
+        }
         if let Some(function_binding) = self.resolve_function_binding_from_expression(callee) {
             match function_binding {
                 LocalFunctionBinding::User(function_name) => {
                     if let Some(user_function) = self.user_function(&function_name).cloned() {
-                        if self.current_function_is_derived_constructor() {
+                        if self.current_function_is_derived_constructor()
+                            || self.current_lexical_function_captures_this()
+                        {
                             self.emit_derived_constructor_super_call(&user_function, arguments)?;
                             return Ok(());
                         }
@@ -23,7 +48,8 @@ impl<'a> FunctionCompiler<'a> {
                     }
                 }
                 LocalFunctionBinding::Builtin(function_name) => {
-                    if self.current_function_is_derived_constructor()
+                    if (self.current_function_is_derived_constructor()
+                        || self.current_lexical_function_captures_this())
                         && self.emit_derived_constructor_builtin_super_call(
                             &function_name,
                             arguments,

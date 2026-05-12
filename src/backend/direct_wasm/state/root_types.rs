@@ -18,3 +18,9 @@ pub(in crate::backend::direct_wasm) struct ImplicitGlobalBinding {
     pub(in crate::backend::direct_wasm) value_index: u32,
     pub(in crate::backend::direct_wasm) present_index: u32,
 }
+
+#[derive(Clone, Copy)]
+pub(in crate::backend::direct_wasm) struct LexicalGlobalBinding {
+    pub(in crate::backend::direct_wasm) initialized_index: u32,
+    pub(in crate::backend::direct_wasm) mutable: bool,
+}

@@ -48,7 +48,19 @@ impl<'a> FunctionCompiler<'a> {
                     {
                         return self.infer_value_kind(&value);
                     }
-                    Some(StaticValueKind::Number)
+                    let left_kind = self.infer_value_kind(left);
+                    let right_kind = self.infer_value_kind(right);
+                    if left_kind == Some(StaticValueKind::String)
+                        || right_kind == Some(StaticValueKind::String)
+                    {
+                        Some(StaticValueKind::String)
+                    } else if left_kind == Some(StaticValueKind::Number)
+                        && right_kind == Some(StaticValueKind::Number)
+                    {
+                        Some(StaticValueKind::Number)
+                    } else {
+                        Some(StaticValueKind::Unknown)
+                    }
                 }
                 BinaryOp::Subtract
                 | BinaryOp::Multiply

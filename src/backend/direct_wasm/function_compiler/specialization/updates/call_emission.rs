@@ -6,8 +6,18 @@ impl<'a> FunctionCompiler<'a> {
         callee: &Expression,
         arguments: &[CallArgument],
     ) -> DirectResult<bool> {
+        let trace_capture_bindings = std::env::var_os("AYY_TRACE_CAPTURE_BINDINGS").is_some();
         if let Some(specialized) = self.resolve_specialized_function_value_from_expression(callee) {
+            if trace_capture_bindings {
+                eprintln!(
+                    "capture_bindings specialized_callee:direct callee={callee:?} binding={:?} return={:?}",
+                    specialized.binding, specialized.summary.return_value
+                );
+            }
             return self.emit_specialized_function_value_call(&specialized, arguments);
+        }
+        if trace_capture_bindings {
+            eprintln!("capture_bindings specialized_callee:none callee={callee:?}");
         }
 
         let Expression::Member { object, property } = callee else {

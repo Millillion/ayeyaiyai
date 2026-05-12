@@ -10,7 +10,13 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(());
         };
 
-        let arguments_usage = collect_arguments_usage_from_statements(statements);
+        let parameter_defaults = self.state.parameters.parameter_defaults.clone();
+        let arguments_usage = collect_arguments_usage_from_statements_and_expressions(
+            statements,
+            parameter_defaults
+                .iter()
+                .filter_map(|default| default.as_ref()),
+        );
         for index in arguments_usage.indexed_slots {
             let source_param_local = if index < self.state.parameters.visible_param_count {
                 Some(index)

@@ -19,6 +19,18 @@ impl<'a> FunctionCompiler<'a> {
     }
 
     pub(super) fn copy_member_bindings_for_alias(&mut self, name: &str, source_name: &str) {
+        let normalized_source_name = self
+            .resolve_registered_function_declaration(source_name)
+            .and_then(|function| {
+                function
+                    .self_binding
+                    .as_ref()
+                    .or(function.top_level_binding.as_ref())
+            })
+            .cloned()
+            .or_else(|| scoped_binding_source_name(source_name).map(str::to_string))
+            .unwrap_or_else(|| source_name.to_string());
+        let source_name = normalized_source_name.as_str();
         let mut function_bindings = Vec::new();
         let mut function_capture_slots = Vec::new();
         let mut getter_bindings = Vec::new();

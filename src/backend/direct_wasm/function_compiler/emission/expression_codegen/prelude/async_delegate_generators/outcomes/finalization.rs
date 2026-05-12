@@ -12,44 +12,46 @@ impl<'a> FunctionCompiler<'a> {
         delegate_completion_expression: &Expression,
         binding_name: &str,
         current_static_index: Option<usize>,
-        delegate_snapshot_bindings: Option<HashMap<String, Expression>>,
+        mut delegate_snapshot_bindings: Option<HashMap<String, Expression>>,
         scoped_snapshot_names: &[String],
         static_step_result_has_accessor_properties: bool,
     ) -> DirectResult<Option<StaticEvalOutcome>> {
+        if let Some(snapshot_bindings) = delegate_snapshot_bindings.as_mut()
+            && let Expression::Identifier(delegate_object_name) = &plan.delegate_expression
+        {
+            snapshot_bindings.remove(delegate_object_name);
+        }
         let step_result_expression = Expression::Identifier(step_result_name.to_string());
         let mut returned_done_expression = Expression::Identifier(promise_done_name.to_string());
         let mut returned_value_expression = Expression::Identifier(promise_value_name.to_string());
+        let mut snapshot_has_done = false;
+        let mut snapshot_has_value = false;
         if let Some(snapshot_bindings) = delegate_snapshot_bindings.as_ref() {
             if let Some(done_expression) = snapshot_bindings.get(promise_done_name) {
+                snapshot_has_done = true;
                 returned_done_expression = done_expression.clone();
             }
             if let Some(value_expression) = snapshot_bindings.get(promise_value_name) {
+                snapshot_has_value = true;
                 returned_value_expression = value_expression.clone();
             }
         }
-        if let Some(resolved_done) = self
-            .resolve_bound_alias_expression(&Expression::Identifier(promise_done_name.to_string()))
-            .filter(|resolved| {
-                !static_expression_matches(
-                    resolved,
-                    &Expression::Identifier(promise_done_name.to_string()),
-                )
-            })
+        if snapshot_has_done
+            && let Some(resolved_done) = self
+                .resolve_bound_alias_expression(&returned_done_expression)
+                .filter(|resolved| !static_expression_matches(resolved, &returned_done_expression))
         {
             returned_done_expression = resolved_done;
         }
-        if let Some(resolved_value) = self
-            .resolve_bound_alias_expression(&Expression::Identifier(promise_value_name.to_string()))
-            .filter(|resolved| {
-                !static_expression_matches(
-                    resolved,
-                    &Expression::Identifier(promise_value_name.to_string()),
-                )
-            })
+        if snapshot_has_value
+            && let Some(resolved_value) = self
+                .resolve_bound_alias_expression(&returned_value_expression)
+                .filter(|resolved| !static_expression_matches(resolved, &returned_value_expression))
         {
             returned_value_expression = resolved_value;
         }
         if !static_step_result_has_accessor_properties
+            && (!snapshot_has_done || !snapshot_has_value)
             && let Some(step_result_binding) =
                 self.resolve_object_binding_from_expression(&step_result_expression)
         {
@@ -64,18 +66,23 @@ impl<'a> FunctionCompiler<'a> {
             if let Some(done_property) = done_property
                 && let Some(done) = self.resolve_static_boolean_expression(&done_property)
             {
-                returned_done_expression = Expression::Bool(done);
+                if !snapshot_has_done {
+                    returned_done_expression = Expression::Bool(done);
+                }
                 if done {
-                    match property_name {
-                        "return" => {
-                            returned_value_expression = delegate_completion_expression.clone();
+                    if !snapshot_has_value {
+                        match property_name {
+                            "return" => {
+                                returned_value_expression = value_property
+                                    .unwrap_or_else(|| delegate_completion_expression.clone());
+                            }
+                            "next" | "throw" => {
+                                returned_value_expression = plan.completion_value.clone();
+                            }
+                            _ => {}
                         }
-                        "next" | "throw" => {
-                            returned_value_expression = plan.completion_value.clone();
-                        }
-                        _ => {}
                     }
-                } else if let Some(value_property) = value_property {
+                } else if !snapshot_has_value && let Some(value_property) = value_property {
                     returned_value_expression = value_property;
                 }
             }
@@ -126,6 +133,26 @@ impl<'a> FunctionCompiler<'a> {
             },
             None => None,
         };
+        if std::env::var_os("AYY_TRACE_ASYNC_DELEGATES").is_some() {
+            eprintln!(
+                "async_delegate_finalize property={} returned_done={:?} returned_value={:?} next_static_index={next_static_index:?}",
+                property_name,
+                self.materialize_static_expression(&returned_done_expression),
+                self.materialize_static_expression(&returned_value_expression)
+            );
+            if let Some(snapshot_bindings) = delegate_snapshot_bindings.as_ref() {
+                eprintln!(
+                    "async_delegate_finalize snapshot_log={:?}",
+                    snapshot_bindings.get("log")
+                );
+            }
+        }
+        if let Some(snapshot_bindings) = delegate_snapshot_bindings.as_ref() {
+            self.apply_async_delegate_snapshot_bindings_to_visible_state(
+                snapshot_bindings,
+                Some(plan.function_name.as_str()),
+            )?;
+        }
         self.persist_async_yield_delegate_generator_snapshot_state(
             binding_name,
             next_static_index,

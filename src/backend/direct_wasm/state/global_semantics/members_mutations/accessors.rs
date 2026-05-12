@@ -6,6 +6,9 @@ impl GlobalMemberService {
         key: MemberFunctionBindingKey,
         binding: LocalFunctionBinding,
     ) {
+        if std::env::var_os("AYY_TRACE_MEMBER_BINDINGS").is_some() {
+            eprintln!("global_member:set_getter key={key:?} binding={binding:?}");
+        }
         self.member_getter_bindings.insert(key, binding);
     }
 
@@ -13,6 +16,9 @@ impl GlobalMemberService {
         &mut self,
         key: &MemberFunctionBindingKey,
     ) {
+        if std::env::var_os("AYY_TRACE_MEMBER_BINDINGS").is_some() {
+            eprintln!("global_member:clear_getter key={key:?}");
+        }
         self.member_getter_bindings.remove(key);
     }
 
@@ -21,6 +27,9 @@ impl GlobalMemberService {
         key: MemberFunctionBindingKey,
         binding: LocalFunctionBinding,
     ) {
+        if std::env::var_os("AYY_TRACE_MEMBER_BINDINGS").is_some() {
+            eprintln!("global_member:set_setter key={key:?} binding={binding:?}");
+        }
         self.member_setter_bindings.insert(key, binding);
     }
 
@@ -28,6 +37,9 @@ impl GlobalMemberService {
         &mut self,
         key: &MemberFunctionBindingKey,
     ) {
+        if std::env::var_os("AYY_TRACE_MEMBER_BINDINGS").is_some() {
+            eprintln!("global_member:clear_setter key={key:?}");
+        }
         self.member_setter_bindings.remove(key);
     }
 }

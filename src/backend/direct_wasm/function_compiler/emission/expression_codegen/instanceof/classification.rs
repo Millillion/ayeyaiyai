@@ -1,6 +1,36 @@
 use super::*;
 
+thread_local! {
+    static PROMISE_INSTANCE_CLASSIFICATION_STACK: std::cell::RefCell<Vec<Expression>> =
+        const { std::cell::RefCell::new(Vec::new()) };
+}
+
 impl<'a> FunctionCompiler<'a> {
+    fn with_promise_instance_classification_guard(
+        &self,
+        expression: &Expression,
+        f: impl FnOnce(&Self) -> bool,
+    ) -> bool {
+        let reentered = PROMISE_INSTANCE_CLASSIFICATION_STACK.with(|stack| {
+            stack
+                .borrow()
+                .iter()
+                .any(|visited| static_expression_matches(visited, expression))
+        });
+        if reentered {
+            return false;
+        }
+
+        PROMISE_INSTANCE_CLASSIFICATION_STACK.with(|stack| {
+            stack.borrow_mut().push(expression.clone());
+        });
+        let result = f(self);
+        PROMISE_INSTANCE_CLASSIFICATION_STACK.with(|stack| {
+            stack.borrow_mut().pop();
+        });
+        result
+    }
+
     pub(in crate::backend::direct_wasm) fn expression_is_builtin_array_constructor(
         &self,
         expression: &Expression,
@@ -42,8 +72,11 @@ impl<'a> FunctionCompiler<'a> {
     ) -> bool {
         if self.expression_is_known_array_value(expression)
             || self.expression_is_known_function_value_for_instanceof(expression)
+            || self.expression_is_known_generator_instance_for_instanceof(expression)
             || self.expression_is_known_promise_instance_for_instanceof(expression)
+            || self.expression_is_known_constructor_instance_for_instanceof(expression, "WeakMap")
             || self.expression_is_known_constructor_instance_for_instanceof(expression, "WeakRef")
+            || self.expression_is_known_constructor_instance_for_instanceof(expression, "WeakSet")
             || self.expression_is_known_native_error_instance_for_instanceof(expression, "Error")
         {
             return false;
@@ -57,6 +90,12 @@ impl<'a> FunctionCompiler<'a> {
         let materialized = self.materialize_static_expression(expression);
         if !static_expression_matches(&materialized, expression) {
             return self.expression_is_known_non_object_value_for_instanceof(&materialized);
+        }
+        if self
+            .resolve_object_binding_from_expression(&materialized)
+            .is_some()
+        {
+            return false;
         }
         matches!(
             self.infer_value_kind(&materialized),
@@ -111,10 +150,78 @@ impl<'a> FunctionCompiler<'a> {
         )
     }
 
+    pub(in crate::backend::direct_wasm) fn expression_is_known_generator_instance_for_instanceof(
+        &self,
+        expression: &Expression,
+    ) -> bool {
+        if let Some(resolved) = self
+            .resolve_bound_alias_expression(expression)
+            .filter(|resolved| !static_expression_matches(resolved, expression))
+        {
+            return self.expression_is_known_generator_instance_for_instanceof(&resolved);
+        }
+        if let Expression::Call { callee, .. } = expression
+            && self
+                .resolve_user_function_from_expression(callee)
+                .is_some_and(|user_function| user_function.is_generator())
+        {
+            return true;
+        }
+        let materialized = self.materialize_static_expression(expression);
+        if !static_expression_matches(&materialized, expression) {
+            return self.expression_is_known_generator_instance_for_instanceof(&materialized);
+        }
+        false
+    }
+
     pub(in crate::backend::direct_wasm) fn expression_is_known_promise_instance_for_instanceof(
         &self,
         expression: &Expression,
     ) -> bool {
+        self.with_promise_instance_classification_guard(expression, |this| {
+            this.expression_is_known_promise_instance_for_instanceof_inner(expression)
+        })
+    }
+
+    fn expression_is_known_promise_instance_for_instanceof_inner(
+        &self,
+        expression: &Expression,
+    ) -> bool {
+        if let Expression::Identifier(name) = expression {
+            let resolved_local_name = self
+                .resolve_current_local_binding(name)
+                .map(|(resolved_name, _)| resolved_name);
+            let bound_value = resolved_local_name
+                .as_deref()
+                .and_then(|resolved_name| {
+                    self.state
+                        .speculation
+                        .static_semantics
+                        .local_value_binding(resolved_name)
+                })
+                .or_else(|| {
+                    resolved_local_name
+                        .is_none()
+                        .then(|| self.global_value_binding(name))
+                        .flatten()
+                });
+            if let Some(bound_value) = bound_value
+                && !static_expression_matches(bound_value, expression)
+                && self.expression_is_known_promise_instance_for_instanceof(bound_value)
+            {
+                return true;
+            }
+            if self.global_object_prototype_expression(name).is_some_and(|prototype| {
+                matches!(
+                    prototype,
+                    Expression::Member { object, property }
+                        if matches!(object.as_ref(), Expression::Identifier(owner) if owner == "Promise")
+                            && matches!(property.as_ref(), Expression::String(property_name) if property_name == "prototype")
+                )
+            }) {
+                return true;
+            }
+        }
         if let Some(resolved) = self
             .resolve_bound_alias_expression(expression)
             .filter(|resolved| !static_expression_matches(resolved, expression))
@@ -237,8 +344,11 @@ impl<'a> FunctionCompiler<'a> {
     ) -> bool {
         if self.expression_is_known_array_value(expression)
             || self.expression_is_known_function_value_for_instanceof(expression)
+            || self.expression_is_known_generator_instance_for_instanceof(expression)
             || self.expression_is_known_promise_instance_for_instanceof(expression)
+            || self.expression_is_known_constructor_instance_for_instanceof(expression, "WeakMap")
             || self.expression_is_known_constructor_instance_for_instanceof(expression, "WeakRef")
+            || self.expression_is_known_constructor_instance_for_instanceof(expression, "WeakSet")
             || self.expression_is_known_native_error_instance_for_instanceof(expression, "Error")
         {
             return true;
@@ -252,6 +362,17 @@ impl<'a> FunctionCompiler<'a> {
         let materialized = self.materialize_static_expression(expression);
         if !static_expression_matches(&materialized, expression) {
             return self.expression_is_known_object_like_value_for_instanceof(&materialized);
+        }
+        let object_binding = self.resolve_object_binding_from_expression(&materialized);
+        if std::env::var_os("AYY_TRACE_INSTANCEOF").is_some() {
+            eprintln!(
+                "instanceof:object_like expression={expression:?} materialized={materialized:?} object_binding={} kind={:?}",
+                object_binding.is_some(),
+                self.infer_value_kind(&materialized)
+            );
+        }
+        if object_binding.is_some() {
+            return true;
         }
         matches!(
             self.infer_value_kind(&materialized),

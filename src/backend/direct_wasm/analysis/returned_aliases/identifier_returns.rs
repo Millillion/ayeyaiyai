@@ -13,12 +13,32 @@ pub(in crate::backend::direct_wasm) fn collect_returned_identifier_source_expres
     statements: &[Statement],
 ) -> Option<Expression> {
     let returned_identifier = collect_returned_identifier(statements)?;
-    statements.iter().rev().find_map(|statement| {
-        collect_returned_identifier_source_expression_from_statement(
+    collect_returned_identifier_source_expression_before_return(statements, &returned_identifier)
+}
+
+fn collect_returned_identifier_source_expression_before_return(
+    statements: &[Statement],
+    returned_identifier: &str,
+) -> Option<Expression> {
+    let mut saw_return = false;
+    for statement in statements.iter().rev() {
+        if !saw_return {
+            if collect_returned_identifier_from_statement(statement)
+                .as_deref()
+                .is_some_and(|name| name == returned_identifier)
+            {
+                saw_return = true;
+            }
+            continue;
+        }
+        if let Some(expression) = collect_returned_identifier_source_expression_from_statement(
             statement,
-            &returned_identifier,
-        )
-    })
+            returned_identifier,
+        ) {
+            return Some(expression);
+        }
+    }
+    None
 }
 
 pub(in crate::backend::direct_wasm) fn collect_returned_identifier_with_scope_objects(
@@ -84,7 +104,9 @@ pub(in crate::backend::direct_wasm) fn collect_returned_identifier_source_expres
         }
         Statement::Block { body }
         | Statement::Labeled { body, .. }
-        | Statement::With { body, .. } => collect_returned_identifier_source_expression(body),
+        | Statement::With { body, .. } => {
+            collect_returned_identifier_source_expression_before_return(body, returned_identifier)
+        }
         Statement::If {
             then_branch,
             else_branch,

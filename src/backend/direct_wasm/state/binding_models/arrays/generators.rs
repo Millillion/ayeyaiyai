@@ -3,6 +3,7 @@ use super::*;
 #[derive(Clone)]
 pub(in crate::backend::direct_wasm) struct SimpleGeneratorStep {
     pub(in crate::backend::direct_wasm) effects: Vec<Statement>,
+    pub(in crate::backend::direct_wasm) close_effects: Vec<Statement>,
     pub(in crate::backend::direct_wasm) outcome: SimpleGeneratorStepOutcome,
 }
 

@@ -5,20 +5,28 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         expression: &Expression,
     ) -> Option<OrdinaryToPrimitivePlan> {
+        if self.expression_depends_on_active_loop_assignment(expression) {
+            return None;
+        }
         let object_binding = self
             .resolve_object_binding_from_expression(expression)
             .or_else(|| self.resolve_effectful_returned_object_binding(expression))?;
         let mut steps = Vec::new();
+        let mut own_non_callable_methods = 0;
         for method_name in ["valueOf", "toString"] {
             let property = Expression::String(method_name.to_string());
             let Some(method_value) = object_binding_lookup_value(&object_binding, &property) else {
                 continue;
             };
-            let binding = self.resolve_function_binding_from_expression(method_value)?;
+            let Some(binding) = self.resolve_function_binding_from_expression(method_value) else {
+                own_non_callable_methods += 1;
+                continue;
+            };
             let outcome = self.resolve_terminal_function_outcome_from_binding(&binding, &[])?;
             steps.push(OrdinaryToPrimitiveStep { binding, outcome });
         }
-        (!steps.is_empty()).then_some(OrdinaryToPrimitivePlan { steps })
+        (!steps.is_empty() || own_non_callable_methods == 2)
+            .then_some(OrdinaryToPrimitivePlan { steps })
     }
 
     pub(in crate::backend::direct_wasm) fn static_expression_is_non_object_primitive(
@@ -98,6 +106,11 @@ impl<'a> FunctionCompiler<'a> {
         left: &Expression,
         right: &Expression,
     ) -> DirectResult<bool> {
+        if self.expression_depends_on_active_loop_assignment(left)
+            || self.expression_depends_on_active_loop_assignment(right)
+        {
+            return Ok(false);
+        }
         let left_plan = self.resolve_ordinary_to_primitive_plan(left);
         let right_plan = self.resolve_ordinary_to_primitive_plan(right);
         let left_eval_throw = matches!(

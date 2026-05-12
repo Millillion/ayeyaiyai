@@ -37,8 +37,14 @@ impl<'a> FunctionCompiler<'a> {
                 Ok(())
             }
             Expression::NewTarget => {
-                self.push_global_get(CURRENT_NEW_TARGET_GLOBAL_INDEX);
-                Ok(())
+                if let Some(hidden_name) =
+                    self.resolve_user_function_capture_hidden_name("new.target")
+                {
+                    self.emit_identifier_expression_value(&hidden_name)
+                } else {
+                    self.push_global_get(CURRENT_NEW_TARGET_GLOBAL_INDEX);
+                    Ok(())
+                }
             }
             Expression::SuperMember { property } => {
                 self.emit_super_member_expression_value(property)

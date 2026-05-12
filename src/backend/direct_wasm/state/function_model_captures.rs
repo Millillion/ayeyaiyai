@@ -26,5 +26,6 @@ pub(in crate::backend::direct_wasm) struct BoundUserFunctionCallSnapshot {
     pub(in crate::backend::direct_wasm) function_name: String,
     pub(in crate::backend::direct_wasm) source_expression: Option<Expression>,
     pub(in crate::backend::direct_wasm) result_expression: Option<Expression>,
+    pub(in crate::backend::direct_wasm) prototype_source_expression: Option<Expression>,
     pub(in crate::backend::direct_wasm) updated_bindings: HashMap<String, Expression>,
 }

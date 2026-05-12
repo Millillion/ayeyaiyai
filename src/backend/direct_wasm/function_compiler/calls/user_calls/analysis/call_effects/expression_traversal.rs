@@ -1,6 +1,22 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn collect_member_assignment_call_effect_target(
+        &self,
+        object: &Expression,
+        names: &mut HashSet<String>,
+    ) {
+        match object {
+            Expression::Identifier(name) => {
+                names.insert(name.clone());
+            }
+            Expression::This => {
+                names.insert("this".to_string());
+            }
+            _ => {}
+        }
+    }
+
     pub(in crate::backend::direct_wasm) fn collect_expression_call_effect_nonlocal_bindings(
         &self,
         expression: &Expression,
@@ -8,6 +24,40 @@ impl<'a> FunctionCompiler<'a> {
         names: &mut HashSet<String>,
         visited: &mut HashSet<String>,
     ) {
+        if let Expression::Call { callee, arguments }
+        | Expression::SuperCall { callee, arguments }
+        | Expression::New { callee, arguments } = expression
+            && let Expression::Member { object, property } = callee.as_ref()
+            && let Expression::String(property_name) = property.as_ref()
+        {
+            let is_promise_protocol_call = matches!(property_name.as_str(), "then" | "catch")
+                && Self::call_is_promise_like_chain(object);
+            let is_generator_protocol_call =
+                matches!(property_name.as_str(), "next" | "return" | "throw")
+                    && (self.is_async_generator_iterator_expression(object)
+                        || self.simple_generator_source_metadata(object).is_some());
+            if is_promise_protocol_call || is_generator_protocol_call {
+                self.collect_expression_call_effect_nonlocal_bindings(
+                    object,
+                    current_function_name,
+                    names,
+                    visited,
+                );
+                for argument in arguments {
+                    match argument {
+                        CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                            self.collect_expression_call_effect_nonlocal_bindings(
+                                expression,
+                                current_function_name,
+                                names,
+                                visited,
+                            );
+                        }
+                    }
+                }
+                return;
+            }
+        }
         match expression {
             Expression::Call { callee, arguments }
             | Expression::SuperCall { callee, arguments }
@@ -49,6 +99,7 @@ impl<'a> FunctionCompiler<'a> {
                 property,
                 value,
             } => {
+                self.collect_member_assignment_call_effect_target(object, names);
                 if let Some(LocalFunctionBinding::User(function_name)) =
                     self.resolve_member_setter_binding(object, property)
                 {
@@ -79,6 +130,7 @@ impl<'a> FunctionCompiler<'a> {
                 );
             }
             Expression::AssignSuperMember { property, value } => {
+                names.insert("this".to_string());
                 if let Some(effective_property) = self.resolve_property_key_expression(property) {
                     if let Some((_, binding)) = self
                         .resolve_super_runtime_prototype_binding_with_context(current_function_name)

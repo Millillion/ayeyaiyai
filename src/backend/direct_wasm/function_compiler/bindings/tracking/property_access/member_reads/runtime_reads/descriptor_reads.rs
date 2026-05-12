@@ -1,7 +1,7 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
-    pub(super) fn emit_runtime_descriptor_member_read(
+    pub(in crate::backend::direct_wasm) fn emit_runtime_descriptor_member_read(
         &mut self,
         object: &Expression,
         property: &Expression,
@@ -27,9 +27,36 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(false);
         };
 
+        let trace_descriptor_reads = std::env::var_os("AYY_TRACE_DESCRIPTOR_READS").is_some();
+        if trace_descriptor_reads {
+            eprintln!(
+                "descriptor_read object={object:?} property={property:?} value={:?} configurable={} enumerable={} writable={:?} getter={:?} setter={:?}",
+                descriptor.value,
+                descriptor.configurable,
+                descriptor.enumerable,
+                descriptor.writable,
+                descriptor.getter,
+                descriptor.setter
+            );
+        }
+
         match property_name.as_str() {
             "value" => {
                 if let Some(value) = descriptor.value.clone() {
+                    if matches!(
+                        &value,
+                        Expression::Member {
+                            object: value_object,
+                            property: value_property,
+                        } if value_object.as_ref() == object && value_property.as_ref() == property
+                    ) {
+                        if trace_descriptor_reads {
+                            eprintln!(
+                                "descriptor_read:self_reference object={object:?} property={property:?}"
+                            );
+                        }
+                        return Ok(false);
+                    }
                     self.emit_numeric_expression(&value)?;
                 } else {
                     self.push_i32_const(JS_UNDEFINED_TAG);

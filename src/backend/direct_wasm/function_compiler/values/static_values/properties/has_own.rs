@@ -1,6 +1,270 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn resolve_static_reflect_has_result_with_depth(
+        &self,
+        object: &Expression,
+        property: &Expression,
+        depth: usize,
+    ) -> Option<bool> {
+        if depth > 16 {
+            return None;
+        }
+
+        if self.resolve_function_object_has_own_property(object, property) == Some(true)
+            || self
+                .resolve_bound_function_prototype_call_descriptor(object, property)
+                .is_some()
+        {
+            return Some(true);
+        }
+
+        if let Some(has_own_property) =
+            self.resolve_static_object_has_own_property_result(object, property)
+        {
+            match has_own_property {
+                Some(true) => return Some(true),
+                Some(false) => {}
+                None => return None,
+            }
+        }
+
+        let prototype = self.resolve_static_object_prototype_expression(object)?;
+        if matches!(prototype, Expression::Null) {
+            return Some(false);
+        }
+        if static_expression_matches(&prototype, object) {
+            return None;
+        }
+        self.resolve_static_reflect_has_result_with_depth(&prototype, property, depth + 1)
+    }
+
+    pub(in crate::backend::direct_wasm) fn resolve_static_reflect_has_result(
+        &self,
+        object: &Expression,
+        property: &Expression,
+    ) -> Option<bool> {
+        self.resolve_static_reflect_has_result_with_depth(object, property, 0)
+    }
+
+    pub(in crate::backend::direct_wasm) fn resolve_static_object_has_own_property_result(
+        &self,
+        object: &Expression,
+        property: &Expression,
+    ) -> Option<Option<bool>> {
+        let resolved_object = self
+            .resolve_bound_alias_expression(object)
+            .filter(|resolved| !static_expression_matches(resolved, object));
+        let materialized_object = self.materialize_static_expression(object);
+        let resolved_property = self.resolve_property_key_expression(property).or_else(|| {
+            self.resolve_bound_alias_expression(property)
+                .filter(|resolved| !static_expression_matches(resolved, property))
+        });
+        let materialized_property = self.materialize_static_expression(property);
+
+        if self.current_function_requires_runtime_public_this_resolution()
+            && self.expression_is_current_this_reference(object)
+            && !is_private_property_name_expression(&materialized_property)
+        {
+            return Some(None);
+        }
+
+        let object_candidates = [
+            Some(object),
+            resolved_object.as_ref(),
+            (!static_expression_matches(&materialized_object, object))
+                .then_some(&materialized_object),
+        ];
+        let property_candidates = [
+            Some(property),
+            resolved_property.as_ref(),
+            (!static_expression_matches(&materialized_property, property))
+                .then_some(&materialized_property),
+        ];
+
+        let mut saw_object_binding = false;
+        let mut saw_dynamic_property_lookup = false;
+        let mut saw_symbol_property_lookup = false;
+        let mut saw_parameter_object_binding = false;
+        let boxed_string_length_lookup =
+            property_candidates
+                .iter()
+                .flatten()
+                .any(|property_candidate| {
+                    matches!(
+                        self.resolve_property_key_expression(property_candidate)
+                            .unwrap_or_else(|| (*property_candidate).clone()),
+                        Expression::String(ref property_name) if property_name == "length"
+                    )
+                });
+        let regexp_last_index_lookup =
+            property_candidates
+                .iter()
+                .flatten()
+                .any(|property_candidate| {
+                    matches!(
+                        self.resolve_property_key_expression(property_candidate)
+                            .unwrap_or_else(|| (*property_candidate).clone()),
+                        Expression::String(ref property_name) if property_name == "lastIndex"
+                    )
+                });
+
+        for object_candidate in object_candidates.into_iter().flatten() {
+            if boxed_string_length_lookup
+                && matches!(
+                    self.resolve_static_boxed_primitive_value(object_candidate),
+                    Some(Expression::String(_))
+                )
+            {
+                return Some(Some(true));
+            }
+            if regexp_last_index_lookup
+                && self.expression_is_static_regexp_instance(object_candidate)
+            {
+                return Some(Some(true));
+            }
+            let object_binding = self
+                .resolve_object_binding_from_expression(object_candidate)
+                .or_else(|| match object_candidate {
+                    Expression::Identifier(name) => {
+                        self.resolve_identifier_object_binding_fallback(name)
+                    }
+                    _ => None,
+                });
+            let Some(object_binding) = object_binding else {
+                continue;
+            };
+            saw_object_binding = true;
+            if let Expression::Identifier(name) = object_candidate {
+                let resolved_name = scoped_binding_source_name(name).unwrap_or(name);
+                saw_parameter_object_binding |= self
+                    .state
+                    .parameters
+                    .parameter_names
+                    .iter()
+                    .any(|parameter_name| parameter_name == resolved_name);
+            }
+
+            for property_candidate in property_candidates.into_iter().flatten() {
+                let canonical_property =
+                    self.canonical_object_property_expression(property_candidate);
+                let requested_symbol = self
+                    .resolve_symbol_identity_expression(&canonical_property)
+                    .or_else(|| self.resolve_symbol_identity_expression(property_candidate));
+                if static_property_name_from_expression(&canonical_property).is_none()
+                    && requested_symbol.is_none()
+                    && (!object_binding.string_properties.is_empty()
+                        || !object_binding.symbol_properties.is_empty())
+                {
+                    saw_dynamic_property_lookup = true;
+                }
+                if !object_binding.symbol_properties.is_empty()
+                    && (!matches!(canonical_property, Expression::String(_))
+                        || requested_symbol.is_some())
+                {
+                    saw_symbol_property_lookup = true;
+                }
+                if object_binding.runtime_symbol_properties && requested_symbol.is_some() {
+                    return Some(None);
+                }
+
+                if self.runtime_object_property_shadow_deletion_may_affect_property(
+                    object_candidate,
+                    &canonical_property,
+                ) {
+                    return Some(None);
+                }
+
+                if self
+                    .resolve_object_binding_property_value(&object_binding, property_candidate)
+                    .is_some()
+                {
+                    return Some(Some(true));
+                }
+            }
+        }
+
+        if saw_symbol_property_lookup {
+            return Some(None);
+        }
+
+        if saw_parameter_object_binding {
+            return Some(None);
+        }
+
+        if saw_dynamic_property_lookup {
+            return Some(None);
+        }
+
+        saw_object_binding.then_some(Some(false))
+    }
+
+    pub(in crate::backend::direct_wasm) fn resolve_function_object_has_own_property(
+        &self,
+        object: &Expression,
+        property: &Expression,
+    ) -> Option<bool> {
+        self.resolve_function_binding_from_expression(object)?;
+
+        let resolved_object = self
+            .resolve_bound_alias_expression(object)
+            .filter(|resolved| !static_expression_matches(resolved, object));
+        let materialized_object = self.materialize_static_expression(object);
+        let resolved_property = self.resolve_property_key_expression(property).or_else(|| {
+            self.resolve_bound_alias_expression(property)
+                .filter(|resolved| !static_expression_matches(resolved, property))
+        });
+        let materialized_property = self.materialize_static_expression(property);
+
+        let object_candidates = [
+            Some(object),
+            resolved_object.as_ref(),
+            (!static_expression_matches(&materialized_object, object))
+                .then_some(&materialized_object),
+        ];
+        let property_candidates = [
+            Some(property),
+            resolved_property.as_ref(),
+            (!static_expression_matches(&materialized_property, property))
+                .then_some(&materialized_property),
+        ];
+
+        for object_candidate in object_candidates.into_iter().flatten() {
+            for property_candidate in property_candidates.into_iter().flatten() {
+                if self
+                    .function_object_has_explicit_own_property(object_candidate, property_candidate)
+                {
+                    return Some(true);
+                }
+                let Expression::String(property_name) = property_candidate else {
+                    continue;
+                };
+                if property_name == "caller" || property_name == "arguments" {
+                    return Some(false);
+                }
+                if self.runtime_object_property_shadow_deletion_may_hide_static_property(
+                    object_candidate,
+                    property_candidate,
+                ) {
+                    return None;
+                }
+                if self
+                    .resolve_function_property_descriptor_binding(
+                        object_candidate,
+                        resolved_object.as_ref(),
+                        &materialized_object,
+                        property_name,
+                    )
+                    .is_some()
+                {
+                    return Some(true);
+                }
+            }
+        }
+
+        Some(false)
+    }
+
     pub(in crate::backend::direct_wasm) fn resolve_static_has_own_property_call_result(
         &self,
         expression: &Expression,
@@ -79,24 +343,56 @@ impl<'a> FunctionCompiler<'a> {
             };
         }
 
-        if self.resolve_user_function_from_expression(object).is_some() {
-            return match argument_property {
-                Expression::String(property_name)
-                    if property_name == "caller" || property_name == "arguments" =>
-                {
-                    Some(false)
-                }
-                _ => None,
-            };
+        if self
+            .resolve_function_binding_from_expression(object)
+            .is_some()
+        {
+            return self.resolve_function_object_has_own_property(object, argument_property);
         }
 
-        if let Some(object_binding) = self.resolve_object_binding_from_expression(object) {
-            return Some(
-                self.resolve_object_binding_property_value(&object_binding, argument_property)
-                    .is_some(),
-            );
+        if let Some(has_property) =
+            self.resolve_static_object_has_own_property_result(object, argument_property)
+        {
+            return has_property;
+        }
+
+        if self
+            .resolve_bound_function_prototype_call_descriptor(object, argument_property)
+            .is_some()
+        {
+            return Some(true);
         }
 
         None
+    }
+
+    pub(in crate::backend::direct_wasm) fn resolve_static_reflect_has_call_result(
+        &self,
+        expression: &Expression,
+    ) -> Option<bool> {
+        let Expression::Call { callee, arguments } = expression else {
+            return None;
+        };
+        let Expression::Member { object, property } = callee.as_ref() else {
+            return None;
+        };
+        if !matches!(object.as_ref(), Expression::Identifier(name) if name == "Reflect" && self.is_unshadowed_builtin_identifier(name))
+            || !matches!(property.as_ref(), Expression::String(name) if name == "has")
+        {
+            return None;
+        }
+        let target = match arguments.first() {
+            Some(CallArgument::Expression(expression) | CallArgument::Spread(expression)) => {
+                expression
+            }
+            None => return None,
+        };
+        let property = match arguments.get(1) {
+            Some(CallArgument::Expression(expression) | CallArgument::Spread(expression)) => {
+                expression.clone()
+            }
+            None => Expression::Undefined,
+        };
+        self.resolve_static_reflect_has_result(target, &property)
     }
 }

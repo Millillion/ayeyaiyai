@@ -61,7 +61,7 @@ impl<'a> FunctionCompiler<'a> {
                     }
                 }
                 self.with_suspended_with_scopes(|compiler| {
-                    compiler.push_call(user_function.function_index);
+                    compiler.push_user_function_call(&user_function);
                     let return_value_local = compiler.allocate_temp_local();
                     compiler.push_local_set(return_value_local);
                     compiler.emit_check_global_throw_for_user_call()?;

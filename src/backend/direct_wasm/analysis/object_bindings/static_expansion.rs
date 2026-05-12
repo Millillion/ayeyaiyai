@@ -186,13 +186,50 @@ pub(in crate::backend::direct_wasm) fn builtin_identifier_kind(
     name: &str,
 ) -> Option<StaticValueKind> {
     match name {
-        "Number" | "String" | "Boolean" | "Symbol" | "BigInt" | "Function" | "Object" | "Array"
-        | "ArrayBuffer" | "Date" | "RegExp" | "Map" | "Set" | "Error" | "EvalError"
-        | "RangeError" | "ReferenceError" | "SyntaxError" | "TypeError" | "URIError"
-        | "AggregateError" | "Uint8Array" | "Int8Array" | "Uint16Array" | "Int16Array"
-        | "Uint32Array" | "Int32Array" | "Float32Array" | "Float64Array" | "Uint8ClampedArray"
-        | "Promise" | "WeakRef" | "eval" => Some(StaticValueKind::Function),
-        "Math" | "JSON" | "globalThis" => Some(StaticValueKind::Object),
+        "Number"
+        | "String"
+        | "Boolean"
+        | "Symbol"
+        | "BigInt"
+        | "Function"
+        | "AsyncFunction"
+        | "GeneratorFunction"
+        | "AsyncGeneratorFunction"
+        | "Object"
+        | "Array"
+        | "ArrayBuffer"
+        | "SharedArrayBuffer"
+        | "DataView"
+        | "Date"
+        | "RegExp"
+        | "Map"
+        | "Set"
+        | "Error"
+        | "EvalError"
+        | "RangeError"
+        | "ReferenceError"
+        | "SyntaxError"
+        | "TypeError"
+        | "URIError"
+        | "AggregateError"
+        | "SuppressedError"
+        | "Uint8Array"
+        | "Int8Array"
+        | "Uint16Array"
+        | "Int16Array"
+        | "Uint32Array"
+        | "Int32Array"
+        | "Float32Array"
+        | "Float64Array"
+        | "Uint8ClampedArray"
+        | "BigInt64Array"
+        | "BigUint64Array"
+        | "Promise"
+        | "WeakMap"
+        | "WeakRef"
+        | "WeakSet"
+        | "eval" => Some(StaticValueKind::Function),
+        "Math" | "JSON" | "Reflect" | "globalThis" => Some(StaticValueKind::Object),
         "Infinity" | "NaN" | "undefined" => Some(StaticValueKind::Undefined),
         _ => None,
     }

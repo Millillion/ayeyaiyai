@@ -1,5 +1,32 @@
 use super::*;
 
+const INFER_VALUE_KIND_RECURSION_LIMIT: usize = 128;
+
+thread_local! {
+    static INFER_VALUE_KIND_DEPTH: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+struct InferValueKindDepthGuard;
+
+impl InferValueKindDepthGuard {
+    fn enter() -> Option<Self> {
+        INFER_VALUE_KIND_DEPTH.with(|depth| {
+            let current = depth.get();
+            if current >= INFER_VALUE_KIND_RECURSION_LIMIT {
+                return None;
+            }
+            depth.set(current + 1);
+            Some(Self)
+        })
+    }
+}
+
+impl Drop for InferValueKindDepthGuard {
+    fn drop(&mut self) {
+        INFER_VALUE_KIND_DEPTH.with(|depth| depth.set(depth.get().saturating_sub(1)));
+    }
+}
+
 #[path = "core_kinds/compound.rs"]
 mod compound;
 #[path = "core_kinds/primitives.rs"]
@@ -10,6 +37,9 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         expression: &Expression,
     ) -> Option<StaticValueKind> {
+        let Some(_depth_guard) = InferValueKindDepthGuard::enter() else {
+            return Some(StaticValueKind::Unknown);
+        };
         match expression {
             Expression::Number(_)
             | Expression::BigInt(_)

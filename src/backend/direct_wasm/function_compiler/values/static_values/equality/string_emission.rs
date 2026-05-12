@@ -39,6 +39,9 @@ impl<'a> FunctionCompiler<'a> {
         right: &Expression,
         op: BinaryOp,
     ) -> DirectResult<bool> {
+        if !matches!(left, Expression::String(_)) && !matches!(right, Expression::String(_)) {
+            return Ok(false);
+        }
         let Some(left_text) = self.resolve_static_string_value(left) else {
             return Ok(false);
         };
@@ -52,6 +55,41 @@ impl<'a> FunctionCompiler<'a> {
             _ => return Ok(false),
         };
         self.push_i32_const(if result { 1 } else { 0 });
+        Ok(true)
+    }
+
+    pub(in crate::backend::direct_wasm) fn emit_runtime_static_string_equality_comparison(
+        &mut self,
+        left: &Expression,
+        right: &Expression,
+        op: BinaryOp,
+    ) -> DirectResult<bool> {
+        let (dynamic, literal) = match (left, right) {
+            (dynamic, Expression::String(text))
+                if self.infer_value_kind(dynamic) == Some(StaticValueKind::String) =>
+            {
+                (dynamic, text)
+            }
+            (Expression::String(text), dynamic)
+                if self.infer_value_kind(dynamic) == Some(StaticValueKind::String) =>
+            {
+                (dynamic, text)
+            }
+            _ => return Ok(false),
+        };
+        if !matches!(
+            op,
+            BinaryOp::Equal | BinaryOp::NotEqual | BinaryOp::LooseEqual | BinaryOp::LooseNotEqual
+        ) {
+            return Ok(false);
+        }
+
+        self.emit_numeric_expression(dynamic)?;
+        self.emit_static_string_literal(literal)?;
+        self.push_binary_op(BinaryOp::Equal)?;
+        if matches!(op, BinaryOp::NotEqual | BinaryOp::LooseNotEqual) {
+            self.state.emission.output.instructions.push(0x45);
+        }
         Ok(true)
     }
 }

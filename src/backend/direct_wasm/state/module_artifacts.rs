@@ -21,7 +21,7 @@ impl ModuleArtifactsState {
 
         let offset = self.next_data_offset;
         let len = bytes.len() as u32;
-        self.next_data_offset += len;
+        self.next_data_offset += len.max(1);
         self.string_data.push((offset, bytes.clone()));
         self.interned_strings.insert(bytes, (offset, len));
         (offset, len)

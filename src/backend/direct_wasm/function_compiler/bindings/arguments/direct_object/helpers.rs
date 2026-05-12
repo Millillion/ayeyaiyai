@@ -6,9 +6,15 @@ impl<'a> FunctionCompiler<'a> {
         expression: &Expression,
     ) -> bool {
         match expression {
-            Expression::Identifier(name) if self.is_current_arguments_binding_name(name) => {
-                self.has_arguments_object()
-            }
+            Expression::Identifier(name) if self.is_current_arguments_binding_name(name) => self
+                .resolve_current_local_binding(name)
+                .map(|(resolved_name, _)| {
+                    self.state
+                        .parameters
+                        .direct_arguments_aliases
+                        .contains(&resolved_name)
+                })
+                .unwrap_or_else(|| self.has_arguments_object()),
             Expression::Identifier(name) => self
                 .state
                 .parameters

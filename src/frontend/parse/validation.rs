@@ -4,7 +4,8 @@ use swc_ecma_ast::{DefaultDecl, ExportDefaultDecl, Module, ModuleDecl, ModuleIte
 use crate::frontend::early_errors::{
     script_has_use_strict_directive, validate_class_syntax, validate_declaration_syntax,
     validate_expression_syntax, validate_function_syntax, validate_import_attributes,
-    validate_statement_syntax, validate_strict_mode_early_errors_in_module_items,
+    validate_script_body_early_errors, validate_statement_syntax,
+    validate_strict_mode_early_errors_in_module_items,
     validate_strict_mode_early_errors_in_statements,
 };
 
@@ -12,6 +13,8 @@ pub(super) fn validate_script_ast(
     script: &swc_ecma_ast::Script,
     file: &swc_common::SourceFile,
 ) -> Result<()> {
+    validate_script_body_early_errors(&script.body)?;
+
     for statement in &script.body {
         validate_statement_syntax(statement, file)?;
     }

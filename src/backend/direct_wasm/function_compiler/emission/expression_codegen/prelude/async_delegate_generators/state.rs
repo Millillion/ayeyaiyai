@@ -7,6 +7,14 @@ impl<'a> FunctionCompiler<'a> {
         static_index: Option<usize>,
         snapshot_bindings: Option<HashMap<String, Expression>>,
     ) {
+        if std::env::var_os("AYY_TRACE_ASYNC_DELEGATES").is_some() {
+            eprintln!(
+                "async_delegate_persist binding={} static_index={:?} snapshot={}",
+                binding_name,
+                static_index,
+                snapshot_bindings.is_some()
+            );
+        }
         if let Some(binding) = self
             .state
             .speculation

@@ -52,6 +52,9 @@ pub(in crate::backend::direct_wasm) trait StaticUserFunctionBindingExecutor:
             return None;
         }
         let return_value = summary.return_value.as_ref()?;
+        if !inline_summary_side_effect_free_expression(return_value) {
+            return None;
+        }
         let substituted = self.substitute_static_user_function_argument_bindings(
             return_value,
             user_function,

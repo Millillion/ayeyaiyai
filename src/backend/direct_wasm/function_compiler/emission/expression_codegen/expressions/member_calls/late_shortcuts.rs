@@ -62,6 +62,12 @@ impl<'a> FunctionCompiler<'a> {
         {
             return Ok(true);
         }
+        if matches!(object, Expression::Identifier(name) if name == "JSON")
+            && matches!(property, Expression::String(name) if name == "stringify")
+            && self.emit_builtin_call("JSON.stringify", arguments)?
+        {
+            return Ok(true);
+        }
         if self.emit_object_array_builtin_call(object, property, arguments)? {
             return Ok(true);
         }

@@ -18,7 +18,9 @@ impl<'a> FunctionCompiler<'a> {
         value_local: u32,
     ) {
         match &iterator_binding.source {
-            IteratorSourceKind::StaticArray { .. } => self
+            IteratorSourceKind::StaticArray { .. }
+            | IteratorSourceKind::StaticArrayEntries { .. }
+            | IteratorSourceKind::StaticMapEntries { .. } => self
                 .update_runtime_iterator_step_static_array(
                     iterator_binding,
                     current_index_local,

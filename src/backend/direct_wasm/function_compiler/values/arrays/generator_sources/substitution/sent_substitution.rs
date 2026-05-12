@@ -29,6 +29,37 @@ impl<'a> FunctionCompiler<'a> {
                         .iter()
                         .any(Self::statement_contains_generator_yield)
             }
+            Statement::Declaration { body }
+            | Statement::Labeled { body, .. }
+            | Statement::With { body, .. } => {
+                body.iter().any(Self::statement_contains_generator_yield)
+            }
+            Statement::Try {
+                body,
+                catch_setup,
+                catch_body,
+                ..
+            } => {
+                body.iter().any(Self::statement_contains_generator_yield)
+                    || catch_setup
+                        .iter()
+                        .any(Self::statement_contains_generator_yield)
+                    || catch_body
+                        .iter()
+                        .any(Self::statement_contains_generator_yield)
+            }
+            Statement::Switch { cases, .. } => cases.iter().any(|case| {
+                case.body
+                    .iter()
+                    .any(Self::statement_contains_generator_yield)
+            }),
+            Statement::For { init, body, .. } => {
+                init.iter().any(Self::statement_contains_generator_yield)
+                    || body.iter().any(Self::statement_contains_generator_yield)
+            }
+            Statement::While { body, .. } | Statement::DoWhile { body, .. } => {
+                body.iter().any(Self::statement_contains_generator_yield)
+            }
             _ => false,
         }
     }

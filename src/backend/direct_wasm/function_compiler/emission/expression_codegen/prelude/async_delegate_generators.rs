@@ -6,7 +6,7 @@ mod outcomes;
 mod setup;
 mod state;
 mod step_result;
-use self::setup::InitialDelegateSnapshotBindings;
+pub(in crate::backend::direct_wasm) use self::setup::InitialDelegateSnapshotBindings;
 
 pub(super) enum AsyncDelegateConsumptionPreparation {
     NotApplicable,
@@ -40,6 +40,20 @@ impl<'a> FunctionCompiler<'a> {
         property_name: &str,
         arguments: &[CallArgument],
     ) -> DirectResult<Option<StaticEvalOutcome>> {
+        if !matches!(object, Expression::Identifier(_))
+            && self.resolve_simple_generator_source(object).is_none()
+            && let Some(source @ IteratorSourceKind::AsyncYieldDelegateGenerator { .. }) =
+                self.resolve_local_array_iterator_source(object)
+        {
+            let iterator_name =
+                self.allocate_named_hidden_local("async_delegate_iter", StaticValueKind::Object);
+            self.update_local_array_iterator_binding_with_source(&iterator_name, Some(source));
+            return self.consume_async_yield_delegate_generator_promise_outcome(
+                &Expression::Identifier(iterator_name),
+                property_name,
+                arguments,
+            );
+        }
         match self.prepare_async_yield_delegate_generator_consumption(
             object,
             property_name,

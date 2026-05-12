@@ -20,7 +20,14 @@ impl<'a> FunctionCompiler<'a> {
     ) -> HashSet<String> {
         prepared
             .iter()
-            .filter_map(|binding| binding.source_binding_name.clone())
+            .filter_map(|binding| {
+                let source_name = binding.source_binding_name.as_ref()?;
+                if Self::capture_slot_member_source_key_parts(source_name).is_some() {
+                    Some(binding.capture_name.clone())
+                } else {
+                    Some(source_name.clone())
+                }
+            })
             .collect()
     }
 

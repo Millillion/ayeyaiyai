@@ -9,13 +9,15 @@ impl DirectWasmCompiler {
         bindings: &mut HashMap<String, HashMap<String, Option<LocalFunctionBinding>>>,
         array_bindings: &mut HashMap<String, HashMap<String, Option<ArrayValueBinding>>>,
         object_bindings: &mut HashMap<String, HashMap<String, Option<ObjectValueBinding>>>,
+        current_function_name: Option<&str>,
     ) {
-        self.collect_parameter_bindings_from_expression(
+        self.collect_parameter_bindings_from_expression_in_function(
             value,
             aliases,
             bindings,
             array_bindings,
             object_bindings,
+            current_function_name,
         );
         let function_binding =
             self.resolve_function_binding_from_expression_with_aliases(value, aliases);
@@ -31,27 +33,31 @@ impl DirectWasmCompiler {
         bindings: &mut HashMap<String, HashMap<String, Option<LocalFunctionBinding>>>,
         array_bindings: &mut HashMap<String, HashMap<String, Option<ArrayValueBinding>>>,
         object_bindings: &mut HashMap<String, HashMap<String, Option<ObjectValueBinding>>>,
+        current_function_name: Option<&str>,
     ) {
-        self.collect_parameter_bindings_from_expression(
+        self.collect_parameter_bindings_from_expression_in_function(
             object,
             aliases,
             bindings,
             array_bindings,
             object_bindings,
+            current_function_name,
         );
-        self.collect_parameter_bindings_from_expression(
+        self.collect_parameter_bindings_from_expression_in_function(
             property,
             aliases,
             bindings,
             array_bindings,
             object_bindings,
+            current_function_name,
         );
-        self.collect_parameter_bindings_from_expression(
+        self.collect_parameter_bindings_from_expression_in_function(
             value,
             aliases,
             bindings,
             array_bindings,
             object_bindings,
+            current_function_name,
         );
     }
 
@@ -63,20 +69,23 @@ impl DirectWasmCompiler {
         bindings: &mut HashMap<String, HashMap<String, Option<LocalFunctionBinding>>>,
         array_bindings: &mut HashMap<String, HashMap<String, Option<ArrayValueBinding>>>,
         object_bindings: &mut HashMap<String, HashMap<String, Option<ObjectValueBinding>>>,
+        current_function_name: Option<&str>,
     ) {
-        self.collect_parameter_bindings_from_expression(
+        self.collect_parameter_bindings_from_expression_in_function(
             object,
             aliases,
             bindings,
             array_bindings,
             object_bindings,
+            current_function_name,
         );
-        self.collect_parameter_bindings_from_expression(
+        self.collect_parameter_bindings_from_expression_in_function(
             property,
             aliases,
             bindings,
             array_bindings,
             object_bindings,
+            current_function_name,
         );
     }
 }

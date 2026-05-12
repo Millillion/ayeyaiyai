@@ -1,5 +1,7 @@
 use super::FunctionArraySemanticsState;
-use crate::backend::direct_wasm::{ArrayIteratorBinding, IteratorStepBinding};
+use crate::backend::direct_wasm::{
+    ArrayIteratorBinding, CachedIteratorNextMethodBinding, IteratorStepBinding,
+};
 
 impl FunctionArraySemanticsState {
     pub(in crate::backend::direct_wasm) fn local_array_iterator_binding(
@@ -37,6 +39,29 @@ impl FunctionArraySemanticsState {
         name: &str,
     ) {
         self.local_array_iterator_bindings.remove(name);
+    }
+
+    pub(in crate::backend::direct_wasm) fn cached_iterator_next_method_binding(
+        &self,
+        name: &str,
+    ) -> Option<&CachedIteratorNextMethodBinding> {
+        self.cached_iterator_next_method_bindings.get(name)
+    }
+
+    pub(in crate::backend::direct_wasm) fn set_cached_iterator_next_method_binding(
+        &mut self,
+        name: &str,
+        binding: CachedIteratorNextMethodBinding,
+    ) {
+        self.cached_iterator_next_method_bindings
+            .insert(name.to_string(), binding);
+    }
+
+    pub(in crate::backend::direct_wasm) fn clear_cached_iterator_next_method_binding(
+        &mut self,
+        name: &str,
+    ) {
+        self.cached_iterator_next_method_bindings.remove(name);
     }
 
     pub(in crate::backend::direct_wasm) fn local_iterator_step_binding(

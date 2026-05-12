@@ -59,6 +59,28 @@ impl<'a> FunctionCompiler<'a> {
         None
     }
 
+    pub(in crate::backend::direct_wasm) fn resolve_with_scope_binding_for_capture_source(
+        &self,
+        name: &str,
+    ) -> Option<Expression> {
+        for scope_object in self.state.emission.lexical_scopes.with_scopes.iter().rev() {
+            if self
+                .resolve_proxy_binding_from_expression(scope_object)
+                .is_some()
+            {
+                return Some(scope_object.clone());
+            }
+            if !self.scope_object_has_binding_property(scope_object, name) {
+                continue;
+            }
+            match self.static_with_scope_unscopables_blocks_for_specialization(scope_object, name) {
+                Some(true) => continue,
+                Some(false) | None => return Some(scope_object.clone()),
+            }
+        }
+        None
+    }
+
     pub(in crate::backend::direct_wasm) fn collect_capture_bindings_from_expression(
         &self,
         expression: &Expression,

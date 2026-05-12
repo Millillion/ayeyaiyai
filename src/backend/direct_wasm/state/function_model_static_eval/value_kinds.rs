@@ -1,6 +1,6 @@
 use super::super::super::*;
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub(in crate::backend::direct_wasm) enum StaticValueKind {
     Unknown,
     Number,

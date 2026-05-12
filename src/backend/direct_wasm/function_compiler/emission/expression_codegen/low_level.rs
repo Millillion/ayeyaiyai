@@ -1,6 +1,58 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    pub(in crate::backend::direct_wasm) fn emit_truthy_expression(
+        &mut self,
+        expression: &Expression,
+    ) -> DirectResult<()> {
+        match expression {
+            Expression::Bool(value) => {
+                self.push_i32_const(if *value { 1 } else { 0 });
+                return Ok(());
+            }
+            Expression::Null | Expression::Undefined => {
+                self.push_i32_const(0);
+                return Ok(());
+            }
+            Expression::Number(value) => {
+                self.push_i32_const(if *value != 0.0 && !value.is_nan() {
+                    1
+                } else {
+                    0
+                });
+                return Ok(());
+            }
+            Expression::String(text) => {
+                self.push_i32_const(if text.is_empty() { 0 } else { 1 });
+                return Ok(());
+            }
+            _ => {}
+        }
+        let value_local = self.allocate_temp_local();
+        self.emit_numeric_expression(expression)?;
+        self.push_local_set(value_local);
+
+        self.push_local_get(value_local);
+        self.push_i32_const(0);
+        self.push_binary_op(BinaryOp::NotEqual)?;
+
+        self.push_local_get(value_local);
+        self.push_i32_const(JS_NULL_TAG);
+        self.push_binary_op(BinaryOp::NotEqual)?;
+        self.state.emission.output.instructions.push(0x71);
+
+        self.push_local_get(value_local);
+        self.push_i32_const(JS_UNDEFINED_TAG);
+        self.push_binary_op(BinaryOp::NotEqual)?;
+        self.state.emission.output.instructions.push(0x71);
+
+        self.push_local_get(value_local);
+        self.push_i32_const(JS_NAN_TAG);
+        self.push_binary_op(BinaryOp::NotEqual)?;
+        self.state.emission.output.instructions.push(0x71);
+        Ok(())
+    }
+
     pub(in crate::backend::direct_wasm) fn emit_loose_number(
         &mut self,
         expression: &Expression,
@@ -120,6 +172,16 @@ impl<'a> FunctionCompiler<'a> {
     pub(in crate::backend::direct_wasm) fn push_call(&mut self, function_index: u32) {
         self.state.emission.output.instructions.push(0x10);
         push_u32(&mut self.state.emission.output.instructions, function_index);
+    }
+
+    pub(in crate::backend::direct_wasm) fn push_user_function_call(
+        &mut self,
+        user_function: &UserFunction,
+    ) {
+        self.backend
+            .function_registry
+            .record_runtime_called_user_function(&user_function.name);
+        self.push_call(user_function.function_index);
     }
 
     pub(in crate::backend::direct_wasm) fn push_br(&mut self, relative_depth: u32) {

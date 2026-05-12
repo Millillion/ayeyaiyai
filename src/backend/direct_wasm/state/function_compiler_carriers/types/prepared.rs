@@ -10,6 +10,7 @@ pub(in crate::backend::direct_wasm) struct PreparedFunctionExecutionContext {
     pub(in crate::backend::direct_wasm) current_arguments_length_present: bool,
     pub(in crate::backend::direct_wasm) top_level_function: bool,
     pub(in crate::backend::direct_wasm) derived_constructor: bool,
+    pub(in crate::backend::direct_wasm) direct_eval_in_class_field_initializer: bool,
     pub(in crate::backend::direct_wasm) self_binding_local: Option<u32>,
     pub(in crate::backend::direct_wasm) self_binding_runtime_value: Option<i32>,
 }
@@ -44,6 +45,8 @@ pub(in crate::backend::direct_wasm) struct PreparedLocalStaticBindings {
         HashMap<String, LocalFunctionBinding>,
     pub(in crate::backend::direct_wasm) local_array_bindings: HashMap<String, ArrayValueBinding>,
     pub(in crate::backend::direct_wasm) local_object_bindings: HashMap<String, ObjectValueBinding>,
+    pub(in crate::backend::direct_wasm) local_lexical_initialized_locals: HashMap<String, u32>,
+    pub(in crate::backend::direct_wasm) immutable_local_bindings: HashSet<String>,
 }
 
 #[derive(Clone)]

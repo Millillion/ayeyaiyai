@@ -6,6 +6,10 @@ impl DirectWasmCompiler {
         source: &str,
         current_function_name: Option<&str>,
     ) -> Option<Program> {
+        if frontend::script_goal_has_direct_using_declaration(source) {
+            return None;
+        }
+
         if let Some(current_function_name) = current_function_name {
             if self
                 .resolve_home_object_name_for_function_static(current_function_name)

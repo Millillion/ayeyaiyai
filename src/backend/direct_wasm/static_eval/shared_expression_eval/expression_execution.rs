@@ -40,12 +40,17 @@ pub(in crate::backend::direct_wasm) fn evaluate_shared_static_expression<
                 executor.delete_member_property(object, property, environment)?;
                 Some(Expression::Bool(true))
             }
+            Expression::Identifier(name)
+                if is_arguments_identifier(expression)
+                    || executor.lookup_binding_value(name, environment).is_some() =>
+            {
+                Some(Expression::Bool(false))
+            }
+            Expression::Identifier(_) => Some(Expression::Bool(true)),
             _ => Some(Expression::Bool(true)),
         },
         Expression::Update { name, op, prefix } => {
-            let current = executor
-                .lookup_binding_value(name, environment)
-                .unwrap_or(Expression::Undefined);
+            let current = executor.lookup_binding_value(name, environment)?;
             let current_number = match current {
                 Expression::Number(value) => value,
                 Expression::Bool(true) => 1.0,

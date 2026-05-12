@@ -76,9 +76,7 @@ impl DirectWasmCompiler {
         PreparedModuleLayout {
             user_type_arities: self.state.user_type_arities_snapshot(),
             user_functions: self.state.user_functions().to_vec(),
-            global_binding_count: self.state.global_binding_count(),
-            implicit_global_binding_count: self.state.implicit_global_binding_count(),
-            runtime_prototype_binding_count: self.state.runtime_prototype_binding_count(),
+            global_initial_values: self.global_initial_values(),
         }
     }
 
@@ -86,5 +84,43 @@ impl DirectWasmCompiler {
         &self,
     ) -> (Vec<(u32, Vec<u8>)>, u32) {
         self.state.snapshot_module_data()
+    }
+
+    fn global_initial_values(&self) -> Vec<i32> {
+        let base_index = NEXT_PRIVATE_BRAND_GLOBAL_INDEX + 1;
+        let next_index = self.next_available_global_index();
+        let mut initial_values =
+            vec![JS_UNDEFINED_TAG; next_index.saturating_sub(base_index) as usize];
+
+        let mut set_initial_value = |global_index: u32, initial_value: i32| {
+            if let Some(slot) = global_index
+                .checked_sub(base_index)
+                .and_then(|offset| initial_values.get_mut(offset as usize))
+            {
+                *slot = initial_value;
+            }
+        };
+
+        for binding in self.state.global_semantics.names.lexical_bindings.values() {
+            set_initial_value(binding.initialized_index, 0);
+        }
+
+        for binding in self.state.global_semantics.names.implicit_bindings.values() {
+            set_initial_value(binding.value_index, 0);
+            set_initial_value(binding.present_index, 0);
+        }
+
+        for global_index in self
+            .state
+            .global_semantics
+            .values
+            .runtime_prototype_bindings
+            .values()
+            .filter_map(|binding| binding.global_index)
+        {
+            set_initial_value(global_index, 0);
+        }
+
+        initial_values
     }
 }

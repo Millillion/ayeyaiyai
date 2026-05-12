@@ -133,6 +133,303 @@ fn compiles_functions_returns_and_short_circuiting() {
 }
 
 #[test]
+fn compiles_private_setter_updates_from_inner_arrow_via_method_this_writeback() {
+    let tempdir = tempdir().unwrap();
+    let input = tempdir.path().join("private-setter-inner-arrow.js");
+    let output = tempdir.path().join("private-setter-inner-arrow.wasm");
+
+    fs::write(
+        &input,
+        r#"
+        class C {
+          set #m(v) { this._v = v; }
+
+          method() {
+            let arrow = () => {
+              this.#m = "Test262";
+            };
+
+            arrow();
+            console.log("value", this._v);
+          }
+        }
+
+        let c = new C();
+        c.method();
+        "#,
+    )
+    .unwrap();
+
+    let compile = Command::new(env!("CARGO_BIN_EXE_ayeyaiyai"))
+        .arg(&input)
+        .arg("-o")
+        .arg(&output)
+        .output()
+        .unwrap();
+
+    assert!(
+        compile.status.success(),
+        "compiler failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&compile.stdout),
+        String::from_utf8_lossy(&compile.stderr),
+    );
+
+    let run = Command::new("wasmtime").arg(&output).output().unwrap();
+
+    assert!(
+        run.status.success(),
+        "wasmtime failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&run.stdout),
+        String::from_utf8_lossy(&run.stderr),
+    );
+    assert_eq!(String::from_utf8_lossy(&run.stdout), "value Test262\n");
+}
+
+#[test]
+fn compiles_public_this_updates_from_inner_arrow_via_method_this_writeback() {
+    let tempdir = tempdir().unwrap();
+    let input = tempdir.path().join("public-this-inner-arrow.js");
+    let output = tempdir.path().join("public-this-inner-arrow.wasm");
+
+    fs::write(
+        &input,
+        r#"
+        class C {
+          method() {
+            let arrow = () => {
+              this._v = "Test262";
+            };
+
+            arrow();
+            console.log("value", this._v);
+          }
+        }
+
+        let c = new C();
+        c.method();
+        "#,
+    )
+    .unwrap();
+
+    let compile = Command::new(env!("CARGO_BIN_EXE_ayeyaiyai"))
+        .arg(&input)
+        .arg("-o")
+        .arg(&output)
+        .output()
+        .unwrap();
+
+    assert!(
+        compile.status.success(),
+        "compiler failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&compile.stdout),
+        String::from_utf8_lossy(&compile.stderr),
+    );
+
+    let run = Command::new("wasmtime").arg(&output).output().unwrap();
+
+    assert!(
+        run.status.success(),
+        "wasmtime failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&run.stdout),
+        String::from_utf8_lossy(&run.stderr),
+    );
+    assert_eq!(String::from_utf8_lossy(&run.stdout), "value Test262\n");
+}
+
+#[test]
+fn compiles_private_setter_inner_arrow_with_external_readback_and_brand_check() {
+    let tempdir = tempdir().unwrap();
+    let input = tempdir
+        .path()
+        .join("private-setter-inner-arrow-brand-check.js");
+    let output = tempdir
+        .path()
+        .join("private-setter-inner-arrow-brand-check.wasm");
+
+    fs::write(
+        &input,
+        r#"
+        class C {
+          set #m(v) { this._v = v; }
+
+          method() {
+            let arrowFunction = () => {
+              this.#m = "Test262";
+            };
+            arrowFunction();
+          }
+        }
+
+        let c = new C();
+        c.method();
+        console.log("after", c._v);
+
+        let o = {};
+        try {
+          c.method.call(o);
+          console.log("no throw");
+        } catch (error) {
+          console.log("caught", error.name);
+        }
+        "#,
+    )
+    .unwrap();
+
+    let compile = Command::new(env!("CARGO_BIN_EXE_ayeyaiyai"))
+        .arg(&input)
+        .arg("-o")
+        .arg(&output)
+        .output()
+        .unwrap();
+
+    assert!(
+        compile.status.success(),
+        "compiler failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&compile.stdout),
+        String::from_utf8_lossy(&compile.stderr),
+    );
+
+    let run = Command::new("wasmtime").arg(&output).output().unwrap();
+
+    assert!(
+        run.status.success(),
+        "wasmtime failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&run.stdout),
+        String::from_utf8_lossy(&run.stderr),
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&run.stdout),
+        "after Test262\ncaught TypeError\n"
+    );
+}
+
+#[test]
+fn compiles_private_setter_inner_function_with_external_readback_and_brand_check() {
+    let tempdir = tempdir().unwrap();
+    let input = tempdir
+        .path()
+        .join("private-setter-inner-function-brand-check.js");
+    let output = tempdir
+        .path()
+        .join("private-setter-inner-function-brand-check.wasm");
+
+    fs::write(
+        &input,
+        r#"
+        class C {
+          set #m(v) { this._v = v; }
+
+          method() {
+            let self = this;
+            function innerFunction() {
+              self.#m = "Test262";
+            }
+            innerFunction();
+          }
+        }
+
+        let c = new C();
+        c.method();
+        console.log("after", c._v);
+
+        let o = {};
+        try {
+          c.method.call(o);
+          console.log("no throw");
+        } catch (error) {
+          console.log("caught", error.name);
+        }
+        "#,
+    )
+    .unwrap();
+
+    let compile = Command::new(env!("CARGO_BIN_EXE_ayeyaiyai"))
+        .arg(&input)
+        .arg("-o")
+        .arg(&output)
+        .output()
+        .unwrap();
+
+    assert!(
+        compile.status.success(),
+        "compiler failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&compile.stdout),
+        String::from_utf8_lossy(&compile.stderr),
+    );
+
+    let run = Command::new("wasmtime").arg(&output).output().unwrap();
+
+    assert!(
+        run.status.success(),
+        "wasmtime failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&run.stdout),
+        String::from_utf8_lossy(&run.stderr),
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&run.stdout),
+        "after Test262\ncaught TypeError\n"
+    );
+}
+
+#[test]
+fn compiles_caught_native_error_name_through_identifier_alias() {
+    let tempdir = tempdir().unwrap();
+    let input = tempdir.path().join("caught-native-error-name-alias.js");
+    let output = tempdir.path().join("caught-native-error-name-alias.wasm");
+
+    fs::write(
+        &input,
+        r#"
+        let caught = "none";
+        class C {
+          set #m(v) { this._v = v; }
+
+          method() {
+            let arrowFunction = () => {
+              this.#m = "Test262";
+            };
+            arrowFunction();
+          }
+        }
+
+        let c = new C();
+        try {
+          c.method.call({});
+        } catch (error) {
+          caught = error.name;
+        }
+
+        console.log("caught", caught);
+        "#,
+    )
+    .unwrap();
+
+    let compile = Command::new(env!("CARGO_BIN_EXE_ayeyaiyai"))
+        .arg(&input)
+        .arg("-o")
+        .arg(&output)
+        .output()
+        .unwrap();
+
+    assert!(
+        compile.status.success(),
+        "compiler failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&compile.stdout),
+        String::from_utf8_lossy(&compile.stderr),
+    );
+
+    let run = Command::new("wasmtime").arg(&output).output().unwrap();
+
+    assert!(
+        run.status.success(),
+        "wasmtime failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&run.stdout),
+        String::from_utf8_lossy(&run.stderr),
+    );
+    assert_eq!(String::from_utf8_lossy(&run.stdout), "caught TypeError\n");
+}
+
+#[test]
 fn compiles_nested_for_of_labeled_continue_outer_loop() {
     let tempdir = tempdir().unwrap();
     let input = tempdir.path().join("nested-for-of-labeled-continue.js");
@@ -9505,7 +9802,7 @@ fn compiles_module_anonymous_default_export_class_name() {
         target: "wasm32-wasip2".to_string(),
     };
 
-    compile_file_with_goal(&entry, &options, true).unwrap();
+    compile_file(&entry, &options).unwrap();
 
     let run = Command::new("wasmtime").arg(&output).output().unwrap();
 
@@ -9646,7 +9943,7 @@ fn compiles_module_namespace_self_import_initialization() {
         target: "wasm32-wasip2".to_string(),
     };
 
-    compile_file_with_goal(&entry, &options, true).unwrap();
+    compile_file(&entry, &options).unwrap();
 
     let run = Command::new("wasmtime").arg(&output).output().unwrap();
 
@@ -9687,7 +9984,7 @@ fn compiles_module_default_export_expression_function_name_inference() {
         target: "wasm32-wasip2".to_string(),
     };
 
-    compile_file_with_goal(&entry, &options, true).unwrap();
+    compile_file(&entry, &options).unwrap();
 
     let run = Command::new("wasmtime").arg(&output).output().unwrap();
 
@@ -9728,7 +10025,7 @@ fn compiles_module_default_export_expression_class_static_name_method() {
         target: "wasm32-wasip2".to_string(),
     };
 
-    compile_file_with_goal(&entry, &options, true).unwrap();
+    compile_file(&entry, &options).unwrap();
 
     let run = Command::new("wasmtime").arg(&output).output().unwrap();
 

@@ -7,8 +7,25 @@ impl DirectWasmCompiler {
         aliases: &mut HashMap<String, Option<LocalFunctionBinding>>,
         bindings: &mut HashMap<String, HashMap<String, Option<Expression>>>,
     ) {
+        self.collect_parameter_value_bindings_from_statements_in_function(
+            statements, aliases, bindings, None,
+        );
+    }
+
+    pub(in crate::backend::direct_wasm) fn collect_parameter_value_bindings_from_statements_in_function(
+        &self,
+        statements: &[Statement],
+        aliases: &mut HashMap<String, Option<LocalFunctionBinding>>,
+        bindings: &mut HashMap<String, HashMap<String, Option<Expression>>>,
+        current_function_name: Option<&str>,
+    ) {
         for statement in statements {
-            self.collect_parameter_value_bindings_from_statement(statement, aliases, bindings);
+            self.collect_parameter_value_bindings_from_statement_in_function(
+                statement,
+                aliases,
+                bindings,
+                current_function_name,
+            );
         }
     }
 
@@ -18,22 +35,49 @@ impl DirectWasmCompiler {
         aliases: &mut HashMap<String, Option<LocalFunctionBinding>>,
         bindings: &mut HashMap<String, HashMap<String, Option<Expression>>>,
     ) {
+        self.collect_parameter_value_bindings_from_statement_in_function(
+            statement, aliases, bindings, None,
+        );
+    }
+
+    pub(in crate::backend::direct_wasm) fn collect_parameter_value_bindings_from_statement_in_function(
+        &self,
+        statement: &Statement,
+        aliases: &mut HashMap<String, Option<LocalFunctionBinding>>,
+        bindings: &mut HashMap<String, HashMap<String, Option<Expression>>>,
+        current_function_name: Option<&str>,
+    ) {
         match statement {
             Statement::Declaration { body }
             | Statement::Block { body }
             | Statement::Labeled { body, .. }
             | Statement::With { body, .. } => {
-                self.collect_parameter_value_bindings_from_statements(body, aliases, bindings);
+                self.collect_parameter_value_bindings_from_statements_in_function(
+                    body,
+                    aliases,
+                    bindings,
+                    current_function_name,
+                );
             }
             Statement::Var { name, value } | Statement::Let { name, value, .. } => {
-                self.collect_parameter_value_bindings_from_expression(value, aliases, bindings);
+                self.collect_parameter_value_bindings_from_expression_in_function(
+                    value,
+                    aliases,
+                    bindings,
+                    current_function_name,
+                );
                 aliases.insert(
                     name.clone(),
                     self.resolve_function_binding_from_expression_with_aliases(value, aliases),
                 );
             }
             Statement::Assign { name, value } => {
-                self.collect_parameter_value_bindings_from_expression(value, aliases, bindings);
+                self.collect_parameter_value_bindings_from_expression_in_function(
+                    value,
+                    aliases,
+                    bindings,
+                    current_function_name,
+                );
                 aliases.insert(
                     name.clone(),
                     self.resolve_function_binding_from_expression_with_aliases(value, aliases),
@@ -44,13 +88,33 @@ impl DirectWasmCompiler {
                 property,
                 value,
             } => {
-                self.collect_parameter_value_bindings_from_expression(object, aliases, bindings);
-                self.collect_parameter_value_bindings_from_expression(property, aliases, bindings);
-                self.collect_parameter_value_bindings_from_expression(value, aliases, bindings);
+                self.collect_parameter_value_bindings_from_expression_in_function(
+                    object,
+                    aliases,
+                    bindings,
+                    current_function_name,
+                );
+                self.collect_parameter_value_bindings_from_expression_in_function(
+                    property,
+                    aliases,
+                    bindings,
+                    current_function_name,
+                );
+                self.collect_parameter_value_bindings_from_expression_in_function(
+                    value,
+                    aliases,
+                    bindings,
+                    current_function_name,
+                );
             }
             Statement::Print { values } => {
                 for value in values {
-                    self.collect_parameter_value_bindings_from_expression(value, aliases, bindings);
+                    self.collect_parameter_value_bindings_from_expression_in_function(
+                        value,
+                        aliases,
+                        bindings,
+                        current_function_name,
+                    );
                 }
             }
             Statement::Expression(expression)
@@ -58,8 +122,11 @@ impl DirectWasmCompiler {
             | Statement::Return(expression)
             | Statement::Yield { value: expression }
             | Statement::YieldDelegate { value: expression } => {
-                self.collect_parameter_value_bindings_from_expression(
-                    expression, aliases, bindings,
+                self.collect_parameter_value_bindings_from_expression_in_function(
+                    expression,
+                    aliases,
+                    bindings,
+                    current_function_name,
                 );
             }
             Statement::If {
@@ -67,19 +134,26 @@ impl DirectWasmCompiler {
                 then_branch,
                 else_branch,
             } => {
-                self.collect_parameter_value_bindings_from_expression(condition, aliases, bindings);
+                self.collect_parameter_value_bindings_from_expression_in_function(
+                    condition,
+                    aliases,
+                    bindings,
+                    current_function_name,
+                );
                 let baseline_aliases = aliases.clone();
                 let mut then_aliases = baseline_aliases.clone();
                 let mut else_aliases = baseline_aliases.clone();
-                self.collect_parameter_value_bindings_from_statements(
+                self.collect_parameter_value_bindings_from_statements_in_function(
                     then_branch,
                     &mut then_aliases,
                     bindings,
+                    current_function_name,
                 );
-                self.collect_parameter_value_bindings_from_statements(
+                self.collect_parameter_value_bindings_from_statements_in_function(
                     else_branch,
                     &mut else_aliases,
                     bindings,
+                    current_function_name,
                 );
                 *aliases = self
                     .merge_aliases_for_branches(&baseline_aliases, &[&then_aliases, &else_aliases]);
@@ -92,25 +166,28 @@ impl DirectWasmCompiler {
             } => {
                 let baseline_aliases = aliases.clone();
                 let mut body_aliases = baseline_aliases.clone();
-                self.collect_parameter_value_bindings_from_statements(
+                self.collect_parameter_value_bindings_from_statements_in_function(
                     body,
                     &mut body_aliases,
                     bindings,
+                    current_function_name,
                 );
 
                 let mut catch_aliases = baseline_aliases.clone();
                 if let Some(binding) = catch_binding {
                     catch_aliases.insert(binding.clone(), None);
                 }
-                self.collect_parameter_value_bindings_from_statements(
+                self.collect_parameter_value_bindings_from_statements_in_function(
                     catch_setup,
                     &mut catch_aliases,
                     bindings,
+                    current_function_name,
                 );
-                self.collect_parameter_value_bindings_from_statements(
+                self.collect_parameter_value_bindings_from_statements_in_function(
                     catch_body,
                     &mut catch_aliases,
                     bindings,
+                    current_function_name,
                 );
                 *aliases = self.merge_aliases_for_branches(
                     &baseline_aliases,
@@ -122,26 +199,29 @@ impl DirectWasmCompiler {
                 cases,
                 ..
             } => {
-                self.collect_parameter_value_bindings_from_expression(
+                self.collect_parameter_value_bindings_from_expression_in_function(
                     discriminant,
                     aliases,
                     bindings,
+                    current_function_name,
                 );
                 let baseline_aliases = aliases.clone();
                 let mut branch_aliases = Vec::new();
                 for case in cases {
                     let mut case_aliases = baseline_aliases.clone();
                     if let Some(test) = &case.test {
-                        self.collect_parameter_value_bindings_from_expression(
+                        self.collect_parameter_value_bindings_from_expression_in_function(
                             test,
                             &mut case_aliases,
                             bindings,
+                            current_function_name,
                         );
                     }
-                    self.collect_parameter_value_bindings_from_statements(
+                    self.collect_parameter_value_bindings_from_statements_in_function(
                         &case.body,
                         &mut case_aliases,
                         bindings,
+                        current_function_name,
                     );
                     branch_aliases.push(case_aliases);
                 }
@@ -156,28 +236,43 @@ impl DirectWasmCompiler {
                 body,
                 ..
             } => {
-                self.collect_parameter_value_bindings_from_statements(init, aliases, bindings);
+                self.collect_parameter_value_bindings_from_statements_in_function(
+                    init,
+                    aliases,
+                    bindings,
+                    current_function_name,
+                );
                 if let Some(condition) = condition {
-                    self.collect_parameter_value_bindings_from_expression(
-                        condition, aliases, bindings,
+                    self.collect_parameter_value_bindings_from_expression_in_function(
+                        condition,
+                        aliases,
+                        bindings,
+                        current_function_name,
                     );
                 }
                 if let Some(update) = update {
-                    self.collect_parameter_value_bindings_from_expression(
-                        update, aliases, bindings,
+                    self.collect_parameter_value_bindings_from_expression_in_function(
+                        update,
+                        aliases,
+                        bindings,
+                        current_function_name,
                     );
                 }
                 if let Some(break_hook) = break_hook {
-                    self.collect_parameter_value_bindings_from_expression(
-                        break_hook, aliases, bindings,
+                    self.collect_parameter_value_bindings_from_expression_in_function(
+                        break_hook,
+                        aliases,
+                        bindings,
+                        current_function_name,
                     );
                 }
                 let baseline_aliases = aliases.clone();
                 let mut body_aliases = baseline_aliases.clone();
-                self.collect_parameter_value_bindings_from_statements(
+                self.collect_parameter_value_bindings_from_statements_in_function(
                     body,
                     &mut body_aliases,
                     bindings,
+                    current_function_name,
                 );
                 *aliases = self.merge_aliases_for_optional_body(&baseline_aliases, &body_aliases);
             }
@@ -193,18 +288,27 @@ impl DirectWasmCompiler {
                 body,
                 ..
             } => {
-                self.collect_parameter_value_bindings_from_expression(condition, aliases, bindings);
+                self.collect_parameter_value_bindings_from_expression_in_function(
+                    condition,
+                    aliases,
+                    bindings,
+                    current_function_name,
+                );
                 if let Some(break_hook) = break_hook {
-                    self.collect_parameter_value_bindings_from_expression(
-                        break_hook, aliases, bindings,
+                    self.collect_parameter_value_bindings_from_expression_in_function(
+                        break_hook,
+                        aliases,
+                        bindings,
+                        current_function_name,
                     );
                 }
                 let baseline_aliases = aliases.clone();
                 let mut body_aliases = baseline_aliases.clone();
-                self.collect_parameter_value_bindings_from_statements(
+                self.collect_parameter_value_bindings_from_statements_in_function(
                     body,
                     &mut body_aliases,
                     bindings,
+                    current_function_name,
                 );
                 *aliases = self.merge_aliases_for_optional_body(&baseline_aliases, &body_aliases);
             }

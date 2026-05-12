@@ -207,6 +207,39 @@ fn rejects_escaped_reserved_words_in_binding_identifiers() {
 }
 
 #[test]
+fn rejects_reserved_object_pattern_shorthand_bindings() {
+    let invalid_sources = [
+        "var x = ({ default }) => {};",
+        "var x = ({ if }) => {};",
+        "var x = ({ default = 1 }) => {};",
+    ];
+
+    for source in invalid_sources {
+        assert!(
+            frontend::validate_script_goal(source).is_err(),
+            "source should fail to parse:\n{source}"
+        );
+    }
+}
+
+#[test]
+fn rejects_strict_reserved_object_pattern_shorthand_bindings() {
+    let invalid_sources = [
+        "\"use strict\"; var x = ({ implements }) => {};",
+        "\"use strict\"; var x = ({ \\u0069mplements }) => {};",
+        "\"use strict\"; var x = ({ package = 1 }) => {};",
+        "\"use strict\"; var x = ({ static }) => {};",
+    ];
+
+    for source in invalid_sources {
+        assert!(
+            frontend::validate_script_goal(source).is_err(),
+            "source should fail to parse:\n{source}"
+        );
+    }
+}
+
+#[test]
 fn parse_script_goal_rejects_escaped_await_binding_in_async_generator_method() {
     let source = r#"
     class C { async *gen() {
@@ -254,6 +287,127 @@ fn parse_script_goal_rejects_await_label_in_async_generator_method() {
     class C { async *gen() {
         await: 1;
     }}
+    "#;
+
+    assert!(
+        frontend::parse_script_goal(source).is_err(),
+        "source should fail to parse:\n{source}"
+    );
+}
+
+#[test]
+fn parse_script_goal_rejects_yield_assignment_pattern_shorthand_in_generator() {
+    let source = r#"
+    (function*() {
+        0, { yield } = {};
+    });
+    "#;
+
+    assert!(
+        frontend::parse_script_goal(source).is_err(),
+        "source should fail to parse:\n{source}"
+    );
+}
+
+#[test]
+fn validate_script_goal_rejects_yield_assignment_pattern_shorthand_in_strict_mode() {
+    let source = r#"
+    "use strict";
+    0, { yield } = {};
+    "#;
+
+    assert!(
+        frontend::validate_script_goal(source).is_err(),
+        "source should fail to parse:\n{source}"
+    );
+}
+
+#[test]
+fn parse_script_goal_accepts_yield_assignment_pattern_shorthand_outside_strict_and_generator() {
+    let source = r#"
+    var yield;
+    0, { yield } = { yield: 3 };
+    "#;
+
+    frontend::parse_script_goal(source).expect("source should parse");
+}
+
+#[test]
+fn parse_script_goal_rejects_escaped_reserved_assignment_pattern_shorthand() {
+    let invalid_sources = [
+        r#"0, { \u0063onst } = { const: 1 };"#,
+        r#"0, { \u0063ontinue } = { continue: 1 };"#,
+        r#"0, { \u0064ebugger } = { debugger: 1 };"#,
+    ];
+
+    for source in invalid_sources {
+        assert!(
+            frontend::parse_script_goal(source).is_err(),
+            "source should fail to parse:\n{source}"
+        );
+    }
+}
+
+#[test]
+fn parse_script_goal_rejects_await_arrow_binding_in_static_block() {
+    let source = r#"
+    class C {
+        static {
+        (await => 0);
+      }
+    }
+    "#;
+
+    assert!(
+        frontend::parse_script_goal(source).is_err(),
+        "source should fail to parse:\n{source}"
+    );
+}
+
+#[test]
+fn parse_script_goal_rejects_await_arrow_parameter_default_in_static_block() {
+    let source = r#"
+    class C {
+      static {
+        ((x = await) => 0);
+      }
+    }
+    "#;
+
+    assert!(
+        frontend::parse_script_goal(source).is_err(),
+        "source should fail to parse:\n{source}"
+    );
+}
+
+#[test]
+fn parse_script_goal_rejects_await_arrow_parameter_default_in_async_arrow_body() {
+    let source = r#"
+    async() => { (a = await/r/g) => {} };
+    "#;
+
+    assert!(
+        frontend::parse_script_goal(source).is_err(),
+        "source should fail to parse:\n{source}"
+    );
+}
+
+#[test]
+fn parse_script_goal_rejects_arrow_parameter_body_lexical_duplicate() {
+    let source = r#"
+    async(bar) => { let bar; }
+    "#;
+
+    assert!(
+        frontend::parse_script_goal(source).is_err(),
+        "source should fail to parse:\n{source}"
+    );
+}
+
+#[test]
+fn parse_script_goal_rejects_function_parameter_body_lexical_duplicate() {
+    let source = r#"
+    (async function foo(bar) { let bar; });
     "#;
 
     assert!(
@@ -322,6 +476,19 @@ fn accepts_escaped_non_reserved_binding_identifiers() {
 }
 
 #[test]
+fn parse_script_goal_accepts_escaped_let_expression_statement_with_asi() {
+    let source = r#"
+    this.let = 0;
+    l\u0065t // ASI
+    a;
+    var a;
+    "#;
+
+    frontend::parse_script_goal(source)
+        .expect("escaped let at statement start should not parse as a lexical declaration");
+}
+
+#[test]
 fn parse_script_goal_accepts_escaped_await_class_name_identifier() {
     let source = r#"
     class aw\u0061it {}
@@ -329,6 +496,39 @@ fn parse_script_goal_accepts_escaped_await_class_name_identifier() {
 
     frontend::parse_script_goal(source)
         .expect("escaped await class name should parse in script goal");
+}
+
+#[test]
+fn parse_script_goal_accepts_escaped_reserved_class_method_name() {
+    let source = r#"
+    class C {
+        bre\u0061k() { return 42; }
+    }
+    "#;
+
+    frontend::parse_script_goal(source).expect("escaped reserved class method name should parse");
+}
+
+#[test]
+fn parse_script_goal_accepts_escaped_reserved_object_assignment_property_name() {
+    let source = r#"
+    var y = { bre\u0061k: x } = { break: 42 };
+    "#;
+
+    frontend::parse_script_goal(source)
+        .expect("escaped reserved assignment property name should parse");
+}
+
+#[test]
+fn parse_script_goal_accepts_escaped_reserved_member_property_name() {
+    let source = r#"
+    var obj = {};
+    obj.bre\u0061k = 42;
+    obj?.def\u0061ult;
+    "#;
+
+    frontend::parse_script_goal(source)
+        .expect("escaped reserved member property name should parse");
 }
 
 #[test]
@@ -342,6 +542,16 @@ fn parse_script_goal_rejects_duplicate_parameters_in_async_class_method() {
     assert!(
         frontend::validate_script_goal(source).is_err(),
         "duplicate parameters in async class methods should be rejected"
+    );
+}
+
+#[test]
+fn parse_script_goal_rejects_duplicate_arrow_parameters() {
+    let source = "0, (a, a) => { };";
+
+    assert!(
+        frontend::validate_script_goal(source).is_err(),
+        "duplicate arrow parameters should be rejected"
     );
 }
 

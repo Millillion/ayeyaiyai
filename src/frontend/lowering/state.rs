@@ -1,3 +1,5 @@
+use std::collections::BTreeSet;
+
 use super::*;
 
 #[derive(Default)]
@@ -9,7 +11,12 @@ pub(crate) struct Lowerer {
     pub(super) binding_scopes: Vec<BindingScope>,
     pub(super) active_binding_counts: HashMap<String, usize>,
     pub(super) private_name_scopes: Vec<HashMap<String, String>>,
+    pub(super) private_name_brand_scopes: Vec<HashMap<String, String>>,
+    pub(super) pending_private_brand_captures: Vec<BTreeSet<String>>,
     pub(super) constructor_super_stack: Vec<Option<String>>,
+    pub(super) class_field_initializer_depth: usize,
+    pub(super) this_replacements: Vec<Option<Expression>>,
+    pub(super) super_member_replacements: Vec<Option<Expression>>,
     pub(crate) strict_modes: Vec<bool>,
     pub(crate) module_mode: bool,
     pub(crate) current_module_path: Option<PathBuf>,

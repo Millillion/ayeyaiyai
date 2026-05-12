@@ -29,6 +29,12 @@ impl<'a> FunctionCompiler<'a> {
         {
             return None;
         }
+        if let Some(LocalFunctionBinding::Builtin(function_name)) =
+            self.resolve_function_binding_from_expression(object)
+            && let Some(bytes_per_element) = typed_array_builtin_bytes_per_element(&function_name)
+        {
+            return Some(bytes_per_element);
+        }
         let Expression::Identifier(name) = self.materialize_static_expression(object) else {
             return None;
         };

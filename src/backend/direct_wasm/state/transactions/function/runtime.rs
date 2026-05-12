@@ -18,6 +18,11 @@ impl FunctionRuntimeState {
         &mut self,
         snapshot: FunctionRuntimeIsolatedIndirectEvalSnapshot,
     ) {
+        let next_local_index = self
+            .locals
+            .next_local_index
+            .max(snapshot.runtime_locals.next_local_index);
         self.locals = snapshot.runtime_locals;
+        self.locals.next_local_index = next_local_index;
     }
 }

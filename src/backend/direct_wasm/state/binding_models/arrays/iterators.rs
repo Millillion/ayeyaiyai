@@ -8,6 +8,17 @@ pub(in crate::backend::direct_wasm) enum IteratorSourceKind {
         length_local: Option<u32>,
         runtime_name: Option<String>,
     },
+    StaticArrayEntries {
+        values: Vec<Option<Expression>>,
+        length_local: Option<u32>,
+        runtime_name: Option<String>,
+    },
+    StaticMapEntries {
+        values: Vec<Option<Expression>>,
+        length_local: Option<u32>,
+        key_runtime_name: Option<String>,
+        value_runtime_name: Option<String>,
+    },
     SimpleGenerator {
         is_async: bool,
         steps: Vec<SimpleGeneratorStep>,
@@ -38,6 +49,20 @@ pub(in crate::backend::direct_wasm) struct ArrayIteratorBinding {
 }
 
 #[derive(Clone)]
+pub(in crate::backend::direct_wasm) struct CachedIteratorNextMethodBinding {
+    pub(in crate::backend::direct_wasm) function_binding: LocalFunctionBinding,
+    pub(in crate::backend::direct_wasm) this_expression: Expression,
+    pub(in crate::backend::direct_wasm) capture_slots:
+        Option<std::collections::BTreeMap<String, String>>,
+}
+
+#[derive(Clone)]
+pub(in crate::backend::direct_wasm) struct IteratorStepEntryArrayBinding {
+    pub(in crate::backend::direct_wasm) index_local: u32,
+    pub(in crate::backend::direct_wasm) value_local: u32,
+}
+
+#[derive(Clone)]
 pub(in crate::backend::direct_wasm) enum IteratorStepBinding {
     Runtime {
         done_local: u32,
@@ -45,5 +70,7 @@ pub(in crate::backend::direct_wasm) enum IteratorStepBinding {
         function_binding: Option<LocalFunctionBinding>,
         static_done: Option<bool>,
         static_value: Option<Expression>,
+        value_candidates: Vec<Expression>,
+        entry_array: Option<IteratorStepEntryArrayBinding>,
     },
 }

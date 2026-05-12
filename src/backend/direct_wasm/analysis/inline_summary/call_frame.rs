@@ -23,10 +23,7 @@ pub(in crate::backend::direct_wasm) fn expression_mentions_call_frame_state(
                 || expression_mentions_call_frame_state(property)
                 || expression_mentions_call_frame_state(value)
         }
-        Expression::AssignSuperMember { property, value } => {
-            expression_mentions_call_frame_state(property)
-                || expression_mentions_call_frame_state(value)
-        }
+        Expression::AssignSuperMember { .. } => true,
         Expression::Await(expression)
         | Expression::EnumerateKeys(expression)
         | Expression::GetIterator(expression)
@@ -86,7 +83,7 @@ pub(in crate::backend::direct_wasm) fn expression_mentions_call_frame_state(
                 expression_mentions_call_frame_state(expression)
             }
         }),
-        Expression::SuperMember { .. } => false,
+        Expression::SuperMember { .. } => true,
         Expression::This | Expression::NewTarget | Expression::Sent => true,
         Expression::Update { .. }
         | Expression::Number(_)

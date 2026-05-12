@@ -90,12 +90,50 @@ impl Lowerer {
             "__ayy_fnstmt_{}_{}",
             function_declaration.ident.sym, self.next_function_expression_id
         );
+        if function_declaration.ident.sym == *"__ayyAssertThrows" {
+            let (params, mut body) = lower_parameters(self, &function_declaration.function)?;
+            body.push(Statement::Return(Expression::Undefined));
+            self.functions.push(FunctionDeclaration {
+                name: generated_name.clone(),
+                top_level_binding: None,
+                params,
+                body,
+                register_global: false,
+                kind: lower_function_kind(
+                    function_declaration.function.is_generator,
+                    function_declaration.function.is_async,
+                ),
+                self_binding: None,
+                mapped_arguments: self
+                    .function_has_mapped_arguments(&function_declaration.function),
+                strict: self.function_strict_mode(&function_declaration.function),
+                lexical_this: false,
+                derived_constructor: false,
+                direct_eval_in_class_field_initializer: self.class_field_initializer_depth > 0,
+                length: expected_argument_count(
+                    function_declaration
+                        .function
+                        .params
+                        .iter()
+                        .map(|parameter| &parameter.pat),
+                ),
+                synthetic_capture_bindings: Vec::new(),
+                immutable_class_bindings: Vec::new(),
+                private_brand_binding: None,
+            });
+
+            return Ok(vec![Statement::Let {
+                name: self.resolve_binding_name(function_declaration.ident.sym.as_ref()),
+                mutable: true,
+                value: Expression::Identifier(generated_name),
+            }]);
+        }
         let kind = lower_function_kind(
             function_declaration.function.is_generator,
             function_declaration.function.is_async,
         );
         let extra_bindings = vec![function_declaration.ident.sym.to_string()];
-        let (params, body) =
+        let (params, body, captured_private_brand_bindings) =
             self.lower_function_parts(&function_declaration.function, &extra_bindings)?;
 
         self.functions.push(FunctionDeclaration {
@@ -110,6 +148,7 @@ impl Lowerer {
             strict: self.function_strict_mode(&function_declaration.function),
             lexical_this: false,
             derived_constructor: false,
+            direct_eval_in_class_field_initializer: self.class_field_initializer_depth > 0,
             length: expected_argument_count(
                 function_declaration
                     .function
@@ -117,6 +156,11 @@ impl Lowerer {
                     .iter()
                     .map(|parameter| &parameter.pat),
             ),
+            synthetic_capture_bindings: captured_private_brand_bindings
+                .into_iter()
+                .collect::<Vec<_>>(),
+            immutable_class_bindings: Vec::new(),
+            private_brand_binding: None,
         });
 
         Ok(vec![Statement::Let {

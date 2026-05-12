@@ -28,7 +28,23 @@ impl CompilerState {
         }
         names.retain(|name| {
             let source_name = scoped_binding_source_name(name).unwrap_or(name);
+            let targets_immutable_class_binding =
+                function.immutable_class_bindings.iter().any(|binding| {
+                    let binding_source_name =
+                        scoped_binding_source_name(binding).unwrap_or(binding);
+                    binding == name
+                        || binding == source_name
+                        || binding_source_name == name
+                        || binding_source_name == source_name
+                });
+            let targets_immutable_global_lexical_binding = self
+                .global_semantics
+                .global_names()
+                .lexical_binding(name)
+                .is_some_and(|binding| !binding.mutable);
             !user_function.scope_bindings.contains(source_name)
+                && !targets_immutable_class_binding
+                && !targets_immutable_global_lexical_binding
         });
         names
     }

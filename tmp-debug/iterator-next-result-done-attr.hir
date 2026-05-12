@@ -1,0 +1,2690 @@
+Program {
+    strict: false,
+    functions: [
+        FunctionDeclaration {
+            name: "__ayy_fnexpr_2",
+            top_level_binding: None,
+            params: [],
+            body: [
+                Var {
+                    name: "iterResult",
+                    value: Identifier(
+                        "nextIterResult",
+                    ),
+                },
+                Assign {
+                    name: "nextIterResult",
+                    value: Identifier(
+                        "finalIterResult",
+                    ),
+                },
+                Return(
+                    Identifier(
+                        "iterResult",
+                    ),
+                ),
+            ],
+            register_global: false,
+            kind: Ordinary,
+            self_binding: None,
+            mapped_arguments: true,
+            strict: false,
+            lexical_this: false,
+            derived_constructor: false,
+            direct_eval_in_class_field_initializer: false,
+            length: 0,
+            synthetic_capture_bindings: [],
+            immutable_class_bindings: [],
+            private_brand_binding: None,
+        },
+        FunctionDeclaration {
+            name: "__ayy_fnexpr_1",
+            top_level_binding: None,
+            params: [],
+            body: [
+                Var {
+                    name: "finalIterResult",
+                    value: Object(
+                        [
+                            Data {
+                                key: String(
+                                    "value",
+                                ),
+                                value: Null,
+                            },
+                            Data {
+                                key: String(
+                                    "done",
+                                ),
+                                value: Bool(
+                                    true,
+                                ),
+                            },
+                        ],
+                    ),
+                },
+                Var {
+                    name: "nextIterResult",
+                    value: Identifier(
+                        "firstIterResult",
+                    ),
+                },
+                Return(
+                    Object(
+                        [
+                            Data {
+                                key: String(
+                                    "next",
+                                ),
+                                value: Identifier(
+                                    "__ayy_fnexpr_2",
+                                ),
+                            },
+                        ],
+                    ),
+                ),
+            ],
+            register_global: false,
+            kind: Ordinary,
+            self_binding: None,
+            mapped_arguments: true,
+            strict: false,
+            lexical_this: false,
+            derived_constructor: false,
+            direct_eval_in_class_field_initializer: false,
+            length: 0,
+            synthetic_capture_bindings: [],
+            immutable_class_bindings: [],
+            private_brand_binding: None,
+        },
+        FunctionDeclaration {
+            name: "__ayy_fnexpr_3",
+            top_level_binding: None,
+            params: [],
+            body: [
+                Return(
+                    Bool(
+                        true,
+                    ),
+                ),
+            ],
+            register_global: false,
+            kind: Ordinary,
+            self_binding: None,
+            mapped_arguments: true,
+            strict: false,
+            lexical_this: false,
+            derived_constructor: false,
+            direct_eval_in_class_field_initializer: false,
+            length: 0,
+            synthetic_capture_bindings: [],
+            immutable_class_bindings: [],
+            private_brand_binding: None,
+        },
+    ],
+    statements: [
+        Var {
+            name: "iterable",
+            value: Object(
+                [],
+            ),
+        },
+        Var {
+            name: "i",
+            value: Undefined,
+        },
+        Var {
+            name: "firstIterResult",
+            value: Undefined,
+        },
+        AssignMember {
+            object: Identifier(
+                "iterable",
+            ),
+            property: Member {
+                object: Identifier(
+                    "Symbol",
+                ),
+                property: String(
+                    "iterator",
+                ),
+            },
+            value: Identifier(
+                "__ayy_fnexpr_1",
+            ),
+        },
+        Assign {
+            name: "firstIterResult",
+            value: Object(
+                [
+                    Data {
+                        key: String(
+                            "value",
+                        ),
+                        value: Null,
+                    },
+                    Data {
+                        key: String(
+                            "done",
+                        ),
+                        value: Identifier(
+                            "undefined",
+                        ),
+                    },
+                ],
+            ),
+        },
+        Assign {
+            name: "i",
+            value: Number(
+                0.0,
+            ),
+        },
+        For {
+            labels: [],
+            init: [
+                Let {
+                    name: "__ayy_for_of_iter_2",
+                    mutable: true,
+                    value: GetIterator(
+                        Identifier(
+                            "iterable",
+                        ),
+                    ),
+                },
+                Var {
+                    name: "x",
+                    value: Undefined,
+                },
+                Let {
+                    name: "__ayy_for_of_done_4",
+                    mutable: true,
+                    value: Bool(
+                        false,
+                    ),
+                },
+            ],
+            per_iteration_bindings: [],
+            condition: Some(
+                Bool(
+                    true,
+                ),
+            ),
+            update: None,
+            break_hook: Some(
+                Conditional {
+                    condition: Identifier(
+                        "__ayy_for_of_done_4",
+                    ),
+                    then_expression: Undefined,
+                    else_expression: IteratorClose(
+                        Identifier(
+                            "__ayy_for_of_iter_2",
+                        ),
+                    ),
+                },
+            ),
+            body: [
+                Let {
+                    name: "__ayy_for_of_step_3",
+                    mutable: true,
+                    value: Call {
+                        callee: Member {
+                            object: Identifier(
+                                "__ayy_for_of_iter_2",
+                            ),
+                            property: String(
+                                "next",
+                            ),
+                        },
+                        arguments: [],
+                    },
+                },
+                If {
+                    condition: Member {
+                        object: Identifier(
+                            "__ayy_for_of_step_3",
+                        ),
+                        property: String(
+                            "done",
+                        ),
+                    },
+                    then_branch: [
+                        Assign {
+                            name: "__ayy_for_of_done_4",
+                            value: Bool(
+                                true,
+                            ),
+                        },
+                        Break {
+                            label: None,
+                        },
+                    ],
+                    else_branch: [],
+                },
+                Try {
+                    body: [
+                        Var {
+                            name: "x",
+                            value: Member {
+                                object: Identifier(
+                                    "__ayy_for_of_step_3",
+                                ),
+                                property: String(
+                                    "value",
+                                ),
+                            },
+                        },
+                        Block {
+                            body: [
+                                Expression(
+                                    Update {
+                                        name: "i",
+                                        op: Increment,
+                                        prefix: false,
+                                    },
+                                ),
+                            ],
+                        },
+                    ],
+                    catch_binding: Some(
+                        "__ayy_for_of_catch_5",
+                    ),
+                    catch_setup: [],
+                    catch_body: [
+                        Expression(
+                            IteratorClose(
+                                Identifier(
+                                    "__ayy_for_of_iter_2",
+                                ),
+                            ),
+                        ),
+                        Throw(
+                            Identifier(
+                                "__ayy_for_of_catch_5",
+                            ),
+                        ),
+                    ],
+                },
+            ],
+        },
+        Expression(
+            Call {
+                callee: Member {
+                    object: Identifier(
+                        "assert",
+                    ),
+                    property: String(
+                        "sameValue",
+                    ),
+                },
+                arguments: [
+                    Expression(
+                        Identifier(
+                            "i",
+                        ),
+                    ),
+                    Expression(
+                        Number(
+                            1.0,
+                        ),
+                    ),
+                ],
+            },
+        ),
+        Assign {
+            name: "firstIterResult",
+            value: Object(
+                [
+                    Data {
+                        key: String(
+                            "value",
+                        ),
+                        value: Null,
+                    },
+                ],
+            ),
+        },
+        Assign {
+            name: "i",
+            value: Number(
+                0.0,
+            ),
+        },
+        For {
+            labels: [],
+            init: [
+                Let {
+                    name: "__ayy_for_of_iter_6",
+                    mutable: true,
+                    value: GetIterator(
+                        Identifier(
+                            "iterable",
+                        ),
+                    ),
+                },
+                Var {
+                    name: "x",
+                    value: Undefined,
+                },
+                Let {
+                    name: "__ayy_for_of_done_8",
+                    mutable: true,
+                    value: Bool(
+                        false,
+                    ),
+                },
+            ],
+            per_iteration_bindings: [],
+            condition: Some(
+                Bool(
+                    true,
+                ),
+            ),
+            update: None,
+            break_hook: Some(
+                Conditional {
+                    condition: Identifier(
+                        "__ayy_for_of_done_8",
+                    ),
+                    then_expression: Undefined,
+                    else_expression: IteratorClose(
+                        Identifier(
+                            "__ayy_for_of_iter_6",
+                        ),
+                    ),
+                },
+            ),
+            body: [
+                Let {
+                    name: "__ayy_for_of_step_7",
+                    mutable: true,
+                    value: Call {
+                        callee: Member {
+                            object: Identifier(
+                                "__ayy_for_of_iter_6",
+                            ),
+                            property: String(
+                                "next",
+                            ),
+                        },
+                        arguments: [],
+                    },
+                },
+                If {
+                    condition: Member {
+                        object: Identifier(
+                            "__ayy_for_of_step_7",
+                        ),
+                        property: String(
+                            "done",
+                        ),
+                    },
+                    then_branch: [
+                        Assign {
+                            name: "__ayy_for_of_done_8",
+                            value: Bool(
+                                true,
+                            ),
+                        },
+                        Break {
+                            label: None,
+                        },
+                    ],
+                    else_branch: [],
+                },
+                Try {
+                    body: [
+                        Var {
+                            name: "x",
+                            value: Member {
+                                object: Identifier(
+                                    "__ayy_for_of_step_7",
+                                ),
+                                property: String(
+                                    "value",
+                                ),
+                            },
+                        },
+                        Block {
+                            body: [
+                                Expression(
+                                    Update {
+                                        name: "i",
+                                        op: Increment,
+                                        prefix: false,
+                                    },
+                                ),
+                            ],
+                        },
+                    ],
+                    catch_binding: Some(
+                        "__ayy_for_of_catch_9",
+                    ),
+                    catch_setup: [],
+                    catch_body: [
+                        Expression(
+                            IteratorClose(
+                                Identifier(
+                                    "__ayy_for_of_iter_6",
+                                ),
+                            ),
+                        ),
+                        Throw(
+                            Identifier(
+                                "__ayy_for_of_catch_9",
+                            ),
+                        ),
+                    ],
+                },
+            ],
+        },
+        Expression(
+            Call {
+                callee: Member {
+                    object: Identifier(
+                        "assert",
+                    ),
+                    property: String(
+                        "sameValue",
+                    ),
+                },
+                arguments: [
+                    Expression(
+                        Identifier(
+                            "i",
+                        ),
+                    ),
+                    Expression(
+                        Number(
+                            1.0,
+                        ),
+                    ),
+                ],
+            },
+        ),
+        Assign {
+            name: "firstIterResult",
+            value: Object(
+                [
+                    Data {
+                        key: String(
+                            "value",
+                        ),
+                        value: Null,
+                    },
+                    Data {
+                        key: String(
+                            "done",
+                        ),
+                        value: Null,
+                    },
+                ],
+            ),
+        },
+        Assign {
+            name: "i",
+            value: Number(
+                0.0,
+            ),
+        },
+        For {
+            labels: [],
+            init: [
+                Let {
+                    name: "__ayy_for_of_iter_10",
+                    mutable: true,
+                    value: GetIterator(
+                        Identifier(
+                            "iterable",
+                        ),
+                    ),
+                },
+                Var {
+                    name: "x",
+                    value: Undefined,
+                },
+                Let {
+                    name: "__ayy_for_of_done_12",
+                    mutable: true,
+                    value: Bool(
+                        false,
+                    ),
+                },
+            ],
+            per_iteration_bindings: [],
+            condition: Some(
+                Bool(
+                    true,
+                ),
+            ),
+            update: None,
+            break_hook: Some(
+                Conditional {
+                    condition: Identifier(
+                        "__ayy_for_of_done_12",
+                    ),
+                    then_expression: Undefined,
+                    else_expression: IteratorClose(
+                        Identifier(
+                            "__ayy_for_of_iter_10",
+                        ),
+                    ),
+                },
+            ),
+            body: [
+                Let {
+                    name: "__ayy_for_of_step_11",
+                    mutable: true,
+                    value: Call {
+                        callee: Member {
+                            object: Identifier(
+                                "__ayy_for_of_iter_10",
+                            ),
+                            property: String(
+                                "next",
+                            ),
+                        },
+                        arguments: [],
+                    },
+                },
+                If {
+                    condition: Member {
+                        object: Identifier(
+                            "__ayy_for_of_step_11",
+                        ),
+                        property: String(
+                            "done",
+                        ),
+                    },
+                    then_branch: [
+                        Assign {
+                            name: "__ayy_for_of_done_12",
+                            value: Bool(
+                                true,
+                            ),
+                        },
+                        Break {
+                            label: None,
+                        },
+                    ],
+                    else_branch: [],
+                },
+                Try {
+                    body: [
+                        Var {
+                            name: "x",
+                            value: Member {
+                                object: Identifier(
+                                    "__ayy_for_of_step_11",
+                                ),
+                                property: String(
+                                    "value",
+                                ),
+                            },
+                        },
+                        Block {
+                            body: [
+                                Expression(
+                                    Update {
+                                        name: "i",
+                                        op: Increment,
+                                        prefix: false,
+                                    },
+                                ),
+                            ],
+                        },
+                    ],
+                    catch_binding: Some(
+                        "__ayy_for_of_catch_13",
+                    ),
+                    catch_setup: [],
+                    catch_body: [
+                        Expression(
+                            IteratorClose(
+                                Identifier(
+                                    "__ayy_for_of_iter_10",
+                                ),
+                            ),
+                        ),
+                        Throw(
+                            Identifier(
+                                "__ayy_for_of_catch_13",
+                            ),
+                        ),
+                    ],
+                },
+            ],
+        },
+        Expression(
+            Call {
+                callee: Member {
+                    object: Identifier(
+                        "assert",
+                    ),
+                    property: String(
+                        "sameValue",
+                    ),
+                },
+                arguments: [
+                    Expression(
+                        Identifier(
+                            "i",
+                        ),
+                    ),
+                    Expression(
+                        Number(
+                            1.0,
+                        ),
+                    ),
+                ],
+            },
+        ),
+        Assign {
+            name: "firstIterResult",
+            value: Object(
+                [
+                    Data {
+                        key: String(
+                            "value",
+                        ),
+                        value: Null,
+                    },
+                    Data {
+                        key: String(
+                            "done",
+                        ),
+                        value: Bool(
+                            false,
+                        ),
+                    },
+                ],
+            ),
+        },
+        Assign {
+            name: "i",
+            value: Number(
+                0.0,
+            ),
+        },
+        For {
+            labels: [],
+            init: [
+                Let {
+                    name: "__ayy_for_of_iter_14",
+                    mutable: true,
+                    value: GetIterator(
+                        Identifier(
+                            "iterable",
+                        ),
+                    ),
+                },
+                Var {
+                    name: "x",
+                    value: Undefined,
+                },
+                Let {
+                    name: "__ayy_for_of_done_16",
+                    mutable: true,
+                    value: Bool(
+                        false,
+                    ),
+                },
+            ],
+            per_iteration_bindings: [],
+            condition: Some(
+                Bool(
+                    true,
+                ),
+            ),
+            update: None,
+            break_hook: Some(
+                Conditional {
+                    condition: Identifier(
+                        "__ayy_for_of_done_16",
+                    ),
+                    then_expression: Undefined,
+                    else_expression: IteratorClose(
+                        Identifier(
+                            "__ayy_for_of_iter_14",
+                        ),
+                    ),
+                },
+            ),
+            body: [
+                Let {
+                    name: "__ayy_for_of_step_15",
+                    mutable: true,
+                    value: Call {
+                        callee: Member {
+                            object: Identifier(
+                                "__ayy_for_of_iter_14",
+                            ),
+                            property: String(
+                                "next",
+                            ),
+                        },
+                        arguments: [],
+                    },
+                },
+                If {
+                    condition: Member {
+                        object: Identifier(
+                            "__ayy_for_of_step_15",
+                        ),
+                        property: String(
+                            "done",
+                        ),
+                    },
+                    then_branch: [
+                        Assign {
+                            name: "__ayy_for_of_done_16",
+                            value: Bool(
+                                true,
+                            ),
+                        },
+                        Break {
+                            label: None,
+                        },
+                    ],
+                    else_branch: [],
+                },
+                Try {
+                    body: [
+                        Var {
+                            name: "x",
+                            value: Member {
+                                object: Identifier(
+                                    "__ayy_for_of_step_15",
+                                ),
+                                property: String(
+                                    "value",
+                                ),
+                            },
+                        },
+                        Block {
+                            body: [
+                                Expression(
+                                    Update {
+                                        name: "i",
+                                        op: Increment,
+                                        prefix: false,
+                                    },
+                                ),
+                            ],
+                        },
+                    ],
+                    catch_binding: Some(
+                        "__ayy_for_of_catch_17",
+                    ),
+                    catch_setup: [],
+                    catch_body: [
+                        Expression(
+                            IteratorClose(
+                                Identifier(
+                                    "__ayy_for_of_iter_14",
+                                ),
+                            ),
+                        ),
+                        Throw(
+                            Identifier(
+                                "__ayy_for_of_catch_17",
+                            ),
+                        ),
+                    ],
+                },
+            ],
+        },
+        Expression(
+            Call {
+                callee: Member {
+                    object: Identifier(
+                        "assert",
+                    ),
+                    property: String(
+                        "sameValue",
+                    ),
+                },
+                arguments: [
+                    Expression(
+                        Identifier(
+                            "i",
+                        ),
+                    ),
+                    Expression(
+                        Number(
+                            1.0,
+                        ),
+                    ),
+                ],
+            },
+        ),
+        Assign {
+            name: "firstIterResult",
+            value: Object(
+                [
+                    Data {
+                        key: String(
+                            "value",
+                        ),
+                        value: Null,
+                    },
+                    Data {
+                        key: String(
+                            "done",
+                        ),
+                        value: Bool(
+                            true,
+                        ),
+                    },
+                ],
+            ),
+        },
+        Assign {
+            name: "i",
+            value: Number(
+                0.0,
+            ),
+        },
+        For {
+            labels: [],
+            init: [
+                Let {
+                    name: "__ayy_for_of_iter_18",
+                    mutable: true,
+                    value: GetIterator(
+                        Identifier(
+                            "iterable",
+                        ),
+                    ),
+                },
+                Var {
+                    name: "x",
+                    value: Undefined,
+                },
+                Let {
+                    name: "__ayy_for_of_done_20",
+                    mutable: true,
+                    value: Bool(
+                        false,
+                    ),
+                },
+            ],
+            per_iteration_bindings: [],
+            condition: Some(
+                Bool(
+                    true,
+                ),
+            ),
+            update: None,
+            break_hook: Some(
+                Conditional {
+                    condition: Identifier(
+                        "__ayy_for_of_done_20",
+                    ),
+                    then_expression: Undefined,
+                    else_expression: IteratorClose(
+                        Identifier(
+                            "__ayy_for_of_iter_18",
+                        ),
+                    ),
+                },
+            ),
+            body: [
+                Let {
+                    name: "__ayy_for_of_step_19",
+                    mutable: true,
+                    value: Call {
+                        callee: Member {
+                            object: Identifier(
+                                "__ayy_for_of_iter_18",
+                            ),
+                            property: String(
+                                "next",
+                            ),
+                        },
+                        arguments: [],
+                    },
+                },
+                If {
+                    condition: Member {
+                        object: Identifier(
+                            "__ayy_for_of_step_19",
+                        ),
+                        property: String(
+                            "done",
+                        ),
+                    },
+                    then_branch: [
+                        Assign {
+                            name: "__ayy_for_of_done_20",
+                            value: Bool(
+                                true,
+                            ),
+                        },
+                        Break {
+                            label: None,
+                        },
+                    ],
+                    else_branch: [],
+                },
+                Try {
+                    body: [
+                        Var {
+                            name: "x",
+                            value: Member {
+                                object: Identifier(
+                                    "__ayy_for_of_step_19",
+                                ),
+                                property: String(
+                                    "value",
+                                ),
+                            },
+                        },
+                        Block {
+                            body: [
+                                Expression(
+                                    Update {
+                                        name: "i",
+                                        op: Increment,
+                                        prefix: false,
+                                    },
+                                ),
+                            ],
+                        },
+                    ],
+                    catch_binding: Some(
+                        "__ayy_for_of_catch_21",
+                    ),
+                    catch_setup: [],
+                    catch_body: [
+                        Expression(
+                            IteratorClose(
+                                Identifier(
+                                    "__ayy_for_of_iter_18",
+                                ),
+                            ),
+                        ),
+                        Throw(
+                            Identifier(
+                                "__ayy_for_of_catch_21",
+                            ),
+                        ),
+                    ],
+                },
+            ],
+        },
+        Expression(
+            Call {
+                callee: Member {
+                    object: Identifier(
+                        "assert",
+                    ),
+                    property: String(
+                        "sameValue",
+                    ),
+                },
+                arguments: [
+                    Expression(
+                        Identifier(
+                            "i",
+                        ),
+                    ),
+                    Expression(
+                        Number(
+                            0.0,
+                        ),
+                    ),
+                ],
+            },
+        ),
+        Assign {
+            name: "firstIterResult",
+            value: Object(
+                [
+                    Data {
+                        key: String(
+                            "value",
+                        ),
+                        value: Null,
+                    },
+                    Data {
+                        key: String(
+                            "done",
+                        ),
+                        value: Number(
+                            1.0,
+                        ),
+                    },
+                ],
+            ),
+        },
+        Assign {
+            name: "i",
+            value: Number(
+                0.0,
+            ),
+        },
+        For {
+            labels: [],
+            init: [
+                Let {
+                    name: "__ayy_for_of_iter_22",
+                    mutable: true,
+                    value: GetIterator(
+                        Identifier(
+                            "iterable",
+                        ),
+                    ),
+                },
+                Var {
+                    name: "x",
+                    value: Undefined,
+                },
+                Let {
+                    name: "__ayy_for_of_done_24",
+                    mutable: true,
+                    value: Bool(
+                        false,
+                    ),
+                },
+            ],
+            per_iteration_bindings: [],
+            condition: Some(
+                Bool(
+                    true,
+                ),
+            ),
+            update: None,
+            break_hook: Some(
+                Conditional {
+                    condition: Identifier(
+                        "__ayy_for_of_done_24",
+                    ),
+                    then_expression: Undefined,
+                    else_expression: IteratorClose(
+                        Identifier(
+                            "__ayy_for_of_iter_22",
+                        ),
+                    ),
+                },
+            ),
+            body: [
+                Let {
+                    name: "__ayy_for_of_step_23",
+                    mutable: true,
+                    value: Call {
+                        callee: Member {
+                            object: Identifier(
+                                "__ayy_for_of_iter_22",
+                            ),
+                            property: String(
+                                "next",
+                            ),
+                        },
+                        arguments: [],
+                    },
+                },
+                If {
+                    condition: Member {
+                        object: Identifier(
+                            "__ayy_for_of_step_23",
+                        ),
+                        property: String(
+                            "done",
+                        ),
+                    },
+                    then_branch: [
+                        Assign {
+                            name: "__ayy_for_of_done_24",
+                            value: Bool(
+                                true,
+                            ),
+                        },
+                        Break {
+                            label: None,
+                        },
+                    ],
+                    else_branch: [],
+                },
+                Try {
+                    body: [
+                        Var {
+                            name: "x",
+                            value: Member {
+                                object: Identifier(
+                                    "__ayy_for_of_step_23",
+                                ),
+                                property: String(
+                                    "value",
+                                ),
+                            },
+                        },
+                        Block {
+                            body: [
+                                Expression(
+                                    Update {
+                                        name: "i",
+                                        op: Increment,
+                                        prefix: false,
+                                    },
+                                ),
+                            ],
+                        },
+                    ],
+                    catch_binding: Some(
+                        "__ayy_for_of_catch_25",
+                    ),
+                    catch_setup: [],
+                    catch_body: [
+                        Expression(
+                            IteratorClose(
+                                Identifier(
+                                    "__ayy_for_of_iter_22",
+                                ),
+                            ),
+                        ),
+                        Throw(
+                            Identifier(
+                                "__ayy_for_of_catch_25",
+                            ),
+                        ),
+                    ],
+                },
+            ],
+        },
+        Expression(
+            Call {
+                callee: Member {
+                    object: Identifier(
+                        "assert",
+                    ),
+                    property: String(
+                        "sameValue",
+                    ),
+                },
+                arguments: [
+                    Expression(
+                        Identifier(
+                            "i",
+                        ),
+                    ),
+                    Expression(
+                        Number(
+                            0.0,
+                        ),
+                    ),
+                ],
+            },
+        ),
+        Assign {
+            name: "firstIterResult",
+            value: Object(
+                [
+                    Data {
+                        key: String(
+                            "value",
+                        ),
+                        value: Null,
+                    },
+                    Data {
+                        key: String(
+                            "done",
+                        ),
+                        value: Number(
+                            0.0,
+                        ),
+                    },
+                ],
+            ),
+        },
+        Assign {
+            name: "i",
+            value: Number(
+                0.0,
+            ),
+        },
+        For {
+            labels: [],
+            init: [
+                Let {
+                    name: "__ayy_for_of_iter_26",
+                    mutable: true,
+                    value: GetIterator(
+                        Identifier(
+                            "iterable",
+                        ),
+                    ),
+                },
+                Var {
+                    name: "x",
+                    value: Undefined,
+                },
+                Let {
+                    name: "__ayy_for_of_done_28",
+                    mutable: true,
+                    value: Bool(
+                        false,
+                    ),
+                },
+            ],
+            per_iteration_bindings: [],
+            condition: Some(
+                Bool(
+                    true,
+                ),
+            ),
+            update: None,
+            break_hook: Some(
+                Conditional {
+                    condition: Identifier(
+                        "__ayy_for_of_done_28",
+                    ),
+                    then_expression: Undefined,
+                    else_expression: IteratorClose(
+                        Identifier(
+                            "__ayy_for_of_iter_26",
+                        ),
+                    ),
+                },
+            ),
+            body: [
+                Let {
+                    name: "__ayy_for_of_step_27",
+                    mutable: true,
+                    value: Call {
+                        callee: Member {
+                            object: Identifier(
+                                "__ayy_for_of_iter_26",
+                            ),
+                            property: String(
+                                "next",
+                            ),
+                        },
+                        arguments: [],
+                    },
+                },
+                If {
+                    condition: Member {
+                        object: Identifier(
+                            "__ayy_for_of_step_27",
+                        ),
+                        property: String(
+                            "done",
+                        ),
+                    },
+                    then_branch: [
+                        Assign {
+                            name: "__ayy_for_of_done_28",
+                            value: Bool(
+                                true,
+                            ),
+                        },
+                        Break {
+                            label: None,
+                        },
+                    ],
+                    else_branch: [],
+                },
+                Try {
+                    body: [
+                        Var {
+                            name: "x",
+                            value: Member {
+                                object: Identifier(
+                                    "__ayy_for_of_step_27",
+                                ),
+                                property: String(
+                                    "value",
+                                ),
+                            },
+                        },
+                        Block {
+                            body: [
+                                Expression(
+                                    Update {
+                                        name: "i",
+                                        op: Increment,
+                                        prefix: false,
+                                    },
+                                ),
+                            ],
+                        },
+                    ],
+                    catch_binding: Some(
+                        "__ayy_for_of_catch_29",
+                    ),
+                    catch_setup: [],
+                    catch_body: [
+                        Expression(
+                            IteratorClose(
+                                Identifier(
+                                    "__ayy_for_of_iter_26",
+                                ),
+                            ),
+                        ),
+                        Throw(
+                            Identifier(
+                                "__ayy_for_of_catch_29",
+                            ),
+                        ),
+                    ],
+                },
+            ],
+        },
+        Expression(
+            Call {
+                callee: Member {
+                    object: Identifier(
+                        "assert",
+                    ),
+                    property: String(
+                        "sameValue",
+                    ),
+                },
+                arguments: [
+                    Expression(
+                        Identifier(
+                            "i",
+                        ),
+                    ),
+                    Expression(
+                        Number(
+                            1.0,
+                        ),
+                    ),
+                ],
+            },
+        ),
+        Assign {
+            name: "firstIterResult",
+            value: Object(
+                [
+                    Data {
+                        key: String(
+                            "value",
+                        ),
+                        value: Null,
+                    },
+                    Data {
+                        key: String(
+                            "done",
+                        ),
+                        value: Unary {
+                            op: Negate,
+                            expression: Number(
+                                0.0,
+                            ),
+                        },
+                    },
+                ],
+            ),
+        },
+        Assign {
+            name: "i",
+            value: Number(
+                0.0,
+            ),
+        },
+        For {
+            labels: [],
+            init: [
+                Let {
+                    name: "__ayy_for_of_iter_30",
+                    mutable: true,
+                    value: GetIterator(
+                        Identifier(
+                            "iterable",
+                        ),
+                    ),
+                },
+                Var {
+                    name: "x",
+                    value: Undefined,
+                },
+                Let {
+                    name: "__ayy_for_of_done_32",
+                    mutable: true,
+                    value: Bool(
+                        false,
+                    ),
+                },
+            ],
+            per_iteration_bindings: [],
+            condition: Some(
+                Bool(
+                    true,
+                ),
+            ),
+            update: None,
+            break_hook: Some(
+                Conditional {
+                    condition: Identifier(
+                        "__ayy_for_of_done_32",
+                    ),
+                    then_expression: Undefined,
+                    else_expression: IteratorClose(
+                        Identifier(
+                            "__ayy_for_of_iter_30",
+                        ),
+                    ),
+                },
+            ),
+            body: [
+                Let {
+                    name: "__ayy_for_of_step_31",
+                    mutable: true,
+                    value: Call {
+                        callee: Member {
+                            object: Identifier(
+                                "__ayy_for_of_iter_30",
+                            ),
+                            property: String(
+                                "next",
+                            ),
+                        },
+                        arguments: [],
+                    },
+                },
+                If {
+                    condition: Member {
+                        object: Identifier(
+                            "__ayy_for_of_step_31",
+                        ),
+                        property: String(
+                            "done",
+                        ),
+                    },
+                    then_branch: [
+                        Assign {
+                            name: "__ayy_for_of_done_32",
+                            value: Bool(
+                                true,
+                            ),
+                        },
+                        Break {
+                            label: None,
+                        },
+                    ],
+                    else_branch: [],
+                },
+                Try {
+                    body: [
+                        Var {
+                            name: "x",
+                            value: Member {
+                                object: Identifier(
+                                    "__ayy_for_of_step_31",
+                                ),
+                                property: String(
+                                    "value",
+                                ),
+                            },
+                        },
+                        Block {
+                            body: [
+                                Expression(
+                                    Update {
+                                        name: "i",
+                                        op: Increment,
+                                        prefix: false,
+                                    },
+                                ),
+                            ],
+                        },
+                    ],
+                    catch_binding: Some(
+                        "__ayy_for_of_catch_33",
+                    ),
+                    catch_setup: [],
+                    catch_body: [
+                        Expression(
+                            IteratorClose(
+                                Identifier(
+                                    "__ayy_for_of_iter_30",
+                                ),
+                            ),
+                        ),
+                        Throw(
+                            Identifier(
+                                "__ayy_for_of_catch_33",
+                            ),
+                        ),
+                    ],
+                },
+            ],
+        },
+        Expression(
+            Call {
+                callee: Member {
+                    object: Identifier(
+                        "assert",
+                    ),
+                    property: String(
+                        "sameValue",
+                    ),
+                },
+                arguments: [
+                    Expression(
+                        Identifier(
+                            "i",
+                        ),
+                    ),
+                    Expression(
+                        Number(
+                            1.0,
+                        ),
+                    ),
+                ],
+            },
+        ),
+        Assign {
+            name: "firstIterResult",
+            value: Object(
+                [
+                    Data {
+                        key: String(
+                            "value",
+                        ),
+                        value: Null,
+                    },
+                    Data {
+                        key: String(
+                            "done",
+                        ),
+                        value: Identifier(
+                            "NaN",
+                        ),
+                    },
+                ],
+            ),
+        },
+        Assign {
+            name: "i",
+            value: Number(
+                0.0,
+            ),
+        },
+        For {
+            labels: [],
+            init: [
+                Let {
+                    name: "__ayy_for_of_iter_34",
+                    mutable: true,
+                    value: GetIterator(
+                        Identifier(
+                            "iterable",
+                        ),
+                    ),
+                },
+                Var {
+                    name: "x",
+                    value: Undefined,
+                },
+                Let {
+                    name: "__ayy_for_of_done_36",
+                    mutable: true,
+                    value: Bool(
+                        false,
+                    ),
+                },
+            ],
+            per_iteration_bindings: [],
+            condition: Some(
+                Bool(
+                    true,
+                ),
+            ),
+            update: None,
+            break_hook: Some(
+                Conditional {
+                    condition: Identifier(
+                        "__ayy_for_of_done_36",
+                    ),
+                    then_expression: Undefined,
+                    else_expression: IteratorClose(
+                        Identifier(
+                            "__ayy_for_of_iter_34",
+                        ),
+                    ),
+                },
+            ),
+            body: [
+                Let {
+                    name: "__ayy_for_of_step_35",
+                    mutable: true,
+                    value: Call {
+                        callee: Member {
+                            object: Identifier(
+                                "__ayy_for_of_iter_34",
+                            ),
+                            property: String(
+                                "next",
+                            ),
+                        },
+                        arguments: [],
+                    },
+                },
+                If {
+                    condition: Member {
+                        object: Identifier(
+                            "__ayy_for_of_step_35",
+                        ),
+                        property: String(
+                            "done",
+                        ),
+                    },
+                    then_branch: [
+                        Assign {
+                            name: "__ayy_for_of_done_36",
+                            value: Bool(
+                                true,
+                            ),
+                        },
+                        Break {
+                            label: None,
+                        },
+                    ],
+                    else_branch: [],
+                },
+                Try {
+                    body: [
+                        Var {
+                            name: "x",
+                            value: Member {
+                                object: Identifier(
+                                    "__ayy_for_of_step_35",
+                                ),
+                                property: String(
+                                    "value",
+                                ),
+                            },
+                        },
+                        Block {
+                            body: [
+                                Expression(
+                                    Update {
+                                        name: "i",
+                                        op: Increment,
+                                        prefix: false,
+                                    },
+                                ),
+                            ],
+                        },
+                    ],
+                    catch_binding: Some(
+                        "__ayy_for_of_catch_37",
+                    ),
+                    catch_setup: [],
+                    catch_body: [
+                        Expression(
+                            IteratorClose(
+                                Identifier(
+                                    "__ayy_for_of_iter_34",
+                                ),
+                            ),
+                        ),
+                        Throw(
+                            Identifier(
+                                "__ayy_for_of_catch_37",
+                            ),
+                        ),
+                    ],
+                },
+            ],
+        },
+        Expression(
+            Call {
+                callee: Member {
+                    object: Identifier(
+                        "assert",
+                    ),
+                    property: String(
+                        "sameValue",
+                    ),
+                },
+                arguments: [
+                    Expression(
+                        Identifier(
+                            "i",
+                        ),
+                    ),
+                    Expression(
+                        Number(
+                            1.0,
+                        ),
+                    ),
+                ],
+            },
+        ),
+        Assign {
+            name: "firstIterResult",
+            value: Object(
+                [
+                    Data {
+                        key: String(
+                            "value",
+                        ),
+                        value: Null,
+                    },
+                    Data {
+                        key: String(
+                            "done",
+                        ),
+                        value: String(
+                            "",
+                        ),
+                    },
+                ],
+            ),
+        },
+        Assign {
+            name: "i",
+            value: Number(
+                0.0,
+            ),
+        },
+        For {
+            labels: [],
+            init: [
+                Let {
+                    name: "__ayy_for_of_iter_38",
+                    mutable: true,
+                    value: GetIterator(
+                        Identifier(
+                            "iterable",
+                        ),
+                    ),
+                },
+                Var {
+                    name: "x",
+                    value: Undefined,
+                },
+                Let {
+                    name: "__ayy_for_of_done_40",
+                    mutable: true,
+                    value: Bool(
+                        false,
+                    ),
+                },
+            ],
+            per_iteration_bindings: [],
+            condition: Some(
+                Bool(
+                    true,
+                ),
+            ),
+            update: None,
+            break_hook: Some(
+                Conditional {
+                    condition: Identifier(
+                        "__ayy_for_of_done_40",
+                    ),
+                    then_expression: Undefined,
+                    else_expression: IteratorClose(
+                        Identifier(
+                            "__ayy_for_of_iter_38",
+                        ),
+                    ),
+                },
+            ),
+            body: [
+                Let {
+                    name: "__ayy_for_of_step_39",
+                    mutable: true,
+                    value: Call {
+                        callee: Member {
+                            object: Identifier(
+                                "__ayy_for_of_iter_38",
+                            ),
+                            property: String(
+                                "next",
+                            ),
+                        },
+                        arguments: [],
+                    },
+                },
+                If {
+                    condition: Member {
+                        object: Identifier(
+                            "__ayy_for_of_step_39",
+                        ),
+                        property: String(
+                            "done",
+                        ),
+                    },
+                    then_branch: [
+                        Assign {
+                            name: "__ayy_for_of_done_40",
+                            value: Bool(
+                                true,
+                            ),
+                        },
+                        Break {
+                            label: None,
+                        },
+                    ],
+                    else_branch: [],
+                },
+                Try {
+                    body: [
+                        Var {
+                            name: "x",
+                            value: Member {
+                                object: Identifier(
+                                    "__ayy_for_of_step_39",
+                                ),
+                                property: String(
+                                    "value",
+                                ),
+                            },
+                        },
+                        Block {
+                            body: [
+                                Expression(
+                                    Update {
+                                        name: "i",
+                                        op: Increment,
+                                        prefix: false,
+                                    },
+                                ),
+                            ],
+                        },
+                    ],
+                    catch_binding: Some(
+                        "__ayy_for_of_catch_41",
+                    ),
+                    catch_setup: [],
+                    catch_body: [
+                        Expression(
+                            IteratorClose(
+                                Identifier(
+                                    "__ayy_for_of_iter_38",
+                                ),
+                            ),
+                        ),
+                        Throw(
+                            Identifier(
+                                "__ayy_for_of_catch_41",
+                            ),
+                        ),
+                    ],
+                },
+            ],
+        },
+        Expression(
+            Call {
+                callee: Member {
+                    object: Identifier(
+                        "assert",
+                    ),
+                    property: String(
+                        "sameValue",
+                    ),
+                },
+                arguments: [
+                    Expression(
+                        Identifier(
+                            "i",
+                        ),
+                    ),
+                    Expression(
+                        Number(
+                            1.0,
+                        ),
+                    ),
+                ],
+            },
+        ),
+        Assign {
+            name: "firstIterResult",
+            value: Object(
+                [
+                    Data {
+                        key: String(
+                            "value",
+                        ),
+                        value: Null,
+                    },
+                    Data {
+                        key: String(
+                            "done",
+                        ),
+                        value: String(
+                            "0",
+                        ),
+                    },
+                ],
+            ),
+        },
+        Assign {
+            name: "i",
+            value: Number(
+                0.0,
+            ),
+        },
+        For {
+            labels: [],
+            init: [
+                Let {
+                    name: "__ayy_for_of_iter_42",
+                    mutable: true,
+                    value: GetIterator(
+                        Identifier(
+                            "iterable",
+                        ),
+                    ),
+                },
+                Var {
+                    name: "x",
+                    value: Undefined,
+                },
+                Let {
+                    name: "__ayy_for_of_done_44",
+                    mutable: true,
+                    value: Bool(
+                        false,
+                    ),
+                },
+            ],
+            per_iteration_bindings: [],
+            condition: Some(
+                Bool(
+                    true,
+                ),
+            ),
+            update: None,
+            break_hook: Some(
+                Conditional {
+                    condition: Identifier(
+                        "__ayy_for_of_done_44",
+                    ),
+                    then_expression: Undefined,
+                    else_expression: IteratorClose(
+                        Identifier(
+                            "__ayy_for_of_iter_42",
+                        ),
+                    ),
+                },
+            ),
+            body: [
+                Let {
+                    name: "__ayy_for_of_step_43",
+                    mutable: true,
+                    value: Call {
+                        callee: Member {
+                            object: Identifier(
+                                "__ayy_for_of_iter_42",
+                            ),
+                            property: String(
+                                "next",
+                            ),
+                        },
+                        arguments: [],
+                    },
+                },
+                If {
+                    condition: Member {
+                        object: Identifier(
+                            "__ayy_for_of_step_43",
+                        ),
+                        property: String(
+                            "done",
+                        ),
+                    },
+                    then_branch: [
+                        Assign {
+                            name: "__ayy_for_of_done_44",
+                            value: Bool(
+                                true,
+                            ),
+                        },
+                        Break {
+                            label: None,
+                        },
+                    ],
+                    else_branch: [],
+                },
+                Try {
+                    body: [
+                        Var {
+                            name: "x",
+                            value: Member {
+                                object: Identifier(
+                                    "__ayy_for_of_step_43",
+                                ),
+                                property: String(
+                                    "value",
+                                ),
+                            },
+                        },
+                        Block {
+                            body: [
+                                Expression(
+                                    Update {
+                                        name: "i",
+                                        op: Increment,
+                                        prefix: false,
+                                    },
+                                ),
+                            ],
+                        },
+                    ],
+                    catch_binding: Some(
+                        "__ayy_for_of_catch_45",
+                    ),
+                    catch_setup: [],
+                    catch_body: [
+                        Expression(
+                            IteratorClose(
+                                Identifier(
+                                    "__ayy_for_of_iter_42",
+                                ),
+                            ),
+                        ),
+                        Throw(
+                            Identifier(
+                                "__ayy_for_of_catch_45",
+                            ),
+                        ),
+                    ],
+                },
+            ],
+        },
+        Expression(
+            Call {
+                callee: Member {
+                    object: Identifier(
+                        "assert",
+                    ),
+                    property: String(
+                        "sameValue",
+                    ),
+                },
+                arguments: [
+                    Expression(
+                        Identifier(
+                            "i",
+                        ),
+                    ),
+                    Expression(
+                        Number(
+                            0.0,
+                        ),
+                    ),
+                ],
+            },
+        ),
+        Assign {
+            name: "firstIterResult",
+            value: Object(
+                [
+                    Data {
+                        key: String(
+                            "value",
+                        ),
+                        value: Null,
+                    },
+                    Data {
+                        key: String(
+                            "done",
+                        ),
+                        value: Call {
+                            callee: Identifier(
+                                "Symbol",
+                            ),
+                            arguments: [],
+                        },
+                    },
+                ],
+            ),
+        },
+        Assign {
+            name: "i",
+            value: Number(
+                0.0,
+            ),
+        },
+        For {
+            labels: [],
+            init: [
+                Let {
+                    name: "__ayy_for_of_iter_46",
+                    mutable: true,
+                    value: GetIterator(
+                        Identifier(
+                            "iterable",
+                        ),
+                    ),
+                },
+                Var {
+                    name: "x",
+                    value: Undefined,
+                },
+                Let {
+                    name: "__ayy_for_of_done_48",
+                    mutable: true,
+                    value: Bool(
+                        false,
+                    ),
+                },
+            ],
+            per_iteration_bindings: [],
+            condition: Some(
+                Bool(
+                    true,
+                ),
+            ),
+            update: None,
+            break_hook: Some(
+                Conditional {
+                    condition: Identifier(
+                        "__ayy_for_of_done_48",
+                    ),
+                    then_expression: Undefined,
+                    else_expression: IteratorClose(
+                        Identifier(
+                            "__ayy_for_of_iter_46",
+                        ),
+                    ),
+                },
+            ),
+            body: [
+                Let {
+                    name: "__ayy_for_of_step_47",
+                    mutable: true,
+                    value: Call {
+                        callee: Member {
+                            object: Identifier(
+                                "__ayy_for_of_iter_46",
+                            ),
+                            property: String(
+                                "next",
+                            ),
+                        },
+                        arguments: [],
+                    },
+                },
+                If {
+                    condition: Member {
+                        object: Identifier(
+                            "__ayy_for_of_step_47",
+                        ),
+                        property: String(
+                            "done",
+                        ),
+                    },
+                    then_branch: [
+                        Assign {
+                            name: "__ayy_for_of_done_48",
+                            value: Bool(
+                                true,
+                            ),
+                        },
+                        Break {
+                            label: None,
+                        },
+                    ],
+                    else_branch: [],
+                },
+                Try {
+                    body: [
+                        Var {
+                            name: "x",
+                            value: Member {
+                                object: Identifier(
+                                    "__ayy_for_of_step_47",
+                                ),
+                                property: String(
+                                    "value",
+                                ),
+                            },
+                        },
+                        Block {
+                            body: [
+                                Expression(
+                                    Update {
+                                        name: "i",
+                                        op: Increment,
+                                        prefix: false,
+                                    },
+                                ),
+                            ],
+                        },
+                    ],
+                    catch_binding: Some(
+                        "__ayy_for_of_catch_49",
+                    ),
+                    catch_setup: [],
+                    catch_body: [
+                        Expression(
+                            IteratorClose(
+                                Identifier(
+                                    "__ayy_for_of_iter_46",
+                                ),
+                            ),
+                        ),
+                        Throw(
+                            Identifier(
+                                "__ayy_for_of_catch_49",
+                            ),
+                        ),
+                    ],
+                },
+            ],
+        },
+        Expression(
+            Call {
+                callee: Member {
+                    object: Identifier(
+                        "assert",
+                    ),
+                    property: String(
+                        "sameValue",
+                    ),
+                },
+                arguments: [
+                    Expression(
+                        Identifier(
+                            "i",
+                        ),
+                    ),
+                    Expression(
+                        Number(
+                            0.0,
+                        ),
+                    ),
+                ],
+            },
+        ),
+        Assign {
+            name: "firstIterResult",
+            value: Object(
+                [
+                    Data {
+                        key: String(
+                            "value",
+                        ),
+                        value: Null,
+                    },
+                    Data {
+                        key: String(
+                            "done",
+                        ),
+                        value: Object(
+                            [],
+                        ),
+                    },
+                ],
+            ),
+        },
+        Assign {
+            name: "i",
+            value: Number(
+                0.0,
+            ),
+        },
+        For {
+            labels: [],
+            init: [
+                Let {
+                    name: "__ayy_for_of_iter_50",
+                    mutable: true,
+                    value: GetIterator(
+                        Identifier(
+                            "iterable",
+                        ),
+                    ),
+                },
+                Var {
+                    name: "x",
+                    value: Undefined,
+                },
+                Let {
+                    name: "__ayy_for_of_done_52",
+                    mutable: true,
+                    value: Bool(
+                        false,
+                    ),
+                },
+            ],
+            per_iteration_bindings: [],
+            condition: Some(
+                Bool(
+                    true,
+                ),
+            ),
+            update: None,
+            break_hook: Some(
+                Conditional {
+                    condition: Identifier(
+                        "__ayy_for_of_done_52",
+                    ),
+                    then_expression: Undefined,
+                    else_expression: IteratorClose(
+                        Identifier(
+                            "__ayy_for_of_iter_50",
+                        ),
+                    ),
+                },
+            ),
+            body: [
+                Let {
+                    name: "__ayy_for_of_step_51",
+                    mutable: true,
+                    value: Call {
+                        callee: Member {
+                            object: Identifier(
+                                "__ayy_for_of_iter_50",
+                            ),
+                            property: String(
+                                "next",
+                            ),
+                        },
+                        arguments: [],
+                    },
+                },
+                If {
+                    condition: Member {
+                        object: Identifier(
+                            "__ayy_for_of_step_51",
+                        ),
+                        property: String(
+                            "done",
+                        ),
+                    },
+                    then_branch: [
+                        Assign {
+                            name: "__ayy_for_of_done_52",
+                            value: Bool(
+                                true,
+                            ),
+                        },
+                        Break {
+                            label: None,
+                        },
+                    ],
+                    else_branch: [],
+                },
+                Try {
+                    body: [
+                        Var {
+                            name: "x",
+                            value: Member {
+                                object: Identifier(
+                                    "__ayy_for_of_step_51",
+                                ),
+                                property: String(
+                                    "value",
+                                ),
+                            },
+                        },
+                        Block {
+                            body: [
+                                Expression(
+                                    Update {
+                                        name: "i",
+                                        op: Increment,
+                                        prefix: false,
+                                    },
+                                ),
+                            ],
+                        },
+                    ],
+                    catch_binding: Some(
+                        "__ayy_for_of_catch_53",
+                    ),
+                    catch_setup: [],
+                    catch_body: [
+                        Expression(
+                            IteratorClose(
+                                Identifier(
+                                    "__ayy_for_of_iter_50",
+                                ),
+                            ),
+                        ),
+                        Throw(
+                            Identifier(
+                                "__ayy_for_of_catch_53",
+                            ),
+                        ),
+                    ],
+                },
+            ],
+        },
+        Expression(
+            Call {
+                callee: Member {
+                    object: Identifier(
+                        "assert",
+                    ),
+                    property: String(
+                        "sameValue",
+                    ),
+                },
+                arguments: [
+                    Expression(
+                        Identifier(
+                            "i",
+                        ),
+                    ),
+                    Expression(
+                        Number(
+                            0.0,
+                        ),
+                    ),
+                ],
+            },
+        ),
+        Assign {
+            name: "firstIterResult",
+            value: Object(
+                [
+                    Data {
+                        key: String(
+                            "value",
+                        ),
+                        value: Null,
+                    },
+                ],
+            ),
+        },
+        Expression(
+            Call {
+                callee: Member {
+                    object: Identifier(
+                        "Object",
+                    ),
+                    property: String(
+                        "defineProperty",
+                    ),
+                },
+                arguments: [
+                    Expression(
+                        Identifier(
+                            "firstIterResult",
+                        ),
+                    ),
+                    Expression(
+                        String(
+                            "done",
+                        ),
+                    ),
+                    Expression(
+                        Object(
+                            [
+                                Data {
+                                    key: String(
+                                        "get",
+                                    ),
+                                    value: Identifier(
+                                        "__ayy_fnexpr_3",
+                                    ),
+                                },
+                            ],
+                        ),
+                    ),
+                ],
+            },
+        ),
+        Assign {
+            name: "i",
+            value: Number(
+                0.0,
+            ),
+        },
+        For {
+            labels: [],
+            init: [
+                Let {
+                    name: "__ayy_for_of_iter_54",
+                    mutable: true,
+                    value: GetIterator(
+                        Identifier(
+                            "iterable",
+                        ),
+                    ),
+                },
+                Var {
+                    name: "x",
+                    value: Undefined,
+                },
+                Let {
+                    name: "__ayy_for_of_done_56",
+                    mutable: true,
+                    value: Bool(
+                        false,
+                    ),
+                },
+            ],
+            per_iteration_bindings: [],
+            condition: Some(
+                Bool(
+                    true,
+                ),
+            ),
+            update: None,
+            break_hook: Some(
+                Conditional {
+                    condition: Identifier(
+                        "__ayy_for_of_done_56",
+                    ),
+                    then_expression: Undefined,
+                    else_expression: IteratorClose(
+                        Identifier(
+                            "__ayy_for_of_iter_54",
+                        ),
+                    ),
+                },
+            ),
+            body: [
+                Let {
+                    name: "__ayy_for_of_step_55",
+                    mutable: true,
+                    value: Call {
+                        callee: Member {
+                            object: Identifier(
+                                "__ayy_for_of_iter_54",
+                            ),
+                            property: String(
+                                "next",
+                            ),
+                        },
+                        arguments: [],
+                    },
+                },
+                If {
+                    condition: Member {
+                        object: Identifier(
+                            "__ayy_for_of_step_55",
+                        ),
+                        property: String(
+                            "done",
+                        ),
+                    },
+                    then_branch: [
+                        Assign {
+                            name: "__ayy_for_of_done_56",
+                            value: Bool(
+                                true,
+                            ),
+                        },
+                        Break {
+                            label: None,
+                        },
+                    ],
+                    else_branch: [],
+                },
+                Try {
+                    body: [
+                        Var {
+                            name: "x",
+                            value: Member {
+                                object: Identifier(
+                                    "__ayy_for_of_step_55",
+                                ),
+                                property: String(
+                                    "value",
+                                ),
+                            },
+                        },
+                        Block {
+                            body: [
+                                Expression(
+                                    Update {
+                                        name: "i",
+                                        op: Increment,
+                                        prefix: false,
+                                    },
+                                ),
+                            ],
+                        },
+                    ],
+                    catch_binding: Some(
+                        "__ayy_for_of_catch_57",
+                    ),
+                    catch_setup: [],
+                    catch_body: [
+                        Expression(
+                            IteratorClose(
+                                Identifier(
+                                    "__ayy_for_of_iter_54",
+                                ),
+                            ),
+                        ),
+                        Throw(
+                            Identifier(
+                                "__ayy_for_of_catch_57",
+                            ),
+                        ),
+                    ],
+                },
+            ],
+        },
+        Expression(
+            Call {
+                callee: Member {
+                    object: Identifier(
+                        "assert",
+                    ),
+                    property: String(
+                        "sameValue",
+                    ),
+                },
+                arguments: [
+                    Expression(
+                        Identifier(
+                            "i",
+                        ),
+                    ),
+                    Expression(
+                        Number(
+                            0.0,
+                        ),
+                    ),
+                ],
+            },
+        ),
+    ],
+}
+ok

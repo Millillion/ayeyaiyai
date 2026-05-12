@@ -6,7 +6,19 @@ pub(crate) fn collect_var_decl_bound_names(
     let mut names = Vec::new();
 
     for declarator in &variable_declaration.decls {
-        collect_pattern_binding_names(&declarator.name, &mut names)?;
+        collect_pattern_binding_names_including_duplicates(&declarator.name, &mut names)?;
+    }
+
+    Ok(names)
+}
+
+pub(super) fn collect_using_decl_bound_names(
+    using_declaration: &swc_ecma_ast::UsingDecl,
+) -> Result<Vec<String>> {
+    let mut names = Vec::new();
+
+    for declarator in &using_declaration.decls {
+        collect_pattern_binding_names_including_duplicates(&declarator.name, &mut names)?;
     }
 
     Ok(names)
@@ -26,6 +38,9 @@ pub(crate) fn collect_module_declared_names(module: &Module) -> Result<HashSet<S
             ModuleItem::Stmt(Stmt::Decl(Decl::Var(variable_declaration))) => {
                 names.extend(collect_var_decl_bound_names(variable_declaration)?);
             }
+            ModuleItem::Stmt(Stmt::Decl(Decl::Using(using_declaration))) => {
+                names.extend(collect_using_decl_bound_names(using_declaration)?);
+            }
             ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(export)) => match &export.decl {
                 Decl::Fn(function_declaration) => {
                     names.insert(function_declaration.ident.sym.to_string());
@@ -35,6 +50,9 @@ pub(crate) fn collect_module_declared_names(module: &Module) -> Result<HashSet<S
                 }
                 Decl::Var(variable_declaration) => {
                     names.extend(collect_var_decl_bound_names(variable_declaration)?);
+                }
+                Decl::Using(using_declaration) => {
+                    names.extend(collect_using_decl_bound_names(using_declaration)?);
                 }
                 _ => {}
             },
@@ -69,6 +87,11 @@ pub(crate) fn ensure_module_lexical_names_are_unique(module: &Module) -> Result<
             {
                 insert_unique_pattern_names(variable_declaration, &mut seen)?;
             }
+            ModuleItem::Stmt(Stmt::Decl(Decl::Using(using_declaration))) => {
+                for name in collect_using_decl_bound_names(using_declaration)? {
+                    ensure!(seen.insert(name.clone()), "duplicate lexical name `{name}`");
+                }
+            }
             ModuleItem::ModuleDecl(ModuleDecl::Import(import)) => {
                 for specifier in &import.specifiers {
                     let local_name = match specifier {
@@ -101,6 +124,11 @@ pub(crate) fn ensure_module_lexical_names_are_unique(module: &Module) -> Result<
                     if !matches!(variable_declaration.kind, VarDeclKind::Var) =>
                 {
                     insert_unique_pattern_names(variable_declaration, &mut seen)?;
+                }
+                Decl::Using(using_declaration) => {
+                    for name in collect_using_decl_bound_names(using_declaration)? {
+                        ensure!(seen.insert(name.clone()), "duplicate lexical name `{name}`");
+                    }
                 }
                 _ => {}
             },
@@ -167,6 +195,44 @@ pub(crate) fn collect_pattern_binding_names(pattern: &Pat, names: &mut Vec<Strin
             }
         }
         Pat::Rest(rest) => collect_pattern_binding_names(&rest.arg, names)?,
+        Pat::Expr(_) | Pat::Invalid(_) => bail!("unsupported binding pattern"),
+    }
+
+    Ok(())
+}
+
+pub(super) fn collect_pattern_binding_names_including_duplicates(
+    pattern: &Pat,
+    names: &mut Vec<String>,
+) -> Result<()> {
+    match pattern {
+        Pat::Ident(identifier) => {
+            names.push(identifier.id.sym.to_string());
+        }
+        Pat::Assign(assign) => {
+            collect_pattern_binding_names_including_duplicates(&assign.left, names)?
+        }
+        Pat::Array(array) => {
+            for element in array.elems.iter().flatten() {
+                collect_pattern_binding_names_including_duplicates(element, names)?;
+            }
+        }
+        Pat::Object(object) => {
+            for property in &object.props {
+                match property {
+                    ObjectPatProp::KeyValue(property) => {
+                        collect_pattern_binding_names_including_duplicates(&property.value, names)?;
+                    }
+                    ObjectPatProp::Assign(property) => {
+                        names.push(property.key.id.sym.to_string());
+                    }
+                    ObjectPatProp::Rest(rest) => {
+                        collect_pattern_binding_names_including_duplicates(&rest.arg, names)?;
+                    }
+                }
+            }
+        }
+        Pat::Rest(rest) => collect_pattern_binding_names_including_duplicates(&rest.arg, names)?,
         Pat::Expr(_) | Pat::Invalid(_) => bail!("unsupported binding pattern"),
     }
 

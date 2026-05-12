@@ -7,6 +7,25 @@ impl<'a> FunctionCompiler<'a> {
         property: &Expression,
         arguments: &[CallArgument],
     ) -> DirectResult<bool> {
+        if matches!(property, Expression::String(property_name) if property_name == "toString")
+            && arguments.is_empty()
+            && (self.infer_value_kind(object) == Some(StaticValueKind::String)
+                || self.resolve_static_string_value(object).is_some()
+                || !self.runtime_string_print_candidates(object).is_empty())
+        {
+            self.emit_numeric_expression(object)?;
+            return Ok(true);
+        }
+        if matches!(property, Expression::String(property_name) if property_name == "toString")
+            && arguments.is_empty()
+        {
+            let object_local = self.allocate_temp_local();
+            self.emit_numeric_expression(object)?;
+            self.push_local_set(object_local);
+            self.emit_throw_if_member_base_nullish_local(object_local)?;
+            self.push_local_get(object_local);
+            return Ok(true);
+        }
         if matches!(property, Expression::String(property_name) if property_name == "indexOf")
             && let Expression::String(text) = object
             && let [CallArgument::Expression(Expression::String(search))] = arguments
@@ -16,6 +35,50 @@ impl<'a> FunctionCompiler<'a> {
             self.emit_numeric_expression(&Expression::String(search.clone()))?;
             self.state.emission.output.instructions.push(0x1a);
             self.push_i32_const(text.find(search).map(|index| index as i32).unwrap_or(-1));
+            return Ok(true);
+        }
+        if matches!(property, Expression::String(property_name) if property_name == "indexOf")
+            && inline_summary_side_effect_free_expression(object)
+            && (self.infer_value_kind(object) == Some(StaticValueKind::String)
+                || self.resolve_static_string_value(object).is_some()
+                || !self.runtime_string_print_candidates(object).is_empty())
+            && let [CallArgument::Expression(search_expression)] = arguments
+            && let Some(search) = self.resolve_static_string_value(search_expression)
+        {
+            let value_local = self.allocate_temp_local();
+            let result_local = self.allocate_temp_local();
+            self.emit_numeric_expression(object)?;
+            self.push_local_set(value_local);
+            self.emit_numeric_expression(search_expression)?;
+            self.state.emission.output.instructions.push(0x1a);
+            self.push_i32_const(-1);
+            self.push_local_set(result_local);
+
+            for (string_pointer, bytes) in self.backend.module_artifacts.string_data.clone() {
+                let Ok(text) = String::from_utf8(bytes) else {
+                    continue;
+                };
+                let index = text
+                    .find(search.as_str())
+                    .map(|index| index as i32)
+                    .unwrap_or(-1);
+                self.push_local_get(value_local);
+                self.push_i32_const(string_pointer as i32);
+                self.push_binary_op(BinaryOp::Equal)?;
+                self.state.emission.output.instructions.push(0x04);
+                self.state
+                    .emission
+                    .output
+                    .instructions
+                    .push(EMPTY_BLOCK_TYPE);
+                self.push_control_frame();
+                self.push_i32_const(index);
+                self.push_local_set(result_local);
+                self.state.emission.output.instructions.push(0x0b);
+                self.pop_control_frame();
+            }
+
+            self.push_local_get(result_local);
             return Ok(true);
         }
         if matches!(property, Expression::String(property_name) if property_name == "replace")

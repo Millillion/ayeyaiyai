@@ -13,7 +13,11 @@ pub struct FunctionDeclaration {
     pub strict: bool,
     pub lexical_this: bool,
     pub derived_constructor: bool,
+    pub direct_eval_in_class_field_initializer: bool,
     pub length: usize,
+    pub synthetic_capture_bindings: Vec<String>,
+    pub immutable_class_bindings: Vec<String>,
+    pub private_brand_binding: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

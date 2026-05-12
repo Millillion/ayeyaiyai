@@ -18,6 +18,26 @@ impl<'a> FunctionCompiler<'a> {
                     .and_then(|value| self.infer_value_kind(value))
                     .or(Some(StaticValueKind::Undefined));
             }
+            if (matches!(object, Expression::Identifier(name) if name.starts_with("__ayy_for_in_keys_"))
+                || self.expression_depends_on_active_loop_assignment(property))
+                && !array_binding.values.is_empty()
+            {
+                let mut common_kind = None;
+                for value in &array_binding.values {
+                    let value_kind = value
+                        .as_ref()
+                        .and_then(|value| self.infer_value_kind(value))?;
+                    if common_kind
+                        .replace(value_kind)
+                        .is_some_and(|previous_kind| previous_kind != value_kind)
+                    {
+                        return Some(StaticValueKind::Unknown);
+                    }
+                }
+                if let Some(kind) = common_kind {
+                    return Some(kind);
+                }
+            }
         }
         if let Some(object_binding) = self.resolve_object_binding_from_expression(object) {
             let materialized_property = self.materialize_static_expression(property);

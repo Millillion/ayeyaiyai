@@ -67,6 +67,16 @@ pub(in crate::backend::direct_wasm) trait StaticMissingMemberPolicySource:
 pub(in crate::backend::direct_wasm) trait StaticMaterializationPolicySource:
     StaticExpressionEnvironmentSource
 {
+    fn static_materialize_member_expression(
+        &self,
+        _expression: &Expression,
+        _object: &Expression,
+        _property: &Expression,
+        _environment: &mut Self::Environment,
+    ) -> Option<Expression> {
+        None
+    }
+
     fn static_preserve_new_expressions_in_materialization(&self) -> bool {
         false
     }
@@ -99,6 +109,16 @@ pub(in crate::backend::direct_wasm) trait StaticEnvironmentObjectBindingSource:
 pub(in crate::backend::direct_wasm) trait StaticAssignedMemberPolicySource:
     StaticExpressionEnvironmentSource
 {
+    fn static_assign_member_binding_value(
+        &self,
+        _object: &Expression,
+        _property: &Expression,
+        _value: &Expression,
+        _environment: &mut Self::Environment,
+    ) -> Option<()> {
+        None
+    }
+
     fn static_resolve_assigned_member_property_key(
         &self,
         _property: &Expression,

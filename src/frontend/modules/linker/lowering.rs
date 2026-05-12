@@ -460,7 +460,11 @@ impl ModuleLinker {
             strict: true,
             lexical_this: false,
             derived_constructor: false,
+            direct_eval_in_class_field_initializer: false,
             length: dependency_params.len() + 1,
+            synthetic_capture_bindings: Vec::new(),
+            immutable_class_bindings: Vec::new(),
+            private_brand_binding: None,
         });
 
         self.modules[module_index].init_async = init_async;

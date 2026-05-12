@@ -27,7 +27,7 @@ impl<'a> FunctionCompiler<'a> {
                     preserved_kinds,
                     blocked_bindings,
                     name,
-                    self.infer_value_kind(value),
+                    self.preserved_expression_kind(preserved_kinds, value),
                 );
                 self.collect_preserved_binding_kinds_from_expression(
                     invalidated_bindings,
@@ -42,7 +42,7 @@ impl<'a> FunctionCompiler<'a> {
                     preserved_kinds,
                     blocked_bindings,
                     name,
-                    self.infer_value_kind(value),
+                    self.preserved_expression_kind(preserved_kinds, value),
                 );
                 self.collect_preserved_binding_kinds_from_expression(
                     invalidated_bindings,

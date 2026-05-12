@@ -1,6 +1,6 @@
 use super::*;
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub(in crate::backend::direct_wasm) struct PropertyDescriptorBinding {
     pub(in crate::backend::direct_wasm) value: Option<Expression>,
     pub(in crate::backend::direct_wasm) configurable: bool,

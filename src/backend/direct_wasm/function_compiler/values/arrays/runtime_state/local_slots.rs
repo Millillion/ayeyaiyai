@@ -127,6 +127,12 @@ impl<'a> FunctionCompiler<'a> {
             self.push_control_frame();
             open_frames += 1;
             self.update_tracked_array_specialized_function_value(&binding_name, index, value)?;
+            let index_property = Expression::Number(index as f64);
+            self.initialize_member_function_assignment_capture_slots(
+                &Expression::Identifier(binding_name.clone()),
+                &index_property,
+                value,
+            )?;
             if !self.emit_runtime_array_slot_write_from_local(&binding_name, index, value_local)? {
                 self.push_local_get(value_local);
             }

@@ -6,6 +6,9 @@ impl<'a> FunctionCompiler<'a> {
         expression: &Expression,
         current_function_name: Option<&str>,
     ) -> Option<String> {
+        if self.expression_depends_on_active_loop_assignment(expression) {
+            return None;
+        }
         let materialized = self.materialize_static_expression(expression);
         if !static_expression_matches(&materialized, expression) {
             return self.resolve_static_string_concat_value(&materialized, current_function_name);

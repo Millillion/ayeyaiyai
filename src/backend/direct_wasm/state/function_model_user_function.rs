@@ -19,6 +19,7 @@ pub(in crate::backend::direct_wasm) struct UserFunction {
         Vec<ReturnedMemberValueBinding>,
     pub(in crate::backend::direct_wasm) inline_summary: Option<InlineFunctionSummary>,
     pub(in crate::backend::direct_wasm) home_object_binding: Option<String>,
+    pub(in crate::backend::direct_wasm) private_brand_binding: Option<String>,
     pub(in crate::backend::direct_wasm) strict: bool,
     pub(in crate::backend::direct_wasm) lexical_this: bool,
     pub(in crate::backend::direct_wasm) function_index: u32,

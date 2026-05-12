@@ -1,0 +1,367 @@
+Program {
+    strict: false,
+    functions: [
+        FunctionDeclaration {
+            name: "__ayy_class_ctor___ayy_ctor_4__name___ayy_scope$Prom$2",
+            top_level_binding: None,
+            params: [
+                Parameter {
+                    name: "__ayy_args_5",
+                    default: None,
+                    rest: true,
+                },
+            ],
+            body: [
+                If {
+                    condition: Binary {
+                        op: Equal,
+                        left: NewTarget,
+                        right: Undefined,
+                    },
+                    then_branch: [
+                        Throw(
+                            New {
+                                callee: Identifier(
+                                    "TypeError",
+                                ),
+                                arguments: [],
+                            },
+                        ),
+                    ],
+                    else_branch: [],
+                },
+                Expression(
+                    SuperCall {
+                        callee: Identifier(
+                            "__ayy_class_super_3",
+                        ),
+                        arguments: [
+                            Spread(
+                                Identifier(
+                                    "__ayy_args_5",
+                                ),
+                            ),
+                        ],
+                    },
+                ),
+            ],
+            register_global: false,
+            kind: Ordinary,
+            self_binding: Some(
+                "__ayy_scope$Prom$2",
+            ),
+            mapped_arguments: false,
+            strict: true,
+            lexical_this: false,
+            derived_constructor: true,
+            direct_eval_in_class_field_initializer: false,
+            length: 0,
+            synthetic_capture_bindings: [
+                "__ayy_class_super_3",
+            ],
+            immutable_class_bindings: [
+                "__ayy_scope$Prom$2",
+            ],
+            private_brand_binding: None,
+        },
+        FunctionDeclaration {
+            name: "__ayy_fnexpr_1",
+            top_level_binding: None,
+            params: [],
+            body: [],
+            register_global: false,
+            kind: Ordinary,
+            self_binding: None,
+            mapped_arguments: true,
+            strict: false,
+            lexical_this: false,
+            derived_constructor: false,
+            direct_eval_in_class_field_initializer: false,
+            length: 0,
+            synthetic_capture_bindings: [],
+            immutable_class_bindings: [],
+            private_brand_binding: None,
+        },
+    ],
+    statements: [
+        Declaration {
+            body: [
+                Let {
+                    name: "__ayy_class_super_3",
+                    mutable: false,
+                    value: Identifier(
+                        "Promise",
+                    ),
+                },
+                Let {
+                    name: "__ayy_scope$Prom$2",
+                    mutable: false,
+                    value: Identifier(
+                        "__ayy_class_ctor___ayy_ctor_4__name___ayy_scope$Prom$2",
+                    ),
+                },
+                Expression(
+                    Call {
+                        callee: Member {
+                            object: Identifier(
+                                "Object",
+                            ),
+                            property: String(
+                                "defineProperty",
+                            ),
+                        },
+                        arguments: [
+                            Expression(
+                                Identifier(
+                                    "__ayy_scope$Prom$2",
+                                ),
+                            ),
+                            Expression(
+                                String(
+                                    "name",
+                                ),
+                            ),
+                            Expression(
+                                Object(
+                                    [
+                                        Data {
+                                            key: String(
+                                                "value",
+                                            ),
+                                            value: String(
+                                                "__ayy_scope$Prom$2",
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "writable",
+                                            ),
+                                            value: Bool(
+                                                false,
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "enumerable",
+                                            ),
+                                            value: Bool(
+                                                false,
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "configurable",
+                                            ),
+                                            value: Bool(
+                                                true,
+                                            ),
+                                        },
+                                    ],
+                                ),
+                            ),
+                        ],
+                    },
+                ),
+                Expression(
+                    Call {
+                        callee: Identifier(
+                            "__ayyClassPrototypeInit",
+                        ),
+                        arguments: [
+                            Expression(
+                                Identifier(
+                                    "__ayy_scope$Prom$2",
+                                ),
+                            ),
+                            Expression(
+                                Member {
+                                    object: Identifier(
+                                        "__ayy_class_super_3",
+                                    ),
+                                    property: String(
+                                        "prototype",
+                                    ),
+                                },
+                            ),
+                        ],
+                    },
+                ),
+                Expression(
+                    Call {
+                        callee: Member {
+                            object: Identifier(
+                                "Object",
+                            ),
+                            property: String(
+                                "defineProperty",
+                            ),
+                        },
+                        arguments: [
+                            Expression(
+                                Member {
+                                    object: Identifier(
+                                        "__ayy_scope$Prom$2",
+                                    ),
+                                    property: String(
+                                        "prototype",
+                                    ),
+                                },
+                            ),
+                            Expression(
+                                String(
+                                    "constructor",
+                                ),
+                            ),
+                            Expression(
+                                Object(
+                                    [
+                                        Data {
+                                            key: String(
+                                                "value",
+                                            ),
+                                            value: Identifier(
+                                                "__ayy_scope$Prom$2",
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "writable",
+                                            ),
+                                            value: Bool(
+                                                true,
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "enumerable",
+                                            ),
+                                            value: Bool(
+                                                false,
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "configurable",
+                                            ),
+                                            value: Bool(
+                                                true,
+                                            ),
+                                        },
+                                    ],
+                                ),
+                            ),
+                        ],
+                    },
+                ),
+                Expression(
+                    Call {
+                        callee: Member {
+                            object: Identifier(
+                                "Object",
+                            ),
+                            property: String(
+                                "setPrototypeOf",
+                            ),
+                        },
+                        arguments: [
+                            Expression(
+                                Identifier(
+                                    "__ayy_scope$Prom$2",
+                                ),
+                            ),
+                            Expression(
+                                Identifier(
+                                    "__ayy_class_super_3",
+                                ),
+                            ),
+                        ],
+                    },
+                ),
+                Expression(
+                    Call {
+                        callee: Member {
+                            object: Identifier(
+                                "Object",
+                            ),
+                            property: String(
+                                "defineProperty",
+                            ),
+                        },
+                        arguments: [
+                            Expression(
+                                Identifier(
+                                    "__ayy_scope$Prom$2",
+                                ),
+                            ),
+                            Expression(
+                                String(
+                                    "name",
+                                ),
+                            ),
+                            Expression(
+                                Object(
+                                    [
+                                        Data {
+                                            key: String(
+                                                "value",
+                                            ),
+                                            value: String(
+                                                "Prom",
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "writable",
+                                            ),
+                                            value: Bool(
+                                                false,
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "enumerable",
+                                            ),
+                                            value: Bool(
+                                                false,
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "configurable",
+                                            ),
+                                            value: Bool(
+                                                true,
+                                            ),
+                                        },
+                                    ],
+                                ),
+                            ),
+                        ],
+                    },
+                ),
+                Let {
+                    name: "Prom",
+                    mutable: true,
+                    value: Identifier(
+                        "__ayy_scope$Prom$2",
+                    ),
+                },
+            ],
+        },
+        Expression(
+            New {
+                callee: Identifier(
+                    "Prom",
+                ),
+                arguments: [
+                    Expression(
+                        Identifier(
+                            "__ayy_fnexpr_1",
+                        ),
+                    ),
+                ],
+            },
+        ),
+    ],
+}
+ok

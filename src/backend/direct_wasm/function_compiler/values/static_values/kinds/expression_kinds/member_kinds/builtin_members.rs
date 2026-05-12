@@ -34,6 +34,23 @@ impl<'a> FunctionCompiler<'a> {
         {
             return Some(StaticValueKind::Number);
         }
+        if matches!(property, Expression::String(property_name) if property_name == "prototype") {
+            let resolved_object = self
+                .resolve_bound_alias_expression(object)
+                .filter(|resolved| !static_expression_matches(resolved, object));
+            let materialized_object = self.materialize_static_expression(object);
+            if self
+                .resolve_function_property_descriptor_binding(
+                    object,
+                    resolved_object.as_ref(),
+                    &materialized_object,
+                    "prototype",
+                )
+                .is_some()
+            {
+                return Some(StaticValueKind::Object);
+            }
+        }
         None
     }
 }

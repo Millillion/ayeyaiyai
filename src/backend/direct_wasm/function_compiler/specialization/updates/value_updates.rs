@@ -5,6 +5,9 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         value: &Expression,
     ) -> DirectResult<Option<SpecializedFunctionValue>> {
+        if self.expression_depends_on_active_loop_assignment(value) {
+            return Ok(None);
+        }
         if let Some(specialized) = self.resolve_specialized_function_value_from_expression(value) {
             return Ok(Some(specialized));
         }
@@ -42,14 +45,31 @@ impl<'a> FunctionCompiler<'a> {
         name: &str,
         value: &Expression,
     ) -> DirectResult<()> {
+        let trace_capture_bindings = std::env::var_os("AYY_TRACE_CAPTURE_BINDINGS").is_some();
+        if trace_capture_bindings {
+            eprintln!(
+                "capture_bindings update_global_specialized:start name={name} value={value:?}"
+            );
+        }
         self.backend
             .global_semantics
             .functions
             .specialized_function_values
             .remove(name);
         let Some(specialized) = self.resolve_updated_specialized_function_value(value)? else {
+            if trace_capture_bindings {
+                eprintln!("capture_bindings update_global_specialized:none name={name}");
+            }
             return Ok(());
         };
+        if trace_capture_bindings {
+            eprintln!(
+                "capture_bindings update_global_specialized:set name={name} binding={:?} return={:?} effects={}",
+                specialized.binding,
+                specialized.summary.return_value,
+                specialized.summary.effects.len()
+            );
+        }
         self.backend
             .global_semantics
             .functions

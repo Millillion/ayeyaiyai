@@ -22,9 +22,15 @@ impl<'a> ProgramCompilationSession<'a> {
 
     pub(super) fn run_runtime_reservation_phase(&mut self, program: &Program) -> DirectResult<()> {
         self.compiler
+            .reserve_function_constructor_implicit_global_bindings(program)?;
+        self.compiler
             .register_user_function_capture_bindings(&program.functions);
         self.compiler
-            .reserve_function_constructor_implicit_global_bindings(program)?;
+            .reserve_global_function_value_capture_slots(&program.functions);
+        self.compiler
+            .register_local_class_member_bindings(&program.functions);
+        self.compiler
+            .reserve_global_returned_member_capture_slots(&program.statements);
         self.compiler
             .reserve_global_runtime_prototype_binding_globals();
         Ok(())

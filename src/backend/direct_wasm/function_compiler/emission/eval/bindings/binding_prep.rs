@@ -180,10 +180,11 @@ impl<'a> FunctionCompiler<'a> {
             .iter()
             .filter_map(|statement| match statement {
                 Statement::Let { name, .. }
-                    if !is_eval_local_function_declaration_statement(
-                        statement,
-                        eval_local_function_declarations,
-                    ) =>
+                    if !name.starts_with("__ayy_")
+                        && !is_eval_local_function_declaration_statement(
+                            statement,
+                            eval_local_function_declarations,
+                        ) =>
                 {
                     Some(name.clone())
                 }

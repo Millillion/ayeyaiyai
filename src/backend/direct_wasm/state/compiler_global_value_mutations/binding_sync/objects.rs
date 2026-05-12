@@ -6,6 +6,22 @@ impl CompilerState {
         name: &str,
         binding: Option<ObjectValueBinding>,
     ) {
+        if std::env::var_os("AYY_TRACE_GLOBAL_OBJECT_SYNC").is_some() {
+            let (strings, symbols, descriptors) = binding
+                .as_ref()
+                .map(|binding| {
+                    (
+                        binding.string_properties.len(),
+                        binding.symbol_properties.len(),
+                        binding.property_descriptors.len(),
+                    )
+                })
+                .unwrap_or((0, 0, 0));
+            eprintln!(
+                "global_object_sync name={name} present={} strings={strings} symbols={symbols} descriptors={descriptors}",
+                binding.is_some()
+            );
+        }
         self.global_semantics
             .values
             .sync_object_binding(name, binding);

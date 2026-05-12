@@ -42,6 +42,21 @@ impl GlobalStaticSemanticsSnapshot {
         self.names.ensure_implicit_binding(name)
     }
 
+    pub(in crate::backend::direct_wasm) fn sync_implicit_binding(
+        &mut self,
+        name: &str,
+        binding: ImplicitGlobalBinding,
+    ) {
+        self.names.sync_implicit_binding(name, binding);
+    }
+
+    pub(in crate::backend::direct_wasm) fn sync_implicit_bindings_from(
+        &mut self,
+        other: &GlobalNameService,
+    ) {
+        self.names.sync_implicit_bindings_from(other);
+    }
+
     pub(in crate::backend::direct_wasm) fn set_global_function_binding(
         &mut self,
         name: &str,

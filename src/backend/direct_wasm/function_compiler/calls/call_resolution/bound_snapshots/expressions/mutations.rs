@@ -17,7 +17,7 @@ impl<'a> FunctionCompiler<'a> {
         Some(value)
     }
 
-    pub(super) fn evaluate_bound_snapshot_assign_member_expression(
+    pub(in crate::backend::direct_wasm) fn evaluate_bound_snapshot_assign_member_expression(
         &self,
         object: &Expression,
         property: &Expression,
@@ -26,7 +26,7 @@ impl<'a> FunctionCompiler<'a> {
         current_function_name: Option<&str>,
     ) -> Option<Expression> {
         if let Some(LocalFunctionBinding::User(function_name)) =
-            self.resolve_member_setter_binding(object, property)
+            self.resolve_member_setter_binding_with_context(object, property, current_function_name)
         {
             let this_binding = match object {
                 Expression::Identifier(name) => Expression::Identifier(

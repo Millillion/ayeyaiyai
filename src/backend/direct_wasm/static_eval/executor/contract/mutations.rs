@@ -2,8 +2,9 @@ use crate::backend::direct_wasm::{
     Expression, StaticBindingEnvironment, StaticLocalBindingEnvironment,
     StaticMutableObjectBindingEnvironment, StaticObjectBindingLookupEnvironment,
     assign_static_binding_with_object_sync, empty_object_value_binding,
-    object_binding_remove_property, object_binding_set_property,
-    resolve_stateful_object_binding_name_in_environment,
+    object_binding_can_define_property, object_binding_remove_property,
+    object_binding_set_property, resolve_stateful_object_binding_name_in_environment,
+    scoped_binding_source_name,
 };
 
 use super::StaticExpressionMaterialization;
@@ -33,6 +34,12 @@ pub(in crate::backend::direct_wasm) trait StaticBindingMutationExecutor:
         let object_binding =
             self.resolve_environment_object_binding(&binding_expression, environment);
         environment.sync_object_binding(name, object_binding);
+        if let Some(source_name) = scoped_binding_source_name(name) {
+            environment.set_local_binding(
+                source_name.to_string(),
+                Expression::Identifier(name.to_string()),
+            );
+        }
         Some(())
     }
 
@@ -60,12 +67,66 @@ pub(in crate::backend::direct_wasm) trait StaticBindingMutationExecutor:
         value: Expression,
         environment: &mut Self::Environment,
     ) -> Option<()> {
+        let trace_static_exec = std::env::var_os("AYY_TRACE_STATIC_EXEC").is_some();
         let property = self.normalize_assigned_member_property(property, environment);
-        let target_name = resolve_stateful_object_binding_name_in_environment(object, environment)?;
+        if self
+            .assign_member_binding_value_hook(object, &property, &value, environment)
+            .is_some()
+        {
+            if trace_static_exec {
+                eprintln!("static_exec:assign_member hook object={object:?} property={property:?}");
+            }
+            return Some(());
+        }
+        let target_name = match resolve_stateful_object_binding_name_in_environment(
+            object,
+            environment,
+        ) {
+            Some(target_name) => target_name,
+            None => {
+                if trace_static_exec {
+                    eprintln!(
+                        "static_exec:assign_member no_target object={object:?} property={property:?}"
+                    );
+                }
+                return None;
+            }
+        };
         self.prepare_assigned_member_target(&target_name, environment)?;
-        let binding = environment.object_binding_mut(&target_name)?;
+        let binding = match environment.object_binding_mut(&target_name) {
+            Some(binding) => binding,
+            None => {
+                if trace_static_exec {
+                    eprintln!(
+                        "static_exec:assign_member no_binding target={target_name} property={property:?}"
+                    );
+                }
+                return None;
+            }
+        };
+        if !object_binding_can_define_property(binding, &property) {
+            if trace_static_exec {
+                eprintln!(
+                    "static_exec:assign_member blocked target={target_name} property={property:?}"
+                );
+            }
+            return None;
+        }
         object_binding_set_property(binding, property, value);
+        if trace_static_exec {
+            eprintln!("static_exec:assign_member ok target={target_name}");
+        }
         Some(())
+    }
+
+    fn assign_member_binding_value_hook(
+        &self,
+        _object: &Expression,
+        _property: &Expression,
+        _value: &Expression,
+        _environment: &mut Self::Environment,
+    ) -> Option<()> {
+        None
     }
 
     fn normalize_assigned_member_property(

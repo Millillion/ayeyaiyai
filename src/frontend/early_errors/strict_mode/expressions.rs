@@ -4,18 +4,43 @@ use super::{
         validate_property_name_strict_mode_early_errors, validate_strict_mode_assignment_target,
         validate_strict_mode_early_errors_in_pattern,
     },
-    directives::is_strict_mode_restricted_identifier,
+    directives::{
+        function_has_use_strict_directive, is_strict_mode_reserved_identifier,
+        is_strict_mode_restricted_identifier,
+    },
     functions::{
-        validate_strict_mode_early_errors_in_class, validate_strict_mode_early_errors_in_function,
+        ensure_no_duplicate_parameter_names, validate_strict_mode_early_errors_in_class,
+        validate_strict_mode_early_errors_in_function,
+        validate_strict_mode_function_binding_identifier,
     },
     statements::validate_strict_mode_early_errors_in_statements,
 };
+
+fn is_strict_mode_forbidden_binding_identifier(name: &str) -> bool {
+    is_strict_mode_restricted_identifier(name) || is_strict_mode_reserved_identifier(name)
+}
+
+fn is_strict_delete_forbidden_target(expression: &Expr) -> bool {
+    match expression {
+        Expr::Ident(_) => true,
+        Expr::Member(member) => matches!(member.prop, MemberProp::PrivateName(_)),
+        Expr::Paren(parenthesized) => is_strict_delete_forbidden_target(&parenthesized.expr),
+        _ => false,
+    }
+}
 
 pub(super) fn validate_strict_mode_early_errors_in_expression(
     expression: &Expr,
     strict: bool,
 ) -> Result<()> {
     match expression {
+        Expr::Ident(identifier) => {
+            ensure!(
+                !strict || !is_strict_mode_reserved_identifier(identifier.sym.as_ref()),
+                "strict mode forbids identifier `{}`",
+                identifier.sym
+            );
+        }
         Expr::Call(call) => {
             if let Callee::Expr(callee) = &call.callee {
                 validate_strict_mode_early_errors_in_expression(callee, strict)?;
@@ -62,6 +87,12 @@ pub(super) fn validate_strict_mode_early_errors_in_expression(
                                 "strict mode forbids binding `{}`",
                                 identifier.sym
                             );
+                            ensure!(
+                                !strict
+                                    || !is_strict_mode_reserved_identifier(identifier.sym.as_ref()),
+                                "strict mode forbids identifier `{}`",
+                                identifier.sym
+                            );
                         }
                         Prop::KeyValue(property) => {
                             validate_property_name_strict_mode_early_errors(&property.key, strict)?;
@@ -105,6 +136,14 @@ pub(super) fn validate_strict_mode_early_errors_in_expression(
                                 "strict mode forbids binding `{}`",
                                 property.key.sym
                             );
+                            ensure!(
+                                !strict
+                                    || !is_strict_mode_reserved_identifier(
+                                        property.key.sym.as_ref()
+                                    ),
+                                "strict mode forbids identifier `{}`",
+                                property.key.sym
+                            );
                             validate_strict_mode_early_errors_in_expression(
                                 &property.value,
                                 strict,
@@ -121,15 +160,20 @@ pub(super) fn validate_strict_mode_early_errors_in_expression(
             }
         }
         Expr::Unary(unary) => {
-            if strict && unary.op == SwcUnaryOp::Delete && matches!(&*unary.arg, Expr::Ident(_)) {
-                bail!("strict mode forbids deleting unqualified identifiers");
+            if strict && unary.op == SwcUnaryOp::Delete {
+                if matches!(&*unary.arg, Expr::Ident(_)) {
+                    bail!("strict mode forbids deleting unqualified identifiers");
+                }
+                if is_strict_delete_forbidden_target(&unary.arg) {
+                    bail!("strict mode forbids deleting private fields");
+                }
             }
             validate_strict_mode_early_errors_in_expression(&unary.arg, strict)?;
         }
         Expr::Update(update) => {
             if strict && let Expr::Ident(identifier) = &*update.arg {
                 ensure!(
-                    !is_strict_mode_restricted_identifier(identifier.sym.as_ref()),
+                    !is_strict_mode_forbidden_binding_identifier(identifier.sym.as_ref()),
                     "strict mode forbids updating `{}`",
                     identifier.sym
                 );
@@ -156,15 +200,15 @@ pub(super) fn validate_strict_mode_early_errors_in_expression(
         }
         Expr::Fn(function) => {
             if let Some(identifier) = &function.ident {
-                ensure!(
-                    !strict || !is_strict_mode_restricted_identifier(identifier.sym.as_ref()),
-                    "strict mode forbids binding `{}`",
-                    identifier.sym
-                );
+                validate_strict_mode_function_binding_identifier(
+                    identifier.sym.as_ref(),
+                    strict || function_has_use_strict_directive(&function.function),
+                )?;
             }
             validate_strict_mode_early_errors_in_function(&function.function, strict)?;
         }
         Expr::Arrow(arrow) => {
+            ensure_no_duplicate_parameter_names(arrow.params.iter(), strict)?;
             for parameter in &arrow.params {
                 validate_strict_mode_early_errors_in_pattern(parameter, strict)?;
             }
@@ -180,7 +224,8 @@ pub(super) fn validate_strict_mode_early_errors_in_expression(
         Expr::Class(class) => {
             if let Some(identifier) = &class.ident {
                 ensure!(
-                    !strict || !is_strict_mode_restricted_identifier(identifier.sym.as_ref()),
+                    !strict
+                        || !is_strict_mode_forbidden_binding_identifier(identifier.sym.as_ref()),
                     "strict mode forbids binding `{}`",
                     identifier.sym
                 );

@@ -11,6 +11,8 @@ impl<'a> FunctionCompiler<'a> {
     ) -> DirectResult<()> {
         let prepared_capture_bindings =
             self.prepare_user_function_capture_bindings(user_function)?;
+        let allow_static_snapshot =
+            !self.user_function_mentions_private_member_access(user_function);
         let synced_capture_source_bindings =
             self.synced_prepared_user_function_capture_source_bindings(&prepared_capture_bindings);
         let capture_snapshot =
@@ -61,7 +63,7 @@ impl<'a> FunctionCompiler<'a> {
                     .unwrap_or(Expression::Undefined)
             })
             .collect::<Vec<_>>();
-        let static_result = if new_target_value == JS_UNDEFINED_TAG {
+        let static_result = if new_target_value == JS_UNDEFINED_TAG && allow_static_snapshot {
             self.resolve_bound_snapshot_user_function_result_with_arguments_and_this(
                 &user_function.name,
                 &capture_snapshot,
@@ -74,17 +76,29 @@ impl<'a> FunctionCompiler<'a> {
         let updated_bindings = static_result
             .as_ref()
             .map(|(_, updated_bindings)| updated_bindings.clone());
+        let existing_snapshot = self
+            .state
+            .speculation
+            .static_semantics
+            .last_bound_user_function_call
+            .clone()
+            .filter(|snapshot| snapshot.function_name == user_function.name);
         self.state
             .speculation
             .static_semantics
-            .last_bound_user_function_call = Some(BoundUserFunctionCallSnapshot {
-            function_name: user_function.name.clone(),
-            source_expression: None,
-            result_expression: static_result.as_ref().map(|(result, _)| result.clone()),
-            updated_bindings: updated_bindings
-                .clone()
-                .unwrap_or_else(|| capture_snapshot.clone()),
-        });
+            .last_bound_user_function_call = if allow_static_snapshot {
+            Some(BoundUserFunctionCallSnapshot {
+                function_name: user_function.name.clone(),
+                source_expression: None,
+                result_expression: static_result.as_ref().map(|(result, _)| result.clone()),
+                prototype_source_expression: None,
+                updated_bindings: updated_bindings
+                    .clone()
+                    .unwrap_or_else(|| capture_snapshot.clone()),
+            })
+        } else {
+            existing_snapshot
+        };
         let assigned_nonlocal_bindings =
             self.collect_user_function_assigned_nonlocal_bindings(user_function);
         let mut call_effect_nonlocal_bindings =
@@ -135,13 +149,28 @@ impl<'a> FunctionCompiler<'a> {
             self.push_global_set(CURRENT_THIS_GLOBAL_INDEX);
             Some(saved_local)
         };
+        let saved_this_shadow_owner = if user_function.lexical_this {
+            None
+        } else {
+            self.prepare_user_function_runtime_this_shadow_state(this_expression)?
+        };
+        let allow_static_this_shadow_commit = self
+            .user_function_call_allows_static_this_shadow_commit(user_function, this_expression);
 
         self.emit_prepare_user_function_capture_globals(&user_function.name)?;
+        let parameter_object_shadow_writebacks = self
+            .emit_user_function_parameter_object_shadow_setup(
+                user_function,
+                &bound_argument_expressions,
+            )?;
 
         let visible_param_count = user_function.visible_param_count() as usize;
+        let rest_parameter_index = self.user_function_rest_parameter_index(user_function);
 
         for argument_index in 0..visible_param_count {
-            if let Some(argument_local) = argument_locals.get(argument_index).copied() {
+            if Some(argument_index) == rest_parameter_index {
+                self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
+            } else if let Some(argument_local) = argument_locals.get(argument_index).copied() {
                 self.push_local_get(argument_local);
             } else {
                 self.push_i32_const(JS_UNDEFINED_TAG);
@@ -157,22 +186,38 @@ impl<'a> FunctionCompiler<'a> {
                 self.push_i32_const(JS_UNDEFINED_TAG);
             }
         }
-        self.push_call(user_function.function_index);
+        self.push_user_function_call(user_function);
         let return_value_local = self.allocate_temp_local();
         self.push_local_set(return_value_local);
+        self.emit_user_function_parameter_object_shadow_writeback(
+            &parameter_object_shadow_writebacks,
+        )?;
+        self.sync_user_function_parameter_object_shadow_writeback_static_metadata(
+            &parameter_object_shadow_writebacks,
+            updated_bindings.as_ref(),
+        );
+        let receiver_updated_via_parameter_writeback = self
+            .receiver_shadow_updated_via_parameter_writebacks(
+                this_expression,
+                &parameter_object_shadow_writebacks,
+            );
         self.sync_user_function_capture_source_bindings(
             &prepared_capture_bindings,
             &assigned_nonlocal_bindings,
             &call_effect_nonlocal_bindings,
             &updated_nonlocal_bindings,
             updated_bindings.as_ref(),
+            saved_this_shadow_owner.as_deref(),
         )?;
         self.restore_user_function_capture_bindings(&prepared_capture_bindings);
         additional_call_effect_nonlocal_bindings = self
             .sync_snapshot_user_function_call_effect_bindings(
                 &additional_call_effect_nonlocal_bindings,
                 updated_bindings.as_ref(),
-                assigned_nonlocal_binding_results.as_ref(),
+                updated_bindings
+                    .as_ref()
+                    .map(|_| assigned_nonlocal_binding_results.as_ref())
+                    .flatten(),
             )?;
         if !additional_call_effect_nonlocal_bindings.is_empty() {
             let preserved_kinds = additional_call_effect_nonlocal_bindings
@@ -191,6 +236,17 @@ impl<'a> FunctionCompiler<'a> {
             user_function,
             &bound_argument_expressions,
         );
+        let receiver_may_require_invalidation = assigned_nonlocal_bindings.contains("this")
+            || updated_nonlocal_bindings.contains("this");
+        self.finalize_user_function_runtime_this_shadow_state(
+            user_function,
+            this_expression,
+            updated_bindings.as_ref(),
+            saved_this_shadow_owner.as_deref(),
+            allow_static_this_shadow_commit,
+            receiver_updated_via_parameter_writeback,
+            receiver_may_require_invalidation,
+        )?;
         if let Some(saved_new_target_local) = saved_new_target_local {
             self.push_local_get(saved_new_target_local);
             self.push_global_set(CURRENT_NEW_TARGET_GLOBAL_INDEX);

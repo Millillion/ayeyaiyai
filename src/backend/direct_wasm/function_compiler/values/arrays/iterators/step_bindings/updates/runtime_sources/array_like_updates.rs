@@ -8,15 +8,27 @@ impl<'a> FunctionCompiler<'a> {
         done_local: u32,
         value_local: u32,
     ) {
-        let IteratorSourceKind::StaticArray {
-            values,
-            keys_only,
-            length_local,
-            runtime_name,
-        } = &iterator_binding.source
-        else {
-            unreachable!("filtered by caller")
-        };
+        let no_runtime_name: Option<String> = None;
+        let (values, keys_only, length_local, runtime_name, entries, map_entries) =
+            match &iterator_binding.source {
+                IteratorSourceKind::StaticArray {
+                    values,
+                    keys_only,
+                    length_local,
+                    runtime_name,
+                } => (values, *keys_only, length_local, runtime_name, false, false),
+                IteratorSourceKind::StaticArrayEntries {
+                    values,
+                    length_local,
+                    runtime_name,
+                } => (values, false, length_local, runtime_name, true, false),
+                IteratorSourceKind::StaticMapEntries {
+                    values,
+                    length_local,
+                    ..
+                } => (values, false, length_local, &no_runtime_name, false, true),
+                _ => unreachable!("filtered by caller"),
+            };
         if let Some(current_index) = iterator_binding.static_index {
             iterator_binding.static_index = Some(current_index.saturating_add(1));
         } else {
@@ -47,8 +59,10 @@ impl<'a> FunctionCompiler<'a> {
         self.push_i32_const(JS_UNDEFINED_TAG);
         self.push_local_set(value_local);
         self.state.emission.output.instructions.push(0x05);
-        if *keys_only {
+        if keys_only {
             self.push_local_get(current_index_local);
+        } else if entries || map_entries {
+            self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
         } else if let Some(runtime_name) = runtime_name {
             if !self
                 .emit_dynamic_runtime_array_slot_read_from_local(runtime_name, current_index_local)
@@ -72,6 +86,148 @@ impl<'a> FunctionCompiler<'a> {
         self.push_i32_const(1);
         self.state.emission.output.instructions.push(0x6a);
         self.push_local_set(iterator_binding.index_local);
+        self.state.emission.output.instructions.push(0x0b);
+        self.pop_control_frame();
+    }
+
+    pub(in crate::backend::direct_wasm) fn update_runtime_iterator_step_static_array_entry_slots(
+        &mut self,
+        source: &IteratorSourceKind,
+        current_index_local: u32,
+        done_local: u32,
+        entry_array: &IteratorStepEntryArrayBinding,
+    ) {
+        let no_runtime_name: Option<String> = None;
+        let (values, runtime_name, key_runtime_name, value_runtime_name, map_entries) = match source
+        {
+            IteratorSourceKind::StaticArrayEntries {
+                values,
+                runtime_name,
+                ..
+            } => (
+                values,
+                runtime_name,
+                &no_runtime_name,
+                &no_runtime_name,
+                false,
+            ),
+            IteratorSourceKind::StaticMapEntries {
+                values,
+                key_runtime_name,
+                value_runtime_name,
+                ..
+            } => (
+                values,
+                &no_runtime_name,
+                key_runtime_name,
+                value_runtime_name,
+                true,
+            ),
+            _ => return,
+        };
+
+        self.push_local_get(done_local);
+        self.state.emission.output.instructions.push(0x04);
+        self.state
+            .emission
+            .output
+            .instructions
+            .push(EMPTY_BLOCK_TYPE);
+        self.push_control_frame();
+        self.push_i32_const(JS_UNDEFINED_TAG);
+        self.push_local_set(entry_array.index_local);
+        self.push_i32_const(JS_UNDEFINED_TAG);
+        self.push_local_set(entry_array.value_local);
+        self.state.emission.output.instructions.push(0x05);
+        if map_entries {
+            let keys = values
+                .iter()
+                .map(|entry| match entry {
+                    Some(Expression::Array(elements)) => {
+                        elements.first().and_then(|element| match element {
+                            ArrayElement::Expression(expression) => Some(expression.clone()),
+                            ArrayElement::Spread(_) => None,
+                        })
+                    }
+                    Some(value) => Some(value.clone()),
+                    None => None,
+                })
+                .collect::<Vec<_>>();
+            let map_values = values
+                .iter()
+                .map(|entry| match entry {
+                    Some(Expression::Array(elements)) => elements
+                        .get(1)
+                        .and_then(|element| match element {
+                            ArrayElement::Expression(expression) => Some(expression.clone()),
+                            ArrayElement::Spread(_) => None,
+                        })
+                        .or(Some(Expression::Undefined)),
+                    Some(value) => Some(value.clone()),
+                    None => None,
+                })
+                .collect::<Vec<_>>();
+            if let Some(runtime_name) = key_runtime_name {
+                if !self
+                    .emit_dynamic_runtime_array_slot_read_from_local(
+                        runtime_name,
+                        current_index_local,
+                    )
+                    .expect("dynamic map iterator key reads are supported")
+                {
+                    self.emit_runtime_array_iterator_value_from_local(current_index_local, &keys)
+                        .expect("static map iterator keys are supported");
+                }
+            } else {
+                self.emit_runtime_array_iterator_value_from_local(current_index_local, &keys)
+                    .expect("static map iterator keys are supported");
+            }
+            self.push_local_set(entry_array.index_local);
+            if let Some(runtime_name) = value_runtime_name {
+                if !self
+                    .emit_dynamic_runtime_array_slot_read_from_local(
+                        runtime_name,
+                        current_index_local,
+                    )
+                    .expect("dynamic map iterator value reads are supported")
+                {
+                    self.emit_runtime_array_iterator_value_from_local(
+                        current_index_local,
+                        &map_values,
+                    )
+                    .expect("static map iterator values are supported");
+                }
+            } else {
+                self.emit_runtime_array_iterator_value_from_local(current_index_local, &map_values)
+                    .expect("static map iterator values are supported");
+            }
+            self.push_local_set(entry_array.value_local);
+        } else {
+            self.push_local_get(current_index_local);
+            self.push_local_set(entry_array.index_local);
+            if let Some(runtime_name) = runtime_name {
+                if !self
+                    .emit_dynamic_runtime_array_slot_read_from_local(
+                        runtime_name,
+                        current_index_local,
+                    )
+                    .expect("dynamic runtime array entries iterator reads are supported")
+                    && !self
+                        .emit_dynamic_global_runtime_array_slot_read_from_local(
+                            runtime_name,
+                            current_index_local,
+                        )
+                        .expect("dynamic global runtime array entries iterator reads are supported")
+                {
+                    self.emit_runtime_array_iterator_value_from_local(current_index_local, values)
+                        .expect("static entries iterator values are supported");
+                }
+            } else {
+                self.emit_runtime_array_iterator_value_from_local(current_index_local, values)
+                    .expect("static entries iterator values are supported");
+            }
+            self.push_local_set(entry_array.value_local);
+        }
         self.state.emission.output.instructions.push(0x0b);
         self.pop_control_frame();
     }

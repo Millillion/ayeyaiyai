@@ -135,4 +135,23 @@ impl<'a> FunctionCompiler<'a> {
         }
         self.push_i32_const(1);
     }
+
+    pub(in crate::backend::direct_wasm) fn emit_arguments_slot_runtime_delete(
+        &mut self,
+        index: u32,
+    ) {
+        if let Some(slot) = self.state.parameters.arguments_slots.get(&index).cloned() {
+            if !slot.state.configurable {
+                self.push_i32_const(0);
+                return;
+            }
+            self.push_i32_const(0);
+            self.push_local_set(slot.present_local);
+            if let Some(mapped_local) = slot.mapped_local {
+                self.push_i32_const(0);
+                self.push_local_set(mapped_local);
+            }
+        }
+        self.push_i32_const(1);
+    }
 }

@@ -39,6 +39,16 @@ impl<T> StaticExpressionMaterialization for T
 where
     T: StaticExpressionExecutionSource + ?Sized,
 {
+    fn materialize_member_expression(
+        &self,
+        expression: &Expression,
+        object: &Expression,
+        property: &Expression,
+        environment: &mut Self::Environment,
+    ) -> Option<Expression> {
+        self.static_materialize_member_expression(expression, object, property, environment)
+    }
+
     fn preserve_missing_member_expression(
         &self,
         full_expression: &Expression,
@@ -83,6 +93,16 @@ impl<T> StaticBindingMutationExecutor for T
 where
     T: StaticExpressionExecutionSource + ?Sized,
 {
+    fn assign_member_binding_value_hook(
+        &self,
+        object: &Expression,
+        property: &Expression,
+        value: &Expression,
+        environment: &mut Self::Environment,
+    ) -> Option<()> {
+        self.static_assign_member_binding_value(object, property, value, environment)
+    }
+
     fn resolve_assigned_member_property_key(
         &self,
         property: &Expression,

@@ -30,10 +30,15 @@ impl DirectWasmCompiler {
 
                 let materialized = self.materialize_global_expression(expression);
                 if !static_expression_matches(&materialized, expression) {
-                    return self.resolve_function_binding_from_expression_with_aliases(
-                        &materialized,
-                        aliases,
-                    );
+                    if matches!(materialized, Expression::Undefined) {
+                        // Prototype lookups can still resolve the member even when own-property
+                        // materialization bottoms out.
+                    } else {
+                        return self.resolve_function_binding_from_expression_with_aliases(
+                            &materialized,
+                            aliases,
+                        );
+                    }
                 }
 
                 self.infer_global_function_binding(expression)

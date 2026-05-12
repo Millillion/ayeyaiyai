@@ -47,7 +47,17 @@ impl CompilerState {
             .object_binding(name)
             .cloned()
             .unwrap_or_else(empty_object_value_binding);
+        let traced_property =
+            std::env::var_os("AYY_TRACE_GLOBAL_OBJECT_PROPERTY").map(|_| property.clone());
         object_binding_define_property(&mut binding, property, value, enumerable);
+        if std::env::var_os("AYY_TRACE_GLOBAL_OBJECT_PROPERTY").is_some() {
+            eprintln!(
+                "global_object_property name={name} property={:?} enumerable={enumerable} strings={} symbols={}",
+                traced_property,
+                binding.string_properties.len(),
+                binding.symbol_properties.len()
+            );
+        }
         self.sync_global_object_binding(name, Some(binding));
     }
 

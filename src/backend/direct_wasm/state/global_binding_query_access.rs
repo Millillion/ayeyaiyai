@@ -1,4 +1,6 @@
-use crate::backend::direct_wasm::{ImplicitGlobalBinding, LocalFunctionBinding, StaticValueKind};
+use crate::backend::direct_wasm::{
+    ImplicitGlobalBinding, LexicalGlobalBinding, LocalFunctionBinding, StaticValueKind,
+};
 
 pub(in crate::backend::direct_wasm) trait GlobalBindingIndexQueryAccess {
     fn resolve_global_binding_index(&self, name: &str) -> Option<u32>;
@@ -15,6 +17,11 @@ pub(in crate::backend::direct_wasm) trait GlobalBindingPresenceQueryAccess {
 pub(in crate::backend::direct_wasm) trait GlobalImplicitBindingQueryAccess {
     fn implicit_global_binding(&self, name: &str) -> Option<ImplicitGlobalBinding>;
     fn implicit_global_binding_count(&self) -> u32;
+}
+
+pub(in crate::backend::direct_wasm) trait GlobalLexicalBindingQueryAccess {
+    fn lexical_global_binding(&self, name: &str) -> Option<LexicalGlobalBinding>;
+    fn global_lexical_binding_count(&self) -> u32;
 }
 
 pub(in crate::backend::direct_wasm) trait GlobalBindingKindQueryAccess {

@@ -8,9 +8,7 @@ pub(in crate::backend::direct_wasm) struct ModuleAssemblyInputs {
     pub(in crate::backend::direct_wasm) user_functions: Vec<UserFunction>,
     pub(in crate::backend::direct_wasm) string_data: Vec<(u32, Vec<u8>)>,
     pub(in crate::backend::direct_wasm) next_data_offset: u32,
-    pub(in crate::backend::direct_wasm) global_binding_count: u32,
-    pub(in crate::backend::direct_wasm) implicit_global_binding_count: u32,
-    pub(in crate::backend::direct_wasm) runtime_prototype_binding_count: u32,
+    pub(in crate::backend::direct_wasm) global_initial_values: Vec<i32>,
     pub(in crate::backend::direct_wasm) int_min_ptr: u32,
     pub(in crate::backend::direct_wasm) int_min_len: u32,
 }
@@ -31,11 +29,7 @@ impl ModuleAssemblyInputs {
         push_section(
             &mut module,
             6,
-            encode_global_section(
-                self.global_binding_count
-                    + self.implicit_global_binding_count * 2
-                    + self.runtime_prototype_binding_count,
-            ),
+            encode_global_section(&self.global_initial_values),
         );
         push_section(&mut module, 7, encode_export_section());
         push_section(
@@ -62,9 +56,7 @@ impl EmittedBackendProgram {
             user_functions: self.module_layout.user_functions,
             string_data: self.artifacts.string_data,
             next_data_offset: self.artifacts.next_data_offset,
-            global_binding_count: self.module_layout.global_binding_count,
-            implicit_global_binding_count: self.module_layout.implicit_global_binding_count,
-            runtime_prototype_binding_count: self.module_layout.runtime_prototype_binding_count,
+            global_initial_values: self.module_layout.global_initial_values,
             int_min_ptr: self.artifacts.int_min_ptr,
             int_min_len: self.artifacts.int_min_len,
         }

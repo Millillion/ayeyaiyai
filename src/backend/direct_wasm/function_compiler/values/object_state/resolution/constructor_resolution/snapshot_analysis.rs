@@ -36,15 +36,23 @@ impl<'a> FunctionCompiler<'a> {
                 condition,
                 then_branch,
                 else_branch,
-            } => {
-                Self::expression_contains_static_constructor_snapshot_call(condition)
-                    || then_branch
-                        .iter()
-                        .any(Self::statement_contains_static_constructor_snapshot_call)
-                    || else_branch
-                        .iter()
-                        .any(Self::statement_contains_static_constructor_snapshot_call)
-            }
+            } => match Self::static_constructor_snapshot_condition_value(condition) {
+                Some(true) => then_branch
+                    .iter()
+                    .any(Self::statement_contains_static_constructor_snapshot_call),
+                Some(false) => else_branch
+                    .iter()
+                    .any(Self::statement_contains_static_constructor_snapshot_call),
+                None => {
+                    Self::expression_contains_static_constructor_snapshot_call(condition)
+                        || then_branch
+                            .iter()
+                            .any(Self::statement_contains_static_constructor_snapshot_call)
+                        || else_branch
+                            .iter()
+                            .any(Self::statement_contains_static_constructor_snapshot_call)
+                }
+            },
             Statement::While {
                 condition,
                 break_hook,
@@ -213,6 +221,58 @@ impl<'a> FunctionCompiler<'a> {
             | Expression::NewTarget
             | Expression::Sent
             | Expression::Update { .. } => false,
+        }
+    }
+
+    fn static_constructor_snapshot_condition_value(expression: &Expression) -> Option<bool> {
+        match expression {
+            Expression::Bool(value) => Some(*value),
+            Expression::Unary {
+                op: UnaryOp::Not,
+                expression,
+            } => Self::static_constructor_snapshot_condition_value(expression).map(|value| !value),
+            Expression::Binary { op, left, right }
+                if matches!(
+                    op,
+                    BinaryOp::Equal
+                        | BinaryOp::LooseEqual
+                        | BinaryOp::NotEqual
+                        | BinaryOp::LooseNotEqual
+                ) =>
+            {
+                let equal = match (left.as_ref(), right.as_ref()) {
+                    (Expression::Bool(lhs), Expression::Bool(rhs)) => lhs == rhs,
+                    (Expression::Number(lhs), Expression::Number(rhs)) => lhs == rhs,
+                    (Expression::String(lhs), Expression::String(rhs)) => lhs == rhs,
+                    (Expression::Null, Expression::Null)
+                    | (Expression::Undefined, Expression::Undefined) => true,
+                    (Expression::Null, Expression::Undefined)
+                    | (Expression::Undefined, Expression::Null)
+                        if matches!(op, BinaryOp::LooseEqual | BinaryOp::LooseNotEqual) =>
+                    {
+                        true
+                    }
+                    (
+                        Expression::Bool(_)
+                        | Expression::Number(_)
+                        | Expression::String(_)
+                        | Expression::Null
+                        | Expression::Undefined,
+                        Expression::Bool(_)
+                        | Expression::Number(_)
+                        | Expression::String(_)
+                        | Expression::Null
+                        | Expression::Undefined,
+                    ) => false,
+                    _ => return None,
+                };
+                Some(match op {
+                    BinaryOp::Equal | BinaryOp::LooseEqual => equal,
+                    BinaryOp::NotEqual | BinaryOp::LooseNotEqual => !equal,
+                    _ => unreachable!("filtered above"),
+                })
+            }
+            _ => None,
         }
     }
 }

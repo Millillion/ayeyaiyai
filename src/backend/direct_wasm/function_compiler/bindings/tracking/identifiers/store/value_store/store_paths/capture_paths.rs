@@ -8,8 +8,11 @@ impl<'a> FunctionCompiler<'a> {
         state: &PreparedIdentifierStoreState,
     ) -> DirectResult<()> {
         if !state.is_internal_iterator_temp {
-            self.update_local_value_binding(name, &state.tracked_object_expression);
-            self.update_object_prototype_binding_from_value(name, &state.tracked_object_expression);
+            self.update_local_value_binding(name, &state.module_assignment_expression);
+            self.update_object_prototype_binding_from_value(
+                name,
+                state.prototype_binding_expression(),
+            );
             if let Some(function_binding) = state.function_binding.clone() {
                 self.state
                     .speculation
@@ -52,6 +55,10 @@ impl<'a> FunctionCompiler<'a> {
             );
         }
         self.emit_store_user_function_capture_binding_from_local(name, value_local)?;
+        let fallback_owner = self
+            .resolve_user_function_capture_hidden_name(name)
+            .unwrap_or_else(|| name.to_string());
+        self.sync_identifier_store_runtime_object_shadows(name, &fallback_owner, state)?;
         Ok(())
     }
 }

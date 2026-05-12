@@ -17,6 +17,7 @@ pub(in crate::backend::direct_wasm) struct FunctionRegistryState {
     pub(in crate::backend::direct_wasm) types: UserTypeRegistry,
     pub(in crate::backend::direct_wasm) catalog: UserFunctionCatalog,
     pub(in crate::backend::direct_wasm) analysis: UserFunctionAnalysisRegistry,
+    pub(in crate::backend::direct_wasm) runtime_called_user_functions: HashSet<String>,
 }
 
 impl FunctionRegistryState {}

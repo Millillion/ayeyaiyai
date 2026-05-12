@@ -1,9 +1,35 @@
 use super::super::*;
-use super::bindings::collect_var_decl_bound_names;
+use super::bindings::{collect_using_decl_bound_names, collect_var_decl_bound_names};
 
 pub(super) fn validate_block_statement_early_errors(statements: &[Stmt]) -> Result<()> {
-    let lexical_names = ensure_direct_statement_lexical_names_are_unique(statements)?;
-    let var_names = collect_var_declared_names_from_statement_list(statements)?;
+    let lexical_names = ensure_direct_statement_lexical_names_are_unique(statements, true)?;
+    let var_names = collect_var_declared_names_from_statement_list(statements, false)?;
+    ensure_lexical_names_do_not_overlap_var_names(lexical_names, var_names)
+}
+
+pub(crate) fn validate_script_body_early_errors(statements: &[Stmt]) -> Result<()> {
+    ensure_no_direct_script_body_using_declarations(statements)?;
+
+    let lexical_names = ensure_direct_statement_lexical_names_are_unique(statements, false)?;
+    let var_names = collect_var_declared_names_from_statement_list(statements, true)?;
+    ensure_lexical_names_do_not_overlap_var_names(lexical_names, var_names)
+}
+
+fn ensure_no_direct_script_body_using_declarations(statements: &[Stmt]) -> Result<()> {
+    for statement in statements {
+        ensure!(
+            !matches!(statement, Stmt::Decl(Decl::Using(_))),
+            "using declaration is not allowed directly in script body"
+        );
+    }
+
+    Ok(())
+}
+
+fn ensure_lexical_names_do_not_overlap_var_names(
+    lexical_names: Vec<String>,
+    var_names: Vec<String>,
+) -> Result<()> {
     let var_names = var_names.into_iter().collect::<HashSet<_>>();
 
     for name in lexical_names {
@@ -16,7 +42,10 @@ pub(super) fn validate_block_statement_early_errors(statements: &[Stmt]) -> Resu
     Ok(())
 }
 
-fn ensure_direct_statement_lexical_names_are_unique(statements: &[Stmt]) -> Result<Vec<String>> {
+fn ensure_direct_statement_lexical_names_are_unique(
+    statements: &[Stmt],
+    include_function_declarations: bool,
+) -> Result<Vec<String>> {
     let mut names = Vec::new();
     let mut seen = HashSet::new();
 
@@ -30,7 +59,13 @@ fn ensure_direct_statement_lexical_names_are_unique(statements: &[Stmt]) -> Resu
                     names.push(name);
                 }
             }
-            Stmt::Decl(Decl::Fn(function_declaration)) => {
+            Stmt::Decl(Decl::Using(using_declaration)) => {
+                for name in collect_using_decl_bound_names(using_declaration)? {
+                    ensure!(seen.insert(name.clone()), "duplicate lexical name `{name}`");
+                    names.push(name);
+                }
+            }
+            Stmt::Decl(Decl::Fn(function_declaration)) if include_function_declarations => {
                 let name = function_declaration.ident.sym.to_string();
                 ensure!(seen.insert(name.clone()), "duplicate lexical name `{name}`");
                 names.push(name);
@@ -47,102 +82,184 @@ fn ensure_direct_statement_lexical_names_are_unique(statements: &[Stmt]) -> Resu
     Ok(names)
 }
 
-fn collect_var_declared_names_from_statement_list(statements: &[Stmt]) -> Result<Vec<String>> {
-    fn collect_statement(statement: &Stmt, names: &mut Vec<String>) -> Result<()> {
-        match statement {
-            Stmt::Decl(Decl::Var(variable_declaration))
-                if matches!(variable_declaration.kind, VarDeclKind::Var) =>
-            {
-                for name in collect_var_decl_bound_names(variable_declaration)? {
-                    if !names.contains(&name) {
-                        names.push(name);
-                    }
-                }
-            }
-            Stmt::Block(block) => {
-                for statement in &block.stmts {
-                    collect_statement(statement, names)?;
-                }
-            }
-            Stmt::Labeled(statement) => collect_statement(&statement.body, names)?,
-            Stmt::If(statement) => {
-                collect_statement(&statement.cons, names)?;
-                if let Some(alternate) = &statement.alt {
-                    collect_statement(alternate, names)?;
-                }
-            }
-            Stmt::While(statement) => collect_statement(&statement.body, names)?,
-            Stmt::DoWhile(statement) => collect_statement(&statement.body, names)?,
-            Stmt::For(statement) => {
-                if let Some(VarDeclOrExpr::VarDecl(variable_declaration)) = &statement.init
-                    && matches!(variable_declaration.kind, VarDeclKind::Var)
-                {
-                    for name in collect_var_decl_bound_names(variable_declaration)? {
-                        if !names.contains(&name) {
-                            names.push(name);
-                        }
-                    }
-                }
-                collect_statement(&statement.body, names)?;
-            }
-            Stmt::ForIn(statement) => {
-                if let ForHead::VarDecl(variable_declaration) = &statement.left
-                    && matches!(variable_declaration.kind, VarDeclKind::Var)
-                {
-                    for name in collect_var_decl_bound_names(variable_declaration)? {
-                        if !names.contains(&name) {
-                            names.push(name);
-                        }
-                    }
-                }
-                collect_statement(&statement.body, names)?;
-            }
-            Stmt::ForOf(statement) => {
-                if let ForHead::VarDecl(variable_declaration) = &statement.left
-                    && matches!(variable_declaration.kind, VarDeclKind::Var)
-                {
-                    for name in collect_var_decl_bound_names(variable_declaration)? {
-                        if !names.contains(&name) {
-                            names.push(name);
-                        }
-                    }
-                }
-                collect_statement(&statement.body, names)?;
-            }
-            Stmt::Switch(statement) => {
-                for case in &statement.cases {
-                    for statement in &case.cons {
-                        collect_statement(statement, names)?;
-                    }
-                }
-            }
-            Stmt::Try(statement) => {
-                for statement in &statement.block.stmts {
-                    collect_statement(statement, names)?;
-                }
-                if let Some(handler) = &statement.handler {
-                    for statement in &handler.body.stmts {
-                        collect_statement(statement, names)?;
-                    }
-                }
-                if let Some(finalizer) = &statement.finalizer {
-                    for statement in &finalizer.stmts {
-                        collect_statement(statement, names)?;
-                    }
-                }
-            }
-            Stmt::With(statement) => collect_statement(&statement.body, names)?,
-            _ => {}
-        }
+pub(super) fn collect_var_declared_names_from_statement(
+    statement: &Stmt,
+    include_function_declarations: bool,
+) -> Result<Vec<String>> {
+    let mut names = Vec::new();
+    collect_var_declared_names_from_statement_into(
+        statement,
+        &mut names,
+        include_function_declarations,
+    )?;
+    Ok(names)
+}
 
-        Ok(())
-    }
-
+fn collect_var_declared_names_from_statement_list(
+    statements: &[Stmt],
+    include_function_declarations: bool,
+) -> Result<Vec<String>> {
     let mut names = Vec::new();
     for statement in statements {
-        collect_statement(statement, &mut names)?;
+        collect_var_declared_names_from_statement_into(
+            statement,
+            &mut names,
+            include_function_declarations,
+        )?;
     }
     Ok(names)
+}
+
+fn collect_var_declared_names_from_statement_into(
+    statement: &Stmt,
+    names: &mut Vec<String>,
+    include_function_declarations: bool,
+) -> Result<()> {
+    match statement {
+        Stmt::Decl(Decl::Var(variable_declaration))
+            if matches!(variable_declaration.kind, VarDeclKind::Var) =>
+        {
+            insert_var_declared_names(variable_declaration, names)?;
+        }
+        Stmt::Decl(Decl::Fn(function_declaration)) if include_function_declarations => {
+            let name = function_declaration.ident.sym.to_string();
+            if !names.contains(&name) {
+                names.push(name);
+            }
+        }
+        Stmt::Block(block) => {
+            for statement in &block.stmts {
+                collect_var_declared_names_from_statement_into(
+                    statement,
+                    names,
+                    include_function_declarations,
+                )?;
+            }
+        }
+        Stmt::Labeled(statement) => collect_var_declared_names_from_statement_into(
+            &statement.body,
+            names,
+            include_function_declarations,
+        )?,
+        Stmt::If(statement) => {
+            collect_var_declared_names_from_statement_into(
+                &statement.cons,
+                names,
+                include_function_declarations,
+            )?;
+            if let Some(alternate) = &statement.alt {
+                collect_var_declared_names_from_statement_into(
+                    alternate,
+                    names,
+                    include_function_declarations,
+                )?;
+            }
+        }
+        Stmt::While(statement) => collect_var_declared_names_from_statement_into(
+            &statement.body,
+            names,
+            include_function_declarations,
+        )?,
+        Stmt::DoWhile(statement) => collect_var_declared_names_from_statement_into(
+            &statement.body,
+            names,
+            include_function_declarations,
+        )?,
+        Stmt::For(statement) => {
+            if let Some(VarDeclOrExpr::VarDecl(variable_declaration)) = &statement.init
+                && matches!(variable_declaration.kind, VarDeclKind::Var)
+            {
+                insert_var_declared_names(variable_declaration, names)?;
+            }
+            collect_var_declared_names_from_statement_into(
+                &statement.body,
+                names,
+                include_function_declarations,
+            )?;
+        }
+        Stmt::ForIn(statement) => {
+            if let ForHead::VarDecl(variable_declaration) = &statement.left
+                && matches!(variable_declaration.kind, VarDeclKind::Var)
+            {
+                insert_var_declared_names(variable_declaration, names)?;
+            }
+            collect_var_declared_names_from_statement_into(
+                &statement.body,
+                names,
+                include_function_declarations,
+            )?;
+        }
+        Stmt::ForOf(statement) => {
+            if let ForHead::VarDecl(variable_declaration) = &statement.left
+                && matches!(variable_declaration.kind, VarDeclKind::Var)
+            {
+                insert_var_declared_names(variable_declaration, names)?;
+            }
+            collect_var_declared_names_from_statement_into(
+                &statement.body,
+                names,
+                include_function_declarations,
+            )?;
+        }
+        Stmt::Switch(statement) => {
+            for case in &statement.cases {
+                for statement in &case.cons {
+                    collect_var_declared_names_from_statement_into(
+                        statement,
+                        names,
+                        include_function_declarations,
+                    )?;
+                }
+            }
+        }
+        Stmt::Try(statement) => {
+            for statement in &statement.block.stmts {
+                collect_var_declared_names_from_statement_into(
+                    statement,
+                    names,
+                    include_function_declarations,
+                )?;
+            }
+            if let Some(handler) = &statement.handler {
+                for statement in &handler.body.stmts {
+                    collect_var_declared_names_from_statement_into(
+                        statement,
+                        names,
+                        include_function_declarations,
+                    )?;
+                }
+            }
+            if let Some(finalizer) = &statement.finalizer {
+                for statement in &finalizer.stmts {
+                    collect_var_declared_names_from_statement_into(
+                        statement,
+                        names,
+                        include_function_declarations,
+                    )?;
+                }
+            }
+        }
+        Stmt::With(statement) => collect_var_declared_names_from_statement_into(
+            &statement.body,
+            names,
+            include_function_declarations,
+        )?,
+        _ => {}
+    }
+
+    Ok(())
+}
+
+fn insert_var_declared_names(
+    variable_declaration: &swc_ecma_ast::VarDecl,
+    names: &mut Vec<String>,
+) -> Result<()> {
+    for name in collect_var_decl_bound_names(variable_declaration)? {
+        if !names.contains(&name) {
+            names.push(name);
+        }
+    }
+    Ok(())
 }
 
 pub(super) fn validate_classic_for_header(

@@ -5,6 +5,11 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         expression: &Expression,
     ) {
+        let trace_iterator_close_updates =
+            std::env::var_os("AYY_TRACE_ITERATOR_CLOSE_UPDATES").is_some();
+        if trace_iterator_close_updates && matches!(expression, Expression::IteratorClose(_)) {
+            eprintln!("iterator_close_updates:object:start expr={expression:?}");
+        }
         match expression {
             Expression::Member { object, property } => {
                 self.update_object_binding_from_expression(object);
@@ -97,7 +102,13 @@ impl<'a> FunctionCompiler<'a> {
             }
             _ => {}
         }
+        if trace_iterator_close_updates && matches!(expression, Expression::IteratorClose(_)) {
+            eprintln!("iterator_close_updates:object:after_walk expr={expression:?}");
+        }
 
         self.apply_builtin_object_binding_updates(expression);
+        if trace_iterator_close_updates && matches!(expression, Expression::IteratorClose(_)) {
+            eprintln!("iterator_close_updates:object:done expr={expression:?}");
+        }
     }
 }

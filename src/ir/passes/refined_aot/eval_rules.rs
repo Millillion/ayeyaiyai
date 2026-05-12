@@ -44,6 +44,22 @@ impl RefinedAotValidator<'_> {
         }
     }
 
+    pub(super) fn is_direct_compile_time_string_eval_call(
+        &self,
+        callee: &Expression,
+        arguments: &[CallArgument],
+    ) -> bool {
+        if !self.is_global_identifier(callee, "eval") {
+            return false;
+        }
+
+        let Some(CallArgument::Expression(argument)) = arguments.first() else {
+            return false;
+        };
+
+        self.resolve_compile_time_string(argument).is_some()
+    }
+
     pub(super) fn is_direct_non_string_eval_call(
         &self,
         callee: &Expression,

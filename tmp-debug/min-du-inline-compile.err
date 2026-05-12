@@ -1,0 +1,52 @@
+emit_immediate_promise_member_call:start object=Identifier("C") property=String("$") arguments=[Expression(Number(1.0))]
+emit_immediate_promise_member_call:start object=Identifier("C") property=String("_") arguments=[Expression(Number(1.0))]
+emit_dynamic_user_function_call:start callee=Member { object: Identifier("C"), property: String("_") } arguments=[Expression(Number(1.0))]
+emit_dynamic_user_function_call:emit-callee
+emit_dynamic_user_function_call:emit-callee-done
+emit_dynamic_user_function_call:prepare-arg index=0 argument=Number(1.0)
+emit_dynamic_user_function_call:dispatch-user-functions count=8
+emit_dynamic_user_function_call:no-match-fallback callee=Member { object: Identifier("C"), property: String("_") } instruction=23737
+emit_dynamic_user_function_call:done
+emit_immediate_promise_member_call:start object=Identifier("Promise") property=String("resolve") arguments=[Expression(Call { callee: Identifier("__ayy_scope$assertions$2"), arguments: [] })]
+emit_immediate_promise_member_call:start object=Identifier("Object") property=String("defineProperty") arguments=[Expression(Identifier("C")), Expression(String("name")), Expression(Object([Data { key: String("value"), value: String("C") }, Data { key: String("writable"), value: Bool(false) }, Data { key: String("enumerable"), value: Bool(false) }, Data { key: String("configurable"), value: Bool(true) }]))]
+emit_immediate_promise_member_call:start object=Identifier("Object") property=String("create") arguments=[Expression(Member { object: Identifier("Object"), property: String("prototype") })]
+emit_immediate_promise_member_call:start object=Identifier("Object") property=String("defineProperty") arguments=[Expression(Member { object: Identifier("C"), property: String("prototype") }), Expression(String("constructor")), Expression(Object([Data { key: String("value"), value: Identifier("C") }, Data { key: String("writable"), value: Bool(true) }, Data { key: String("enumerable"), value: Bool(false) }, Data { key: String("configurable"), value: Bool(true) }]))]
+emit_immediate_promise_member_call:start object=Identifier("Object") property=String("defineProperty") arguments=[Expression(Member { object: Identifier("C"), property: String("prototype") }), Expression(String("m")), Expression(Object([Data { key: String("value"), value: Identifier("__ayy_class_method_1") }, Data { key: String("writable"), value: Bool(true) }, Data { key: String("enumerable"), value: Bool(false) }, Data { key: String("configurable"), value: Bool(true) }]))]
+emit_immediate_promise_member_call:start object=Identifier("Object") property=String("defineProperty") arguments=[Expression(Identifier("C")), Expression(String("$")), Expression(Object([Data { key: String("value"), value: Identifier("__ayy_class_method_2") }, Data { key: String("writable"), value: Bool(true) }, Data { key: String("enumerable"), value: Bool(false) }, Data { key: String("configurable"), value: Bool(true) }]))]
+emit_immediate_promise_member_call:start object=Identifier("Object") property=String("defineProperty") arguments=[Expression(Identifier("C")), Expression(String("_")), Expression(Object([Data { key: String("value"), value: Identifier("__ayy_class_method_3") }, Data { key: String("writable"), value: Bool(true) }, Data { key: String("enumerable"), value: Bool(false) }, Data { key: String("configurable"), value: Bool(true) }]))]
+emit_immediate_promise_member_call:start object=Call { callee: Member { object: Call { callee: Member { object: Call { callee: Member { object: Identifier("c"), property: String("m") }, arguments: [] }, property: String("next") }, arguments: [] }, property: String("then") }, arguments: [Expression(Identifier("__ayy_fnexpr_4"))] } property=String("then") arguments=[Expression(Identifier("__ayy_fnexpr_6")), Expression(Identifier("__ayy_fnexpr_7"))]
+consume_immediate_promise_outcome:start expr=Call { callee: Member { object: Call { callee: Member { object: Call { callee: Member { object: Call { callee: Member { object: Identifier("c"), property: String("m") }, arguments: [] }, property: String("next") }, arguments: [] }, property: String("then") }, arguments: [Expression(Identifier("__ayy_fnexpr_4"))] }, property: String("then") }, arguments: [Expression(Identifier("__ayy_fnexpr_6")), Expression(Identifier("__ayy_fnexpr_7"))] }
+consume_immediate_promise_outcome:property=then handlers_require_runtime_chain=false
+consume_immediate_promise_outcome:start expr=Call { callee: Member { object: Call { callee: Member { object: Call { callee: Member { object: Identifier("c"), property: String("m") }, arguments: [] }, property: String("next") }, arguments: [] }, property: String("then") }, arguments: [Expression(Identifier("__ayy_fnexpr_4"))] }
+consume_immediate_promise_outcome:property=then handlers_require_runtime_chain=false
+consume_immediate_promise_outcome:start expr=Call { callee: Member { object: Call { callee: Member { object: Identifier("c"), property: String("m") }, arguments: [] }, property: String("next") }, arguments: [] }
+consume_immediate_promise_outcome:property=next handlers_require_runtime_chain=false
+consume_immediate_promise_outcome:base-outcome property=then outcome=value
+consume_immediate_promise_outcome:handler-selected property=then handler=Identifier("__ayy_fnexpr_4")
+emit_immediate_promise_callback:start callback=Identifier("__ayy_fnexpr_4") argument=Object([Data { key: String("done"), value: Bool(true) }, Data { key: String("value"), value: Number(42.0) }]) allow_inline=true
+emit_immediate_promise_callback:user-function name=__ayy_fnexpr_4
+emit_immediate_promise_callback:visible-log length=Member { object: Identifier("log"), property: String("length") } slot11_name=Member { object: Member { object: Identifier("log"), property: Number(11.0) }, property: String("name") } slot11_value=Member { object: Member { object: Identifier("log"), property: Number(11.0) }, property: String("value") }
+emit_immediate_promise_callback:capture-slots-present=false
+emit_immediate_promise_callback:check-explicit-call-frame-inline name=__ayy_fnexpr_4
+emit_immediate_promise_callback:check-explicit-call-frame-inline:result name=__ayy_fnexpr_4 can_inline=false
+emit_immediate_promise_callback:sync-visible-runtime-bindings:start name=__ayy_fnexpr_4
+emit_immediate_promise_callback:sync-visible-runtime-bindings:done name=__ayy_fnexpr_4
+emit_immediate_promise_callback:emit-user-call-inline-path name=__ayy_fnexpr_4
+emit_immediate_promise_callback:user-call-done name=__ayy_fnexpr_4
+consume_immediate_promise_outcome:value-handler-emitted property=then
+consume_immediate_promise_outcome:base-outcome property=then outcome=value
+consume_immediate_promise_outcome:handler-selected property=then handler=Identifier("__ayy_fnexpr_6")
+emit_immediate_promise_callback:start callback=Identifier("__ayy_fnexpr_6") argument=Undefined allow_inline=true
+emit_immediate_promise_callback:user-function name=__ayy_fnexpr_6
+emit_immediate_promise_callback:visible-log length=Member { object: Identifier("log"), property: String("length") } slot11_name=Member { object: Member { object: Identifier("log"), property: Number(11.0) }, property: String("name") } slot11_value=Member { object: Member { object: Identifier("log"), property: Number(11.0) }, property: String("value") }
+emit_immediate_promise_callback:capture-slots-present=false
+emit_immediate_promise_callback:check-explicit-call-frame-inline name=__ayy_fnexpr_6
+emit_immediate_promise_callback:check-explicit-call-frame-inline:result name=__ayy_fnexpr_6 can_inline=true
+emit_inline_user_function_summary_with_explicit_call_frame:start name=__ayy_fnexpr_6
+emit_inline_user_function_summary_with_explicit_call_frame:check-iterator-consumption name=__ayy_fnexpr_6
+emit_inline_user_function_summary_with_explicit_call_frame:check-iterator-consumption:result name=__ayy_fnexpr_6 consumed={}
+emit_inline_user_function_summary_with_explicit_call_frame:prepared name=__ayy_fnexpr_6
+emit_inline_user_function_summary_with_explicit_call_frame:fast-path name=__ayy_fnexpr_6
+emit_immediate_promise_callback:inlined-explicit-call-frame
+consume_immediate_promise_outcome:value-handler-emitted property=then
+emit_immediate_promise_member_call:consumed object=Call { callee: Member { object: Call { callee: Member { object: Call { callee: Member { object: Identifier("c"), property: String("m") }, arguments: [] }, property: String("next") }, arguments: [] }, property: String("then") }, arguments: [Expression(Identifier("__ayy_fnexpr_4"))] } property=String("then")

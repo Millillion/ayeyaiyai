@@ -5,6 +5,7 @@ impl FunctionRegistryState {
         self.types.reset_for_program();
         self.catalog.reset_for_program();
         self.analysis.reset_for_program();
+        self.runtime_called_user_functions.clear();
     }
 
     pub(in crate::backend::direct_wasm) fn user_type_index_for_arity(&mut self, arity: u32) -> u32 {

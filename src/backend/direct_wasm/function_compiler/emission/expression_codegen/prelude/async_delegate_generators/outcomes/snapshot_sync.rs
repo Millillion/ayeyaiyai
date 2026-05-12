@@ -14,6 +14,7 @@ impl<'a> FunctionCompiler<'a> {
         delegate_iterator_name: &str,
         static_step_result_has_accessor_properties: bool,
     ) {
+        let delegate_function_name = Some(plan.function_name.as_str());
         if snapshot_bindings.contains_key(promise_done_name)
             && self.resolve_static_boolean_expression(
                 snapshot_bindings
@@ -21,10 +22,29 @@ impl<'a> FunctionCompiler<'a> {
                     .expect("checked above"),
             ) == Some(true)
         {
-            let completion_value = snapshot_bindings
-                .get(delegate_completion_name)
-                .cloned()
-                .unwrap_or(Expression::Identifier(delegate_completion_name.to_string()));
+            let current_step_value = self.evaluate_bound_snapshot_expression(
+                &Expression::Member {
+                    object: Box::new(Expression::Identifier(step_result_name.to_string())),
+                    property: Box::new(Expression::String("value".to_string())),
+                },
+                snapshot_bindings,
+                delegate_function_name,
+            );
+            let completion_value = if property_name == "return" {
+                current_step_value
+                    .or_else(|| snapshot_bindings.get(delegate_completion_name).cloned())
+                    .unwrap_or(Expression::Identifier(delegate_completion_name.to_string()))
+            } else {
+                snapshot_bindings
+                    .get(delegate_completion_name)
+                    .cloned()
+                    .or(current_step_value)
+                    .unwrap_or(Expression::Identifier(delegate_completion_name.to_string()))
+            };
+            snapshot_bindings.insert(
+                delegate_completion_name.to_string(),
+                completion_value.clone(),
+            );
             snapshot_bindings
                 .entry(delegate_completion_name.to_string())
                 .or_insert_with(|| completion_value.clone());
@@ -41,7 +61,7 @@ impl<'a> FunctionCompiler<'a> {
                     .evaluate_bound_snapshot_expression(
                         &plan.completion_value,
                         snapshot_bindings,
-                        self.current_function_name(),
+                        delegate_function_name,
                     )
                     .unwrap_or_else(|| plan.completion_value.clone()),
                 _ => Expression::Undefined,
@@ -50,7 +70,12 @@ impl<'a> FunctionCompiler<'a> {
             self.update_local_value_binding(promise_value_name, &promise_value);
         }
 
-        if !static_step_result_has_accessor_properties
+        if let Some(done_value) = snapshot_bindings.get(promise_done_name).cloned() {
+            self.update_local_value_binding(promise_done_name, &done_value);
+            if let Some(yield_value) = snapshot_bindings.get(promise_value_name).cloned() {
+                self.update_local_value_binding(promise_value_name, &yield_value);
+            }
+        } else if !static_step_result_has_accessor_properties
             && let Some(step_result_binding) = self.resolve_object_binding_from_expression(
                 &Expression::Identifier(step_result_name.to_string()),
             )
@@ -79,7 +104,7 @@ impl<'a> FunctionCompiler<'a> {
             if let Some(done_value) = self.evaluate_bound_snapshot_expression(
                 &done_member,
                 snapshot_bindings,
-                self.current_function_name(),
+                delegate_function_name,
             ) {
                 snapshot_bindings.insert(promise_done_name.to_string(), done_value.clone());
                 self.update_local_value_binding(promise_done_name, &done_value);
@@ -93,7 +118,7 @@ impl<'a> FunctionCompiler<'a> {
                                 property: Box::new(Expression::String("value".to_string())),
                             },
                             snapshot_bindings,
-                            self.current_function_name(),
+                            delegate_function_name,
                         );
                         if let Some(completion_value) = completion_value {
                             snapshot_bindings.insert(
@@ -123,7 +148,7 @@ impl<'a> FunctionCompiler<'a> {
                                 .evaluate_bound_snapshot_expression(
                                     &plan.completion_value,
                                     snapshot_bindings,
-                                    self.current_function_name(),
+                                    delegate_function_name,
                                 )
                                 .unwrap_or_else(|| plan.completion_value.clone()),
                             _ => Expression::Undefined,
@@ -137,7 +162,7 @@ impl<'a> FunctionCompiler<'a> {
                             property: Box::new(Expression::String("value".to_string())),
                         },
                         snapshot_bindings,
-                        self.current_function_name(),
+                        delegate_function_name,
                     ) {
                         if !self.async_yield_delegate_step_value_is_placeholder(
                             &yield_value,

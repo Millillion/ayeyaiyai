@@ -1,24 +1,81 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn emit_dynamic_static_array_member_read(
+        &mut self,
+        object: &Expression,
+        property: &Expression,
+        array_binding: &ArrayValueBinding,
+    ) -> DirectResult<bool> {
+        let property_local = self.allocate_temp_local();
+        self.emit_numeric_expression(property)?;
+        self.push_local_set(property_local);
+
+        if let Some(binding_name) = self.runtime_array_binding_name_for_expression(object) {
+            if self.emit_dynamic_global_runtime_array_slot_read_from_local(
+                &binding_name,
+                property_local,
+            )? {
+                return Ok(true);
+            }
+            if self
+                .emit_dynamic_runtime_array_slot_read_from_local(&binding_name, property_local)?
+            {
+                return Ok(true);
+            }
+        }
+
+        let mut open_frames = 0;
+        for (index, value) in array_binding.values.iter().enumerate() {
+            self.push_local_get(property_local);
+            self.push_i32_const(index as i32);
+            self.push_binary_op(BinaryOp::Equal)?;
+            self.state.emission.output.instructions.push(0x04);
+            self.state.emission.output.instructions.push(I32_TYPE);
+            self.push_control_frame();
+            open_frames += 1;
+            if let Some(value) = value {
+                self.emit_numeric_expression(value)?;
+            } else {
+                self.push_i32_const(JS_UNDEFINED_TAG);
+            }
+            self.state.emission.output.instructions.push(0x05);
+        }
+
+        self.push_i32_const(JS_UNDEFINED_TAG);
+        for _ in 0..open_frames {
+            self.state.emission.output.instructions.push(0x0b);
+            self.pop_control_frame();
+        }
+        Ok(true)
+    }
+
     pub(super) fn emit_runtime_array_member_read(
         &mut self,
         object: &Expression,
         static_array_property: &Expression,
     ) -> DirectResult<bool> {
-        if let Expression::Identifier(name) = object
+        if let Some(binding_name) = self.runtime_array_binding_name_for_expression(object)
             && let Some(index) = argument_index_from_expression(static_array_property)
         {
+            if self.emit_global_runtime_array_slot_read(&binding_name, index)? {
+                return Ok(true);
+            }
+            if self.emit_runtime_array_slot_read(&binding_name, index)? {
+                return Ok(true);
+            }
             if let Some(array_binding) = self.resolve_array_binding_from_expression(object)
                 && let Some(Some(value)) = array_binding.values.get(index as usize)
             {
                 self.emit_numeric_expression(value)?;
                 return Ok(true);
             }
-            if self.emit_global_runtime_array_slot_read(name, index)? {
-                return Ok(true);
-            }
-            if self.emit_runtime_array_slot_read(name, index)? {
+        }
+
+        if matches!(static_array_property, Expression::String(text) if text == "length") {
+            if let Some(binding_name) = self.runtime_array_binding_name_for_expression(object)
+                && self.emit_global_runtime_array_length_read(&binding_name)
+            {
                 return Ok(true);
             }
         }
@@ -27,11 +84,6 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(false);
         };
         if matches!(static_array_property, Expression::String(text) if text == "length") {
-            if let Expression::Identifier(name) = object
-                && self.emit_global_runtime_array_length_read(name)
-            {
-                return Ok(true);
-            }
             if let Some(length_local) = self.runtime_array_length_local_for_expression(object) {
                 self.push_local_get(length_local);
             } else {
@@ -40,8 +92,13 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(true);
         }
         if let Some(index) = argument_index_from_expression(static_array_property) {
-            if let Expression::Identifier(name) = object
-                && self.emit_global_runtime_array_slot_read(name, index)?
+            if let Some(binding_name) = self.runtime_array_binding_name_for_expression(object)
+                && self.emit_global_runtime_array_slot_read(&binding_name, index)?
+            {
+                return Ok(true);
+            }
+            if let Some(binding_name) = self.runtime_array_binding_name_for_expression(object)
+                && self.emit_runtime_array_slot_read(&binding_name, index)?
             {
                 return Ok(true);
             }
@@ -53,6 +110,10 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(true);
         }
 
-        Ok(false)
+        return self.emit_dynamic_static_array_member_read(
+            object,
+            static_array_property,
+            &array_binding,
+        );
     }
 }

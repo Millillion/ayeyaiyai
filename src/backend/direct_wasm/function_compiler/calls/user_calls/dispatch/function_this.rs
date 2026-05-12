@@ -1,6 +1,66 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn resolve_user_function_capture_slots_by_name(
+        &self,
+        function_name: &str,
+        expression: &Expression,
+    ) -> Option<BTreeMap<String, String>> {
+        let trace_private = std::env::var_os("AYY_TRACE_PRIVATE_MEMBER_LOOKUP").is_some();
+        let capture_bindings = self.user_function_capture_bindings(function_name)?;
+        if capture_bindings.is_empty() {
+            return None;
+        }
+        let mut capture_names = capture_bindings.keys().cloned().collect::<Vec<_>>();
+        capture_names.sort();
+        let mut capture_slots = BTreeMap::new();
+        for capture_name in capture_names {
+            let slot_name = if capture_name == "this" {
+                self.resolve_user_function_capture_hidden_name("this")
+                    .or_else(|| self.resolve_eval_local_function_hidden_name("this"))
+                    .or_else(|| Some("this".to_string()))
+            } else {
+                self.resolve_current_local_binding(&capture_name)
+                    .map(|(resolved_name, _)| resolved_name)
+                    .or_else(|| self.resolve_user_function_capture_hidden_name(&capture_name))
+                    .or_else(|| self.resolve_eval_local_function_hidden_name(&capture_name))
+                    .or_else(|| {
+                        (self.global_has_binding(&capture_name)
+                            || self.backend.global_has_lexical_binding(&capture_name)
+                            || self
+                                .backend
+                                .global_function_binding(&capture_name)
+                                .is_some()
+                            || self.global_has_implicit_binding(&capture_name))
+                        .then_some(capture_name.clone())
+                    })
+            };
+            let Some(slot_name) = slot_name else {
+                if trace_private {
+                    eprintln!(
+                        "private_lookup capture_slots current_fn={:?} callee={:?} target={} capture_name={} slot=None",
+                        self.current_function_name(),
+                        expression,
+                        function_name,
+                        capture_name,
+                    );
+                }
+                return None;
+            };
+            capture_slots.insert(capture_name, slot_name);
+        }
+        if trace_private {
+            eprintln!(
+                "private_lookup capture_slots current_fn={:?} callee={:?} target={} slots={:?}",
+                self.current_function_name(),
+                expression,
+                function_name,
+                capture_slots,
+            );
+        }
+        Some(capture_slots)
+    }
+
     pub(in crate::backend::direct_wasm) fn expand_apply_call_arguments_from_expression(
         &self,
         expression: &Expression,
@@ -38,6 +98,17 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         expression: &Expression,
     ) -> Option<BTreeMap<String, String>> {
+        if let Expression::Identifier(name) = expression
+            && let Some(capture_slots) = self.resolve_identifier_function_value_capture_slots(name)
+        {
+            return Some(capture_slots);
+        }
+        if let Expression::Member { object, property } = expression
+            && let Some(capture_slots) =
+                self.resolve_member_function_capture_slots(object, property)
+        {
+            return Some(capture_slots);
+        }
         if let Some(resolved) = self
             .resolve_bound_alias_expression(expression)
             .filter(|resolved| !static_expression_matches(resolved, expression))
@@ -45,10 +116,13 @@ impl<'a> FunctionCompiler<'a> {
         {
             return Some(capture_slots);
         }
-        let Expression::Member { object, property } = expression else {
-            return None;
-        };
-        self.resolve_member_function_capture_slots(object, property)
+        if let Some(user_function) = self.resolve_user_function_from_expression(expression)
+            && let Some(capture_slots) =
+                self.resolve_user_function_capture_slots_by_name(&user_function.name, expression)
+        {
+            return Some(capture_slots);
+        }
+        None
     }
 
     pub(in crate::backend::direct_wasm) fn should_box_sloppy_function_this(
@@ -80,6 +154,7 @@ impl<'a> FunctionCompiler<'a> {
         this_expression: &Expression,
         capture_slots: Option<&BTreeMap<String, String>>,
     ) -> DirectResult<()> {
+        let trace_private = std::env::var_os("AYY_TRACE_PRIVATE_MEMBER_LOOKUP").is_some();
         let expanded_arguments = self.expand_call_arguments(arguments);
         let simple_generator_call = Expression::Call {
             callee: Box::new(Expression::Identifier(user_function.name.clone())),
@@ -94,6 +169,7 @@ impl<'a> FunctionCompiler<'a> {
                 .resolve_simple_generator_source(&simple_generator_call)
                 .is_some()
         {
+            self.emit_simple_generator_call_time_prefix_effects(&simple_generator_call)?;
             self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
             return Ok(());
         }
@@ -105,6 +181,18 @@ impl<'a> FunctionCompiler<'a> {
                 .iter()
                 .map(|argument| self.materialize_static_expression(argument))
                 .collect::<Vec<_>>();
+            if trace_private {
+                eprintln!(
+                    "private_lookup user_call current_fn={:?} target={} capture_slots=None inlineable={}",
+                    self.current_function_name(),
+                    user_function.name,
+                    self.can_inline_user_function_call_with_explicit_call_frame(
+                        user_function,
+                        &materialized_call_arguments,
+                        &materialized_this_expression,
+                    ),
+                );
+            }
             if self.can_inline_user_function_call_with_explicit_call_frame(
                 user_function,
                 &materialized_call_arguments,
@@ -122,13 +210,49 @@ impl<'a> FunctionCompiler<'a> {
                 }
             }
         }
+        if trace_private && capture_slots.is_some() {
+            eprintln!(
+                "private_lookup user_call current_fn={:?} target={} capture_slots={:?}",
+                self.current_function_name(),
+                user_function.name,
+                capture_slots,
+            );
+        }
+        let class_field_initializer_function = self
+            .resolve_registered_function_declaration(&user_function.name)
+            .is_some_and(|function| function.direct_eval_in_class_field_initializer);
+        let adjusted_capture_slots = capture_slots.and_then(|capture_slots| {
+            if !user_function.lexical_this
+                || !class_field_initializer_function
+                || !capture_slots
+                    .get("this")
+                    .is_some_and(|slot_name| slot_name == "this")
+            {
+                return None;
+            }
+            let receiver_owner =
+                self.resolve_user_function_call_receiver_shadow_owner(this_expression)?;
+            if receiver_owner == "this" {
+                return None;
+            }
+            let mut adjusted = capture_slots.clone();
+            adjusted.insert("this".to_string(), receiver_owner);
+            Some(adjusted)
+        });
         if let Some(capture_slots) = capture_slots {
+            let capture_slots = adjusted_capture_slots.as_ref().unwrap_or(capture_slots);
+            let effective_this_expression =
+                if self.should_box_sloppy_function_this(user_function, this_expression) {
+                    Expression::This
+                } else {
+                    this_expression.clone()
+                };
             return self
                 .emit_user_function_call_with_new_target_and_this_expression_and_bound_captures(
                     user_function,
                     arguments,
                     JS_UNDEFINED_TAG,
-                    this_expression,
+                    &effective_this_expression,
                     capture_slots,
                 );
         }
@@ -161,6 +285,20 @@ impl<'a> FunctionCompiler<'a> {
         let Some(user_function) = self.user_function(function_name).cloned() else {
             return Ok(false);
         };
+        let callee_expression = Expression::Identifier(user_function.name.clone());
+        let capture_slots = self
+            .resolve_user_function_capture_slots_by_name(&user_function.name, &callee_expression);
+        if let Some(capture_slots) = capture_slots.as_ref() {
+            self.emit_user_function_call_with_new_target_and_this_expression_and_bound_captures_from_argument_locals(
+                &user_function,
+                argument_locals,
+                argument_count,
+                JS_UNDEFINED_TAG,
+                this_expression,
+                capture_slots,
+            )?;
+            return Ok(true);
+        }
         self.emit_user_function_call_with_new_target_and_this_expression_from_argument_locals(
             &user_function,
             argument_locals,

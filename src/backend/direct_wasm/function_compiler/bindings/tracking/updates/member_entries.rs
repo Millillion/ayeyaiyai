@@ -92,6 +92,11 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         expression: &Expression,
     ) {
+        let trace_iterator_close_updates =
+            std::env::var_os("AYY_TRACE_ITERATOR_CLOSE_UPDATES").is_some();
+        if trace_iterator_close_updates && matches!(expression, Expression::IteratorClose(_)) {
+            eprintln!("iterator_close_updates:member:start expr={expression:?}");
+        }
         match expression {
             Expression::Member { object, property } => {
                 self.update_member_function_binding_from_expression(object);
@@ -184,13 +189,20 @@ impl<'a> FunctionCompiler<'a> {
             }
             _ => {}
         }
+        if trace_iterator_close_updates && matches!(expression, Expression::IteratorClose(_)) {
+            eprintln!("iterator_close_updates:member:after_walk expr={expression:?}");
+        }
         let Expression::Call { callee, arguments } = expression else {
+            if trace_iterator_close_updates && matches!(expression, Expression::IteratorClose(_)) {
+                eprintln!("iterator_close_updates:member:done expr={expression:?}");
+            }
             return;
         };
         let Expression::Member { object, property } = callee.as_ref() else {
             return;
         };
-        if !matches!(object.as_ref(), Expression::Identifier(name) if name == "Object") {
+        if !matches!(object.as_ref(), Expression::Identifier(name) if name == "Object" || name == "Reflect")
+        {
             return;
         }
         if !matches!(property.as_ref(), Expression::String(name) if name == "defineProperty") {
@@ -234,6 +246,9 @@ impl<'a> FunctionCompiler<'a> {
         } else if has_set_field {
             self.clear_member_setter_binding_entry(&key);
         }
+        if trace_iterator_close_updates && matches!(expression, Expression::IteratorClose(_)) {
+            eprintln!("iterator_close_updates:member:done expr={expression:?}");
+        }
     }
 
     pub(in crate::backend::direct_wasm) fn update_member_function_assignment_binding(
@@ -262,6 +277,48 @@ impl<'a> FunctionCompiler<'a> {
         name: &str,
         value: &Expression,
     ) {
+        let iterator_step_value = match value {
+            Expression::Await(value) => value.as_ref(),
+            _ => value,
+        };
+        if let Expression::Member { object, property } = iterator_step_value
+            && matches!(property.as_ref(), Expression::String(property_name) if property_name == "value")
+            && let Some(IteratorStepBinding::Runtime {
+                function_binding,
+                static_value,
+                ..
+            }) = self.resolve_iterator_step_binding_from_expression(object)
+        {
+            if let Some(function_binding) = function_binding {
+                self.state
+                    .speculation
+                    .static_semantics
+                    .set_local_function_binding(name, function_binding);
+                return;
+            }
+            if let Some(static_value) = static_value.as_ref()
+                && let Some(function_binding) =
+                    self.resolve_function_binding_from_expression(static_value)
+            {
+                self.state
+                    .speculation
+                    .static_semantics
+                    .set_local_function_binding(name, function_binding);
+                return;
+            }
+            self.state
+                .speculation
+                .static_semantics
+                .clear_local_function_binding(name);
+            return;
+        }
+        if self.expression_depends_on_active_loop_assignment(value) {
+            self.state
+                .speculation
+                .static_semantics
+                .clear_local_function_binding(name);
+            return;
+        }
         let Some(function_name) = self.resolve_function_binding_from_expression(value) else {
             self.state
                 .speculation

@@ -69,25 +69,49 @@ impl<'a> FunctionCompiler<'a> {
                 }
                 _ => unreachable!("filtered above"),
             };
-            if self
-                .resolve_static_call_result_expression_with_context(
-                    callee,
-                    arguments,
-                    current_function_name,
-                )
-                .is_none()
+            let stable_empty_object_constructor = arguments.is_empty()
+                && matches!(callee, Expression::Identifier(name) if name == "Object" && self.is_unshadowed_builtin_identifier(name));
+            if !stable_empty_object_constructor
+                && self
+                    .resolve_static_call_result_expression_with_context(
+                        callee,
+                        arguments,
+                        current_function_name,
+                    )
+                    .is_none()
             {
                 return true;
             }
         }
 
-        ["valueOf", "toString"].into_iter().any(|method_name| {
-            self.ordinary_to_primitive_member_requires_runtime_with_context(
+        for method_name in ["valueOf", "toString"] {
+            let Some(outcome) = self.resolve_static_member_call_outcome_with_context(
                 expression,
                 method_name,
                 current_function_name,
-            )
-        })
+            ) else {
+                if self.ordinary_to_primitive_member_requires_runtime_with_context(
+                    expression,
+                    method_name,
+                    current_function_name,
+                ) {
+                    return true;
+                }
+                continue;
+            };
+            match outcome {
+                StaticEvalOutcome::Throw(_) => return false,
+                StaticEvalOutcome::Value(value) => {
+                    match self.static_expression_is_non_object_primitive(&value) {
+                        Some(true) => return false,
+                        Some(false) => continue,
+                        None => return true,
+                    }
+                }
+            }
+        }
+
+        false
     }
 
     pub(in crate::backend::direct_wasm) fn symbol_to_primitive_requires_runtime_with_context(
@@ -158,12 +182,13 @@ impl<'a> FunctionCompiler<'a> {
         let Some(object_binding) = self.resolve_object_binding_from_expression(expression) else {
             return false;
         };
-        let Some(method_value) = object_binding_lookup_value(&object_binding, &symbol_property)
+        let Some(method_value) =
+            self.resolve_object_binding_property_value(&object_binding, &symbol_property)
         else {
             return false;
         };
         if let Some(primitive) = self
-            .resolve_static_primitive_expression_with_context(method_value, current_function_name)
+            .resolve_static_primitive_expression_with_context(&method_value, current_function_name)
         {
             return !matches!(primitive, Expression::Null | Expression::Undefined)
                 && self
@@ -174,7 +199,7 @@ impl<'a> FunctionCompiler<'a> {
                     .is_some();
         }
         let Some(binding) = self.resolve_function_binding_from_expression_with_context(
-            method_value,
+            &method_value,
             current_function_name,
         ) else {
             return false;

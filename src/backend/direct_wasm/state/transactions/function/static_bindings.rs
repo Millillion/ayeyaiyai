@@ -9,8 +9,12 @@ pub(in crate::backend::direct_wasm) struct FunctionStaticBindingMetadataSnapshot
     pub(in crate::backend::direct_wasm) objects: FunctionObjectSemanticsState,
     pub(in crate::backend::direct_wasm) arrays: FunctionArraySemanticsState,
     pub(in crate::backend::direct_wasm) materializing_expression_keys: HashSet<usize>,
+    pub(in crate::backend::direct_wasm) local_lexical_initialized_locals: HashMap<String, u32>,
+    pub(in crate::backend::direct_wasm) immutable_local_bindings: HashSet<String>,
     pub(in crate::backend::direct_wasm) eval_lexical_initialized_locals: HashMap<String, u32>,
     pub(in crate::backend::direct_wasm) capture_slot_source_bindings: HashMap<String, String>,
+    pub(in crate::backend::direct_wasm) capture_slot_initial_source_bindings:
+        HashMap<String, String>,
     pub(in crate::backend::direct_wasm) last_bound_user_function_call:
         Option<BoundUserFunctionCallSnapshot>,
 }

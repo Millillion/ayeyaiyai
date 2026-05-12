@@ -19,6 +19,9 @@ impl<'a> FunctionCompiler<'a> {
                 .speculation
                 .static_semantics
                 .clear_tracked_array_specialized_function_values(name);
+            if self.binding_name_is_global(name) {
+                self.backend.sync_global_array_binding(name, None);
+            }
             return;
         };
         let source_binding_name = if let Expression::Identifier(source_name) = value {
@@ -104,7 +107,11 @@ impl<'a> FunctionCompiler<'a> {
         self.state
             .speculation
             .static_semantics
-            .set_local_array_binding(name, array_binding);
+            .set_local_array_binding(name, array_binding.clone());
+        if self.binding_name_is_global(name) {
+            self.backend
+                .sync_global_array_binding(name, Some(array_binding.clone()));
+        }
         if let Some(source_name) = source_binding_name.as_ref() {
             if let Some(bindings) = self
                 .state

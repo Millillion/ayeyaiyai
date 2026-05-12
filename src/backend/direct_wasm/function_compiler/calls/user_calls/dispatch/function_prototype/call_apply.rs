@@ -13,7 +13,48 @@ impl<'a> FunctionCompiler<'a> {
         if property_name != "call" && property_name != "apply" {
             return Ok(false);
         }
+        if property_name == "call"
+            && matches!(
+                object,
+                Expression::Member {
+                    object: prototype_object,
+                    property: to_string_property,
+                } if matches!(
+                    prototype_object.as_ref(),
+                    Expression::Member {
+                        object: object_constructor,
+                        property: prototype_property,
+                    } if matches!(object_constructor.as_ref(), Expression::Identifier(name) if name == "Object")
+                        && matches!(prototype_property.as_ref(), Expression::String(name) if name == "prototype")
+                ) && matches!(to_string_property.as_ref(), Expression::String(name) if name == "toString")
+            )
+        {
+            let static_tag = arguments.first().and_then(|argument| match argument {
+                CallArgument::Expression(receiver) | CallArgument::Spread(receiver) => {
+                    self.resolve_static_typed_array_to_string_tag(receiver)
+                }
+            });
+            self.emit_numeric_expression(object)?;
+            self.state.emission.output.instructions.push(0x1a);
+            for argument in arguments {
+                match argument {
+                    CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                        self.emit_numeric_expression(expression)?;
+                        self.state.emission.output.instructions.push(0x1a);
+                    }
+                }
+            }
+            if let Some(tag) = static_tag {
+                self.emit_static_string_literal(&tag)?;
+            } else {
+                self.push_i32_const(JS_TYPEOF_STRING_TAG);
+            }
+            return Ok(true);
+        }
         if property_name == "call" && self.emit_has_own_property_call(object, arguments)? {
+            return Ok(true);
+        }
+        if property_name == "call" && self.emit_property_is_enumerable_call(object, arguments)? {
             return Ok(true);
         }
 

@@ -20,8 +20,10 @@ pub(in crate::backend::direct_wasm) const JS_TYPEOF_SYMBOL_TAG: i32 = -107374181
 pub(in crate::backend::direct_wasm) const JS_TYPEOF_BIGINT_TAG: i32 = -1073741815;
 pub(in crate::backend::direct_wasm) const JS_NAN_TAG: i32 = -1073741814;
 pub(in crate::backend::direct_wasm) const JS_BUILTIN_EVAL_VALUE: i32 = -1073539000;
+pub(in crate::backend::direct_wasm) const JS_BUILTIN_FUNCTION_VALUE_BASE: i32 = -1073538000;
+pub(in crate::backend::direct_wasm) const JS_BUILTIN_FUNCTION_VALUE_LIMIT: i32 = 128;
 pub(in crate::backend::direct_wasm) const JS_NATIVE_ERROR_VALUE_BASE: i32 = -1073540000;
-pub(in crate::backend::direct_wasm) const JS_NATIVE_ERROR_VALUE_LIMIT: i32 = 8;
+pub(in crate::backend::direct_wasm) const JS_NATIVE_ERROR_VALUE_LIMIT: i32 = 9;
 pub(in crate::backend::direct_wasm) const JS_USER_FUNCTION_VALUE_BASE: i32 = -1073640000;
 pub(in crate::backend::direct_wasm) const JS_USER_FUNCTION_VALUE_LIMIT: i32 = 100000;
 pub(in crate::backend::direct_wasm) const FUNCTION_CONSTRUCTOR_FAMILY_BUILTIN: &str =
@@ -53,6 +55,7 @@ pub(in crate::backend::direct_wasm) const THROW_TAG_GLOBAL_INDEX: u32 = 0;
 pub(in crate::backend::direct_wasm) const THROW_VALUE_GLOBAL_INDEX: u32 = 1;
 pub(in crate::backend::direct_wasm) const CURRENT_NEW_TARGET_GLOBAL_INDEX: u32 = 2;
 pub(in crate::backend::direct_wasm) const CURRENT_THIS_GLOBAL_INDEX: u32 = 3;
+pub(in crate::backend::direct_wasm) const NEXT_PRIVATE_BRAND_GLOBAL_INDEX: u32 = 4;
 pub(in crate::backend::direct_wasm) const TRACKED_ARGUMENT_SLOT_LIMIT: u32 = 64;
 pub(in crate::backend::direct_wasm) const TRACKED_ARRAY_SLOT_LIMIT: u32 = 32;
 
@@ -72,4 +75,5 @@ pub(in crate::backend::direct_wasm) const NATIVE_ERROR_NAMES: [&str;
     "TypeError",
     "URIError",
     "AggregateError",
+    "SuppressedError",
 ];

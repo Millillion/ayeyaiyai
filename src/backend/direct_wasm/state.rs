@@ -40,9 +40,10 @@ mod transactions;
 pub(in crate::backend::direct_wasm) use binding_models::{
     ArgumentsIndexedPropertyState, ArgumentsPropertyEffect, ArgumentsSlot, ArgumentsUsage,
     ArgumentsValueBinding, ArrayIteratorBinding, ArrayValueBinding,
-    AsyncYieldDelegateGeneratorPlan, BreakContext, CompiledFunction, GlobalPropertyDescriptorState,
-    IteratorSourceKind, IteratorStepBinding, LoopContext, MaterializationGuard,
-    MemberFunctionBindingKey, MemberFunctionBindingProperty, MemberFunctionBindingTarget,
+    AsyncYieldDelegateGeneratorPlan, BreakContext, CachedIteratorNextMethodBinding,
+    CompiledFunction, GlobalPropertyDescriptorState, IteratorSourceKind, IteratorStepBinding,
+    IteratorStepEntryArrayBinding, LoopContext, MaterializationGuard, MemberFunctionBindingKey,
+    MemberFunctionBindingProperty, MemberFunctionBindingTarget, NumericLoopSpec,
     ObjectValueBinding, PropertyDescriptorBinding, PropertyDescriptorDefinition, ProxyValueBinding,
     ResizableArrayBufferBinding, ReturnedArgumentsEffects, RuntimeArraySlot, SimpleGeneratorStep,
     SimpleGeneratorStepOutcome, StringConcatFragment, TryContext, TypedArrayViewBinding,
@@ -77,6 +78,7 @@ pub(in crate::backend::direct_wasm) use function_state::{
 pub(in crate::backend::direct_wasm) use global_binding_query_access::{
     GlobalBindingIndexQueryAccess, GlobalBindingKindQueryAccess, GlobalBindingPresenceQueryAccess,
     GlobalFunctionBindingQueryAccess, GlobalImplicitBindingQueryAccess,
+    GlobalLexicalBindingQueryAccess,
 };
 pub(in crate::backend::direct_wasm) use global_member_access::{
     GlobalMemberAccessorMutationAccess, GlobalMemberAccessorQueryAccess,
@@ -95,7 +97,7 @@ pub(in crate::backend::direct_wasm) use global_value_query_access::{
 };
 pub(in crate::backend::direct_wasm) use module_artifacts::ModuleArtifactsState;
 pub(in crate::backend::direct_wasm) use root_types::{
-    CompilerState, DirectWasmCompiler, ImplicitGlobalBinding,
+    CompilerState, DirectWasmCompiler, ImplicitGlobalBinding, LexicalGlobalBinding,
 };
 pub(in crate::backend::direct_wasm) use static_env::{
     GlobalBindingEnvironment, GlobalStaticEvaluationEnvironment, SharedGlobalBindingEnvironment,

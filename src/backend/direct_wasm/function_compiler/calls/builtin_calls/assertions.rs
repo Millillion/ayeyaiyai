@@ -41,6 +41,12 @@ impl<'a> FunctionCompiler<'a> {
                     .instructions
                     .push(EMPTY_BLOCK_TYPE);
                 self.push_control_frame();
+                if std::env::var_os("AYY_TRACE_ASSERTIONS").is_some() {
+                    self.emit_print(&[Expression::String(format!(
+                        "assertion_fail name=__assert condition={condition:?} fn={:?}",
+                        self.current_function_name()
+                    ))])?;
+                }
                 self.emit_error_throw()?;
                 self.state.emission.output.instructions.push(0x0b);
                 self.pop_control_frame();

@@ -16,6 +16,25 @@ impl DirectWasmCompiler {
         array_bindings: &mut HashMap<String, HashMap<String, Option<ArrayValueBinding>>>,
         object_bindings: &mut HashMap<String, HashMap<String, Option<ObjectValueBinding>>>,
     ) {
+        self.collect_parameter_bindings_from_expression_in_function(
+            expression,
+            aliases,
+            bindings,
+            array_bindings,
+            object_bindings,
+            None,
+        );
+    }
+
+    pub(in crate::backend::direct_wasm) fn collect_parameter_bindings_from_expression_in_function(
+        &self,
+        expression: &Expression,
+        aliases: &mut HashMap<String, Option<LocalFunctionBinding>>,
+        bindings: &mut HashMap<String, HashMap<String, Option<LocalFunctionBinding>>>,
+        array_bindings: &mut HashMap<String, HashMap<String, Option<ArrayValueBinding>>>,
+        object_bindings: &mut HashMap<String, HashMap<String, Option<ObjectValueBinding>>>,
+        current_function_name: Option<&str>,
+    ) {
         match expression {
             Expression::Call { callee, arguments } => self.handle_call_parameter_expression(
                 callee,
@@ -24,6 +43,7 @@ impl DirectWasmCompiler {
                 bindings,
                 array_bindings,
                 object_bindings,
+                current_function_name,
             ),
             Expression::Assign { name, value } => self.handle_assign_parameter_expression(
                 name,
@@ -32,6 +52,7 @@ impl DirectWasmCompiler {
                 bindings,
                 array_bindings,
                 object_bindings,
+                current_function_name,
             ),
             Expression::AssignMember {
                 object,
@@ -45,21 +66,24 @@ impl DirectWasmCompiler {
                 bindings,
                 array_bindings,
                 object_bindings,
+                current_function_name,
             ),
             Expression::AssignSuperMember { property, value } => {
-                self.collect_parameter_bindings_from_expression(
+                self.collect_parameter_bindings_from_expression_in_function(
                     property,
                     aliases,
                     bindings,
                     array_bindings,
                     object_bindings,
+                    current_function_name,
                 );
-                self.collect_parameter_bindings_from_expression(
+                self.collect_parameter_bindings_from_expression_in_function(
                     value,
                     aliases,
                     bindings,
                     array_bindings,
                     object_bindings,
+                    current_function_name,
                 );
             }
             Expression::Member { object, property } => self.handle_member_parameter_expression(
@@ -69,32 +93,37 @@ impl DirectWasmCompiler {
                 bindings,
                 array_bindings,
                 object_bindings,
+                current_function_name,
             ),
             Expression::SuperMember { property } => self
-                .collect_parameter_bindings_from_expression(
+                .collect_parameter_bindings_from_expression_in_function(
                     property,
                     aliases,
                     bindings,
                     array_bindings,
                     object_bindings,
+                    current_function_name,
                 ),
             Expression::Unary { expression, .. }
             | Expression::EnumerateKeys(expression)
             | Expression::GetIterator(expression)
             | Expression::IteratorClose(expression)
-            | Expression::Await(expression) => self.collect_parameter_bindings_from_expression(
-                expression,
-                aliases,
-                bindings,
-                array_bindings,
-                object_bindings,
-            ),
+            | Expression::Await(expression) => self
+                .collect_parameter_bindings_from_expression_in_function(
+                    expression,
+                    aliases,
+                    bindings,
+                    array_bindings,
+                    object_bindings,
+                    current_function_name,
+                ),
             Expression::Array(elements) => self.handle_array_parameter_expression(
                 elements,
                 aliases,
                 bindings,
                 array_bindings,
                 object_bindings,
+                current_function_name,
             ),
             Expression::Object(entries) => self.handle_object_parameter_expression(
                 entries,
@@ -102,6 +131,7 @@ impl DirectWasmCompiler {
                 bindings,
                 array_bindings,
                 object_bindings,
+                current_function_name,
             ),
             Expression::Binary { left, right, .. } => self.handle_binary_parameter_expression(
                 left,
@@ -110,6 +140,7 @@ impl DirectWasmCompiler {
                 bindings,
                 array_bindings,
                 object_bindings,
+                current_function_name,
             ),
             Expression::Conditional {
                 condition,
@@ -123,6 +154,7 @@ impl DirectWasmCompiler {
                 bindings,
                 array_bindings,
                 object_bindings,
+                current_function_name,
             ),
             Expression::Sequence(expressions) => self.handle_sequence_parameter_expression(
                 expressions,
@@ -130,6 +162,7 @@ impl DirectWasmCompiler {
                 bindings,
                 array_bindings,
                 object_bindings,
+                current_function_name,
             ),
             Expression::New { callee, arguments } | Expression::SuperCall { callee, arguments } => {
                 self.handle_construct_parameter_expression(
@@ -139,6 +172,7 @@ impl DirectWasmCompiler {
                     bindings,
                     array_bindings,
                     object_bindings,
+                    current_function_name,
                 )
             }
             Expression::Update { .. }

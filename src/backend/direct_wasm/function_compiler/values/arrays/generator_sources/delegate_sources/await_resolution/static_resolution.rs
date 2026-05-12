@@ -6,6 +6,19 @@ impl<'a> FunctionCompiler<'a> {
         resolution: &Expression,
     ) -> Option<StaticEvalOutcome> {
         let current_function_name = self.current_function_name();
+        if let Expression::Await(value) = resolution {
+            let materialized = self.materialize_static_expression(value);
+            return self
+                .resolve_static_await_resolution_outcome(&materialized)
+                .or(Some(StaticEvalOutcome::Value(materialized)));
+        }
+        if let Expression::New { callee, arguments } = resolution
+            && matches!(callee.as_ref(), Expression::Identifier(name) if name == "Promise")
+            && let Some(outcome) =
+                self.resolve_static_promise_constructor_outcome(arguments, current_function_name)
+        {
+            return Some(outcome);
+        }
         if let Expression::Call { callee, arguments } = resolution {
             if let Some(binding) = self.resolve_function_binding_from_expression_with_context(
                 callee,
@@ -197,5 +210,105 @@ impl<'a> FunctionCompiler<'a> {
                 }
             }
         }
+    }
+
+    fn resolve_static_promise_constructor_outcome(
+        &self,
+        arguments: &[CallArgument],
+        current_function_name: Option<&str>,
+    ) -> Option<StaticEvalOutcome> {
+        let executor = match arguments.first()? {
+            CallArgument::Expression(expression) => expression,
+            CallArgument::Spread(_) => return None,
+        };
+        let materialized_executor = self.materialize_static_expression(executor);
+        let binding = self
+            .resolve_function_binding_from_expression_with_context(executor, current_function_name)
+            .or_else(|| {
+                self.resolve_function_binding_from_expression_with_context(
+                    &materialized_executor,
+                    current_function_name,
+                )
+            })?;
+        let LocalFunctionBinding::User(function_name) = binding else {
+            return None;
+        };
+        let function = self.resolve_registered_function_declaration(&function_name)?;
+        let resolve_name = function.params.first().map(|param| param.name.as_str())?;
+        let reject_name = function.params.get(1).map(|param| param.name.as_str());
+
+        for statement in &function.body {
+            if let Some(outcome) =
+                self.resolve_static_promise_executor_statement_outcome(
+                    statement,
+                    resolve_name,
+                    reject_name,
+                )
+            {
+                return Some(outcome);
+            }
+        }
+        None
+    }
+
+    fn resolve_static_promise_executor_statement_outcome(
+        &self,
+        statement: &Statement,
+        resolve_name: &str,
+        reject_name: Option<&str>,
+    ) -> Option<StaticEvalOutcome> {
+        match statement {
+            Statement::Expression(expression) | Statement::Return(expression) => self
+                .resolve_static_promise_executor_expression_outcome(
+                    expression,
+                    resolve_name,
+                    reject_name,
+                ),
+            Statement::Block { body } | Statement::Declaration { body } => {
+                for statement in body {
+                    if let Some(outcome) = self.resolve_static_promise_executor_statement_outcome(
+                        statement,
+                        resolve_name,
+                        reject_name,
+                    ) {
+                        return Some(outcome);
+                    }
+                }
+                None
+            }
+            _ => None,
+        }
+    }
+
+    fn resolve_static_promise_executor_expression_outcome(
+        &self,
+        expression: &Expression,
+        resolve_name: &str,
+        reject_name: Option<&str>,
+    ) -> Option<StaticEvalOutcome> {
+        let Expression::Call { callee, arguments } = expression else {
+            return None;
+        };
+        let Expression::Identifier(callee_name) = callee.as_ref() else {
+            return None;
+        };
+        let settled_argument = arguments.first().map(|argument| match argument {
+            CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                self.materialize_static_expression(expression)
+            }
+        });
+        if callee_name == resolve_name {
+            let value = settled_argument.unwrap_or(Expression::Undefined);
+            return Some(
+                self.resolve_static_await_resolution_outcome(&value)
+                    .unwrap_or(StaticEvalOutcome::Value(value)),
+            );
+        }
+        if reject_name.is_some_and(|reject_name| callee_name == reject_name) {
+            return Some(StaticEvalOutcome::Throw(StaticThrowValue::Value(
+                settled_argument.unwrap_or(Expression::Undefined),
+            )));
+        }
+        None
     }
 }

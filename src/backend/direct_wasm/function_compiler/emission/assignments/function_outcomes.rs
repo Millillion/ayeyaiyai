@@ -10,6 +10,11 @@ impl<'a> FunctionCompiler<'a> {
             return None;
         };
         let user_function = self.user_function(function_name)?;
+        if self.user_function_mentions_private_member_access(user_function)
+            || self.user_function_mentions_direct_eval(user_function)
+        {
+            return None;
+        }
         let summary = user_function.inline_summary.as_ref()?;
         let return_value = summary.return_value.as_ref()?;
         let call_arguments = arguments
@@ -82,6 +87,49 @@ impl<'a> FunctionCompiler<'a> {
         })
     }
 
+    pub(in crate::backend::direct_wasm) fn emit_function_binding_effect_statements_with_arguments(
+        &mut self,
+        binding: &LocalFunctionBinding,
+        arguments: &[Expression],
+    ) -> DirectResult<()> {
+        self.with_suspended_with_scopes(|compiler| match binding {
+            LocalFunctionBinding::User(function_name) => {
+                let Some(user_function) = compiler.user_function(function_name).cloned() else {
+                    return Ok(());
+                };
+                let Some(function) = compiler
+                    .resolve_registered_function_declaration(&user_function.name)
+                    .cloned()
+                else {
+                    return Ok(());
+                };
+                let Some((_, effect_statements)) = function.body.split_last() else {
+                    return Ok(());
+                };
+                let effect_statements = effect_statements.to_vec();
+                let call_arguments = arguments
+                    .iter()
+                    .cloned()
+                    .map(CallArgument::Expression)
+                    .collect::<Vec<_>>();
+
+                compiler.with_user_function_execution_context(&user_function, |compiler| {
+                    for statement in &effect_statements {
+                        if !compiler.emit_inline_user_function_effect_statement(
+                            statement,
+                            &user_function,
+                            &call_arguments,
+                        )? {
+                            return Ok(());
+                        }
+                    }
+                    Ok(())
+                })
+            }
+            LocalFunctionBinding::Builtin(_) => Ok(()),
+        })
+    }
+
     pub(in crate::backend::direct_wasm) fn function_binding_defaults_to_undefined(
         &self,
         binding: &LocalFunctionBinding,
@@ -125,6 +173,11 @@ impl<'a> FunctionCompiler<'a> {
             return None;
         };
         let user_function = self.user_function(function_name)?;
+        if self.user_function_mentions_private_member_access(user_function)
+            || self.user_function_mentions_direct_eval(user_function)
+        {
+            return None;
+        }
         let function = self.resolve_registered_function_declaration(function_name)?;
         if function.body.is_empty() {
             return Some(StaticEvalOutcome::Value(Expression::Undefined));

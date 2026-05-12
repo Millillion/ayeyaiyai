@@ -5,6 +5,12 @@ impl<'a> FunctionCompilerBackend<'a> {
         &mut self,
         name: &str,
     ) -> ImplicitGlobalBinding {
-        self.global_semantics.ensure_implicit_binding(name)
+        if let Some(binding) = self.global_semantics.global_names().implicit_binding(name) {
+            return binding;
+        }
+
+        let binding = self.shared_global_semantics.ensure_implicit_binding(name);
+        self.global_semantics.sync_implicit_binding(name, binding);
+        binding
     }
 }

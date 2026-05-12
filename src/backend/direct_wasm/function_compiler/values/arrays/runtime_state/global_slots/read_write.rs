@@ -60,7 +60,8 @@ impl<'a> FunctionCompiler<'a> {
         name: &str,
         index_local: u32,
     ) -> DirectResult<bool> {
-        if !self.is_named_global_array_binding(name) {
+        if !self.is_named_global_array_binding(name) || !self.uses_global_runtime_array_state(name)
+        {
             return Ok(false);
         }
         let mut open_frames = 0;
@@ -170,6 +171,13 @@ impl<'a> FunctionCompiler<'a> {
             self.state.emission.output.instructions.push(I32_TYPE);
             self.push_control_frame();
             open_frames += 1;
+            self.update_tracked_array_specialized_function_value(name, index, value)?;
+            let index_property = Expression::Number(index as f64);
+            self.initialize_member_function_assignment_capture_slots(
+                &Expression::Identifier(name.to_string()),
+                &index_property,
+                value,
+            )?;
             self.emit_global_runtime_array_slot_write_from_local(name, index, value_local)?;
             self.state.emission.output.instructions.push(0x05);
         }

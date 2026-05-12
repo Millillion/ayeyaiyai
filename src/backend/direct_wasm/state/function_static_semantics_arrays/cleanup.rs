@@ -9,6 +9,7 @@ impl FunctionArraySemanticsState {
         self.tracked_array_function_values.clear();
         self.runtime_array_slots.clear();
         self.local_array_iterator_bindings.clear();
+        self.cached_iterator_next_method_bindings.clear();
         self.local_iterator_step_bindings.clear();
         self.runtime_array_length_locals.clear();
     }
@@ -31,6 +32,7 @@ impl FunctionArraySemanticsState {
         self.tracked_array_function_values.remove(name);
         self.runtime_array_slots.remove(name);
         self.local_array_iterator_bindings.remove(name);
+        self.cached_iterator_next_method_bindings.remove(name);
         self.local_iterator_step_bindings.remove(name);
         self.runtime_array_length_locals.remove(name);
     }

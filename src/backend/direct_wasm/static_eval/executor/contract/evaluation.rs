@@ -1,5 +1,6 @@
 use crate::backend::direct_wasm::{
     Expression, evaluate_shared_static_expression, evaluate_static_binary_expression,
+    inline_summary_side_effect_free_expression,
 };
 
 use super::{StaticExpressionHooks, StaticExpressionMaterialization};
@@ -30,8 +31,11 @@ where
         expression: &Expression,
         environment: &mut Self::Environment,
     ) -> Option<Expression> {
-        evaluate_shared_static_expression(self, expression, environment)
-            .or_else(|| self.evaluate_fallback_expression(expression, environment))
+        evaluate_shared_static_expression(self, expression, environment).or_else(|| {
+            inline_summary_side_effect_free_expression(expression)
+                .then(|| self.evaluate_fallback_expression(expression, environment))
+                .flatten()
+        })
     }
 
     fn evaluate_fallback_expression(

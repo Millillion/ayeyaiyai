@@ -13,6 +13,16 @@ impl DirectWasmCompiler {
             return HashSet::new();
         };
         let mut names = HashSet::new();
+        for parameter in &function.params {
+            if let Some(default) = &parameter.default {
+                collect_assigned_binding_names_from_expression(default, &mut names);
+                self.collect_static_direct_eval_assigned_nonlocal_names_from_expression(
+                    default,
+                    Some(&user_function.name),
+                    &mut names,
+                );
+            }
+        }
         for statement in &function.body {
             collect_assigned_binding_names_from_statement(statement, &mut names);
             self.collect_static_direct_eval_assigned_nonlocal_names_from_statement(

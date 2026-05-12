@@ -110,7 +110,11 @@ impl ModuleLinker {
                 strict: true,
                 lexical_this: false,
                 derived_constructor: false,
+                direct_eval_in_class_field_initializer: false,
                 length: 0,
+                synthetic_capture_bindings: Vec::new(),
+                immutable_class_bindings: Vec::new(),
+                private_brand_binding: None,
             };
             rewrite_import_bindings_in_function(&mut getter_function, import_bindings)?;
             self.lowerer.functions.push(getter_function);

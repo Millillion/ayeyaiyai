@@ -1,13 +1,41 @@
 use super::*;
 
 impl DirectWasmCompiler {
+    fn resolve_global_class_prototype_parent_expression(
+        &self,
+        expression: &Expression,
+    ) -> Expression {
+        match expression {
+            Expression::Identifier(alias) => self
+                .resolve_static_class_init_local_alias_expression(alias)
+                .or_else(|| {
+                    self.global_value_binding(alias)
+                        .filter(|value| !static_expression_matches(value, expression))
+                        .cloned()
+                })
+                .map(|resolved| self.resolve_global_class_prototype_parent_expression(&resolved))
+                .unwrap_or_else(|| expression.clone()),
+            Expression::Member { object, property } => Expression::Member {
+                object: Box::new(self.resolve_global_class_prototype_parent_expression(object)),
+                property: Box::new(self.materialize_global_expression(property)),
+            },
+            Expression::Sequence(expressions) => expressions
+                .last()
+                .map(|expression| self.resolve_global_class_prototype_parent_expression(expression))
+                .unwrap_or(Expression::Undefined),
+            _ => self.materialize_global_expression(expression),
+        }
+    }
+
     pub(in crate::backend::direct_wasm) fn update_global_object_prototype_binding(
         &mut self,
         name: &str,
         prototype: &Expression,
     ) {
         let prototype = match prototype {
-            Expression::Identifier(_) => prototype.clone(),
+            Expression::Identifier(alias) => self
+                .resolve_static_class_init_local_alias_expression(alias)
+                .unwrap_or_else(|| prototype.clone()),
             Expression::Member { property, .. } if matches!(property.as_ref(), Expression::String(property_name) if property_name == "prototype") => {
                 prototype.clone()
             }
@@ -21,18 +49,26 @@ impl DirectWasmCompiler {
         name: &str,
         value: &Expression,
     ) {
-        let materialized = self.materialize_global_expression(value);
-        let prototype = object_literal_prototype_expression(&materialized).or_else(|| {
-            let Expression::New { callee, .. } = &materialized else {
-                return None;
-            };
-            let Expression::Identifier(constructor_name) = callee.as_ref() else {
-                return None;
-            };
-            Some(Expression::Member {
-                object: Box::new(Expression::Identifier(constructor_name.clone())),
-                property: Box::new(Expression::String("prototype".to_string())),
+        let prototype_from_value = |_compiler: &Self, expression: &Expression| {
+            object_literal_prototype_expression(expression).or_else(|| {
+                let Expression::New { callee, .. } = expression else {
+                    return None;
+                };
+                let Expression::Identifier(constructor_name) = callee.as_ref() else {
+                    return None;
+                };
+                Some(Expression::Member {
+                    object: Box::new(Expression::Identifier(constructor_name.clone())),
+                    property: Box::new(Expression::String("prototype".to_string())),
+                })
             })
+        };
+        let prototype = prototype_from_value(self, value).or_else(|| {
+            let materialized = self.materialize_global_expression(value);
+            if static_expression_matches(&materialized, value) {
+                return None;
+            }
+            prototype_from_value(self, &materialized)
         });
         if let Some(prototype) = prototype {
             self.update_global_object_prototype_binding(name, &prototype);
@@ -44,7 +80,13 @@ impl DirectWasmCompiler {
         name: &str,
         prototype: Option<&Expression>,
     ) {
-        let prototype = prototype.map(|expression| self.materialize_global_expression(expression));
+        let prototype = prototype.map(|expression| match expression {
+            Expression::Identifier(alias) => self
+                .resolve_static_class_init_local_alias_expression(alias)
+                .map(|resolved| self.materialize_global_expression(&resolved))
+                .unwrap_or_else(|| self.materialize_global_expression(expression)),
+            _ => self.materialize_global_expression(expression),
+        });
         self.record_runtime_prototype_variant(name, prototype);
     }
 
@@ -66,6 +108,24 @@ impl DirectWasmCompiler {
                 }
             }
             Expression::Call { callee, arguments } => {
+                if matches!(callee.as_ref(), Expression::Identifier(name) if name == "__ayyClassPrototypeInit")
+                {
+                    let [
+                        CallArgument::Expression(Expression::Identifier(target_name)),
+                        CallArgument::Expression(prototype_parent),
+                        ..,
+                    ] = arguments.as_slice()
+                    else {
+                        return;
+                    };
+                    let prototype_parent =
+                        self.resolve_global_class_prototype_parent_expression(prototype_parent);
+                    self.update_global_object_prototype_expression(
+                        &format!("{target_name}.prototype"),
+                        prototype_parent,
+                    );
+                    return;
+                }
                 let Expression::Member { object, property } = callee.as_ref() else {
                     return;
                 };
@@ -113,7 +173,7 @@ impl DirectWasmCompiler {
                     } else {
                         target_name.to_string()
                     };
-                    let property = self.materialize_global_expression(property);
+                    let property = self.canonical_global_object_property_expression(property);
                     let property_name = static_property_name_from_expression(&property);
                     let existing_value = if is_prototype {
                         self.global_prototype_object_binding(target_name)
@@ -226,11 +286,42 @@ impl DirectWasmCompiler {
                 else {
                     return;
                 };
-                if !self.global_has_binding(target_name) {
-                    return;
+                let mut target_names = vec![target_name.clone()];
+                if let Some(Expression::Identifier(alias)) =
+                    self.global_value_binding(target_name).cloned()
+                    && !target_names.contains(&alias)
+                {
+                    target_names.push(alias);
                 }
-                self.record_global_runtime_prototype_variant(target_name, Some(prototype));
-                self.update_global_object_prototype_binding(target_name, prototype);
+                if let Some(Expression::Identifier(alias)) =
+                    self.resolve_static_class_init_local_alias_expression(target_name)
+                    && !target_names.contains(&alias)
+                {
+                    target_names.push(alias);
+                }
+                for target_name in target_names {
+                    let has_runtime_prototype = self
+                        .state
+                        .global_semantics
+                        .values
+                        .runtime_prototype_binding(&target_name)
+                        .is_some();
+                    if !self.global_has_binding(&target_name)
+                        && !has_runtime_prototype
+                        && self
+                            .global_object_prototype_expression(&target_name)
+                            .is_none()
+                    {
+                        continue;
+                    }
+                    let runtime_prototype = if matches!(prototype, Expression::Null) {
+                        None
+                    } else {
+                        Some(prototype)
+                    };
+                    self.record_global_runtime_prototype_variant(&target_name, runtime_prototype);
+                    self.update_global_object_prototype_binding(&target_name, prototype);
+                }
             }
             _ => {}
         }

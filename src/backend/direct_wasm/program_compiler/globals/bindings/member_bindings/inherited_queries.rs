@@ -1,39 +1,151 @@
 use super::*;
 
 impl DirectWasmCompiler {
+    pub(in crate::backend::direct_wasm) fn direct_user_function_return_expression(
+        &self,
+        function_name: &str,
+        depth: usize,
+    ) -> Option<Expression> {
+        if depth > 8 {
+            return None;
+        }
+        let function = self.registered_function(function_name)?;
+        for statement in &function.body {
+            let Statement::Return(value) = statement else {
+                continue;
+            };
+            if let Expression::Call { callee, .. } = value
+                && let Expression::Identifier(callee_name) = callee.as_ref()
+            {
+                if let Some(result) =
+                    self.infer_static_class_init_call_result_expression(callee_name)
+                {
+                    return Some(result);
+                }
+                if self.contains_user_function(callee_name)
+                    && let Some(result) =
+                        self.direct_user_function_return_expression(callee_name, depth + 1)
+                {
+                    return Some(result);
+                }
+            }
+            return Some(value.clone());
+        }
+        None
+    }
+
     pub(in crate::backend::direct_wasm) fn global_inherited_member_function_bindings(
         &self,
         value: &Expression,
     ) -> Vec<ReturnedMemberFunctionBinding> {
         match value {
-            Expression::Identifier(source_name) => self
-                .global_member_function_binding_entries()
-                .into_iter()
-                .filter_map(|(key, binding)| match &key.target {
-                    MemberFunctionBindingTarget::Identifier(target) if target == source_name => {
-                        let MemberFunctionBindingProperty::String(property) = &key.property else {
-                            return None;
-                        };
-                        Some(ReturnedMemberFunctionBinding {
-                            target: ReturnedMemberFunctionBindingTarget::Value,
-                            property: property.clone(),
-                            binding,
-                        })
+            Expression::Identifier(source_name) => {
+                let mut source_names = vec![source_name.clone()];
+                if let Some(function) = self.registered_function(source_name) {
+                    if let Some(self_binding) = function.self_binding.as_ref() {
+                        source_names.push(self_binding.clone());
                     }
-                    MemberFunctionBindingTarget::Prototype(target) if target == source_name => {
-                        let MemberFunctionBindingProperty::String(property) = &key.property else {
-                            return None;
-                        };
-                        Some(ReturnedMemberFunctionBinding {
-                            target: ReturnedMemberFunctionBindingTarget::Prototype,
-                            property: property.clone(),
-                            binding,
-                        })
+                    if let Some(top_level_binding) = function.top_level_binding.as_ref() {
+                        source_names.push(top_level_binding.clone());
                     }
-                    _ => None,
-                })
-                .collect(),
-            Expression::Call { callee, .. } | Expression::New { callee, .. } => {
+                }
+                self.global_member_function_binding_entries()
+                    .into_iter()
+                    .filter_map(|(key, binding)| match &key.target {
+                        MemberFunctionBindingTarget::Identifier(target)
+                            if source_names.iter().any(|source_name| target == source_name) =>
+                        {
+                            let MemberFunctionBindingProperty::String(property) = &key.property
+                            else {
+                                return None;
+                            };
+                            Some(ReturnedMemberFunctionBinding {
+                                target: ReturnedMemberFunctionBindingTarget::Value,
+                                property: property.clone(),
+                                binding,
+                            })
+                        }
+                        MemberFunctionBindingTarget::Prototype(target)
+                            if source_names.iter().any(|source_name| target == source_name) =>
+                        {
+                            let MemberFunctionBindingProperty::String(property) = &key.property
+                            else {
+                                return None;
+                            };
+                            Some(ReturnedMemberFunctionBinding {
+                                target: ReturnedMemberFunctionBindingTarget::Prototype,
+                                property: property.clone(),
+                                binding,
+                            })
+                        }
+                        _ => None,
+                    })
+                    .collect()
+            }
+            Expression::Call { callee, arguments } => {
+                if let Some(resolved) = self
+                    .infer_static_call_result_expression(callee, arguments)
+                    .filter(|resolved| !static_expression_matches(resolved, value))
+                {
+                    let bindings = self.global_inherited_member_function_bindings(&resolved);
+                    if !bindings.is_empty() {
+                        return bindings;
+                    }
+                }
+                let Some(LocalFunctionBinding::User(function_name)) =
+                    self.infer_global_function_binding(callee)
+                else {
+                    return Vec::new();
+                };
+                if let Some(returned) = self
+                    .direct_user_function_return_expression(&function_name, 0)
+                    .filter(|returned| !static_expression_matches(returned, value))
+                {
+                    let bindings = self.global_inherited_member_function_bindings(&returned);
+                    if !bindings.is_empty() {
+                        return bindings;
+                    }
+                }
+                self.user_function_returned_member_function_bindings(&function_name)
+            }
+            Expression::New { callee, .. } => {
+                if let Expression::Identifier(constructor_name) = callee.as_ref() {
+                    let mut constructor_names = vec![constructor_name.clone()];
+                    if let Some(LocalFunctionBinding::User(function_name)) =
+                        self.infer_global_function_binding(callee)
+                        && let Some(function) = self.registered_function(&function_name)
+                    {
+                        if let Some(self_binding) = function.self_binding.as_ref() {
+                            constructor_names.push(self_binding.clone());
+                        }
+                        if let Some(top_level_binding) = function.top_level_binding.as_ref() {
+                            constructor_names.push(top_level_binding.clone());
+                        }
+                    }
+                    let bindings = self
+                        .global_member_function_binding_entries()
+                        .into_iter()
+                        .filter_map(|(key, binding)| match (&key.target, &key.property) {
+                            (
+                                MemberFunctionBindingTarget::Prototype(target),
+                                MemberFunctionBindingProperty::String(property),
+                            ) if constructor_names
+                                .iter()
+                                .any(|constructor_name| target == constructor_name) =>
+                            {
+                                Some(ReturnedMemberFunctionBinding {
+                                    target: ReturnedMemberFunctionBindingTarget::Value,
+                                    property: property.clone(),
+                                    binding,
+                                })
+                            }
+                            _ => None,
+                        })
+                        .collect::<Vec<_>>();
+                    if !bindings.is_empty() {
+                        return bindings;
+                    }
+                }
                 let Some(LocalFunctionBinding::User(function_name)) =
                     self.infer_global_function_binding(callee)
                 else {

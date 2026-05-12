@@ -1,6 +1,71 @@
 use super::*;
 
 impl DirectWasmCompiler {
+    fn preserves_global_symbol_call_binding(&self, value: &Expression) -> bool {
+        matches!(
+            value,
+            Expression::Call { callee, .. }
+                if matches!(callee.as_ref(), Expression::Identifier(symbol_name)
+                    if symbol_name == "Symbol"
+                        && !self.global_has_binding(symbol_name)
+                        && !self.global_has_lexical_binding(symbol_name))
+        )
+    }
+
+    pub(in crate::backend::direct_wasm) fn global_expression_is_static_symbol_property_key(
+        &self,
+        expression: &Expression,
+    ) -> bool {
+        match expression {
+            Expression::Identifier(name) => {
+                self.global_binding_kind(name) == Some(StaticValueKind::Symbol)
+                    || self
+                        .global_value_binding(name)
+                        .is_some_and(|value| self.preserves_global_symbol_call_binding(value))
+            }
+            Expression::Member { object, property }
+                if matches!(object.as_ref(), Expression::Identifier(name)
+                    if name == "Symbol"
+                        && !self.global_has_binding(name)
+                        && !self.global_has_lexical_binding(name))
+                    && matches!(property.as_ref(), Expression::String(_)) =>
+            {
+                true
+            }
+            Expression::Call { callee, .. }
+                if matches!(callee.as_ref(), Expression::Identifier(name)
+                    if name == "Symbol"
+                        && !self.global_has_binding(name)
+                        && !self.global_has_lexical_binding(name)) =>
+            {
+                true
+            }
+            _ => false,
+        }
+    }
+
+    pub(in crate::backend::direct_wasm) fn canonical_global_object_property_expression(
+        &self,
+        property: &Expression,
+    ) -> Expression {
+        let resolved = match property {
+            Expression::Identifier(name) => self
+                .resolve_static_class_init_local_alias_expression(name)
+                .unwrap_or_else(|| property.clone()),
+            _ => property.clone(),
+        };
+        let evaluated = self
+            .evaluate_static_expression(&resolved)
+            .unwrap_or_else(|| self.materialize_global_expression(&resolved));
+        if self.global_expression_is_static_symbol_property_key(&resolved) {
+            return resolved;
+        }
+        if self.global_expression_is_static_symbol_property_key(&evaluated) {
+            return evaluated;
+        }
+        evaluated
+    }
+
     pub(in crate::backend::direct_wasm) fn materialize_global_expression_with_state(
         &self,
         expression: &Expression,
@@ -54,6 +119,12 @@ impl DirectWasmCompiler {
                     return Expression::Undefined;
                 }
                 if self.global_binding_kind(name) == Some(StaticValueKind::Symbol) {
+                    return expression.clone();
+                }
+                if self
+                    .global_value_binding(name)
+                    .is_some_and(|value| self.preserves_global_symbol_call_binding(value))
+                {
                     return expression.clone();
                 }
                 if let Some(value) = self.global_value_binding(name) {

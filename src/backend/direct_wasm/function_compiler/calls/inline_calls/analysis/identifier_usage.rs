@@ -6,8 +6,19 @@ impl<'a> FunctionCompiler<'a> {
             Expression::Call { callee, arguments }
             | Expression::SuperCall { callee, arguments }
             | Expression::New { callee, arguments } => {
-                matches!(callee.as_ref(), Expression::Identifier(_))
-                    || Self::expression_contains_identifier_callee_call(callee)
+                matches!(
+                    callee.as_ref(),
+                    Expression::Identifier(name)
+                        if !matches!(
+                            name.as_str(),
+                            "__assert"
+                                | "__assertSameValue"
+                                | "__assertNotSameValue"
+                                | "__ayyAssertCompareArray"
+                                | "assert"
+                                | "TypeError"
+                        )
+                ) || Self::expression_contains_identifier_callee_call(callee)
                     || arguments.iter().any(|argument| match argument {
                         CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
                             Self::expression_contains_identifier_callee_call(expression)

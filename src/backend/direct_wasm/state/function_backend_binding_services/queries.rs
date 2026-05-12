@@ -31,18 +31,41 @@ impl<'a> GlobalBindingPresenceQueryAccess for FunctionCompilerBackend<'a> {
         self.global_semantics
             .global_names()
             .has_implicit_binding(name)
+            || self
+                .shared_global_semantics
+                .global_names()
+                .has_implicit_binding(name)
     }
 }
 
 impl<'a> GlobalImplicitBindingQueryAccess for FunctionCompilerBackend<'a> {
     fn implicit_global_binding(&self, name: &str) -> Option<ImplicitGlobalBinding> {
-        self.global_semantics.global_names().implicit_binding(name)
+        self.global_semantics
+            .global_names()
+            .implicit_binding(name)
+            .or_else(|| {
+                self.shared_global_semantics
+                    .global_names()
+                    .implicit_binding(name)
+            })
     }
 
     fn implicit_global_binding_count(&self) -> u32 {
         self.global_semantics
             .global_names()
             .implicit_binding_count()
+    }
+}
+
+impl<'a> GlobalLexicalBindingQueryAccess for FunctionCompilerBackend<'a> {
+    fn lexical_global_binding(&self, name: &str) -> Option<LexicalGlobalBinding> {
+        self.global_semantics.global_names().lexical_binding(name)
+    }
+
+    fn global_lexical_binding_count(&self) -> u32 {
+        self.global_semantics
+            .global_names()
+            .lexical_binding_runtime_slot_count()
     }
 }
 

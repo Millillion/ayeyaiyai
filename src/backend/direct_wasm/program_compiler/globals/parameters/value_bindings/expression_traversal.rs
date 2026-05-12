@@ -7,11 +7,32 @@ impl DirectWasmCompiler {
         aliases: &mut HashMap<String, Option<LocalFunctionBinding>>,
         bindings: &mut HashMap<String, HashMap<String, Option<Expression>>>,
     ) {
+        self.collect_parameter_value_bindings_from_expression_in_function(
+            expression, aliases, bindings, None,
+        );
+    }
+
+    pub(in crate::backend::direct_wasm) fn collect_parameter_value_bindings_from_expression_in_function(
+        &self,
+        expression: &Expression,
+        aliases: &mut HashMap<String, Option<LocalFunctionBinding>>,
+        bindings: &mut HashMap<String, HashMap<String, Option<Expression>>>,
+        current_function_name: Option<&str>,
+    ) {
         match expression {
             Expression::Call { callee, arguments } => {
-                self.collect_parameter_value_bindings_from_expression(callee, aliases, bindings);
+                self.collect_parameter_value_bindings_from_expression_in_function(
+                    callee,
+                    aliases,
+                    bindings,
+                    current_function_name,
+                );
                 self.register_parameter_value_bindings_for_call(
-                    callee, arguments, aliases, bindings,
+                    callee,
+                    arguments,
+                    aliases,
+                    bindings,
+                    current_function_name,
                 );
                 for argument in arguments {
                     let argument = match argument {
@@ -19,45 +40,96 @@ impl DirectWasmCompiler {
                             argument
                         }
                     };
-                    self.collect_parameter_value_bindings_from_expression(
-                        argument, aliases, bindings,
+                    self.collect_parameter_value_bindings_from_expression_in_function(
+                        argument,
+                        aliases,
+                        bindings,
+                        current_function_name,
                     );
                 }
             }
             Expression::Assign { name, value } => {
-                self.collect_parameter_value_bindings_from_expression(value, aliases, bindings);
+                self.collect_parameter_value_bindings_from_expression_in_function(
+                    value,
+                    aliases,
+                    bindings,
+                    current_function_name,
+                );
                 aliases.insert(
                     name.clone(),
                     self.resolve_function_binding_from_expression_with_aliases(value, aliases),
                 );
             }
             Expression::Member { object, property } => {
-                self.collect_parameter_value_bindings_from_expression(object, aliases, bindings);
-                self.collect_parameter_value_bindings_from_expression(property, aliases, bindings);
+                self.collect_parameter_value_bindings_from_expression_in_function(
+                    object,
+                    aliases,
+                    bindings,
+                    current_function_name,
+                );
+                self.collect_parameter_value_bindings_from_expression_in_function(
+                    property,
+                    aliases,
+                    bindings,
+                    current_function_name,
+                );
             }
             Expression::SuperMember { property } => {
-                self.collect_parameter_value_bindings_from_expression(property, aliases, bindings);
+                self.collect_parameter_value_bindings_from_expression_in_function(
+                    property,
+                    aliases,
+                    bindings,
+                    current_function_name,
+                );
             }
             Expression::AssignMember {
                 object,
                 property,
                 value,
             } => {
-                self.collect_parameter_value_bindings_from_expression(object, aliases, bindings);
-                self.collect_parameter_value_bindings_from_expression(property, aliases, bindings);
-                self.collect_parameter_value_bindings_from_expression(value, aliases, bindings);
+                self.collect_parameter_value_bindings_from_expression_in_function(
+                    object,
+                    aliases,
+                    bindings,
+                    current_function_name,
+                );
+                self.collect_parameter_value_bindings_from_expression_in_function(
+                    property,
+                    aliases,
+                    bindings,
+                    current_function_name,
+                );
+                self.collect_parameter_value_bindings_from_expression_in_function(
+                    value,
+                    aliases,
+                    bindings,
+                    current_function_name,
+                );
             }
             Expression::AssignSuperMember { property, value } => {
-                self.collect_parameter_value_bindings_from_expression(property, aliases, bindings);
-                self.collect_parameter_value_bindings_from_expression(value, aliases, bindings);
+                self.collect_parameter_value_bindings_from_expression_in_function(
+                    property,
+                    aliases,
+                    bindings,
+                    current_function_name,
+                );
+                self.collect_parameter_value_bindings_from_expression_in_function(
+                    value,
+                    aliases,
+                    bindings,
+                    current_function_name,
+                );
             }
             Expression::Unary { expression, .. }
             | Expression::Await(expression)
             | Expression::EnumerateKeys(expression)
             | Expression::GetIterator(expression)
             | Expression::IteratorClose(expression) => {
-                self.collect_parameter_value_bindings_from_expression(
-                    expression, aliases, bindings,
+                self.collect_parameter_value_bindings_from_expression_in_function(
+                    expression,
+                    aliases,
+                    bindings,
+                    current_function_name,
                 );
             }
             Expression::Array(elements) => {
@@ -67,8 +139,11 @@ impl DirectWasmCompiler {
                             expression
                         }
                     };
-                    self.collect_parameter_value_bindings_from_expression(
-                        expression, aliases, bindings,
+                    self.collect_parameter_value_bindings_from_expression_in_function(
+                        expression,
+                        aliases,
+                        bindings,
+                        current_function_name,
                     );
                 }
             }
@@ -76,75 +151,124 @@ impl DirectWasmCompiler {
                 for entry in entries {
                     match entry {
                         ObjectEntry::Data { key, value } => {
-                            self.collect_parameter_value_bindings_from_expression(
-                                key, aliases, bindings,
+                            self.collect_parameter_value_bindings_from_expression_in_function(
+                                key,
+                                aliases,
+                                bindings,
+                                current_function_name,
                             );
-                            self.collect_parameter_value_bindings_from_expression(
-                                value, aliases, bindings,
+                            self.collect_parameter_value_bindings_from_expression_in_function(
+                                value,
+                                aliases,
+                                bindings,
+                                current_function_name,
                             );
                         }
                         ObjectEntry::Getter { key, getter } => {
-                            self.collect_parameter_value_bindings_from_expression(
-                                key, aliases, bindings,
+                            self.collect_parameter_value_bindings_from_expression_in_function(
+                                key,
+                                aliases,
+                                bindings,
+                                current_function_name,
                             );
-                            self.collect_parameter_value_bindings_from_expression(
-                                getter, aliases, bindings,
+                            self.collect_parameter_value_bindings_from_expression_in_function(
+                                getter,
+                                aliases,
+                                bindings,
+                                current_function_name,
                             );
                         }
                         ObjectEntry::Setter { key, setter } => {
-                            self.collect_parameter_value_bindings_from_expression(
-                                key, aliases, bindings,
+                            self.collect_parameter_value_bindings_from_expression_in_function(
+                                key,
+                                aliases,
+                                bindings,
+                                current_function_name,
                             );
-                            self.collect_parameter_value_bindings_from_expression(
-                                setter, aliases, bindings,
+                            self.collect_parameter_value_bindings_from_expression_in_function(
+                                setter,
+                                aliases,
+                                bindings,
+                                current_function_name,
                             );
                         }
                         ObjectEntry::Spread(expression) => {
-                            self.collect_parameter_value_bindings_from_expression(
-                                expression, aliases, bindings,
+                            self.collect_parameter_value_bindings_from_expression_in_function(
+                                expression,
+                                aliases,
+                                bindings,
+                                current_function_name,
                             );
                         }
                     }
                 }
             }
             Expression::Binary { left, right, .. } => {
-                self.collect_parameter_value_bindings_from_expression(left, aliases, bindings);
-                self.collect_parameter_value_bindings_from_expression(right, aliases, bindings);
+                self.collect_parameter_value_bindings_from_expression_in_function(
+                    left,
+                    aliases,
+                    bindings,
+                    current_function_name,
+                );
+                self.collect_parameter_value_bindings_from_expression_in_function(
+                    right,
+                    aliases,
+                    bindings,
+                    current_function_name,
+                );
             }
             Expression::Conditional {
                 condition,
                 then_expression,
                 else_expression,
             } => {
-                self.collect_parameter_value_bindings_from_expression(condition, aliases, bindings);
-                self.collect_parameter_value_bindings_from_expression(
+                self.collect_parameter_value_bindings_from_expression_in_function(
+                    condition,
+                    aliases,
+                    bindings,
+                    current_function_name,
+                );
+                self.collect_parameter_value_bindings_from_expression_in_function(
                     then_expression,
                     aliases,
                     bindings,
+                    current_function_name,
                 );
-                self.collect_parameter_value_bindings_from_expression(
+                self.collect_parameter_value_bindings_from_expression_in_function(
                     else_expression,
                     aliases,
                     bindings,
+                    current_function_name,
                 );
             }
             Expression::Sequence(expressions) => {
                 for expression in expressions {
-                    self.collect_parameter_value_bindings_from_expression(
-                        expression, aliases, bindings,
+                    self.collect_parameter_value_bindings_from_expression_in_function(
+                        expression,
+                        aliases,
+                        bindings,
+                        current_function_name,
                     );
                 }
             }
             Expression::New { callee, arguments } | Expression::SuperCall { callee, arguments } => {
-                self.collect_parameter_value_bindings_from_expression(callee, aliases, bindings);
+                self.collect_parameter_value_bindings_from_expression_in_function(
+                    callee,
+                    aliases,
+                    bindings,
+                    current_function_name,
+                );
                 for argument in arguments {
                     let argument = match argument {
                         CallArgument::Expression(argument) | CallArgument::Spread(argument) => {
                             argument
                         }
                     };
-                    self.collect_parameter_value_bindings_from_expression(
-                        argument, aliases, bindings,
+                    self.collect_parameter_value_bindings_from_expression_in_function(
+                        argument,
+                        aliases,
+                        bindings,
+                        current_function_name,
                     );
                 }
             }

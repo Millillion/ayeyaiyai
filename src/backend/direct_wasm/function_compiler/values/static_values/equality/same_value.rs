@@ -1,4 +1,5 @@
 use super::*;
+use std::collections::HashSet;
 
 impl<'a> FunctionCompiler<'a> {
     pub(in crate::backend::direct_wasm) fn resolve_static_same_value_result_with_context(
@@ -7,6 +8,27 @@ impl<'a> FunctionCompiler<'a> {
         expected: &Expression,
         current_function_name: Option<&str>,
     ) -> Option<bool> {
+        let member_call_has_lexical_new_target_capture = |expression: &Expression| {
+            if let Expression::Call { callee, .. } = expression
+                && let Expression::Member { object, property } = callee.as_ref()
+            {
+                return self
+                    .resolve_member_function_capture_slots(object, property)
+                    .is_some_and(|capture_slots| capture_slots.contains_key("new.target"));
+            }
+            false
+        };
+        if member_call_has_lexical_new_target_capture(actual)
+            || member_call_has_lexical_new_target_capture(expected)
+        {
+            return None;
+        }
+        if self.same_value_expression_depends_on_dynamic_this(actual, current_function_name)
+            || self.same_value_expression_depends_on_dynamic_this(expected, current_function_name)
+        {
+            return None;
+        }
+
         let actual_primitive =
             self.resolve_static_primitive_expression_with_context(actual, current_function_name);
         let expected_primitive =
@@ -41,8 +63,78 @@ impl<'a> FunctionCompiler<'a> {
             };
         }
 
-        let actual_materialized = self.materialize_static_expression(actual);
-        let expected_materialized = self.materialize_static_expression(expected);
+        if actual_has_primitive != expected_has_primitive
+            && (matches!(actual, Expression::Identifier(_))
+                || matches!(expected, Expression::Identifier(_)))
+        {
+            return None;
+        }
+
+        let materializes_to_top_level_this = |expression: &Expression| {
+            current_function_name.is_none()
+                && (matches!(expression, Expression::This)
+                    || matches!(
+                        self.materialize_static_expression(expression),
+                        Expression::This
+                    ))
+        };
+        if materializes_to_top_level_this(actual) ^ materializes_to_top_level_this(expected) {
+            return None;
+        }
+
+        let actual_reference_key = self.resolve_static_reference_identity_key(actual);
+        let expected_reference_key = self.resolve_static_reference_identity_key(expected);
+        if current_function_name.is_none()
+            && ((actual_reference_key.as_deref() == Some("this"))
+                ^ (expected_reference_key.as_deref() == Some("this")))
+        {
+            return None;
+        }
+        if let (Some(actual_key), Some(expected_key)) =
+            (actual_reference_key, expected_reference_key)
+        {
+            if actual_key != expected_key
+                && (actual_key.contains("__ayy_scope$") || expected_key.contains("__ayy_scope$"))
+            {
+                return None;
+            }
+            return Some(actual_key == expected_key);
+        }
+
+        let apply_member_call_capture_slots =
+            |source: &Expression, materialized: Expression| -> Expression {
+                if let Expression::Call { callee, arguments } = source
+                    && arguments.is_empty()
+                    && let Expression::Member { object, property } = callee.as_ref()
+                    && let Expression::String(property_name) = property.as_ref()
+                    && let Some(StaticEvalOutcome::Value(value)) = self
+                        .resolve_static_member_call_outcome_with_context(
+                            object,
+                            property_name,
+                            current_function_name,
+                        )
+                {
+                    value
+                } else if let Expression::Call { callee, .. } = source
+                    && let Expression::Member { object, property } = callee.as_ref()
+                    && let Some(capture_slots) =
+                        self.resolve_member_function_capture_slots(object, property)
+                {
+                    let substituted =
+                        self.substitute_capture_slot_bindings(&materialized, &capture_slots);
+                    if matches!(substituted, Expression::Identifier(_)) {
+                        substituted
+                    } else {
+                        self.materialize_static_expression(&substituted)
+                    }
+                } else {
+                    materialized
+                }
+            };
+        let actual_materialized =
+            apply_member_call_capture_slots(actual, self.materialize_static_expression(actual));
+        let expected_materialized =
+            apply_member_call_capture_slots(expected, self.materialize_static_expression(expected));
 
         let actual_is_this = matches!(actual_materialized, Expression::This);
         let expected_is_this = matches!(expected_materialized, Expression::This);
@@ -98,10 +190,165 @@ impl<'a> FunctionCompiler<'a> {
             self.resolve_static_reference_identity_key(&actual_materialized),
             self.resolve_static_reference_identity_key(&expected_materialized),
         ) {
+            if actual_key != expected_key
+                && (actual_key.contains("__ayy_scope$") || expected_key.contains("__ayy_scope$"))
+            {
+                return None;
+            }
             return Some(actual_key == expected_key);
         }
 
         None
+    }
+
+    fn same_value_context_user_function(
+        &self,
+        current_function_name: Option<&str>,
+    ) -> Option<&UserFunction> {
+        current_function_name
+            .and_then(|name| self.user_function(name))
+            .or_else(|| self.current_user_function())
+    }
+
+    fn same_value_context_is_derived_constructor(
+        &self,
+        current_function_name: Option<&str>,
+    ) -> bool {
+        current_function_name
+            .and_then(|name| self.user_function(name))
+            .is_some_and(|function| self.user_function_is_derived_constructor(function))
+            || (current_function_name.is_none() && self.current_function_is_derived_constructor())
+    }
+
+    fn same_value_expression_depends_on_dynamic_this(
+        &self,
+        expression: &Expression,
+        current_function_name: Option<&str>,
+    ) -> bool {
+        let Some(user_function) = self.same_value_context_user_function(current_function_name)
+        else {
+            return false;
+        };
+        if user_function.lexical_this
+            || self.same_value_context_is_derived_constructor(current_function_name)
+        {
+            return false;
+        }
+        self.expression_contains_dynamic_this_reference(expression, &mut HashSet::new())
+    }
+
+    fn expression_contains_dynamic_this_reference(
+        &self,
+        expression: &Expression,
+        seen_aliases: &mut HashSet<String>,
+    ) -> bool {
+        match expression {
+            Expression::This
+            | Expression::SuperMember { .. }
+            | Expression::AssignSuperMember { .. }
+            | Expression::SuperCall { .. } => true,
+            Expression::Identifier(name) => {
+                if !seen_aliases.insert(name.clone()) {
+                    return false;
+                }
+                self.resolve_bound_alias_expression(expression)
+                    .filter(|resolved| !static_expression_matches(resolved, expression))
+                    .is_some_and(|resolved| {
+                        self.expression_contains_dynamic_this_reference(&resolved, seen_aliases)
+                    })
+            }
+            Expression::Update { name, .. } => {
+                if !seen_aliases.insert(name.clone()) {
+                    return false;
+                }
+                let identifier = Expression::Identifier(name.clone());
+                self.resolve_bound_alias_expression(&identifier)
+                    .filter(|resolved| !static_expression_matches(resolved, &identifier))
+                    .is_some_and(|resolved| {
+                        self.expression_contains_dynamic_this_reference(&resolved, seen_aliases)
+                    })
+            }
+            Expression::Member { object, property } => {
+                self.expression_contains_dynamic_this_reference(object, seen_aliases)
+                    || self.expression_contains_dynamic_this_reference(property, seen_aliases)
+            }
+            Expression::Assign { value, .. }
+            | Expression::Await(value)
+            | Expression::EnumerateKeys(value)
+            | Expression::GetIterator(value)
+            | Expression::IteratorClose(value)
+            | Expression::Unary {
+                expression: value, ..
+            } => self.expression_contains_dynamic_this_reference(value, seen_aliases),
+            Expression::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                self.expression_contains_dynamic_this_reference(object, seen_aliases)
+                    || self.expression_contains_dynamic_this_reference(property, seen_aliases)
+                    || self.expression_contains_dynamic_this_reference(value, seen_aliases)
+            }
+            Expression::Binary { left, right, .. } => {
+                self.expression_contains_dynamic_this_reference(left, seen_aliases)
+                    || self.expression_contains_dynamic_this_reference(right, seen_aliases)
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                self.expression_contains_dynamic_this_reference(condition, seen_aliases)
+                    || self
+                        .expression_contains_dynamic_this_reference(then_expression, seen_aliases)
+                    || self
+                        .expression_contains_dynamic_this_reference(else_expression, seen_aliases)
+            }
+            Expression::Sequence(expressions) => expressions.iter().any(|expression| {
+                self.expression_contains_dynamic_this_reference(expression, seen_aliases)
+            }),
+            Expression::Call { callee, arguments } | Expression::New { callee, arguments } => {
+                self.expression_contains_dynamic_this_reference(callee, seen_aliases)
+                    || arguments.iter().any(|argument| match argument {
+                        CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                            self.expression_contains_dynamic_this_reference(
+                                expression,
+                                seen_aliases,
+                            )
+                        }
+                    })
+            }
+            Expression::Array(elements) => elements.iter().any(|element| match element {
+                ArrayElement::Expression(expression) | ArrayElement::Spread(expression) => {
+                    self.expression_contains_dynamic_this_reference(expression, seen_aliases)
+                }
+            }),
+            Expression::Object(entries) => entries.iter().any(|entry| match entry {
+                ObjectEntry::Data { key, value } => {
+                    self.expression_contains_dynamic_this_reference(key, seen_aliases)
+                        || self.expression_contains_dynamic_this_reference(value, seen_aliases)
+                }
+                ObjectEntry::Getter { key, getter } => {
+                    self.expression_contains_dynamic_this_reference(key, seen_aliases)
+                        || self.expression_contains_dynamic_this_reference(getter, seen_aliases)
+                }
+                ObjectEntry::Setter { key, setter } => {
+                    self.expression_contains_dynamic_this_reference(key, seen_aliases)
+                        || self.expression_contains_dynamic_this_reference(setter, seen_aliases)
+                }
+                ObjectEntry::Spread(expression) => {
+                    self.expression_contains_dynamic_this_reference(expression, seen_aliases)
+                }
+            }),
+            Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined
+            | Expression::NewTarget
+            | Expression::Sent => false,
+        }
     }
 
     pub(in crate::backend::direct_wasm) fn resolve_static_object_is_call_result(

@@ -1,6 +1,143 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn statement_contains_nested_promise_member_chain(statement: &Statement) -> bool {
+        match statement {
+            Statement::Block { body } => body
+                .iter()
+                .any(Self::statement_contains_nested_promise_member_chain),
+            Statement::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                Self::expression_contains_nested_promise_member_chain(condition)
+                    || then_branch
+                        .iter()
+                        .any(Self::statement_contains_nested_promise_member_chain)
+                    || else_branch
+                        .iter()
+                        .any(Self::statement_contains_nested_promise_member_chain)
+            }
+            Statement::Var { value, .. }
+            | Statement::Let { value, .. }
+            | Statement::Assign { value, .. }
+            | Statement::Return(value)
+            | Statement::Throw(value)
+            | Statement::Expression(value) => {
+                Self::expression_contains_nested_promise_member_chain(value)
+            }
+            Statement::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                Self::expression_contains_nested_promise_member_chain(object)
+                    || Self::expression_contains_nested_promise_member_chain(property)
+                    || Self::expression_contains_nested_promise_member_chain(value)
+            }
+            Statement::Print { values } => values
+                .iter()
+                .any(Self::expression_contains_nested_promise_member_chain),
+            _ => false,
+        }
+    }
+
+    fn expression_contains_nested_promise_member_chain(expression: &Expression) -> bool {
+        match expression {
+            Expression::Call { callee, arguments }
+            | Expression::SuperCall { callee, arguments }
+            | Expression::New { callee, arguments } => {
+                if let Expression::Member { object, property } = callee.as_ref() {
+                    if matches!(
+                        property.as_ref(),
+                        Expression::String(name) if name == "then" || name == "catch"
+                    ) {
+                        return true;
+                    }
+                    if Self::expression_contains_nested_promise_member_chain(object)
+                        || Self::expression_contains_nested_promise_member_chain(property)
+                    {
+                        return true;
+                    }
+                } else if Self::expression_contains_nested_promise_member_chain(callee) {
+                    return true;
+                }
+                arguments.iter().any(|argument| match argument {
+                    CallArgument::Expression(value) | CallArgument::Spread(value) => {
+                        Self::expression_contains_nested_promise_member_chain(value)
+                    }
+                })
+            }
+            Expression::Member { object, property } => {
+                Self::expression_contains_nested_promise_member_chain(object)
+                    || Self::expression_contains_nested_promise_member_chain(property)
+            }
+            Expression::Assign { value, .. }
+            | Expression::Await(value)
+            | Expression::EnumerateKeys(value)
+            | Expression::GetIterator(value)
+            | Expression::IteratorClose(value) => {
+                Self::expression_contains_nested_promise_member_chain(value)
+            }
+            Expression::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                Self::expression_contains_nested_promise_member_chain(object)
+                    || Self::expression_contains_nested_promise_member_chain(property)
+                    || Self::expression_contains_nested_promise_member_chain(value)
+            }
+            Expression::AssignSuperMember { property, value } => {
+                Self::expression_contains_nested_promise_member_chain(property)
+                    || Self::expression_contains_nested_promise_member_chain(value)
+            }
+            Expression::Unary { expression, .. } => {
+                Self::expression_contains_nested_promise_member_chain(expression)
+            }
+            Expression::Binary { left, right, .. } => {
+                Self::expression_contains_nested_promise_member_chain(left)
+                    || Self::expression_contains_nested_promise_member_chain(right)
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                Self::expression_contains_nested_promise_member_chain(condition)
+                    || Self::expression_contains_nested_promise_member_chain(then_expression)
+                    || Self::expression_contains_nested_promise_member_chain(else_expression)
+            }
+            Expression::Sequence(expressions) => expressions
+                .iter()
+                .any(Self::expression_contains_nested_promise_member_chain),
+            Expression::Array(elements) => elements.iter().any(|element| match element {
+                ArrayElement::Expression(value) | ArrayElement::Spread(value) => {
+                    Self::expression_contains_nested_promise_member_chain(value)
+                }
+            }),
+            Expression::Object(entries) => entries.iter().any(|entry| match entry {
+                ObjectEntry::Data { key, value } => {
+                    Self::expression_contains_nested_promise_member_chain(key)
+                        || Self::expression_contains_nested_promise_member_chain(value)
+                }
+                ObjectEntry::Getter { key, getter } => {
+                    Self::expression_contains_nested_promise_member_chain(key)
+                        || Self::expression_contains_nested_promise_member_chain(getter)
+                }
+                ObjectEntry::Setter { key, setter } => {
+                    Self::expression_contains_nested_promise_member_chain(key)
+                        || Self::expression_contains_nested_promise_member_chain(setter)
+                }
+                ObjectEntry::Spread(value) => {
+                    Self::expression_contains_nested_promise_member_chain(value)
+                }
+            }),
+            _ => false,
+        }
+    }
+
     fn statement_contains_nested_async_generator_return_or_throw_chain(
         statement: &Statement,
     ) -> bool {
@@ -175,10 +312,10 @@ impl<'a> FunctionCompiler<'a> {
         else {
             return false;
         };
-        function
-            .body
-            .iter()
-            .any(Self::statement_contains_nested_async_generator_return_or_throw_chain)
+        function.body.iter().any(|statement| {
+            Self::statement_contains_nested_async_generator_return_or_throw_chain(statement)
+                || Self::statement_contains_nested_promise_member_chain(statement)
+        })
     }
 
     pub(in crate::backend::direct_wasm) fn promise_member_call_requires_runtime_fallback(

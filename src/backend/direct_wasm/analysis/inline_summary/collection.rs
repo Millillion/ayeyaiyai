@@ -79,6 +79,7 @@ pub(in crate::backend::direct_wasm) fn collect_inline_function_summary(
                 }
                 summary.return_value =
                     Some(substitute_inline_summary_bindings(value, &local_bindings));
+                return Some(summary);
             }
             Statement::Block { body } if body.is_empty() => {}
             _ => return None,

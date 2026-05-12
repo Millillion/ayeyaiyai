@@ -1,5 +1,25 @@
 use super::*;
 
+fn collect_for_head_lexical_binding_names(head: &ForHead) -> Result<Vec<String>> {
+    let mut names = Vec::new();
+    match head {
+        ForHead::VarDecl(variable_declaration)
+            if !matches!(variable_declaration.kind, VarDeclKind::Var) =>
+        {
+            for declarator in &variable_declaration.decls {
+                collect_for_of_binding_names(&declarator.name, &mut names)?;
+            }
+        }
+        ForHead::UsingDecl(using_declaration) => {
+            for declarator in &using_declaration.decls {
+                collect_for_of_binding_names(&declarator.name, &mut names)?;
+            }
+        }
+        _ => {}
+    }
+    Ok(names)
+}
+
 impl Lowerer {
     pub(crate) fn lower_for_of_statement(
         &mut self,
@@ -52,7 +72,13 @@ impl Lowerer {
     ) -> Result<Vec<Statement>> {
         let iterator_name = self.fresh_temporary_name("for_of_iter");
         let step_name = self.fresh_temporary_name("for_of_step");
+        let value_name = self.fresh_temporary_name("for_of_value");
         let done_name = self.fresh_temporary_name("for_of_done");
+        let lexical_binding_names = collect_for_head_lexical_binding_names(&for_of_statement.left)?;
+        let pushed_loop_head_scope = !lexical_binding_names.is_empty();
+        if pushed_loop_head_scope {
+            self.push_renaming_binding_scope(lexical_binding_names.clone());
+        }
         let iterator_value =
             Expression::GetIterator(Box::new(self.lower_expression(&for_of_statement.right)?));
         let step_value = Expression::Call {
@@ -66,10 +92,13 @@ impl Lowerer {
             object: Box::new(Expression::Identifier(step_name.clone())),
             property: Box::new(Expression::String("done".to_string())),
         };
-        let iterated_value = Expression::Member {
+        let mut iterated_value = Expression::Member {
             object: Box::new(Expression::Identifier(step_name.clone())),
             property: Box::new(Expression::String("value".to_string())),
         };
+        if for_of_statement.is_await {
+            iterated_value = Expression::Await(Box::new(iterated_value));
+        }
         let break_hook = Expression::Conditional {
             condition: Box::new(Expression::Identifier(done_name.clone())),
             then_expression: Box::new(Expression::Undefined),
@@ -77,7 +106,29 @@ impl Lowerer {
                 iterator_name.clone(),
             )))),
         };
-        let binding = self.lower_for_of_binding(&for_of_statement.left, iterated_value)?;
+        let lowered_binding_and_body =
+            (|| -> Result<(ForOfBinding, Vec<Statement>, Vec<String>)> {
+                let binding_value = Expression::Identifier(value_name.clone());
+                let binding = if generator_body {
+                    self.lower_generator_for_of_binding(&for_of_statement.left, binding_value)?
+                } else {
+                    self.lower_for_of_binding(&for_of_statement.left, binding_value)?
+                };
+                let per_iteration_bindings = lexical_binding_names
+                    .iter()
+                    .map(|name| self.resolve_binding_name(name))
+                    .collect();
+                let body = if generator_body {
+                    self.lower_generator_loop_body(&for_of_statement.body, allow_return)?
+                } else {
+                    self.lower_block_or_statement(&for_of_statement.body, allow_return, true)?
+                };
+                Ok((binding, body, per_iteration_bindings))
+            })();
+        if pushed_loop_head_scope {
+            self.pop_binding_scope();
+        }
+        let (binding, lowered_loop_body, per_iteration_bindings) = lowered_binding_and_body?;
 
         let mut body = vec![
             Statement::Let {
@@ -96,32 +147,47 @@ impl Lowerer {
                 ],
                 else_branch: Vec::new(),
             },
+            Statement::Let {
+                name: value_name,
+                mutable: true,
+                value: iterated_value,
+            },
         ];
-        body.extend(binding.per_iteration);
-        body.extend(if generator_body {
-            self.lower_generator_loop_body(&for_of_statement.body, allow_return)?
-        } else {
-            self.lower_block_or_statement(&for_of_statement.body, allow_return, true)?
+        let catch_name = self.fresh_temporary_name("for_of_catch");
+        let mut protected_iteration = binding.per_iteration;
+        protected_iteration.extend(lowered_loop_body);
+        body.push(Statement::Try {
+            body: protected_iteration,
+            catch_binding: Some(catch_name.clone()),
+            catch_setup: Vec::new(),
+            catch_body: vec![
+                Statement::Expression(Expression::IteratorClose(Box::new(Expression::Identifier(
+                    iterator_name.clone(),
+                )))),
+                Statement::Throw(Expression::Identifier(catch_name)),
+            ],
         });
 
-        let mut lowered = vec![Statement::Let {
+        let mut init = vec![Statement::Let {
             name: iterator_name,
             mutable: true,
             value: iterator_value,
         }];
-        lowered.extend(binding.before_loop);
-        lowered.push(Statement::Let {
+        init.extend(binding.before_loop);
+        init.push(Statement::Let {
             name: done_name,
             mutable: true,
             value: Expression::Bool(false),
         });
-        lowered.push(Statement::While {
+        Ok(vec![Statement::For {
             labels: Vec::new(),
-            condition: Expression::Bool(true),
+            init,
+            per_iteration_bindings,
+            condition: Some(Expression::Bool(true)),
+            update: None,
             break_hook: Some(break_hook),
             body,
-        });
-        Ok(lowered)
+        }])
     }
 
     pub(crate) fn lower_for_in_statement(
@@ -139,7 +205,26 @@ impl Lowerer {
             object: Box::new(Expression::Identifier(keys_name.clone())),
             property: Box::new(Expression::Identifier(index_name.clone())),
         };
-        let binding = self.lower_for_of_binding(&for_in_statement.left, current_key.clone())?;
+        let lexical_binding_names = collect_for_head_lexical_binding_names(&for_in_statement.left)?;
+        if !lexical_binding_names.is_empty() {
+            self.push_renaming_binding_scope(lexical_binding_names.clone());
+        }
+        let lowered_binding_and_body =
+            (|| -> Result<(ForOfBinding, Vec<Statement>, Vec<String>)> {
+                let binding =
+                    self.lower_for_of_binding(&for_in_statement.left, current_key.clone())?;
+                let per_iteration_bindings = lexical_binding_names
+                    .iter()
+                    .map(|name| self.resolve_binding_name(name))
+                    .collect();
+                let body =
+                    self.lower_block_or_statement(&for_in_statement.body, allow_return, true)?;
+                Ok((binding, body, per_iteration_bindings))
+            })();
+        if !lexical_binding_names.is_empty() {
+            self.pop_binding_scope();
+        }
+        let (binding, lowered_loop_body, per_iteration_bindings) = lowered_binding_and_body?;
 
         let mut init = binding.before_loop;
         init.push(Statement::Let {
@@ -158,25 +243,22 @@ impl Lowerer {
             value: Expression::Number(0.0),
         });
 
-        let mut body = vec![Statement::If {
-            condition: Expression::Unary {
-                op: UnaryOp::Not,
-                expression: Box::new(Expression::Binary {
-                    op: BinaryOp::In,
-                    left: Box::new(current_key),
-                    right: Box::new(target_expression),
-                }),
+        let mut guarded_body = binding.per_iteration;
+        guarded_body.extend(lowered_loop_body);
+        let body = vec![Statement::If {
+            condition: Expression::Binary {
+                op: BinaryOp::In,
+                left: Box::new(current_key),
+                right: Box::new(target_expression),
             },
-            then_branch: vec![Statement::Continue { label: None }],
+            then_branch: guarded_body,
             else_branch: Vec::new(),
         }];
-        body.extend(binding.per_iteration);
-        body.extend(self.lower_block_or_statement(&for_in_statement.body, allow_return, true)?);
 
         Ok(vec![Statement::For {
             labels: Vec::new(),
             init,
-            per_iteration_bindings: Vec::new(),
+            per_iteration_bindings,
             condition: Some(Expression::Binary {
                 op: BinaryOp::LessThan,
                 left: Box::new(Expression::Identifier(index_name.clone())),
@@ -240,32 +322,44 @@ impl Lowerer {
     ) -> Result<Vec<Statement>> {
         let bindings = collect_switch_bindings(switch_statement)?;
         let binding_names = bindings.iter().cloned().collect::<HashSet<_>>();
-        let cases = switch_statement
-            .cases
-            .iter()
-            .map(|case| {
-                Ok(SwitchCase {
-                    test: case
-                        .test
-                        .as_deref()
-                        .map(|expression| self.lower_expression(expression))
-                        .transpose()?,
-                    body: self.lower_switch_case_statements(
-                        &case.cons,
-                        allow_return,
-                        true,
-                        &binding_names,
-                    )?,
-                })
-            })
-            .collect::<Result<Vec<_>>>()?;
+        let discriminant = self.lower_expression(&switch_statement.discriminant)?;
 
-        Ok(vec![Statement::Switch {
-            labels: Vec::new(),
-            bindings,
-            discriminant: self.lower_expression(&switch_statement.discriminant)?,
-            cases,
-        }])
+        self.push_renaming_binding_scope(bindings.clone());
+        let lowered = (|| -> Result<Statement> {
+            let scoped_bindings = bindings
+                .iter()
+                .map(|name| self.resolve_binding_name(name))
+                .collect::<Vec<_>>();
+            let cases = switch_statement
+                .cases
+                .iter()
+                .map(|case| {
+                    Ok(SwitchCase {
+                        test: case
+                            .test
+                            .as_deref()
+                            .map(|expression| self.lower_expression(expression))
+                            .transpose()?,
+                        body: self.lower_switch_case_statements(
+                            &case.cons,
+                            allow_return,
+                            true,
+                            &binding_names,
+                        )?,
+                    })
+                })
+                .collect::<Result<Vec<_>>>()?;
+
+            Ok(Statement::Switch {
+                labels: Vec::new(),
+                bindings: scoped_bindings,
+                discriminant,
+                cases,
+            })
+        })();
+        self.pop_binding_scope();
+
+        Ok(vec![lowered?])
     }
 
     pub(crate) fn lower_switch_case_statements(
@@ -316,8 +410,9 @@ impl Lowerer {
             };
 
             if let Pat::Ident(identifier) = &declarator.name {
-                lowered.push(Statement::Assign {
-                    name: identifier.id.sym.to_string(),
+                lowered.push(Statement::Let {
+                    name: self.resolve_binding_name(identifier.id.sym.as_ref()),
+                    mutable: !matches!(variable_declaration.kind, VarDeclKind::Const),
                     value,
                 });
                 continue;
@@ -332,7 +427,9 @@ impl Lowerer {
             self.lower_for_of_pattern_binding(
                 &declarator.name,
                 Expression::Identifier(temporary_name),
-                ForOfPatternBindingKind::Assignment,
+                ForOfPatternBindingKind::Lexical {
+                    mutable: !matches!(variable_declaration.kind, VarDeclKind::Const),
+                },
                 &mut lowered,
             )?;
         }
@@ -415,7 +512,18 @@ fn for_of_binding_identifier_name(left: &ForHead) -> Option<&str> {
             };
             Some(identifier.id.sym.as_ref())
         }
-        _ => None,
+        ForHead::UsingDecl(using_declaration) => {
+            let [declarator] = &using_declaration.decls[..] else {
+                return None;
+            };
+            if declarator.init.is_some() {
+                return None;
+            }
+            let Pat::Ident(identifier) = &declarator.name else {
+                return None;
+            };
+            Some(identifier.id.sym.as_ref())
+        }
     }
 }
 

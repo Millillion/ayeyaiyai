@@ -8,18 +8,21 @@ pub(in crate::backend::direct_wasm) fn infer_call_result_kind(
         "String" => Some(StaticValueKind::String),
         "Boolean" => Some(StaticValueKind::Bool),
         "isNaN" => Some(StaticValueKind::Bool),
-        "Object" | "Array" | "ArrayBuffer" | "Date" | "RegExp" | "Map" | "Set" | "Error"
-        | "EvalError" | "RangeError" | "ReferenceError" | "SyntaxError" | "TypeError"
-        | "URIError" | "AggregateError" | "Promise" | "WeakRef" => Some(StaticValueKind::Object),
+        "Object" | "Array" | "ArrayBuffer" | "SharedArrayBuffer" | "DataView" | "Date"
+        | "RegExp" | "Map" | "Set" | "Error" | "EvalError" | "RangeError" | "ReferenceError"
+        | "SyntaxError" | "TypeError" | "URIError" | "AggregateError" | "SuppressedError"
+        | "Promise" | "WeakMap" | "WeakRef" | "WeakSet" => Some(StaticValueKind::Object),
         "Uint8Array" | "Int8Array" | "Uint16Array" | "Int16Array" | "Uint32Array"
-        | "Int32Array" | "Float32Array" | "Float64Array" | "Uint8ClampedArray" => {
-            Some(StaticValueKind::Object)
-        }
+        | "Int32Array" | "Float32Array" | "Float64Array" | "Uint8ClampedArray"
+        | "BigInt64Array" | "BigUint64Array" => Some(StaticValueKind::Object),
         "BigInt" => Some(StaticValueKind::BigInt),
         "Symbol" => Some(StaticValueKind::Symbol),
-        "Function" | FUNCTION_CONSTRUCTOR_FAMILY_BUILTIN | "eval" => {
-            Some(StaticValueKind::Function)
-        }
+        "Function"
+        | "AsyncFunction"
+        | "GeneratorFunction"
+        | "AsyncGeneratorFunction"
+        | FUNCTION_CONSTRUCTOR_FAMILY_BUILTIN
+        | "eval" => Some(StaticValueKind::Function),
         _ => None,
     }
 }
@@ -29,7 +32,11 @@ pub(in crate::backend::direct_wasm) fn is_builtin_like_capture_identifier(name: 
         || name == "console"
         || matches!(
             name,
-            "__assert" | "__assertSameValue" | "__assertNotSameValue" | "__ayyAssertThrows"
+            "__assert"
+                | "__assertSameValue"
+                | "__assertNotSameValue"
+                | "__ayyAssertThrows"
+                | "__ayyClassPrototypeInit"
         )
         || builtin_identifier_kind(name).is_some()
         || infer_call_result_kind(name).is_some()
@@ -64,7 +71,7 @@ pub(in crate::backend::direct_wasm) fn typed_array_builtin_bytes_per_element(
         "Uint8Array" | "Int8Array" | "Uint8ClampedArray" => Some(1),
         "Uint16Array" | "Int16Array" => Some(2),
         "Uint32Array" | "Int32Array" | "Float32Array" => Some(4),
-        "Float64Array" => Some(8),
+        "Float64Array" | "BigInt64Array" | "BigUint64Array" => Some(8),
         _ => None,
     }
 }

@@ -1,6 +1,85 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn emit_strict_deleted_member_source_check(
+        &mut self,
+        hidden_name: &str,
+        fallback_source_name: Option<&str>,
+    ) -> DirectResult<()> {
+        if !self.state.speculation.execution_context.strict_mode {
+            return Ok(());
+        }
+
+        let deleted_marker_name =
+            Self::capture_slot_member_source_deleted_binding_name(hidden_name);
+        let deleted_marker = self.ensure_implicit_global_binding(&deleted_marker_name);
+        self.push_global_get(deleted_marker.present_index);
+        self.state.emission.output.instructions.push(0x04);
+        self.state
+            .emission
+            .output
+            .instructions
+            .push(EMPTY_BLOCK_TYPE);
+        self.push_control_frame();
+        self.emit_named_error_throw("ReferenceError")?;
+        self.state.emission.output.instructions.push(0x0b);
+        self.pop_control_frame();
+
+        if let Some(source_name) = self.resolve_capture_slot_source_binding_name(hidden_name)
+            && let Some((object_name, property_name)) =
+                Self::capture_slot_member_source_key_parts(&source_name)
+        {
+            let object = Expression::Identifier(object_name);
+            let property = Expression::String(property_name);
+            if let Some(deleted_binding) =
+                self.resolve_runtime_object_property_shadow_deleted_binding(&object, &property)
+            {
+                self.push_global_get(deleted_binding.present_index);
+                self.state.emission.output.instructions.push(0x04);
+                self.state
+                    .emission
+                    .output
+                    .instructions
+                    .push(EMPTY_BLOCK_TYPE);
+                self.push_control_frame();
+                self.emit_named_error_throw("ReferenceError")?;
+                self.state.emission.output.instructions.push(0x0b);
+                self.pop_control_frame();
+            }
+        }
+        if let Some(source_name) = self
+            .resolve_capture_slot_source_binding_name(hidden_name)
+            .or_else(|| fallback_source_name.map(str::to_string))
+            && Self::capture_slot_member_source_key_parts(&source_name).is_none()
+            && (self.global_has_binding(&source_name)
+                || self.backend.global_has_lexical_binding(&source_name)
+                || self.global_has_implicit_binding(&source_name)
+                || self.backend.global_function_binding(&source_name).is_some())
+        {
+            let property = Expression::String(source_name);
+            if let Some(deleted_binding) = self
+                .resolve_runtime_object_property_shadow_deleted_binding(
+                    &Expression::This,
+                    &property,
+                )
+            {
+                self.push_global_get(deleted_binding.present_index);
+                self.state.emission.output.instructions.push(0x04);
+                self.state
+                    .emission
+                    .output
+                    .instructions
+                    .push(EMPTY_BLOCK_TYPE);
+                self.push_control_frame();
+                self.emit_named_error_throw("ReferenceError")?;
+                self.state.emission.output.instructions.push(0x0b);
+                self.pop_control_frame();
+            }
+        }
+
+        Ok(())
+    }
+
     pub(in crate::backend::direct_wasm) fn emit_eval_local_function_binding_read(
         &mut self,
         name: &str,
@@ -11,6 +90,8 @@ impl<'a> FunctionCompiler<'a> {
         let Some(binding) = self.hidden_implicit_global_binding(&hidden_name) else {
             return Ok(false);
         };
+
+        self.emit_strict_deleted_member_source_check(&hidden_name, Some(name))?;
 
         self.push_global_get(binding.present_index);
         self.state.emission.output.instructions.push(0x04);
@@ -36,6 +117,8 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(false);
         };
 
+        self.emit_strict_deleted_member_source_check(&hidden_name, Some(name))?;
+
         self.push_global_get(binding.present_index);
         self.state.emission.output.instructions.push(0x04);
         self.state.emission.output.instructions.push(I32_TYPE);
@@ -60,10 +143,27 @@ impl<'a> FunctionCompiler<'a> {
         let Some(binding) = self.hidden_implicit_global_binding(&hidden_name) else {
             return Ok(false);
         };
-        self.push_local_get(value_local);
-        self.push_global_set(binding.value_index);
-        self.push_i32_const(1);
-        self.push_global_set(binding.present_index);
+        self.emit_strict_deleted_member_source_check(&hidden_name, Some(name))?;
+        self.push_global_get(binding.present_index);
+        self.state.emission.output.instructions.push(0x04);
+        self.state
+            .emission
+            .output
+            .instructions
+            .push(EMPTY_BLOCK_TYPE);
+        self.push_control_frame();
+        if self.user_function_capture_binding_is_immutable(name) {
+            self.emit_named_error_throw("TypeError")?;
+        } else {
+            self.push_local_get(value_local);
+            self.push_global_set(binding.value_index);
+            self.push_i32_const(1);
+            self.push_global_set(binding.present_index);
+        }
+        self.state.emission.output.instructions.push(0x05);
+        self.emit_named_error_throw("ReferenceError")?;
+        self.state.emission.output.instructions.push(0x0b);
+        self.pop_control_frame();
         Ok(true)
     }
 

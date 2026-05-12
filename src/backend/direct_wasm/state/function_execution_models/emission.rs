@@ -6,6 +6,7 @@ pub(in crate::backend::direct_wasm) struct FunctionControlFlowState {
     pub(in crate::backend::direct_wasm) loop_stack: Vec<LoopContext>,
     pub(in crate::backend::direct_wasm) break_stack: Vec<BreakContext>,
     pub(in crate::backend::direct_wasm) try_stack: Vec<TryContext>,
+    pub(in crate::backend::direct_wasm) tail_call_restart_target: Option<usize>,
 }
 
 #[derive(Clone, Default)]

@@ -5,7 +5,7 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         user_function: &UserFunction,
         arguments: &[Expression],
-        this_binding: &Expression,
+        _this_binding: &Expression,
     ) -> DirectResult<InlineSummaryEmissionState> {
         let prepared_capture_bindings =
             self.prepare_user_function_capture_bindings(user_function)?;
@@ -13,14 +13,12 @@ impl<'a> FunctionCompiler<'a> {
             self.synced_prepared_user_function_capture_source_bindings(&prepared_capture_bindings);
         let capture_snapshot =
             self.snapshot_user_function_capture_source_bindings(&prepared_capture_bindings);
-        let updated_bindings = self
-            .resolve_bound_snapshot_user_function_result_with_arguments_and_this(
-                &user_function.name,
-                &capture_snapshot,
-                arguments,
-                this_binding,
-            )
-            .map(|(_, updated_bindings)| updated_bindings);
+        let _capture_snapshot = capture_snapshot;
+        // Explicit-call-frame inline emission already executes either substituted summary effects
+        // or the lowered fallback statements directly. Precomputing bound-snapshot updates here can
+        // recurse indefinitely on nested immediate-promise callback chains, so this path uses
+        // conservative post-call invalidation instead of eager snapshot resolution.
+        let updated_bindings = None;
         let assigned_nonlocal_bindings =
             self.collect_user_function_assigned_nonlocal_bindings(user_function);
         let mut call_effect_nonlocal_bindings =
@@ -50,8 +48,12 @@ impl<'a> FunctionCompiler<'a> {
                 .map(crate::ir::hir::ArrayElement::Expression)
                 .collect(),
         );
-        let (call_arguments, inline_parameter_scope_names) = self
-            .prepare_inline_summary_call_arguments(user_function, arguments, &arguments_binding)?;
+        let (call_arguments, inline_parameter_scope_names, inline_parameter_shadow_writebacks) =
+            self.prepare_inline_summary_call_arguments(
+                user_function,
+                arguments,
+                &arguments_binding,
+            )?;
 
         Ok(InlineSummaryEmissionState {
             prepared_capture_bindings,
@@ -64,6 +66,7 @@ impl<'a> FunctionCompiler<'a> {
             arguments_binding,
             call_arguments,
             inline_parameter_scope_names,
+            inline_parameter_shadow_writebacks,
         })
     }
 
@@ -72,9 +75,10 @@ impl<'a> FunctionCompiler<'a> {
         user_function: &UserFunction,
         arguments: &[Expression],
         arguments_binding: &Expression,
-    ) -> DirectResult<(Vec<CallArgument>, Vec<String>)> {
+    ) -> DirectResult<(Vec<CallArgument>, Vec<String>, Vec<(String, String)>)> {
         let mut call_arguments = Vec::new();
         let mut inline_parameter_scope_names = Vec::new();
+        let mut inline_parameter_shadow_writebacks = Vec::new();
         let visible_param_count = user_function.visible_param_count() as usize;
         for (param_index, param_name) in user_function
             .params
@@ -101,6 +105,7 @@ impl<'a> FunctionCompiler<'a> {
             self.emit_numeric_expression(&argument)?;
             self.push_local_set(hidden_local);
             self.update_capture_slot_binding_from_expression(&hidden_name, &argument)?;
+            self.sync_capture_slot_runtime_object_shadows_from_expression(&hidden_name, &argument)?;
             self.state
                 .emission
                 .lexical_scopes
@@ -108,6 +113,25 @@ impl<'a> FunctionCompiler<'a> {
                 .entry(param_name.clone())
                 .or_default()
                 .push(hidden_name.clone());
+            match &argument {
+                Expression::Identifier(source_name) => {
+                    if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+                        eprintln!(
+                            "inline_param_writeback hidden={hidden_name} source_owner={source_name}"
+                        );
+                    }
+                    inline_parameter_shadow_writebacks
+                        .push((hidden_name.clone(), source_name.clone()));
+                }
+                Expression::This => {
+                    if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+                        eprintln!("inline_param_writeback hidden={hidden_name} source_owner=this");
+                    }
+                    inline_parameter_shadow_writebacks
+                        .push((hidden_name.clone(), "this".to_string()));
+                }
+                _ => {}
+            }
             call_arguments.push(CallArgument::Expression(Expression::Identifier(
                 hidden_name,
             )));
@@ -131,6 +155,10 @@ impl<'a> FunctionCompiler<'a> {
             self.emit_numeric_expression(arguments_binding)?;
             self.push_local_set(hidden_local);
             self.update_capture_slot_binding_from_expression(&hidden_name, arguments_binding)?;
+            self.sync_capture_slot_runtime_object_shadows_from_expression(
+                &hidden_name,
+                arguments_binding,
+            )?;
             self.state
                 .emission
                 .lexical_scopes
@@ -140,7 +168,11 @@ impl<'a> FunctionCompiler<'a> {
                 .push(hidden_name);
             inline_parameter_scope_names.push("arguments".to_string());
         }
-        Ok((call_arguments, inline_parameter_scope_names))
+        Ok((
+            call_arguments,
+            inline_parameter_scope_names,
+            inline_parameter_shadow_writebacks,
+        ))
     }
 
     pub(super) fn abort_inline_summary_emission_state(
@@ -157,6 +189,39 @@ impl<'a> FunctionCompiler<'a> {
         arguments: &[Expression],
         state: &mut InlineSummaryEmissionState,
     ) -> DirectResult<()> {
+        let visible_param_count = user_function.visible_param_count() as usize;
+        if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+            eprintln!(
+                "inline_param_writeback_finalize visible_param_count={visible_param_count} arguments_len={} call_arguments_len={}",
+                arguments.len(),
+                state.call_arguments.len(),
+            );
+        }
+        for (argument, call_argument) in arguments
+            .iter()
+            .take(visible_param_count)
+            .zip(state.call_arguments.iter().take(visible_param_count))
+        {
+            let CallArgument::Expression(Expression::Identifier(hidden_name)) = call_argument
+            else {
+                continue;
+            };
+            let source_owner = match argument {
+                Expression::Identifier(source_name) => source_name.as_str(),
+                Expression::This => "this",
+                _ => continue,
+            };
+            if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+                eprintln!(
+                    "inline_param_writeback_commit hidden={hidden_name} source_owner={source_owner}"
+                );
+            }
+            self.emit_runtime_object_property_shadow_copy(hidden_name, source_owner)?;
+            self.sync_runtime_object_shadow_owner_static_metadata_from_expression(
+                source_owner,
+                &Expression::Identifier(hidden_name.clone()),
+            );
+        }
         self.pop_scoped_lexical_bindings(&state.inline_parameter_scope_names);
         self.sync_user_function_capture_source_bindings(
             &state.prepared_capture_bindings,
@@ -164,6 +229,7 @@ impl<'a> FunctionCompiler<'a> {
             &state.call_effect_nonlocal_bindings,
             &state.updated_nonlocal_bindings,
             state.updated_bindings.as_ref(),
+            None,
         )?;
         self.restore_user_function_capture_bindings(&state.prepared_capture_bindings);
         state.additional_call_effect_nonlocal_bindings = self
@@ -183,6 +249,20 @@ impl<'a> FunctionCompiler<'a> {
                 .collect::<HashMap<_, _>>();
             self.invalidate_static_binding_metadata_for_names_with_preserved_kinds(
                 &state.additional_call_effect_nonlocal_bindings,
+                &preserved_kinds,
+            );
+        }
+        if !state.updated_nonlocal_bindings.is_empty() {
+            let preserved_kinds = state
+                .updated_nonlocal_bindings
+                .iter()
+                .filter_map(|name| {
+                    self.lookup_identifier_kind(name)
+                        .map(|kind| (name.clone(), kind))
+                })
+                .collect::<HashMap<_, _>>();
+            self.invalidate_static_binding_metadata_for_names_with_preserved_kinds(
+                &state.updated_nonlocal_bindings,
                 &preserved_kinds,
             );
         }

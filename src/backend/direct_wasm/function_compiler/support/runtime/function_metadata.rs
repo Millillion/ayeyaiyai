@@ -16,7 +16,12 @@ pub(in crate::backend::direct_wasm) fn internal_function_name_hint(
     function_name
         .rsplit_once("__name_")
         .map(|(_, hinted_name)| hinted_name)
-        .filter(|hinted_name| !hinted_name.is_empty())
+}
+
+fn internal_function_display_name_hint(function_name: &str) -> Option<String> {
+    internal_function_name_hint(function_name)
+        .map(|hinted_name| scoped_binding_source_name(hinted_name).unwrap_or(hinted_name))
+        .map(str::to_string)
 }
 
 pub(in crate::backend::direct_wasm) fn function_display_name(
@@ -26,7 +31,7 @@ pub(in crate::backend::direct_wasm) fn function_display_name(
         .self_binding
         .clone()
         .or_else(|| function.top_level_binding.clone())
-        .or_else(|| internal_function_name_hint(&function.name).map(str::to_string))
+        .or_else(|| internal_function_display_name_hint(&function.name))
         .or_else(|| (!function.name.starts_with("__ayy_")).then(|| function.name.clone()))
 }
 
@@ -39,8 +44,12 @@ pub(in crate::backend::direct_wasm) fn builtin_function_display_name(name: &str)
 
 pub(in crate::backend::direct_wasm) fn builtin_function_length(name: &str) -> Option<u32> {
     match name {
-        "Math.atan" | "Math.exp" => Some(1),
-        "Math.max" | "Math.min" => Some(2),
+        "Array" | "Boolean" | "Function" | "Number" | "Object" | "String" | "Symbol" | "BigInt"
+        | "Date" | "Error" | "EvalError" | "RangeError" | "ReferenceError" | "SyntaxError"
+        | "TypeError" | "URIError" | "AggregateError" => Some(1),
+        "RegExp" => Some(2),
+        "Math.abs" | "Math.atan" | "Math.exp" | "Math.floor" | "Math.sin" => Some(1),
+        "Math.max" | "Math.min" | "Math.pow" => Some(2),
         _ => None,
     }
 }

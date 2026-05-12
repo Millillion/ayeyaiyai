@@ -33,8 +33,14 @@ impl GlobalSemanticState {
         self.names.ensure_binding_index(name, next_global_index);
     }
 
-    pub(in crate::backend::direct_wasm) fn mark_global_lexical_binding(&mut self, name: &str) {
-        self.names.mark_lexical_binding(name);
+    pub(in crate::backend::direct_wasm) fn mark_global_lexical_binding(
+        &mut self,
+        name: &str,
+        mutable: bool,
+        next_global_index: &mut u32,
+    ) {
+        self.names
+            .mark_lexical_binding(name, mutable, next_global_index);
     }
 
     pub(in crate::backend::direct_wasm) fn set_global_binding_kind(

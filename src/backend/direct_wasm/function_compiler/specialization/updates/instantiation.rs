@@ -6,6 +6,15 @@ impl<'a> FunctionCompiler<'a> {
         template: &SpecializedFunctionValue,
     ) -> DirectResult<Option<SpecializedFunctionValue>> {
         let captured = self.collect_capture_bindings_from_summary(&template.summary);
+        let trace_capture_bindings = std::env::var_os("AYY_TRACE_CAPTURE_BINDINGS").is_some();
+        if trace_capture_bindings {
+            eprintln!(
+                "capture_bindings instantiate binding={:?} captured={captured:?} return={:?} effects={}",
+                template.binding,
+                template.summary.return_value,
+                template.summary.effects.len()
+            );
+        }
         if captured.is_empty() {
             return Ok(None);
         }
@@ -36,27 +45,6 @@ impl<'a> FunctionCompiler<'a> {
             else {
                 continue;
             };
-            if let Expression::Identifier(scope_name) = &scope_object
-                && self
-                    .parameter_scope_arguments_local_for(scope_name)
-                    .is_none()
-                && self.resolve_current_local_binding(scope_name).is_none()
-                && self
-                    .resolve_eval_local_function_hidden_name(scope_name)
-                    .is_none()
-                && self
-                    .resolve_user_function_capture_hidden_name(scope_name)
-                    .is_none()
-            {
-                bindings.insert(
-                    name.clone(),
-                    Expression::Member {
-                        object: Box::new(scope_object),
-                        property: Box::new(Expression::String(name)),
-                    },
-                );
-                continue;
-            }
             let hidden_name = self.allocate_named_hidden_local(
                 "capture_scope",
                 self.infer_value_kind(&scope_object)
@@ -71,7 +59,23 @@ impl<'a> FunctionCompiler<'a> {
                 .copied()
                 .expect("hidden capture scope local should be allocated");
             self.push_local_set(hidden_local);
-            self.update_capture_slot_binding_from_expression(&hidden_name, &scope_object)?;
+            let scope_metadata_expression = self
+                .resolve_object_binding_from_expression(&scope_object)
+                .map(|binding| object_binding_to_expression(&binding))
+                .unwrap_or_else(|| scope_object.clone());
+            self.update_capture_slot_binding_from_expression(
+                &hidden_name,
+                &scope_metadata_expression,
+            )?;
+            self.sync_capture_slot_runtime_object_shadows_from_expression(
+                &hidden_name,
+                &scope_metadata_expression,
+            )?;
+            if trace_capture_bindings {
+                eprintln!(
+                    "capture_bindings instantiate_with name={name} hidden={hidden_name} scope={scope_object:?} metadata={scope_metadata_expression:?}",
+                );
+            }
             bindings.insert(
                 name.clone(),
                 Expression::Member {
@@ -81,9 +85,18 @@ impl<'a> FunctionCompiler<'a> {
             );
         }
 
+        let summary = rewrite_inline_function_summary_bindings(&template.summary, &bindings);
+        if trace_capture_bindings {
+            eprintln!(
+                "capture_bindings instantiate_result bindings={bindings:?} return={:?} effects={}",
+                summary.return_value,
+                summary.effects.len()
+            );
+        }
+
         Ok(Some(SpecializedFunctionValue {
             binding: template.binding.clone(),
-            summary: rewrite_inline_function_summary_bindings(&template.summary, &bindings),
+            summary,
         }))
     }
 }

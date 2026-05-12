@@ -1,6 +1,18 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn user_function_allows_static_call_frame_result(&self, user_function: &UserFunction) -> bool {
+        !self.user_function_mentions_private_member_access(user_function)
+            && !self.user_function_mentions_direct_eval(user_function)
+            && !self
+                .backend
+                .function_registry
+                .analysis
+                .user_function_capture_bindings
+                .contains_key(&user_function.name)
+            && !self.user_function_references_captured_user_function(user_function)
+    }
+
     pub(super) fn resolve_static_binding_call_result_with_context(
         &self,
         callee: &Expression,
@@ -38,6 +50,21 @@ impl<'a> FunctionCompiler<'a> {
             return None;
         };
         let user_function = self.user_function(&function_name)?;
+        if self.user_function_mentions_private_member_access(user_function)
+            || self.user_function_mentions_direct_eval(user_function)
+        {
+            return None;
+        }
+        if self
+            .backend
+            .function_registry
+            .analysis
+            .user_function_capture_bindings
+            .contains_key(&user_function.name)
+            || self.user_function_references_captured_user_function(user_function)
+        {
+            return None;
+        }
         if user_function.has_lowered_pattern_parameters()
             || !self
                 .user_function_parameter_iterator_consumption_indices(user_function)
@@ -72,8 +99,22 @@ impl<'a> FunctionCompiler<'a> {
             return None;
         }
         let return_value = summary.return_value.as_ref()?;
+        let expanded_arguments = self.expand_call_arguments(arguments);
+        let arguments_binding = Expression::Array(
+            expanded_arguments
+                .iter()
+                .cloned()
+                .map(ArrayElement::Expression)
+                .collect(),
+        );
         Some((
-            self.substitute_user_function_argument_bindings(return_value, user_function, arguments),
+            self.substitute_user_function_call_frame_bindings(
+                return_value,
+                user_function,
+                arguments,
+                &Expression::Undefined,
+                &arguments_binding,
+            ),
             Some(function_name),
         ))
     }
@@ -84,6 +125,55 @@ impl<'a> FunctionCompiler<'a> {
         arguments: &[CallArgument],
         current_function_name: Option<&str>,
     ) -> Option<(Expression, Option<String>)> {
+        if let Some(resolved_callee) = self
+            .resolve_bound_alias_expression(callee)
+            .filter(|resolved| !static_expression_matches(resolved, callee))
+            && let Some(result) = self.resolve_static_call_frame_binding_result_with_context(
+                &resolved_callee,
+                arguments,
+                current_function_name,
+            )
+        {
+            return Some(result);
+        }
+
+        if let Expression::Member { object, property } = callee
+            && !matches!(property.as_ref(), Expression::String(name) if name == "call" || name == "apply")
+            && !is_private_property_name_expression(property)
+            && let Some(function_binding) = self
+                .resolve_function_binding_from_expression_with_context(
+                    callee,
+                    current_function_name,
+                )
+            && let LocalFunctionBinding::User(function_name) = &function_binding
+        {
+            let user_function = self.user_function(function_name)?;
+            if !self.user_function_allows_static_call_frame_result(user_function) {
+                return None;
+            }
+            if user_function.has_lowered_pattern_parameters()
+                || !self
+                    .user_function_parameter_iterator_consumption_indices(user_function)
+                    .is_empty()
+            {
+                return None;
+            }
+            let expanded_arguments = self.expand_call_arguments(arguments);
+            let raw_this_expression = self.materialize_static_expression(object);
+            let this_binding =
+                if self.should_box_sloppy_function_this(user_function, &raw_this_expression) {
+                    Expression::This
+                } else {
+                    raw_this_expression
+                };
+            let value = self.resolve_function_binding_static_return_expression_with_call_frame(
+                &function_binding,
+                &expanded_arguments,
+                &this_binding,
+            )?;
+            return Some((value, Some(function_name.clone())));
+        }
+
         if let Expression::Member { object, property } = callee
             && matches!(property.as_ref(), Expression::String(name) if name == "call" || name == "apply")
         {
@@ -95,6 +185,9 @@ impl<'a> FunctionCompiler<'a> {
                 return None;
             };
             let user_function = self.user_function(function_name)?;
+            if !self.user_function_allows_static_call_frame_result(user_function) {
+                return None;
+            }
             if user_function.has_lowered_pattern_parameters()
                 || !self
                     .user_function_parameter_iterator_consumption_indices(user_function)
@@ -162,6 +255,9 @@ impl<'a> FunctionCompiler<'a> {
                 return None;
             };
             let user_function = self.user_function(function_name)?;
+            if !self.user_function_allows_static_call_frame_result(user_function) {
+                return None;
+            }
             if user_function.has_lowered_pattern_parameters()
                 || !self
                     .user_function_parameter_iterator_consumption_indices(user_function)

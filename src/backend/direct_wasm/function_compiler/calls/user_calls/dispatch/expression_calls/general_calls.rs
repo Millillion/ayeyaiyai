@@ -57,6 +57,15 @@ impl<'a> FunctionCompiler<'a> {
         if self.emit_deferred_generator_call_result(user_function, &expanded_arguments)? {
             return Ok(());
         }
+        if allow_inline {
+            if self.emit_inline_lowered_pattern_user_function_with_arguments(
+                user_function,
+                &expanded_arguments,
+                this_expression,
+            )? {
+                return Ok(());
+            }
+        }
         if allow_inline && self.can_inline_user_function_call(user_function, &expanded_arguments) {
             self.emit_numeric_expression(this_expression)?;
             self.state.emission.output.instructions.push(0x1a);
@@ -112,15 +121,29 @@ impl<'a> FunctionCompiler<'a> {
             self.push_global_set(CURRENT_THIS_GLOBAL_INDEX);
             Some(saved_local)
         };
+        let saved_this_shadow_owner = if user_function.lexical_this {
+            None
+        } else {
+            self.prepare_user_function_runtime_this_shadow_state(this_expression)?
+        };
 
         self.emit_prepare_user_function_capture_globals(&user_function.name)?;
 
-        let return_value_local = self.emit_user_function_runtime_call_from_expanded_arguments(
-            user_function,
-            &expanded_arguments,
-        )?;
+        let (return_value_local, parameter_object_shadow_writebacks) = self
+            .emit_user_function_runtime_call_from_expanded_arguments(
+                user_function,
+                &expanded_arguments,
+                updated_bindings.as_ref(),
+            )?;
+        let receiver_updated_via_parameter_writeback = self
+            .receiver_shadow_updated_via_parameter_writebacks(
+                this_expression,
+                &parameter_object_shadow_writebacks,
+            );
         self.finalize_user_function_call(
             user_function,
+            this_expression,
+            receiver_updated_via_parameter_writeback,
             &prepared_capture_bindings,
             &assigned_nonlocal_bindings,
             &call_effect_nonlocal_bindings,
@@ -130,6 +153,7 @@ impl<'a> FunctionCompiler<'a> {
             assigned_nonlocal_binding_results,
             saved_new_target_local,
             saved_this_local,
+            saved_this_shadow_owner.as_deref(),
             return_value_local,
             &expanded_arguments,
         )

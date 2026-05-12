@@ -128,6 +128,25 @@ pub(crate) fn collect_for_of_binding_names(pattern: &Pat, names: &mut Vec<String
                 collect_for_of_binding_names(element, names)?;
             }
         }
+        Pat::Object(object) => {
+            for property in &object.props {
+                match property {
+                    ObjectPatProp::KeyValue(property) => {
+                        collect_for_of_binding_names(&property.value, names)?;
+                    }
+                    ObjectPatProp::Assign(property) => {
+                        let name = property.key.id.sym.to_string();
+                        if !names.contains(&name) {
+                            names.push(name);
+                        }
+                    }
+                    ObjectPatProp::Rest(rest) => {
+                        collect_for_of_binding_names(&rest.arg, names)?;
+                    }
+                }
+            }
+        }
+        Pat::Rest(rest) => collect_for_of_binding_names(&rest.arg, names)?,
         _ => bail!("unsupported for-of binding pattern"),
     }
 
@@ -140,21 +159,33 @@ pub(crate) fn collect_switch_bindings(switch_statement: &SwitchStmt) -> Result<V
 
     for case in &switch_statement.cases {
         for statement in &case.cons {
-            let Stmt::Decl(Decl::Var(variable_declaration)) = statement else {
-                continue;
-            };
-            if matches!(variable_declaration.kind, VarDeclKind::Var) {
-                continue;
-            }
-
-            for declarator in &variable_declaration.decls {
-                let mut names = Vec::new();
-                collect_pattern_binding_names(&declarator.name, &mut names)?;
-                for name in names {
+            match statement {
+                Stmt::Decl(Decl::Var(variable_declaration))
+                    if !matches!(variable_declaration.kind, VarDeclKind::Var) =>
+                {
+                    for declarator in &variable_declaration.decls {
+                        let mut names = Vec::new();
+                        collect_pattern_binding_names(&declarator.name, &mut names)?;
+                        for name in names {
+                            if seen.insert(name.clone()) {
+                                bindings.push(name);
+                            }
+                        }
+                    }
+                }
+                Stmt::Decl(Decl::Fn(function_declaration)) => {
+                    let name = function_declaration.ident.sym.to_string();
                     if seen.insert(name.clone()) {
                         bindings.push(name);
                     }
                 }
+                Stmt::Decl(Decl::Class(class_declaration)) => {
+                    let name = class_declaration.ident.sym.to_string();
+                    if seen.insert(name.clone()) {
+                        bindings.push(name);
+                    }
+                }
+                _ => {}
             }
         }
     }
@@ -173,6 +204,11 @@ pub(crate) fn collect_direct_statement_lexical_bindings(
                 if !matches!(variable_declaration.kind, VarDeclKind::Var) =>
             {
                 for declarator in &variable_declaration.decls {
+                    collect_pattern_binding_names(&declarator.name, &mut bindings)?;
+                }
+            }
+            Stmt::Decl(Decl::Using(using_declaration)) => {
+                for declarator in &using_declaration.decls {
                     collect_pattern_binding_names(&declarator.name, &mut bindings)?;
                 }
             }

@@ -21,6 +21,15 @@ impl<'a> FunctionCompiler<'a> {
             | Expression::Bool(_)
             | Expression::Null
             | Expression::Undefined => Some(expression.clone()),
+            _ if self
+                .resolve_static_symbol_to_string_value_with_context(
+                    expression,
+                    current_function_name,
+                )
+                .is_some() =>
+            {
+                Some(expression.clone())
+            }
             Expression::Conditional {
                 condition,
                 then_expression,
@@ -57,7 +66,69 @@ impl<'a> FunctionCompiler<'a> {
                 Some(Expression::Number(f64::INFINITY))
             }
             Expression::Member { object, property } => {
+                if std::env::var_os("AYY_TRACE_THIS_FLOW").is_some()
+                    && matches!(object.as_ref(), Expression::This)
+                {
+                    eprintln!(
+                        "this_flow primitive_resolution fn={:?} expr={:?} runtime_dynamic_this={}",
+                        current_function_name,
+                        expression,
+                        self.state
+                            .runtime
+                            .locals
+                            .runtime_dynamic_bindings
+                            .contains("this")
+                    );
+                }
+                if let Some(shadow_binding_name) = self
+                    .runtime_object_property_shadow_binding_name_for_expression(object, property)
+                    .filter(|shadow_binding_name| {
+                        self.runtime_object_property_shadow_binding_should_defer_static_resolution(
+                            shadow_binding_name,
+                        )
+                    })
+                {
+                    if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+                        eprintln!(
+                            "runtime_shadow_primitive_defer object={object:?} property={property:?} shadow_name={shadow_binding_name}"
+                        );
+                    }
+                    return None;
+                }
+                if self.expression_uses_runtime_dynamic_binding(object)
+                    || self.expression_uses_runtime_dynamic_binding(property)
+                {
+                    if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+                        eprintln!(
+                            "runtime_shadow_primitive_member_dynamic object={object:?} property={property:?}"
+                        );
+                    }
+                    return None;
+                }
+                let materialized_property = self.materialize_static_expression(property);
+                if matches!(&materialized_property, Expression::String(name) if name == "prototype")
+                    && self
+                        .resolve_function_binding_from_expression(object)
+                        .is_some()
+                {
+                    return None;
+                }
+                if matches!(&materialized_property, Expression::String(name) if name == "length")
+                    && self
+                        .resolve_typed_array_view_binding_from_expression(object)
+                        .is_some()
+                    && self
+                        .runtime_array_length_local_for_expression(object)
+                        .is_some()
+                {
+                    return None;
+                }
                 if let Some(function_name) = self.resolve_function_name_value(object, property) {
+                    if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+                        eprintln!(
+                            "runtime_shadow_primitive_member_function_name object={object:?} property={property:?} function_name={function_name:?}"
+                        );
+                    }
                     return Some(Expression::String(function_name));
                 }
                 if let Some(value) = self
@@ -68,6 +139,11 @@ impl<'a> FunctionCompiler<'a> {
                     )
                     .filter(|value| !static_expression_matches(value, expression))
                 {
+                    if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+                        eprintln!(
+                            "runtime_shadow_primitive_member_getter object={object:?} property={property:?} value={value:?}"
+                        );
+                    }
                     return self.resolve_static_primitive_expression_with_context(
                         &value,
                         current_function_name,
@@ -76,7 +152,70 @@ impl<'a> FunctionCompiler<'a> {
                 if !self.function_object_has_explicit_own_property(object, property)
                     && let Some(number) = self.resolve_static_number_value(expression)
                 {
+                    if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+                        eprintln!(
+                            "runtime_shadow_primitive_member_number object={object:?} property={property:?} number={number:?}"
+                        );
+                    }
                     return Some(Expression::Number(number));
+                }
+                let materialized_object = self.materialize_static_expression(object);
+                let object_binding =
+                    self.resolve_object_binding_from_expression(object)
+                        .or_else(|| {
+                            (!static_expression_matches(&materialized_object, object))
+                                .then(|| {
+                                    self.resolve_object_binding_from_expression(
+                                        &materialized_object,
+                                    )
+                                })
+                                .flatten()
+                        });
+                if let Some(object_binding) = object_binding {
+                    if let Some(value) = self.resolve_object_binding_property_value(
+                        &object_binding,
+                        &materialized_property,
+                    ) {
+                        return self.resolve_static_primitive_expression_with_context(
+                            &value,
+                            current_function_name,
+                        );
+                    }
+                    if let Some(value) = self.static_typed_array_member_value_from_binding(
+                        &object_binding,
+                        &materialized_property,
+                    ) {
+                        return self.resolve_static_primitive_expression_with_context(
+                            &value,
+                            current_function_name,
+                        );
+                    }
+                    if let Some(value) = self
+                        .resolve_inherited_object_property_value(object, &materialized_property)
+                        .or_else(|| {
+                            (!static_expression_matches(&materialized_object, object))
+                                .then(|| {
+                                    self.resolve_inherited_object_property_value(
+                                        &materialized_object,
+                                        &materialized_property,
+                                    )
+                                })
+                                .flatten()
+                        })
+                    {
+                        return self.resolve_static_primitive_expression_with_context(
+                            &value,
+                            current_function_name,
+                        );
+                    }
+                    if static_property_name_from_expression(&materialized_property).is_some() {
+                        return Some(Expression::Undefined);
+                    }
+                }
+                if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+                    eprintln!(
+                        "runtime_shadow_primitive_member_none object={object:?} property={property:?}"
+                    );
                 }
                 None
             }

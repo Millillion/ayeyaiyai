@@ -38,6 +38,16 @@ impl<'a> FunctionCompiler<'a> {
             return None;
         };
         let user_function = self.user_function(function_name)?;
+        if self
+            .backend
+            .function_registry
+            .analysis
+            .user_function_capture_bindings
+            .contains_key(&user_function.name)
+            || self.user_function_references_captured_user_function(user_function)
+        {
+            return None;
+        }
         if user_function.has_lowered_pattern_parameters()
             || !self
                 .user_function_parameter_iterator_consumption_indices(user_function)
@@ -52,8 +62,22 @@ impl<'a> FunctionCompiler<'a> {
             return None;
         }
         let return_value = summary.return_value.as_ref()?;
+        let expanded_arguments = self.expand_call_arguments(arguments);
+        let arguments_binding = Expression::Array(
+            expanded_arguments
+                .iter()
+                .cloned()
+                .map(ArrayElement::Expression)
+                .collect(),
+        );
         Some((
-            self.substitute_user_function_argument_bindings(return_value, user_function, arguments),
+            self.substitute_user_function_call_frame_bindings(
+                return_value,
+                user_function,
+                arguments,
+                &Expression::Undefined,
+                &arguments_binding,
+            ),
             Some(function_name.clone()),
         ))
     }

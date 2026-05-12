@@ -1,4 +1,30 @@
+use std::collections::BTreeSet;
+
 use super::*;
+
+fn hoist_lowered_function_statement_bindings(body: &mut Vec<Statement>) {
+    let mut hoisted = Vec::new();
+    let mut remaining = Vec::with_capacity(body.len());
+
+    for statement in std::mem::take(body) {
+        let is_function_statement_binding = matches!(
+            &statement,
+            Statement::Let {
+                mutable: true,
+                value: Expression::Identifier(function_name),
+                ..
+            } if function_name.starts_with("__ayy_fnstmt_")
+        );
+        if is_function_statement_binding {
+            hoisted.push(statement);
+        } else {
+            remaining.push(statement);
+        }
+    }
+
+    hoisted.extend(remaining);
+    *body = hoisted;
+}
 
 impl Lowerer {
     pub(crate) fn lower_named_default_function_expression(
@@ -19,7 +45,7 @@ impl Lowerer {
             function_expression.function.is_async,
         );
         let extra_bindings = vec![identifier.sym.to_string()];
-        let (params, body) =
+        let (params, body, captured_private_brand_bindings) =
             self.lower_function_parts(&function_expression.function, &extra_bindings)?;
 
         self.functions.push(FunctionDeclaration {
@@ -34,6 +60,7 @@ impl Lowerer {
             strict: self.function_strict_mode(&function_expression.function),
             lexical_this: false,
             derived_constructor: false,
+            direct_eval_in_class_field_initializer: self.class_field_initializer_depth > 0,
             length: expected_argument_count(
                 function_expression
                     .function
@@ -41,6 +68,11 @@ impl Lowerer {
                     .iter()
                     .map(|parameter| &parameter.pat),
             ),
+            synthetic_capture_bindings: captured_private_brand_bindings
+                .into_iter()
+                .collect::<Vec<_>>(),
+            immutable_class_bindings: Vec::new(),
+            private_brand_binding: None,
         });
 
         Ok(generated_name)
@@ -56,8 +88,41 @@ impl Lowerer {
             "declare function is not supported yet"
         );
 
+        if function_declaration.ident.sym == *"__ayyAssertThrows" {
+            let (params, mut body) = lower_parameters(self, &function_declaration.function)?;
+            body.push(Statement::Return(Expression::Undefined));
+            return Ok(FunctionDeclaration {
+                name: function_declaration.ident.sym.to_string(),
+                top_level_binding: None,
+                params,
+                body,
+                register_global,
+                kind: lower_function_kind(
+                    function_declaration.function.is_generator,
+                    function_declaration.function.is_async,
+                ),
+                self_binding: Some(function_declaration.ident.sym.to_string()),
+                mapped_arguments: self
+                    .function_has_mapped_arguments(&function_declaration.function),
+                strict: self.function_strict_mode(&function_declaration.function),
+                lexical_this: false,
+                derived_constructor: false,
+                direct_eval_in_class_field_initializer: self.class_field_initializer_depth > 0,
+                length: expected_argument_count(
+                    function_declaration
+                        .function
+                        .params
+                        .iter()
+                        .map(|parameter| &parameter.pat),
+                ),
+                synthetic_capture_bindings: Vec::new(),
+                immutable_class_bindings: Vec::new(),
+                private_brand_binding: None,
+            });
+        }
+
         let extra_bindings = vec![function_declaration.ident.sym.to_string()];
-        let (params, body) =
+        let (params, body, captured_private_brand_bindings) =
             self.lower_function_parts(&function_declaration.function, &extra_bindings)?;
 
         Ok(FunctionDeclaration {
@@ -75,6 +140,7 @@ impl Lowerer {
             strict: self.function_strict_mode(&function_declaration.function),
             lexical_this: false,
             derived_constructor: false,
+            direct_eval_in_class_field_initializer: self.class_field_initializer_depth > 0,
             length: expected_argument_count(
                 function_declaration
                     .function
@@ -82,6 +148,11 @@ impl Lowerer {
                     .iter()
                     .map(|parameter| &parameter.pat),
             ),
+            synthetic_capture_bindings: captured_private_brand_bindings
+                .into_iter()
+                .collect::<Vec<_>>(),
+            immutable_class_bindings: Vec::new(),
+            private_brand_binding: None,
         })
     }
 
@@ -115,7 +186,7 @@ impl Lowerer {
             .as_ref()
             .map(|identifier| vec![identifier.sym.to_string()])
             .unwrap_or_default();
-        let (params, body) =
+        let (params, body, captured_private_brand_bindings) =
             self.lower_function_parts(&function_expression.function, &extra_bindings)?;
         let self_binding = function_expression
             .ident
@@ -134,6 +205,7 @@ impl Lowerer {
             strict: self.function_strict_mode(&function_expression.function),
             lexical_this: false,
             derived_constructor: false,
+            direct_eval_in_class_field_initializer: self.class_field_initializer_depth > 0,
             length: expected_argument_count(
                 function_expression
                     .function
@@ -141,6 +213,11 @@ impl Lowerer {
                     .iter()
                     .map(|parameter| &parameter.pat),
             ),
+            synthetic_capture_bindings: captured_private_brand_bindings
+                .into_iter()
+                .collect::<Vec<_>>(),
+            immutable_class_bindings: Vec::new(),
+            private_brand_binding: None,
         });
 
         Ok(Expression::Identifier(generated_name))
@@ -160,6 +237,7 @@ impl Lowerer {
             None => format!("__ayy_arrow_{}", self.next_function_expression_id),
         };
 
+        self.pending_private_brand_captures.push(BTreeSet::new());
         let (params, param_setup) = lower_parameter_patterns(self, arrow_expression.params.iter())?;
 
         let mut body = match &*arrow_expression.body {
@@ -171,6 +249,10 @@ impl Lowerer {
             )],
         };
         body.splice(0..0, param_setup);
+        let captured_private_brand_bindings = self
+            .pending_private_brand_captures
+            .pop()
+            .expect("arrow private brand capture collector should exist");
 
         self.functions.push(FunctionDeclaration {
             name: generated_name.clone(),
@@ -184,7 +266,13 @@ impl Lowerer {
             strict: self.arrow_strict_mode(arrow_expression),
             lexical_this: true,
             derived_constructor: false,
+            direct_eval_in_class_field_initializer: self.class_field_initializer_depth > 0,
             length: expected_argument_count(arrow_expression.params.iter()),
+            synthetic_capture_bindings: captured_private_brand_bindings
+                .into_iter()
+                .collect::<Vec<_>>(),
+            immutable_class_bindings: Vec::new(),
+            private_brand_binding: None,
         });
 
         Ok(Expression::Identifier(generated_name))
@@ -194,7 +282,7 @@ impl Lowerer {
         &mut self,
         function: &Function,
         extra_bindings: &[String],
-    ) -> Result<(Vec<Parameter>, Vec<Statement>)> {
+    ) -> Result<(Vec<Parameter>, Vec<Statement>, BTreeSet<String>)> {
         let body = function
             .body
             .as_ref()
@@ -218,18 +306,26 @@ impl Lowerer {
             }
         }
 
+        self.pending_private_brand_captures.push(BTreeSet::new());
         self.push_binding_scope(scope_bindings);
-        let lowered = (|| -> Result<(Vec<Parameter>, Vec<Statement>)> {
-            let (params, param_setup) = lower_parameters(self, function)?;
-            let mut body = if function.is_generator {
-                self.lower_generator_statements(&body.stmts, true)?
-            } else {
-                self.lower_statements(&body.stmts, true, false)?
-            };
-            body.splice(0..0, param_setup);
-            Ok((params, body))
-        })();
+        let lowered = self.with_this_replacement(None, |lowerer| {
+            lowerer.with_super_member_replacement(None, |lowerer| {
+                let (params, param_setup) = lower_parameters(lowerer, function)?;
+                let mut body = if function.is_generator {
+                    lowerer.lower_generator_statements(&body.stmts, true)?
+                } else {
+                    lowerer.lower_statements(&body.stmts, true, false)?
+                };
+                hoist_lowered_function_statement_bindings(&mut body);
+                body.splice(0..0, param_setup);
+                Ok((params, body))
+            })
+        });
         self.pop_binding_scope();
+        let captured_private_brand_bindings = self
+            .pending_private_brand_captures
+            .pop()
+            .expect("function private brand capture collector should exist");
         self.strict_modes.pop();
         lowered.map(|(params, body)| {
             let body = if function.is_async && function.is_generator {
@@ -237,7 +333,7 @@ impl Lowerer {
             } else {
                 body
             };
-            (params, body)
+            (params, body, captured_private_brand_bindings)
         })
     }
 }

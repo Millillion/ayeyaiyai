@@ -11,6 +11,33 @@ impl<'a> FunctionCompiler<'a> {
             return None;
         };
         let user_function = self.user_function(function_name)?;
+        if self.user_function_mentions_direct_eval(user_function) {
+            return None;
+        }
+        if user_function
+            .inline_summary
+            .as_ref()
+            .is_some_and(inline_summary_mentions_unsupported_explicit_call_frame_state)
+        {
+            return None;
+        }
+        if self.user_function_mentions_private_member_access(user_function)
+            && self
+                .resolve_object_binding_from_expression(this_binding)
+                .is_none()
+        {
+            return None;
+        }
+        if self
+            .backend
+            .function_registry
+            .analysis
+            .user_function_capture_bindings
+            .contains_key(&user_function.name)
+            || self.user_function_references_captured_user_function(user_function)
+        {
+            return None;
+        }
         if user_function.has_lowered_pattern_parameters()
             || !self
                 .user_function_parameter_iterator_consumption_indices(user_function)
@@ -50,7 +77,7 @@ impl<'a> FunctionCompiler<'a> {
             && self
                 .collect_user_function_call_effect_nonlocal_bindings(user_function)
                 .is_empty()
-            && let Some((result, _)) = self
+            && let Some((result, updated_bindings)) = self
                 .resolve_bound_snapshot_user_function_result_with_arguments_and_this(
                     function_name,
                     &HashMap::new(),
@@ -58,7 +85,18 @@ impl<'a> FunctionCompiler<'a> {
                     this_binding,
                 )
         {
-            return Some(result);
+            let materialized_this_binding = self.materialize_static_expression(this_binding);
+            let this_binding_changed = updated_bindings.get("this").is_some_and(|updated_this| {
+                let materialized_updated_this = self.materialize_static_expression(updated_this);
+                !static_expression_matches(updated_this, this_binding)
+                    && !static_expression_matches(
+                        &materialized_updated_this,
+                        &materialized_this_binding,
+                    )
+            });
+            if !this_binding_changed {
+                return Some(result);
+            }
         }
 
         let function = self.resolve_registered_function_declaration(function_name)?;

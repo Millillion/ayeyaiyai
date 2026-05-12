@@ -22,10 +22,17 @@ impl<'a> FunctionCompiler<'a> {
 
         let array_like = match first_argument {
             CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
-                !matches!(expression, Expression::Identifier(name) if self.state.speculation.static_semantics.has_local_typed_array_view_binding(name))
-                    && self
-                        .resolve_array_binding_from_expression(expression)
-                        .is_some()
+                let typed_array = matches!(expression, Expression::Identifier(name) if self.state.speculation.static_semantics.has_local_typed_array_view_binding(name));
+                let static_array = self
+                    .resolve_array_binding_from_expression(expression)
+                    .is_some();
+                let runtime_array = self.runtime_array_binding_name_for_expression(expression);
+                if std::env::var_os("AYY_TRACE_ARRAY_IS_ARRAY").is_some() {
+                    eprintln!(
+                        "array_is_array:emit expression={expression:?} typed_array={typed_array} static_array={static_array} runtime_array={runtime_array:?}"
+                    );
+                }
+                !typed_array && (static_array || runtime_array.is_some())
             }
         };
 

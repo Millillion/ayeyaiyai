@@ -2,6 +2,18 @@ use super::*;
 
 use super::expression_traversal::collect_updated_names_from_expression;
 
+fn collect_member_assignment_target_name(expression: &Expression, names: &mut HashSet<String>) {
+    match expression {
+        Expression::Identifier(name) => {
+            names.insert(name.clone());
+        }
+        Expression::This => {
+            names.insert("this".to_string());
+        }
+        _ => {}
+    }
+}
+
 pub(super) fn collect_updated_names_from_statement(
     statement: &Statement,
     names: &mut HashSet<String>,
@@ -30,7 +42,8 @@ pub(super) fn collect_updated_names_from_statement(
                 collect_updated_names_from_expression(value, names);
             }
         }
-        Statement::Assign { value, .. } => {
+        Statement::Assign { name, value } => {
+            names.insert(name.clone());
             collect_updated_names_from_expression(value, names);
         }
         Statement::AssignMember {
@@ -38,6 +51,7 @@ pub(super) fn collect_updated_names_from_statement(
             property,
             value,
         } => {
+            collect_member_assignment_target_name(object, names);
             collect_updated_names_from_expression(object, names);
             collect_updated_names_from_expression(property, names);
             collect_updated_names_from_expression(value, names);

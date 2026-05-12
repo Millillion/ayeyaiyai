@@ -4,12 +4,14 @@ impl<'a> FunctionCompilerBackend<'a> {
     pub(in crate::backend::direct_wasm) fn new(
         module_artifacts: &'a mut ModuleArtifactsState,
         function_registry: &'a mut FunctionRegistryState,
+        shared_global_semantics: &'a mut GlobalSemanticState,
         test262: &'a mut Test262State,
         global_semantics: GlobalStaticSemanticsSnapshot,
     ) -> FunctionCompilerBackend<'a> {
         Self {
             module_artifacts,
             function_registry,
+            shared_global_semantics,
             test262,
             global_semantics,
         }

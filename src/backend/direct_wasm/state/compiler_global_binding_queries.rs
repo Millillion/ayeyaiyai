@@ -1,7 +1,8 @@
 use super::{
     CompilerState, GlobalBindingIndexQueryAccess, GlobalBindingKindQueryAccess,
     GlobalBindingPresenceQueryAccess, GlobalFunctionBindingQueryAccess,
-    GlobalImplicitBindingQueryAccess, GlobalStaticSemanticsSnapshot, ImplicitGlobalBinding,
+    GlobalImplicitBindingQueryAccess, GlobalLexicalBindingQueryAccess,
+    GlobalStaticSemanticsSnapshot, ImplicitGlobalBinding, LexicalGlobalBinding,
     LocalFunctionBinding, StaticValueKind,
 };
 
@@ -51,6 +52,18 @@ impl GlobalImplicitBindingQueryAccess for CompilerState {
     }
 }
 
+impl GlobalLexicalBindingQueryAccess for CompilerState {
+    fn lexical_global_binding(&self, name: &str) -> Option<LexicalGlobalBinding> {
+        self.global_semantics.global_names().lexical_binding(name)
+    }
+
+    fn global_lexical_binding_count(&self) -> u32 {
+        self.global_semantics
+            .global_names()
+            .lexical_binding_runtime_slot_count()
+    }
+}
+
 impl GlobalBindingKindQueryAccess for CompilerState {
     fn global_binding_kind(&self, name: &str) -> Option<StaticValueKind> {
         self.global_semantics.global_names().kind(name)
@@ -76,5 +89,11 @@ impl CompilerState {
         &self,
     ) -> GlobalStaticSemanticsSnapshot {
         self.global_semantics.snapshot()
+    }
+
+    pub(in crate::backend::direct_wasm) fn global_lexical_binding_count(&self) -> u32 {
+        self.global_semantics
+            .global_names()
+            .lexical_binding_runtime_slot_count()
     }
 }

@@ -16,7 +16,7 @@ impl<'a> FunctionCompiler<'a> {
         match op {
             UnaryOp::TypeOf => self.emit_typeof_expression(expression),
             UnaryOp::Not => {
-                self.emit_numeric_expression(expression)?;
+                self.emit_truthy_expression(expression)?;
                 self.state.emission.output.instructions.push(0x45);
                 Ok(())
             }

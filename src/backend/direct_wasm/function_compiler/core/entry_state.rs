@@ -233,25 +233,43 @@ impl<'a> FunctionCompiler<'a> {
         prepared_inputs: PreparedFunctionCompilerInputs,
     ) -> DirectResult<Self> {
         let program_context = prepared_inputs.shared_program_context();
-        let global_static_semantics = program_context.required_global_static_semantics().clone();
-        let assigned_nonlocal_binding_results =
-            prepared_inputs.assigned_nonlocal_binding_results_snapshot();
         let CompilerState {
             module_artifacts,
             function_registry,
-            global_semantics: _,
+            global_semantics,
             test262,
         } = &mut module.state;
-        Ok(Self {
+        let mut global_static_semantics =
+            program_context.required_global_static_semantics().clone();
+        global_static_semantics.sync_implicit_bindings_from(global_semantics.global_names());
+        let array_iterator_deleted_binding =
+            Self::array_prototype_symbol_iterator_deleted_binding_name();
+        if let Some(value) = global_semantics
+            .values
+            .value_binding(array_iterator_deleted_binding)
+            .cloned()
+        {
+            global_static_semantics
+                .set_global_binding_kind(array_iterator_deleted_binding, StaticValueKind::Bool);
+            global_static_semantics
+                .values
+                .set_value_binding(array_iterator_deleted_binding.to_string(), value);
+        }
+        let assigned_nonlocal_binding_results =
+            prepared_inputs.assigned_nonlocal_binding_results_snapshot();
+        let mut compiler = Self {
             backend: FunctionCompilerBackend::new(
                 module_artifacts,
                 function_registry,
+                global_semantics,
                 test262,
                 global_static_semantics,
             ),
             prepared_program: program_context,
             assigned_nonlocal_binding_results,
             state: FunctionCompilerState::from_prepared_entry_state(entry_state),
-        })
+        };
+        compiler.recover_parameter_object_bindings_from_value_bindings();
+        Ok(compiler)
     }
 }

@@ -91,6 +91,7 @@ impl<'a> FunctionCompiler<'a> {
         Some((
             vec![SimpleGeneratorStep {
                 effects: Vec::new(),
+                close_effects: Vec::new(),
                 outcome: SimpleGeneratorStepOutcome::Yield(value),
             }],
             Vec::new(),

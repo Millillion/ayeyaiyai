@@ -73,6 +73,9 @@ impl<'a> GlobalMemberCaptureMutationAccess for FunctionCompilerBackend<'a> {
     ) {
         self.global_semantics
             .global_members_mut()
+            .set_function_capture_slots(key.clone(), capture_slots.clone());
+        self.shared_global_semantics
+            .global_members_mut()
             .set_function_capture_slots(key, capture_slots);
     }
 }

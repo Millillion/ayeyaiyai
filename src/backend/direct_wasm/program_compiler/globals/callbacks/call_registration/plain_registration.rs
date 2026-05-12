@@ -9,6 +9,7 @@ impl DirectWasmCompiler {
         bindings: &mut HashMap<String, HashMap<String, Option<LocalFunctionBinding>>>,
         array_bindings: &mut HashMap<String, HashMap<String, Option<ArrayValueBinding>>>,
         object_bindings: &mut HashMap<String, HashMap<String, Option<ObjectValueBinding>>>,
+        current_function_name: Option<&str>,
     ) {
         let (called_function_name, call_arguments) = match callee {
             Expression::Member { object, property } if matches!(property.as_ref(), Expression::String(name) if name == "call") =>
@@ -60,6 +61,10 @@ impl DirectWasmCompiler {
         let Some(user_function) = self.user_function(&called_function_name) else {
             return;
         };
+        let current_parameter_object_bindings = current_function_name
+            .and_then(|name| object_bindings.get(name))
+            .cloned()
+            .unwrap_or_default();
         let Some(parameter_bindings) = bindings.get_mut(&called_function_name) else {
             return;
         };
@@ -128,7 +133,6 @@ impl DirectWasmCompiler {
                 param_name,
                 self.resolve_function_binding_from_expression_with_aliases(argument, aliases),
             );
-            register_array_candidate(param_name, self.infer_global_array_binding(argument));
             let global_bindings = self.snapshot_global_binding_environment();
             let materialized_argument = self
                 .materialize_global_expression_with_state(
@@ -138,11 +142,24 @@ impl DirectWasmCompiler {
                     &global_bindings.object_bindings,
                 )
                 .unwrap_or_else(|| self.materialize_global_expression(argument));
+            let stable_argument =
+                Self::prepared_parameter_argument_is_stable(&materialized_argument);
+            register_array_candidate(
+                param_name,
+                stable_argument
+                    .then(|| {
+                        self.infer_global_array_binding(&materialized_argument)
+                            .or_else(|| self.infer_global_array_binding(argument))
+                    })
+                    .flatten(),
+            );
             let object_candidate = if matches!(
                 argument,
                 Expression::Member { property, .. }
                     if matches!(property.as_ref(), Expression::String(name) if name == "prototype")
             ) {
+                None
+            } else if !stable_argument {
                 None
             } else if matches!(
                 materialized_argument,
@@ -161,7 +178,16 @@ impl DirectWasmCompiler {
             ) {
                 None
             } else {
-                self.infer_global_object_binding(argument)
+                self.infer_current_or_global_object_binding(
+                    argument,
+                    &current_parameter_object_bindings,
+                )
+                .or_else(|| {
+                    self.infer_current_or_global_object_binding(
+                        &materialized_argument,
+                        &current_parameter_object_bindings,
+                    )
+                })
             };
             register_object_candidate(param_name, object_candidate);
         }
@@ -172,6 +198,21 @@ impl DirectWasmCompiler {
                 parameter_array_bindings.insert(param_name.to_string(), None);
                 parameter_object_bindings.insert(param_name.to_string(), None);
             }
+        }
+    }
+
+    fn infer_current_or_global_object_binding(
+        &self,
+        expression: &Expression,
+        current_parameter_object_bindings: &HashMap<String, Option<ObjectValueBinding>>,
+    ) -> Option<ObjectValueBinding> {
+        match expression {
+            Expression::Identifier(name) => current_parameter_object_bindings
+                .get(name)
+                .cloned()
+                .flatten()
+                .or_else(|| self.infer_global_object_binding(expression)),
+            _ => self.infer_global_object_binding(expression),
         }
     }
 }

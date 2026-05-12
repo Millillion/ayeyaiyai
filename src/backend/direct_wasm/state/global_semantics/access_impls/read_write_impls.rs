@@ -28,6 +28,7 @@ impl GlobalStaticSemanticsWriteServices for GlobalSemanticState {
         self.values.sync_array_binding(name, None);
         self.values.sync_object_binding(name, None);
         self.values.sync_arguments_binding(name, None);
+        self.values.sync_object_prototype_expression(name, None);
         self.functions.clear_function_binding(name);
         self.names.clear_kind(name);
     }
@@ -65,6 +66,7 @@ impl GlobalStaticSemanticsWriteServices for GlobalStaticSemanticsSnapshot {
         self.values.sync_array_binding(name, None);
         self.values.sync_object_binding(name, None);
         self.values.sync_arguments_binding(name, None);
+        self.values.sync_object_prototype_expression(name, None);
         self.functions.clear_function_binding(name);
         self.names.clear_kind(name);
     }

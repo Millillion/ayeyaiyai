@@ -34,16 +34,14 @@ pub(in crate::backend::direct_wasm) fn collect_loop_assigned_binding_names_from_
     body: &[Statement],
 ) -> HashSet<String> {
     let fallback_condition = Expression::Bool(true);
-    let mut names = collect_loop_assigned_binding_names(
+    let names = collect_loop_assigned_binding_names(
         condition.unwrap_or(&fallback_condition),
         break_hook,
         body,
         None,
         update,
     );
-    for statement in init {
-        collect_assigned_binding_names_from_expression_in_loop_initializer(statement, &mut names);
-    }
+    let _ = init;
     names
 }
 

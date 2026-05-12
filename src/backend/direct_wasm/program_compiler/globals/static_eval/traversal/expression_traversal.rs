@@ -15,7 +15,8 @@ impl DirectWasmCompiler {
                         && let Some(eval_program) =
                             self.parse_static_eval_program_in_context(source, current_function_name)
                     {
-                        let mut eval_program = eval_program;
+                        let mut eval_program =
+                            lower_static_eval_function_constructors(eval_program);
                         namespace_eval_program_internal_function_names(
                             &mut eval_program,
                             current_function_name,
@@ -52,8 +53,10 @@ impl DirectWasmCompiler {
                         callee.as_ref(),
                         Expression::Sequence(expressions)
                             if matches!(expressions.last(), Some(Expression::Identifier(name)) if name == "eval")
-                    ) && let Ok(mut eval_program) = frontend::parse(source)
+                    ) && let Ok(eval_program) = frontend::parse(source)
                     {
+                        let mut eval_program =
+                            lower_static_eval_function_constructors(eval_program);
                         namespace_eval_program_internal_function_names(
                             &mut eval_program,
                             current_function_name,

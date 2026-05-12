@@ -87,15 +87,28 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         expression: &Expression,
     ) -> bool {
-        if let Expression::Identifier(name) = expression
-            && self
-                .state
-                .runtime
-                .locals
-                .runtime_dynamic_bindings
-                .contains(name)
-        {
-            return true;
+        match expression {
+            Expression::Identifier(name)
+                if self
+                    .state
+                    .runtime
+                    .locals
+                    .runtime_dynamic_bindings
+                    .contains(name) =>
+            {
+                return true;
+            }
+            Expression::This
+                if self
+                    .state
+                    .runtime
+                    .locals
+                    .runtime_dynamic_bindings
+                    .contains("this") =>
+            {
+                return true;
+            }
+            _ => {}
         }
         self.resolve_bound_alias_expression(expression)
             .is_some_and(|resolved| {
@@ -137,6 +150,18 @@ impl<'a> FunctionCompiler<'a> {
         expression: &Expression,
     ) -> Option<ObjectValueBinding> {
         self.with_object_binding_resolution_guard(expression, |this| {
+            if let Expression::Assign { value, .. }
+            | Expression::AssignMember { value, .. }
+            | Expression::AssignSuperMember { value, .. } = expression
+            {
+                return this.resolve_object_binding_from_expression(value);
+            }
+            if let Expression::Sequence(expressions) = expression {
+                return expressions.last().and_then(|expression| {
+                    this.resolve_object_binding_from_expression(expression)
+                });
+            }
+
             this.resolve_descriptor_object_binding(expression)
                 .or_else(|| this.resolve_basic_object_binding(expression))
                 .or_else(|| this.resolve_member_object_binding(expression))

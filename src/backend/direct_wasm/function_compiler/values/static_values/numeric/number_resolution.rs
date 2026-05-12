@@ -21,6 +21,22 @@ impl<'a> FunctionCompiler<'a> {
         if self.expression_depends_on_active_loop_assignment(expression) {
             return None;
         }
+        if Self::call_is_promise_like_chain(expression) {
+            return None;
+        }
+        if let Expression::Call { callee, .. }
+        | Expression::SuperCall { callee, .. }
+        | Expression::New { callee, .. } = expression
+            && let Some(LocalFunctionBinding::User(function_name)) =
+                self.resolve_function_binding_from_expression(callee)
+            && self
+                .user_function(&function_name)
+                .is_some_and(|user_function| {
+                    self.user_function_may_read_restricted_function_property(&user_function)
+                })
+        {
+            return None;
+        }
         if let Expression::Identifier(name) = expression
             && let Some(resolved) = self
                 .resolve_bound_alias_expression(expression)
@@ -36,6 +52,12 @@ impl<'a> FunctionCompiler<'a> {
                 return None;
             }
             return self.resolve_static_number_value(&resolved);
+        }
+        if matches!(expression, Expression::Call { .. } | Expression::New { .. })
+            && let Some(Expression::Number(number)) =
+                self.resolve_static_boxed_primitive_value(expression)
+        {
+            return Some(number);
         }
         if let Expression::Identifier(name) = expression
             && name == "Infinity"

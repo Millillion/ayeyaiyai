@@ -6,6 +6,16 @@ impl<'a> FunctionCompiler<'a> {
         expression: &Expression,
         async_generator: bool,
     ) -> Option<(Vec<SimpleGeneratorStep>, Vec<Statement>)> {
+        if let Expression::Await(_) = expression {
+            return match self.resolve_static_await_resolution_outcome(expression)? {
+                StaticEvalOutcome::Value(value) => {
+                    self.resolve_simple_yield_delegate_source(&value, async_generator)
+                }
+                StaticEvalOutcome::Throw(throw_value) => {
+                    self.simple_generator_throw_step(throw_value)
+                }
+            };
+        }
         if let Some(source) = self.resolve_iterator_source_kind(expression) {
             if let Some(flattened) = self.flatten_simple_yield_delegate_iterator_source(&source) {
                 return Some(flattened);
@@ -59,6 +69,7 @@ impl<'a> FunctionCompiler<'a> {
                 return Some((
                     vec![SimpleGeneratorStep {
                         effects: Vec::new(),
+                        close_effects: Vec::new(),
                         outcome: SimpleGeneratorStepOutcome::Throw(Expression::Call {
                             callee: Box::new(Expression::Identifier("TypeError".to_string())),
                             arguments: Vec::new(),
@@ -86,6 +97,7 @@ impl<'a> FunctionCompiler<'a> {
         Some((
             vec![SimpleGeneratorStep {
                 effects: Vec::new(),
+                close_effects: Vec::new(),
                 outcome: SimpleGeneratorStepOutcome::Throw(
                     self.resolve_static_throw_value_expression(&throw_value)?,
                 ),
@@ -176,6 +188,7 @@ impl<'a> FunctionCompiler<'a> {
                     .enumerate()
                     .map(|(index, value)| SimpleGeneratorStep {
                         effects: Vec::new(),
+                        close_effects: Vec::new(),
                         outcome: SimpleGeneratorStepOutcome::Yield(if *keys_only {
                             Expression::Number(index as f64)
                         } else {

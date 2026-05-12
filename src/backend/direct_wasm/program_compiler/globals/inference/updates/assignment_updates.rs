@@ -17,18 +17,43 @@ impl DirectWasmCompiler {
             return;
         }
         self.set_global_binding_kind(name, infer_global_expression_kind(&snapshot_value));
-        let materialized_value = self.materialize_global_expression(&snapshot_value);
         let inferred_array_binding = self.infer_global_array_binding(&snapshot_value);
         let inferred_object_binding = self.infer_global_object_binding(&snapshot_value);
         let inferred_arguments_binding = self.infer_global_arguments_binding(&snapshot_value);
         let inferred_function_binding = self.infer_global_function_binding(&snapshot_value);
+        let preserve_reference_alias = matches!(snapshot_value, Expression::Identifier(_))
+            && (inferred_array_binding.is_some()
+                || inferred_object_binding.is_some()
+                || inferred_function_binding.is_some());
+        let materialized_value = if preserve_reference_alias {
+            snapshot_value.clone()
+        } else {
+            self.materialize_global_expression(&snapshot_value)
+        };
         self.set_global_expression_binding(name, materialized_value);
         self.sync_global_array_binding(name, inferred_array_binding);
         self.sync_global_object_binding(name, inferred_object_binding);
         self.sync_global_arguments_binding(name, inferred_arguments_binding);
         self.sync_global_function_binding(name, inferred_function_binding);
         let materialized_snapshot = self.materialize_global_expression(&snapshot_value);
-        if let Expression::Identifier(source_name) = &materialized_snapshot {
+        let member_binding_alias_source = match &snapshot_value {
+            Expression::Identifier(source_name)
+                if self.has_global_member_bindings_for_name(source_name)
+                    || self
+                        .global_object_prototype_expression(source_name)
+                        .is_some()
+                    || self
+                        .global_object_prototype_expression(&format!("{source_name}.prototype"))
+                        .is_some() =>
+            {
+                Some(source_name)
+            }
+            _ => match &materialized_snapshot {
+                Expression::Identifier(source_name) => Some(source_name),
+                _ => None,
+            },
+        };
+        if let Some(source_name) = member_binding_alias_source {
             self.copy_global_member_bindings_for_alias(name, source_name);
         } else {
             let preserved_capture_slots =
@@ -94,6 +119,20 @@ impl DirectWasmCompiler {
                     materialized_value.clone(),
                     true,
                 );
+            }
+            Expression::This => {
+                self.define_global_object_property(
+                    "this",
+                    materialized_property.clone(),
+                    materialized_value.clone(),
+                    true,
+                );
+                if let Expression::String(name) = &materialized_property
+                    && !name.starts_with("__ayy")
+                {
+                    self.ensure_implicit_global_binding(name);
+                    self.update_static_global_assignment_metadata(name, &materialized_value);
+                }
             }
             Expression::Member {
                 object: prototype_object,

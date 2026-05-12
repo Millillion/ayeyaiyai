@@ -1,11 +1,80 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    pub(in crate::backend::direct_wasm) fn resolve_function_prototype_bind_call(
+        &self,
+        expression: &Expression,
+        current_function_name: Option<&str>,
+    ) -> Option<(Expression, Vec<CallArgument>, LocalFunctionBinding)> {
+        let resolved = self
+            .resolve_bound_alias_expression(expression)
+            .filter(|resolved| !static_expression_matches(resolved, expression))
+            .unwrap_or_else(|| expression.clone());
+        let Expression::Call { callee, arguments } = resolved else {
+            return None;
+        };
+        let Expression::Member { object, property } = callee.as_ref() else {
+            return None;
+        };
+        if !matches!(property.as_ref(), Expression::String(name) if name == "bind") {
+            return None;
+        }
+        let binding = self
+            .resolve_function_binding_from_expression_with_context(object, current_function_name)?;
+        let bound_arguments = arguments.into_iter().skip(1).collect::<Vec<_>>();
+        Some((object.as_ref().clone(), bound_arguments, binding))
+    }
+
     pub(in crate::backend::direct_wasm) fn emit_function_prototype_bind_call(
         &mut self,
         callee: &Expression,
         arguments: &[CallArgument],
     ) -> DirectResult<bool> {
+        if let Expression::Member { object, property } = callee
+            && matches!(property.as_ref(), Expression::String(name) if name == "bind")
+            && let Some(LocalFunctionBinding::Builtin(function_name)) =
+                self.resolve_function_binding_from_expression(object)
+            && function_name == "Function.prototype.call"
+            && let [
+                CallArgument::Expression(target) | CallArgument::Spread(target),
+                ..,
+            ] = arguments
+            && let Some(LocalFunctionBinding::Builtin(_)) =
+                self.resolve_function_binding_from_expression(target)
+        {
+            self.emit_numeric_expression(object)?;
+            self.state.emission.output.instructions.push(0x1a);
+            for argument in arguments {
+                match argument {
+                    CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                        self.emit_numeric_expression(expression)?;
+                        self.state.emission.output.instructions.push(0x1a);
+                    }
+                }
+            }
+            self.push_i32_const(JS_TYPEOF_FUNCTION_TAG);
+            return Ok(true);
+        }
+        if let Expression::Member { object, property } = callee
+            && matches!(property.as_ref(), Expression::String(name) if name == "bind")
+            && self
+                .resolve_function_binding_from_expression(object)
+                .is_some()
+        {
+            self.emit_numeric_expression(object)?;
+            self.state.emission.output.instructions.push(0x1a);
+            for argument in arguments {
+                match argument {
+                    CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                        self.emit_numeric_expression(expression)?;
+                        self.state.emission.output.instructions.push(0x1a);
+                    }
+                }
+            }
+            self.push_i32_const(JS_TYPEOF_FUNCTION_TAG);
+            return Ok(true);
+        }
+
         let Expression::Call {
             callee: bind_callee,
             arguments: bind_arguments,
@@ -64,10 +133,21 @@ impl<'a> FunctionCompiler<'a> {
 
         let capture_slots = self.resolve_function_expression_capture_slots(object);
         let expanded_bind_arguments = self.expand_call_arguments(bind_arguments);
-        let raw_this_expression = expanded_bind_arguments
-            .first()
-            .cloned()
-            .unwrap_or(Expression::Undefined);
+        let lexical_this_expression = user_function
+            .lexical_this
+            .then(|| {
+                capture_slots
+                    .as_ref()
+                    .and_then(|slots| slots.get("this"))
+                    .map(|slot_name| Expression::Identifier(slot_name.clone()))
+            })
+            .flatten();
+        let raw_this_expression = lexical_this_expression.unwrap_or_else(|| {
+            expanded_bind_arguments
+                .first()
+                .cloned()
+                .unwrap_or(Expression::Undefined)
+        });
         let expanded_call_arguments = self.expand_call_arguments(arguments);
         let bound_call_arguments = expanded_bind_arguments
             .iter()

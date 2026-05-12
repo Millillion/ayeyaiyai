@@ -1,10 +1,53 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
-    pub(in crate::backend::direct_wasm) fn resolve_home_object_name_for_function(
+    fn super_function_references_nested_function(
+        function: &FunctionDeclaration,
+        nested_function_name: &str,
+    ) -> bool {
+        if collect_referenced_binding_names_from_statements(&function.body)
+            .contains(nested_function_name)
+        {
+            return true;
+        }
+        function.params.iter().any(|parameter| {
+            parameter.default.as_ref().is_some_and(|default| {
+                let mut referenced = HashSet::new();
+                collect_referenced_binding_names_from_expression(default, &mut referenced);
+                referenced.contains(nested_function_name)
+            })
+        })
+    }
+
+    fn lexical_enclosing_function_name(&self, function_name: &str) -> Option<String> {
+        let function = self
+            .backend
+            .function_registry
+            .catalog
+            .registered_function(function_name)?;
+        if !function.lexical_this {
+            return None;
+        }
+        self.backend
+            .function_registry
+            .catalog
+            .registered_function_declarations
+            .iter()
+            .find(|candidate| {
+                candidate.name != function_name
+                    && Self::super_function_references_nested_function(candidate, function_name)
+            })
+            .map(|candidate| candidate.name.clone())
+    }
+
+    fn resolve_home_object_name_for_function_inner(
         &self,
         function_name: &str,
+        visited: &mut HashSet<String>,
     ) -> Option<String> {
+        if !visited.insert(function_name.to_string()) {
+            return None;
+        }
         if let Some(home_object_name) = self
             .user_function(function_name)?
             .home_object_binding
@@ -12,7 +55,18 @@ impl<'a> FunctionCompiler<'a> {
         {
             return Some(home_object_name.clone());
         }
-        self.find_global_home_object_binding_name(function_name)
+        if let Some(home_object_name) = self.find_global_home_object_binding_name(function_name) {
+            return Some(home_object_name);
+        }
+        let enclosing_function_name = self.lexical_enclosing_function_name(function_name)?;
+        self.resolve_home_object_name_for_function_inner(&enclosing_function_name, visited)
+    }
+
+    pub(in crate::backend::direct_wasm) fn resolve_home_object_name_for_function(
+        &self,
+        function_name: &str,
+    ) -> Option<String> {
+        self.resolve_home_object_name_for_function_inner(function_name, &mut HashSet::new())
     }
 
     pub(in crate::backend::direct_wasm) fn resolve_super_base_expression_with_context(
@@ -20,7 +74,32 @@ impl<'a> FunctionCompiler<'a> {
         current_function_name: Option<&str>,
     ) -> Option<Expression> {
         let function_name = current_function_name?;
-        let home_object_name = self.resolve_home_object_name_for_function(function_name)?;
+        if let Some(function) = self.resolve_registered_function_declaration(function_name)
+            && function.derived_constructor
+            && let Some(self_binding) = function.self_binding.as_deref()
+            && let Some(super_constructor) = self
+                .global_object_prototype_expression(self_binding)
+                .cloned()
+        {
+            let materialized_super_constructor =
+                self.materialize_static_expression(&super_constructor);
+            return match materialized_super_constructor {
+                Expression::Identifier(name) => Some(Self::prototype_member_expression(&name)),
+                _ => Some(Expression::Member {
+                    object: Box::new(materialized_super_constructor),
+                    property: Box::new(Expression::String("prototype".to_string())),
+                }),
+            };
+        }
+        let home_object_name = match self.resolve_home_object_name_for_function(function_name) {
+            Some(home_object_name) => home_object_name,
+            None => {
+                let enclosing_function_name =
+                    self.lexical_enclosing_function_name(function_name)?;
+                return self
+                    .resolve_super_base_expression_with_context(Some(&enclosing_function_name));
+            }
+        };
         self.global_object_prototype_expression(&home_object_name)
             .cloned()
     }

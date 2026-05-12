@@ -59,13 +59,13 @@ pub(super) fn encode_memory_section(initial_pages: u32) -> Vec<u8> {
     bytes
 }
 
-pub(super) fn encode_global_section(global_binding_count: u32) -> Vec<u8> {
+pub(super) fn encode_global_section(global_initial_values: &[i32]) -> Vec<u8> {
     let mut bytes = Vec::new();
-    push_u32(&mut bytes, 4 + global_binding_count);
+    push_u32(&mut bytes, 5 + global_initial_values.len() as u32);
 
-    for initial_value in [0, 0, JS_UNDEFINED_TAG, JS_TYPEOF_OBJECT_TAG]
+    for initial_value in [0, 0, JS_UNDEFINED_TAG, JS_TYPEOF_OBJECT_TAG, 1]
         .into_iter()
-        .chain(std::iter::repeat(0).take(global_binding_count as usize))
+        .chain(global_initial_values.iter().copied())
     {
         bytes.push(I32_TYPE);
         bytes.push(0x01);
@@ -120,10 +120,21 @@ pub(super) fn encode_code_section(
 }
 
 pub(super) fn encode_data_section(segments: &[(u32, Vec<u8>)]) -> Vec<u8> {
-    let mut bytes = Vec::new();
-    push_u32(&mut bytes, segments.len() as u32);
-
+    let mut coalesced_segments = Vec::<(u32, Vec<u8>)>::new();
     for (offset, data) in segments {
+        if let Some((last_offset, last_data)) = coalesced_segments.last_mut() {
+            if *last_offset + last_data.len() as u32 == *offset {
+                last_data.extend_from_slice(data);
+                continue;
+            }
+        }
+        coalesced_segments.push((*offset, data.clone()));
+    }
+
+    let mut bytes = Vec::new();
+    push_u32(&mut bytes, coalesced_segments.len() as u32);
+
+    for (offset, data) in &coalesced_segments {
         bytes.push(0x00);
         bytes.push(0x41);
         push_i32(&mut bytes, *offset as i32);

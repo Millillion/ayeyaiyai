@@ -216,6 +216,15 @@ impl<'a> FunctionCompiler<'a> {
                     names,
                     visited,
                 );
+                match object {
+                    Expression::Identifier(name) => {
+                        names.insert(name.clone());
+                    }
+                    Expression::This => {
+                        names.insert("this".to_string());
+                    }
+                    _ => {}
+                }
                 for statement in body {
                     self.collect_statement_call_effect_nonlocal_bindings(
                         statement,

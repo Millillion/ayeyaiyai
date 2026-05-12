@@ -9,7 +9,7 @@ use swc_ecma_ast::{
     ArrowExpr, AssignOp, AssignTarget, BinaryOp as SwcBinaryOp, BindingIdent, BlockStmt,
     BlockStmtOrExpr, BreakStmt, Callee, Class, ClassDecl, ClassMember, ClassMethod, Constructor,
     ContinueStmt, Decl, DefaultDecl, ExportDefaultDecl, Expr, ExprStmt, FnDecl, FnExpr, ForHead,
-    ForInStmt, ForOfStmt, Function, LabeledStmt, Lit, MemberProp, MetaPropKind, MethodKind,
+    ForInStmt, ForOfStmt, Function, Key, LabeledStmt, Lit, MemberProp, MetaPropKind, MethodKind,
     ModuleDecl, ModuleItem, ObjectPatProp, ParamOrTsParamProp, Pat, Program as SwcProgram, Prop,
     PropName, PropOrSpread, SimpleAssignTarget, Stmt, SuperProp, SuperPropExpr, SwitchStmt,
     UnaryOp as SwcUnaryOp, UpdateOp as SwcUpdateOp, VarDeclKind, VarDeclOrExpr, WithStmt,

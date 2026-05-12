@@ -1,9 +1,15 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::backend::direct_wasm::is_internal_user_function_identifier;
-use crate::backend::direct_wasm::state::{StaticThrowValue, StaticValueKind};
+use crate::backend::direct_wasm::state::{
+    GlobalArrayValueQueryAccess, StaticThrowValue, StaticValueKind,
+};
+use crate::backend::direct_wasm::{
+    ArrayValueBinding, PreparedFunctionMetadata, PreparedProgramAnalysis,
+    is_internal_user_function_identifier, ordered_object_property_names,
+    symbol_iterator_expression,
+};
 use crate::frontend;
-use crate::ir::hir::{CallArgument, FunctionKind, ObjectEntry};
+use crate::ir::hir::{ArrayElement, CallArgument, FunctionKind, ObjectEntry};
 
 use super::collect_referenced_binding_names_from_expression;
 use super::{
@@ -37,6 +43,1744 @@ fn collects_eval_local_function_declarations_in_ordinary_eval_context() {
         .next()
         .expect("expected one eval-local function declaration binding");
     assert!(binding_name.starts_with("__ayy_scope$f$"));
+}
+
+#[test]
+fn class_field_initializer_direct_eval_marks_ctor_assigned_nonlocals() {
+    let program = frontend::parse(
+        r#"
+            var executed = false;
+            class C {
+              x = eval('executed = true; 1;');
+            }
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.reserve_global_array_runtime_state_bindings(&program);
+    compiler.apply_user_function_parameter_analysis(&program);
+    compiler.register_user_function_capture_bindings(&program.functions);
+    compiler
+        .reserve_function_constructor_implicit_global_bindings(&program)
+        .expect("implicit global bindings should reserve");
+    compiler.reserve_global_runtime_prototype_binding_globals();
+
+    let ctor = compiler
+        .state
+        .function_registry
+        .user_functions()
+        .iter()
+        .find(|function| function.name.starts_with("__ayy_class_ctor_"))
+        .cloned()
+        .expect("expected lowered class constructor");
+    let ctor_declaration = compiler
+        .state
+        .function_registry
+        .registered_function(&ctor.name)
+        .expect("expected registered constructor declaration");
+
+    assert!(ctor_declaration.direct_eval_in_class_field_initializer);
+    assert!(
+        compiler
+            .collect_user_function_assigned_nonlocal_bindings(&ctor)
+            .contains("executed"),
+        "expected direct eval assignment to mark executed as nonlocal",
+    );
+}
+
+#[test]
+fn nested_class_field_initializer_function_declaration_retains_direct_eval_flag() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              x = () => {
+                var t = () => { eval("arguments;"); };
+                return t;
+              };
+            }
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+
+    let nested_eval_function = program
+        .functions
+        .iter()
+        .find(|function| {
+            matches!(
+                function.body.as_slice(),
+                [Statement::Expression(Expression::Call { callee, .. })]
+                    if matches!(callee.as_ref(), Expression::Identifier(name) if name == "eval")
+            )
+        })
+        .expect("expected nested eval arrow function");
+
+    assert!(
+        nested_eval_function.direct_eval_in_class_field_initializer,
+        "nested function declaration should preserve class field initializer eval rules",
+    );
+
+    let registered = compiler
+        .state
+        .function_registry
+        .registered_function(&nested_eval_function.name)
+        .expect("expected registered nested eval function");
+    assert!(
+        registered.direct_eval_in_class_field_initializer,
+        "registered nested eval function should preserve class field initializer eval rules",
+    );
+}
+
+#[test]
+fn nested_class_field_initializer_direct_eval_arguments_throws_syntax_error() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              x = () => {
+                var t = () => { eval("arguments;"); };
+                return t;
+              };
+            }
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+
+    let nested_eval_function = compiler
+        .state
+        .function_registry
+        .user_functions()
+        .iter()
+        .find(|function| {
+            compiler
+                .state
+                .function_registry
+                .registered_function(&function.name)
+                .is_some_and(|declaration| {
+                    matches!(
+                        declaration.body.as_slice(),
+                        [Statement::Expression(Expression::Call { callee, .. })]
+                            if matches!(callee.as_ref(), Expression::Identifier(name) if name == "eval")
+                    )
+                })
+        })
+        .cloned()
+        .expect("expected nested eval user function");
+
+    let function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        Some(&nested_eval_function),
+        true,
+        false,
+        nested_eval_function.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+
+    let outcome =
+        function_compiler.resolve_static_direct_eval_outcome(&[CallArgument::Expression(
+            Expression::String("arguments;".to_string()),
+        )]);
+    match outcome {
+        Some(StaticEvalOutcome::Throw(StaticThrowValue::NamedError(name))) => {
+            assert_eq!(name, "SyntaxError");
+        }
+        _ => panic!("expected SyntaxError static eval outcome"),
+    }
+}
+
+#[test]
+fn parses_private_field_access_in_class_field_initializer_direct_eval_context() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              #m = 44;
+              v = eval("this.#m;");
+            }
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.reserve_global_array_runtime_state_bindings(&program);
+    compiler.apply_user_function_parameter_analysis(&program);
+    compiler.register_user_function_capture_bindings(&program.functions);
+    compiler
+        .reserve_function_constructor_implicit_global_bindings(&program)
+        .expect("implicit global bindings should reserve");
+    compiler.reserve_global_runtime_prototype_binding_globals();
+
+    let ctor = compiler
+        .state
+        .function_registry
+        .user_functions()
+        .iter()
+        .find(|function| function.name.starts_with("__ayy_class_ctor_"))
+        .cloned()
+        .expect("expected lowered class constructor");
+
+    let function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        Some(&ctor),
+        true,
+        false,
+        ctor.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+
+    let eval_program = function_compiler
+        .parse_eval_program_in_current_function_context("this.#m;")
+        .expect("eval program should parse in class field initializer context");
+    assert!(matches!(
+        eval_program.statements.as_slice(),
+        [Statement::Expression(Expression::Member { object, property })]
+            if matches!(object.as_ref(), Expression::This)
+                && matches!(
+                    property.as_ref(),
+                    Expression::String(name) if name == "__ayy$private$C$m"
+                )
+    ));
+
+    let strict_eval_program = function_compiler
+        .parse_eval_program_in_current_function_context("\"use strict\";this.#m")
+        .expect("strict eval program should parse in class field initializer context");
+    assert!(strict_eval_program.statements.iter().any(|statement| {
+        matches!(
+            statement,
+            Statement::Expression(Expression::Member { object, property })
+                if matches!(object.as_ref(), Expression::This)
+                    && matches!(
+                        property.as_ref(),
+                        Expression::String(name) if name == "__ayy$private$C$m"
+                    )
+        )
+    }));
+
+    let outcome =
+        function_compiler.resolve_static_direct_eval_outcome(&[CallArgument::Expression(
+            Expression::String("this.#m".to_string()),
+        )]);
+    assert!(outcome.is_none());
+}
+
+#[test]
+fn compiles_private_field_access_in_class_method_direct_eval_context() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              #m = 44;
+
+              getWithEval() {
+                return eval("this.#m;");
+              }
+            }
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.reserve_global_array_runtime_state_bindings(&program);
+    compiler.apply_user_function_parameter_analysis(&program);
+    compiler.register_user_function_capture_bindings(&program.functions);
+    compiler
+        .reserve_function_constructor_implicit_global_bindings(&program)
+        .expect("implicit global bindings should reserve");
+    compiler.reserve_global_runtime_prototype_binding_globals();
+    FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("top-level function compiler should initialize")
+    .compile(&program.statements)
+    .expect("top-level class should compile");
+}
+
+#[test]
+fn compiles_private_getter_access_in_class_method_direct_eval_context() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              get #m() { return 44; }
+
+              getWithEval() {
+                return eval("this.#m;");
+              }
+            }
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.reserve_global_array_runtime_state_bindings(&program);
+    compiler.apply_user_function_parameter_analysis(&program);
+    compiler.register_user_function_capture_bindings(&program.functions);
+    compiler
+        .reserve_function_constructor_implicit_global_bindings(&program)
+        .expect("implicit global bindings should reserve");
+    compiler.reserve_global_runtime_prototype_binding_globals();
+    FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("top-level function compiler should initialize")
+    .compile(&program.statements)
+    .expect("top-level class should compile");
+}
+
+#[test]
+fn keeps_private_getter_direct_eval_method_call_dynamic() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              get #m() { return 44; }
+
+              getWithEval() {
+                return eval("this.#m");
+              }
+            }
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.reserve_global_array_runtime_state_bindings(&program);
+    compiler.apply_user_function_parameter_analysis(&program);
+    compiler.register_user_function_capture_bindings(&program.functions);
+    compiler
+        .reserve_function_constructor_implicit_global_bindings(&program)
+        .expect("implicit global bindings should reserve");
+    compiler.reserve_global_runtime_prototype_binding_globals();
+
+    let function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("top-level function compiler should initialize");
+
+    assert!(
+        function_compiler
+            .resolve_static_member_call_outcome_with_context(
+                &Expression::New {
+                    callee: Box::new(Expression::Identifier("C".to_string())),
+                    arguments: vec![],
+                },
+                "getWithEval",
+                None,
+            )
+            .is_none(),
+        "expected methods containing direct eval to stay dynamic so they keep the correct method context",
+    );
+}
+
+#[test]
+fn materializes_literal_string_index_member_to_character() {
+    let program = frontend::parse(r#"console.log("lol"[1]);"#).expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+
+    let function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        program.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+
+    assert_eq!(
+        function_compiler.materialize_static_expression(&Expression::Member {
+            object: Box::new(Expression::String("lol".to_string())),
+            property: Box::new(Expression::Number(1.0)),
+        }),
+        Expression::String("o".to_string()),
+    );
+}
+
+#[test]
+fn resolves_constructor_object_binding_for_direct_eval_new_target_field_as_undefined() {
+    let program = frontend::parse(
+        r#"
+            var executed = false;
+            class C {
+              x = eval('executed = true; new.target;');
+            }
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+    compiler.register_local_class_member_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        program.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+    function_compiler
+        .emit_statement(&program.statements[0])
+        .expect("seed statement should emit");
+    function_compiler
+        .emit_statement(&program.statements[1])
+        .expect("class declaration should emit");
+
+    let object_binding = function_compiler
+        .resolve_user_constructor_object_binding_from_new(
+            &Expression::Identifier("C".to_string()),
+            &[],
+        )
+        .expect("expected constructor object binding");
+    assert_eq!(
+        object_binding_lookup_value(&object_binding, &Expression::String("x".to_string())),
+        Some(&Expression::Undefined),
+    );
+}
+
+#[test]
+fn resolves_constructor_object_binding_for_string_index_field_as_character() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              x = "lol"
+              [1];
+            }
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+    compiler.register_local_class_member_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        program.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+    for statement in program
+        .statements
+        .iter()
+        .take(program.statements.len().saturating_sub(1))
+    {
+        function_compiler
+            .emit_statement(statement)
+            .expect("statement should emit");
+    }
+
+    let object_binding = function_compiler
+        .resolve_user_constructor_object_binding_from_new(
+            &Expression::Identifier("C".to_string()),
+            &[],
+        )
+        .expect("expected constructor object binding");
+
+    assert_eq!(
+        function_compiler.resolve_object_binding_property_value(
+            &object_binding,
+            &Expression::String("x".to_string()),
+        ),
+        Some(Expression::String("o".to_string())),
+    );
+}
+
+#[test]
+fn resolves_constructor_object_binding_for_private_field_initializer() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              #_ = 1;
+            }
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        program.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+    for statement in &program.statements {
+        function_compiler
+            .emit_statement(statement)
+            .expect("statement should emit");
+    }
+
+    let object_binding = function_compiler
+        .resolve_user_constructor_object_binding_from_new(
+            &Expression::Identifier("C".to_string()),
+            &[],
+        )
+        .expect("expected constructor object binding");
+    assert_eq!(
+        object_binding_lookup_value(
+            &object_binding,
+            &Expression::String("__ayy$private$C$_".to_string()),
+        ),
+        Some(&Expression::Number(1.0)),
+        "expected constructor object binding to preserve private field initializer value",
+    );
+}
+
+#[test]
+fn resolves_constructor_object_binding_for_private_field_direct_eval_initializer() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              #m = 44;
+              v = eval("this.#m");
+            }
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        program.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+    for statement in &program.statements {
+        function_compiler
+            .emit_statement(statement)
+            .expect("statement should emit");
+    }
+
+    let object_binding = function_compiler
+        .resolve_user_constructor_object_binding_from_new(
+            &Expression::Identifier("C".to_string()),
+            &[],
+        )
+        .expect("expected constructor object binding");
+
+    assert_eq!(
+        object_binding_lookup_value(&object_binding, &Expression::String("v".to_string())),
+        Some(&Expression::Number(44.0)),
+        "expected direct eval field initializer to resolve against the constructor this binding",
+    );
+}
+
+#[test]
+fn resolves_constructor_object_binding_for_private_getter_direct_eval_initializer() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              get #m() { return "Test262"; }
+              v = eval("this.#m");
+            }
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        program.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+    for statement in &program.statements {
+        function_compiler
+            .emit_statement(statement)
+            .expect("statement should emit");
+    }
+
+    let object_binding = function_compiler
+        .resolve_user_constructor_object_binding_from_new(
+            &Expression::Identifier("C".to_string()),
+            &[],
+        )
+        .expect("expected constructor object binding");
+
+    assert_eq!(
+        object_binding_lookup_value(&object_binding, &Expression::String("v".to_string())),
+        Some(&Expression::String("Test262".to_string())),
+        "expected direct eval getter initializer to resolve against the constructor this binding",
+    );
+}
+
+#[test]
+fn tracks_top_level_new_binding_for_private_field_initializer() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              #_ = 1;
+              _() { return this.#_; }
+            }
+            let c = new C();
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.reserve_global_array_runtime_state_bindings(&program);
+    compiler.apply_user_function_parameter_analysis(&program);
+    compiler.register_user_function_capture_bindings(&program.functions);
+    compiler
+        .reserve_function_constructor_implicit_global_bindings(&program)
+        .expect("implicit global bindings should reserve");
+    compiler.reserve_global_runtime_prototype_binding_globals();
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        program.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+    for statement in &program.statements {
+        function_compiler
+            .emit_statement(statement)
+            .expect("statement should emit");
+    }
+
+    let object_binding = function_compiler
+        .resolve_object_binding_from_expression(&Expression::Identifier("c".to_string()))
+        .expect("expected top-level new binding object");
+    assert_eq!(
+        object_binding_lookup_value(
+            &object_binding,
+            &Expression::String("__ayy$private$C$_".to_string()),
+        ),
+        Some(&Expression::Number(1.0)),
+        "expected top-level new binding to preserve private field initializer value",
+    );
+
+    let method_binding = function_compiler
+        .resolve_member_function_binding(
+            &Expression::Identifier("c".to_string()),
+            &Expression::String("_".to_string()),
+        )
+        .expect("expected instance method binding");
+    let private_member = Expression::Member {
+        object: Box::new(Expression::Identifier("c".to_string())),
+        property: Box::new(Expression::String("__ayy$private$C$_".to_string())),
+    };
+    assert_eq!(
+        function_compiler.materialize_static_expression(&private_member),
+        Expression::Number(1.0),
+        "expected top-level private member materialization to preserve field value",
+    );
+    let LocalFunctionBinding::User(method_name) = &method_binding else {
+        panic!("expected user function binding");
+    };
+    let method_user_function = function_compiler
+        .user_function(method_name)
+        .cloned()
+        .expect("expected method user function");
+    function_compiler
+        .with_user_function_execution_context(&method_user_function, |compiler| {
+            assert_eq!(
+                compiler.materialize_static_expression(&private_member),
+                Expression::Number(1.0),
+                "expected private member materialization inside method context to preserve field value",
+            );
+            Ok(())
+        })
+        .expect("expected method context materialization to succeed");
+    if let Some(StaticEvalOutcome::Value(static_call_value)) = function_compiler
+        .resolve_static_member_call_outcome_with_context(
+            &Expression::Identifier("c".to_string()),
+            "_",
+            None,
+        )
+    {
+        assert_eq!(
+            function_compiler.materialize_static_expression(&static_call_value),
+            Expression::Number(1.0),
+            "expected top-level method call shortcut to preserve private field initializer value",
+        );
+    }
+    let resolved_return = function_compiler
+        .resolve_function_binding_static_return_expression_with_call_frame(
+            &method_binding,
+            &[],
+            &Expression::Identifier("c".to_string()),
+        )
+        .expect("expected explicit call-frame return resolution");
+    assert_eq!(
+        function_compiler.materialize_static_expression(&resolved_return),
+        Expression::Number(1.0),
+        "expected explicit call-frame return resolution to preserve private field initializer value",
+    );
+}
+
+#[test]
+fn tracks_object_prevent_extensions_on_local_binding() {
+    let program = frontend::parse(
+        r#"
+            let o = {};
+            let same = Object.preventExtensions(o) === o;
+            let extensible = Object.isExtensible(o);
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        program.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+    for statement in &program.statements {
+        function_compiler
+            .emit_statement(statement)
+            .expect("statement should emit");
+    }
+
+    let object_binding = function_compiler
+        .resolve_object_binding_from_expression(&Expression::Identifier("o".to_string()))
+        .expect("expected tracked object binding");
+    assert!(
+        !object_binding.extensible,
+        "expected Object.preventExtensions to mark the binding as non-extensible",
+    );
+    assert_eq!(
+        function_compiler
+            .resolve_static_boolean_expression(&Expression::Identifier("same".to_string())),
+        Some(true),
+        "expected Object.preventExtensions to preserve object identity",
+    );
+    assert_eq!(
+        function_compiler
+            .materialize_static_expression(&Expression::Identifier("extensible".to_string())),
+        Expression::Bool(false),
+        "expected Object.isExtensible to observe the non-extensible binding",
+    );
+}
+
+#[test]
+fn does_not_resolve_constructor_object_binding_for_nonextensible_private_field_install() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              #x = (Object.preventExtensions(this), 1);
+            }
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        program.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+    for statement in &program.statements {
+        function_compiler
+            .emit_statement(statement)
+            .expect("statement should emit");
+    }
+
+    let LocalFunctionBinding::User(function_name) = function_compiler
+        .resolve_function_binding_from_expression(&Expression::Identifier("C".to_string()))
+        .expect("expected class constructor binding")
+    else {
+        panic!("expected user function binding for class constructor");
+    };
+    let user_function = function_compiler
+        .user_function(&function_name)
+        .expect("expected user function for class constructor");
+
+    assert!(
+        function_compiler
+            .resolve_user_constructor_object_binding_from_new(
+                &Expression::Identifier("C".to_string()),
+                &[],
+            )
+            .is_none(),
+        "expected non-extensible private field installation to stop static constructor resolution",
+    );
+}
+
+#[test]
+fn does_not_resolve_derived_constructor_object_binding_after_nonextensible_super() {
+    let program = frontend::parse(
+        r#"
+            class B {
+              constructor(seal) {
+                if (seal) Object.preventExtensions(this);
+              }
+            }
+            class C extends B {
+              #x;
+              constructor(seal) {
+                super(seal);
+              }
+            }
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        program.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+    for statement in &program.statements {
+        function_compiler
+            .emit_statement(statement)
+            .expect("statement should emit");
+    }
+
+    let LocalFunctionBinding::User(function_name) = function_compiler
+        .resolve_function_binding_from_expression(&Expression::Identifier("C".to_string()))
+        .expect("expected class constructor binding")
+    else {
+        panic!("expected user function binding for class constructor");
+    };
+    let user_function = function_compiler
+        .user_function(&function_name)
+        .expect("expected user function for class constructor");
+
+    assert!(
+        function_compiler
+            .resolve_user_constructor_object_binding_from_new(
+                &Expression::Identifier("C".to_string()),
+                &[CallArgument::Expression(Expression::Bool(true))],
+            )
+            .is_none(),
+        "expected derived constructor resolution to stop when super() returns a non-extensible receiver",
+    );
+    assert!(
+        function_compiler
+            .resolve_user_constructor_object_binding_for_function(
+                user_function,
+                &[CallArgument::Expression(Expression::Bool(true))],
+                None,
+            )
+            .is_none(),
+        "expected direct derived constructor object binding resolution to stop when super() returns a non-extensible receiver",
+    );
+    match function_compiler.resolve_user_constructor_object_binding_outcome_for_function(
+        user_function,
+        &[CallArgument::Expression(Expression::Bool(true))],
+        None,
+    ) {
+        Some(Err(StaticThrowValue::NamedError(name))) => assert_eq!(name, "TypeError"),
+        Some(Err(StaticThrowValue::Value(value))) => {
+            panic!("expected named TypeError outcome, got thrown value {value:?}");
+        }
+        Some(Ok(_)) => {
+            panic!("expected TypeError outcome, got resolved binding");
+        }
+        None => panic!("expected constructor outcome"),
+    }
+}
+
+#[test]
+fn resolves_derived_constructor_outcome_for_nonextensible_private_method_install() {
+    let program = frontend::parse(
+        r#"
+            class NonExtensibleBase {
+              constructor(seal) {
+                if (seal) Object.preventExtensions(this);
+              }
+            }
+
+            class ClassWithPrivateMethod extends NonExtensibleBase {
+              constructor(seal) {
+                super(seal);
+              }
+
+              #privateMethod() {
+                return 42;
+              }
+
+              publicMethod() {
+                return this.#privateMethod();
+              }
+            }
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        program.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+    for statement in &program.statements {
+        function_compiler
+            .emit_statement(statement)
+            .expect("statement should emit");
+    }
+
+    let LocalFunctionBinding::User(function_name) = function_compiler
+        .resolve_function_binding_from_expression(&Expression::Identifier(
+            "ClassWithPrivateMethod".to_string(),
+        ))
+        .expect("expected class constructor binding")
+    else {
+        panic!("expected user function binding for class constructor");
+    };
+    let user_function = function_compiler
+        .user_function(&function_name)
+        .expect("expected user function for class constructor");
+
+    match function_compiler.resolve_user_constructor_object_binding_outcome_for_function(
+        user_function,
+        &[CallArgument::Expression(Expression::Bool(true))],
+        None,
+    ) {
+        Some(Err(StaticThrowValue::NamedError(name))) => assert_eq!(name, "TypeError"),
+        Some(Err(StaticThrowValue::Value(value))) => {
+            panic!("expected named TypeError outcome, got thrown value {value:?}");
+        }
+        Some(Ok(_)) => panic!("expected TypeError outcome, got resolved binding"),
+        None => panic!("expected constructor outcome"),
+    }
+}
+
+#[test]
+fn resolves_derived_constructor_outcome_for_nonextensible_private_accessor_install() {
+    let program = frontend::parse(
+        r#"
+            class NonExtensibleBase {
+              constructor(seal) {
+                if (seal) Object.preventExtensions(this);
+              }
+            }
+
+            class ClassWithPrivateAccessor extends NonExtensibleBase {
+              constructor(seal) {
+                super(seal);
+              }
+
+              get #privateAccessor() {
+                return 42;
+              }
+
+              get publicAccessor() {
+                return this.#privateAccessor;
+              }
+            }
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        program.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+    for statement in &program.statements {
+        function_compiler
+            .emit_statement(statement)
+            .expect("statement should emit");
+    }
+
+    let LocalFunctionBinding::User(function_name) = function_compiler
+        .resolve_function_binding_from_expression(&Expression::Identifier(
+            "ClassWithPrivateAccessor".to_string(),
+        ))
+        .expect("expected class constructor binding")
+    else {
+        panic!("expected user function binding for class constructor");
+    };
+    let user_function = function_compiler
+        .user_function(&function_name)
+        .expect("expected user function for class constructor");
+
+    match function_compiler.resolve_user_constructor_object_binding_outcome_for_function(
+        user_function,
+        &[CallArgument::Expression(Expression::Bool(true))],
+        None,
+    ) {
+        Some(Err(StaticThrowValue::NamedError(name))) => assert_eq!(name, "TypeError"),
+        Some(Err(StaticThrowValue::Value(value))) => {
+            panic!("expected named TypeError outcome, got thrown value {value:?}");
+        }
+        Some(Ok(_)) => panic!("expected TypeError outcome, got resolved binding"),
+        None => panic!("expected constructor outcome"),
+    }
+}
+
+#[test]
+fn tracks_top_level_new_binding_for_derived_private_field_assignment_after_super() {
+    let program = frontend::parse(
+        r#"
+            class NonExtensibleBase {
+              constructor(seal) {
+                if (seal) Object.preventExtensions(this);
+              }
+            }
+
+            class ClassWithPrivateField extends NonExtensibleBase {
+              #val;
+
+              constructor(seal) {
+                super(seal);
+                this.#val = 42;
+              }
+
+              val() {
+                return this.#val;
+              }
+            }
+
+            const t = new ClassWithPrivateField(false);
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        program.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+    for statement in &program.statements {
+        function_compiler
+            .emit_statement(statement)
+            .expect("statement should emit");
+    }
+
+    let object_binding = function_compiler
+        .resolve_object_binding_from_expression(&Expression::Identifier("t".to_string()))
+        .expect("expected tracked t object binding");
+    assert_eq!(
+        object_binding_lookup_value(
+            &object_binding,
+            &Expression::String("__ayy$private$ClassWithPrivateField$val".to_string()),
+        ),
+        Some(&Expression::Number(42.0)),
+    );
+}
+
+#[test]
+fn resolves_static_member_call_outcome_for_derived_private_field_method() {
+    let program = frontend::parse(
+        r#"
+            class NonExtensibleBase {
+              constructor(seal) {
+                if (seal) Object.preventExtensions(this);
+              }
+            }
+
+            class ClassWithPrivateField extends NonExtensibleBase {
+              #val;
+
+              constructor(seal) {
+                super(seal);
+                this.#val = 42;
+              }
+
+              val() {
+                return this.#val;
+              }
+            }
+
+            const t = new ClassWithPrivateField(false);
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        program.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+    for statement in &program.statements {
+        function_compiler
+            .emit_statement(statement)
+            .expect("statement should emit");
+    }
+
+    match function_compiler.resolve_static_member_call_outcome_with_context(
+        &Expression::Identifier("t".to_string()),
+        "val",
+        None,
+    ) {
+        Some(StaticEvalOutcome::Value(value)) => {
+            assert_eq!(
+                function_compiler.materialize_static_expression(&value),
+                Expression::Number(42.0)
+            );
+        }
+        Some(StaticEvalOutcome::Throw(StaticThrowValue::NamedError(name))) => {
+            panic!("expected 42, got named error {name}");
+        }
+        Some(StaticEvalOutcome::Throw(StaticThrowValue::Value(value))) => {
+            panic!("expected 42, got thrown value {value:?}");
+        }
+        None => panic!("expected static member call outcome"),
+    }
+}
+
+#[test]
+fn tracks_top_level_new_binding_for_direct_eval_new_target_field_as_undefined() {
+    let program = frontend::parse(
+        r#"
+            var executed = false;
+            class C {
+              x = eval('executed = true; new.target;');
+            }
+            var c = new C();
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        program.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+    for statement in &program.statements {
+        function_compiler
+            .emit_statement(statement)
+            .expect("statement should emit");
+    }
+
+    let object_binding = function_compiler
+        .resolve_object_binding_from_expression(&Expression::Identifier("c".to_string()))
+        .expect("expected global object binding for c");
+    assert_eq!(
+        object_binding_lookup_value(&object_binding, &Expression::String("x".to_string())),
+        Some(&Expression::Undefined),
+    );
+
+    let comparison = Expression::Binary {
+        op: crate::ir::hir::BinaryOp::Equal,
+        left: Box::new(Expression::Member {
+            object: Box::new(Expression::Identifier("c".to_string())),
+            property: Box::new(Expression::String("x".to_string())),
+        }),
+        right: Box::new(Expression::Undefined),
+    };
+    assert_eq!(
+        function_compiler.resolve_static_boolean_expression(&comparison),
+        Some(true),
+    );
+}
+
+#[test]
+fn materializes_member_expression_through_new_alias_without_direct_object_binding() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              x = eval('new.target;');
+            }
+            var c = new C();
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        program.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+    for statement in &program.statements {
+        function_compiler
+            .emit_statement(statement)
+            .expect("statement should emit");
+    }
+
+    assert!(function_compiler.global_object_binding("c").is_some());
+    assert!(matches!(
+        function_compiler.global_value_binding("c"),
+        Some(Expression::New { .. })
+    ));
+
+    function_compiler
+        .backend
+        .sync_global_object_binding("c", None);
+    assert!(function_compiler.global_object_binding("c").is_none());
+
+    let member_expression = Expression::Member {
+        object: Box::new(Expression::Identifier("c".to_string())),
+        property: Box::new(Expression::String("x".to_string())),
+    };
+    assert_eq!(
+        function_compiler.materialize_static_expression(&member_expression),
+        Expression::Undefined,
+    );
+}
+
+#[test]
+fn prepared_start_path_materializes_direct_eval_new_target_field_member_as_undefined() {
+    let program = frontend::parse(
+        r#"
+            var executed = false;
+            class C {
+              x = eval('executed = true; new.target;');
+            }
+            var c = new C();
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.reserve_global_array_runtime_state_bindings(&program);
+    compiler.apply_user_function_parameter_analysis(&program);
+    compiler.register_user_function_capture_bindings(&program.functions);
+    compiler
+        .reserve_function_constructor_implicit_global_bindings(&program)
+        .expect("function constructor implicit globals should reserve");
+    compiler.reserve_global_runtime_prototype_binding_globals();
+
+    let global_binding_environment = compiler.snapshot_global_binding_environment();
+    let global_static_semantics = compiler.snapshot_global_static_semantics();
+    let start_statements = compiler.prepare_start_statements(&program);
+    let entry_state = FunctionCompiler::prepare_top_level_entry_state(
+        &mut compiler,
+        program.strict,
+        &global_binding_environment,
+    )
+    .expect("top-level entry state should prepare");
+
+    let mut ordered_user_function_names = Vec::new();
+    let mut assigned_nonlocal_binding_results = HashMap::new();
+    let mut user_function_metadata = HashMap::new();
+    for declaration in &program.functions {
+        let Some(user_function) = compiler.prepared_user_function(&declaration.name) else {
+            continue;
+        };
+        ordered_user_function_names.push(declaration.name.clone());
+        user_function_metadata.insert(
+            declaration.name.clone(),
+            PreparedFunctionMetadata {
+                name: declaration.name.clone(),
+                declaration: declaration.clone(),
+                user_function: user_function.clone(),
+            },
+        );
+        let assigned_nonlocal_bindings =
+            compiler.collect_user_function_assigned_nonlocal_bindings(&user_function);
+        let prepared_results =
+            compiler.capture_assigned_nonlocal_binding_results(&assigned_nonlocal_bindings);
+        if !prepared_results.is_empty() {
+            assigned_nonlocal_binding_results.insert(declaration.name.clone(), prepared_results);
+        }
+    }
+    let analysis = PreparedProgramAnalysis::new(
+        assigned_nonlocal_binding_results,
+        user_function_metadata,
+        ordered_user_function_names,
+        compiler.prepared_eval_local_function_bindings(),
+        compiler.prepared_user_function_capture_bindings(),
+        global_binding_environment,
+        global_static_semantics,
+    );
+
+    let mut function_compiler = FunctionCompiler::from_prepared_entry_state(
+        &mut compiler,
+        entry_state,
+        analysis.function_compiler_inputs(),
+    )
+    .expect("prepared start compiler should initialize");
+    function_compiler
+        .register_bindings(&start_statements)
+        .expect("start bindings should register");
+    for statement in &start_statements {
+        function_compiler
+            .emit_statement(statement)
+            .expect("prepared start statement should emit");
+    }
+
+    let member_expression = Expression::Member {
+        object: Box::new(Expression::Identifier("c".to_string())),
+        property: Box::new(Expression::String("x".to_string())),
+    };
+    assert_eq!(
+        function_compiler.materialize_static_expression(&member_expression),
+        Expression::Undefined,
+    );
+}
+
+#[test]
+fn resolves_object_binding_for_derived_constructor_returning_proxy_with_public_fields() {
+    let program = frontend::parse(
+        r#"
+            let arr = [];
+            let expectedTarget = null;
+            function ProxyBase() {
+              expectedTarget = this;
+              return new Proxy(this, {
+                defineProperty(target, key, descriptor) {
+                  arr.push(target);
+                  return Reflect.defineProperty(target, key, descriptor);
+                }
+              });
+            }
+
+            class Test extends ProxyBase {
+              f = 3;
+              g = "Test262";
+            }
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+    let (
+        parameter_bindings,
+        parameter_value_bindings,
+        parameter_array_bindings,
+        parameter_object_bindings,
+    ) = compiler.collect_user_function_parameter_bindings(&program);
+    compiler
+        .state
+        .function_registry
+        .analysis
+        .user_function_parameter_analysis
+        .function_bindings_by_function = parameter_bindings;
+    compiler
+        .state
+        .function_registry
+        .analysis
+        .user_function_parameter_analysis
+        .value_bindings_by_function = parameter_value_bindings;
+    compiler
+        .state
+        .function_registry
+        .analysis
+        .user_function_parameter_analysis
+        .array_bindings_by_function = parameter_array_bindings;
+    compiler
+        .state
+        .function_registry
+        .analysis
+        .user_function_parameter_analysis
+        .object_bindings_by_function = parameter_object_bindings;
+
+    let function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        true,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+
+    let expression = Expression::New {
+        callee: Box::new(Expression::Identifier("Test".to_string())),
+        arguments: Vec::new(),
+    };
+    let object_binding = function_compiler
+        .resolve_object_binding_from_expression(&expression)
+        .expect("expected object binding from new Test()");
+    assert_eq!(
+        object_binding_lookup_value(&object_binding, &Expression::String("f".to_string())),
+        Some(&Expression::Number(3.0)),
+    );
+    assert_eq!(
+        object_binding_lookup_value(&object_binding, &Expression::String("g".to_string())),
+        Some(&Expression::String("Test262".to_string())),
+    );
 }
 
 #[test]
@@ -1134,10 +2878,20 @@ fn preserves_descriptor_return_snapshots_through_extra_local_builtin_alias_calls
         .register_bindings(&program.statements)
         .expect("bindings should register");
 
-    for statement in &program.statements {
+    for (index, statement) in program.statements.iter().enumerate() {
         function_compiler
             .emit_statement(statement)
             .expect("statement should emit");
+        if index < 3 {
+            assert!(
+                function_compiler
+                    .resolve_object_binding_from_expression(&Expression::Identifier(
+                        "obj".to_string(),
+                    ))
+                    .is_some(),
+                "expected obj object binding after statement index {index}",
+            );
+        }
     }
 
     let verify_call = Expression::Call {
@@ -1692,35 +3446,6 @@ fn propagates_custom_iterator_member_bindings_through_symbol_iterator_calls() {
         function_compiler
             .emit_statement(statement)
             .expect("statement should emit");
-        eprintln!("stmt: {statement:?}");
-        eprintln!(
-            "static getter={:?} setter={:?}",
-            function_compiler.resolve_member_getter_binding(
-                &Expression::Identifier("C".to_string()),
-                &Expression::Number(2.0),
-            ),
-            function_compiler.resolve_member_setter_binding(
-                &Expression::Identifier("C".to_string()),
-                &Expression::Number(2.0),
-            )
-        );
-        eprintln!(
-            "instance getter={:?} setter={:?}",
-            function_compiler.resolve_member_getter_binding(
-                &Expression::New {
-                    callee: Box::new(Expression::Identifier("C".to_string())),
-                    arguments: Vec::new(),
-                },
-                &Expression::Number(2.0),
-            ),
-            function_compiler.resolve_member_setter_binding(
-                &Expression::New {
-                    callee: Box::new(Expression::Identifier("C".to_string())),
-                    arguments: Vec::new(),
-                },
-                &Expression::Number(2.0),
-            )
-        );
     }
 
     let Statement::Var {
@@ -2473,6 +4198,100 @@ fn does_not_infer_object_parameter_bindings_for_undefined_member_argument_values
 }
 
 #[test]
+fn does_not_reuse_conflicting_object_parameter_bindings_for_arrow_destructuring_defaults() {
+    let program = frontend::parse(
+        r#"
+            var af = ({x = 1}) => x;
+            console.log(af({}));
+            console.log(af({x: 2}));
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+
+    let (_, parameter_value_bindings, _, parameter_object_bindings) =
+        compiler.collect_user_function_parameter_bindings(&program);
+
+    let arrow_function = compiler
+        .state
+        .function_registry
+        .catalog
+        .user_functions
+        .iter()
+        .find(|function| function.name.ends_with("__name_af"))
+        .expect("expected af arrow user function");
+    let parameter_name = arrow_function
+        .params
+        .first()
+        .expect("expected destructuring temporary parameter");
+
+    assert!(matches!(
+        parameter_value_bindings
+            .get(&arrow_function.name)
+            .and_then(|bindings| bindings.get(parameter_name)),
+        Some(None)
+    ));
+    let actual_object_binding = parameter_object_bindings
+        .get(&arrow_function.name)
+        .and_then(|bindings| bindings.get(parameter_name));
+    let actual_object_binding_kind = match actual_object_binding {
+        Some(None) => "unknown",
+        Some(Some(_)) => "concrete",
+        None => "missing",
+    };
+    assert!(
+        matches!(actual_object_binding, Some(None)),
+        "unexpected object parameter binding for {parameter_name}: {actual_object_binding_kind}"
+    );
+
+    let function_parameter_bindings = HashMap::new();
+    let function_parameter_value_bindings = parameter_value_bindings
+        .get(&arrow_function.name)
+        .cloned()
+        .unwrap_or_default();
+    let function_parameter_array_bindings = HashMap::new();
+    let function_parameter_object_bindings = parameter_object_bindings
+        .get(&arrow_function.name)
+        .cloned()
+        .unwrap_or_default();
+    let arrow_function = arrow_function.clone();
+    let declaration = compiler
+        .registered_function(&arrow_function.name)
+        .expect("expected arrow declaration")
+        .clone();
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        Some(&arrow_function),
+        true,
+        false,
+        arrow_function.strict,
+        &function_parameter_bindings,
+        &function_parameter_value_bindings,
+        &function_parameter_array_bindings,
+        &function_parameter_object_bindings,
+    )
+    .expect("function compiler should initialize");
+    for statement in declaration.body.iter().take(2) {
+        function_compiler
+            .emit_statement(statement)
+            .expect("statement should emit");
+    }
+    assert_eq!(
+        function_compiler.resolve_static_number_value(&Expression::Identifier("x".to_string())),
+        None
+    );
+}
+
+#[test]
 fn preserves_unknown_parameter_object_binding_after_stateful_callback_object_call() {
     let program = frontend::parse(
         r#"
@@ -2533,8 +4352,12 @@ fn does_not_infer_object_parameter_bindings_for_direct_undefined_member_argument
     compiler.register_global_bindings(&program.statements);
     compiler.register_global_function_bindings(&program.functions);
 
-    let (_, parameter_value_bindings, _, parameter_object_bindings) =
-        compiler.collect_user_function_parameter_bindings(&program);
+    let (
+        parameter_bindings,
+        parameter_value_bindings,
+        parameter_array_bindings,
+        parameter_object_bindings,
+    ) = compiler.collect_user_function_parameter_bindings(&program);
     let same_value_parameter_values = parameter_value_bindings
         .get("sameValue")
         .expect("expected sameValue parameter value bindings");
@@ -2577,8 +4400,12 @@ fn does_not_infer_object_parameter_bindings_for_callback_undefined_member_argume
     compiler.register_global_bindings(&program.statements);
     compiler.register_global_function_bindings(&program.functions);
 
-    let (_, parameter_value_bindings, _, parameter_object_bindings) =
-        compiler.collect_user_function_parameter_bindings(&program);
+    let (
+        parameter_bindings,
+        parameter_value_bindings,
+        parameter_array_bindings,
+        parameter_object_bindings,
+    ) = compiler.collect_user_function_parameter_bindings(&program);
     let same_value_parameter_values = parameter_value_bindings
         .get("sameValue")
         .expect("expected sameValue parameter value bindings");
@@ -2623,8 +4450,12 @@ fn does_not_infer_object_parameter_bindings_for_nested_callback_undefined_member
     compiler.register_global_bindings(&program.statements);
     compiler.register_global_function_bindings(&program.functions);
 
-    let (_, parameter_value_bindings, _, parameter_object_bindings) =
-        compiler.collect_user_function_parameter_bindings(&program);
+    let (
+        parameter_bindings,
+        parameter_value_bindings,
+        parameter_array_bindings,
+        parameter_object_bindings,
+    ) = compiler.collect_user_function_parameter_bindings(&program);
     let same_value_parameter_values = parameter_value_bindings
         .get("sameValue")
         .expect("expected sameValue parameter value bindings");
@@ -2714,8 +4545,12 @@ fn preserves_unknown_parameter_value_bindings_for_sync_yield_star_return_sameval
     compiler.register_global_bindings(&program.statements);
     compiler.register_global_function_bindings(&program.functions);
 
-    let (_, parameter_value_bindings, _, parameter_object_bindings) =
-        compiler.collect_user_function_parameter_bindings(&program);
+    let (
+        parameter_bindings,
+        parameter_value_bindings,
+        parameter_array_bindings,
+        parameter_object_bindings,
+    ) = compiler.collect_user_function_parameter_bindings(&program);
     let same_value_parameter_values = parameter_value_bindings
         .get("sameValue")
         .expect("expected sameValue parameter value bindings");
@@ -3299,6 +5134,70 @@ fn preserves_derived_constructor_this_binding_after_pre_super_reference_error() 
 }
 
 #[test]
+fn does_not_resolve_static_same_value_for_dynamic_this_in_class_method() {
+    let program = frontend::parse(
+        r##"
+            class C {
+              ["#m"] = 0;
+              check() {
+                return this["#m"];
+              }
+            }
+        "##,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_local_class_member_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+
+    let method = compiler
+        .state
+        .function_registry
+        .catalog
+        .user_function_map
+        .values()
+        .find(|function| function.name.starts_with("__ayy_class_method_"))
+        .cloned()
+        .expect("expected class method");
+
+    let function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        Some(&method),
+        true,
+        false,
+        method.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+
+    let actual = Expression::Member {
+        object: Box::new(Expression::This),
+        property: Box::new(Expression::String("#m".to_string())),
+    };
+    assert_eq!(
+        function_compiler.resolve_static_same_value_result_with_context(
+            &actual,
+            &Expression::Number(0.0),
+            Some(&method.name),
+        ),
+        None,
+        "ordinary class methods should evaluate this-dependent same-value checks at runtime",
+    );
+}
+
+#[test]
 fn resolves_new_object_binding_for_derived_constructor_after_caught_pre_super_reference_error() {
     let program = frontend::parse(
         r#"
@@ -3644,6 +5543,104 @@ fn resolves_async_generator_yield_delegate_non_callable_sync_iterator_as_throw_s
             if matches!(callee.as_ref(), Expression::Identifier(name) if name == "TypeError")
                 && arguments.is_empty()
     ));
+}
+
+#[test]
+fn initializes_async_yield_delegate_snapshot_bindings_for_non_callable_async_iterator_object_entry()
+{
+    let program = frontend::parse(
+        r#"
+            var obj = {
+              get [Symbol.iterator]() {
+                throw new Test262Error("it should not get Symbol.iterator");
+              },
+              [Symbol.asyncIterator]: 0
+            };
+
+            class C {
+              static async *gen() {
+                yield* obj;
+              }
+            }
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+
+    let async_generator_name = compiler
+        .state
+        .function_registry
+        .catalog
+        .user_functions
+        .iter()
+        .find(|function| matches!(function.kind, FunctionKind::AsyncGenerator))
+        .expect("expected async generator")
+        .name
+        .clone();
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should construct");
+
+    let plan = function_compiler
+        .resolve_async_yield_delegate_generator_plan(
+            &Expression::Call {
+                callee: Box::new(Expression::Identifier(async_generator_name)),
+                arguments: Vec::new(),
+            },
+            "__ayy_async_delegate_completion",
+        )
+        .expect("expected async delegate generator plan");
+    let async_iterator_property =
+        function_compiler.materialize_static_expression(&Expression::Member {
+            object: Box::new(Expression::Identifier("Symbol".to_string())),
+            property: Box::new(Expression::String("asyncIterator".to_string())),
+        });
+    assert!(
+        function_compiler
+            .async_yield_delegate_uses_async_iterator_method(&plan, &async_iterator_property,),
+        "expected a non-nullish raw @@asyncIterator entry to suppress sync iterator fallback",
+    );
+    let iterator_property =
+        function_compiler.materialize_static_expression(&symbol_iterator_expression());
+    let delegate_iterator_method_name = function_compiler
+        .allocate_named_hidden_local("async_delegate_iterator_method", StaticValueKind::Unknown);
+    let delegate_iterator_name = function_compiler
+        .allocate_named_hidden_local("async_delegate_iterator", StaticValueKind::Unknown);
+    let delegate_next_name = function_compiler
+        .allocate_named_hidden_local("async_delegate_next", StaticValueKind::Unknown);
+
+    assert!(
+        function_compiler
+            .initialize_async_yield_delegate_snapshot_bindings(
+                &plan,
+                &async_iterator_property,
+                &iterator_property,
+                &delegate_iterator_method_name,
+                &delegate_iterator_name,
+                &delegate_next_name,
+            )
+            .expect("snapshot bindings should resolve")
+            .is_some()
+    );
 }
 
 #[test]
@@ -4020,6 +6017,51 @@ fn consumes_async_yield_delegate_abrupt_getiterator_rejection_then_completion() 
     function_compiler
         .register_bindings(&program.statements)
         .expect("bindings should register");
+
+    let Statement::Var {
+        value: Expression::Member {
+            object: next_call,
+            property,
+        },
+        ..
+    } = &program.statements[1]
+    else {
+        panic!("expected nested next().value initializer");
+    };
+    let Expression::Call { callee, arguments } = next_call.as_ref() else {
+        panic!("expected next call initializer");
+    };
+    let Expression::Member {
+        object: iterator_call,
+        property: next_property,
+    } = callee.as_ref()
+    else {
+        panic!("expected next member callee");
+    };
+    assert!(matches!(
+        next_property.as_ref(),
+        Expression::String(name) if name == "next"
+    ));
+    assert_eq!(
+        function_compiler.resolve_fresh_simple_generator_next_result_expression(
+            iterator_call.as_ref(),
+            arguments,
+        ),
+        Some(Expression::Object(vec![
+            ObjectEntry::Data {
+                key: Expression::String("done".to_string()),
+                value: Expression::Bool(false),
+            },
+            ObjectEntry::Data {
+                key: Expression::String("value".to_string()),
+                value: Expression::Number(1.0),
+            },
+        ])),
+    );
+    assert_eq!(
+        function_compiler.resolve_returned_member_value_from_expression(next_call, property),
+        Some(Expression::Number(1.0)),
+    );
 
     for statement in &program.statements {
         function_compiler
@@ -5991,6 +8033,58 @@ fn consumes_for_await_async_generator_rejection_then_completion() {
             .expect("statement should emit");
     }
 
+    let Statement::Var {
+        value: iter_initializer,
+        ..
+    } = program
+        .statements
+        .last()
+        .expect("expected iter initializer statement")
+    else {
+        panic!("expected final var statement");
+    };
+    let (user_function, arguments) = function_compiler
+        .resolve_user_function_call_target(iter_initializer)
+        .expect("expected private async generator call target");
+    let function_declaration = function_compiler
+        .resolve_registered_function_declaration(&user_function.name)
+        .expect("expected private async generator declaration")
+        .clone();
+    let mut call_argument_values = arguments
+        .iter()
+        .map(|argument| match argument {
+            CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                expression.clone()
+            }
+        })
+        .collect::<Vec<_>>();
+    if call_argument_values.len() < user_function.params.len() {
+        call_argument_values.resize(user_function.params.len(), Expression::Undefined);
+    }
+    let mut arguments_values = call_argument_values.clone();
+    let substituted_body = function_compiler
+        .substitute_simple_generator_statements_with_call_frame_bindings(
+            &function_declaration.body,
+            &user_function,
+            function_declaration.mapped_arguments && !function_declaration.strict,
+            &mut call_argument_values,
+            &mut arguments_values,
+            &function_compiler.resolve_generator_call_this_binding(match iter_initializer {
+                Expression::Call { callee, .. } => callee,
+                _ => panic!("expected iter initializer call"),
+            }),
+        )
+        .expect("expected substituted private async generator body");
+    let [
+        Statement::YieldDelegate {
+            value: delegate_value,
+        },
+    ] = substituted_body.as_slice()
+    else {
+        panic!("expected substituted private generator body to remain a single yield*");
+    };
+    assert_eq!(delegate_value, &Expression::Identifier("obj".to_string()));
+
     let Some(binding_name) = function_compiler.resolve_local_array_iterator_binding_name("iter")
     else {
         panic!("expected iter iterator binding name");
@@ -6637,6 +8731,131 @@ fn inlines_immediate_promise_callback_with_lowered_pattern_parameters() {
 }
 
 #[test]
+fn does_not_inline_assertion_callback_with_explicit_call_frame() {
+    let program = frontend::parse(
+        r#"
+            var reason = {};
+            Promise.reject(reason).then(undefined, function(v) {
+              assert.sameValue(v, reason);
+            });
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+
+    let function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should construct");
+
+    let Statement::Expression(Expression::Call { arguments, .. }) = program
+        .statements
+        .last()
+        .expect("expected then expression statement")
+    else {
+        panic!("expected then expression statement");
+    };
+    let handler = function_compiler
+        .promise_handler_expression(arguments.get(1))
+        .expect("expected rejection callback handler");
+    let user_function = function_compiler
+        .resolve_user_function_from_expression(&handler)
+        .expect("expected handler user function");
+
+    assert!(
+        !function_compiler.can_inline_user_function_call_with_explicit_call_frame(
+            user_function,
+            &[Expression::Identifier("reason".to_string())],
+            &Expression::Undefined,
+        ),
+        "assertion callbacks should avoid explicit-call-frame inlining",
+    );
+}
+
+#[test]
+fn does_not_inline_explicit_call_frame_when_function_references_captured_nested_function() {
+    let program = frontend::parse(
+        r#"
+            function outer() {
+              let captured = 1;
+              function inner() {
+                return captured;
+              }
+              return inner();
+            }
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+
+    let function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should construct");
+
+    let outer = function_compiler
+        .resolve_user_function_from_expression(&Expression::Identifier("outer".to_string()))
+        .expect("expected outer user function");
+
+    assert!(
+        function_compiler.user_function_references_captured_user_function(outer),
+        "expected outer to reference captured nested function",
+    );
+    assert!(
+        !function_compiler.can_inline_user_function_call_with_explicit_call_frame(
+            outer,
+            &[],
+            &Expression::Undefined,
+        ),
+        "functions that depend on nested captured calls should not inline with explicit call frame",
+    );
+    assert!(
+        function_compiler
+            .resolve_function_binding_static_return_expression_with_call_frame(
+                &LocalFunctionBinding::User(outer.name.clone()),
+                &[],
+                &Expression::Undefined,
+            )
+            .is_none(),
+        "static return synthesis should require a complete capture environment",
+    );
+}
+
+#[test]
 fn defers_rejected_yield_async_generator_call_result() {
     let program = frontend::parse(
         r#"
@@ -6693,6 +8912,83 @@ fn defers_rejected_yield_async_generator_call_result() {
             .emit_deferred_generator_call_result(&user_function, &[])
             .expect("deferred generator call result should evaluate"),
         "expected async generator call to defer to iterator creation",
+    );
+}
+
+#[test]
+fn does_not_defer_async_generator_call_result_with_lowered_pattern_parameter_prefix() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              static async *method([,]) {}
+            }
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should construct");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+    for statement in &program.statements {
+        function_compiler
+            .emit_statement(statement)
+            .expect("statement should emit");
+    }
+
+    let user_function = function_compiler
+        .backend
+        .function_registry
+        .catalog
+        .user_function_map
+        .values()
+        .find(|function| matches!(function.kind, FunctionKind::AsyncGenerator))
+        .cloned()
+        .expect("expected async generator function");
+
+    assert!(user_function.has_lowered_pattern_parameters());
+    let generator_call = Expression::Call {
+        callee: Box::new(Expression::Identifier(user_function.name.clone())),
+        arguments: vec![CallArgument::Expression(Expression::Identifier(
+            "iter".to_string(),
+        ))],
+    };
+    let prefix_effects = function_compiler
+        .simple_generator_call_time_prefix_effects(&generator_call)
+        .expect("expected lowered-pattern prefix effects");
+    assert!(
+        !prefix_effects.is_empty(),
+        "expected lowered-pattern parameters to produce eager call-time effects",
+    );
+    assert!(
+        !function_compiler
+            .emit_deferred_generator_call_result(
+                &user_function,
+                &[Expression::Identifier("iter".to_string(),)]
+            )
+            .expect("generator call result should evaluate"),
+        "expected eager lowered-pattern effects to force the real call path",
     );
 }
 
@@ -8010,42 +10306,61 @@ fn consumes_second_delegate_next_inside_callback_context_without_restart() {
     ));
     assert_eq!(
         function_compiler
+            .resolve_local_array_iterator_binding_name("iter")
+            .and_then(|binding_name| {
+                function_compiler
+                    .state
+                    .speculation
+                    .static_semantics
+                    .arrays
+                    .local_array_iterator_bindings
+                    .get(&binding_name)
+                    .and_then(|binding| binding.static_index)
+            }),
+        Some(1)
+    );
+    let iter_binding_name = function_compiler
+        .resolve_local_array_iterator_binding_name("iter")
+        .expect("expected iter iterator binding name after first next");
+    let (delegate_function_name, delegate_next_name, delegate_snapshot_bindings) =
+        match function_compiler
             .state
             .speculation
             .static_semantics
             .arrays
             .local_array_iterator_bindings
-            .get("iter")
-            .and_then(|binding| binding.static_index),
-        Some(1)
-    );
-    let (delegate_next_name, delegate_snapshot_bindings) = match function_compiler
-        .state
-        .speculation
-        .static_semantics
-        .arrays
-        .local_array_iterator_bindings
-        .get("iter")
-        .expect("expected iter binding after first next")
-        .source
-        .clone()
-    {
-        IteratorSourceKind::AsyncYieldDelegateGenerator {
-            delegate_next_name,
-            snapshot_bindings: Some(snapshot_bindings),
-            ..
-        } => (delegate_next_name, snapshot_bindings),
-        IteratorSourceKind::SimpleGenerator { .. } => panic!("unexpected simple generator source"),
-        IteratorSourceKind::StaticArray { .. } => panic!("unexpected static array source"),
-        IteratorSourceKind::TypedArrayView { .. } => panic!("unexpected typed array source"),
-        IteratorSourceKind::DirectArguments { .. } => panic!("unexpected direct arguments source"),
-        IteratorSourceKind::AsyncYieldDelegateGenerator {
-            snapshot_bindings: None,
-            ..
-        } => {
-            panic!("missing async-yield-delegate snapshot bindings")
-        }
-    };
+            .get(&iter_binding_name)
+            .expect("expected iter binding after first next")
+            .source
+            .clone()
+        {
+            IteratorSourceKind::AsyncYieldDelegateGenerator {
+                plan,
+                delegate_next_name,
+                snapshot_bindings: Some(snapshot_bindings),
+                ..
+            } => (plan.function_name, delegate_next_name, snapshot_bindings),
+            IteratorSourceKind::SimpleGenerator { .. } => {
+                panic!("unexpected simple generator source")
+            }
+            IteratorSourceKind::StaticArray { .. } => panic!("unexpected static array source"),
+            IteratorSourceKind::StaticArrayEntries { .. } => {
+                panic!("unexpected static array entries source")
+            }
+            IteratorSourceKind::StaticMapEntries { .. } => {
+                panic!("unexpected static map entries source")
+            }
+            IteratorSourceKind::TypedArrayView { .. } => panic!("unexpected typed array source"),
+            IteratorSourceKind::DirectArguments { .. } => {
+                panic!("unexpected direct arguments source")
+            }
+            IteratorSourceKind::AsyncYieldDelegateGenerator {
+                snapshot_bindings: None,
+                ..
+            } => {
+                panic!("missing async-yield-delegate snapshot bindings")
+            }
+        };
 
     let previous_user_function_name = function_compiler
         .state
@@ -8059,9 +10374,324 @@ fn consumes_second_delegate_next_inside_callback_context_without_restart() {
         .execution_context
         .current_user_function_name = Some(outer_user_function.name.clone());
     let delegate_next_binding = function_compiler
-        .resolve_function_binding_from_expression(&Expression::Identifier(
-            delegate_next_name.clone(),
-        ))
+        .resolve_function_binding_from_expression_with_context(
+            &Expression::Identifier(delegate_next_name.clone()),
+            Some(delegate_function_name.as_str()),
+        )
+        .expect("expected delegate next function binding");
+    let (snapshot_result, _updated_snapshot_bindings) = function_compiler
+        .resolve_bound_snapshot_function_result_with_arguments(
+            &delegate_next_binding,
+            &delegate_snapshot_bindings,
+            &[Expression::String("arg2".to_string())],
+        )
+        .expect("expected callback-context snapshot delegate next result");
+    let snapshot_result_binding = function_compiler
+        .resolve_object_binding_from_expression(&snapshot_result)
+        .expect("expected snapshot result object binding");
+    let snapshot_result_name = object_binding_lookup_value(
+        &snapshot_result_binding,
+        &Expression::String("name".to_string()),
+    )
+    .cloned()
+    .expect("expected snapshot result name");
+    let resolved_snapshot_result = match snapshot_result_name {
+        Expression::String(name) if name == "next-promise-2" => {
+            let mut then_snapshot_bindings = HashMap::new();
+            let then_value = function_compiler
+                .evaluate_bound_snapshot_expression(
+                    &Expression::Member {
+                        object: Box::new(snapshot_result.clone()),
+                        property: Box::new(Expression::String("then".to_string())),
+                    },
+                    &mut then_snapshot_bindings,
+                    Some(delegate_function_name.as_str()),
+                )
+                .expect("expected snapshot then getter value");
+            let then_binding = function_compiler
+                .resolve_function_binding_from_expression(&then_value)
+                .expect("expected snapshot then binding");
+            let then_outcome = function_compiler
+                .resolve_bound_snapshot_thenable_outcome(
+                    &then_binding,
+                    &snapshot_result,
+                    &mut then_snapshot_bindings,
+                    Some(delegate_function_name.as_str()),
+                )
+                .expect("expected snapshot thenable outcome");
+            let StaticEvalOutcome::Value(then_value) = then_outcome else {
+                panic!("expected resolved snapshot thenable value");
+            };
+            then_value
+        }
+        Expression::String(name) if name == "next-result-2" => snapshot_result.clone(),
+        _ => panic!("unexpected snapshot result object"),
+    };
+    let then_value_binding = function_compiler
+        .resolve_object_binding_from_expression(&resolved_snapshot_result)
+        .expect("expected resolved snapshot result object binding");
+    assert_eq!(
+        object_binding_lookup_value(&then_value_binding, &Expression::String("name".to_string()),),
+        Some(&Expression::String("next-result-2".to_string()))
+    );
+    let second_outcome = function_compiler
+        .consume_async_yield_delegate_generator_promise_outcome(
+            &Expression::Identifier("iter".to_string()),
+            "next",
+            &[CallArgument::Expression(Expression::String(
+                "arg2".to_string(),
+            ))],
+        )
+        .expect("second delegate next should compile inside callback context");
+    function_compiler
+        .state
+        .speculation
+        .execution_context
+        .current_user_function_name = previous_user_function_name;
+
+    let second_value = match second_outcome {
+        Some(StaticEvalOutcome::Value(value)) => value,
+        _ => panic!("expected second delegate value outcome"),
+    };
+    assert_eq!(
+        function_compiler.materialize_static_expression(&Expression::Member {
+            object: Box::new(second_value.clone()),
+            property: Box::new(Expression::String("done".to_string())),
+        }),
+        Expression::Bool(true)
+    );
+    assert_eq!(
+        function_compiler.materialize_static_expression(&Expression::Member {
+            object: Box::new(second_value),
+            property: Box::new(Expression::String("value".to_string())),
+        }),
+        Expression::String("return-value".to_string())
+    );
+    assert_eq!(
+        function_compiler
+            .resolve_static_number_value(&Expression::Identifier("callCount".to_string())),
+        Some(1.0)
+    );
+    assert_eq!(
+        function_compiler
+            .state
+            .speculation
+            .static_semantics
+            .arrays
+            .local_array_iterator_bindings
+            .get(&iter_binding_name)
+            .and_then(|binding| binding.static_index),
+        Some(2)
+    );
+}
+
+#[test]
+fn consumes_second_delegate_next_inside_callback_context_for_async_generator_private_method_getter()
+{
+    let program = frontend::parse(
+        r#"
+            var log = [];
+            var callCount = 0;
+            var obj = {
+              get [Symbol.iterator]() {
+                log.push({ name: "get [Symbol.iterator]", thisValue: this });
+                return null;
+              },
+              get [Symbol.asyncIterator]() {
+                log.push({ name: "get [Symbol.asyncIterator]" });
+                return function() {
+                  log.push({ name: "call [Symbol.asyncIterator]", thisValue: this, args: [...arguments] });
+                  var nextCount = 0;
+                  return {
+                    name: "asyncIterator",
+                    get next() {
+                      log.push({ name: "get next", thisValue: this });
+                      return function() {
+                        log.push({ name: "call next", thisValue: this, args: [...arguments] });
+                        nextCount++;
+                        if (nextCount == 1) {
+                          return {
+                            name: "next-promise-1",
+                            get then() {
+                              log.push({ name: "get next then (1)", thisValue: this });
+                              return function(resolve) {
+                                log.push({ name: "call next then (1)", thisValue: this, args: [...arguments] });
+                                resolve({
+                                  name: "next-result-1",
+                                  get value() {
+                                    log.push({ name: "get next value (1)", thisValue: this });
+                                    return "next-value-1";
+                                  },
+                                  get done() {
+                                    log.push({ name: "get next done (1)", thisValue: this });
+                                    return false;
+                                  }
+                                });
+                              };
+                            }
+                          };
+                        }
+                        return {
+                          name: "next-promise-2",
+                          get then() {
+                            log.push({ name: "get next then (2)", thisValue: this });
+                            return function(resolve) {
+                              log.push({ name: "call next then (2)", thisValue: this, args: [...arguments] });
+                              resolve({
+                                name: "next-result-2",
+                                get value() {
+                                  log.push({ name: "get next value (2)", thisValue: this });
+                                  return "next-value-2";
+                                },
+                                get done() {
+                                  log.push({ name: "get next done (2)", thisValue: this });
+                                  return true;
+                                }
+                              });
+                            };
+                          }
+                        };
+                      };
+                    }
+                  };
+                };
+              }
+            };
+            class C {
+              async *#gen() {
+                callCount += 1;
+                log.push({ name: "before yield*" });
+                var v = yield* obj;
+                log.push({ name: "after yield*", value: v });
+                return "return-value";
+              }
+              get gen() { return this.#gen; }
+            }
+            let c = new C();
+            var iter = c.gen();
+            iter.next("arg1").then(function(v) {
+              console.log("after-first", v.value, v.done, log.length, callCount);
+              iter.next("arg2").then(function(v2) {
+                console.log("after-second", v2.value, v2.done, log.length, callCount);
+              });
+            });
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should construct");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+    for statement in &program.statements[..program.statements.len() - 1] {
+        function_compiler
+            .emit_statement(statement)
+            .expect("setup statement should emit");
+    }
+
+    let outer_then_statement = match program.statements.last().expect("expected then statement") {
+        Statement::Expression(expression) => expression,
+        _ => panic!("expected then expression statement"),
+    };
+    let outer_handler = match outer_then_statement {
+        Expression::Call { arguments, .. } => function_compiler
+            .promise_handler_expression(arguments.first())
+            .expect("expected outer handler expression"),
+        _ => panic!("expected outer then call expression"),
+    };
+    let outer_user_function = function_compiler
+        .resolve_user_function_from_expression(&outer_handler)
+        .cloned()
+        .expect("expected outer handler user function");
+
+    assert!(matches!(
+        function_compiler
+            .consume_async_yield_delegate_generator_promise_outcome(
+                &Expression::Identifier("iter".to_string()),
+                "next",
+                &[CallArgument::Expression(Expression::String(
+                    "arg1".to_string()
+                ))],
+            )
+            .expect("first delegate next should compile"),
+        Some(StaticEvalOutcome::Value(_))
+    ));
+    let iter_binding_name = function_compiler
+        .resolve_local_array_iterator_binding_name("iter")
+        .expect("expected iter iterator binding name after first next");
+    assert_eq!(
+        function_compiler
+            .state
+            .speculation
+            .static_semantics
+            .arrays
+            .local_array_iterator_bindings
+            .get(&iter_binding_name)
+            .and_then(|binding| binding.static_index),
+        Some(1)
+    );
+    let (delegate_function_name, delegate_next_name, delegate_snapshot_bindings) =
+        match function_compiler
+            .state
+            .speculation
+            .static_semantics
+            .arrays
+            .local_array_iterator_bindings
+            .get(&iter_binding_name)
+            .expect("expected iter binding after first next")
+            .source
+            .clone()
+        {
+            IteratorSourceKind::AsyncYieldDelegateGenerator {
+                plan,
+                delegate_next_name,
+                snapshot_bindings: Some(snapshot_bindings),
+                ..
+            } => (plan.function_name, delegate_next_name, snapshot_bindings),
+            IteratorSourceKind::AsyncYieldDelegateGenerator {
+                snapshot_bindings: None,
+                ..
+            } => panic!("missing async-yield-delegate snapshot bindings"),
+            _ => panic!("expected async-yield-delegate iterator source"),
+        };
+
+    let previous_user_function_name = function_compiler
+        .state
+        .speculation
+        .execution_context
+        .current_user_function_name
+        .clone();
+    function_compiler
+        .state
+        .speculation
+        .execution_context
+        .current_user_function_name = Some(outer_user_function.name.clone());
+    let delegate_next_binding = function_compiler
+        .resolve_function_binding_from_expression_with_context(
+            &Expression::Identifier(delegate_next_name.clone()),
+            Some(delegate_function_name.as_str()),
+        )
         .expect("expected delegate next function binding");
     let (snapshot_result, _updated_snapshot_bindings) = function_compiler
         .resolve_bound_snapshot_function_result_with_arguments(
@@ -8078,6 +10708,38 @@ fn consumes_second_delegate_next_inside_callback_context_without_restart() {
             &snapshot_result_binding,
             &Expression::String("name".to_string()),
         ),
+        Some(&Expression::String("next-promise-2".to_string()))
+    );
+    let mut then_snapshot_bindings = HashMap::new();
+    let then_value = function_compiler
+        .evaluate_bound_snapshot_expression(
+            &Expression::Member {
+                object: Box::new(snapshot_result.clone()),
+                property: Box::new(Expression::String("then".to_string())),
+            },
+            &mut then_snapshot_bindings,
+            Some(delegate_function_name.as_str()),
+        )
+        .expect("expected snapshot then getter value");
+    let then_binding = function_compiler
+        .resolve_function_binding_from_expression(&then_value)
+        .expect("expected snapshot then binding");
+    let then_outcome = function_compiler
+        .resolve_bound_snapshot_thenable_outcome(
+            &then_binding,
+            &snapshot_result,
+            &mut then_snapshot_bindings,
+            Some(delegate_function_name.as_str()),
+        )
+        .expect("expected snapshot thenable outcome");
+    let StaticEvalOutcome::Value(then_value) = then_outcome else {
+        panic!("expected resolved snapshot thenable value");
+    };
+    let then_value_binding = function_compiler
+        .resolve_object_binding_from_expression(&then_value)
+        .expect("expected resolved snapshot result object binding");
+    assert_eq!(
+        object_binding_lookup_value(&then_value_binding, &Expression::String("name".to_string()),),
         Some(&Expression::String("next-result-2".to_string()))
     );
     let second_outcome = function_compiler
@@ -9643,6 +12305,9 @@ fn consumes_immediate_promise_outcome_for_async_iterator_return_then_after_next(
             .expect("next outcome should compile"),
         Some(StaticEvalOutcome::Value(_))
     ));
+    let iter_binding_name = function_compiler
+        .resolve_local_array_iterator_binding_name("iter")
+        .expect("expected iter iterator binding name after first next");
     assert!(
         matches!(
             function_compiler
@@ -9664,7 +12329,7 @@ fn consumes_immediate_promise_outcome_for_async_iterator_return_then_after_next(
             .static_semantics
             .arrays
             .local_array_iterator_bindings
-            .get("iter")
+            .get(&iter_binding_name)
             .expect("expected iter binding after first next")
             .source
             .clone()
@@ -9786,6 +12451,532 @@ fn consumes_immediate_promise_outcome_for_async_iterator_return_then_after_next(
         }
         None => panic!("expected immediate promise outcome"),
     }
+}
+
+#[test]
+fn consumes_immediate_promise_outcome_for_async_generator_yield_star_sync_next_arrow_callbacks() {
+    let program = frontend::parse(
+        r#"
+            var log = [];
+            var obj = {
+              get [Symbol.iterator]() {
+                log.push({
+                  name: "get [Symbol.iterator]",
+                  thisValue: this
+                });
+                return function() {
+                  log.push({
+                    name: "call [Symbol.iterator]",
+                    thisValue: this,
+                    args: [...arguments]
+                  });
+                  var nextCount = 0;
+                  return {
+                    name: "syncIterator",
+                    get next() {
+                      log.push({
+                        name: "get next",
+                        thisValue: this
+                      });
+                      return function() {
+                        log.push({
+                          name: "call next",
+                          thisValue: this,
+                          args: [...arguments]
+                        });
+
+                        nextCount++;
+                        if (nextCount == 1) {
+                          return {
+                            name: "next-result-1",
+                            get value() {
+                              log.push({
+                                name: "get next value (1)",
+                                thisValue: this
+                              });
+                              return "next-value-1";
+                            },
+                            get done() {
+                              log.push({
+                                name: "get next done (1)",
+                                thisValue: this
+                              });
+                              return false;
+                            }
+                          };
+                        }
+
+                        return {
+                          name: "next-result-2",
+                          get value() {
+                            log.push({
+                              name: "get next value (2)",
+                              thisValue: this
+                            });
+                            return "next-value-2";
+                          },
+                          get done() {
+                            log.push({
+                              name: "get next done (2)",
+                              thisValue: this
+                            });
+                            return true;
+                          }
+                        };
+                      };
+                    }
+                  };
+                };
+              },
+              get [Symbol.asyncIterator]() {
+                log.push({ name: "get [Symbol.asyncIterator]" });
+                return null;
+              }
+            };
+
+            async function *gen() {
+              log.push({ name: "before yield*" });
+              var v = yield* obj;
+              log.push({
+                name: "after yield*",
+                value: v
+              });
+              return "return-value";
+            }
+
+            var iter = gen();
+            iter.next("next-arg-1").then(v => {
+              iter.next("next-arg-2").then(v2 => {
+                console.log(
+                  v.value,
+                  v.done,
+                  v2.value,
+                  v2.done,
+                  log[9].thisValue.name,
+                  log[10].thisValue.name,
+                  log[11].name,
+                  log[11].value,
+                  log.length
+                );
+              });
+            });
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should construct");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+
+    for statement in &program.statements[..program.statements.len() - 1] {
+        function_compiler
+            .emit_statement(statement)
+            .expect("setup statement should emit");
+    }
+
+    let Statement::Expression(then_expression) =
+        program.statements.last().expect("expected then statement")
+    else {
+        panic!("expected then expression statement");
+    };
+    match function_compiler
+        .consume_immediate_promise_outcome(then_expression)
+        .expect("immediate promise outcome should compile")
+    {
+        Some(StaticEvalOutcome::Value(Expression::Undefined)) => {}
+        Some(StaticEvalOutcome::Value(_)) => {
+            panic!("expected callback-chain execution instead of value passthrough")
+        }
+        Some(StaticEvalOutcome::Throw(StaticThrowValue::NamedError(name))) => {
+            panic!("expected fulfilled callback-chain outcome, got named error {name}")
+        }
+        Some(StaticEvalOutcome::Throw(StaticThrowValue::Value(_))) => {
+            panic!("expected fulfilled callback-chain outcome, got thrown value")
+        }
+        None => panic!("expected immediate promise outcome"),
+    }
+
+    assert_eq!(
+        function_compiler.materialize_static_expression(&Expression::Member {
+            object: Box::new(Expression::Member {
+                object: Box::new(Expression::Identifier("log".to_string())),
+                property: Box::new(Expression::Number(9.0)),
+            }),
+            property: Box::new(Expression::String("name".to_string())),
+        }),
+        Expression::String("get next done (2)".to_string())
+    );
+    assert_eq!(
+        function_compiler.materialize_static_expression(&Expression::Member {
+            object: Box::new(Expression::Member {
+                object: Box::new(Expression::Member {
+                    object: Box::new(Expression::Identifier("log".to_string())),
+                    property: Box::new(Expression::Number(9.0)),
+                }),
+                property: Box::new(Expression::String("thisValue".to_string())),
+            }),
+            property: Box::new(Expression::String("name".to_string())),
+        }),
+        Expression::String("next-result-2".to_string())
+    );
+    assert_eq!(
+        function_compiler.materialize_static_expression(&Expression::Member {
+            object: Box::new(Expression::Member {
+                object: Box::new(Expression::Identifier("log".to_string())),
+                property: Box::new(Expression::Number(10.0)),
+            }),
+            property: Box::new(Expression::String("name".to_string())),
+        }),
+        Expression::String("get next value (2)".to_string())
+    );
+    assert_eq!(
+        function_compiler.materialize_static_expression(&Expression::Member {
+            object: Box::new(Expression::Member {
+                object: Box::new(Expression::Member {
+                    object: Box::new(Expression::Identifier("log".to_string())),
+                    property: Box::new(Expression::Number(10.0)),
+                }),
+                property: Box::new(Expression::String("thisValue".to_string())),
+            }),
+            property: Box::new(Expression::String("name".to_string())),
+        }),
+        Expression::String("next-result-2".to_string())
+    );
+    assert_eq!(
+        function_compiler.materialize_static_expression(&Expression::Member {
+            object: Box::new(Expression::Member {
+                object: Box::new(Expression::Identifier("log".to_string())),
+                property: Box::new(Expression::Number(11.0)),
+            }),
+            property: Box::new(Expression::String("name".to_string())),
+        }),
+        Expression::String("after yield*".to_string())
+    );
+    assert_eq!(
+        function_compiler.materialize_static_expression(&Expression::Member {
+            object: Box::new(Expression::Member {
+                object: Box::new(Expression::Identifier("log".to_string())),
+                property: Box::new(Expression::Number(11.0)),
+            }),
+            property: Box::new(Expression::String("value".to_string())),
+        }),
+        Expression::String("next-value-2".to_string())
+    );
+}
+
+#[test]
+fn consumes_immediate_promise_outcome_for_async_generator_private_method_yield_star_sync_next_arrow_callbacks()
+ {
+    let program = frontend::parse(
+        r#"
+            var log = [];
+            var obj = {
+              get [Symbol.iterator]() {
+                log.push({
+                  name: "get [Symbol.iterator]",
+                  thisValue: this
+                });
+                return function() {
+                  log.push({
+                    name: "call [Symbol.iterator]",
+                    thisValue: this,
+                    args: [...arguments]
+                  });
+                  var nextCount = 0;
+                  return {
+                    name: "syncIterator",
+                    get next() {
+                      log.push({
+                        name: "get next",
+                        thisValue: this
+                      });
+                      return function() {
+                        log.push({
+                          name: "call next",
+                          thisValue: this,
+                          args: [...arguments]
+                        });
+
+                        nextCount++;
+                        if (nextCount == 1) {
+                          return {
+                            name: "next-result-1",
+                            get value() {
+                              log.push({
+                                name: "get next value (1)",
+                                thisValue: this
+                              });
+                              return "next-value-1";
+                            },
+                            get done() {
+                              log.push({
+                                name: "get next done (1)",
+                                thisValue: this
+                              });
+                              return false;
+                            }
+                          };
+                        }
+
+                        return {
+                          name: "next-result-2",
+                          get value() {
+                            log.push({
+                              name: "get next value (2)",
+                              thisValue: this
+                            });
+                            return "next-value-2";
+                          },
+                          get done() {
+                            log.push({
+                              name: "get next done (2)",
+                              thisValue: this
+                            });
+                            return true;
+                          }
+                        };
+                      };
+                    }
+                  };
+                };
+              },
+              get [Symbol.asyncIterator]() {
+                log.push({ name: "get [Symbol.asyncIterator]" });
+                return null;
+              }
+            };
+
+            async function done(value) {
+              console.log("done", value);
+            }
+
+            class C {
+              async *#gen() {
+                log.push({ name: "before yield*" });
+                var v = yield* obj;
+                log.push({
+                  name: "after yield*",
+                  value: v
+                });
+                return "return-value";
+              }
+              get gen() { return this.#gen; }
+            }
+
+            var iter = new C().gen();
+            iter.next("next-arg-1").then(v => {
+              iter.next("next-arg-2").then(v2 => {
+                console.log(
+                  v.value,
+                  v.done,
+                  v2.value,
+                  v2.done,
+                  log[9].thisValue.name,
+                  log[10].thisValue.name,
+                  log[11].name,
+                  log[11].value,
+                  log.length
+                );
+              });
+            }).then(done, done);
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should construct");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+
+    for statement in &program.statements[..program.statements.len() - 1] {
+        function_compiler
+            .emit_statement(statement)
+            .expect("setup statement should emit");
+    }
+
+    let Statement::Expression(then_expression) =
+        program.statements.last().expect("expected then statement")
+    else {
+        panic!("expected then expression statement");
+    };
+    match function_compiler
+        .consume_immediate_promise_outcome(then_expression)
+        .expect("private method immediate promise outcome should compile")
+    {
+        Some(StaticEvalOutcome::Value(Expression::Undefined)) => {}
+        Some(StaticEvalOutcome::Value(_)) => {
+            panic!("expected callback-chain execution instead of value passthrough")
+        }
+        Some(StaticEvalOutcome::Throw(StaticThrowValue::NamedError(name))) => {
+            panic!("expected fulfilled callback-chain outcome, got named error {name}")
+        }
+        Some(StaticEvalOutcome::Throw(StaticThrowValue::Value(_))) => {
+            panic!("expected fulfilled callback-chain outcome, got thrown value")
+        }
+        None => panic!("expected immediate promise outcome"),
+    }
+
+    assert_eq!(
+        function_compiler.materialize_static_expression(&Expression::Member {
+            object: Box::new(Expression::Member {
+                object: Box::new(Expression::Identifier("log".to_string())),
+                property: Box::new(Expression::Number(0.0)),
+            }),
+            property: Box::new(Expression::String("name".to_string())),
+        }),
+        Expression::String("before yield*".to_string())
+    );
+    assert_eq!(
+        function_compiler.materialize_static_expression(&Expression::Member {
+            object: Box::new(Expression::Member {
+                object: Box::new(Expression::Identifier("log".to_string())),
+                property: Box::new(Expression::Number(1.0)),
+            }),
+            property: Box::new(Expression::String("name".to_string())),
+        }),
+        Expression::String("get [Symbol.asyncIterator]".to_string())
+    );
+    assert_eq!(
+        function_compiler.materialize_static_expression(&Expression::Member {
+            object: Box::new(Expression::Member {
+                object: Box::new(Expression::Identifier("log".to_string())),
+                property: Box::new(Expression::Number(2.0)),
+            }),
+            property: Box::new(Expression::String("name".to_string())),
+        }),
+        Expression::String("get [Symbol.iterator]".to_string())
+    );
+    assert_eq!(
+        function_compiler.materialize_static_expression(&Expression::Member {
+            object: Box::new(Expression::Member {
+                object: Box::new(Expression::Identifier("log".to_string())),
+                property: Box::new(Expression::Number(3.0)),
+            }),
+            property: Box::new(Expression::String("name".to_string())),
+        }),
+        Expression::String("call [Symbol.iterator]".to_string())
+    );
+    assert_eq!(
+        function_compiler.materialize_static_expression(&Expression::Member {
+            object: Box::new(Expression::Member {
+                object: Box::new(Expression::Identifier("log".to_string())),
+                property: Box::new(Expression::Number(9.0)),
+            }),
+            property: Box::new(Expression::String("name".to_string())),
+        }),
+        Expression::String("get next done (2)".to_string())
+    );
+    assert_eq!(
+        function_compiler.materialize_static_expression(&Expression::Member {
+            object: Box::new(Expression::Member {
+                object: Box::new(Expression::Member {
+                    object: Box::new(Expression::Identifier("log".to_string())),
+                    property: Box::new(Expression::Number(9.0)),
+                }),
+                property: Box::new(Expression::String("thisValue".to_string())),
+            }),
+            property: Box::new(Expression::String("name".to_string())),
+        }),
+        Expression::String("next-result-2".to_string())
+    );
+    assert_eq!(
+        function_compiler.materialize_static_expression(&Expression::Member {
+            object: Box::new(Expression::Member {
+                object: Box::new(Expression::Identifier("log".to_string())),
+                property: Box::new(Expression::Number(10.0)),
+            }),
+            property: Box::new(Expression::String("name".to_string())),
+        }),
+        Expression::String("get next value (2)".to_string())
+    );
+    assert_eq!(
+        function_compiler.materialize_static_expression(&Expression::Member {
+            object: Box::new(Expression::Member {
+                object: Box::new(Expression::Member {
+                    object: Box::new(Expression::Identifier("log".to_string())),
+                    property: Box::new(Expression::Number(10.0)),
+                }),
+                property: Box::new(Expression::String("thisValue".to_string())),
+            }),
+            property: Box::new(Expression::String("name".to_string())),
+        }),
+        Expression::String("next-result-2".to_string())
+    );
+    assert_eq!(
+        function_compiler.materialize_static_expression(&Expression::Member {
+            object: Box::new(Expression::Member {
+                object: Box::new(Expression::Identifier("log".to_string())),
+                property: Box::new(Expression::Number(11.0)),
+            }),
+            property: Box::new(Expression::String("name".to_string())),
+        }),
+        Expression::String("after yield*".to_string())
+    );
+    assert_eq!(
+        function_compiler.materialize_static_expression(&Expression::Member {
+            object: Box::new(Expression::Member {
+                object: Box::new(Expression::Identifier("log".to_string())),
+                property: Box::new(Expression::Number(11.0)),
+            }),
+            property: Box::new(Expression::String("value".to_string())),
+        }),
+        Expression::String("next-value-2".to_string())
+    );
+    assert_eq!(
+        function_compiler.materialize_static_expression(&Expression::Member {
+            object: Box::new(Expression::Identifier("log".to_string())),
+            property: Box::new(Expression::String("length".to_string())),
+        }),
+        Expression::Member {
+            object: Box::new(Expression::Identifier("log".to_string())),
+            property: Box::new(Expression::String("length".to_string())),
+        }
+    );
 }
 
 #[test]
@@ -10233,6 +13424,161 @@ fn resolves_new_object_binding_for_class_expression_computed_instance_field() {
 }
 
 #[test]
+fn resolves_symbol_to_primitive_computed_class_field_key() {
+    let program = frontend::parse(
+        r#"
+            let s1 = Symbol();
+            let s2 = Symbol();
+            let s3 = Symbol();
+            let obj1 = {
+              [Symbol.toPrimitive]: function() { return s1; }
+            };
+            let obj2 = {
+              toString: function() { return s2; }
+            };
+            let obj3 = {
+              valueOf: function() { return s3; }
+            };
+            let C = class {
+              [obj1] = 42;
+              [obj2] = 43;
+              [obj3] = 44;
+            };
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should construct");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+    for statement in &program.statements {
+        function_compiler
+            .emit_statement(statement)
+            .expect("statement should emit");
+    }
+
+    assert_eq!(
+        function_compiler
+            .resolve_property_key_expression(&Expression::Identifier("obj1".to_string(),)),
+        Some(Expression::Identifier("s1".to_string())),
+        "expected @@toPrimitive object property key to preserve the returned symbol identity",
+    );
+    assert_eq!(
+        function_compiler
+            .resolve_property_key_expression(&Expression::Identifier("obj2".to_string(),)),
+        Some(Expression::Identifier("s2".to_string())),
+        "expected toString object property key to preserve the returned symbol identity",
+    );
+    assert_eq!(
+        function_compiler
+            .resolve_property_key_expression(&Expression::Identifier("obj3".to_string(),)),
+        Some(Expression::Identifier("s3".to_string())),
+        "expected valueOf object property key to preserve the returned symbol identity",
+    );
+
+    let object_binding = function_compiler
+        .resolve_user_constructor_object_binding_from_new(
+            &Expression::Identifier("C".to_string()),
+            &[],
+        )
+        .expect("expected new C object binding");
+    assert_eq!(
+        object_binding_lookup_value(&object_binding, &Expression::Identifier("s1".to_string())),
+        Some(&Expression::Number(42.0)),
+    );
+    assert_eq!(
+        object_binding_lookup_value(&object_binding, &Expression::Identifier("s2".to_string())),
+        Some(&Expression::Number(43.0)),
+    );
+    assert_eq!(
+        object_binding_lookup_value(&object_binding, &Expression::Identifier("s3".to_string())),
+        Some(&Expression::Number(44.0)),
+    );
+}
+
+#[test]
+fn resolves_static_string_builtin_for_symbol_identifier_arguments() {
+    let program = frontend::parse(
+        r#"
+            let s = Symbol("field");
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should construct");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+    for statement in &program.statements {
+        function_compiler
+            .emit_statement(statement)
+            .expect("statement should emit");
+    }
+
+    let stringified_symbol = Expression::Call {
+        callee: Box::new(Expression::Identifier("String".to_string())),
+        arguments: vec![CallArgument::Expression(Expression::Identifier(
+            "s".to_string(),
+        ))],
+    };
+    assert_eq!(
+        function_compiler.resolve_static_string_value(&stringified_symbol),
+        Some("Symbol(field)".to_string()),
+        "expected String(symbol) to preserve symbol descriptions through the direct backend",
+    );
+    assert_eq!(
+        function_compiler.resolve_property_key_expression(&stringified_symbol),
+        Some(Expression::String("Symbol(field)".to_string())),
+        "expected String(symbol) to materialize as the canonical string property key",
+    );
+}
+
+#[test]
 fn resolves_new_object_binding_for_derived_class_super_constructor() {
     let program = frontend::parse(
         r#"
@@ -10437,6 +13783,61 @@ fn resolves_function_binding_and_object_prototype_for_class_expression_binding()
 }
 
 #[test]
+fn resolves_name_property_for_anonymous_class_expression_binding() {
+    let program = frontend::parse(
+        r#"
+            let cls = class {};
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should construct");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+    function_compiler
+        .emit_statement(&program.statements[0])
+        .expect("class expression binding should emit");
+
+    let name_member = Expression::Member {
+        object: Box::new(Expression::Identifier("cls".to_string())),
+        property: Box::new(Expression::String("name".to_string())),
+    };
+
+    assert_eq!(
+        function_compiler.resolve_static_string_value(&name_member),
+        Some("cls".to_string()),
+        "anonymous class expression binding should preserve its inferred name property",
+    );
+    assert_eq!(
+        function_compiler.materialize_static_expression(&name_member),
+        Expression::String("cls".to_string()),
+        "anonymous class expression binding should materialize its inferred name property",
+    );
+}
+
+#[test]
 fn resolves_static_object_prototype_expression_for_class_extends_constructor_binding() {
     let program = frontend::parse(
         r#"
@@ -10506,6 +13907,260 @@ fn resolves_static_object_prototype_expression_for_class_extends_constructor_bin
 }
 
 #[test]
+fn registers_lexical_this_capture_for_inner_arrow_private_field_read() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              #f = 'Test262';
+              method() {
+                var arrowFunction = () => {
+                  return this.#f;
+                };
+                return arrowFunction();
+              }
+            }
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+
+    let arrow_function_name = program
+        .functions
+        .iter()
+        .find(|function| {
+            function.lexical_this
+                && matches!(
+                    function.body.as_slice(),
+                    [Statement::Return(Expression::Member { object, property })]
+                        if matches!(object.as_ref(), Expression::This)
+                            && matches!(property.as_ref(), Expression::String(name) if name == "__ayy$private$C$f")
+                )
+        })
+        .map(|function| function.name.clone())
+        .expect("expected lexical-this arrow function");
+
+    assert_eq!(
+        compiler
+            .state
+            .function_registry
+            .analysis
+            .user_function_capture_bindings
+            .get(&arrow_function_name)
+            .and_then(|bindings| bindings.get("this")),
+        Some(&format!(
+            "__ayy_capture_binding__{}__this",
+            arrow_function_name
+        )),
+    );
+}
+
+#[test]
+fn resolves_lexical_this_capture_slots_for_inner_arrow_alias_call() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              method() {
+                let arrowFunction = () => {
+                  this.value = "Test262";
+                };
+                return arrowFunction();
+              }
+            }
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+
+    let method_name = compiler
+        .state
+        .global_semantics
+        .members
+        .member_function_bindings
+        .iter()
+        .find_map(|(key, binding)| {
+            let target_name = match &key.target {
+                crate::backend::direct_wasm::MemberFunctionBindingTarget::Prototype(name) => name,
+                _ => return None,
+            };
+            let property_name = match &key.property {
+                crate::backend::direct_wasm::MemberFunctionBindingProperty::String(name) => name,
+                _ => return None,
+            };
+            let LocalFunctionBinding::User(function_name) = binding else {
+                return None;
+            };
+            (target_name == "C" && property_name == "method").then_some(function_name.clone())
+        })
+        .expect("expected C.prototype.method binding");
+    let method_user_function = compiler
+        .state
+        .function_registry
+        .catalog
+        .user_function_map
+        .get(&method_name)
+        .cloned()
+        .expect("expected method user function");
+    let method_declaration = compiler
+        .state
+        .function_registry
+        .registered_function(&method_name)
+        .cloned()
+        .expect("expected method declaration");
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        Some(&method_user_function),
+        true,
+        false,
+        method_user_function.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("method compiler should initialize");
+    function_compiler
+        .register_bindings(&method_declaration.body)
+        .expect("method bindings should register");
+    function_compiler
+        .emit_statement(&method_declaration.body[0])
+        .expect("arrow binding statement should emit");
+
+    let arrow_expression = Expression::Identifier("arrowFunction".to_string());
+    let capture_slots = function_compiler
+        .resolve_function_expression_capture_slots(&arrow_expression)
+        .expect("expected arrow call to resolve capture slots");
+    assert_eq!(capture_slots.get("this"), Some(&"this".to_string()));
+
+    let arrow_user_function = function_compiler
+        .resolve_user_function_from_expression(&arrow_expression)
+        .expect("expected arrow binding to resolve user function")
+        .clone();
+    let prepared = function_compiler
+        .prepare_bound_user_function_capture_bindings(&arrow_user_function, &capture_slots)
+        .expect("expected arrow call to prepare lexical-this bound captures");
+    assert!(
+        prepared.iter().any(|binding| {
+            binding.capture_name == "this" && binding.source_binding_name.as_deref() == Some("this")
+        }),
+        "expected lexical this bound capture to preserve its source binding",
+    );
+}
+
+fn resolves_bound_snapshot_result_for_inner_arrow_private_field_read() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              #f = 'Test262';
+              method() {
+                var arrowFunction = () => {
+                  return this.#f;
+                };
+                return arrowFunction();
+              }
+            }
+            let receiver = new C();
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+    let method_name = compiler
+        .state
+        .global_semantics
+        .members
+        .member_function_bindings
+        .iter()
+        .find_map(|(key, binding)| {
+            let target_name = match &key.target {
+                crate::backend::direct_wasm::MemberFunctionBindingTarget::Prototype(name) => name,
+                _ => return None,
+            };
+            let property_name = match &key.property {
+                crate::backend::direct_wasm::MemberFunctionBindingProperty::String(name) => name,
+                _ => return None,
+            };
+            let LocalFunctionBinding::User(function_name) = binding else {
+                return None;
+            };
+            (target_name == "C" && property_name == "method").then_some(function_name.clone())
+        })
+        .expect("expected C.prototype.method binding");
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        program.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("top-level compiler should initialize");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("top-level bindings should register");
+    for statement in &program.statements {
+        function_compiler
+            .emit_statement(statement)
+            .expect("top-level statement should emit");
+    }
+
+    let (result, updated_bindings) = function_compiler
+        .resolve_bound_snapshot_user_function_result_with_arguments_and_this(
+            &method_name,
+            &HashMap::new(),
+            &[],
+            &Expression::Identifier("receiver".to_string()),
+        )
+        .expect("expected bound snapshot method result");
+    assert_eq!(result, Expression::String("Test262".to_string()));
+    let receiver_binding = updated_bindings
+        .get("receiver")
+        .expect("expected receiver binding update");
+    let receiver_object = function_compiler
+        .resolve_object_binding_from_expression(receiver_binding)
+        .expect("expected receiver object binding");
+    assert_eq!(
+        object_binding_lookup_value(
+            &receiver_object,
+            &Expression::String("__ayy$private$C$f".to_string())
+        ),
+        Some(&Expression::String("Test262".to_string()))
+    );
+}
+
+#[test]
 fn resolves_new_object_binding_for_class_expression_identifier_computed_instance_field() {
     let program = frontend::parse(
         r#"
@@ -10558,6 +14213,271 @@ fn resolves_new_object_binding_for_class_expression_identifier_computed_instance
     assert_eq!(
         object_binding_lookup_value(&object_binding, &Expression::String("1".to_string())),
         Some(&Expression::Number(2.0)),
+    );
+}
+
+#[test]
+fn resolves_incremental_computed_instance_field_values_from_new_class_binding() {
+    let program = frontend::parse(
+        r#"
+            let x = 1;
+            class C {
+              [x++] = x++;
+              [x++] = x++;
+            }
+            let c = new C();
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should construct");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+    function_compiler
+        .emit_statement(&program.statements[0])
+        .expect("seed statement should emit");
+    let seed_global_x = function_compiler.global_value_binding("x").cloned();
+    let seed_local_x = function_compiler
+        .state
+        .speculation
+        .static_semantics
+        .local_value_binding("x")
+        .cloned();
+    function_compiler
+        .emit_statement(&program.statements[1])
+        .expect("class declaration should emit");
+
+    let object_binding = function_compiler
+        .resolve_user_constructor_object_binding_from_new(
+            &Expression::Identifier("C".to_string()),
+            &[],
+        )
+        .expect("expected new C object binding");
+    let capture_source_bindings = function_compiler
+        .resolve_constructor_capture_source_bindings_from_expression(&Expression::Identifier(
+            "C".to_string(),
+        ));
+    assert!(
+        matches!(
+            object_binding_lookup_value(&object_binding, &Expression::String("1".to_string())),
+            Some(Expression::Number(value)) if *value == 3.0
+        ),
+        "unexpected incremental instance binding: strings={:?} symbols={:?} seed_global_x={:?} seed_local_x={:?} captures={:?} field2_global={:?} field3_global={:?} field2_local={:?} field3_local={:?} local_x={:?} global_x={:?} snap_x={:?} snap_field2={:?} snap_field3={:?}",
+        object_binding.string_properties,
+        object_binding.symbol_properties,
+        seed_global_x,
+        seed_local_x,
+        capture_source_bindings,
+        function_compiler.global_value_binding("__ayy_class_field_name_2"),
+        function_compiler.global_value_binding("__ayy_class_field_name_3"),
+        function_compiler
+            .state
+            .speculation
+            .static_semantics
+            .local_value_binding("__ayy_class_field_name_2"),
+        function_compiler
+            .state
+            .speculation
+            .static_semantics
+            .local_value_binding("__ayy_class_field_name_3"),
+        function_compiler
+            .state
+            .speculation
+            .static_semantics
+            .local_value_binding("x"),
+        function_compiler.global_value_binding("x"),
+        function_compiler.snapshot_bound_capture_slot_expression("x"),
+        function_compiler.snapshot_bound_capture_slot_expression("__ayy_class_field_name_2"),
+        function_compiler.snapshot_bound_capture_slot_expression("__ayy_class_field_name_3"),
+    );
+    assert!(
+        matches!(
+            object_binding_lookup_value(&object_binding, &Expression::String("2".to_string())),
+            Some(Expression::Number(value)) if *value == 4.0
+        ),
+        "unexpected incremental instance binding: strings={:?} symbols={:?} seed_global_x={:?} seed_local_x={:?} captures={:?} field2_global={:?} field3_global={:?} field2_local={:?} field3_local={:?} local_x={:?} global_x={:?} snap_x={:?} snap_field2={:?} snap_field3={:?}",
+        object_binding.string_properties,
+        object_binding.symbol_properties,
+        seed_global_x,
+        seed_local_x,
+        capture_source_bindings,
+        function_compiler.global_value_binding("__ayy_class_field_name_2"),
+        function_compiler.global_value_binding("__ayy_class_field_name_3"),
+        function_compiler
+            .state
+            .speculation
+            .static_semantics
+            .local_value_binding("__ayy_class_field_name_2"),
+        function_compiler
+            .state
+            .speculation
+            .static_semantics
+            .local_value_binding("__ayy_class_field_name_3"),
+        function_compiler
+            .state
+            .speculation
+            .static_semantics
+            .local_value_binding("x"),
+        function_compiler.global_value_binding("x"),
+        function_compiler.snapshot_bound_capture_slot_expression("x"),
+        function_compiler.snapshot_bound_capture_slot_expression("__ayy_class_field_name_2"),
+        function_compiler.snapshot_bound_capture_slot_expression("__ayy_class_field_name_3"),
+    );
+}
+
+#[test]
+fn resolves_intercalated_static_and_instance_computed_class_field_bindings() {
+    let program = frontend::parse(
+        r#"
+            let i = 0;
+            class C {
+              [i++] = i++;
+              static [i++] = i++;
+              [i++] = i++;
+            }
+            let c = new C();
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should construct");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+    for statement in &program.statements {
+        function_compiler
+            .emit_statement(statement)
+            .expect("statement should emit");
+    }
+
+    let class_binding = function_compiler
+        .resolve_object_binding_from_expression(&Expression::Identifier("C".to_string()))
+        .expect("expected class object binding");
+    assert!(
+        matches!(
+            object_binding_lookup_value(&class_binding, &Expression::String("1".to_string())),
+            Some(Expression::Number(value)) if *value == 3.0
+        ),
+        "unexpected intercalated class binding: strings={:?} symbols={:?} direct_c_prop_1={:?} local_c_prop_1={:?} global_has_c={} binding_name_is_global_c={} i={:?} local_i={:?} field2={:?} field3={:?} field4={:?} snap_i={:?} snap_field2={:?} snap_field3={:?} snap_field4={:?}",
+        class_binding.string_properties,
+        class_binding.symbol_properties,
+        function_compiler
+            .global_object_binding("C")
+            .and_then(|binding| {
+                binding
+                    .string_properties
+                    .iter()
+                    .find_map(|(key, value)| (key == "1").then_some(value.clone()))
+            }),
+        function_compiler
+            .state
+            .speculation
+            .static_semantics
+            .local_object_binding("C")
+            .and_then(|binding| {
+                binding
+                    .string_properties
+                    .iter()
+                    .find_map(|(key, value)| (key == "1").then_some(value.clone()))
+            }),
+        function_compiler.global_has_binding("C"),
+        function_compiler.binding_name_is_global("C"),
+        function_compiler.global_value_binding("i"),
+        function_compiler
+            .state
+            .speculation
+            .static_semantics
+            .local_value_binding("i"),
+        function_compiler.global_value_binding("__ayy_class_field_name_2"),
+        function_compiler.global_value_binding("__ayy_class_field_name_3"),
+        function_compiler.global_value_binding("__ayy_class_field_name_4"),
+        function_compiler.snapshot_bound_capture_slot_expression("i"),
+        function_compiler.snapshot_bound_capture_slot_expression("__ayy_class_field_name_2"),
+        function_compiler.snapshot_bound_capture_slot_expression("__ayy_class_field_name_3"),
+        function_compiler.snapshot_bound_capture_slot_expression("__ayy_class_field_name_4"),
+    );
+
+    let instance_binding = function_compiler
+        .resolve_user_constructor_object_binding_from_new(
+            &Expression::Identifier("C".to_string()),
+            &[],
+        )
+        .expect("expected new C object binding");
+    assert!(
+        matches!(
+            object_binding_lookup_value(&instance_binding, &Expression::String("0".to_string())),
+            Some(Expression::Number(value)) if *value == 4.0
+        ),
+        "unexpected intercalated instance binding: strings={:?} symbols={:?} captures={:?} global_i={:?} local_i={:?} snap_i={:?} snap_field2={:?} snap_field3={:?} snap_field4={:?}",
+        instance_binding.string_properties,
+        instance_binding.symbol_properties,
+        function_compiler.resolve_constructor_capture_source_bindings_from_expression(
+            &Expression::Identifier("C".to_string()),
+        ),
+        function_compiler.global_value_binding("i"),
+        function_compiler
+            .state
+            .speculation
+            .static_semantics
+            .local_value_binding("i"),
+        function_compiler.snapshot_bound_capture_slot_expression("i"),
+        function_compiler.snapshot_bound_capture_slot_expression("__ayy_class_field_name_2"),
+        function_compiler.snapshot_bound_capture_slot_expression("__ayy_class_field_name_3"),
+        function_compiler.snapshot_bound_capture_slot_expression("__ayy_class_field_name_4"),
+    );
+    assert!(
+        matches!(
+            object_binding_lookup_value(&instance_binding, &Expression::String("2".to_string())),
+            Some(Expression::Number(value)) if *value == 5.0
+        ),
+        "unexpected intercalated instance binding: strings={:?} symbols={:?}",
+        instance_binding.string_properties,
+        instance_binding.symbol_properties,
     );
 }
 
@@ -10849,6 +14769,269 @@ fn snapshots_fresh_simple_generator_completion_result_object() {
         ),
         Some(Expression::Bool(true))
     ));
+}
+
+#[test]
+fn tracked_array_push_helper_updates_global_array_binding() {
+    let program = frontend::parse(
+        r#"
+            var x = [];
+            x.push(2);
+            x.push(1);
+            x.push(3);
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should construct");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+
+    function_compiler
+        .emit_statement(&program.statements[0])
+        .expect("declaration should emit");
+
+    let Statement::Expression(Expression::Call { callee, arguments }) = &program.statements[1]
+    else {
+        panic!("expected first push call expression statement");
+    };
+    let Expression::Member { object, property } = callee.as_ref() else {
+        panic!("expected member call for tracked push");
+    };
+    assert!(
+        matches!(property.as_ref(), Expression::String(name) if name == "push"),
+        "expected push property",
+    );
+    assert!(
+        function_compiler
+            .emit_tracked_array_push_call(object, arguments)
+            .expect("tracked push helper should emit"),
+        "expected tracked push helper to handle the global array binding",
+    );
+
+    let binding = function_compiler
+        .backend
+        .global_array_binding("x")
+        .expect("expected tracked global array binding");
+    let local_binding = function_compiler
+        .state
+        .speculation
+        .static_semantics
+        .local_array_binding("x")
+        .cloned();
+    assert!(
+        matches!(
+            local_binding,
+            Some(ArrayValueBinding { values })
+                if values == vec![Some(Expression::Number(2.0))]
+        ),
+        "expected the tracked push helper to update the local tracked binding",
+    );
+    assert_eq!(
+        binding.values,
+        vec![Some(Expression::Number(2.0))],
+        "expected the tracked push helper to update the global array binding",
+    );
+}
+
+#[test]
+fn tracked_array_push_statement_updates_array_bindings() {
+    let program = frontend::parse(
+        r#"
+            var x = [];
+            x.push(2);
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should construct");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+
+    for statement in &program.statements {
+        function_compiler
+            .emit_statement(statement)
+            .expect("statement should emit");
+    }
+
+    assert!(
+        matches!(
+            function_compiler
+                .state
+                .speculation
+                .static_semantics
+                .local_array_binding("x"),
+            Some(ArrayValueBinding { values })
+                if values == &vec![Some(Expression::Number(2.0))]
+        ),
+        "expected statement emission to preserve the local tracked array binding",
+    );
+    assert!(
+        matches!(
+            function_compiler.backend.global_array_binding("x"),
+            Some(ArrayValueBinding { values })
+                if values == &vec![Some(Expression::Number(2.0))]
+        ),
+        "expected statement emission to sync the global tracked array binding",
+    );
+}
+
+#[test]
+fn consumes_fresh_simple_generator_next_call_for_destructured_generator_method_iterator_close() {
+    let program = frontend::parse(
+        r#"
+            var doneCallCount = 0;
+            var callCount = 0;
+            var iter = {};
+            iter[Symbol.iterator] = function() {
+              return {
+                next: function() {
+                  return { value: null, done: false };
+                },
+                return: function() {
+                  doneCallCount = doneCallCount + 1;
+                  return {};
+                }
+              };
+            };
+            class C {
+              *method([x]) {
+                callCount = doneCallCount;
+              }
+            }
+            new C().method(iter).next();
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should construct");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+
+    for statement in &program.statements[..program.statements.len() - 1] {
+        function_compiler
+            .emit_statement(statement)
+            .expect("statement should emit");
+    }
+
+    let Statement::Expression(Expression::Call { callee, arguments }) = program
+        .statements
+        .last()
+        .expect("expected trailing next call")
+    else {
+        panic!("expected trailing next call expression");
+    };
+    let Expression::Member { object, property } = callee.as_ref() else {
+        panic!("expected next member callee");
+    };
+    assert!(
+        matches!(property.as_ref(), Expression::String(name) if name == "next"),
+        "expected next call property",
+    );
+    assert!(
+        function_compiler
+            .resolve_simple_generator_source(object.as_ref())
+            .is_some(),
+        "expected destructured generator method call to resolve as a simple generator source",
+    );
+    assert!(
+        function_compiler
+            .emit_fresh_simple_generator_next_call(object.as_ref(), arguments)
+            .expect("fresh next helper should emit"),
+        "expected fresh next helper to handle the destructured generator method call",
+    );
+    assert_eq!(
+        function_compiler.materialize_static_expression(&Expression::Member {
+            object: Box::new(Expression::Identifier("__ayy_array_step_7".to_string())),
+            property: Box::new(Expression::String("done".to_string())),
+        }),
+        Expression::Bool(false),
+        "expected the iterator step temp to retain the static done=false result",
+    );
+    assert_eq!(
+        function_compiler.materialize_static_expression(&Expression::Identifier(
+            "__ayy_array_iter_done_6".to_string()
+        )),
+        Expression::Bool(false),
+        "expected the iterator done temp to retain the copied static done=false flag",
+    );
+
+    assert_eq!(
+        function_compiler
+            .resolve_static_number_value(&Expression::Identifier("doneCallCount".to_string())),
+        Some(1.0),
+        "expected destructuring to close the iterator before the generator body runs",
+    );
+    assert_eq!(
+        function_compiler
+            .resolve_static_number_value(&Expression::Identifier("callCount".to_string())),
+        Some(1.0),
+        "expected the generator body to observe the iterator close having already happened",
+    );
 }
 
 #[test]
@@ -11370,6 +15553,1363 @@ fn consumes_chained_immediate_promise_outcome_for_async_generator_method_next() 
             .expect("chained immediate promise outcome should compile"),
         Some(StaticEvalOutcome::Value(Expression::Undefined))
     ));
+}
+
+#[test]
+fn consumes_chained_immediate_promise_outcome_for_async_generator_static_method_with_destructured_params()
+ {
+    let program = frontend::parse(
+        r#"
+            function done(value) {
+              console.log("done", value);
+            }
+            var callCount = 0;
+            class C {
+              static async *method([x, y, z]) {
+                callCount = x * 100 + y * 10 + z;
+              }
+            }
+            C.method([1, 2, 3]).next()
+              .then(function() {
+                console.log("then1");
+              }, done)
+              .then(done, done);
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should construct");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+
+    for statement in &program.statements[..program.statements.len() - 1] {
+        function_compiler
+            .emit_statement(statement)
+            .expect("setup statement should emit");
+    }
+
+    let Statement::Expression(expression) = program
+        .statements
+        .last()
+        .expect("expected chained then expression")
+    else {
+        panic!("expected chained then expression statement");
+    };
+    assert!(matches!(
+        function_compiler
+            .consume_immediate_promise_outcome(expression)
+            .expect("chained immediate promise outcome should compile"),
+        Some(StaticEvalOutcome::Value(Expression::Undefined))
+    ));
+    assert_eq!(
+        function_compiler
+            .resolve_static_number_value(&Expression::Identifier("callCount".to_string())),
+        Some(123.0),
+        "expected destructured parameter values to update callCount before promise handlers run",
+    );
+}
+
+#[test]
+fn consumes_chained_immediate_promise_outcome_for_async_generator_static_method_with_default_class_name()
+ {
+    let program = frontend::parse(
+        r#"
+            function done(value) {
+              console.log("done", value);
+            }
+            var clsNameOk = 0;
+            var xClsNameOk = 0;
+            var xCls2NameOk = 0;
+            var callCount = 0;
+            class C {
+              static async *method([cls = class {}, xCls = class X {}, xCls2 = class { static name() {} }]) {
+                clsNameOk = cls.name === 'cls' ? 1 : 0;
+                xClsNameOk = xCls.name !== 'xCls' ? 1 : 0;
+                xCls2NameOk = xCls2.name !== 'xCls2' ? 1 : 0;
+                callCount = callCount + 1;
+              }
+            }
+            C.method([]).next()
+              .then(function() {
+                console.log("then1");
+              }, done)
+              .then(done, done);
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should construct");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+
+    for statement in &program.statements[..program.statements.len() - 1] {
+        function_compiler
+            .emit_statement(statement)
+            .expect("setup statement should emit");
+    }
+
+    let Statement::Expression(expression) = program
+        .statements
+        .last()
+        .expect("expected chained then expression")
+    else {
+        panic!("expected chained then expression statement");
+    };
+    assert!(matches!(
+        function_compiler
+            .consume_immediate_promise_outcome(expression)
+            .expect("chained immediate promise outcome should compile"),
+        Some(StaticEvalOutcome::Value(Expression::Undefined))
+    ));
+    assert_eq!(
+        function_compiler
+            .resolve_static_number_value(&Expression::Identifier("clsNameOk".to_string())),
+        Some(1.0),
+        "expected anonymous default class initializer to preserve its inferred name through immediate promise outcome consumption",
+    );
+    assert_eq!(
+        function_compiler
+            .resolve_static_number_value(&Expression::Identifier("xClsNameOk".to_string())),
+        Some(1.0),
+        "expected named default class initializer to preserve its explicit class name",
+    );
+    assert_eq!(
+        function_compiler
+            .resolve_static_number_value(&Expression::Identifier("xCls2NameOk".to_string())),
+        Some(1.0),
+        "expected default class initializer with static name method to keep the explicit own name property semantics",
+    );
+    assert_eq!(
+        function_compiler
+            .resolve_static_number_value(&Expression::Identifier("callCount".to_string())),
+        Some(1.0),
+        "expected the async generator body to complete exactly once",
+    );
+}
+
+#[test]
+fn consumes_chained_immediate_promise_outcome_for_async_generator_private_method_via_getter() {
+    let program = frontend::parse(
+        r#"
+            function done(value) {
+              console.log("done", value);
+            }
+            let error = new Error();
+            class C {
+              async *#gen() {
+                yield Promise.reject(error);
+                yield "unreachable";
+              }
+              get gen() { return this.#gen; }
+            }
+            let c = new C();
+            c.gen().next()
+              .then(function() {
+                throw new Test262Error("Promise incorrectly resolved.");
+              })
+              .catch(function(rejectValue) {
+                assert.sameValue(rejectValue, error);
+              })
+              .then(done, done);
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should construct");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+
+    for statement in &program.statements[..program.statements.len() - 1] {
+        function_compiler
+            .emit_statement(statement)
+            .expect("setup statement should emit");
+    }
+
+    let Statement::Expression(expression) = program
+        .statements
+        .last()
+        .expect("expected chained then expression")
+    else {
+        panic!("expected chained then expression statement");
+    };
+    assert!(matches!(
+        function_compiler
+            .consume_immediate_promise_outcome(expression)
+            .expect("private async generator immediate promise outcome should compile"),
+        Some(StaticEvalOutcome::Value(Expression::Undefined))
+    ));
+}
+
+#[test]
+fn consumes_chained_immediate_promise_outcome_for_static_private_async_generator_via_getter() {
+    let program = frontend::parse(
+        r#"
+            function done(value) {
+              console.log("done", value);
+            }
+            var resultValue = 0;
+            var resultDone = true;
+            class C {
+              async *m() { return 42; }
+              static async *#$(value) {
+                yield * await value;
+              }
+              static get $() { return this.#$; }
+            }
+            C.$([1]).next()
+              .then(function(result) {
+                resultValue = result.value;
+                resultDone = result.done;
+              })
+              .then(done, done);
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should construct");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+
+    for statement in &program.statements[..program.statements.len() - 1] {
+        function_compiler
+            .emit_statement(statement)
+            .expect("setup statement should emit");
+    }
+
+    let Statement::Expression(expression) = program
+        .statements
+        .last()
+        .expect("expected chained then expression")
+    else {
+        panic!("expected chained then expression statement");
+    };
+    assert!(matches!(
+        function_compiler
+            .consume_immediate_promise_outcome(expression)
+            .expect("static private async generator immediate promise outcome should compile"),
+        Some(StaticEvalOutcome::Value(Expression::Undefined))
+    ));
+}
+
+#[test]
+fn consumes_immediate_promise_all_for_static_private_async_generator_next_results() {
+    let program = frontend::parse(
+        r#"
+            function done(value) {
+              console.log("done", value);
+            }
+            var firstValue = 0;
+            var firstDone = true;
+            var secondValue = 0;
+            var secondDone = true;
+            class C {
+              async *m() { return 42; }
+              static async *#$(value) {
+                yield * await value;
+              }
+              static async *#_(value) {
+                yield * await value;
+              }
+              static get $() { return this.#$; }
+              static get _() { return this.#_; }
+            }
+            Promise.all([
+              C.$([1]).next(),
+              C._([2]).next(),
+            ])
+              .then(function(results) {
+                firstValue = results[0].value;
+                firstDone = results[0].done;
+                secondValue = results[1].value;
+                secondDone = results[1].done;
+              })
+              .then(done, done);
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should construct");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+
+    for statement in &program.statements[..program.statements.len() - 1] {
+        function_compiler
+            .emit_statement(statement)
+            .expect("setup statement should emit");
+    }
+
+    let Statement::Expression(expression) = program
+        .statements
+        .last()
+        .expect("expected chained promise expression")
+    else {
+        panic!("expected chained promise expression statement");
+    };
+    assert!(matches!(
+        function_compiler
+            .consume_immediate_promise_outcome(expression)
+            .expect("Promise.all immediate promise outcome should compile"),
+        Some(StaticEvalOutcome::Value(Expression::Undefined))
+    ));
+}
+
+#[test]
+fn consumes_immediate_promise_all_for_static_private_async_method_results() {
+    let program = frontend::parse(
+        r#"
+            function done(value) {
+              console.log("done", value);
+            }
+            var firstValue = 0;
+            var secondValue = 0;
+            class C {
+              static async #$(value) {
+                return await value;
+              }
+              static async #_(value) {
+                return await value;
+              }
+              static async $(value) {
+                return await this.#$(value);
+              }
+              static async _(value) {
+                return await this.#_(value);
+              }
+            }
+            Promise.all([
+              C.$(1),
+              C._(2),
+            ]);
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should construct");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+
+    for statement in &program.statements[..program.statements.len() - 1] {
+        function_compiler
+            .emit_statement(statement)
+            .expect("setup statement should emit");
+    }
+
+    let Statement::Expression(expression) = program
+        .statements
+        .last()
+        .expect("expected chained promise expression")
+    else {
+        panic!("expected chained promise expression statement");
+    };
+    let Some(StaticEvalOutcome::Value(Expression::Array(values))) = function_compiler
+        .consume_immediate_promise_outcome(expression)
+        .expect("Promise.all async method outcome should compile")
+    else {
+        panic!("expected Promise.all to resolve to a static result array");
+    };
+    assert_eq!(
+        values,
+        vec![
+            ArrayElement::Expression(Expression::Number(1.0)),
+            ArrayElement::Expression(Expression::Number(2.0)),
+        ]
+    );
+}
+
+#[test]
+fn consumes_chained_immediate_promise_outcome_for_async_generator_private_method_yield_star_next_sequence()
+ {
+    let program = frontend::parse(
+        r#"
+            var log = [];
+            var obj = {
+              get [Symbol.iterator]() {
+                log.push({ name: "get [Symbol.iterator]" });
+              },
+              get [Symbol.asyncIterator]() {
+                log.push({ name: "get [Symbol.asyncIterator]", thisValue: this });
+                return function() {
+                  log.push({ name: "call [Symbol.asyncIterator]", thisValue: this, args: [...arguments] });
+                  var nextCount = 0;
+                  return {
+                    name: "asyncIterator",
+                    get next() {
+                      log.push({ name: "get next", thisValue: this });
+                      return function() {
+                        log.push({ name: "call next", thisValue: this, args: [...arguments] });
+                        nextCount++;
+                        if (nextCount == 1) {
+                          return {
+                            name: "next-promise-1",
+                            get then() {
+                              log.push({ name: "get next then (1)", thisValue: this });
+                              return function(resolve) {
+                                log.push({ name: "call next then (1)", thisValue: this, args: [...arguments] });
+                                resolve({
+                                  name: "next-result-1",
+                                  get value() {
+                                    log.push({ name: "get next value (1)", thisValue: this });
+                                    return "next-value-1";
+                                  },
+                                  get done() {
+                                    log.push({ name: "get next done (1)", thisValue: this });
+                                    return false;
+                                  }
+                                });
+                              };
+                            }
+                          };
+                        }
+                        return {
+                          name: "next-promise-2",
+                          get then() {
+                            log.push({ name: "get next then (2)", thisValue: this });
+                            return function(resolve) {
+                              log.push({ name: "call next then (2)", thisValue: this, args: [...arguments] });
+                              resolve({
+                                name: "next-result-2",
+                                get value() {
+                                  log.push({ name: "get next value (2)", thisValue: this });
+                                  return "next-value-2";
+                                },
+                                get done() {
+                                  log.push({ name: "get next done (2)", thisValue: this });
+                                  return true;
+                                }
+                              });
+                            };
+                          }
+                        };
+                      };
+                    }
+                  };
+                };
+              }
+            };
+
+            var callCount = 0;
+
+            class C {
+              async *#gen() {
+                callCount += 1;
+                log.push({ name: "before yield*" });
+                var v = yield* obj;
+                log.push({ name: "after yield*", value: v });
+                return "return-value";
+              }
+              get gen() { return this.#gen; }
+            }
+
+            var iter = new C().gen();
+            iter.next("next-arg-1").then(function(v) {
+              iter.next("next-arg-2").then(function(v2) {
+                console.log(v.value, v.done, v2.value, v2.done);
+              });
+            });
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should construct");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+
+    for statement in &program.statements[..program.statements.len() - 1] {
+        function_compiler
+            .emit_statement(statement)
+            .expect("setup statement should emit");
+    }
+
+    let Statement::Expression(expression) = program
+        .statements
+        .last()
+        .expect("expected chained then expression")
+    else {
+        panic!("expected chained then expression statement");
+    };
+    assert!(matches!(
+        function_compiler
+            .consume_immediate_promise_outcome(expression)
+            .expect("private async generator yield* promise chain should compile"),
+        Some(StaticEvalOutcome::Value(Expression::Undefined))
+    ));
+
+    assert_eq!(
+        function_compiler
+            .resolve_static_number_value(&Expression::Identifier("callCount".to_string())),
+        Some(1.0),
+    );
+    if std::env::var_os("AYY_TRACE_PRIVATE_RETURN").is_some() {
+        for index in 0..14 {
+            eprintln!(
+                "private_return_log index={index} name={:?} value={:?}",
+                function_compiler.materialize_static_expression(&Expression::Member {
+                    object: Box::new(Expression::Member {
+                        object: Box::new(Expression::Identifier("log".to_string())),
+                        property: Box::new(Expression::Number(index as f64)),
+                    }),
+                    property: Box::new(Expression::String("name".to_string())),
+                }),
+                function_compiler.materialize_static_expression(&Expression::Member {
+                    object: Box::new(Expression::Member {
+                        object: Box::new(Expression::Identifier("log".to_string())),
+                        property: Box::new(Expression::Number(index as f64)),
+                    }),
+                    property: Box::new(Expression::String("value".to_string())),
+                }),
+            );
+        }
+    }
+    assert_eq!(
+        function_compiler.materialize_static_expression(&Expression::Member {
+            object: Box::new(Expression::Member {
+                object: Box::new(Expression::Identifier("log".to_string())),
+                property: Box::new(Expression::Number(0.0)),
+            }),
+            property: Box::new(Expression::String("name".to_string())),
+        }),
+        Expression::String("before yield*".to_string())
+    );
+    assert_eq!(
+        function_compiler.materialize_static_expression(&Expression::Member {
+            object: Box::new(Expression::Member {
+                object: Box::new(Expression::Identifier("log".to_string())),
+                property: Box::new(Expression::Number(13.0)),
+            }),
+            property: Box::new(Expression::String("name".to_string())),
+        }),
+        Expression::String("after yield*".to_string())
+    );
+    assert_eq!(
+        function_compiler.materialize_static_expression(&Expression::Member {
+            object: Box::new(Expression::Member {
+                object: Box::new(Expression::Identifier("log".to_string())),
+                property: Box::new(Expression::Number(13.0)),
+            }),
+            property: Box::new(Expression::String("value".to_string())),
+        }),
+        Expression::String("next-value-2".to_string())
+    );
+    assert_eq!(
+        function_compiler
+            .state
+            .speculation
+            .static_semantics
+            .arrays
+            .local_array_iterator_bindings
+            .get("iter")
+            .and_then(|binding| binding.static_index),
+        Some(2)
+    );
+}
+
+#[test]
+fn consumes_chained_immediate_promise_outcome_for_async_generator_private_method_yield_star_return_sequence()
+ {
+    let program = frontend::parse(
+        r#"
+            var log = [];
+            var obj = {
+              [Symbol.asyncIterator]() {
+                var returnCount = 0;
+                return {
+                  name: "asyncIterator",
+                  get next() {
+                    log.push({ name: "get next", thisValue: this });
+                    return function() {
+                      return { value: "next-value-1", done: false };
+                    };
+                  },
+                  get return() {
+                    log.push({ name: "get return", thisValue: this });
+                    return function() {
+                      log.push({ name: "call return", thisValue: this, args: [...arguments] });
+                      returnCount++;
+                      if (returnCount === 1) {
+                        return {
+                          name: "return-promise-1",
+                          get then() {
+                            log.push({ name: "get return then (1)", thisValue: this });
+                            return function(resolve) {
+                              log.push({ name: "call return then (1)", thisValue: this, args: [...arguments] });
+                              resolve({
+                                name: "return-result-1",
+                                get value() {
+                                  log.push({ name: "get return value (1)", thisValue: this });
+                                  return "return-value-1";
+                                },
+                                get done() {
+                                  log.push({ name: "get return done (1)", thisValue: this });
+                                  return false;
+                                }
+                              });
+                            };
+                          }
+                        };
+                      }
+                      return {
+                        name: "return-promise-2",
+                        get then() {
+                          log.push({ name: "get return then (2)", thisValue: this });
+                          return function(resolve) {
+                            log.push({ name: "call return then (2)", thisValue: this, args: [...arguments] });
+                            resolve({
+                              name: "return-result-2",
+                              get value() {
+                                log.push({ name: "get return value (2)", thisValue: this });
+                                return "return-value-2";
+                              },
+                              get done() {
+                                log.push({ name: "get return done (2)", thisValue: this });
+                                return true;
+                              }
+                            });
+                          };
+                        }
+                      };
+                    };
+                  }
+                };
+              }
+            };
+
+            var callCount = 0;
+
+            class C {
+              async *#gen() {
+                callCount += 1;
+                log.push({ name: "before yield*" });
+                yield* obj;
+              }
+              get gen() { return this.#gen; }
+            }
+
+            var iter = new C().gen();
+            iter.next().then(function(v) {
+              iter.return("return-arg-1").then(function(v2) {
+                iter.return("return-arg-2").then(function(v3) {
+                  console.log(v.value, v.done, v2.value, v2.done, v3.value, v3.done);
+                });
+              });
+            });
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should construct");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+
+    for statement in &program.statements[..program.statements.len() - 1] {
+        function_compiler
+            .emit_statement(statement)
+            .expect("setup statement should emit");
+    }
+
+    let Statement::Expression(expression) = program
+        .statements
+        .last()
+        .expect("expected chained then expression")
+    else {
+        panic!("expected chained then expression statement");
+    };
+    assert!(matches!(
+        function_compiler
+            .consume_immediate_promise_outcome(expression)
+            .expect("private async generator yield* return promise chain should compile"),
+        Some(StaticEvalOutcome::Value(Expression::Undefined))
+    ));
+
+    assert_eq!(
+        function_compiler
+            .resolve_static_number_value(&Expression::Identifier("callCount".to_string())),
+        Some(1.0),
+    );
+    if std::env::var_os("AYY_TRACE_PRIVATE_RETURN").is_some() {
+        for index in 0..14 {
+            eprintln!(
+                "private_return_log index={index} name={:?} value={:?}",
+                function_compiler.materialize_static_expression(&Expression::Member {
+                    object: Box::new(Expression::Member {
+                        object: Box::new(Expression::Identifier("log".to_string())),
+                        property: Box::new(Expression::Number(index as f64)),
+                    }),
+                    property: Box::new(Expression::String("name".to_string())),
+                }),
+                function_compiler.materialize_static_expression(&Expression::Member {
+                    object: Box::new(Expression::Member {
+                        object: Box::new(Expression::Identifier("log".to_string())),
+                        property: Box::new(Expression::Number(index as f64)),
+                    }),
+                    property: Box::new(Expression::String("value".to_string())),
+                }),
+            );
+        }
+    }
+    assert_eq!(
+        function_compiler.materialize_static_expression(&Expression::Member {
+            object: Box::new(Expression::Member {
+                object: Box::new(Expression::Identifier("log".to_string())),
+                property: Box::new(Expression::Number(0.0)),
+            }),
+            property: Box::new(Expression::String("name".to_string())),
+        }),
+        Expression::String("before yield*".to_string())
+    );
+    assert_eq!(
+        function_compiler.materialize_static_expression(&Expression::Member {
+            object: Box::new(Expression::Member {
+                object: Box::new(Expression::Identifier("log".to_string())),
+                property: Box::new(Expression::Number(8.0)),
+            }),
+            property: Box::new(Expression::String("name".to_string())),
+        }),
+        Expression::String("get return value (1)".to_string())
+    );
+    assert_eq!(
+        function_compiler.materialize_static_expression(&Expression::Member {
+            object: Box::new(Expression::Member {
+                object: Box::new(Expression::Identifier("log".to_string())),
+                property: Box::new(Expression::Number(13.0)),
+            }),
+            property: Box::new(Expression::String("name".to_string())),
+        }),
+        Expression::String("get return done (2)".to_string())
+    );
+}
+
+#[test]
+fn preserves_distinct_sent_values_for_nested_generator_yields_in_object_spread() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              static *#gen() {
+                yield {
+                  ...yield,
+                  y: 1,
+                  ...yield yield,
+                };
+              }
+              static get gen() { return this.#gen; }
+            }
+
+            var iter = C.gen();
+            iter.next();
+            iter.next({ x: 42 });
+            iter.next({ x: 'lol' });
+            var item = iter.next({ y: 39 });
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should construct");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+
+    let iter_init = match &program.statements[1] {
+        Statement::Var { value, .. } => value,
+        _ => panic!("expected iter initializer"),
+    };
+    let (steps, completion_effects, completion_value) = function_compiler
+        .resolve_simple_generator_source(iter_init)
+        .expect("expected simple generator source");
+    assert_eq!(steps.len(), 4);
+    assert!(completion_effects.is_empty());
+    assert_eq!(completion_value, Expression::Undefined);
+    assert!(matches!(
+        steps[0].outcome,
+        SimpleGeneratorStepOutcome::Yield(Expression::Undefined)
+    ));
+    assert!(matches!(
+        steps[1].outcome,
+        SimpleGeneratorStepOutcome::Yield(Expression::Undefined)
+    ));
+    assert!(matches!(
+        steps[2].outcome,
+        SimpleGeneratorStepOutcome::Yield(Expression::Identifier(ref name))
+            if name == "__ayy_generator_sent_3"
+    ));
+
+    let SimpleGeneratorStepOutcome::Yield(Expression::Object(entries)) = &steps[3].outcome else {
+        panic!("expected final yielded object spread expression");
+    };
+    assert_eq!(entries.len(), 3);
+    assert!(matches!(
+        &entries[0],
+        ObjectEntry::Spread(Expression::Identifier(name)) if name == "__ayy_generator_sent_2"
+    ));
+    assert!(matches!(
+        &entries[1],
+        ObjectEntry::Data { key: Expression::String(key), value }
+            if key == "y" && value == &Expression::Number(1.0)
+    ));
+    assert!(matches!(
+        &entries[2],
+        ObjectEntry::Spread(Expression::Identifier(name)) if name == "__ayy_generator_sent_4"
+    ));
+}
+
+#[test]
+fn resolves_static_private_generator_next_value_via_getter_call_snapshot() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              static *#gen(value) {
+                yield * value;
+              }
+              static get gen() { return this.#gen; }
+            }
+
+            var value = C.gen([1]).next().value;
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should construct");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+
+    for statement in &program.statements {
+        function_compiler
+            .emit_statement(statement)
+            .expect("statement should emit");
+    }
+}
+
+#[test]
+fn stores_async_generator_private_method_getter_call_as_local_iterator_binding() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              async *#gen() {
+                yield 1;
+              }
+              get gen() { return this.#gen; }
+            }
+            let c = new C();
+            var iter = c.gen();
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should construct");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+
+    for statement in &program.statements {
+        function_compiler
+            .emit_statement(statement)
+            .expect("statement should emit");
+    }
+
+    let Some(binding_name) = function_compiler.resolve_local_array_iterator_binding_name("iter")
+    else {
+        panic!("expected iter iterator binding name");
+    };
+    assert!(matches!(
+        function_compiler
+            .state
+            .speculation
+            .static_semantics
+            .arrays
+            .local_array_iterator_bindings
+            .get(&binding_name)
+            .map(|binding| &binding.source),
+        Some(IteratorSourceKind::SimpleGenerator { is_async: true, .. })
+    ));
+}
+
+#[test]
+fn stores_private_async_generator_yield_star_non_callable_async_iterator_as_throwing_step() {
+    let program = frontend::parse(
+        r#"
+            var obj = {
+              get [Symbol.iterator]() {
+                throw new Error("should not get sync iterator");
+              },
+              [Symbol.asyncIterator]: 0
+            };
+            class C {
+              async *#gen() {
+                yield* obj;
+              }
+              get gen() { return this.#gen; }
+            }
+            let c = new C();
+            var iter = c.gen();
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should construct");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+
+    for statement in &program.statements {
+        function_compiler
+            .emit_statement(statement)
+            .expect("statement should emit");
+    }
+
+    let iter_initializer = program
+        .statements
+        .iter()
+        .find_map(|statement| match statement {
+            Statement::Var { name, value } if name == "iter" => Some(value.clone()),
+            _ => None,
+        })
+        .expect("expected iter initializer");
+    let async_iterator_property =
+        function_compiler.materialize_static_expression(&Expression::Member {
+            object: Box::new(Expression::Identifier("Symbol".to_string())),
+            property: Box::new(Expression::String("asyncIterator".to_string())),
+        });
+    let object_binding = function_compiler
+        .resolve_object_binding_from_expression(&Expression::Identifier("obj".to_string()))
+        .expect("expected object binding for obj");
+    assert_eq!(
+        object_binding_lookup_value(&object_binding, &async_iterator_property).cloned(),
+        Some(Expression::Number(0.0))
+    );
+    let (direct_async_delegate_steps, direct_async_delegate_completion_effects) = function_compiler
+        .resolve_simple_async_yield_delegate_source(&Expression::Identifier("obj".to_string()))
+        .expect("expected direct async delegate source");
+    assert!(direct_async_delegate_completion_effects.is_empty());
+    assert_eq!(direct_async_delegate_steps.len(), 1);
+    match &direct_async_delegate_steps[0].outcome {
+        SimpleGeneratorStepOutcome::Throw(Expression::Call { callee, .. }) if matches!(callee.as_ref(), Expression::Identifier(name) if name == "TypeError") =>
+            {}
+        SimpleGeneratorStepOutcome::Throw(other) => {
+            panic!("expected direct async delegate source to throw TypeError, got throw={other:?}")
+        }
+        SimpleGeneratorStepOutcome::Yield(other) => {
+            panic!("expected direct async delegate source to throw TypeError, got yield={other:?}")
+        }
+    }
+    let (direct_delegate_steps, direct_delegate_completion_effects) = function_compiler
+        .resolve_simple_yield_delegate_source(&Expression::Identifier("obj".to_string()), true)
+        .expect("expected direct delegate source");
+    assert!(direct_delegate_completion_effects.is_empty());
+    assert_eq!(direct_delegate_steps.len(), 1);
+    match &direct_delegate_steps[0].outcome {
+        SimpleGeneratorStepOutcome::Throw(Expression::Call { callee, .. }) if matches!(callee.as_ref(), Expression::Identifier(name) if name == "TypeError") =>
+            {}
+        SimpleGeneratorStepOutcome::Throw(other) => {
+            panic!("expected direct delegate source to throw TypeError, got throw={other:?}")
+        }
+        SimpleGeneratorStepOutcome::Yield(other) => {
+            panic!("expected direct delegate source to throw TypeError, got yield={other:?}")
+        }
+    }
+    let (resolved_user_function, _) = function_compiler
+        .resolve_user_function_call_target(&iter_initializer)
+        .expect("expected iter initializer call target");
+    assert!(matches!(
+        resolved_user_function.kind,
+        FunctionKind::AsyncGenerator
+    ));
+    let (resolved_steps, resolved_completion_effects, resolved_completion_value) =
+        function_compiler
+            .resolve_simple_generator_source(&iter_initializer)
+            .expect("expected iter initializer to resolve as a simple generator source");
+    assert!(resolved_completion_effects.is_empty());
+    assert_eq!(resolved_completion_value, Expression::Undefined);
+    assert_eq!(resolved_steps.len(), 1);
+    match &resolved_steps[0].outcome {
+        SimpleGeneratorStepOutcome::Throw(Expression::Call { callee, .. }) if matches!(callee.as_ref(), Expression::Identifier(name) if name == "TypeError") =>
+            {}
+        SimpleGeneratorStepOutcome::Throw(other) => {
+            panic!("expected resolved generator source to throw TypeError, got throw={other:?}")
+        }
+        SimpleGeneratorStepOutcome::Yield(other) => {
+            panic!("expected resolved generator source to throw TypeError, got yield={other:?}")
+        }
+    }
+    let Some(IteratorSourceKind::SimpleGenerator {
+        is_async: local_source_is_async,
+        steps: local_source_steps,
+        completion_effects: local_source_completion_effects,
+        completion_value: local_source_completion_value,
+    }) = function_compiler.resolve_local_array_iterator_source(&iter_initializer)
+    else {
+        panic!("expected local iterator source for iter initializer");
+    };
+    assert!(local_source_is_async);
+    assert!(local_source_completion_effects.is_empty());
+    assert_eq!(local_source_completion_value, Expression::Undefined);
+    assert_eq!(local_source_steps.len(), 1);
+    match &local_source_steps[0].outcome {
+        SimpleGeneratorStepOutcome::Throw(Expression::Call { callee, .. }) if matches!(callee.as_ref(), Expression::Identifier(name) if name == "TypeError") =>
+            {}
+        SimpleGeneratorStepOutcome::Throw(other) => {
+            panic!("expected local iterator source to throw TypeError, got throw={other:?}")
+        }
+        SimpleGeneratorStepOutcome::Yield(other) => {
+            panic!("expected local iterator source to throw TypeError, got yield={other:?}")
+        }
+    }
+
+    let Some(binding_name) = function_compiler.resolve_local_array_iterator_binding_name("iter")
+    else {
+        panic!("expected iter iterator binding name");
+    };
+    let Some(IteratorSourceKind::SimpleGenerator {
+        is_async,
+        steps,
+        completion_effects,
+        completion_value,
+    }) = function_compiler
+        .state
+        .speculation
+        .static_semantics
+        .arrays
+        .local_array_iterator_bindings
+        .get(&binding_name)
+        .map(|binding| &binding.source)
+    else {
+        panic!("expected iter simple generator source");
+    };
+    assert!(*is_async);
+    assert!(completion_effects.is_empty());
+    assert_eq!(*completion_value, Expression::Undefined);
+    assert_eq!(steps.len(), 1);
+    assert!(steps[0].effects.is_empty());
+    match &steps[0].outcome {
+        SimpleGeneratorStepOutcome::Throw(Expression::Call { callee, .. }) if matches!(callee.as_ref(), Expression::Identifier(name) if name == "TypeError") =>
+            {}
+        SimpleGeneratorStepOutcome::Throw(other) => {
+            panic!("expected throwing TypeError step, got throw={other:?}")
+        }
+        SimpleGeneratorStepOutcome::Yield(other) => {
+            panic!("expected throwing TypeError step, got yield={other:?}")
+        }
+    }
+}
+
+#[test]
+fn emits_nested_then_inside_async_generator_private_method_catch_callback() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              async *#gen() {
+                yield Promise.reject(error);
+              }
+              get gen() { return this.#gen; }
+            }
+            let error = new Error();
+            let c = new C();
+            var iter = c.gen();
+            iter.next().catch(function(rejectValue) {
+              assert.sameValue(rejectValue, error);
+              iter.next().then(function() {});
+            });
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should construct");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+
+    for statement in &program.statements[..program.statements.len() - 1] {
+        function_compiler
+            .emit_statement(statement)
+            .expect("setup statement should emit");
+    }
+
+    let statement = program
+        .statements
+        .last()
+        .expect("expected trailing catch expression");
+    function_compiler
+        .emit_statement(statement)
+        .expect("nested promise callback statement should emit");
 }
 
 #[test]
@@ -12730,6 +18270,2773 @@ fn materializes_class_computed_function_declaration_accessor_reads() {
         }),
         Expression::Number(1.0),
         "expected static accessor read to materialize getter result",
+    );
+}
+
+#[test]
+fn resolves_instance_method_binding_from_class_prototype_after_new() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              m() { return 42; }
+            }
+            let c = new C();
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+
+    for statement in &program.statements {
+        function_compiler
+            .emit_statement(statement)
+            .expect("statement should emit");
+    }
+
+    let instance_identifier = Expression::Identifier("c".to_string());
+    let method_property = Expression::String("m".to_string());
+
+    assert_eq!(
+        function_compiler.resolve_static_object_prototype_expression(&instance_identifier),
+        Some(Expression::Member {
+            object: Box::new(Expression::Identifier("C".to_string())),
+            property: Box::new(Expression::String("prototype".to_string())),
+        }),
+        "expected instance to retain C.prototype; local value: {:?}",
+        function_compiler
+            .state
+            .speculation
+            .static_semantics
+            .values
+            .local_value_bindings
+            .get("c")
+            .cloned(),
+    );
+    assert!(
+        function_compiler
+            .resolve_member_function_binding(&instance_identifier, &method_property)
+            .is_some(),
+        "expected instance method binding to resolve from C.prototype",
+    );
+}
+
+#[test]
+fn resolves_instance_method_binding_from_factory_returned_local_class() {
+    let program = frontend::parse(
+        r#"
+            function create() {
+              class C {
+                m() { return 42; }
+              }
+              return new C();
+            }
+            let c = create();
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_local_class_member_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+
+    for statement in &program.statements {
+        function_compiler
+            .emit_statement(statement)
+            .expect("statement should emit");
+    }
+
+    let call_expression = function_compiler
+        .backend
+        .global_semantics
+        .values
+        .value_bindings
+        .get("c")
+        .cloned()
+        .expect("expected global value binding for c");
+    let instance_identifier = Expression::Identifier("c".to_string());
+    let method_property = Expression::String("m".to_string());
+
+    assert!(
+        matches!(call_expression, Expression::Call { .. }),
+        "expected c to retain the factory call expression, got {call_expression:?}",
+    );
+    let call_callee = match &call_expression {
+        Expression::Call { callee, .. } => callee.as_ref(),
+        _ => unreachable!("asserted call expression above"),
+    };
+    let static_return_expression = function_compiler
+        .resolve_function_binding_from_expression(call_callee)
+        .and_then(|binding| match binding {
+            LocalFunctionBinding::User(function_name) => function_compiler
+                .resolve_static_return_expression_from_user_function_call(
+                    &function_name,
+                    &[],
+                    None,
+                ),
+            LocalFunctionBinding::Builtin(_) => None,
+        });
+    assert!(
+        matches!(
+            static_return_expression,
+            Some(Expression::New { ref callee, .. })
+                if matches!(callee.as_ref(), Expression::Identifier(name) if name.starts_with("__ayy_class_ctor_"))
+        ),
+        "expected factory call to materialize a lowered constructor return expression, got {static_return_expression:?}",
+    );
+    assert!(
+        matches!(
+            function_compiler.resolve_static_object_prototype_expression(&call_expression),
+            Some(Expression::Member { object, property })
+                if matches!(object.as_ref(), Expression::Identifier(name) if name.starts_with("__ayy_class_ctor_"))
+                    && matches!(property.as_ref(), Expression::String(property_name) if property_name == "prototype")
+        ),
+        "expected factory call result to retain the lowered class prototype; global value: {:?}",
+        function_compiler
+            .backend
+            .global_semantics
+            .values
+            .value_bindings
+            .get("c")
+            .cloned(),
+    );
+    assert!(
+        matches!(
+            function_compiler.resolve_static_object_prototype_expression(&instance_identifier),
+            Some(Expression::Member { object, property })
+                if matches!(object.as_ref(), Expression::Identifier(name) if name.starts_with("__ayy_class_ctor_"))
+                    && matches!(property.as_ref(), Expression::String(property_name) if property_name == "prototype")
+        ),
+        "expected factory-returned instance to retain the lowered class prototype; local value: {:?}",
+        function_compiler
+            .state
+            .speculation
+            .static_semantics
+            .values
+            .local_value_bindings
+            .get("c")
+            .cloned(),
+    );
+    assert!(
+        function_compiler
+            .resolve_member_function_binding(&instance_identifier, &method_property)
+            .is_some(),
+        "expected factory-returned instance method binding to resolve from the retained prototype",
+    );
+}
+
+#[test]
+fn does_not_resolve_static_member_call_outcome_for_mutating_instance_method() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              m() { this.x = 1; }
+            }
+            let c = new C();
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_local_class_member_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+
+    for statement in &program.statements {
+        function_compiler
+            .emit_statement(statement)
+            .expect("statement should emit");
+    }
+
+    let instance_identifier = Expression::Identifier("c".to_string());
+
+    assert!(
+        function_compiler
+            .resolve_member_function_binding(
+                &instance_identifier,
+                &Expression::String("m".to_string()),
+            )
+            .is_some(),
+        "expected instance method binding to resolve from C.prototype",
+    );
+    assert!(
+        function_compiler
+            .resolve_static_member_call_outcome_with_context(
+                &instance_identifier,
+                "m",
+                function_compiler.current_function_name(),
+            )
+            .is_none(),
+        "expected mutating instance method calls to avoid side-effect-dropping static resolution",
+    );
+}
+
+#[test]
+fn tracks_public_this_property_assignment_inside_class_method_body() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              method() {
+                this.x = 1;
+                return this.x;
+              }
+            }
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_local_class_member_bindings(&program.functions);
+
+    let method = compiler
+        .state
+        .function_registry
+        .catalog
+        .user_function_map
+        .values()
+        .find(|function| function.name.starts_with("__ayy_class_method_"))
+        .cloned()
+        .expect("expected class method");
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        Some(&method),
+        true,
+        false,
+        method.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+    let method_declaration = function_compiler
+        .resolve_registered_function_declaration(&method.name)
+        .cloned()
+        .expect("expected registered class method declaration");
+
+    function_compiler
+        .emit_statement(
+            method_declaration
+                .body
+                .first()
+                .expect("expected class method body statement"),
+        )
+        .expect("expected assignment statement to emit");
+
+    assert_eq!(
+        function_compiler.materialize_static_expression(&Expression::Member {
+            object: Box::new(Expression::This),
+            property: Box::new(Expression::String("x".to_string())),
+        }),
+        Expression::Number(1.0),
+        "expected class method body to retain public this-property assignment",
+    );
+}
+
+fn resolves_factory_returned_private_getter_method_capture_slots() {
+    let program = frontend::parse(
+        r#"
+            function createAndInstantiateClass() {
+              class C {
+                get #m() { return 'test262'; }
+                access(o) { return o.#m; }
+              }
+              return new C();
+            }
+            let c = createAndInstantiateClass();
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+    compiler.register_local_class_member_bindings(&program.functions);
+
+    let access_function = program
+        .functions
+        .iter()
+        .find(|function| {
+            matches!(
+                function.body.as_slice(),
+                [Statement::Return(Expression::Member { object, property })]
+                    if matches!(object.as_ref(), Expression::Identifier(name) if name == "o")
+                        && matches!(property.as_ref(), Expression::String(name) if name == "__ayy$private$C$m")
+            )
+        })
+        .cloned()
+        .expect("expected access method declaration");
+    let expected_private_brand_binding = access_function
+        .private_brand_binding
+        .clone()
+        .expect("expected access method to capture a private brand binding");
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+
+    for statement in &program.statements {
+        function_compiler
+            .emit_statement(statement)
+            .expect("statement should emit");
+    }
+
+    let capture_slots = function_compiler
+        .resolve_member_function_capture_slots(
+            &Expression::Identifier("c".to_string()),
+            &Expression::String("access".to_string()),
+        )
+        .expect("expected factory-returned instance method capture slots");
+    assert!(
+        capture_slots.contains_key(&expected_private_brand_binding),
+        "expected access method capture slots to preserve the private brand binding, got {capture_slots:?}",
+    );
+}
+
+#[test]
+fn tracks_distinct_private_getter_markers_across_factory_evaluations() {
+    let program = frontend::parse(
+        r#"
+            function createAndInstantiateClass() {
+              class C {
+                get #m() { return 'test262'; }
+                access(o) { return o.#m; }
+              }
+              return new C();
+            }
+            let c1 = createAndInstantiateClass();
+            let c2 = createAndInstantiateClass();
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+    compiler.register_local_class_member_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+
+    for statement in &program.statements {
+        function_compiler
+            .emit_statement(statement)
+            .expect("statement should emit");
+    }
+
+    let c1_binding = function_compiler
+        .resolve_object_binding_from_expression(&Expression::Identifier("c1".to_string()))
+        .expect("expected c1 object binding");
+    let c2_binding = function_compiler
+        .resolve_object_binding_from_expression(&Expression::Identifier("c2".to_string()))
+        .expect("expected c2 object binding");
+    let c1_marker = object_binding_lookup_value(
+        &c1_binding,
+        &Expression::String("__ayy$private$C$m".to_string()),
+    )
+    .cloned()
+    .expect("expected c1 private marker");
+    let c2_marker = object_binding_lookup_value(
+        &c2_binding,
+        &Expression::String("__ayy$private$C$m".to_string()),
+    )
+    .cloned()
+    .expect("expected c2 private marker");
+    let c1_capture_slots = function_compiler
+        .resolve_member_function_capture_slots(
+            &Expression::Identifier("c1".to_string()),
+            &Expression::String("access".to_string()),
+        )
+        .expect("expected c1 access capture slots");
+    let c2_capture_slots = function_compiler
+        .resolve_member_function_capture_slots(
+            &Expression::Identifier("c2".to_string()),
+            &Expression::String("access".to_string()),
+        )
+        .expect("expected c2 access capture slots");
+    let stored_c1_binding = function_compiler
+        .state
+        .speculation
+        .static_semantics
+        .local_object_binding("c1")
+        .cloned();
+    let stored_c1_marker = stored_c1_binding.as_ref().and_then(|binding| {
+        object_binding_lookup_value(
+            binding,
+            &Expression::String("__ayy$private$C$m".to_string()),
+        )
+        .cloned()
+    });
+    let stored_c2_binding = function_compiler
+        .state
+        .speculation
+        .static_semantics
+        .local_object_binding("c2")
+        .cloned();
+    let stored_c2_marker = stored_c2_binding.as_ref().and_then(|binding| {
+        object_binding_lookup_value(
+            binding,
+            &Expression::String("__ayy$private$C$m".to_string()),
+        )
+        .cloned()
+    });
+
+    assert_ne!(
+        c1_marker, c2_marker,
+        "expected separate factory evaluations to preserve distinct private brand markers, c1={c1_marker:?}, c2={c2_marker:?}, c1_slots={c1_capture_slots:?}, c2_slots={c2_capture_slots:?}, stored_c1_marker={stored_c1_marker:?}, stored_c2_marker={stored_c2_marker:?}",
+    );
+}
+
+#[test]
+fn tracks_distinct_private_method_markers_across_factory_evaluations() {
+    let program = frontend::parse(
+        r#"
+            function createAndInstantiateClass() {
+              class C {
+                #m() { return 'test262'; }
+                access(o) { return o.#m(); }
+              }
+              return new C();
+            }
+            let c1 = createAndInstantiateClass();
+            let c2 = createAndInstantiateClass();
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+    compiler.register_local_class_member_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+
+    for statement in &program.statements {
+        function_compiler
+            .emit_statement(statement)
+            .expect("statement should emit");
+    }
+
+    let c1_binding = function_compiler
+        .resolve_object_binding_from_expression(&Expression::Identifier("c1".to_string()))
+        .expect("expected c1 object binding");
+    let c2_binding = function_compiler
+        .resolve_object_binding_from_expression(&Expression::Identifier("c2".to_string()))
+        .expect("expected c2 object binding");
+    let c1_marker = object_binding_lookup_value(
+        &c1_binding,
+        &Expression::String("__ayy$private$C$m".to_string()),
+    )
+    .cloned()
+    .expect("expected c1 private marker");
+    let c2_marker = object_binding_lookup_value(
+        &c2_binding,
+        &Expression::String("__ayy$private$C$m".to_string()),
+    )
+    .cloned()
+    .expect("expected c2 private marker");
+    let c1_capture_slots = function_compiler
+        .resolve_member_function_capture_slots(
+            &Expression::Identifier("c1".to_string()),
+            &Expression::String("access".to_string()),
+        )
+        .expect("expected c1 access capture slots");
+    let c2_capture_slots = function_compiler
+        .resolve_member_function_capture_slots(
+            &Expression::Identifier("c2".to_string()),
+            &Expression::String("access".to_string()),
+        )
+        .expect("expected c2 access capture slots");
+
+    assert_ne!(
+        c1_marker, c2_marker,
+        "expected separate factory evaluations to preserve distinct private method markers, c1={c1_marker:?}, c2={c2_marker:?}, c1_slots={c1_capture_slots:?}, c2_slots={c2_capture_slots:?}",
+    );
+}
+
+#[test]
+fn tracks_distinct_private_setter_markers_across_factory_evaluations() {
+    let program = frontend::parse(
+        r#"
+            function createAndInstantiateClass() {
+              class C {
+                set #m(v) { this._v = v; }
+                access(o, v) { o.#m = v; }
+              }
+              return new C();
+            }
+            let c1 = createAndInstantiateClass();
+            let c2 = createAndInstantiateClass();
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+    compiler.register_local_class_member_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+
+    for statement in &program.statements {
+        function_compiler
+            .emit_statement(statement)
+            .expect("statement should emit");
+    }
+
+    let c1_binding = function_compiler
+        .resolve_object_binding_from_expression(&Expression::Identifier("c1".to_string()))
+        .expect("expected c1 object binding");
+    let c2_binding = function_compiler
+        .resolve_object_binding_from_expression(&Expression::Identifier("c2".to_string()))
+        .expect("expected c2 object binding");
+    let c1_marker = object_binding_lookup_value(
+        &c1_binding,
+        &Expression::String("__ayy$private$C$m".to_string()),
+    )
+    .cloned()
+    .expect("expected c1 private setter marker");
+    let c2_marker = object_binding_lookup_value(
+        &c2_binding,
+        &Expression::String("__ayy$private$C$m".to_string()),
+    )
+    .cloned()
+    .expect("expected c2 private setter marker");
+
+    assert_ne!(
+        c1_marker, c2_marker,
+        "expected separate factory evaluations to preserve distinct private setter markers, c1={c1_marker:?}, c2={c2_marker:?}",
+    );
+}
+
+#[test]
+fn preserves_extracted_private_method_binding_for_call_dispatch() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              #m() { return this._v; }
+              getPrivateMethod() { return this.#m; }
+            }
+            let c = new C();
+            let m = c.getPrivateMethod();
+            let o1 = {_v: 'test262'};
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+    compiler.register_local_class_member_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+
+    for statement in &program.statements {
+        function_compiler
+            .emit_statement(statement)
+            .expect("statement should emit");
+    }
+
+    let extracted_binding = function_compiler
+        .resolve_function_binding_from_expression(&Expression::Identifier("m".to_string()));
+    let stored_value = function_compiler
+        .backend
+        .global_semantics
+        .values
+        .value_bindings
+        .get("m")
+        .cloned();
+    assert!(
+        matches!(extracted_binding, Some(LocalFunctionBinding::User(_))),
+        "expected extracted private method binding, got {extracted_binding:?}; stored value={stored_value:?}",
+    );
+
+    let call_result = function_compiler.resolve_static_call_result_expression_with_context(
+        &Expression::Member {
+            object: Box::new(Expression::Identifier("m".to_string())),
+            property: Box::new(Expression::String("call".to_string())),
+        },
+        &[CallArgument::Expression(Expression::Identifier(
+            "o1".to_string(),
+        ))],
+        None,
+    );
+    let materialized_call_result = call_result
+        .as_ref()
+        .map(|(expression, _)| function_compiler.materialize_static_expression(expression));
+    assert!(
+        matches!(
+            materialized_call_result,
+            Some(Expression::String(ref value)) if value == "test262"
+        ),
+        "expected extracted private method call result to resolve through Function.prototype.call, got raw={call_result:?} materialized={materialized_call_result:?}",
+    );
+}
+
+#[test]
+fn resolves_private_setter_binding_for_this_from_instance_method_home_object() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              #value_;
+              set #value(v) { this.#value_ = v; }
+              write(v) { this.#value = v; }
+            }
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+
+    let writer = compiler
+        .state
+        .function_registry
+        .user_functions()
+        .iter()
+        .find(|function| {
+            compiler
+                .state
+                .function_registry
+                .registered_function(&function.name)
+                .is_some_and(|declaration| {
+                    matches!(
+                        declaration.body.as_slice(),
+                        [Statement::AssignMember { object, property, .. }]
+                            if matches!(object, Expression::This)
+                                && matches!(property, Expression::String(name) if name == "__ayy$private$C$value")
+                    )
+                })
+        })
+        .cloned()
+        .expect("expected private setter writer method");
+
+    let writer_declaration = compiler
+        .state
+        .function_registry
+        .registered_function(&writer.name)
+        .expect("expected registered writer declaration")
+        .clone();
+    let setter_keys = compiler
+        .state
+        .global_semantics
+        .members
+        .member_setter_bindings
+        .keys()
+        .map(|key| {
+            let target = match &key.target {
+                crate::backend::direct_wasm::MemberFunctionBindingTarget::Identifier(name) => {
+                    format!("id:{name}")
+                }
+                crate::backend::direct_wasm::MemberFunctionBindingTarget::Prototype(name) => {
+                    format!("proto:{name}")
+                }
+            };
+            let property = match &key.property {
+                crate::backend::direct_wasm::MemberFunctionBindingProperty::String(name) => {
+                    format!("str:{name}")
+                }
+                crate::backend::direct_wasm::MemberFunctionBindingProperty::Symbol(name) => {
+                    format!("sym:{name}")
+                }
+                crate::backend::direct_wasm::MemberFunctionBindingProperty::SymbolExpression(
+                    name,
+                ) => {
+                    format!("symexpr:{name}")
+                }
+            };
+            format!("{target}/{property}")
+        })
+        .collect::<Vec<_>>();
+    assert!(
+        setter_keys
+            .iter()
+            .any(|key| key == "proto:C/str:__ayy$private$C$value"),
+        "expected private setter metadata to be registered on C.prototype",
+    );
+
+    let function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        Some(&writer),
+        true,
+        false,
+        writer.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+    let property = match writer_declaration.body.first() {
+        Some(Statement::AssignMember { property, .. }) => property,
+        other => panic!("expected private setter assignment in writer body, found {other:?}"),
+    };
+
+    assert!(
+        matches!(
+            function_compiler.resolve_member_setter_binding(&Expression::This, property),
+            Some(LocalFunctionBinding::User(_))
+        ),
+        "expected private setter binding to resolve from instance method home object",
+    );
+}
+
+#[test]
+fn resolves_private_getter_binding_for_alias_of_this_from_instance_method() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              get #value() { return 1; }
+              read() {
+                let self = this;
+                return self.#value;
+              }
+            }
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("top-level function compiler should initialize")
+    .compile(&program.statements)
+    .expect("program should compile");
+}
+
+#[test]
+fn resolves_private_setter_binding_for_alias_of_this_from_instance_method() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              set #value(v) {}
+              write() {
+                let self = this;
+                self.#value = 1;
+              }
+            }
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+
+    let writer = compiler
+        .state
+        .function_registry
+        .user_functions()
+        .iter()
+        .find(|function| {
+            compiler
+                .state
+                .function_registry
+                .registered_function(&function.name)
+                .is_some_and(|declaration| {
+                    matches!(
+                        declaration.body.as_slice(),
+                        [
+                            Statement::Let { name, value, .. },
+                            Statement::AssignMember { object, property, .. },
+                        ]
+                            if name == "self"
+                                && matches!(value, Expression::This)
+                                && matches!(object, Expression::Identifier(alias) if alias == "self")
+                                && matches!(property, Expression::String(name) if name == "__ayy$private$C$value")
+                    )
+                })
+        })
+        .cloned()
+        .expect("expected private setter alias writer method");
+    let writer_declaration = compiler
+        .state
+        .function_registry
+        .registered_function(&writer.name)
+        .cloned()
+        .expect("expected registered writer declaration");
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        Some(&writer),
+        true,
+        false,
+        writer.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+    function_compiler
+        .register_bindings(&writer_declaration.body)
+        .expect("writer bindings should register");
+    let receiver_expression = Expression::New {
+        callee: Box::new(Expression::Identifier("C".to_string())),
+        arguments: vec![],
+    };
+    function_compiler.update_local_value_binding("this", &receiver_expression);
+    function_compiler.update_local_object_binding("this", &receiver_expression);
+    let alias_binding_statement = writer_declaration
+        .body
+        .first()
+        .cloned()
+        .expect("expected alias binding statement");
+    function_compiler
+        .emit_statement(&alias_binding_statement)
+        .expect("alias binding statement should emit");
+    let self_identifier = Expression::Identifier("self".to_string());
+    let property = Expression::String("__ayy$private$C$value".to_string());
+
+    assert_eq!(
+        function_compiler.resolve_bound_alias_expression(&self_identifier),
+        Some(Expression::This),
+        "expected self alias to resolve to this in private setter writer",
+    );
+    let self_binding = function_compiler
+        .resolve_object_binding_from_expression(&self_identifier)
+        .expect("expected self object binding after alias initialization");
+    assert!(
+        object_binding_lookup_value(
+            &self_binding,
+            &Expression::String("__ayy$private$C$value".to_string()),
+        )
+        .is_some(),
+        "expected self binding to preserve the private setter marker",
+    );
+    assert!(
+        matches!(
+            function_compiler.resolve_member_setter_binding(&self_identifier, &property),
+            Some(LocalFunctionBinding::User(_))
+        ),
+        "expected private setter binding to resolve for alias of this",
+    );
+    assert!(
+        function_compiler
+            .emit_setter_member_assignment(&self_identifier, &property, &Expression::Number(1.0),)
+            .expect("alias private setter assignment should emit"),
+        "expected alias-of-this private setter to use setter assignment emission",
+    );
+}
+
+#[test]
+fn nested_private_getter_capture_alias_resolves_to_getter_binding() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              get #value() { return 1; }
+              read() {
+                let self = this;
+                function inner() {
+                  return self.#value;
+                }
+                return inner();
+              }
+            }
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+
+    let inner_name = program
+        .functions
+        .iter()
+        .find_map(|function| {
+            matches!(
+                function.body.as_slice(),
+                [Statement::Return(Expression::Member { object, property })]
+                    if matches!(object.as_ref(), Expression::Identifier(name) if name == "self")
+                        && matches!(property.as_ref(), Expression::String(name) if name == "__ayy$private$C$value")
+            )
+            .then_some(function.name.clone())
+        })
+        .expect("expected nested function declaration");
+    let inner = compiler
+        .state
+        .function_registry
+        .catalog
+        .user_function_map
+        .get(&inner_name)
+        .cloned()
+        .expect("expected nested function");
+
+    let function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        Some(&inner),
+        true,
+        false,
+        inner.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("nested function compiler should initialize");
+
+    let self_identifier = Expression::Identifier("self".to_string());
+    let property = Expression::String("__ayy$private$C$value".to_string());
+
+    assert_eq!(
+        function_compiler.resolve_bound_alias_expression(&self_identifier),
+        Some(Expression::This),
+        "expected captured self alias to resolve to this in nested class helper",
+    );
+    assert!(
+        matches!(
+            function_compiler.resolve_member_getter_binding(&self_identifier, &property),
+            Some(LocalFunctionBinding::User(_))
+        ),
+        "expected nested captured self private getter to resolve",
+    );
+}
+
+#[test]
+fn nested_private_getter_capture_slot_resolves_to_getter_binding() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              get #value() { return 1; }
+              read() {
+                let self = this;
+                function inner() {
+                  return self.#value;
+                }
+                return inner();
+              }
+            }
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+
+    let inner_name = program
+        .functions
+        .iter()
+        .find_map(|function| {
+            matches!(
+                function.body.as_slice(),
+                [Statement::Return(Expression::Member { object, property })]
+                    if matches!(object.as_ref(), Expression::Identifier(name) if name == "self")
+                        && matches!(property.as_ref(), Expression::String(name) if name == "__ayy$private$C$value")
+            )
+            .then_some(function.name.clone())
+        })
+        .expect("expected nested function declaration");
+    let inner = compiler
+        .state
+        .function_registry
+        .catalog
+        .user_function_map
+        .get(&inner_name)
+        .cloned()
+        .expect("expected nested function");
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        Some(&inner),
+        true,
+        false,
+        inner.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("nested function compiler should initialize");
+
+    let capture_slot = "__ayy_capture_private_self".to_string();
+    function_compiler
+        .state
+        .runtime
+        .locals
+        .runtime_dynamic_bindings
+        .insert(capture_slot.clone());
+    function_compiler
+        .state
+        .speculation
+        .static_semantics
+        .capture_slot_source_bindings
+        .insert(capture_slot.clone(), "self".to_string());
+
+    let property = Expression::String("__ayy$private$C$value".to_string());
+
+    assert!(
+        matches!(
+            function_compiler
+                .resolve_member_getter_binding(&Expression::Identifier(capture_slot), &property),
+            Some(LocalFunctionBinding::User(_))
+        ),
+        "expected nested captured private getter slot to resolve through its source binding",
+    );
+}
+
+#[test]
+fn emits_nested_private_getter_capture_alias_read_without_object_fallback() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              get #value() { return 'Test262'; }
+
+              method() {
+                let self = this;
+                function inner() {
+                  return self.#value;
+                }
+                return inner();
+              }
+            }
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+
+    let inner_name = program
+        .functions
+        .iter()
+        .find_map(|function| {
+            matches!(
+                function.body.as_slice(),
+                [Statement::Return(Expression::Member { object, property })]
+                    if matches!(object.as_ref(), Expression::Identifier(name) if name == "self")
+                        && matches!(property.as_ref(), Expression::String(name) if name == "__ayy$private$C$value")
+            )
+            .then_some(function.name.clone())
+        })
+        .expect("expected nested function declaration");
+    let inner = compiler
+        .state
+        .function_registry
+        .catalog
+        .user_function_map
+        .get(&inner_name)
+        .cloned()
+        .expect("expected nested function");
+    let inner_declaration = compiler
+        .state
+        .function_registry
+        .catalog
+        .registered_function(&inner_name)
+        .cloned()
+        .expect("expected nested function declaration");
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        Some(&inner),
+        true,
+        false,
+        inner.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("nested function compiler should initialize");
+    function_compiler
+        .register_bindings(&inner_declaration.body)
+        .expect("nested function bindings should register");
+    function_compiler.seed_local_this_object_binding();
+
+    let base_len = function_compiler.state.emission.output.instructions.len();
+    function_compiler
+        .emit_numeric_expression(&Expression::Member {
+            object: Box::new(Expression::Identifier("self".to_string())),
+            property: Box::new(Expression::String("__ayy$private$C$value".to_string())),
+        })
+        .expect("nested private getter read should emit");
+    let emitted = &function_compiler.state.emission.output.instructions[base_len..];
+
+    assert_ne!(
+        decode_last_i32_const(emitted),
+        Some(crate::backend::direct_wasm::JS_TYPEOF_OBJECT_TAG),
+        "expected nested private getter capture read to avoid generic object fallback",
+    );
+}
+
+#[test]
+fn resolves_private_getter_binding_for_this_in_method() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              get #m() { return 'test262'; }
+              access(o) { return this.#m; }
+            }
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+
+    let access = compiler
+        .state
+        .function_registry
+        .user_functions()
+        .iter()
+        .find(|function| function.name.contains("__ayy_class_method"))
+        .cloned()
+        .expect("expected class access method");
+    let function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        Some(&access),
+        true,
+        false,
+        access.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+    let property = Expression::String("__ayy$private$C$m".to_string());
+
+    assert!(
+        matches!(
+            function_compiler.resolve_member_getter_binding(&Expression::This, &property),
+            Some(LocalFunctionBinding::User(_))
+        ),
+        "expected this private getter to resolve from the current class method",
+    );
+    assert_eq!(
+        function_compiler.resolve_member_function_binding(&Expression::This, &property),
+        None,
+        "expected private getter to not resolve as a plain private method binding",
+    );
+}
+
+#[test]
+fn resolves_outer_private_getter_binding_for_this_in_nested_class_method() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              get #m() { return 'test262'; }
+
+              B = class {
+                method(o) {
+                  return o.#m;
+                }
+              }
+            }
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+    compiler.register_local_class_member_bindings(&program.functions);
+
+    let inner_method = compiler
+        .state
+        .function_registry
+        .user_functions()
+        .iter()
+        .find(|function| {
+            compiler
+                .state
+                .function_registry
+                .registered_function(&function.name)
+                .is_some_and(|declaration| {
+                    matches!(
+                        declaration.body.as_slice(),
+                        [Statement::Return(Expression::Member { object, property })]
+                            if matches!(object.as_ref(), Expression::Identifier(name) if name == "o")
+                                && matches!(property.as_ref(), Expression::String(name) if name == "__ayy$private$C$m")
+                    )
+                })
+        })
+        .cloned()
+        .expect("expected nested class method");
+    let synthetic_capture_bindings = compiler
+        .state
+        .function_registry
+        .registered_function(&inner_method.name)
+        .map(|function| function.synthetic_capture_bindings.clone())
+        .unwrap_or_default();
+    assert!(
+        synthetic_capture_bindings
+            .iter()
+            .any(|capture_name| capture_name.starts_with("__ayy_class_brand_")),
+        "expected nested class method to record the outer private brand binding as a synthetic capture, got {synthetic_capture_bindings:?}",
+    );
+
+    let function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        Some(&inner_method),
+        true,
+        false,
+        inner_method.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+    let property = Expression::String("__ayy$private$C$m".to_string());
+
+    assert!(
+        matches!(
+            function_compiler.resolve_member_getter_binding(&Expression::This, &property),
+            Some(LocalFunctionBinding::User(_))
+        ),
+        "expected nested class method to resolve the outer private getter binding",
+    );
+}
+
+#[test]
+fn resolves_outer_private_method_binding_for_identifier_in_nested_class_method() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              #m() { return 'test262'; }
+
+              B = class {
+                method(o) {
+                  return o.#m();
+                }
+              }
+            }
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+    compiler.register_local_class_member_bindings(&program.functions);
+
+    let inner_method = compiler
+        .state
+        .function_registry
+        .user_functions()
+        .iter()
+        .find(|function| {
+            compiler
+                .state
+                .function_registry
+                .registered_function(&function.name)
+                .is_some_and(|declaration| {
+                    matches!(
+                        declaration.body.as_slice(),
+                        [Statement::Return(Expression::Call { callee, arguments })]
+                            if arguments.is_empty()
+                                && matches!(
+                                    callee.as_ref(),
+                                    Expression::Member { object, property }
+                                        if matches!(object.as_ref(), Expression::Identifier(name) if name == "o")
+                                            && matches!(property.as_ref(), Expression::String(name) if name == "__ayy$private$C$m")
+                                )
+                    )
+                })
+        })
+        .cloned()
+        .expect("expected nested class method");
+
+    let function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        Some(&inner_method),
+        true,
+        false,
+        inner_method.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+    let property = Expression::String("__ayy$private$C$m".to_string());
+
+    assert!(
+        matches!(
+            function_compiler.resolve_member_function_binding(
+                &Expression::Identifier("o".to_string()),
+                &property
+            ),
+            Some(LocalFunctionBinding::User(_))
+        ),
+        "expected nested class method to resolve the outer private method binding for o.#m()",
+    );
+
+    let static_outcome = function_compiler.resolve_static_member_call_outcome_with_context(
+        &Expression::Identifier("o".to_string()),
+        "__ayy$private$C$m",
+        function_compiler.current_function_name(),
+    );
+    assert!(
+        matches!(
+            static_outcome,
+            Some(StaticEvalOutcome::Value(Expression::String(ref value))) if value == "test262"
+        ),
+        "expected nested class method to preserve the outer private method call outcome",
+    );
+}
+
+#[test]
+fn resolves_top_level_static_call_result_for_nested_private_method_call() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              #m() { return 'test262'; }
+
+              B = class {
+                method(o) {
+                  return o.#m();
+                }
+              }
+            }
+
+            let c = new C();
+            let innerB = new c.B();
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.apply_user_function_parameter_analysis(&program);
+    compiler.register_user_function_capture_bindings(&program.functions);
+    compiler.register_local_class_member_bindings(&program.functions);
+
+    let method_function = compiler
+        .state
+        .function_registry
+        .user_functions()
+        .iter()
+        .find(|function| {
+            compiler
+                .state
+                .function_registry
+                .registered_function(&function.name)
+                .is_some_and(|declaration| {
+                    matches!(
+                        declaration.body.as_slice(),
+                        [Statement::Return(Expression::Call { callee, arguments })]
+                            if arguments.is_empty()
+                                && matches!(
+                                    callee.as_ref(),
+                                    Expression::Member { object, property }
+                                        if matches!(object.as_ref(), Expression::Identifier(name) if name == "o")
+                                            && matches!(property.as_ref(), Expression::String(name) if name == "__ayy$private$C$m")
+                                )
+                    )
+                })
+        })
+        .cloned()
+        .expect("expected nested class method");
+
+    let mut top_level_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        program.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("top-level function compiler should initialize");
+    top_level_compiler
+        .register_bindings(&program.statements)
+        .expect("top-level bindings should register");
+    for statement in &program.statements {
+        top_level_compiler
+            .emit_statement(statement)
+            .expect("top-level statement should emit");
+    }
+
+    assert!(
+        top_level_compiler
+            .resolve_object_binding_from_expression(&Expression::Identifier("innerB".to_string()))
+            .is_some(),
+        "expected top-level compiler to preserve the nested class instance object binding",
+    );
+    assert!(
+        matches!(
+            top_level_compiler.resolve_function_binding_from_expression(&Expression::Member {
+                object: Box::new(Expression::Identifier("innerB".to_string())),
+                property: Box::new(Expression::String("method".to_string())),
+            }),
+            Some(LocalFunctionBinding::User(ref name)) if name == &method_function.name
+        ),
+        "expected top-level compiler to resolve innerB.method to the nested class method binding",
+    );
+
+    let method_call = Expression::Call {
+        callee: Box::new(Expression::Member {
+            object: Box::new(Expression::Identifier("innerB".to_string())),
+            property: Box::new(Expression::String("method".to_string())),
+        }),
+        arguments: vec![CallArgument::Expression(Expression::Identifier(
+            "c".to_string(),
+        ))],
+    };
+    assert_eq!(
+        top_level_compiler.resolve_static_call_result_expression_with_context(
+            match &method_call {
+                Expression::Call { callee, .. } => callee.as_ref(),
+                _ => unreachable!(),
+            },
+            match &method_call {
+                Expression::Call { arguments, .. } => arguments.as_slice(),
+                _ => unreachable!(),
+            },
+            None,
+        ),
+        Some((
+            Expression::Call {
+                callee: Box::new(Expression::Member {
+                    object: Box::new(Expression::Identifier("c".to_string())),
+                    property: Box::new(Expression::String("__ayy$private$C$m".to_string())),
+                }),
+                arguments: vec![],
+            },
+            Some(method_function.name.clone()),
+        )),
+        "expected top-level static call result to preserve nested private method call",
+    );
+    assert_eq!(
+        top_level_compiler.resolve_static_primitive_expression_with_context(&method_call, None),
+        Some(Expression::String("test262".to_string())),
+        "expected nested private method call to resolve to test262",
+    );
+}
+
+#[test]
+fn infers_private_getter_marker_for_constructed_instance_binding() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              get #m() { return 'test262'; }
+              access(o) { return o.#m; }
+            }
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+
+    let object_binding = compiler
+        .infer_global_object_binding(&Expression::New {
+            callee: Box::new(Expression::Identifier("C".to_string())),
+            arguments: vec![],
+        })
+        .expect("expected constructed object binding");
+    let marker_value = object_binding_lookup_value(
+        &object_binding,
+        &Expression::String("__ayy$private$C$m".to_string()),
+    )
+    .cloned()
+    .expect("expected constructed instance to carry private getter marker");
+
+    let preserves_getter_binding = matches!(
+        compiler.infer_global_function_binding(&marker_value),
+        Some(LocalFunctionBinding::User(_))
+    );
+    let preserves_private_brand_marker = matches!(marker_value, Expression::Identifier(ref name) if name.starts_with("__ayy_class_brand_"))
+        || matches!(marker_value, Expression::Object(ref entries) if entries.is_empty());
+    assert!(
+        preserves_getter_binding || preserves_private_brand_marker,
+        "expected private getter marker to preserve either the getter function binding or a private brand marker, got {marker_value:?}",
+    );
+}
+
+#[test]
+fn tracks_top_level_new_binding_for_private_getter_marker() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              get #m() { return 'test262'; }
+              access(o) { return o.#m; }
+            }
+            let c = new C();
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        program.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+    for statement in &program.statements {
+        function_compiler
+            .emit_statement(statement)
+            .expect("statement should emit");
+    }
+
+    let object_binding = function_compiler
+        .resolve_object_binding_from_expression(&Expression::Identifier("c".to_string()))
+        .expect("expected tracked c object binding");
+    let marker_value = object_binding_lookup_value(
+        &object_binding,
+        &Expression::String("__ayy$private$C$m".to_string()),
+    )
+    .cloned()
+    .expect("expected top-level c binding to preserve the private getter marker");
+
+    assert!(
+        matches!(marker_value, Expression::Identifier(ref name) if name.starts_with("__ayy_class_brand_")),
+        "expected top-level c binding marker to preserve the direct private brand binding, got {marker_value:?}",
+    );
+}
+
+#[test]
+fn preserves_constructed_private_setter_marker() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              set #m(v) { this._v = v; }
+              access(o, v) { o.#m = v; }
+            }
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+
+    let object_binding = compiler
+        .infer_global_object_binding(&Expression::New {
+            callee: Box::new(Expression::Identifier("C".to_string())),
+            arguments: vec![],
+        })
+        .expect("expected constructed object binding");
+    let marker_value = object_binding_lookup_value(
+        &object_binding,
+        &Expression::String("__ayy$private$C$m".to_string()),
+    )
+    .cloned()
+    .expect("expected constructed instance to carry private setter marker");
+
+    assert!(
+        matches!(marker_value, Expression::Identifier(ref name) if name.starts_with("__ayy_class_brand_"))
+            || matches!(marker_value, Expression::Object(ref entries) if entries.is_empty()),
+        "expected private setter marker to preserve a usable private brand marker, got {marker_value:?}",
+    );
+}
+
+#[test]
+fn preserves_hidden_private_brand_marker_for_nested_class_constructor_result() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              B = class {
+                get #m() { return 'test262'; }
+                method(o) { return o.#m; }
+              }
+            }
+            let c = new C();
+            let innerB = new c.B();
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+    compiler.register_local_class_member_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        program.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+    for statement in &program.statements {
+        function_compiler
+            .emit_statement(statement)
+            .expect("statement should emit");
+    }
+
+    let inner_b_binding = function_compiler
+        .resolve_object_binding_from_expression(&Expression::Identifier("innerB".to_string()))
+        .expect("expected innerB object binding");
+    let marker_value = ordered_object_property_names(&inner_b_binding)
+        .into_iter()
+        .find(|property_name| property_name.starts_with("__ayy$private$"))
+        .and_then(|property_name| {
+            object_binding_lookup_value(&inner_b_binding, &Expression::String(property_name))
+                .cloned()
+        })
+        .expect("expected nested class instance private marker");
+
+    assert!(
+        matches!(
+            marker_value,
+            Expression::Identifier(ref name)
+                if name.starts_with("__ayy_capture_binding__")
+                    || name.starts_with("__ayy_class_brand_")
+                    || name.starts_with("__ayy_closure_slot_")
+        ) || matches!(marker_value, Expression::Object(ref entries) if entries.is_empty()),
+        "expected nested class instance marker to preserve a usable private brand marker, got {marker_value:?}",
+    );
+}
+
+#[test]
+fn tracks_factory_returned_private_getter_marker() {
+    let program = frontend::parse(
+        r#"
+            function createAndInstantiateClass() {
+              class C {
+                get #m() { return 'test262'; }
+                access(o) { return o.#m; }
+              }
+              let c = new C();
+              return c;
+            }
+
+            let c = createAndInstantiateClass();
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        program.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+    for statement in &program.statements {
+        function_compiler
+            .emit_statement(statement)
+            .expect("statement should emit");
+    }
+
+    let object_binding = function_compiler
+        .resolve_object_binding_from_expression(&Expression::Identifier("c".to_string()))
+        .expect("expected tracked c object binding");
+    let marker_value = object_binding_lookup_value(
+        &object_binding,
+        &Expression::String("__ayy$private$C$m".to_string()),
+    )
+    .cloned()
+    .expect("expected factory-returned c binding to preserve the private getter marker");
+
+    assert!(
+        matches!(marker_value, Expression::Object(ref entries) if entries.is_empty()),
+        "expected factory-returned c marker to preserve the lowered private brand marker, got {marker_value:?}",
+    );
+}
+
+#[test]
+fn skips_bound_snapshot_for_method_call_through_captured_private_getter_closure() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              get #value() { return 'Test262'; }
+
+              method() {
+                let self = this;
+                function inner() {
+                  return self.#value;
+                }
+                return inner();
+              }
+            }
+
+            let receiver = new C();
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.reserve_global_array_runtime_state_bindings(&program);
+    compiler.apply_user_function_parameter_analysis(&program);
+    compiler.register_user_function_capture_bindings(&program.functions);
+    compiler
+        .reserve_function_constructor_implicit_global_bindings(&program)
+        .expect("implicit global bindings should reserve");
+    compiler.reserve_global_runtime_prototype_binding_globals();
+
+    let method = compiler
+        .state
+        .function_registry
+        .user_functions()
+        .iter()
+        .find(|function| {
+            compiler
+                .state
+                .function_registry
+                .registered_function(&function.name)
+                .is_some_and(|declaration| {
+                    matches!(
+                        declaration.body.as_slice(),
+                        [
+                            Statement::Let {
+                                name,
+                                value: Expression::This,
+                                ..
+                            },
+                            ..,
+                            Statement::Return(Expression::Call { callee, .. }),
+                        ] if name == "self"
+                            && matches!(callee.as_ref(), Expression::Identifier(_))
+                    )
+                })
+        })
+        .cloned()
+        .expect("expected method with nested captured private getter closure");
+
+    let function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        program.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+
+    assert!(
+        function_compiler
+            .resolve_bound_snapshot_user_function_result_with_arguments_and_this(
+                &method.name,
+                &HashMap::new(),
+                &[],
+                &Expression::Identifier("receiver".to_string()),
+            )
+            .is_none(),
+        "expected bound snapshot to bail out for nested captured private getter closure",
+    );
+}
+
+#[test]
+fn does_not_materialize_nested_captured_private_getter_closure_call_to_static_value() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              get #value() { return 'Test262'; }
+
+              method() {
+                let self = this;
+                function inner() {
+                  return self.#value;
+                }
+                return inner();
+              }
+            }
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.reserve_global_array_runtime_state_bindings(&program);
+    compiler.apply_user_function_parameter_analysis(&program);
+    compiler.register_user_function_capture_bindings(&program.functions);
+    compiler
+        .reserve_function_constructor_implicit_global_bindings(&program)
+        .expect("implicit global bindings should reserve");
+    compiler.reserve_global_runtime_prototype_binding_globals();
+
+    let method = compiler
+        .state
+        .function_registry
+        .user_functions()
+        .iter()
+        .find(|function| {
+            compiler
+                .state
+                .function_registry
+                .registered_function(&function.name)
+                .is_some_and(|declaration| {
+                    matches!(
+                        declaration.body.as_slice(),
+                        [
+                            Statement::Let {
+                                name,
+                                value: Expression::This,
+                                ..
+                            },
+                            ..,
+                            Statement::Return(Expression::Call { callee, .. }),
+                        ] if name == "self"
+                            && matches!(callee.as_ref(), Expression::Identifier(_))
+                    )
+                })
+        })
+        .cloned()
+        .expect("expected method with nested captured private getter closure");
+    let method_declaration = compiler
+        .state
+        .function_registry
+        .registered_function(&method.name)
+        .cloned()
+        .expect("expected registered method declaration");
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        Some(&method),
+        true,
+        false,
+        method.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("method function compiler should initialize");
+    function_compiler
+        .register_bindings(&method_declaration.body)
+        .expect("method bindings should register");
+
+    let return_call = match method_declaration.body.last() {
+        Some(Statement::Return(Expression::Call { callee, arguments })) => Expression::Call {
+            callee: callee.clone(),
+            arguments: arguments.clone(),
+        },
+        other => panic!("expected method return inner() call, found {other:?}"),
+    };
+
+    assert_eq!(
+        function_compiler.materialize_static_expression(&return_call),
+        return_call,
+        "expected nested captured private getter closure call to remain dynamic",
+    );
+}
+
+#[test]
+fn syncs_this_binding_after_private_setter_assignment() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              #value_;
+              set #value(v) { this.#value_ = v; }
+              write(v) { this.#value = v; return this.#value_; }
+            }
+            let receiver = new C();
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.reserve_global_array_runtime_state_bindings(&program);
+    compiler.apply_user_function_parameter_analysis(&program);
+    compiler.register_user_function_capture_bindings(&program.functions);
+    compiler
+        .reserve_function_constructor_implicit_global_bindings(&program)
+        .expect("implicit global bindings should reserve");
+    compiler.reserve_global_runtime_prototype_binding_globals();
+
+    let writer = compiler
+        .state
+        .function_registry
+        .user_functions()
+        .iter()
+        .find(|function| {
+            compiler
+                .state
+                .function_registry
+                .registered_function(&function.name)
+                .is_some_and(|declaration| {
+                    matches!(
+                        declaration.body.as_slice(),
+                        [Statement::AssignMember { object, property, .. }, ..]
+                            if matches!(object, Expression::This)
+                                && matches!(property, Expression::String(name) if name == "__ayy$private$C$value")
+                    )
+                })
+        })
+        .cloned()
+        .expect("expected private setter writer method");
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        Some(&writer),
+        true,
+        false,
+        writer.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+    function_compiler
+        .update_local_value_binding("this", &Expression::Identifier("receiver".to_string()));
+    function_compiler
+        .update_local_object_binding("this", &Expression::Identifier("receiver".to_string()));
+
+    assert!(
+        function_compiler
+            .emit_setter_member_assignment(
+                &Expression::This,
+                &Expression::String("__ayy$private$C$value".to_string()),
+                &Expression::Number(2.0),
+            )
+            .expect("private setter assignment should emit"),
+        "expected private setter assignment to use setter call emission",
+    );
+
+    let this_binding = function_compiler
+        .resolve_object_binding_from_expression(&Expression::This)
+        .expect("expected this binding after private setter call");
+    assert_eq!(
+        object_binding_lookup_value(
+            &this_binding,
+            &Expression::String("__ayy$private$C$value_".to_string()),
+        ),
+        Some(&Expression::Number(2.0)),
+        "expected setter receiver snapshot to synchronize back into this binding",
+    );
+}
+
+#[test]
+fn resolves_bound_snapshot_result_for_private_setter_writer_call() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              #value_;
+              set #value(v) { this.#value_ = v; }
+              write(v) { this.#value = v; return this.#value_; }
+            }
+            let receiver = new C();
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.reserve_global_array_runtime_state_bindings(&program);
+    compiler.apply_user_function_parameter_analysis(&program);
+    compiler.register_user_function_capture_bindings(&program.functions);
+    compiler
+        .reserve_function_constructor_implicit_global_bindings(&program)
+        .expect("implicit global bindings should reserve");
+    compiler.reserve_global_runtime_prototype_binding_globals();
+
+    let writer = compiler
+        .state
+        .function_registry
+        .user_functions()
+        .iter()
+        .find(|function| {
+            compiler
+                .state
+                .function_registry
+                .registered_function(&function.name)
+                .is_some_and(|declaration| {
+                    matches!(
+                        declaration.body.as_slice(),
+                        [Statement::AssignMember { object, property, .. }, ..]
+                            if matches!(object, Expression::This)
+                                && matches!(property, Expression::String(name) if name == "__ayy$private$C$value")
+                    )
+                })
+        })
+        .cloned()
+        .expect("expected private setter writer method");
+
+    let function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        program.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+    assert!(
+        function_compiler
+            .user_function_parameter_iterator_consumption_indices(&writer)
+            .is_empty(),
+        "writer should not consume parameter iterators in bound snapshot mode"
+    );
+    let writer_declaration = function_compiler
+        .resolve_registered_function_declaration(&writer.name)
+        .expect("expected registered writer declaration");
+
+    let mut local_bindings = HashMap::from([
+        (
+            "this".to_string(),
+            Expression::Identifier("receiver".to_string()),
+        ),
+        (
+            "receiver".to_string(),
+            crate::backend::direct_wasm::object_binding_to_expression(
+                &function_compiler
+                    .resolve_object_binding_from_expression(&Expression::Identifier(
+                        "receiver".to_string(),
+                    ))
+                    .expect("expected receiver object binding at test entry"),
+            ),
+        ),
+        ("v".to_string(), Expression::Number(2.0)),
+    ]);
+    assert_eq!(
+        function_compiler.apply_bound_snapshot_member_assignment(
+            &Expression::This,
+            &Expression::String("__ayy$private$C$__".to_string()),
+            &Expression::Identifier("v".to_string()),
+            &mut local_bindings,
+            Some(&writer.name),
+        ),
+        Some(Expression::Number(2.0)),
+        "expected snapshot member assignment to model underscore private field write",
+    );
+    assert_eq!(
+        function_compiler.evaluate_bound_snapshot_expression(
+            &Expression::Member {
+                object: Box::new(Expression::This),
+                property: Box::new(Expression::String("__ayy$private$C$__".to_string())),
+            },
+            &mut local_bindings,
+            Some(&writer.name),
+        ),
+        Some(Expression::Number(2.0)),
+        "expected snapshot member read to observe underscore private field write",
+    );
+
+    let mut wrapper_like_bindings = HashMap::new();
+    wrapper_like_bindings.insert("v".to_string(), Expression::Number(2.0));
+    wrapper_like_bindings.insert(
+        "this".to_string(),
+        Expression::Identifier("receiver".to_string()),
+    );
+    if !wrapper_like_bindings.contains_key("receiver") {
+        if let Some(object_binding) = function_compiler
+            .resolve_object_binding_from_expression(&Expression::Identifier("receiver".to_string()))
+        {
+            wrapper_like_bindings.insert(
+                "receiver".to_string(),
+                crate::backend::direct_wasm::object_binding_to_expression(&object_binding),
+            );
+        } else if let Some(value) = function_compiler
+            .state
+            .speculation
+            .static_semantics
+            .local_value_binding("receiver")
+            .cloned()
+            .or_else(|| {
+                function_compiler
+                    .backend
+                    .global_semantics
+                    .values
+                    .value_bindings
+                    .get("receiver")
+                    .cloned()
+            })
+        {
+            wrapper_like_bindings.insert("receiver".to_string(), value);
+        }
+    }
+    assert!(
+        function_compiler
+            .execute_bound_snapshot_statements(
+                &writer_declaration.body,
+                &mut wrapper_like_bindings,
+                Some(&writer.name),
+            )
+            .is_some(),
+        "expected bound snapshot statement executor to resolve underscore private field writer; bindings={wrapper_like_bindings:?}",
+    );
+    assert!(
+        matches!(
+            wrapper_like_bindings.get("receiver"),
+            Some(Expression::Object(entries))
+                if entries.iter().any(|entry| matches!(
+                    entry,
+                    ObjectEntry::Data { key, value }
+                        if matches!(key, Expression::String(name) if name == "__ayy$private$C$__")
+                            && matches!(value, Expression::Number(number) if *number == 2.0)
+                ))
+        ),
+        "expected wrapper-like bound snapshot bindings to store underscore private field update; bindings={wrapper_like_bindings:?}",
+    );
+
+    let (result, updated_bindings) = function_compiler
+        .resolve_bound_snapshot_user_function_result_with_arguments_and_this(
+            &writer.name,
+            &HashMap::new(),
+            &[Expression::Number(2.0)],
+            &Expression::Identifier("receiver".to_string()),
+        )
+        .expect("expected bound snapshot result for writer call");
+    assert_eq!(
+        result,
+        Expression::Number(2.0),
+        "expected bound snapshot to resolve writer return value through private setter",
+    );
+    let receiver_binding = updated_bindings
+        .get("receiver")
+        .expect("expected receiver binding update");
+    let receiver_object = function_compiler
+        .resolve_object_binding_from_expression(receiver_binding)
+        .expect("expected updated receiver object binding");
+    assert_eq!(
+        object_binding_lookup_value(
+            &receiver_object,
+            &Expression::String("__ayy$private$C$value_".to_string()),
+        ),
+        Some(&Expression::Number(2.0)),
+        "expected bound snapshot to propagate private setter effects into receiver binding",
+    );
+}
+
+#[test]
+fn syncs_global_receiver_binding_after_runtime_private_setter_inner_arrow_method_call() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              set #m(v) { this._v = v; }
+              method() {
+                let arrow = () => {
+                  this.#m = "Test262";
+                };
+                arrow();
+              }
+            }
+            let c = new C();
+            c.method();
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.reserve_global_array_runtime_state_bindings(&program);
+    compiler.apply_user_function_parameter_analysis(&program);
+    compiler.register_user_function_capture_bindings(&program.functions);
+    compiler
+        .reserve_function_constructor_implicit_global_bindings(&program)
+        .expect("implicit global bindings should reserve");
+    compiler.reserve_global_runtime_prototype_binding_globals();
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        program.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+
+    for statement in &program.statements {
+        function_compiler
+            .emit_statement(statement)
+            .expect("statement should emit");
+    }
+
+    let c_binding = function_compiler
+        .resolve_object_binding_from_expression(&Expression::Identifier("c".to_string()))
+        .expect("expected tracked c object binding after method call");
+    assert_eq!(
+        object_binding_lookup_value(&c_binding, &Expression::String("_v".to_string())),
+        Some(&Expression::String("Test262".to_string())),
+        "expected c binding to reflect runtime setter update after method call",
+    );
+}
+
+#[test]
+fn syncs_this_binding_after_direct_private_field_assignment_with_underscore_name() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              #__;
+              write(v) { this.#__ = v; return this.#__; }
+            }
+            let receiver = new C();
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.reserve_global_array_runtime_state_bindings(&program);
+    compiler.apply_user_function_parameter_analysis(&program);
+    compiler.register_user_function_capture_bindings(&program.functions);
+    compiler
+        .reserve_function_constructor_implicit_global_bindings(&program)
+        .expect("implicit global bindings should reserve");
+    compiler.reserve_global_runtime_prototype_binding_globals();
+
+    let writer = compiler
+        .state
+        .function_registry
+        .user_functions()
+        .iter()
+        .find(|function| {
+            compiler
+                .state
+                .function_registry
+                .registered_function(&function.name)
+                .is_some_and(|declaration| {
+                    matches!(
+                        declaration.body.as_slice(),
+                        [
+                            Statement::AssignMember { object, property, .. },
+                            Statement::Return(Expression::Member {
+                                object: return_object,
+                                property: return_property,
+                            }),
+                        ]
+                            if matches!(object, Expression::This)
+                                && matches!(property, Expression::String(name) if name == "__ayy$private$C$__")
+                                && matches!(return_object.as_ref(), Expression::This)
+                                && matches!(return_property.as_ref(), Expression::String(name) if name == "__ayy$private$C$__")
+                    )
+                })
+        })
+        .cloned()
+        .expect("expected private field writer method");
+    assert!(
+        !writer.has_parameter_defaults(),
+        "writer should not have parameter defaults"
+    );
+    assert!(
+        !writer.has_lowered_pattern_parameters(),
+        "writer should not have lowered pattern parameters"
+    );
+    assert!(
+        writer.extra_argument_indices.is_empty(),
+        "writer should not need extra argument indices: {:?}",
+        writer.extra_argument_indices
+    );
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        Some(&writer),
+        true,
+        false,
+        writer.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+    function_compiler
+        .update_local_value_binding("this", &Expression::Identifier("receiver".to_string()));
+    function_compiler
+        .update_local_object_binding("this", &Expression::Identifier("receiver".to_string()));
+
+    function_compiler
+        .emit_statement(&Statement::AssignMember {
+            object: Expression::This,
+            property: Expression::String("__ayy$private$C$__".to_string()),
+            value: Expression::Number(2.0),
+        })
+        .expect("expected direct private field assignment statement to emit");
+
+    let this_binding = function_compiler
+        .resolve_object_binding_from_expression(&Expression::This)
+        .expect("expected this binding after private field assignment");
+    assert_eq!(
+        object_binding_lookup_value(
+            &this_binding,
+            &Expression::String("__ayy$private$C$__".to_string()),
+        ),
+        Some(&Expression::Number(2.0)),
+        "expected direct private field assignment to synchronize into this binding",
+    );
+    assert_eq!(
+        function_compiler.materialize_static_expression(&Expression::Member {
+            object: Box::new(Expression::This),
+            property: Box::new(Expression::String("__ayy$private$C$__".to_string())),
+        }),
+        Expression::Number(2.0),
+        "expected private field read to materialize assigned underscore-named value",
+    );
+}
+
+#[test]
+fn resolves_bound_snapshot_result_for_direct_private_field_writer_call_with_underscore_name() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              #__;
+              write(v) { this.#__ = v; return this.#__; }
+            }
+            let receiver = new C();
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.reserve_global_array_runtime_state_bindings(&program);
+    compiler.apply_user_function_parameter_analysis(&program);
+    compiler.register_user_function_capture_bindings(&program.functions);
+    compiler
+        .reserve_function_constructor_implicit_global_bindings(&program)
+        .expect("implicit global bindings should reserve");
+    compiler.reserve_global_runtime_prototype_binding_globals();
+
+    let writer = compiler
+        .state
+        .function_registry
+        .user_functions()
+        .iter()
+        .find(|function| {
+            compiler
+                .state
+                .function_registry
+                .registered_function(&function.name)
+                .is_some_and(|declaration| {
+                    matches!(
+                        declaration.body.as_slice(),
+                        [
+                            Statement::AssignMember { object, property, .. },
+                            Statement::Return(Expression::Member {
+                                object: return_object,
+                                property: return_property,
+                            }),
+                        ]
+                            if matches!(object, Expression::This)
+                                && matches!(property, Expression::String(name) if name == "__ayy$private$C$__")
+                                && matches!(return_object.as_ref(), Expression::This)
+                                && matches!(return_property.as_ref(), Expression::String(name) if name == "__ayy$private$C$__")
+                    )
+                })
+        })
+        .cloned()
+        .expect("expected private field writer method");
+
+    let function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        program.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+
+    let (result, updated_bindings) = function_compiler
+        .resolve_bound_snapshot_user_function_result_with_arguments_and_this(
+            &writer.name,
+            &HashMap::new(),
+            &[Expression::Number(2.0)],
+            &Expression::Identifier("receiver".to_string()),
+        )
+        .expect("expected bound snapshot result for writer call");
+    assert_eq!(
+        result,
+        Expression::Number(2.0),
+        "expected bound snapshot to resolve underscore-named private field writer return value",
+    );
+    let receiver_binding = updated_bindings
+        .get("receiver")
+        .expect("expected receiver binding update");
+    let receiver_object = function_compiler
+        .resolve_object_binding_from_expression(receiver_binding)
+        .expect("expected updated receiver object binding");
+    assert_eq!(
+        object_binding_lookup_value(
+            &receiver_object,
+            &Expression::String("__ayy$private$C$__".to_string()),
+        ),
+        Some(&Expression::Number(2.0)),
+        "expected bound snapshot to propagate underscore-named private field effects",
     );
 }
 
@@ -14312,6 +22619,734 @@ fn collects_object_binding_for_lowered_object_method_destructuring_parameter() {
 }
 
 #[test]
+fn collects_object_binding_for_array_member_runtime_call_argument() {
+    let program = frontend::parse(
+        r#"
+            function f(a, b) { console.log(String(a), String(b && b.value)); }
+            let arr = [f];
+            arr[0]("x", { value: 1 });
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+
+    let (_, _, _, parameter_object_bindings) =
+        compiler.collect_user_function_parameter_bindings(&program);
+
+    let function_object_bindings = parameter_object_bindings
+        .get("f")
+        .expect("expected object bindings for f");
+    let object_binding = function_object_bindings
+        .get("b")
+        .and_then(|binding| binding.as_ref())
+        .expect("expected object binding for b in array member runtime call");
+    assert_eq!(
+        object_binding_lookup_value(object_binding, &Expression::String("value".to_string())),
+        Some(&Expression::Number(1.0)),
+    );
+}
+
+#[test]
+fn collects_object_binding_for_nested_forwarded_helper_parameter_after_dead_for_in_branch() {
+    let program = frontend::parse(
+        r#"
+            var s = Symbol();
+            class C { [s] = 42; }
+            function probe(obj, name) {
+                if (typeof name === 'string') {
+                    for (var x in obj) {
+                        if (x === name) break;
+                    }
+                }
+                console.log(String(obj[name]));
+            }
+            function outer(obj, name) {
+                probe(obj, name);
+            }
+            let c = new C();
+            outer(c, s);
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+
+    let (
+        parameter_bindings,
+        parameter_value_bindings,
+        parameter_array_bindings,
+        parameter_object_bindings,
+    ) = compiler.collect_user_function_parameter_bindings(&program);
+
+    let outer_value_bindings = parameter_value_bindings
+        .get("outer")
+        .expect("expected value bindings for outer");
+    let outer_bindings = parameter_object_bindings
+        .get("outer")
+        .expect("expected object bindings for outer");
+    let probe_value_bindings = parameter_value_bindings
+        .get("probe")
+        .expect("expected value bindings for probe");
+    let probe_bindings = parameter_object_bindings
+        .get("probe")
+        .expect("expected object bindings for probe");
+
+    assert!(
+        matches!(
+            outer_value_bindings.get("obj"),
+            Some(Some(Expression::New { .. }))
+        ),
+        "expected propagated constructor value binding for outer(obj, ...); outer_value={:?}; probe_value={:?}; outer_has_object={}",
+        outer_value_bindings.get("obj"),
+        probe_value_bindings.get("obj"),
+        outer_bindings.get("obj").is_some(),
+    );
+    assert!(
+        matches!(
+            probe_value_bindings.get("obj"),
+            Some(Some(Expression::New { .. }))
+        ),
+        "expected forwarded constructor value binding for probe(obj, ...); outer_value={:?}; probe_value={:?}; probe_has_object={}",
+        outer_value_bindings.get("obj"),
+        probe_value_bindings.get("obj"),
+        probe_bindings.get("obj").is_some(),
+    );
+
+    let outer_user_function = compiler
+        .user_function("outer")
+        .expect("expected outer user function")
+        .clone();
+    let probe_user_function = compiler
+        .user_function("probe")
+        .expect("expected probe user function")
+        .clone();
+
+    {
+        let outer_function_compiler = FunctionCompiler::new(
+            &mut compiler,
+            Some(&outer_user_function),
+            true,
+            false,
+            false,
+            parameter_bindings
+                .get("outer")
+                .expect("expected function bindings for outer"),
+            outer_value_bindings,
+            parameter_array_bindings
+                .get("outer")
+                .expect("expected array bindings for outer"),
+            outer_bindings,
+        )
+        .expect("outer function compiler should construct");
+        assert!(
+            outer_function_compiler
+                .state
+                .speculation
+                .static_semantics
+                .local_object_binding("obj")
+                .is_some(),
+            "expected recovered object binding for outer(obj, ...) at function entry",
+        );
+    }
+
+    {
+        let probe_function_compiler = FunctionCompiler::new(
+            &mut compiler,
+            Some(&probe_user_function),
+            true,
+            false,
+            false,
+            parameter_bindings
+                .get("probe")
+                .expect("expected function bindings for probe"),
+            probe_value_bindings,
+            parameter_array_bindings
+                .get("probe")
+                .expect("expected array bindings for probe"),
+            probe_bindings,
+        )
+        .expect("probe function compiler should construct");
+        assert!(
+            probe_function_compiler
+                .state
+                .speculation
+                .static_semantics
+                .local_object_binding("obj")
+                .is_some(),
+            "expected recovered object binding for probe(obj, ...) at function entry",
+        );
+    }
+}
+
+#[test]
+fn preserves_symbol_parameter_identity_for_forwarded_class_field_helpers() {
+    let program = frontend::parse(
+        r#"
+            var s = Symbol();
+            class C { [s] = 42; }
+            function verifyProperty(obj, name) {
+                console.log(String(obj[name]));
+            }
+            let c = new C();
+            verifyProperty(c, s);
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+
+    let (
+        parameter_bindings,
+        parameter_value_bindings,
+        parameter_array_bindings,
+        parameter_object_bindings,
+    ) = compiler.collect_user_function_parameter_bindings(&program);
+    compiler
+        .state
+        .function_registry
+        .analysis
+        .user_function_parameter_analysis
+        .function_bindings_by_function = parameter_bindings;
+    compiler
+        .state
+        .function_registry
+        .analysis
+        .user_function_parameter_analysis
+        .value_bindings_by_function = parameter_value_bindings;
+    compiler
+        .state
+        .function_registry
+        .analysis
+        .user_function_parameter_analysis
+        .array_bindings_by_function = parameter_array_bindings;
+    compiler
+        .state
+        .function_registry
+        .analysis
+        .user_function_parameter_analysis
+        .object_bindings_by_function = parameter_object_bindings;
+
+    let verify_property = compiler
+        .user_function("verifyProperty")
+        .expect("expected verifyProperty user function")
+        .clone();
+    let function_parameter_bindings = compiler
+        .state
+        .function_registry
+        .analysis
+        .user_function_parameter_analysis
+        .function_bindings_by_function
+        .get(&verify_property.name)
+        .cloned()
+        .unwrap_or_default();
+    let function_parameter_value_bindings = compiler
+        .state
+        .function_registry
+        .analysis
+        .user_function_parameter_analysis
+        .value_bindings_by_function
+        .get(&verify_property.name)
+        .cloned()
+        .unwrap_or_default();
+    let function_parameter_array_bindings = compiler
+        .state
+        .function_registry
+        .analysis
+        .user_function_parameter_analysis
+        .array_bindings_by_function
+        .get(&verify_property.name)
+        .cloned()
+        .unwrap_or_default();
+    let function_parameter_object_bindings = compiler
+        .state
+        .function_registry
+        .analysis
+        .user_function_parameter_analysis
+        .object_bindings_by_function
+        .get(&verify_property.name)
+        .cloned()
+        .unwrap_or_default();
+
+    assert!(matches!(
+        function_parameter_value_bindings.get("name"),
+        Some(Some(Expression::Identifier(name))) if name == "s"
+    ));
+
+    let function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        Some(&verify_property),
+        true,
+        false,
+        false,
+        &function_parameter_bindings,
+        &function_parameter_value_bindings,
+        &function_parameter_array_bindings,
+        &function_parameter_object_bindings,
+    )
+    .expect("function compiler should initialize");
+
+    assert!(matches!(
+        function_compiler.resolve_symbol_identity_expression(&Expression::Identifier(
+            "name".to_string(),
+        )),
+        Some(Expression::Identifier(name)) if name == "s"
+    ));
+    assert!(matches!(
+        function_compiler.resolve_property_key_expression(&Expression::Identifier(
+            "name".to_string(),
+        )),
+        Some(Expression::Identifier(name)) if name == "s"
+    ));
+    let object_binding = function_compiler
+        .resolve_object_binding_from_expression(&Expression::Identifier("obj".to_string()))
+        .expect("expected obj object binding at function entry");
+    assert!(
+        matches!(
+            object_binding.symbol_properties.first(),
+            Some((_, Expression::Number(value))) if *value == 42.0
+        ),
+        "unexpected stored symbol property: {:?}",
+        object_binding
+            .symbol_properties
+            .first()
+            .map(|(key, value)| (key, value)),
+    );
+    assert_eq!(
+        function_compiler.resolve_object_binding_property_value(
+            &object_binding,
+            &Expression::Identifier("name".to_string()),
+        ),
+        Some(Expression::Number(42.0)),
+    );
+    assert!(
+        function_compiler
+            .resolve_descriptor_binding_from_expression(&Expression::Call {
+                callee: Box::new(Expression::Member {
+                    object: Box::new(Expression::Identifier("Object".to_string())),
+                    property: Box::new(Expression::String("getOwnPropertyDescriptor".to_string(),)),
+                }),
+                arguments: vec![
+                    CallArgument::Expression(Expression::Identifier("obj".to_string())),
+                    CallArgument::Expression(Expression::Identifier("name".to_string())),
+                ],
+            })
+            .is_some(),
+        "expected static descriptor binding for obj/name at function entry; symbol_properties_len={} runtime_symbol_properties={}",
+        object_binding.symbol_properties.len(),
+        object_binding.runtime_symbol_properties,
+    );
+    assert_eq!(
+        function_compiler.resolve_static_has_own_property_call_result(&Expression::Call {
+            callee: Box::new(Expression::Member {
+                object: Box::new(Expression::Identifier("obj".to_string())),
+                property: Box::new(Expression::String("hasOwnProperty".to_string())),
+            }),
+            arguments: vec![CallArgument::Expression(Expression::Identifier(
+                "name".to_string(),
+            ))],
+        }),
+        Some(true),
+    );
+}
+
+#[test]
+fn resolves_static_reflect_has_result_for_plain_object_and_prototype_chain_queries() {
+    let program = frontend::parse(
+        r#"
+            const inherited = { y: 1 };
+            const obj = Object.create(inherited);
+            obj.x = 1;
+            const nullProto = Object.create(null);
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should construct");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+
+    for statement in &program.statements {
+        function_compiler
+            .emit_statement(statement)
+            .expect("setup statement should emit");
+    }
+
+    let reflect_has = |target: Expression, property: Expression| Expression::Call {
+        callee: Box::new(Expression::Member {
+            object: Box::new(Expression::Identifier("Reflect".to_string())),
+            property: Box::new(Expression::String("has".to_string())),
+        }),
+        arguments: vec![
+            CallArgument::Expression(target),
+            CallArgument::Expression(property),
+        ],
+    };
+
+    assert_eq!(
+        function_compiler.resolve_static_reflect_has_call_result(&reflect_has(
+            Expression::Identifier("obj".to_string()),
+            Expression::String("x".to_string()),
+        )),
+        Some(true),
+    );
+    assert_eq!(
+        function_compiler.resolve_static_reflect_has_call_result(&reflect_has(
+            Expression::Identifier("obj".to_string()),
+            Expression::String("y".to_string()),
+        )),
+        Some(true),
+    );
+    assert_eq!(
+        function_compiler.resolve_static_reflect_has_call_result(&reflect_has(
+            Expression::Object(vec![]),
+            Expression::String("x".to_string()),
+        )),
+        Some(false),
+    );
+    assert_eq!(
+        function_compiler.resolve_static_reflect_has_call_result(&reflect_has(
+            Expression::Identifier("nullProto".to_string()),
+            Expression::String("toString".to_string()),
+        )),
+        Some(false),
+    );
+}
+
+#[test]
+fn resolves_static_reflect_has_result_for_private_async_generator_instances() {
+    let program = frontend::parse(
+        r##"
+            class C {
+              async *#m() { return 42; }
+            }
+
+            const c = new C();
+        "##,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should construct");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+
+    for statement in &program.statements {
+        function_compiler
+            .emit_statement(statement)
+            .expect("setup statement should emit");
+    }
+
+    let reflect_has = |target: Expression| Expression::Call {
+        callee: Box::new(Expression::Member {
+            object: Box::new(Expression::Identifier("Reflect".to_string())),
+            property: Box::new(Expression::String("has".to_string())),
+        }),
+        arguments: vec![
+            CallArgument::Expression(target),
+            CallArgument::Expression(Expression::String("#m".to_string())),
+        ],
+    };
+
+    assert_eq!(
+        function_compiler.resolve_static_reflect_has_call_result(&reflect_has(
+            Expression::Identifier("c".to_string()),
+        )),
+        Some(false),
+    );
+    assert_eq!(
+        function_compiler.resolve_static_reflect_has_call_result(&reflect_has(
+            Expression::Member {
+                object: Box::new(Expression::Identifier("C".to_string())),
+                property: Box::new(Expression::String("prototype".to_string())),
+            },
+        )),
+        Some(false),
+    );
+    assert_eq!(
+        function_compiler.resolve_static_reflect_has_call_result(&reflect_has(
+            Expression::Identifier("C".to_string()),
+        )),
+        Some(false),
+    );
+}
+
+#[test]
+fn collects_object_binding_for_object_method_descriptor_argument() {
+    let program = frontend::parse(
+        r#"
+            const h = {
+                defineProperty(target, key, descriptor) {
+                    console.log(String(key), String(descriptor && descriptor.value));
+                }
+            };
+            h.defineProperty({}, "x", { value: 1 });
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+
+    let (_, parameter_value_bindings, _, parameter_object_bindings) =
+        compiler.collect_user_function_parameter_bindings(&program);
+
+    let method_function = program
+        .functions
+        .iter()
+        .find(|function| {
+            function.params.iter().map(|param| param.name.as_str()).eq([
+                "target",
+                "key",
+                "descriptor",
+            ])
+        })
+        .expect("expected lowered object method");
+    let method_object_bindings = parameter_object_bindings
+        .get(&method_function.name)
+        .expect("expected method object bindings");
+    let method_value_bindings = parameter_value_bindings
+        .get(&method_function.name)
+        .expect("expected method value bindings");
+
+    let descriptor_binding = method_object_bindings
+        .get("descriptor")
+        .and_then(|binding| binding.as_ref())
+        .expect("expected descriptor object binding for object method call");
+    assert_eq!(
+        object_binding_lookup_value(descriptor_binding, &Expression::String("value".to_string())),
+        Some(&Expression::Number(1.0)),
+    );
+    assert!(matches!(
+        method_value_bindings.get("key"),
+        Some(Some(Expression::String(name))) if name == "x"
+    ));
+}
+
+#[test]
+fn resolves_object_method_descriptor_member_value_at_function_entry() {
+    let program = frontend::parse(
+        r#"
+            const h = {
+                defineProperty(target, key, descriptor) {
+                    console.log(String(key), String(descriptor && descriptor.value));
+                }
+            };
+            h.defineProperty({}, "x", { value: 1 });
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+
+    let (
+        parameter_bindings,
+        parameter_value_bindings,
+        parameter_array_bindings,
+        parameter_object_bindings,
+    ) = compiler.collect_user_function_parameter_bindings(&program);
+    compiler
+        .state
+        .function_registry
+        .analysis
+        .user_function_parameter_analysis
+        .function_bindings_by_function = parameter_bindings;
+    compiler
+        .state
+        .function_registry
+        .analysis
+        .user_function_parameter_analysis
+        .value_bindings_by_function = parameter_value_bindings;
+    compiler
+        .state
+        .function_registry
+        .analysis
+        .user_function_parameter_analysis
+        .array_bindings_by_function = parameter_array_bindings;
+    compiler
+        .state
+        .function_registry
+        .analysis
+        .user_function_parameter_analysis
+        .object_bindings_by_function = parameter_object_bindings;
+
+    let method_function = program
+        .functions
+        .iter()
+        .find(|function| {
+            function.params.iter().map(|param| param.name.as_str()).eq([
+                "target",
+                "key",
+                "descriptor",
+            ])
+        })
+        .cloned()
+        .expect("expected lowered object method");
+    let user_function = compiler
+        .state
+        .function_registry
+        .catalog
+        .user_function_map
+        .get(&method_function.name)
+        .cloned()
+        .expect("expected user function");
+    let function_parameter_bindings = compiler
+        .state
+        .function_registry
+        .analysis
+        .user_function_parameter_analysis
+        .function_bindings_by_function
+        .get(&user_function.name)
+        .cloned()
+        .unwrap_or_default();
+    let function_parameter_value_bindings = compiler
+        .state
+        .function_registry
+        .analysis
+        .user_function_parameter_analysis
+        .value_bindings_by_function
+        .get(&user_function.name)
+        .cloned()
+        .unwrap_or_default();
+    let function_parameter_array_bindings = compiler
+        .state
+        .function_registry
+        .analysis
+        .user_function_parameter_analysis
+        .array_bindings_by_function
+        .get(&user_function.name)
+        .cloned()
+        .unwrap_or_default();
+    let function_parameter_object_bindings = compiler
+        .state
+        .function_registry
+        .analysis
+        .user_function_parameter_analysis
+        .object_bindings_by_function
+        .get(&user_function.name)
+        .cloned()
+        .unwrap_or_default();
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        Some(&user_function),
+        true,
+        method_function.mapped_arguments,
+        method_function.strict,
+        &function_parameter_bindings,
+        &function_parameter_value_bindings,
+        &function_parameter_array_bindings,
+        &function_parameter_object_bindings,
+    )
+    .expect("function compiler should initialize");
+    function_compiler
+        .register_bindings(&method_function.body)
+        .expect("bindings should register");
+
+    let descriptor_expression = Expression::Identifier("descriptor".to_string());
+    let descriptor_value_expression = Expression::Member {
+        object: Box::new(descriptor_expression.clone()),
+        property: Box::new(Expression::String("value".to_string())),
+    };
+    let descriptor_binding = function_compiler
+        .resolve_object_binding_from_expression(&Expression::Identifier("descriptor".to_string()))
+        .expect("expected descriptor binding at function entry");
+    assert_eq!(
+        object_binding_lookup_value(
+            &descriptor_binding,
+            &Expression::String("value".to_string())
+        ),
+        Some(&Expression::Number(1.0)),
+    );
+    assert_eq!(
+        function_compiler.resolve_static_number_value(&descriptor_value_expression),
+        Some(1.0),
+    );
+}
+
+#[test]
 fn initializes_local_object_binding_for_lowered_object_method_destructuring_parameter() {
     let program = frontend::parse(
         r#"
@@ -14879,6 +23914,275 @@ fn direct_eval_iife_is_not_inlineable() {
 }
 
 #[test]
+fn collects_private_outer_field_binding_for_nested_class_method_parameter() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              #outer = 'test262';
+              B_withoutPrivateField = class {
+                method(o) {
+                  return o.#outer;
+                }
+              }
+            }
+
+            let c = new C();
+            let innerB1 = new c.B_withoutPrivateField();
+            innerB1.method(c);
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+
+    let method_function = program
+        .functions
+        .iter()
+        .find(|function| {
+            matches!(
+                function.body.as_slice(),
+                [Statement::Return(Expression::Member { object, property })]
+                    if matches!(object.as_ref(), Expression::Identifier(name) if name == "o")
+                        && matches!(property.as_ref(), Expression::String(name) if name == "__ayy$private$C$outer")
+            )
+        })
+        .expect("expected nested class method");
+    let direct_new_c_binding = compiler.infer_global_object_binding(&Expression::New {
+        callee: Box::new(Expression::Identifier("C".to_string())),
+        arguments: Vec::new(),
+    });
+    assert!(
+        direct_new_c_binding.is_some(),
+        "expected direct new C() inference to synthesize an object binding",
+    );
+    let c_binding = compiler.infer_global_object_binding(&Expression::Identifier("c".to_string()));
+    assert!(
+        c_binding.is_some(),
+        "expected a global object binding for c"
+    );
+    assert_eq!(
+        c_binding.as_ref().and_then(|binding| {
+            object_binding_lookup_value(
+                binding,
+                &Expression::String("__ayy$private$C$outer".to_string()),
+            )
+        }),
+        Some(&Expression::String("test262".to_string())),
+        "expected global object binding for c to include the outer private field",
+    );
+    let inner_method_binding = compiler.infer_global_function_binding(&Expression::Member {
+        object: Box::new(Expression::Identifier("innerB1".to_string())),
+        property: Box::new(Expression::String("method".to_string())),
+    });
+    assert!(
+        matches!(
+            inner_method_binding,
+            Some(LocalFunctionBinding::User(ref name)) if name == &method_function.name
+        ),
+        "expected innerB1.method to resolve to the nested class method",
+    );
+
+    let (
+        parameter_bindings,
+        parameter_value_bindings,
+        parameter_array_bindings,
+        parameter_object_bindings,
+    ) = compiler.collect_user_function_parameter_bindings(&program);
+    let method_object_bindings = parameter_object_bindings
+        .get(&method_function.name)
+        .expect("expected object bindings for nested method");
+    assert!(
+        method_object_bindings.contains_key("o"),
+        "expected an object-binding entry for nested method parameter o",
+    );
+    let object_binding = method_object_bindings
+        .get("o")
+        .and_then(|binding| binding.as_ref())
+        .expect("expected object binding for nested method parameter");
+
+    assert_eq!(
+        object_binding_lookup_value(
+            object_binding,
+            &Expression::String("__ayy$private$C$outer".to_string())
+        ),
+        Some(&Expression::String("test262".to_string()))
+    );
+
+    compiler
+        .state
+        .function_registry
+        .analysis
+        .user_function_parameter_analysis
+        .function_bindings_by_function = parameter_bindings;
+    compiler
+        .state
+        .function_registry
+        .analysis
+        .user_function_parameter_analysis
+        .value_bindings_by_function = parameter_value_bindings;
+    compiler
+        .state
+        .function_registry
+        .analysis
+        .user_function_parameter_analysis
+        .array_bindings_by_function = parameter_array_bindings;
+    compiler
+        .state
+        .function_registry
+        .analysis
+        .user_function_parameter_analysis
+        .object_bindings_by_function = parameter_object_bindings;
+
+    let user_function = compiler
+        .state
+        .function_registry
+        .catalog
+        .user_function_map
+        .get(&method_function.name)
+        .cloned()
+        .expect("expected nested method user function");
+    let function_parameter_bindings = compiler
+        .state
+        .function_registry
+        .analysis
+        .user_function_parameter_analysis
+        .function_bindings_by_function
+        .get(&user_function.name)
+        .cloned()
+        .unwrap_or_default();
+    let function_parameter_value_bindings = compiler
+        .state
+        .function_registry
+        .analysis
+        .user_function_parameter_analysis
+        .value_bindings_by_function
+        .get(&user_function.name)
+        .cloned()
+        .unwrap_or_default();
+    let function_parameter_array_bindings = compiler
+        .state
+        .function_registry
+        .analysis
+        .user_function_parameter_analysis
+        .array_bindings_by_function
+        .get(&user_function.name)
+        .cloned()
+        .unwrap_or_default();
+    let function_parameter_object_bindings = compiler
+        .state
+        .function_registry
+        .analysis
+        .user_function_parameter_analysis
+        .object_bindings_by_function
+        .get(&user_function.name)
+        .cloned()
+        .unwrap_or_default();
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        Some(&user_function),
+        true,
+        method_function.mapped_arguments,
+        method_function.strict,
+        &function_parameter_bindings,
+        &function_parameter_value_bindings,
+        &function_parameter_array_bindings,
+        &function_parameter_object_bindings,
+    )
+    .expect("function compiler should initialize");
+    function_compiler
+        .register_bindings(&method_function.body)
+        .expect("bindings should register");
+
+    let parameter_object_binding = function_compiler
+        .resolve_object_binding_from_expression(&Expression::Identifier("o".to_string()))
+        .expect("expected nested method parameter object binding at function entry");
+    assert_eq!(
+        object_binding_lookup_value(
+            &parameter_object_binding,
+            &Expression::String("__ayy$private$C$outer".to_string())
+        ),
+        Some(&Expression::String("test262".to_string()))
+    );
+    assert_eq!(
+        function_compiler.materialize_static_expression(&Expression::Member {
+            object: Box::new(Expression::Identifier("o".to_string())),
+            property: Box::new(Expression::String("__ayy$private$C$outer".to_string())),
+        }),
+        Expression::String("test262".to_string()),
+        "expected nested method private field read to materialize from parameter object binding",
+    );
+
+    let mut top_level_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        program.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("top-level function compiler should initialize");
+    top_level_compiler
+        .register_bindings(&program.statements)
+        .expect("top-level bindings should register");
+    for statement in program
+        .statements
+        .iter()
+        .take(program.statements.len().saturating_sub(1))
+    {
+        top_level_compiler
+            .emit_statement(statement)
+            .expect("top-level setup statement should emit");
+    }
+    let method_call = Expression::Call {
+        callee: Box::new(Expression::Member {
+            object: Box::new(Expression::Identifier("innerB1".to_string())),
+            property: Box::new(Expression::String("method".to_string())),
+        }),
+        arguments: vec![CallArgument::Expression(Expression::Identifier(
+            "c".to_string(),
+        ))],
+    };
+    assert_eq!(
+        top_level_compiler.resolve_static_call_result_expression_with_context(
+            match &method_call {
+                Expression::Call { callee, .. } => callee.as_ref(),
+                _ => unreachable!(),
+            },
+            match &method_call {
+                Expression::Call { arguments, .. } => arguments.as_slice(),
+                _ => unreachable!(),
+            },
+            None,
+        ),
+        Some((
+            Expression::Member {
+                object: Box::new(Expression::Identifier("c".to_string())),
+                property: Box::new(Expression::String("__ayy$private$C$outer".to_string())),
+            },
+            Some(method_function.name.clone()),
+        )),
+        "expected top-level static call result to preserve nested private field member read",
+    );
+    assert_eq!(
+        top_level_compiler.resolve_static_primitive_expression_with_context(&method_call, None),
+        Some(Expression::String("test262".to_string())),
+        "expected top-level static call result to resolve nested private field value",
+    );
+}
+
+#[test]
 fn direct_eval_outer_assignments_normalize_to_plain_global_names() {
     let eval_source = "initialNew = f; f = 5; postAssignment = f; function f() { return 33; }";
     let program = frontend::parse(&format!(
@@ -15335,6 +24639,271 @@ fn resolves_static_numeric_class_super_bindings_from_class_home_object_metadata(
 }
 
 #[test]
+fn seeds_static_this_object_binding_from_home_object_metadata_for_private_fields() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              static #x = 1;
+              static getX() { return this.#x; }
+            }
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+
+    let method_name = compiler
+        .state
+        .global_semantics
+        .members
+        .member_function_bindings
+        .iter()
+        .find_map(|(key, binding)| {
+            let target_name = match &key.target {
+                crate::backend::direct_wasm::MemberFunctionBindingTarget::Identifier(name) => name,
+                _ => return None,
+            };
+            let property_name = match &key.property {
+                crate::backend::direct_wasm::MemberFunctionBindingProperty::String(name) => name,
+                _ => return None,
+            };
+            let LocalFunctionBinding::User(function_name) = binding else {
+                return None;
+            };
+            (target_name == "C" && property_name == "getX").then_some(function_name.clone())
+        })
+        .expect("expected C static method binding");
+    let user_function = compiler
+        .state
+        .function_registry
+        .catalog
+        .user_function_map
+        .get(&method_name)
+        .cloned()
+        .expect("expected static method user function");
+
+    let function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        Some(&user_function),
+        true,
+        false,
+        program.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+
+    let this_binding = function_compiler
+        .resolve_object_binding_from_expression(&Expression::This)
+        .expect("expected static this binding");
+    assert_eq!(
+        object_binding_lookup_value(
+            &this_binding,
+            &Expression::String("__ayy$private$C$x".to_string())
+        ),
+        Some(&Expression::Number(1.0))
+    );
+    assert_eq!(
+        function_compiler.materialize_static_expression(&Expression::Member {
+            object: Box::new(Expression::This),
+            property: Box::new(Expression::String("__ayy$private$C$x".to_string())),
+        }),
+        Expression::Number(1.0)
+    );
+}
+
+fn decode_last_i32_const(instructions: &[u8]) -> Option<i32> {
+    let mut index = 0usize;
+    let mut last = None;
+    while index < instructions.len() {
+        let opcode = instructions[index];
+        index += 1;
+        if opcode != 0x41 {
+            continue;
+        }
+        let mut shift = 0u32;
+        let mut value = 0i32;
+        let byte = loop {
+            let byte = *instructions.get(index)?;
+            index += 1;
+            value |= ((byte & 0x7f) as i32) << shift;
+            shift += 7;
+            if byte & 0x80 == 0 {
+                break byte;
+            }
+        };
+        if shift < 32 && (byte & 0x40) != 0 {
+            value |= !0 << shift;
+        }
+        last = Some(value);
+    }
+    last
+}
+
+#[test]
+fn emits_static_private_field_read_via_this_in_static_method() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              static #x = 1;
+              static getX() { return this.#x; }
+            }
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+
+    let method_name = compiler
+        .state
+        .global_semantics
+        .members
+        .member_function_bindings
+        .iter()
+        .find_map(|(key, binding)| {
+            let target_name = match &key.target {
+                crate::backend::direct_wasm::MemberFunctionBindingTarget::Identifier(name) => name,
+                _ => return None,
+            };
+            let property_name = match &key.property {
+                crate::backend::direct_wasm::MemberFunctionBindingProperty::String(name) => name,
+                _ => return None,
+            };
+            let LocalFunctionBinding::User(function_name) = binding else {
+                return None;
+            };
+            (target_name == "C" && property_name == "getX").then_some(function_name.clone())
+        })
+        .expect("expected C static method binding");
+    let user_function = compiler
+        .state
+        .function_registry
+        .catalog
+        .user_function_map
+        .get(&method_name)
+        .cloned()
+        .expect("expected static method user function");
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        Some(&user_function),
+        true,
+        false,
+        program.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+
+    let base_len = function_compiler.state.emission.output.instructions.len();
+    function_compiler
+        .emit_numeric_expression(&Expression::Member {
+            object: Box::new(Expression::This),
+            property: Box::new(Expression::String("__ayy$private$C$x".to_string())),
+        })
+        .expect("private member read should emit");
+    let emitted = &function_compiler.state.emission.output.instructions[base_len..];
+
+    assert_eq!(
+        decode_last_i32_const(emitted),
+        Some(1),
+        "expected emitted static private field read to lower to numeric value",
+    );
+}
+
+#[test]
+fn emits_static_method_call_result_for_this_private_field_initializer_from_top_level() {
+    let program = frontend::parse(
+        r#"
+            class C {
+              static #x = 1;
+              static getX() { return this.#x; }
+            }
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.reserve_global_array_runtime_state_bindings(&program);
+    compiler.apply_user_function_parameter_analysis(&program);
+    compiler.register_user_function_capture_bindings(&program.functions);
+    compiler
+        .reserve_function_constructor_implicit_global_bindings(&program)
+        .expect("implicit global bindings should reserve");
+    compiler.reserve_global_runtime_prototype_binding_globals();
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        program.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("top-level function compiler should initialize");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+    for statement in &program.statements {
+        function_compiler
+            .emit_statement(statement)
+            .expect("class setup statement should emit");
+    }
+
+    let method_call = Expression::Call {
+        callee: Box::new(Expression::Member {
+            object: Box::new(Expression::Identifier("C".to_string())),
+            property: Box::new(Expression::String("getX".to_string())),
+        }),
+        arguments: Vec::new(),
+    };
+    let base_len = function_compiler.state.emission.output.instructions.len();
+    function_compiler
+        .emit_numeric_expression(&method_call)
+        .expect("static method call should emit");
+    let emitted = &function_compiler.state.emission.output.instructions[base_len..];
+
+    assert_eq!(
+        decode_last_i32_const(emitted),
+        Some(1),
+        "expected top-level C.getX() call to lower to numeric value",
+    );
+}
+
+#[test]
 fn full_compile_keeps_eval_local_global_metadata_after_iife_call() {
     let program = frontend::parse(
         r#"
@@ -15393,5 +24962,198 @@ fn full_compile_keeps_eval_local_global_metadata_after_iife_call() {
                 })
                 .expect("expected function identifier for initialNew")
         ))
+    );
+}
+
+#[test]
+fn leaves_generator_private_method_helper_parameters_unseeded_for_yield_spread_values() {
+    let program = frontend::parse(
+        r#"
+            function __sameValue(left, right) {
+              return left === right;
+            }
+            function __assertToString(value) {
+              return String(value);
+            }
+            function __formatIdentityFreeValue(value) {
+              switch (value === null ? "null" : typeof value) {
+                case "string":
+                case "number":
+                case "boolean":
+                case "undefined":
+                  return String(value);
+                default:
+                  return __assertToString(value);
+              }
+            }
+            function __assertSameValue(actual, expected) {
+              if (__sameValue(actual, expected)) {
+                return;
+              }
+              throw new Error(__formatIdentityFreeValue(actual));
+            }
+            class C {
+              *#gen() {
+                yield [...yield];
+              }
+              get gen() {
+                return this.#gen;
+              }
+            }
+            const c = new C();
+            var iter = c.gen();
+            iter.next(false);
+            var item = iter.next(['a', 'b', 'c']);
+            var value = item.value;
+            __assertSameValue(value.length, 3);
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+
+    let (
+        parameter_bindings,
+        parameter_value_bindings,
+        parameter_array_bindings,
+        parameter_object_bindings,
+    ) = compiler.collect_user_function_parameter_bindings(&program);
+
+    let assert_same_value = program
+        .functions
+        .iter()
+        .find(|function| {
+            function
+                .params
+                .iter()
+                .map(|param| param.name.as_str())
+                .eq(["actual", "expected"])
+        })
+        .expect("expected __assertSameValue function");
+    let format_identity_free_value = program
+        .functions
+        .iter()
+        .find(|function| {
+            function
+                .params
+                .iter()
+                .map(|param| param.name.as_str())
+                .eq(["value"])
+                && matches!(function.body.first(), Some(Statement::Switch { .. }))
+        })
+        .expect("expected __formatIdentityFreeValue function");
+
+    let assert_same_value_value_bindings = parameter_value_bindings
+        .get(&assert_same_value.name)
+        .expect("expected __assertSameValue value bindings");
+    let assert_same_value_array_bindings = parameter_array_bindings
+        .get(&assert_same_value.name)
+        .expect("expected __assertSameValue array bindings");
+    let assert_same_value_object_bindings = parameter_object_bindings
+        .get(&assert_same_value.name)
+        .expect("expected __assertSameValue object bindings");
+    assert!(
+        !matches!(
+            assert_same_value_value_bindings.get("actual"),
+            Some(Some(_))
+        ),
+        "unexpected stable value binding for actual",
+    );
+    assert!(
+        !matches!(
+            assert_same_value_array_bindings.get("actual"),
+            Some(Some(_))
+        ),
+        "unexpected array binding for actual",
+    );
+    assert!(
+        !matches!(
+            assert_same_value_object_bindings.get("actual"),
+            Some(Some(_))
+        ),
+        "unexpected object binding for actual",
+    );
+
+    let format_value_bindings = parameter_value_bindings
+        .get(&format_identity_free_value.name)
+        .expect("expected __formatIdentityFreeValue value bindings");
+    let format_array_bindings = parameter_array_bindings
+        .get(&format_identity_free_value.name)
+        .expect("expected __formatIdentityFreeValue array bindings");
+    let format_object_bindings = parameter_object_bindings
+        .get(&format_identity_free_value.name)
+        .expect("expected __formatIdentityFreeValue object bindings");
+    assert!(
+        !matches!(format_value_bindings.get("value"), Some(Some(_))),
+        "unexpected stable value binding for helper value",
+    );
+    assert!(
+        !matches!(format_array_bindings.get("value"), Some(Some(_))),
+        "unexpected array binding for helper value",
+    );
+    assert!(
+        !matches!(format_object_bindings.get("value"), Some(Some(_))),
+        "unexpected object binding for helper value",
+    );
+
+    let format_function_binding_map = parameter_bindings
+        .get(&format_identity_free_value.name)
+        .expect("expected __formatIdentityFreeValue function bindings")
+        .clone();
+    let format_value_binding_map = format_value_bindings.clone();
+    let format_array_binding_map = format_array_bindings.clone();
+    let format_object_binding_map = format_object_bindings.clone();
+    let format_user_function = compiler
+        .state
+        .function_registry
+        .catalog
+        .user_function_map
+        .get(&format_identity_free_value.name)
+        .cloned()
+        .expect("expected registered helper function");
+
+    let format_function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        Some(&format_user_function),
+        true,
+        false,
+        false,
+        &format_function_binding_map,
+        &format_value_binding_map,
+        &format_array_binding_map,
+        &format_object_binding_map,
+    )
+    .expect("__formatIdentityFreeValue compiler should construct");
+    assert!(
+        format_function_compiler
+            .state
+            .speculation
+            .static_semantics
+            .local_value_binding("value")
+            .is_none(),
+        "expected helper value binding to stay unknown at entry",
+    );
+    assert!(
+        format_function_compiler
+            .state
+            .speculation
+            .static_semantics
+            .local_object_binding("value")
+            .is_none(),
+        "expected helper object binding to stay unknown at entry",
+    );
+    assert_eq!(
+        format_function_compiler
+            .resolve_bound_alias_expression(&Expression::Identifier("value".to_string())),
+        Some(Expression::Identifier("value".to_string())),
+        "expected local helper parameter to shadow same-named global value binding",
     );
 }

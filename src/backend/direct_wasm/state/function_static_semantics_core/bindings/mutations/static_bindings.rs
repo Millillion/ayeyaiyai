@@ -14,8 +14,11 @@ impl FunctionStaticSemanticsState {
         self.objects = snapshot.objects;
         self.arrays = snapshot.arrays;
         *self.materializing_expression_keys.borrow_mut() = snapshot.materializing_expression_keys;
+        self.local_lexical_initialized_locals = snapshot.local_lexical_initialized_locals;
+        self.immutable_local_bindings = snapshot.immutable_local_bindings;
         self.eval_lexical_initialized_locals = snapshot.eval_lexical_initialized_locals;
         self.capture_slot_source_bindings = snapshot.capture_slot_source_bindings;
+        self.capture_slot_initial_source_bindings = snapshot.capture_slot_initial_source_bindings;
         self.last_bound_user_function_call = snapshot.last_bound_user_function_call;
     }
 

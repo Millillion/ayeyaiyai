@@ -6,11 +6,22 @@ pub(in crate::backend::direct_wasm) struct CompiledFunction {
 }
 
 #[derive(Clone)]
+pub(in crate::backend::direct_wasm) struct NumericLoopSpec {
+    pub(in crate::backend::direct_wasm) binding: String,
+    pub(in crate::backend::direct_wasm) start: i64,
+    pub(in crate::backend::direct_wasm) bound: Expression,
+    pub(in crate::backend::direct_wasm) inclusive: bool,
+}
+
+#[derive(Clone)]
 pub(in crate::backend::direct_wasm) struct LoopContext {
     pub(in crate::backend::direct_wasm) break_target: usize,
     pub(in crate::backend::direct_wasm) continue_target: usize,
     pub(in crate::backend::direct_wasm) labels: Vec<String>,
     pub(in crate::backend::direct_wasm) assigned_bindings: HashSet<String>,
+    pub(in crate::backend::direct_wasm) direct_step_iterators: HashSet<String>,
+    pub(in crate::backend::direct_wasm) numeric_binding_candidates: HashMap<String, Vec<i64>>,
+    pub(in crate::backend::direct_wasm) numeric_spec: Option<NumericLoopSpec>,
 }
 
 #[derive(Clone)]

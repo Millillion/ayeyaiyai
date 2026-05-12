@@ -1,12 +1,64 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    pub(in crate::backend::direct_wasm) fn statement_unconditionally_transfers_control(
+        statement: &Statement,
+    ) -> bool {
+        match statement {
+            Statement::Break { .. }
+            | Statement::Continue { .. }
+            | Statement::Return(_)
+            | Statement::Throw(_) => true,
+            Statement::Block { body } | Statement::Declaration { body } => {
+                Self::statement_list_unconditionally_transfers_control(body)
+            }
+            Statement::Labeled { body, .. } => {
+                Self::statement_list_unconditionally_transfers_control(body)
+            }
+            Statement::If {
+                then_branch,
+                else_branch,
+                ..
+            } if !else_branch.is_empty() => {
+                Self::statement_list_unconditionally_transfers_control(then_branch)
+                    && Self::statement_list_unconditionally_transfers_control(else_branch)
+            }
+            _ => false,
+        }
+    }
+
+    pub(in crate::backend::direct_wasm) fn statement_list_unconditionally_transfers_control(
+        statements: &[Statement],
+    ) -> bool {
+        statements
+            .iter()
+            .any(Self::statement_unconditionally_transfers_control)
+    }
+
     pub(in crate::backend::direct_wasm) fn emit_statements(
         &mut self,
         statements: &[Statement],
     ) -> DirectResult<()> {
-        for statement in statements {
-            self.emit_statement(statement)?;
+        let trace = std::env::var_os("AYY_TRACE_FUNCTION_COMPILE").is_some();
+        let mut index = 0;
+        while let Some(statement) = statements.get(index) {
+            if trace {
+                eprintln!("function_compile=statement:{statement:?}");
+            }
+            let next_statement = statements.get(index + 1);
+            if !self.try_emit_destructuring_default_iterator_close_statement(
+                statement,
+                next_statement,
+            )? {
+                self.emit_statement(statement)?;
+            }
+            if trace {
+                eprintln!("function_compile=statement_done:{statement:?}");
+            }
+            if Self::statement_unconditionally_transfers_control(statement) {
+                break;
+            }
+            index += 1;
         }
         Ok(())
     }

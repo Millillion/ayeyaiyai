@@ -62,7 +62,7 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(true);
         }
 
-        if self.is_restricted_arrow_function_property(object, property) {
+        if self.is_restricted_function_property(object, property) {
             self.emit_numeric_expression(object)?;
             self.state.emission.output.instructions.push(0x1a);
             self.emit_numeric_expression(property)?;

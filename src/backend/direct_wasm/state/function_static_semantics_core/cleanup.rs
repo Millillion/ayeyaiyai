@@ -7,6 +7,7 @@ impl FunctionStaticSemanticsState {
         self.arrays.clear_isolated_indirect_eval_state();
         self.eval_lexical_initialized_locals.clear();
         self.capture_slot_source_bindings.clear();
+        self.capture_slot_initial_source_bindings.clear();
         self.last_bound_user_function_call = None;
     }
 

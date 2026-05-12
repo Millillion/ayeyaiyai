@@ -9,13 +9,15 @@ impl DirectWasmCompiler {
         bindings: &mut HashMap<String, HashMap<String, Option<LocalFunctionBinding>>>,
         array_bindings: &mut HashMap<String, HashMap<String, Option<ArrayValueBinding>>>,
         object_bindings: &mut HashMap<String, HashMap<String, Option<ObjectValueBinding>>>,
+        current_function_name: Option<&str>,
     ) {
-        self.collect_parameter_bindings_from_expression(
+        self.collect_parameter_bindings_from_expression_in_function(
             callee,
             aliases,
             bindings,
             array_bindings,
             object_bindings,
+            current_function_name,
         );
         self.register_callback_bindings_for_call(
             callee,
@@ -24,6 +26,7 @@ impl DirectWasmCompiler {
             bindings,
             array_bindings,
             object_bindings,
+            current_function_name,
         );
         self.collect_parameter_bindings_from_call_arguments(
             arguments,
@@ -31,6 +34,7 @@ impl DirectWasmCompiler {
             bindings,
             array_bindings,
             object_bindings,
+            current_function_name,
         );
     }
 
@@ -42,13 +46,15 @@ impl DirectWasmCompiler {
         bindings: &mut HashMap<String, HashMap<String, Option<LocalFunctionBinding>>>,
         array_bindings: &mut HashMap<String, HashMap<String, Option<ArrayValueBinding>>>,
         object_bindings: &mut HashMap<String, HashMap<String, Option<ObjectValueBinding>>>,
+        current_function_name: Option<&str>,
     ) {
-        self.collect_parameter_bindings_from_expression(
+        self.collect_parameter_bindings_from_expression_in_function(
             callee,
             aliases,
             bindings,
             array_bindings,
             object_bindings,
+            current_function_name,
         );
         self.collect_parameter_bindings_from_call_arguments(
             arguments,
@@ -56,6 +62,7 @@ impl DirectWasmCompiler {
             bindings,
             array_bindings,
             object_bindings,
+            current_function_name,
         );
     }
 
@@ -66,16 +73,18 @@ impl DirectWasmCompiler {
         bindings: &mut HashMap<String, HashMap<String, Option<LocalFunctionBinding>>>,
         array_bindings: &mut HashMap<String, HashMap<String, Option<ArrayValueBinding>>>,
         object_bindings: &mut HashMap<String, HashMap<String, Option<ObjectValueBinding>>>,
+        current_function_name: Option<&str>,
     ) {
         for argument in arguments {
             match argument {
                 CallArgument::Expression(argument) | CallArgument::Spread(argument) => {
-                    self.collect_parameter_bindings_from_expression(
+                    self.collect_parameter_bindings_from_expression_in_function(
                         argument,
                         aliases,
                         bindings,
                         array_bindings,
                         object_bindings,
+                        current_function_name,
                     );
                 }
             }

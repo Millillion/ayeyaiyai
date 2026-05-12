@@ -17,10 +17,39 @@ impl<'a> FunctionCompiler<'a> {
             self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
             return Ok(true);
         }
+        if matches!(property, Expression::String(property_name) if property_name == "next")
+            && matches!(
+                object,
+                Expression::Identifier(name)
+                    if name.starts_with("__ayy_array_iter_")
+                        || name.starts_with("__ayy_for_of_iter_")
+            )
+        {
+            self.emit_numeric_expression(object)?;
+            self.state.emission.output.instructions.push(0x1a);
+            self.emit_ignored_call_arguments(arguments)?;
+            self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
+            return Ok(true);
+        }
         if matches!(property, Expression::String(property_name) if property_name == "slice")
             && self
                 .resolve_array_slice_binding(object, arguments)
                 .is_some()
+        {
+            self.emit_numeric_expression(object)?;
+            self.state.emission.output.instructions.push(0x1a);
+            self.emit_ignored_call_arguments(arguments)?;
+            self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
+            return Ok(true);
+        }
+        if matches!(property, Expression::String(property_name) if property_name == "slice")
+            && self.expression_inherits_from_prototype_for_instanceof(
+                object,
+                &Expression::Member {
+                    object: Box::new(Expression::Identifier("ArrayBuffer".to_string())),
+                    property: Box::new(Expression::String("prototype".to_string())),
+                },
+            )
         {
             self.emit_numeric_expression(object)?;
             self.state.emission.output.instructions.push(0x1a);

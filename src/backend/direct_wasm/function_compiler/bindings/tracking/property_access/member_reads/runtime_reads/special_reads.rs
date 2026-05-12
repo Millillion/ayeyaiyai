@@ -1,6 +1,47 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    pub(super) fn emit_runtime_native_error_member_read(
+        &mut self,
+        object: &Expression,
+        property: &Expression,
+    ) -> DirectResult<bool> {
+        if !matches!(property, Expression::String(name) if name == "name")
+            || !inline_summary_side_effect_free_expression(object)
+        {
+            return Ok(false);
+        }
+
+        let mut open_frames = 0;
+        for name in NATIVE_ERROR_NAMES {
+            let Some(value) = native_error_runtime_value(name) else {
+                continue;
+            };
+            self.emit_numeric_expression(object)?;
+            self.push_i32_const(value);
+            self.push_binary_op(BinaryOp::Equal)?;
+            self.state.emission.output.instructions.push(0x04);
+            self.state.emission.output.instructions.push(I32_TYPE);
+            self.push_control_frame();
+            self.emit_static_string_literal(name)?;
+            self.state.emission.output.instructions.push(0x05);
+            open_frames += 1;
+        }
+
+        if open_frames == 0 {
+            return Ok(false);
+        }
+
+        if !self.emit_runtime_user_function_property_read(object, property)? {
+            self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
+        }
+        for _ in 0..open_frames {
+            self.state.emission.output.instructions.push(0x0b);
+            self.pop_control_frame();
+        }
+        Ok(true)
+    }
+
     pub(super) fn emit_runtime_string_member_read(
         &mut self,
         object: &Expression,

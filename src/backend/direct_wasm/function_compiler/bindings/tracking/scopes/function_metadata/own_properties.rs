@@ -1,6 +1,61 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    pub(in crate::backend::direct_wasm) fn explicit_function_self_binding_property_value(
+        &self,
+        function_name: &str,
+        property: &Expression,
+    ) -> Option<Expression> {
+        let self_binding = self
+            .resolve_registered_function_declaration(function_name)?
+            .self_binding
+            .as_ref()?;
+        self.state
+            .speculation
+            .static_semantics
+            .local_object_binding(self_binding)
+            .or_else(|| self.backend.global_object_binding(self_binding))
+            .and_then(|object_binding| {
+                self.resolve_object_binding_property_value(object_binding, property)
+            })
+    }
+
+    fn function_self_binding_has_explicit_own_property(
+        &self,
+        binding: &LocalFunctionBinding,
+        property: &Expression,
+    ) -> bool {
+        let LocalFunctionBinding::User(function_name) = binding else {
+            return false;
+        };
+        let Some(self_binding) = self
+            .resolve_registered_function_declaration(function_name)
+            .and_then(|function| function.self_binding.as_ref())
+        else {
+            return false;
+        };
+
+        let self_expression = Expression::Identifier(self_binding.clone());
+        self.resolve_member_function_binding_shallow(&self_expression, property)
+            .is_some()
+            || self
+                .resolve_member_getter_binding_shallow(&self_expression, property)
+                .is_some()
+            || self
+                .resolve_member_setter_binding_shallow(&self_expression, property)
+                .is_some()
+            || self
+                .state
+                .speculation
+                .static_semantics
+                .local_object_binding(self_binding)
+                .or_else(|| self.backend.global_object_binding(self_binding))
+                .is_some_and(|object_binding| {
+                    self.resolve_object_binding_property_value(object_binding, property)
+                        .is_some()
+                })
+    }
+
     pub(in crate::backend::direct_wasm) fn function_object_has_explicit_own_property(
         &self,
         object: &Expression,
@@ -37,13 +92,22 @@ impl<'a> FunctionCompiler<'a> {
                     .into_iter()
                     .flatten()
                     .any(|property_candidate| {
-                        self.resolve_member_function_binding(object_candidate, property_candidate)
-                            .is_some()
+                        self.resolve_member_function_binding_shallow(
+                            object_candidate,
+                            property_candidate,
+                        )
+                        .is_some()
                             || self
-                                .resolve_member_getter_binding(object_candidate, property_candidate)
+                                .resolve_member_getter_binding_shallow(
+                                    object_candidate,
+                                    property_candidate,
+                                )
                                 .is_some()
                             || self
-                                .resolve_member_setter_binding(object_candidate, property_candidate)
+                                .resolve_member_setter_binding_shallow(
+                                    object_candidate,
+                                    property_candidate,
+                                )
                                 .is_some()
                             || self
                                 .resolve_object_binding_from_expression(object_candidate)
@@ -53,6 +117,15 @@ impl<'a> FunctionCompiler<'a> {
                                         property_candidate,
                                     )
                                     .is_some()
+                                })
+                            || self
+                                .resolve_function_binding_from_expression(object_candidate)
+                                .as_ref()
+                                .is_some_and(|binding| {
+                                    self.function_self_binding_has_explicit_own_property(
+                                        binding,
+                                        property_candidate,
+                                    )
                                 })
                     })
             })

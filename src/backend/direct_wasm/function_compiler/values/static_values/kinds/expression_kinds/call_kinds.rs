@@ -19,6 +19,15 @@ impl<'a> FunctionCompiler<'a> {
         {
             return Some(StaticValueKind::Bool);
         }
+        if matches!(callee, Expression::Identifier(name) if name == "eval")
+            && matches!(
+                self.resolve_function_binding_from_expression(callee),
+                Some(LocalFunctionBinding::Builtin(function_name)) if function_name == "eval"
+            )
+            && let Some(kind) = self.infer_static_direct_eval_completion_kind(arguments)
+        {
+            return Some(kind);
+        }
         if arguments.is_empty()
             && let Expression::Member { object, property } = callee
             && let Expression::String(property_name) = property.as_ref()
@@ -39,9 +48,17 @@ impl<'a> FunctionCompiler<'a> {
             return self.infer_value_kind(&value);
         }
         match callee {
-            Expression::Identifier(name) => self
-                .infer_call_result_kind(name)
-                .or(Some(StaticValueKind::Unknown)),
+            Expression::Identifier(name) => {
+                if let Some(LocalFunctionBinding::Builtin(function_name)) =
+                    self.resolve_function_binding_from_expression(callee)
+                {
+                    self.infer_call_result_kind(&function_name)
+                        .or(Some(StaticValueKind::Unknown))
+                } else {
+                    self.infer_call_result_kind(name)
+                        .or(Some(StaticValueKind::Unknown))
+                }
+            }
             _ => Some(StaticValueKind::Unknown),
         }
     }

@@ -8,9 +8,10 @@ mod function_metadata;
 mod value_parsing;
 
 pub(in crate::backend::direct_wasm) use builtin_catalog::{
-    bound_function_prototype_call_builtin_name, builtin_function_runtime_value,
-    builtin_member_function_name, builtin_member_number_value, builtin_prototype_function_name,
-    is_non_definable_global_name, parse_bound_function_prototype_call_builtin_name,
+    bound_function_prototype_call_builtin_name, builtin_function_runtime_entries,
+    builtin_function_runtime_value, builtin_member_function_name, builtin_member_number_value,
+    builtin_prototype_function_name, is_non_definable_global_name,
+    parse_bound_function_prototype_call_builtin_name,
 };
 #[cfg(test)]
 pub(in crate::backend::direct_wasm) use function_metadata::internal_function_name_hint;

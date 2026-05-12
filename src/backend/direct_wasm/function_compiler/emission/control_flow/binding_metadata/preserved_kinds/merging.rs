@@ -1,6 +1,38 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    pub(in crate::backend::direct_wasm) fn preserved_expression_kind(
+        &self,
+        preserved_kinds: &HashMap<String, StaticValueKind>,
+        expression: &Expression,
+    ) -> Option<StaticValueKind> {
+        match expression {
+            Expression::Identifier(name) => preserved_kinds
+                .get(name)
+                .copied()
+                .or_else(|| self.infer_value_kind(expression)),
+            Expression::Member { object, .. } if matches!(object.as_ref(), Expression::Identifier(name) if name.starts_with("__ayy_for_in_keys_")) => {
+                Some(StaticValueKind::String)
+            }
+            Expression::Binary {
+                op: BinaryOp::Add,
+                left,
+                right,
+            } => {
+                let left_kind = self.preserved_expression_kind(preserved_kinds, left);
+                let right_kind = self.preserved_expression_kind(preserved_kinds, right);
+                if left_kind == Some(StaticValueKind::String)
+                    || right_kind == Some(StaticValueKind::String)
+                {
+                    Some(StaticValueKind::String)
+                } else {
+                    self.infer_value_kind(expression)
+                }
+            }
+            _ => self.infer_value_kind(expression),
+        }
+    }
+
     pub(in crate::backend::direct_wasm) fn current_binding_kind_for_preservation(
         &self,
         name: &str,
@@ -38,6 +70,9 @@ impl<'a> FunctionCompiler<'a> {
             return;
         };
         match preserved_kinds.get(name).copied() {
+            Some(StaticValueKind::Undefined) if candidate != StaticValueKind::Undefined => {
+                preserved_kinds.insert(name.to_string(), candidate);
+            }
             Some(existing_kind) if existing_kind != candidate => {
                 preserved_kinds.remove(name);
                 blocked_bindings.insert(name.to_string());

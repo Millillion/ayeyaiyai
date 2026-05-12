@@ -138,6 +138,43 @@ impl<'a> FunctionCompiler<'a> {
         self.emit_dynamic_direct_arguments_property_read_from_local(property_local)
     }
 
+    pub(in crate::backend::direct_wasm) fn emit_dynamic_direct_arguments_property_delete(
+        &mut self,
+        property: &Expression,
+    ) -> DirectResult<()> {
+        let property_local = self.allocate_temp_local();
+        self.emit_numeric_expression(property)?;
+        self.push_local_set(property_local);
+
+        let mut open_frames = 0;
+        let mut indices = self
+            .state
+            .parameters
+            .arguments_slots
+            .keys()
+            .copied()
+            .collect::<Vec<_>>();
+        indices.sort_unstable();
+        for index in indices {
+            self.push_local_get(property_local);
+            self.push_i32_const(index as i32);
+            self.push_binary_op(BinaryOp::Equal)?;
+            self.state.emission.output.instructions.push(0x04);
+            self.state.emission.output.instructions.push(I32_TYPE);
+            self.push_control_frame();
+            open_frames += 1;
+            self.emit_arguments_slot_runtime_delete(index);
+            self.state.emission.output.instructions.push(0x05);
+        }
+
+        self.push_i32_const(1);
+        for _ in 0..open_frames {
+            self.state.emission.output.instructions.push(0x0b);
+            self.pop_control_frame();
+        }
+        Ok(())
+    }
+
     pub(in crate::backend::direct_wasm) fn emit_dynamic_direct_arguments_property_write(
         &mut self,
         property: &Expression,

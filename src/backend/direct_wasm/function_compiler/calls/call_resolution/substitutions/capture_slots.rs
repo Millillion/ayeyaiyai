@@ -7,6 +7,11 @@ impl<'a> FunctionCompiler<'a> {
         bindings: &BTreeMap<String, String>,
     ) -> Expression {
         match expression {
+            Expression::This => bindings
+                .get("this")
+                .cloned()
+                .map(Expression::Identifier)
+                .unwrap_or_else(|| expression.clone()),
             Expression::Identifier(name) => bindings
                 .get(name)
                 .cloned()

@@ -1,7 +1,7 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
-    pub(super) fn emit_inline_user_function_effect_statement(
+    pub(in crate::backend::direct_wasm) fn emit_inline_user_function_effect_statement(
         &mut self,
         statement: &Statement,
         user_function: &UserFunction,
@@ -46,8 +46,13 @@ impl<'a> FunctionCompiler<'a> {
                     user_function,
                     call_arguments,
                 );
-                self.emit_numeric_expression(&substituted)?;
-                self.state.emission.output.instructions.push(0x1a);
+                if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+                    eprintln!(
+                        "inline_effect_expression user_function={} expr={substituted:?}",
+                        user_function.name
+                    );
+                }
+                self.emit_statement(&Statement::Expression(substituted))?;
             }
             Statement::Block { body } if body.is_empty() => {}
             _ => return Ok(false),
@@ -120,8 +125,13 @@ impl<'a> FunctionCompiler<'a> {
                     user_function,
                     call_arguments,
                 );
-                self.emit_numeric_expression(&substituted)?;
-                self.state.emission.output.instructions.push(0x1a);
+                if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+                    eprintln!(
+                        "inline_terminal_expression user_function={} expr={substituted:?}",
+                        user_function.name
+                    );
+                }
+                self.emit_statement(&Statement::Expression(substituted))?;
                 self.push_i32_const(JS_UNDEFINED_TAG);
             }
             Statement::Block { body } if body.is_empty() => {
@@ -165,8 +175,13 @@ impl<'a> FunctionCompiler<'a> {
                             user_function,
                             call_arguments,
                         );
-                        compiler.emit_numeric_expression(&substituted)?;
-                        compiler.state.emission.output.instructions.push(0x1a);
+                        if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+                            eprintln!(
+                                "inline_summary_expression user_function={} expr={substituted:?}",
+                                user_function.name
+                            );
+                        }
+                        compiler.emit_statement(&Statement::Expression(substituted))?;
                     }
                 }
             }

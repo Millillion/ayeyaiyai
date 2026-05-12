@@ -4,9 +4,7 @@ use super::*;
 pub(in crate::backend::direct_wasm) struct PreparedModuleLayout {
     pub(in crate::backend::direct_wasm) user_type_arities: Vec<u32>,
     pub(in crate::backend::direct_wasm) user_functions: Vec<UserFunction>,
-    pub(in crate::backend::direct_wasm) global_binding_count: u32,
-    pub(in crate::backend::direct_wasm) implicit_global_binding_count: u32,
-    pub(in crate::backend::direct_wasm) runtime_prototype_binding_count: u32,
+    pub(in crate::backend::direct_wasm) global_initial_values: Vec<i32>,
 }
 
 #[derive(Clone)]

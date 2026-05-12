@@ -104,6 +104,62 @@ impl<'a> FunctionCompiler<'a> {
             StaticValueKind::Unknown,
         );
         let current_argument_expression = self.promise_argument_expression(arguments, 0);
+        let async_iterator_property = self.materialize_static_expression(&Expression::Member {
+            object: Box::new(Expression::Identifier("Symbol".to_string())),
+            property: Box::new(Expression::String("asyncIterator".to_string())),
+        });
+        let iterator_property = self.materialize_static_expression(&symbol_iterator_expression());
+        let async_iterator_member = Expression::Member {
+            object: Box::new(plan.delegate_expression.clone()),
+            property: Box::new(async_iterator_property.clone()),
+        };
+        let iterator_member = Expression::Member {
+            object: Box::new(plan.delegate_expression.clone()),
+            property: Box::new(iterator_property.clone()),
+        };
+        let uses_async_iterator_method = stored_uses_async_iterator_method.unwrap_or_else(|| {
+            self.async_yield_delegate_uses_async_iterator_method(plan, &async_iterator_property)
+        });
+        let mut needs_runtime_setup = delegate_snapshot_bindings.is_none();
+        if delegate_snapshot_bindings.is_none() {
+            match self.initialize_async_yield_delegate_snapshot_bindings(
+                plan,
+                &async_iterator_property,
+                &iterator_property,
+                &delegate_iterator_method_name,
+                delegate_iterator_name,
+                delegate_next_name,
+            )? {
+                Some(InitialDelegateSnapshotBindings::Ready { bindings }) => {
+                    delegate_snapshot_bindings = Some(bindings);
+                    needs_runtime_setup = false;
+                }
+                Some(InitialDelegateSnapshotBindings::Throw {
+                    throw_value,
+                    bindings,
+                }) => {
+                    self.persist_async_yield_delegate_generator_snapshot_state(
+                        &binding_name,
+                        Some(2),
+                        Some(bindings.clone()),
+                    );
+                    self.sync_async_delegate_snapshot_bindings(&bindings)?;
+                    self.pop_async_delegate_snapshot_scope_bindings(&scoped_snapshot_names);
+                    return Ok(AsyncDelegateConsumptionPreparation::Outcome(
+                        StaticEvalOutcome::Throw(throw_value),
+                    ));
+                }
+                None => {}
+            }
+        }
+        if std::env::var_os("AYY_TRACE_ASYNC_DELEGATES").is_some() {
+            eprintln!(
+                "async_delegate_prepare binding={} property={} snapshot={}",
+                binding_name,
+                property_name,
+                delegate_snapshot_bindings.is_some()
+            );
+        }
 
         if property_name == "next" {
             match current_static_index {
@@ -152,60 +208,18 @@ impl<'a> FunctionCompiler<'a> {
             })?;
         }
 
-        let async_iterator_property = self.materialize_static_expression(&Expression::Member {
-            object: Box::new(Expression::Identifier("Symbol".to_string())),
-            property: Box::new(Expression::String("asyncIterator".to_string())),
-        });
-        let iterator_property = self.materialize_static_expression(&symbol_iterator_expression());
-        let async_iterator_member = Expression::Member {
-            object: Box::new(plan.delegate_expression.clone()),
-            property: Box::new(async_iterator_property.clone()),
-        };
-        let iterator_member = Expression::Member {
-            object: Box::new(plan.delegate_expression.clone()),
-            property: Box::new(iterator_property.clone()),
-        };
-        let uses_async_iterator_method = stored_uses_async_iterator_method.unwrap_or_else(|| {
-            self.async_yield_delegate_uses_async_iterator_method(plan, &async_iterator_property)
-        });
-        if delegate_snapshot_bindings.is_none() {
-            match self.initialize_async_yield_delegate_snapshot_bindings(
+        if needs_runtime_setup {
+            self.emit_async_yield_delegate_setup(
                 plan,
-                &async_iterator_property,
-                &iterator_property,
+                uses_async_iterator_method,
+                &async_iterator_member,
+                &iterator_member,
                 &delegate_iterator_method_name,
                 delegate_iterator_name,
-            )? {
-                Some(InitialDelegateSnapshotBindings::Ready { bindings }) => {
-                    delegate_snapshot_bindings = Some(bindings);
-                }
-                Some(InitialDelegateSnapshotBindings::Throw {
-                    throw_value,
-                    bindings,
-                }) => {
-                    self.persist_async_yield_delegate_generator_snapshot_state(
-                        &binding_name,
-                        Some(2),
-                        Some(bindings.clone()),
-                    );
-                    self.sync_async_delegate_snapshot_bindings(&bindings)?;
-                    self.pop_async_delegate_snapshot_scope_bindings(&scoped_snapshot_names);
-                    return Ok(AsyncDelegateConsumptionPreparation::Outcome(
-                        StaticEvalOutcome::Throw(throw_value),
-                    ));
-                }
-                None => self.emit_async_yield_delegate_setup(
-                    plan,
-                    uses_async_iterator_method,
-                    &async_iterator_member,
-                    &iterator_member,
-                    &delegate_iterator_method_name,
-                    delegate_iterator_name,
-                    &async_iterator_property,
-                )?,
-            }
-        } else if let Some(snapshot_bindings) = delegate_snapshot_bindings.as_ref() {
-            self.sync_async_delegate_snapshot_bindings(snapshot_bindings)?;
+                delegate_next_name,
+                &async_iterator_property,
+                &iterator_property,
+            )?;
         }
 
         Ok(AsyncDelegateConsumptionPreparation::Ready(

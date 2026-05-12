@@ -12,6 +12,22 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         name: &str,
     ) {
+        if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+            eprintln!(
+                "runtime_shadow_clear_identifier_metadata name={name} local_value={:?} local_object={} global_value={:?} global_object={}",
+                self.state
+                    .speculation
+                    .static_semantics
+                    .local_value_binding(name)
+                    .cloned(),
+                self.state
+                    .speculation
+                    .static_semantics
+                    .has_local_object_binding(name),
+                self.global_value_binding(name).cloned(),
+                self.global_object_binding(name).is_some(),
+            );
+        }
         self.state.clear_local_static_binding_metadata(name);
 
         self.clear_global_binding_state(name);

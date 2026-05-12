@@ -12,6 +12,8 @@ pub(in crate::backend::direct_wasm) struct FunctionExecutionContextState {
     pub(in crate::backend::direct_wasm) current_arguments_length_override: Option<Expression>,
     pub(in crate::backend::direct_wasm) top_level_function: bool,
     pub(in crate::backend::direct_wasm) derived_constructor: bool,
+    pub(in crate::backend::direct_wasm) direct_eval_in_class_field_initializer: bool,
+    pub(in crate::backend::direct_wasm) private_field_initializer_block: bool,
     pub(in crate::backend::direct_wasm) self_binding_local: Option<u32>,
     pub(in crate::backend::direct_wasm) self_binding_runtime_value: Option<i32>,
     pub(in crate::backend::direct_wasm) isolated_indirect_eval: bool,
@@ -32,6 +34,8 @@ impl FunctionExecutionContextState {
             current_arguments_length_override: None,
             top_level_function: prepared.top_level_function,
             derived_constructor: prepared.derived_constructor,
+            direct_eval_in_class_field_initializer: prepared.direct_eval_in_class_field_initializer,
+            private_field_initializer_block: false,
             self_binding_local: prepared.self_binding_local,
             self_binding_runtime_value: prepared.self_binding_runtime_value,
             isolated_indirect_eval: false,
@@ -46,6 +50,8 @@ impl FunctionExecutionContextState {
         self.current_arguments_length_override = None;
         self.top_level_function = true;
         self.strict_mode = false;
+        self.direct_eval_in_class_field_initializer = false;
+        self.private_field_initializer_block = false;
         self.isolated_indirect_eval = true;
     }
 }

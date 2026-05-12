@@ -1,7 +1,7 @@
 use std::env;
 use std::fs;
 
-use ayeyaiyai::{CompileOptions, compile_file, compile_source_with_reason, frontend};
+use ayeyaiyai::{CompileOptions, backend, compile_file, compile_source_with_reason, frontend, ir};
 
 fn main() {
     let path = env::args().nth(1).unwrap_or_else(|| {
@@ -46,6 +46,31 @@ fn main() {
         match result {
             Ok(()) => println!("ok"),
             Err(error) => println!("unsupported: {error:#}"),
+        }
+        return;
+    }
+
+    if env::var_os("AYY_DEBUG_REASON_PHASES").is_some() {
+        eprintln!("phase=parse");
+        let program = frontend::parse(&source).unwrap_or_else(|error| {
+            eprintln!("parse error: {error:#}");
+            std::process::exit(1);
+        });
+        eprintln!("phase=validate");
+        ir::pipeline::validate(&program).unwrap_or_else(|error| {
+            eprintln!("validate error: {error:#}");
+            std::process::exit(1);
+        });
+        eprintln!("phase=lower_static_function_constructors");
+        let program =
+            ir::passes::static_function_constructors::lower(program).unwrap_or_else(|error| {
+                eprintln!("lower error: {error:#}");
+                std::process::exit(1);
+            });
+        eprintln!("phase=backend_emit");
+        match backend::emit_wasm_with_reason(&program) {
+            Ok(_) => println!("ok"),
+            Err(message) => println!("unsupported: {message}"),
         }
         return;
     }

@@ -1,10 +1,319 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn expression_is_top_level_global_object_reference(&self, expression: &Expression) -> bool {
+        matches!(expression, Expression::Identifier(name) if name == "globalThis" && self.is_unshadowed_builtin_identifier(name))
+            || (self.state.speculation.execution_context.top_level_function
+                && matches!(expression, Expression::This))
+    }
+
+    fn emit_top_level_global_object_member_delete(
+        &mut self,
+        object: &Expression,
+        property: &Expression,
+    ) -> DirectResult<bool> {
+        if !self.expression_is_top_level_global_object_reference(object) {
+            return Ok(false);
+        }
+
+        let resolved_property = self
+            .resolve_property_key_expression(property)
+            .unwrap_or_else(|| self.materialize_static_expression(property));
+        let Expression::String(property_name) = resolved_property else {
+            return Ok(false);
+        };
+
+        if self
+            .backend
+            .global_property_descriptor(&property_name)
+            .is_some_and(|descriptor| !descriptor.configurable)
+        {
+            self.push_i32_const(0);
+            return Ok(true);
+        }
+
+        if builtin_identifier_kind(&property_name).is_some()
+            && !builtin_identifier_delete_returns_true(&property_name)
+        {
+            self.push_i32_const(0);
+            return Ok(true);
+        }
+
+        Ok(false)
+    }
+
+    fn object_binding_property_removal_plan(
+        &self,
+        object_binding: &ObjectValueBinding,
+        property: &Expression,
+    ) -> (Option<String>, Vec<Expression>) {
+        let resolved_property = self.canonical_object_property_expression(property);
+        if let Some(property_name) = static_property_name_from_expression(&resolved_property) {
+            return (Some(property_name), Vec::new());
+        }
+
+        let matching_keys = object_binding
+            .symbol_properties
+            .iter()
+            .filter_map(|(existing_key, _)| {
+                let resolved_existing = self.canonical_object_property_expression(existing_key);
+                static_expression_matches(&resolved_existing, &resolved_property)
+                    .then_some(existing_key.clone())
+            })
+            .collect();
+        (None, matching_keys)
+    }
+
+    fn emit_dynamic_symbol_named_object_member_delete(
+        &mut self,
+        name: &str,
+        property: &Expression,
+    ) -> DirectResult<bool> {
+        let object_expression = Expression::Identifier(name.to_string());
+        let Some(object_binding) = self.resolve_object_binding_from_expression(&object_expression)
+        else {
+            return Ok(false);
+        };
+        let owner_name = if let Some(owner_name) =
+            self.runtime_object_property_shadow_owner_name_for_identifier(name)
+        {
+            owner_name
+        } else {
+            if !self.binding_name_is_global(name)
+                && !self
+                    .state
+                    .speculation
+                    .static_semantics
+                    .has_local_object_binding(name)
+            {
+                let local_object_binding = self
+                    .state
+                    .speculation
+                    .static_semantics
+                    .ensure_local_object_binding(name);
+                *local_object_binding = object_binding.clone();
+            }
+            let Some(owner_name) =
+                self.runtime_object_property_shadow_owner_name_for_identifier(name)
+            else {
+                return Ok(false);
+            };
+            owner_name
+        };
+        if object_binding.symbol_properties.is_empty() {
+            return Ok(false);
+        }
+        if let Some(object_binding) = self
+            .state
+            .speculation
+            .static_semantics
+            .local_object_binding_mut(name)
+        {
+            object_binding.runtime_symbol_properties = true;
+        }
+        if let Some(object_binding) = self
+            .backend
+            .global_semantics
+            .values
+            .object_bindings
+            .get_mut(name)
+        {
+            object_binding.runtime_symbol_properties = true;
+        }
+
+        let property_local = self.allocate_temp_local();
+        self.emit_numeric_expression(property)?;
+        self.push_local_set(property_local);
+
+        if let Some((existing_key, _)) =
+            self.resolve_static_symbol_property_shadow_entry(&object_binding, property)
+        {
+            let binding =
+                self.runtime_object_property_shadow_binding_by_property(&owner_name, &existing_key);
+            let deleted_binding = self.runtime_object_property_shadow_deleted_binding_by_property(
+                &owner_name,
+                &existing_key,
+            );
+            self.push_i32_const(JS_UNDEFINED_TAG);
+            self.push_global_set(binding.value_index);
+            self.push_i32_const(0);
+            self.push_global_set(binding.present_index);
+            self.push_i32_const(JS_UNDEFINED_TAG);
+            self.push_global_set(deleted_binding.value_index);
+            self.push_i32_const(1);
+            self.push_global_set(deleted_binding.present_index);
+            self.push_i32_const(1);
+            return Ok(true);
+        }
+
+        let mut open_frames = 0;
+        for (existing_key, _) in object_binding.symbol_properties {
+            let comparison_key = self.canonical_object_property_expression(&existing_key);
+            self.push_local_get(property_local);
+            self.emit_numeric_expression(&comparison_key)?;
+            self.push_binary_op(BinaryOp::Equal)?;
+            self.state.emission.output.instructions.push(0x04);
+            self.state.emission.output.instructions.push(I32_TYPE);
+            self.push_control_frame();
+            open_frames += 1;
+            let binding =
+                self.runtime_object_property_shadow_binding_by_property(&owner_name, &existing_key);
+            let deleted_binding = self.runtime_object_property_shadow_deleted_binding_by_property(
+                &owner_name,
+                &existing_key,
+            );
+            self.push_i32_const(JS_UNDEFINED_TAG);
+            self.push_global_set(binding.value_index);
+            self.push_i32_const(0);
+            self.push_global_set(binding.present_index);
+            self.push_i32_const(JS_UNDEFINED_TAG);
+            self.push_global_set(deleted_binding.value_index);
+            self.push_i32_const(1);
+            self.push_global_set(deleted_binding.present_index);
+            self.push_i32_const(1);
+            self.state.emission.output.instructions.push(0x05);
+        }
+
+        self.push_i32_const(1);
+        for _ in 0..open_frames {
+            self.state.emission.output.instructions.push(0x0b);
+            self.pop_control_frame();
+        }
+        Ok(true)
+    }
+
+    fn emit_dynamic_string_named_object_member_delete(
+        &mut self,
+        name: &str,
+        property: &Expression,
+    ) -> DirectResult<bool> {
+        let object_expression = Expression::Identifier(name.to_string());
+        let Some(object_binding) = self.resolve_object_binding_from_expression(&object_expression)
+        else {
+            if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+                eprintln!("dynamic_string_delete object={name} binding=<none>");
+            }
+            return Ok(false);
+        };
+        if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+            eprintln!(
+                "dynamic_string_delete object={name} keys={:?}",
+                object_binding
+                    .string_properties
+                    .iter()
+                    .map(|(property_name, _)| property_name.clone())
+                    .collect::<Vec<_>>()
+            );
+        }
+        if object_binding.string_properties.is_empty() {
+            return Ok(false);
+        }
+        let owner_name = if let Some(owner_name) =
+            self.runtime_object_property_shadow_owner_name_for_identifier(name)
+        {
+            owner_name
+        } else {
+            if !self.binding_name_is_global(name)
+                && !self
+                    .state
+                    .speculation
+                    .static_semantics
+                    .has_local_object_binding(name)
+            {
+                let local_object_binding = self
+                    .state
+                    .speculation
+                    .static_semantics
+                    .ensure_local_object_binding(name);
+                *local_object_binding = object_binding.clone();
+            }
+            let Some(owner_name) =
+                self.runtime_object_property_shadow_owner_name_for_identifier(name)
+            else {
+                return Ok(false);
+            };
+            owner_name
+        };
+
+        if matches!(property, Expression::Identifier(property_name) if property_name == "name")
+            && object_binding
+                .string_properties
+                .iter()
+                .any(|(property_name, _)| property_name == "name")
+        {
+            let existing_key = Expression::String("name".to_string());
+            let binding =
+                self.runtime_object_property_shadow_binding_by_property(&owner_name, &existing_key);
+            let deleted_binding = self.runtime_object_property_shadow_deleted_binding_by_property(
+                &owner_name,
+                &existing_key,
+            );
+            self.push_i32_const(JS_UNDEFINED_TAG);
+            self.push_global_set(binding.value_index);
+            self.push_i32_const(0);
+            self.push_global_set(binding.present_index);
+            self.push_i32_const(JS_UNDEFINED_TAG);
+            self.push_global_set(deleted_binding.value_index);
+            self.push_i32_const(1);
+            self.push_global_set(deleted_binding.present_index);
+            self.push_i32_const(1);
+            return Ok(true);
+        }
+
+        let property_local = self.allocate_temp_local();
+        self.emit_numeric_expression(property)?;
+        self.push_local_set(property_local);
+
+        let mut open_frames = 0;
+        for (property_name, _) in object_binding.string_properties {
+            let existing_key = Expression::String(property_name);
+            self.push_local_get(property_local);
+            self.emit_numeric_expression(&existing_key)?;
+            self.push_binary_op(BinaryOp::Equal)?;
+            self.state.emission.output.instructions.push(0x04);
+            self.state.emission.output.instructions.push(I32_TYPE);
+            self.push_control_frame();
+            open_frames += 1;
+            let binding =
+                self.runtime_object_property_shadow_binding_by_property(&owner_name, &existing_key);
+            let deleted_binding = self.runtime_object_property_shadow_deleted_binding_by_property(
+                &owner_name,
+                &existing_key,
+            );
+            self.push_i32_const(JS_UNDEFINED_TAG);
+            self.push_global_set(binding.value_index);
+            self.push_i32_const(0);
+            self.push_global_set(binding.present_index);
+            self.push_i32_const(JS_UNDEFINED_TAG);
+            self.push_global_set(deleted_binding.value_index);
+            self.push_i32_const(1);
+            self.push_global_set(deleted_binding.present_index);
+            self.push_i32_const(1);
+            self.state.emission.output.instructions.push(0x05);
+        }
+
+        self.push_i32_const(1);
+        for _ in 0..open_frames {
+            self.state.emission.output.instructions.push(0x0b);
+            self.pop_control_frame();
+        }
+        Ok(true)
+    }
+
     pub(in crate::backend::direct_wasm) fn emit_delete_expression(
         &mut self,
         expression: &Expression,
     ) -> DirectResult<()> {
+        if let Expression::Identifier(name) = expression
+            && let Some(scope_object) = self.resolve_with_scope_binding(name)?
+        {
+            let member_expression = Expression::Member {
+                object: Box::new(scope_object),
+                property: Box::new(Expression::String(name.clone())),
+            };
+            return self.emit_delete_expression(&member_expression);
+        }
+
         match expression {
             Expression::Identifier(name)
                 if self.resolve_current_local_binding(name).is_none()
@@ -42,6 +351,14 @@ impl<'a> FunctionCompiler<'a> {
                     .insert(name.clone());
                 self.push_i32_const(1);
                 return Ok(());
+            }
+            Expression::Identifier(name)
+                if self.is_current_arguments_binding_name(name)
+                    && self
+                        .current_user_function()
+                        .is_some_and(|function| !function.lexical_this) =>
+            {
+                self.push_i32_const(0);
             }
             Expression::Identifier(name) if self.is_identifier_bound(name) => {
                 self.push_i32_const(0);
@@ -118,6 +435,11 @@ impl<'a> FunctionCompiler<'a> {
                 self.emit_delete_result_or_throw_if_strict()?;
                 return Ok(());
             }
+            Expression::Member { object, property } if self.is_direct_arguments_object(object) => {
+                self.emit_dynamic_direct_arguments_property_delete(property)?;
+                self.emit_delete_result_or_throw_if_strict()?;
+                return Ok(());
+            }
             Expression::Member { object, property }
                 if argument_index_from_expression(property).is_some() =>
             {
@@ -177,9 +499,23 @@ impl<'a> FunctionCompiler<'a> {
                 self.state.emission.output.instructions.push(0x1a);
                 self.push_i32_const(1);
             }
+            Expression::Member { object, property }
+                if self.is_array_prototype_symbol_iterator_member(object, property) =>
+            {
+                self.emit_array_prototype_symbol_iterator_deleted_marker(true)?;
+                self.push_i32_const(1);
+                return Ok(());
+            }
             Expression::Member { object, property } => {
+                if self.emit_top_level_global_object_member_delete(object, property)? {
+                    return Ok(());
+                }
                 let resolved_property = self
                     .resolve_property_key_expression(property)
+                    .or_else(|| {
+                        self.resolve_static_string_value(property)
+                            .map(Expression::String)
+                    })
                     .unwrap_or_else(|| self.materialize_static_expression(property));
                 if matches!(
                     resolved_property,
@@ -199,8 +535,42 @@ impl<'a> FunctionCompiler<'a> {
                     return Ok(());
                 }
                 if let Expression::Identifier(name) = object.as_ref() {
-                    let materialized_property = resolved_property;
-                    self.clear_runtime_object_property_shadow_binding(
+                    let materialized_property =
+                        self.canonical_object_property_expression(&resolved_property);
+                    let local_removal_plan = self
+                        .state
+                        .speculation
+                        .static_semantics
+                        .local_object_binding(name)
+                        .map(|binding| {
+                            self.object_binding_property_removal_plan(
+                                binding,
+                                &materialized_property,
+                            )
+                        });
+                    let global_removal_plan = self
+                        .backend
+                        .global_semantics
+                        .values
+                        .object_bindings
+                        .get(name)
+                        .map(|binding| {
+                            self.object_binding_property_removal_plan(
+                                binding,
+                                &materialized_property,
+                            )
+                        });
+                    if static_property_name_from_expression(&materialized_property).is_none()
+                        && self.emit_dynamic_string_named_object_member_delete(name, property)?
+                    {
+                        return Ok(());
+                    }
+                    if static_property_name_from_expression(&materialized_property).is_none()
+                        && self.emit_dynamic_symbol_named_object_member_delete(name, property)?
+                    {
+                        return Ok(());
+                    }
+                    self.mark_runtime_object_property_shadow_deleted_binding(
                         object,
                         &materialized_property,
                     );
@@ -210,7 +580,22 @@ impl<'a> FunctionCompiler<'a> {
                         .static_semantics
                         .local_object_binding_mut(name)
                     {
-                        object_binding_remove_property(object_binding, &materialized_property);
+                        let (string_property, symbol_keys) =
+                            local_removal_plan.unwrap_or((None, Vec::new()));
+                        if let Some(property_name) = string_property {
+                            object_binding
+                                .string_properties
+                                .retain(|(existing_name, _)| *existing_name != property_name);
+                            object_binding
+                                .non_enumerable_string_properties
+                                .retain(|hidden_name| hidden_name != &property_name);
+                        } else {
+                            object_binding
+                                .symbol_properties
+                                .retain(|(existing_key, _)| {
+                                    !symbol_keys.iter().any(|key| key == existing_key)
+                                });
+                        }
                         self.push_i32_const(1);
                         return Ok(());
                     }
@@ -221,7 +606,22 @@ impl<'a> FunctionCompiler<'a> {
                         .object_bindings
                         .get_mut(name)
                     {
-                        object_binding_remove_property(object_binding, &materialized_property);
+                        let (string_property, symbol_keys) =
+                            global_removal_plan.unwrap_or((None, Vec::new()));
+                        if let Some(property_name) = string_property {
+                            object_binding
+                                .string_properties
+                                .retain(|(existing_name, _)| *existing_name != property_name);
+                            object_binding
+                                .non_enumerable_string_properties
+                                .retain(|hidden_name| hidden_name != &property_name);
+                        } else {
+                            object_binding
+                                .symbol_properties
+                                .retain(|(existing_key, _)| {
+                                    !symbol_keys.iter().any(|key| key == existing_key)
+                                });
+                        }
                         self.push_i32_const(1);
                         return Ok(());
                     }

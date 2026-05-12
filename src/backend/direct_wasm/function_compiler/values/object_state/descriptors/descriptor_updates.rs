@@ -117,14 +117,26 @@ impl<'a> FunctionCompiler<'a> {
                 .clear_local_value_binding(name);
             return;
         }
-        let materialized_value =
-            if let Some(bigint) = self.resolve_static_bigint_value(&snapshot_value) {
-                Expression::BigInt(bigint.to_string())
-            } else {
-                self.resolve_static_string_value(&snapshot_value)
-                    .map(Expression::String)
-                    .unwrap_or_else(|| self.materialize_static_expression(&snapshot_value))
-            };
+        let preserve_reference_alias =
+            matches!(snapshot_value, Expression::Identifier(_) | Expression::This)
+                && (self
+                    .resolve_object_binding_from_expression(&snapshot_value)
+                    .is_some()
+                    || self
+                        .resolve_array_binding_from_expression(&snapshot_value)
+                        .is_some()
+                    || self
+                        .resolve_function_binding_from_expression(&snapshot_value)
+                        .is_some());
+        let materialized_value = if preserve_reference_alias {
+            snapshot_value.clone()
+        } else if let Some(bigint) = self.resolve_static_bigint_value(&snapshot_value) {
+            Expression::BigInt(bigint.to_string())
+        } else {
+            self.resolve_static_string_value(&snapshot_value)
+                .map(Expression::String)
+                .unwrap_or_else(|| self.materialize_static_expression(&snapshot_value))
+        };
         self.state
             .speculation
             .static_semantics

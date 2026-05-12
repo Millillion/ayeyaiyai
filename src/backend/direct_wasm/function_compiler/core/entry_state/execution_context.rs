@@ -18,6 +18,9 @@ impl<'a> FunctionCompiler<'a> {
         let derived_constructor = current_function_declaration
             .as_ref()
             .is_some_and(|declaration| declaration.derived_constructor);
+        let direct_eval_in_class_field_initializer = current_function_declaration
+            .as_ref()
+            .is_some_and(|declaration| declaration.direct_eval_in_class_field_initializer);
         let (self_binding_local, self_binding_runtime_value) = user_function
             .and_then(|function| {
                 declaration.and_then(|declaration| {
@@ -46,6 +49,7 @@ impl<'a> FunctionCompiler<'a> {
             current_arguments_length_present,
             top_level_function,
             derived_constructor,
+            direct_eval_in_class_field_initializer,
             self_binding_local,
             self_binding_runtime_value,
         }

@@ -15,7 +15,7 @@ impl<'a> FunctionCompiler<'a> {
             )
             .and_then(|value| self.resolve_function_binding_from_expression(value))
             .is_some();
-            if has_next_method || self.resolve_iterator_source_kind(iterated).is_some() {
+            if has_next_method {
                 return Some(object_binding);
             }
         }
@@ -23,9 +23,15 @@ impl<'a> FunctionCompiler<'a> {
             object: Box::new((**iterated).clone()),
             property: Box::new(self.materialize_static_expression(&symbol_iterator_expression())),
         };
-        self.resolve_object_binding_from_expression(&Expression::Call {
-            callee: Box::new(iterator_callee),
-            arguments: Vec::new(),
-        })
+        if let Some(iterator_binding) =
+            self.resolve_object_binding_from_expression(&Expression::Call {
+                callee: Box::new(iterator_callee),
+                arguments: Vec::new(),
+            })
+        {
+            return Some(iterator_binding);
+        }
+        self.resolve_iterator_source_kind(iterated)
+            .map(|_| empty_object_value_binding())
     }
 }

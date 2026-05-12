@@ -8,9 +8,20 @@ impl<'a> FunctionCompiler<'a> {
         else_expression: &Expression,
     ) -> Expression {
         let materialized_condition = self.materialize_static_expression(condition);
-        if let Some(condition_value) =
-            self.resolve_static_if_condition_value(&materialized_condition)
+        let condition_value = if self.if_condition_depends_on_active_loop_assignment(condition)
+            || self.expression_has_dynamic_member_property_access(condition)
         {
+            None
+        } else {
+            self.resolve_static_if_condition_value(&materialized_condition)
+        }
+        .or_else(|| {
+            (!self.expression_has_dynamic_member_property_access(condition)
+                && self.if_condition_depends_on_active_iterator_loop_assignment(condition))
+            .then(|| self.resolve_static_loop_dependent_if_condition_value(condition))
+            .flatten()
+        });
+        if let Some(condition_value) = condition_value {
             let branch = if condition_value {
                 then_expression
             } else {
@@ -31,9 +42,18 @@ impl<'a> FunctionCompiler<'a> {
         callee: &Expression,
         arguments: &[CallArgument],
     ) -> Expression {
-        if let Some(value) = self
-            .resolve_static_has_own_property_call_result(expression)
+        let static_has_own_result = match callee {
+            Expression::Member { property, .. } if matches!(property.as_ref(), Expression::String(name) if name == "hasOwnProperty") => {
+                self.resolve_static_has_own_property_call_result(expression)
+            }
+            _ => None,
+        };
+        if let Some(value) = static_has_own_result
             .map(Expression::Bool)
+            .or_else(|| {
+                self.resolve_static_reflect_has_call_result(expression)
+                    .map(Expression::Bool)
+            })
             .or_else(|| {
                 self.resolve_static_is_nan_call_result(expression)
                     .map(Expression::Bool)
@@ -65,7 +85,9 @@ impl<'a> FunctionCompiler<'a> {
         if matches!(callee, Expression::Identifier(_))
             && !self
                 .resolve_user_function_from_expression(callee)
-                .is_some_and(|user_function| user_function.is_async())
+                .is_some_and(|user_function| {
+                    user_function.is_async() || user_function.is_generator()
+                })
             && let Some(value) = self.resolve_static_call_result_expression(callee, arguments)
         {
             return self.materialize_static_expression(&value);

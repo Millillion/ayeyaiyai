@@ -1,6 +1,6 @@
 use crate::backend::direct_wasm::{
-    ArrayIteratorBinding, ArrayValueBinding, IteratorStepBinding, ResizableArrayBufferBinding,
-    RuntimeArraySlot, SpecializedFunctionValue, TypedArrayViewBinding,
+    ArrayIteratorBinding, ArrayValueBinding, CachedIteratorNextMethodBinding, IteratorStepBinding,
+    ResizableArrayBufferBinding, RuntimeArraySlot, SpecializedFunctionValue, TypedArrayViewBinding,
 };
 use std::collections::HashMap;
 
@@ -29,6 +29,8 @@ pub(in crate::backend::direct_wasm) struct FunctionArraySemanticsState {
         HashMap<String, HashMap<u32, RuntimeArraySlot>>,
     pub(in crate::backend::direct_wasm) local_array_iterator_bindings:
         HashMap<String, ArrayIteratorBinding>,
+    pub(in crate::backend::direct_wasm) cached_iterator_next_method_bindings:
+        HashMap<String, CachedIteratorNextMethodBinding>,
     pub(in crate::backend::direct_wasm) local_iterator_step_bindings:
         HashMap<String, IteratorStepBinding>,
     pub(in crate::backend::direct_wasm) runtime_array_length_locals: HashMap<String, u32>,
@@ -46,6 +48,7 @@ impl FunctionArraySemanticsState {
             tracked_array_function_values: HashMap::new(),
             runtime_array_slots: HashMap::new(),
             local_array_iterator_bindings: HashMap::new(),
+            cached_iterator_next_method_bindings: HashMap::new(),
             local_iterator_step_bindings: HashMap::new(),
             runtime_array_length_locals: HashMap::new(),
         }

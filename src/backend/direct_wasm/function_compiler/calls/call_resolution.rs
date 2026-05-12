@@ -39,6 +39,7 @@ pub(in crate::backend::direct_wasm) enum BoundSnapshotControlFlow {
     None,
     Return(Expression),
     Throw(Expression),
+    Break(Option<String>),
 }
 
 pub(in crate::backend::direct_wasm) struct PreparedStaticUserFunctionExecution {

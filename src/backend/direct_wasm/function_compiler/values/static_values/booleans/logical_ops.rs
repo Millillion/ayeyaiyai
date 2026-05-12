@@ -5,6 +5,9 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         expression: &Expression,
     ) -> Option<bool> {
+        if Self::expression_contains_assignment_or_update(expression) {
+            return None;
+        }
         if let Expression::Binary { op, left, right } = expression {
             let compare = |lhs: bool, rhs: bool| match op {
                 BinaryOp::Equal | BinaryOp::LooseEqual => Some(lhs == rhs),
@@ -31,6 +34,26 @@ impl<'a> FunctionCompiler<'a> {
         left: &Expression,
         right: &Expression,
     ) -> Option<Expression> {
+        if let Expression::Identifier(name) = left
+            && self
+                .resolve_bound_alias_expression(left)
+                .filter(|resolved| !static_expression_matches(resolved, left))
+                .is_none()
+            && !(name == "undefined" && self.is_unshadowed_builtin_identifier(name))
+            && !(name == "NaN" && self.is_unshadowed_builtin_identifier(name))
+            && !matches!(
+                self.lookup_identifier_kind(name),
+                Some(
+                    StaticValueKind::Object
+                        | StaticValueKind::Function
+                        | StaticValueKind::Symbol
+                        | StaticValueKind::Null
+                        | StaticValueKind::Undefined
+                )
+            )
+        {
+            return None;
+        }
         match op {
             BinaryOp::LogicalAnd => {
                 let left_truthy = self.resolve_static_boolean_expression(left)?;

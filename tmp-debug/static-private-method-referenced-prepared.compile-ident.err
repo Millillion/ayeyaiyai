@@ -1,0 +1,2270 @@
+identifier_read:start name=message
+identifier_read:path direct_fallback name=message
+identifier_read:fallback:start name=message
+identifier_read:fallback:path local name=message local_index=0
+identifier_read:fallback:done name=message
+identifier_read:start name=value
+identifier_read:path direct_fallback name=value
+identifier_read:fallback:start name=value
+identifier_read:fallback:path local name=value local_index=0
+identifier_read:fallback:done name=value
+identifier_read:start name=value
+identifier_read:path direct_fallback name=value
+identifier_read:fallback:start name=value
+identifier_read:fallback:path local name=value local_index=0
+identifier_read:fallback:done name=value
+identifier_read:start name=JSON
+identifier_read:path no_implicit_global name=JSON
+identifier_read:fallback:start name=JSON
+identifier_read:fallback:path inferred_kind name=JSON
+identifier_read:fallback:done name=JSON
+identifier_read:start name=value
+identifier_read:path direct_fallback name=value
+identifier_read:fallback:start name=value
+identifier_read:fallback:path local name=value local_index=0
+identifier_read:fallback:done name=value
+identifier_read:start name=value
+identifier_read:path direct_fallback name=value
+identifier_read:fallback:start name=value
+identifier_read:fallback:path local name=value local_index=0
+identifier_read:fallback:done name=value
+identifier_read:start name=value
+identifier_read:path direct_fallback name=value
+identifier_read:fallback:start name=value
+identifier_read:fallback:path local name=value local_index=0
+identifier_read:fallback:done name=value
+identifier_read:start name=value
+identifier_read:path direct_fallback name=value
+identifier_read:fallback:start name=value
+identifier_read:fallback:path local name=value local_index=0
+identifier_read:fallback:done name=value
+identifier_read:start name=value
+identifier_read:path direct_fallback name=value
+identifier_read:fallback:start name=value
+identifier_read:fallback:path local name=value local_index=0
+identifier_read:fallback:done name=value
+identifier_read:start name=Infinity
+identifier_read:path no_implicit_global name=Infinity
+identifier_read:fallback:start name=Infinity
+identifier_read:fallback:path inferred_kind name=Infinity
+identifier_read:fallback:done name=Infinity
+identifier_read:start name=value
+identifier_read:path direct_fallback name=value
+identifier_read:fallback:start name=value
+identifier_read:fallback:path local name=value local_index=0
+identifier_read:fallback:done name=value
+identifier_read:start name=value
+identifier_read:path direct_fallback name=value
+identifier_read:fallback:start name=value
+identifier_read:fallback:path local name=value local_index=0
+identifier_read:fallback:done name=value
+identifier_read:start name=left
+identifier_read:path direct_fallback name=left
+identifier_read:fallback:start name=left
+identifier_read:fallback:path local name=left local_index=0
+identifier_read:fallback:done name=left
+identifier_read:start name=right
+identifier_read:path direct_fallback name=right
+identifier_read:fallback:start name=right
+identifier_read:fallback:path local name=right local_index=1
+identifier_read:fallback:done name=right
+identifier_read:start name=left
+identifier_read:path direct_fallback name=left
+identifier_read:fallback:start name=left
+identifier_read:fallback:path local name=left local_index=0
+identifier_read:fallback:done name=left
+identifier_read:start name=left
+identifier_read:path direct_fallback name=left
+identifier_read:fallback:start name=left
+identifier_read:fallback:path local name=left local_index=0
+identifier_read:fallback:done name=left
+identifier_read:start name=right
+identifier_read:path direct_fallback name=right
+identifier_read:fallback:start name=right
+identifier_read:fallback:path local name=right local_index=1
+identifier_read:fallback:done name=right
+identifier_read:start name=left
+identifier_read:path direct_fallback name=left
+identifier_read:fallback:start name=left
+identifier_read:fallback:path local name=left local_index=0
+identifier_read:fallback:done name=left
+identifier_read:start name=left
+identifier_read:path direct_fallback name=left
+identifier_read:fallback:start name=left
+identifier_read:fallback:path local name=left local_index=0
+identifier_read:fallback:done name=left
+identifier_read:start name=right
+identifier_read:path direct_fallback name=right
+identifier_read:fallback:start name=right
+identifier_read:fallback:path local name=right local_index=1
+identifier_read:fallback:done name=right
+identifier_read:start name=right
+identifier_read:path direct_fallback name=right
+identifier_read:fallback:start name=right
+identifier_read:fallback:path local name=right local_index=1
+identifier_read:fallback:done name=right
+identifier_read:start name=value
+identifier_read:path direct_fallback name=value
+identifier_read:fallback:start name=value
+identifier_read:fallback:path local name=value local_index=0
+identifier_read:fallback:done name=value
+identifier_store:basic:canonical
+identifier_store:basic:tracked
+identifier_store:basic:descriptor
+identifier_store:basic:call_snapshot
+identifier_store:basic:function_binding
+identifier_store:basic:object_binding
+identifier_store:basic:kind
+identifier_store:basic:string
+identifier_store:basic:number
+identifier_store:basic:array
+identifier_store:basic:module
+identifier_store:basic:prepared
+identifier_store:basic:shared_updates:start
+identifier_store:basic:shared:member_bindings:start
+identifier_store:basic:shared:member_bindings:done
+identifier_store:basic:shared:local_function:start
+identifier_store:basic:shared:local_function:done
+identifier_store:basic:shared:specialized_function:start
+identifier_store:basic:shared:specialized_function:done
+identifier_store:basic:shared:proxy:start
+identifier_store:basic:shared:proxy:done
+identifier_store:basic:shared:object_literal_members:start
+identifier_store:basic:shared:object_literal_members:done
+identifier_store:basic:shared:array_binding:start
+identifier_store:basic:shared:array_binding:done
+identifier_store:basic:shared:resizable_array_buffer:start
+identifier_store:basic:shared:resizable_array_buffer:done
+identifier_store:basic:shared:typed_array_view:start
+identifier_store:basic:shared:typed_array_view:done
+identifier_store:basic:shared:iterator_step:start
+identifier_store:basic:shared:iterator_step:done
+identifier_store:basic:shared:object_binding:start
+identifier_store:basic:shared:object_binding:done
+identifier_store:basic:shared:arguments_binding:start
+identifier_store:basic:shared:arguments_binding:done
+identifier_store:basic:shared:descriptor_binding:start
+identifier_store:basic:shared:descriptor_binding:done
+identifier_store:basic:shared:iterator_source:start
+identifier_store:basic:shared:iterator_source:done
+identifier_store:basic:shared:array_iterator_binding:start
+identifier_store:basic:shared:array_iterator_binding:done
+identifier_store:basic:shared_updates:done
+identifier_store:basic:store_local
+identifier_store:basic:runtime_shadows target_owner=basic source_owner=None object_binding_props=[]
+identifier_store:basic:done
+identifier_read:start name=basic
+identifier_read:path direct_fallback name=basic
+identifier_read:fallback:start name=basic
+identifier_read:fallback:path local name=basic local_index=6
+identifier_read:fallback:done name=basic
+identifier_read:start name=basic
+identifier_read:path direct_fallback name=basic
+identifier_read:fallback:start name=basic
+identifier_read:fallback:path local name=basic local_index=6
+identifier_read:fallback:done name=basic
+identifier_read:start name=value
+identifier_read:path direct_fallback name=value
+identifier_read:fallback:start name=value
+identifier_read:fallback:path local name=value local_index=0
+identifier_read:fallback:done name=value
+identifier_read:start name=error
+identifier_read:path direct_fallback name=error
+identifier_read:fallback:start name=error
+identifier_read:fallback:path local name=error local_index=7
+identifier_read:fallback:done name=error
+identifier_read:start name=error
+identifier_read:path direct_fallback name=error
+identifier_read:fallback:start name=error
+identifier_read:fallback:path local name=error local_index=7
+identifier_read:fallback:done name=error
+identifier_read:start name=error
+identifier_read:path direct_fallback name=error
+identifier_read:fallback:start name=error
+identifier_read:fallback:path local name=error local_index=7
+identifier_read:fallback:done name=error
+identifier_read:start name=error
+identifier_read:path direct_fallback name=error
+identifier_read:fallback:start name=error
+identifier_read:fallback:path local name=error local_index=7
+identifier_read:fallback:done name=error
+identifier_read:start name=error
+identifier_read:path direct_fallback name=error
+identifier_read:fallback:start name=error
+identifier_read:fallback:path local name=error local_index=7
+identifier_read:fallback:done name=error
+identifier_read:start name=error
+identifier_read:path direct_fallback name=error
+identifier_read:fallback:start name=error
+identifier_read:fallback:path local name=error local_index=7
+identifier_read:fallback:done name=error
+identifier_read:start name=error
+identifier_read:path direct_fallback name=error
+identifier_read:fallback:start name=error
+identifier_read:fallback:path local name=error local_index=7
+identifier_read:fallback:done name=error
+identifier_read:start name=error
+identifier_read:path direct_fallback name=error
+identifier_read:fallback:start name=error
+identifier_read:fallback:path local name=error local_index=7
+identifier_read:fallback:done name=error
+identifier_read:start name=error
+identifier_read:path direct_fallback name=error
+identifier_read:fallback:start name=error
+identifier_read:fallback:path local name=error local_index=7
+identifier_read:fallback:done name=error
+identifier_read:start name=error
+identifier_read:path direct_fallback name=error
+identifier_read:fallback:start name=error
+identifier_read:fallback:path local name=error local_index=7
+identifier_read:fallback:done name=error
+identifier_read:start name=Object
+identifier_read:path no_implicit_global name=Object
+identifier_read:fallback:start name=Object
+identifier_read:fallback:path inferred_kind name=Object
+identifier_read:fallback:done name=Object
+identifier_read:start name=value
+identifier_read:path direct_fallback name=value
+identifier_read:fallback:start name=value
+identifier_read:fallback:path local name=value local_index=0
+identifier_read:fallback:done name=value
+identifier_read:start name=error
+identifier_read:path direct_fallback name=error
+identifier_read:fallback:start name=error
+identifier_read:fallback:path local name=error local_index=7
+identifier_read:fallback:done name=error
+identifier_read:start name=mustBeTrue
+identifier_read:path direct_fallback name=mustBeTrue
+identifier_read:fallback:start name=mustBeTrue
+identifier_read:fallback:path local name=mustBeTrue local_index=0
+identifier_read:fallback:done name=mustBeTrue
+identifier_read:start name=message
+identifier_read:path direct_fallback name=message
+identifier_read:fallback:start name=message
+identifier_read:fallback:path local name=message local_index=1
+identifier_read:fallback:done name=message
+identifier_read:start name=undefined
+identifier_read:path no_implicit_global name=undefined
+identifier_read:fallback:start name=undefined
+identifier_read:fallback:path undefined name=undefined
+identifier_read:fallback:done name=undefined
+identifier_read:start name=mustBeTrue
+identifier_read:path direct_fallback name=mustBeTrue
+identifier_read:fallback:start name=mustBeTrue
+identifier_read:fallback:path local name=mustBeTrue local_index=0
+identifier_read:fallback:done name=mustBeTrue
+identifier_store:message:canonical
+identifier_store:message:tracked
+identifier_store:message:descriptor
+identifier_store:message:call_snapshot
+identifier_store:message:function_binding
+identifier_store:message:object_binding
+identifier_store:message:kind
+identifier_store:message:string
+identifier_store:message:number
+identifier_store:message:array
+identifier_store:message:module
+identifier_store:message:prepared
+identifier_store:message:shared_updates:start
+identifier_store:message:shared:member_bindings:start
+identifier_store:message:shared:member_bindings:done
+identifier_store:message:shared:local_function:start
+identifier_store:message:shared:local_function:done
+identifier_store:message:shared:specialized_function:start
+identifier_store:message:shared:specialized_function:done
+identifier_store:message:shared:proxy:start
+identifier_store:message:shared:proxy:done
+identifier_store:message:shared:object_literal_members:start
+identifier_store:message:shared:object_literal_members:done
+identifier_store:message:shared:array_binding:start
+identifier_store:message:shared:array_binding:done
+identifier_store:message:shared:resizable_array_buffer:start
+identifier_store:message:shared:resizable_array_buffer:done
+identifier_store:message:shared:typed_array_view:start
+identifier_store:message:shared:typed_array_view:done
+identifier_store:message:shared:iterator_step:start
+identifier_store:message:shared:iterator_step:done
+identifier_store:message:shared:object_binding:start
+identifier_store:message:shared:object_binding:done
+identifier_store:message:shared:arguments_binding:start
+identifier_store:message:shared:arguments_binding:done
+identifier_store:message:shared:descriptor_binding:start
+identifier_store:message:shared:descriptor_binding:done
+identifier_store:message:shared:iterator_source:start
+identifier_store:message:shared:iterator_source:done
+identifier_store:message:shared:array_iterator_binding:start
+identifier_store:message:shared:array_iterator_binding:done
+identifier_store:message:shared_updates:done
+identifier_store:message:store_local
+identifier_store:message:runtime_shadows target_owner=message source_owner=None object_binding_props=[]
+identifier_store:message:done
+identifier_read:start name=message
+identifier_read:path direct_fallback name=message
+identifier_read:fallback:start name=message
+identifier_read:fallback:path local name=message local_index=1
+identifier_read:fallback:done name=message
+identifier_read:start name=__ayy_construct_arg_0_14
+identifier_read:path direct_fallback name=__ayy_construct_arg_0_14
+identifier_read:fallback:start name=__ayy_construct_arg_0_14
+identifier_read:fallback:path local name=__ayy_construct_arg_0_14 local_index=14
+identifier_read:fallback:done name=__ayy_construct_arg_0_14
+identifier_read:start name=condition
+identifier_read:path direct_fallback name=condition
+identifier_read:fallback:start name=condition
+identifier_read:fallback:path local name=condition local_index=0
+identifier_read:fallback:done name=condition
+identifier_read:start name=message
+identifier_read:path direct_fallback name=message
+identifier_read:fallback:start name=message
+identifier_read:fallback:path local name=message local_index=1
+identifier_read:fallback:done name=message
+identifier_read:start name=actual
+identifier_read:path direct_fallback name=actual
+identifier_read:fallback:start name=actual
+identifier_read:fallback:path local name=actual local_index=0
+identifier_read:fallback:done name=actual
+identifier_read:start name=expected
+identifier_read:path direct_fallback name=expected
+identifier_read:fallback:start name=expected
+identifier_read:fallback:path local name=expected local_index=1
+identifier_read:fallback:done name=expected
+identifier_read:start name=message
+identifier_read:path direct_fallback name=message
+identifier_read:fallback:start name=message
+identifier_read:fallback:path local name=message local_index=2
+identifier_read:fallback:done name=message
+identifier_read:start name=error
+identifier_read:path direct_fallback name=error
+identifier_read:fallback:start name=error
+identifier_read:fallback:path local name=error local_index=8
+identifier_read:fallback:done name=error
+identifier_read:start name=__ayy_construct_arg_0_17
+identifier_read:path direct_fallback name=__ayy_construct_arg_0_17
+identifier_read:fallback:start name=__ayy_construct_arg_0_17
+identifier_read:fallback:path local name=__ayy_construct_arg_0_17 local_index=17
+identifier_read:fallback:done name=__ayy_construct_arg_0_17
+identifier_read:start name=message
+identifier_read:path direct_fallback name=message
+identifier_read:fallback:start name=message
+identifier_read:fallback:path local name=message local_index=2
+identifier_read:fallback:done name=message
+identifier_read:start name=undefined
+identifier_read:path no_implicit_global name=undefined
+identifier_read:fallback:start name=undefined
+identifier_read:fallback:path undefined name=undefined
+identifier_read:fallback:done name=undefined
+identifier_store:message:canonical
+identifier_store:message:tracked
+identifier_store:message:descriptor
+identifier_store:message:call_snapshot
+identifier_store:message:function_binding
+identifier_store:message:object_binding
+identifier_store:message:kind
+identifier_store:message:string
+identifier_store:message:number
+identifier_store:message:array
+identifier_store:message:module
+identifier_store:message:prepared
+identifier_store:message:shared_updates:start
+identifier_store:message:shared:member_bindings:start
+identifier_store:message:shared:member_bindings:done
+identifier_store:message:shared:local_function:start
+identifier_store:message:shared:local_function:done
+identifier_store:message:shared:specialized_function:start
+identifier_store:message:shared:specialized_function:done
+identifier_store:message:shared:proxy:start
+identifier_store:message:shared:proxy:done
+identifier_store:message:shared:object_literal_members:start
+identifier_store:message:shared:object_literal_members:done
+identifier_store:message:shared:array_binding:start
+identifier_store:message:shared:array_binding:done
+identifier_store:message:shared:resizable_array_buffer:start
+identifier_store:message:shared:resizable_array_buffer:done
+identifier_store:message:shared:typed_array_view:start
+identifier_store:message:shared:typed_array_view:done
+identifier_store:message:shared:iterator_step:start
+identifier_store:message:shared:iterator_step:done
+identifier_store:message:shared:object_binding:start
+identifier_store:message:shared:object_binding:done
+identifier_store:message:shared:arguments_binding:start
+identifier_store:message:shared:arguments_binding:done
+identifier_store:message:shared:descriptor_binding:start
+identifier_store:message:shared:descriptor_binding:done
+identifier_store:message:shared:iterator_source:start
+identifier_store:message:shared:iterator_source:done
+identifier_store:message:shared:array_iterator_binding:start
+identifier_store:message:shared:array_iterator_binding:done
+identifier_store:message:shared_updates:done
+identifier_store:message:store_local
+identifier_store:message:runtime_shadows target_owner=message source_owner=None object_binding_props=[]
+identifier_store:message:done
+identifier_read:start name=message
+identifier_read:path direct_fallback name=message
+identifier_read:fallback:start name=message
+identifier_read:fallback:path local name=message local_index=2
+identifier_read:fallback:done name=message
+identifier_store:message:canonical
+identifier_store:message:tracked
+identifier_store:message:descriptor
+identifier_store:message:call_snapshot
+identifier_store:message:function_binding
+identifier_store:message:object_binding
+identifier_store:message:kind
+identifier_store:message:string
+identifier_store:message:number
+identifier_store:message:array
+identifier_store:message:module
+identifier_store:message:prepared
+identifier_store:message:shared_updates:start
+identifier_store:message:shared:member_bindings:start
+identifier_store:message:shared:member_bindings:done
+identifier_store:message:shared:local_function:start
+identifier_store:message:shared:local_function:done
+identifier_store:message:shared:specialized_function:start
+identifier_store:message:shared:specialized_function:done
+identifier_store:message:shared:proxy:start
+identifier_store:message:shared:proxy:done
+identifier_store:message:shared:object_literal_members:start
+identifier_store:message:shared:object_literal_members:done
+identifier_store:message:shared:array_binding:start
+identifier_store:message:shared:array_binding:done
+identifier_store:message:shared:resizable_array_buffer:start
+identifier_store:message:shared:resizable_array_buffer:done
+identifier_store:message:shared:typed_array_view:start
+identifier_store:message:shared:typed_array_view:done
+identifier_store:message:shared:iterator_step:start
+identifier_store:message:shared:iterator_step:done
+identifier_store:message:shared:object_binding:start
+identifier_store:message:shared:object_binding:done
+identifier_store:message:shared:arguments_binding:start
+identifier_store:message:shared:arguments_binding:done
+identifier_store:message:shared:descriptor_binding:start
+identifier_store:message:shared:descriptor_binding:done
+identifier_store:message:shared:iterator_source:start
+identifier_store:message:shared:iterator_source:done
+identifier_store:message:shared:array_iterator_binding:start
+identifier_store:message:shared:array_iterator_binding:done
+identifier_store:message:shared_updates:done
+identifier_store:message:store_local
+identifier_store:message:runtime_shadows target_owner=message source_owner=None object_binding_props=[]
+identifier_store:message:done
+identifier_read:start name=message
+identifier_read:path direct_fallback name=message
+identifier_read:fallback:start name=message
+identifier_read:fallback:path local name=message local_index=2
+identifier_read:fallback:done name=message
+identifier_read:start name=actual
+identifier_read:path direct_fallback name=actual
+identifier_read:fallback:start name=actual
+identifier_read:fallback:path local name=actual local_index=0
+identifier_read:fallback:done name=actual
+identifier_read:start name=expected
+identifier_read:path direct_fallback name=expected
+identifier_read:fallback:start name=expected
+identifier_read:fallback:path local name=expected local_index=1
+identifier_read:fallback:done name=expected
+identifier_store:message:canonical
+identifier_store:message:tracked
+identifier_store:message:descriptor
+identifier_store:message:call_snapshot
+identifier_store:message:function_binding
+identifier_store:message:object_binding
+identifier_store:message:kind
+identifier_store:message:string
+identifier_store:message:number
+identifier_store:message:array
+identifier_store:message:module
+identifier_store:message:prepared
+identifier_store:message:shared_updates:start
+identifier_store:message:shared:member_bindings:start
+identifier_store:message:shared:member_bindings:done
+identifier_store:message:shared:local_function:start
+identifier_store:message:shared:local_function:done
+identifier_store:message:shared:specialized_function:start
+identifier_store:message:shared:specialized_function:done
+identifier_store:message:shared:proxy:start
+identifier_store:message:shared:proxy:done
+identifier_store:message:shared:object_literal_members:start
+identifier_store:message:shared:object_literal_members:done
+identifier_store:message:shared:array_binding:start
+identifier_store:message:shared:array_binding:done
+identifier_store:message:shared:resizable_array_buffer:start
+identifier_store:message:shared:resizable_array_buffer:done
+identifier_store:message:shared:typed_array_view:start
+identifier_store:message:shared:typed_array_view:done
+identifier_store:message:shared:iterator_step:start
+identifier_store:message:shared:iterator_step:done
+identifier_store:message:shared:object_binding:start
+identifier_store:message:shared:object_binding:done
+identifier_store:message:shared:arguments_binding:start
+identifier_store:message:shared:arguments_binding:done
+identifier_store:message:shared:descriptor_binding:start
+identifier_store:message:shared:descriptor_binding:done
+identifier_store:message:shared:iterator_source:start
+identifier_store:message:shared:iterator_source:done
+identifier_store:message:shared:array_iterator_binding:start
+identifier_store:message:shared:array_iterator_binding:done
+identifier_store:message:shared_updates:done
+identifier_store:message:store_local
+identifier_store:message:runtime_shadows target_owner=message source_owner=None object_binding_props=[]
+identifier_store:message:done
+identifier_read:start name=message
+identifier_read:path direct_fallback name=message
+identifier_read:fallback:start name=message
+identifier_read:fallback:path local name=message local_index=2
+identifier_read:fallback:done name=message
+identifier_read:start name=__ayy_construct_arg_0_37
+identifier_read:path direct_fallback name=__ayy_construct_arg_0_37
+identifier_read:fallback:start name=__ayy_construct_arg_0_37
+identifier_read:fallback:path local name=__ayy_construct_arg_0_37 local_index=37
+identifier_read:fallback:done name=__ayy_construct_arg_0_37
+identifier_read:start name=actual
+identifier_read:path direct_fallback name=actual
+identifier_read:fallback:start name=actual
+identifier_read:fallback:path local name=actual local_index=0
+identifier_read:fallback:done name=actual
+identifier_read:start name=expected
+identifier_read:path direct_fallback name=expected
+identifier_read:fallback:start name=expected
+identifier_read:fallback:path local name=expected local_index=1
+identifier_read:fallback:done name=expected
+identifier_read:start name=message
+identifier_read:path direct_fallback name=message
+identifier_read:fallback:start name=message
+identifier_read:fallback:path local name=message local_index=2
+identifier_read:fallback:done name=message
+identifier_read:start name=undefined
+identifier_read:path no_implicit_global name=undefined
+identifier_read:fallback:start name=undefined
+identifier_read:fallback:path undefined name=undefined
+identifier_read:fallback:done name=undefined
+identifier_store:message:canonical
+identifier_store:message:tracked
+identifier_store:message:descriptor
+identifier_store:message:call_snapshot
+identifier_store:message:function_binding
+identifier_store:message:object_binding
+identifier_store:message:kind
+identifier_store:message:string
+identifier_store:message:number
+identifier_store:message:array
+identifier_store:message:module
+identifier_store:message:prepared
+identifier_store:message:shared_updates:start
+identifier_store:message:shared:member_bindings:start
+identifier_store:message:shared:member_bindings:done
+identifier_store:message:shared:local_function:start
+identifier_store:message:shared:local_function:done
+identifier_store:message:shared:specialized_function:start
+identifier_store:message:shared:specialized_function:done
+identifier_store:message:shared:proxy:start
+identifier_store:message:shared:proxy:done
+identifier_store:message:shared:object_literal_members:start
+identifier_store:message:shared:object_literal_members:done
+identifier_store:message:shared:array_binding:start
+identifier_store:message:shared:array_binding:done
+identifier_store:message:shared:resizable_array_buffer:start
+identifier_store:message:shared:resizable_array_buffer:done
+identifier_store:message:shared:typed_array_view:start
+identifier_store:message:shared:typed_array_view:done
+identifier_store:message:shared:iterator_step:start
+identifier_store:message:shared:iterator_step:done
+identifier_store:message:shared:object_binding:start
+identifier_store:message:shared:object_binding:done
+identifier_store:message:shared:arguments_binding:start
+identifier_store:message:shared:arguments_binding:done
+identifier_store:message:shared:descriptor_binding:start
+identifier_store:message:shared:descriptor_binding:done
+identifier_store:message:shared:iterator_source:start
+identifier_store:message:shared:iterator_source:done
+identifier_store:message:shared:array_iterator_binding:start
+identifier_store:message:shared:array_iterator_binding:done
+identifier_store:message:shared_updates:done
+identifier_store:message:store_local
+identifier_store:message:runtime_shadows target_owner=message source_owner=None object_binding_props=[]
+identifier_store:message:done
+identifier_read:start name=message
+identifier_read:path direct_fallback name=message
+identifier_read:fallback:start name=message
+identifier_read:fallback:path local name=message local_index=2
+identifier_read:fallback:done name=message
+identifier_store:message:canonical
+identifier_store:message:tracked
+identifier_store:message:descriptor
+identifier_store:message:call_snapshot
+identifier_store:message:function_binding
+identifier_store:message:object_binding
+identifier_store:message:kind
+identifier_store:message:string
+identifier_store:message:number
+identifier_store:message:array
+identifier_store:message:module
+identifier_store:message:prepared
+identifier_store:message:shared_updates:start
+identifier_store:message:shared:member_bindings:start
+identifier_store:message:shared:member_bindings:done
+identifier_store:message:shared:local_function:start
+identifier_store:message:shared:local_function:done
+identifier_store:message:shared:specialized_function:start
+identifier_store:message:shared:specialized_function:done
+identifier_store:message:shared:proxy:start
+identifier_store:message:shared:proxy:done
+identifier_store:message:shared:object_literal_members:start
+identifier_store:message:shared:object_literal_members:done
+identifier_store:message:shared:array_binding:start
+identifier_store:message:shared:array_binding:done
+identifier_store:message:shared:resizable_array_buffer:start
+identifier_store:message:shared:resizable_array_buffer:done
+identifier_store:message:shared:typed_array_view:start
+identifier_store:message:shared:typed_array_view:done
+identifier_store:message:shared:iterator_step:start
+identifier_store:message:shared:iterator_step:done
+identifier_store:message:shared:object_binding:start
+identifier_store:message:shared:object_binding:done
+identifier_store:message:shared:arguments_binding:start
+identifier_store:message:shared:arguments_binding:done
+identifier_store:message:shared:descriptor_binding:start
+identifier_store:message:shared:descriptor_binding:done
+identifier_store:message:shared:iterator_source:start
+identifier_store:message:shared:iterator_source:done
+identifier_store:message:shared:array_iterator_binding:start
+identifier_store:message:shared:array_iterator_binding:done
+identifier_store:message:shared_updates:done
+identifier_store:message:store_local
+identifier_store:message:runtime_shadows target_owner=message source_owner=None object_binding_props=[]
+identifier_store:message:done
+identifier_read:start name=message
+identifier_read:path direct_fallback name=message
+identifier_read:fallback:start name=message
+identifier_read:fallback:path local name=message local_index=2
+identifier_read:fallback:done name=message
+identifier_read:start name=actual
+identifier_read:path direct_fallback name=actual
+identifier_read:fallback:start name=actual
+identifier_read:fallback:path local name=actual local_index=0
+identifier_read:fallback:done name=actual
+identifier_read:start name=expected
+identifier_read:path direct_fallback name=expected
+identifier_read:fallback:start name=expected
+identifier_read:fallback:path local name=expected local_index=1
+identifier_read:fallback:done name=expected
+identifier_store:message:canonical
+identifier_store:message:tracked
+identifier_store:message:descriptor
+identifier_store:message:call_snapshot
+identifier_store:message:function_binding
+identifier_store:message:object_binding
+identifier_store:message:kind
+identifier_store:message:string
+identifier_store:message:number
+identifier_store:message:array
+identifier_store:message:module
+identifier_store:message:prepared
+identifier_store:message:shared_updates:start
+identifier_store:message:shared:member_bindings:start
+identifier_store:message:shared:member_bindings:done
+identifier_store:message:shared:local_function:start
+identifier_store:message:shared:local_function:done
+identifier_store:message:shared:specialized_function:start
+identifier_store:message:shared:specialized_function:done
+identifier_store:message:shared:proxy:start
+identifier_store:message:shared:proxy:done
+identifier_store:message:shared:object_literal_members:start
+identifier_store:message:shared:object_literal_members:done
+identifier_store:message:shared:array_binding:start
+identifier_store:message:shared:array_binding:done
+identifier_store:message:shared:resizable_array_buffer:start
+identifier_store:message:shared:resizable_array_buffer:done
+identifier_store:message:shared:typed_array_view:start
+identifier_store:message:shared:typed_array_view:done
+identifier_store:message:shared:iterator_step:start
+identifier_store:message:shared:iterator_step:done
+identifier_store:message:shared:object_binding:start
+identifier_store:message:shared:object_binding:done
+identifier_store:message:shared:arguments_binding:start
+identifier_store:message:shared:arguments_binding:done
+identifier_store:message:shared:descriptor_binding:start
+identifier_store:message:shared:descriptor_binding:done
+identifier_store:message:shared:iterator_source:start
+identifier_store:message:shared:iterator_source:done
+identifier_store:message:shared:array_iterator_binding:start
+identifier_store:message:shared:array_iterator_binding:done
+identifier_store:message:shared_updates:done
+identifier_store:message:store_local
+identifier_store:message:runtime_shadows target_owner=message source_owner=None object_binding_props=[]
+identifier_store:message:done
+identifier_read:start name=message
+identifier_read:path direct_fallback name=message
+identifier_read:fallback:start name=message
+identifier_read:fallback:path local name=message local_index=2
+identifier_read:fallback:done name=message
+identifier_read:start name=__ayy_construct_arg_0_27
+identifier_read:path direct_fallback name=__ayy_construct_arg_0_27
+identifier_read:fallback:start name=__ayy_construct_arg_0_27
+identifier_read:fallback:path local name=__ayy_construct_arg_0_27 local_index=27
+identifier_read:fallback:done name=__ayy_construct_arg_0_27
+identifier_store:expectedName:canonical
+identifier_store:expectedName:tracked
+identifier_store:expectedName:descriptor
+identifier_store:expectedName:call_snapshot
+identifier_store:expectedName:function_binding
+identifier_store:expectedName:object_binding
+identifier_store:expectedName:kind
+identifier_store:expectedName:string
+identifier_store:expectedName:number
+identifier_store:expectedName:array
+identifier_store:expectedName:module
+identifier_store:expectedName:prepared
+identifier_store:expectedName:shared_updates:start
+identifier_store:expectedName:shared:member_bindings:start
+identifier_store:expectedName:shared:member_bindings:done
+identifier_store:expectedName:shared:local_function:start
+identifier_store:expectedName:shared:local_function:done
+identifier_store:expectedName:shared:specialized_function:start
+identifier_store:expectedName:shared:specialized_function:done
+identifier_store:expectedName:shared:proxy:start
+identifier_store:expectedName:shared:proxy:done
+identifier_store:expectedName:shared:object_literal_members:start
+identifier_store:expectedName:shared:object_literal_members:done
+identifier_store:expectedName:shared:array_binding:start
+identifier_store:expectedName:shared:array_binding:done
+identifier_store:expectedName:shared:resizable_array_buffer:start
+identifier_store:expectedName:shared:resizable_array_buffer:done
+identifier_store:expectedName:shared:typed_array_view:start
+identifier_store:expectedName:shared:typed_array_view:done
+identifier_store:expectedName:shared:iterator_step:start
+identifier_store:expectedName:shared:iterator_step:done
+identifier_store:expectedName:shared:object_binding:start
+identifier_store:expectedName:shared:object_binding:done
+identifier_store:expectedName:shared:arguments_binding:start
+identifier_store:expectedName:shared:arguments_binding:done
+identifier_store:expectedName:shared:descriptor_binding:start
+identifier_store:expectedName:shared:descriptor_binding:done
+identifier_store:expectedName:shared:iterator_source:start
+identifier_store:expectedName:shared:iterator_source:done
+identifier_store:expectedName:shared:array_iterator_binding:start
+identifier_store:expectedName:shared:array_iterator_binding:done
+identifier_store:expectedName:shared_updates:done
+identifier_store:expectedName:store_local
+identifier_store:expectedName:runtime_shadows target_owner=expectedName source_owner=None object_binding_props=[]
+identifier_store:expectedName:done
+identifier_store:actualName:canonical
+identifier_store:actualName:tracked
+identifier_store:actualName:descriptor
+identifier_store:actualName:call_snapshot
+identifier_store:actualName:function_binding
+identifier_store:actualName:object_binding
+identifier_store:actualName:kind
+identifier_store:actualName:string
+identifier_store:actualName:number
+identifier_store:actualName:array
+identifier_store:actualName:module
+identifier_store:actualName:prepared
+identifier_store:actualName:shared_updates:start
+identifier_store:actualName:shared:member_bindings:start
+identifier_store:actualName:shared:member_bindings:done
+identifier_store:actualName:shared:local_function:start
+identifier_store:actualName:shared:local_function:done
+identifier_store:actualName:shared:specialized_function:start
+identifier_store:actualName:shared:specialized_function:done
+identifier_store:actualName:shared:proxy:start
+identifier_store:actualName:shared:proxy:done
+identifier_store:actualName:shared:object_literal_members:start
+identifier_store:actualName:shared:object_literal_members:done
+identifier_store:actualName:shared:array_binding:start
+identifier_store:actualName:shared:array_binding:done
+identifier_store:actualName:shared:resizable_array_buffer:start
+identifier_store:actualName:shared:resizable_array_buffer:done
+identifier_store:actualName:shared:typed_array_view:start
+identifier_store:actualName:shared:typed_array_view:done
+identifier_store:actualName:shared:iterator_step:start
+identifier_store:actualName:shared:iterator_step:done
+identifier_store:actualName:shared:object_binding:start
+identifier_store:actualName:shared:object_binding:done
+identifier_store:actualName:shared:arguments_binding:start
+identifier_store:actualName:shared:arguments_binding:done
+identifier_store:actualName:shared:descriptor_binding:start
+identifier_store:actualName:shared:descriptor_binding:done
+identifier_store:actualName:shared:iterator_source:start
+identifier_store:actualName:shared:iterator_source:done
+identifier_store:actualName:shared:array_iterator_binding:start
+identifier_store:actualName:shared:array_iterator_binding:done
+identifier_store:actualName:shared_updates:done
+identifier_store:actualName:store_local
+identifier_store:actualName:runtime_shadows target_owner=actualName source_owner=None object_binding_props=[]
+identifier_store:actualName:done
+identifier_read:start name=func
+identifier_read:path direct_fallback name=func
+identifier_read:fallback:start name=func
+identifier_read:fallback:path local name=func local_index=1
+identifier_read:fallback:done name=func
+identifier_read:start name=__ayy_construct_arg_0_18
+identifier_read:path direct_fallback name=__ayy_construct_arg_0_18
+identifier_read:fallback:start name=__ayy_construct_arg_0_18
+identifier_read:fallback:path local name=__ayy_construct_arg_0_18 local_index=18
+identifier_read:fallback:done name=__ayy_construct_arg_0_18
+identifier_read:start name=message
+identifier_read:path direct_fallback name=message
+identifier_read:fallback:start name=message
+identifier_read:fallback:path local name=message local_index=2
+identifier_read:fallback:done name=message
+identifier_read:start name=undefined
+identifier_read:path no_implicit_global name=undefined
+identifier_read:fallback:start name=undefined
+identifier_read:fallback:path undefined name=undefined
+identifier_read:fallback:done name=undefined
+identifier_store:message:canonical
+identifier_store:message:tracked
+identifier_store:message:descriptor
+identifier_store:message:call_snapshot
+identifier_store:message:function_binding
+identifier_store:message:object_binding
+identifier_store:message:kind
+identifier_store:message:string
+identifier_store:message:number
+identifier_store:message:array
+identifier_store:message:module
+identifier_store:message:prepared
+identifier_store:message:shared_updates:start
+identifier_store:message:shared:member_bindings:start
+identifier_store:message:shared:member_bindings:done
+identifier_store:message:shared:local_function:start
+identifier_store:message:shared:local_function:done
+identifier_store:message:shared:specialized_function:start
+identifier_store:message:shared:specialized_function:done
+identifier_store:message:shared:proxy:start
+identifier_store:message:shared:proxy:done
+identifier_store:message:shared:object_literal_members:start
+identifier_store:message:shared:object_literal_members:done
+identifier_store:message:shared:array_binding:start
+identifier_store:message:shared:array_binding:done
+identifier_store:message:shared:resizable_array_buffer:start
+identifier_store:message:shared:resizable_array_buffer:done
+identifier_store:message:shared:typed_array_view:start
+identifier_store:message:shared:typed_array_view:done
+identifier_store:message:shared:iterator_step:start
+identifier_store:message:shared:iterator_step:done
+identifier_store:message:shared:object_binding:start
+identifier_store:message:shared:object_binding:done
+identifier_store:message:shared:arguments_binding:start
+identifier_store:message:shared:arguments_binding:done
+identifier_store:message:shared:descriptor_binding:start
+identifier_store:message:shared:descriptor_binding:done
+identifier_store:message:shared:iterator_source:start
+identifier_store:message:shared:iterator_source:done
+identifier_store:message:shared:array_iterator_binding:start
+identifier_store:message:shared:array_iterator_binding:done
+identifier_store:message:shared_updates:done
+identifier_store:message:store_local
+identifier_store:message:runtime_shadows target_owner=message source_owner=None object_binding_props=[]
+identifier_store:message:done
+identifier_read:start name=message
+identifier_read:path direct_fallback name=message
+identifier_read:fallback:start name=message
+identifier_read:fallback:path local name=message local_index=2
+identifier_read:fallback:done name=message
+identifier_store:message:canonical
+identifier_store:message:tracked
+identifier_store:message:descriptor
+identifier_store:message:call_snapshot
+identifier_store:message:function_binding
+identifier_store:message:object_binding
+identifier_store:message:kind
+identifier_store:message:string
+identifier_store:message:number
+identifier_store:message:array
+identifier_store:message:module
+identifier_store:message:prepared
+identifier_store:message:shared_updates:start
+identifier_store:message:shared:member_bindings:start
+identifier_store:message:shared:member_bindings:done
+identifier_store:message:shared:local_function:start
+identifier_store:message:shared:local_function:done
+identifier_store:message:shared:specialized_function:start
+identifier_store:message:shared:specialized_function:done
+identifier_store:message:shared:proxy:start
+identifier_store:message:shared:proxy:done
+identifier_store:message:shared:object_literal_members:start
+identifier_store:message:shared:object_literal_members:done
+identifier_store:message:shared:array_binding:start
+identifier_store:message:shared:array_binding:done
+identifier_store:message:shared:resizable_array_buffer:start
+identifier_store:message:shared:resizable_array_buffer:done
+identifier_store:message:shared:typed_array_view:start
+identifier_store:message:shared:typed_array_view:done
+identifier_store:message:shared:iterator_step:start
+identifier_store:message:shared:iterator_step:done
+identifier_store:message:shared:object_binding:start
+identifier_store:message:shared:object_binding:done
+identifier_store:message:shared:arguments_binding:start
+identifier_store:message:shared:arguments_binding:done
+identifier_store:message:shared:descriptor_binding:start
+identifier_store:message:shared:descriptor_binding:done
+identifier_store:message:shared:iterator_source:start
+identifier_store:message:shared:iterator_source:done
+identifier_store:message:shared:array_iterator_binding:start
+identifier_store:message:shared:array_iterator_binding:done
+identifier_store:message:shared_updates:done
+identifier_store:message:store_local
+identifier_store:message:runtime_shadows target_owner=message source_owner=None object_binding_props=[]
+identifier_store:message:done
+identifier_read:start name=thrown
+identifier_read:path direct_fallback name=thrown
+identifier_read:fallback:start name=thrown
+identifier_read:fallback:path local name=thrown local_index=10
+identifier_read:fallback:done name=thrown
+identifier_read:start name=thrown
+identifier_read:path direct_fallback name=thrown
+identifier_read:fallback:start name=thrown
+identifier_read:fallback:path local name=thrown local_index=10
+identifier_read:fallback:done name=thrown
+identifier_read:start name=message
+identifier_read:path direct_fallback name=message
+identifier_read:fallback:start name=message
+identifier_read:fallback:path local name=message local_index=2
+identifier_read:fallback:done name=message
+identifier_read:start name=__ayy_construct_arg_0_31
+identifier_read:path direct_fallback name=__ayy_construct_arg_0_31
+identifier_read:fallback:start name=__ayy_construct_arg_0_31
+identifier_read:fallback:path local name=__ayy_construct_arg_0_31 local_index=31
+identifier_read:fallback:done name=__ayy_construct_arg_0_31
+identifier_read:start name=thrown
+identifier_read:path direct_fallback name=thrown
+identifier_read:fallback:start name=thrown
+identifier_read:fallback:path local name=thrown local_index=10
+identifier_read:fallback:done name=thrown
+identifier_read:start name=expectedErrorConstructor
+identifier_read:path direct_fallback name=expectedErrorConstructor
+identifier_read:fallback:start name=expectedErrorConstructor
+identifier_read:fallback:path local name=expectedErrorConstructor local_index=0
+identifier_read:fallback:done name=expectedErrorConstructor
+identifier_read:start name=expectedErrorConstructor
+identifier_read:path direct_fallback name=expectedErrorConstructor
+identifier_read:fallback:start name=expectedErrorConstructor
+identifier_read:fallback:path local name=expectedErrorConstructor local_index=0
+identifier_read:fallback:done name=expectedErrorConstructor
+identifier_store:expectedName:canonical
+identifier_store:expectedName:tracked
+identifier_store:expectedName:descriptor
+identifier_store:expectedName:call_snapshot
+identifier_store:expectedName:function_binding
+identifier_store:expectedName:object_binding
+identifier_store:expectedName:kind
+identifier_store:expectedName:string
+identifier_store:expectedName:number
+identifier_store:expectedName:array
+identifier_store:expectedName:module
+identifier_store:expectedName:prepared
+identifier_store:expectedName:shared_updates:start
+identifier_store:expectedName:shared:member_bindings:start
+identifier_store:expectedName:shared:member_bindings:done
+identifier_store:expectedName:shared:local_function:start
+identifier_store:expectedName:shared:local_function:done
+identifier_store:expectedName:shared:specialized_function:start
+identifier_store:expectedName:shared:specialized_function:done
+identifier_store:expectedName:shared:proxy:start
+identifier_store:expectedName:shared:proxy:done
+identifier_store:expectedName:shared:object_literal_members:start
+identifier_store:expectedName:shared:object_literal_members:done
+identifier_store:expectedName:shared:array_binding:start
+identifier_store:expectedName:shared:array_binding:done
+identifier_store:expectedName:shared:resizable_array_buffer:start
+identifier_store:expectedName:shared:resizable_array_buffer:done
+identifier_store:expectedName:shared:typed_array_view:start
+identifier_store:expectedName:shared:typed_array_view:done
+identifier_store:expectedName:shared:iterator_step:start
+identifier_store:expectedName:shared:iterator_step:done
+identifier_store:expectedName:shared:object_binding:start
+identifier_store:expectedName:shared:object_binding:done
+identifier_store:expectedName:shared:arguments_binding:start
+identifier_store:expectedName:shared:arguments_binding:done
+identifier_store:expectedName:shared:descriptor_binding:start
+identifier_store:expectedName:shared:descriptor_binding:done
+identifier_store:expectedName:shared:iterator_source:start
+identifier_store:expectedName:shared:iterator_source:done
+identifier_store:expectedName:shared:array_iterator_binding:start
+identifier_store:expectedName:shared:array_iterator_binding:done
+identifier_store:expectedName:shared_updates:done
+identifier_store:expectedName:store_local
+identifier_store:expectedName:runtime_shadows target_owner=expectedName source_owner=None object_binding_props=[]
+identifier_store:expectedName:done
+identifier_read:start name=thrown
+identifier_read:path direct_fallback name=thrown
+identifier_read:fallback:start name=thrown
+identifier_read:fallback:path local name=thrown local_index=10
+identifier_read:fallback:done name=thrown
+identifier_read:start name=thrown
+identifier_read:path direct_fallback name=thrown
+identifier_read:fallback:start name=thrown
+identifier_read:fallback:path local name=thrown local_index=10
+identifier_read:fallback:done name=thrown
+identifier_read:start name=thrown
+identifier_read:path direct_fallback name=thrown
+identifier_read:fallback:start name=thrown
+identifier_read:fallback:path local name=thrown local_index=10
+identifier_read:fallback:done name=thrown
+identifier_read:start name=thrown
+identifier_read:path direct_fallback name=thrown
+identifier_read:fallback:start name=thrown
+identifier_read:fallback:path local name=thrown local_index=10
+identifier_read:fallback:done name=thrown
+identifier_read:start name=thrown
+identifier_read:path direct_fallback name=thrown
+identifier_read:fallback:start name=thrown
+identifier_read:fallback:path local name=thrown local_index=10
+identifier_read:fallback:done name=thrown
+identifier_read:start name=thrown
+identifier_read:path direct_fallback name=thrown
+identifier_read:fallback:start name=thrown
+identifier_read:fallback:path local name=thrown local_index=10
+identifier_read:fallback:done name=thrown
+identifier_read:start name=thrown
+identifier_read:path direct_fallback name=thrown
+identifier_read:fallback:start name=thrown
+identifier_read:fallback:path local name=thrown local_index=10
+identifier_read:fallback:done name=thrown
+identifier_read:start name=thrown
+identifier_read:path direct_fallback name=thrown
+identifier_read:fallback:start name=thrown
+identifier_read:fallback:path local name=thrown local_index=10
+identifier_read:fallback:done name=thrown
+identifier_read:start name=thrown
+identifier_read:path direct_fallback name=thrown
+identifier_read:fallback:start name=thrown
+identifier_read:fallback:path local name=thrown local_index=10
+identifier_read:fallback:done name=thrown
+identifier_store:actualName:canonical
+identifier_store:actualName:tracked
+identifier_store:actualName:descriptor
+identifier_store:actualName:call_snapshot
+identifier_store:actualName:function_binding
+identifier_store:actualName:object_binding
+identifier_store:actualName:kind
+identifier_store:actualName:string
+identifier_store:actualName:number
+identifier_store:actualName:array
+identifier_store:actualName:module
+identifier_store:actualName:prepared
+identifier_store:actualName:shared_updates:start
+identifier_store:actualName:shared:member_bindings:start
+identifier_store:actualName:shared:member_bindings:done
+identifier_store:actualName:shared:local_function:start
+identifier_store:actualName:shared:local_function:done
+identifier_store:actualName:shared:specialized_function:start
+identifier_store:actualName:shared:specialized_function:done
+identifier_store:actualName:shared:proxy:start
+identifier_store:actualName:shared:proxy:done
+identifier_store:actualName:shared:object_literal_members:start
+identifier_store:actualName:shared:object_literal_members:done
+identifier_store:actualName:shared:array_binding:start
+identifier_store:actualName:shared:array_binding:done
+identifier_store:actualName:shared:resizable_array_buffer:start
+identifier_store:actualName:shared:resizable_array_buffer:done
+identifier_store:actualName:shared:typed_array_view:start
+identifier_store:actualName:shared:typed_array_view:done
+identifier_store:actualName:shared:iterator_step:start
+identifier_store:actualName:shared:iterator_step:done
+identifier_store:actualName:shared:object_binding:start
+identifier_store:actualName:shared:object_binding:done
+identifier_store:actualName:shared:arguments_binding:start
+identifier_store:actualName:shared:arguments_binding:done
+identifier_store:actualName:shared:descriptor_binding:start
+identifier_store:actualName:shared:descriptor_binding:done
+identifier_store:actualName:shared:iterator_source:start
+identifier_store:actualName:shared:iterator_source:done
+identifier_store:actualName:shared:array_iterator_binding:start
+identifier_store:actualName:shared:array_iterator_binding:done
+identifier_store:actualName:shared_updates:done
+identifier_store:actualName:store_local
+identifier_store:actualName:runtime_shadows target_owner=actualName source_owner=None object_binding_props=[]
+identifier_store:actualName:done
+identifier_read:start name=expectedName
+identifier_read:path direct_fallback name=expectedName
+identifier_read:fallback:start name=expectedName
+identifier_read:fallback:path local name=expectedName local_index=9
+identifier_read:fallback:done name=expectedName
+identifier_read:start name=actualName
+identifier_read:path direct_fallback name=actualName
+identifier_read:fallback:start name=actualName
+identifier_read:fallback:path local name=actualName local_index=8
+identifier_read:fallback:done name=actualName
+identifier_read:start name=message
+identifier_read:path direct_fallback name=message
+identifier_read:fallback:start name=message
+identifier_read:fallback:path local name=message local_index=2
+identifier_read:fallback:done name=message
+identifier_read:start name=expectedName
+identifier_read:path direct_fallback name=expectedName
+identifier_read:fallback:start name=expectedName
+identifier_read:fallback:path local name=expectedName local_index=9
+identifier_read:fallback:done name=expectedName
+identifier_store:message:canonical
+identifier_store:message:tracked
+identifier_store:message:descriptor
+identifier_store:message:call_snapshot
+identifier_store:message:function_binding
+identifier_store:message:object_binding
+identifier_store:message:kind
+identifier_store:message:string
+identifier_store:message:number
+identifier_store:message:array
+identifier_store:message:module
+identifier_store:message:prepared
+identifier_store:message:shared_updates:start
+identifier_store:message:shared:member_bindings:start
+identifier_store:message:shared:member_bindings:done
+identifier_store:message:shared:local_function:start
+identifier_store:message:shared:local_function:done
+identifier_store:message:shared:specialized_function:start
+identifier_store:message:shared:specialized_function:done
+identifier_store:message:shared:proxy:start
+identifier_store:message:shared:proxy:done
+identifier_store:message:shared:object_literal_members:start
+identifier_store:message:shared:object_literal_members:done
+identifier_store:message:shared:array_binding:start
+identifier_store:message:shared:array_binding:done
+identifier_store:message:shared:resizable_array_buffer:start
+identifier_store:message:shared:resizable_array_buffer:done
+identifier_store:message:shared:typed_array_view:start
+identifier_store:message:shared:typed_array_view:done
+identifier_store:message:shared:iterator_step:start
+identifier_store:message:shared:iterator_step:done
+identifier_store:message:shared:object_binding:start
+identifier_store:message:shared:object_binding:done
+identifier_store:message:shared:arguments_binding:start
+identifier_store:message:shared:arguments_binding:done
+identifier_store:message:shared:descriptor_binding:start
+identifier_store:message:shared:descriptor_binding:done
+identifier_store:message:shared:iterator_source:start
+identifier_store:message:shared:iterator_source:done
+identifier_store:message:shared:array_iterator_binding:start
+identifier_store:message:shared:array_iterator_binding:done
+identifier_store:message:shared_updates:done
+identifier_store:message:store_local
+identifier_store:message:runtime_shadows target_owner=message source_owner=None object_binding_props=[]
+identifier_store:message:done
+identifier_read:start name=message
+identifier_read:path direct_fallback name=message
+identifier_read:fallback:start name=message
+identifier_read:fallback:path local name=message local_index=2
+identifier_read:fallback:done name=message
+identifier_read:start name=expectedName
+identifier_read:path direct_fallback name=expectedName
+identifier_read:fallback:start name=expectedName
+identifier_read:fallback:path local name=expectedName local_index=9
+identifier_read:fallback:done name=expectedName
+identifier_read:start name=actualName
+identifier_read:path direct_fallback name=actualName
+identifier_read:fallback:start name=actualName
+identifier_read:fallback:path local name=actualName local_index=8
+identifier_read:fallback:done name=actualName
+identifier_store:message:canonical
+identifier_store:message:tracked
+identifier_store:message:descriptor
+identifier_store:message:call_snapshot
+identifier_store:message:function_binding
+identifier_store:message:object_binding
+identifier_store:message:kind
+identifier_store:message:string
+identifier_store:message:number
+identifier_store:message:array
+identifier_store:message:module
+identifier_store:message:prepared
+identifier_store:message:shared_updates:start
+identifier_store:message:shared:member_bindings:start
+identifier_store:message:shared:member_bindings:done
+identifier_store:message:shared:local_function:start
+identifier_store:message:shared:local_function:done
+identifier_store:message:shared:specialized_function:start
+identifier_store:message:shared:specialized_function:done
+identifier_store:message:shared:proxy:start
+identifier_store:message:shared:proxy:done
+identifier_store:message:shared:object_literal_members:start
+identifier_store:message:shared:object_literal_members:done
+identifier_store:message:shared:array_binding:start
+identifier_store:message:shared:array_binding:done
+identifier_store:message:shared:resizable_array_buffer:start
+identifier_store:message:shared:resizable_array_buffer:done
+identifier_store:message:shared:typed_array_view:start
+identifier_store:message:shared:typed_array_view:done
+identifier_store:message:shared:iterator_step:start
+identifier_store:message:shared:iterator_step:done
+identifier_store:message:shared:object_binding:start
+identifier_store:message:shared:object_binding:done
+identifier_store:message:shared:arguments_binding:start
+identifier_store:message:shared:arguments_binding:done
+identifier_store:message:shared:descriptor_binding:start
+identifier_store:message:shared:descriptor_binding:done
+identifier_store:message:shared:iterator_source:start
+identifier_store:message:shared:iterator_source:done
+identifier_store:message:shared:array_iterator_binding:start
+identifier_store:message:shared:array_iterator_binding:done
+identifier_store:message:shared_updates:done
+identifier_store:message:store_local
+identifier_store:message:runtime_shadows target_owner=message source_owner=None object_binding_props=[]
+identifier_store:message:done
+identifier_read:start name=message
+identifier_read:path direct_fallback name=message
+identifier_read:fallback:start name=message
+identifier_read:fallback:path local name=message local_index=2
+identifier_read:fallback:done name=message
+identifier_read:start name=__ayy_construct_arg_0_43
+identifier_read:path direct_fallback name=__ayy_construct_arg_0_43
+identifier_read:fallback:start name=__ayy_construct_arg_0_43
+identifier_read:fallback:path local name=__ayy_construct_arg_0_43 local_index=43
+identifier_read:fallback:done name=__ayy_construct_arg_0_43
+identifier_read:start name=message
+identifier_read:path direct_fallback name=message
+identifier_read:fallback:start name=message
+identifier_read:fallback:path local name=message local_index=2
+identifier_read:fallback:done name=message
+identifier_read:start name=expectedErrorConstructor
+identifier_read:path direct_fallback name=expectedErrorConstructor
+identifier_read:fallback:start name=expectedErrorConstructor
+identifier_read:fallback:path local name=expectedErrorConstructor local_index=0
+identifier_read:fallback:done name=expectedErrorConstructor
+identifier_read:start name=__ayy_construct_arg_0_51
+identifier_read:path direct_fallback name=__ayy_construct_arg_0_51
+identifier_read:fallback:start name=__ayy_construct_arg_0_51
+identifier_read:fallback:path local name=__ayy_construct_arg_0_51 local_index=51
+identifier_read:fallback:done name=__ayy_construct_arg_0_51
+identifier_read:start name=actual
+identifier_read:path direct_fallback name=actual
+identifier_read:fallback:start name=actual
+identifier_read:fallback:path local name=actual local_index=0
+identifier_read:fallback:done name=actual
+identifier_read:start name=expected
+identifier_read:path direct_fallback name=expected
+identifier_read:fallback:start name=expected
+identifier_read:fallback:path local name=expected local_index=1
+identifier_read:fallback:done name=expected
+identifier_store:i:canonical
+identifier_store:i:tracked
+identifier_store:i:descriptor
+identifier_store:i:call_snapshot
+identifier_store:i:function_binding
+identifier_store:i:object_binding
+identifier_store:i:kind
+identifier_store:i:string
+identifier_store:i:number
+identifier_store:i:array
+identifier_store:i:module
+identifier_store:i:prepared
+identifier_store:i:shared_updates:start
+identifier_store:i:shared:member_bindings:start
+identifier_store:i:shared:member_bindings:done
+identifier_store:i:shared:local_function:start
+identifier_store:i:shared:local_function:done
+identifier_store:i:shared:specialized_function:start
+identifier_store:i:shared:specialized_function:done
+identifier_store:i:shared:proxy:start
+identifier_store:i:shared:proxy:done
+identifier_store:i:shared:object_literal_members:start
+identifier_store:i:shared:object_literal_members:done
+identifier_store:i:shared:array_binding:start
+identifier_store:i:shared:array_binding:done
+identifier_store:i:shared:resizable_array_buffer:start
+identifier_store:i:shared:resizable_array_buffer:done
+identifier_store:i:shared:typed_array_view:start
+identifier_store:i:shared:typed_array_view:done
+identifier_store:i:shared:iterator_step:start
+identifier_store:i:shared:iterator_step:done
+identifier_store:i:shared:object_binding:start
+identifier_store:i:shared:object_binding:done
+identifier_store:i:shared:arguments_binding:start
+identifier_store:i:shared:arguments_binding:done
+identifier_store:i:shared:descriptor_binding:start
+identifier_store:i:shared:descriptor_binding:done
+identifier_store:i:shared:iterator_source:start
+identifier_store:i:shared:iterator_source:done
+identifier_store:i:shared:array_iterator_binding:start
+identifier_store:i:shared:array_iterator_binding:done
+identifier_store:i:shared_updates:done
+identifier_store:i:store_local
+identifier_store:i:runtime_shadows target_owner=i source_owner=None object_binding_props=[]
+identifier_store:i:done
+identifier_read:start name=i
+identifier_read:path direct_fallback name=i
+identifier_read:fallback:start name=i
+identifier_read:fallback:path local name=i local_index=7
+identifier_read:fallback:done name=i
+identifier_read:start name=actual
+identifier_read:path direct_fallback name=actual
+identifier_read:fallback:start name=actual
+identifier_read:fallback:path local name=actual local_index=0
+identifier_read:fallback:done name=actual
+identifier_read:start name=actual
+identifier_read:path direct_fallback name=actual
+identifier_read:fallback:start name=actual
+identifier_read:fallback:path local name=actual local_index=0
+identifier_read:fallback:done name=actual
+identifier_read:start name=i
+identifier_read:path direct_fallback name=i
+identifier_read:fallback:start name=i
+identifier_read:fallback:path local name=i local_index=7
+identifier_read:fallback:done name=i
+identifier_read:start name=expected
+identifier_read:path direct_fallback name=expected
+identifier_read:fallback:start name=expected
+identifier_read:fallback:path local name=expected local_index=1
+identifier_read:fallback:done name=expected
+identifier_read:start name=i
+identifier_read:path direct_fallback name=i
+identifier_read:fallback:start name=i
+identifier_read:fallback:path local name=i local_index=7
+identifier_read:fallback:done name=i
+identifier_read:start name=i
+identifier_read:path direct_fallback name=i
+identifier_read:fallback:start name=i
+identifier_read:fallback:path local name=i local_index=7
+identifier_read:fallback:done name=i
+identifier_store:i:canonical
+identifier_store:i:tracked
+identifier_store:i:descriptor
+identifier_store:i:call_snapshot
+identifier_store:i:function_binding
+identifier_store:i:object_binding
+identifier_store:i:kind
+identifier_store:i:string
+identifier_store:i:number
+identifier_store:i:array
+identifier_store:i:module
+identifier_store:i:prepared
+identifier_store:i:shared_updates:start
+identifier_store:i:shared:member_bindings:start
+identifier_store:i:shared:member_bindings:done
+identifier_store:i:shared:local_function:start
+identifier_store:i:shared:local_function:done
+identifier_store:i:shared:specialized_function:start
+identifier_store:i:shared:specialized_function:done
+identifier_store:i:shared:proxy:start
+identifier_store:i:shared:proxy:done
+identifier_store:i:shared:object_literal_members:start
+identifier_store:i:shared:object_literal_members:done
+identifier_store:i:shared:array_binding:start
+identifier_store:i:shared:array_binding:done
+identifier_store:i:shared:resizable_array_buffer:start
+identifier_store:i:shared:resizable_array_buffer:done
+identifier_store:i:shared:typed_array_view:start
+identifier_store:i:shared:typed_array_view:done
+identifier_store:i:shared:iterator_step:start
+identifier_store:i:shared:iterator_step:done
+identifier_store:i:shared:object_binding:start
+identifier_store:i:shared:object_binding:done
+identifier_store:i:shared:arguments_binding:start
+identifier_store:i:shared:arguments_binding:done
+identifier_store:i:shared:descriptor_binding:start
+identifier_store:i:shared:descriptor_binding:done
+identifier_store:i:shared:iterator_source:start
+identifier_store:i:shared:iterator_source:done
+identifier_store:i:shared:array_iterator_binding:start
+identifier_store:i:shared:array_iterator_binding:done
+identifier_store:i:shared_updates:done
+identifier_store:i:store_local
+identifier_store:i:runtime_shadows target_owner=i source_owner=None object_binding_props=[]
+identifier_store:i:done
+identifier_read:start name=arrayLike
+identifier_read:path direct_fallback name=arrayLike
+identifier_read:fallback:start name=arrayLike
+identifier_read:fallback:path local name=arrayLike local_index=0
+identifier_read:fallback:done name=arrayLike
+identifier_read:start name=error
+identifier_read:path direct_fallback name=error
+identifier_read:fallback:start name=error
+identifier_read:fallback:path local name=error local_index=0
+identifier_read:fallback:done name=error
+identifier_read:start name=undefined
+identifier_read:path no_implicit_global name=undefined
+identifier_read:fallback:start name=undefined
+identifier_read:fallback:path undefined name=undefined
+identifier_read:fallback:done name=undefined
+identifier_read:start name=error
+identifier_read:path direct_fallback name=error
+identifier_read:fallback:start name=error
+identifier_read:fallback:path local name=error local_index=0
+identifier_read:fallback:done name=error
+identifier_read:start name=Test262Error
+identifier_read:path direct_fallback name=Test262Error
+identifier_read:fallback:start name=Test262Error
+identifier_read:fallback:path global name=Test262Error global_index=11
+identifier_read:fallback:done name=Test262Error
+identifier_store:Test262Error:canonical
+identifier_store:Test262Error:tracked
+identifier_store:Test262Error:descriptor
+identifier_store:Test262Error:call_snapshot
+identifier_store:Test262Error:function_binding
+identifier_store:Test262Error:object_binding
+identifier_store:Test262Error:kind
+identifier_store:Test262Error:string
+identifier_store:Test262Error:number
+identifier_store:Test262Error:array
+identifier_store:Test262Error:module
+identifier_store:Test262Error:prepared
+identifier_store:Test262Error:shared_updates:start
+identifier_store:Test262Error:shared:member_bindings:start
+identifier_store:Test262Error:shared:member_bindings:done
+identifier_store:Test262Error:shared:local_function:start
+identifier_store:Test262Error:shared:local_function:done
+identifier_store:Test262Error:shared:specialized_function:start
+identifier_store:Test262Error:shared:specialized_function:done
+identifier_store:Test262Error:shared:proxy:start
+identifier_store:Test262Error:shared:proxy:done
+identifier_store:Test262Error:shared:object_literal_members:start
+identifier_store:Test262Error:shared:object_literal_members:done
+identifier_store:Test262Error:shared:array_binding:start
+identifier_store:Test262Error:shared:array_binding:done
+identifier_store:Test262Error:shared:resizable_array_buffer:start
+identifier_store:Test262Error:shared:resizable_array_buffer:done
+identifier_store:Test262Error:shared:typed_array_view:start
+identifier_store:Test262Error:shared:typed_array_view:done
+identifier_store:Test262Error:shared:iterator_step:start
+identifier_store:Test262Error:shared:iterator_step:done
+identifier_store:Test262Error:shared:object_binding:start
+identifier_store:Test262Error:shared:object_binding:done
+identifier_store:Test262Error:shared:arguments_binding:start
+identifier_store:Test262Error:shared:arguments_binding:done
+identifier_store:Test262Error:shared:descriptor_binding:start
+identifier_store:Test262Error:shared:descriptor_binding:done
+identifier_store:Test262Error:shared:iterator_source:start
+identifier_store:Test262Error:shared:iterator_source:done
+identifier_store:Test262Error:shared:array_iterator_binding:start
+identifier_store:Test262Error:shared:array_iterator_binding:done
+identifier_store:Test262Error:shared_updates:done
+identifier_store:Test262Error:store_declared_global
+identifier_store:Test262Error:runtime_shadows target_owner=Test262Error source_owner=None object_binding_props=[]
+identifier_store:Test262Error:done
+identifier_read:start name=__formatIdentityFreeValue
+identifier_read:path direct_fallback name=__formatIdentityFreeValue
+identifier_read:fallback:start name=__formatIdentityFreeValue
+identifier_read:fallback:path global name=__formatIdentityFreeValue global_index=12
+identifier_read:fallback:done name=__formatIdentityFreeValue
+identifier_store:__formatIdentityFreeValue:canonical
+identifier_store:__formatIdentityFreeValue:tracked
+identifier_store:__formatIdentityFreeValue:descriptor
+identifier_store:__formatIdentityFreeValue:call_snapshot
+identifier_store:__formatIdentityFreeValue:function_binding
+identifier_store:__formatIdentityFreeValue:object_binding
+identifier_store:__formatIdentityFreeValue:kind
+identifier_store:__formatIdentityFreeValue:string
+identifier_store:__formatIdentityFreeValue:number
+identifier_store:__formatIdentityFreeValue:array
+identifier_store:__formatIdentityFreeValue:module
+identifier_store:__formatIdentityFreeValue:prepared
+identifier_store:__formatIdentityFreeValue:shared_updates:start
+identifier_store:__formatIdentityFreeValue:shared:member_bindings:start
+identifier_store:__formatIdentityFreeValue:shared:member_bindings:done
+identifier_store:__formatIdentityFreeValue:shared:local_function:start
+identifier_store:__formatIdentityFreeValue:shared:local_function:done
+identifier_store:__formatIdentityFreeValue:shared:specialized_function:start
+identifier_store:__formatIdentityFreeValue:shared:specialized_function:done
+identifier_store:__formatIdentityFreeValue:shared:proxy:start
+identifier_store:__formatIdentityFreeValue:shared:proxy:done
+identifier_store:__formatIdentityFreeValue:shared:object_literal_members:start
+identifier_store:__formatIdentityFreeValue:shared:object_literal_members:done
+identifier_store:__formatIdentityFreeValue:shared:array_binding:start
+identifier_store:__formatIdentityFreeValue:shared:array_binding:done
+identifier_store:__formatIdentityFreeValue:shared:resizable_array_buffer:start
+identifier_store:__formatIdentityFreeValue:shared:resizable_array_buffer:done
+identifier_store:__formatIdentityFreeValue:shared:typed_array_view:start
+identifier_store:__formatIdentityFreeValue:shared:typed_array_view:done
+identifier_store:__formatIdentityFreeValue:shared:iterator_step:start
+identifier_store:__formatIdentityFreeValue:shared:iterator_step:done
+identifier_store:__formatIdentityFreeValue:shared:object_binding:start
+identifier_store:__formatIdentityFreeValue:shared:object_binding:done
+identifier_store:__formatIdentityFreeValue:shared:arguments_binding:start
+identifier_store:__formatIdentityFreeValue:shared:arguments_binding:done
+identifier_store:__formatIdentityFreeValue:shared:descriptor_binding:start
+identifier_store:__formatIdentityFreeValue:shared:descriptor_binding:done
+identifier_store:__formatIdentityFreeValue:shared:iterator_source:start
+identifier_store:__formatIdentityFreeValue:shared:iterator_source:done
+identifier_store:__formatIdentityFreeValue:shared:array_iterator_binding:start
+identifier_store:__formatIdentityFreeValue:shared:array_iterator_binding:done
+identifier_store:__formatIdentityFreeValue:shared_updates:done
+identifier_store:__formatIdentityFreeValue:store_declared_global
+identifier_store:__formatIdentityFreeValue:runtime_shadows target_owner=__formatIdentityFreeValue source_owner=None object_binding_props=[]
+identifier_store:__formatIdentityFreeValue:done
+identifier_read:start name=__sameValue
+identifier_read:path direct_fallback name=__sameValue
+identifier_read:fallback:start name=__sameValue
+identifier_read:fallback:path global name=__sameValue global_index=13
+identifier_read:fallback:done name=__sameValue
+identifier_store:__sameValue:canonical
+identifier_store:__sameValue:tracked
+identifier_store:__sameValue:descriptor
+identifier_store:__sameValue:call_snapshot
+identifier_store:__sameValue:function_binding
+identifier_store:__sameValue:object_binding
+identifier_store:__sameValue:kind
+identifier_store:__sameValue:string
+identifier_store:__sameValue:number
+identifier_store:__sameValue:array
+identifier_store:__sameValue:module
+identifier_store:__sameValue:prepared
+identifier_store:__sameValue:shared_updates:start
+identifier_store:__sameValue:shared:member_bindings:start
+identifier_store:__sameValue:shared:member_bindings:done
+identifier_store:__sameValue:shared:local_function:start
+identifier_store:__sameValue:shared:local_function:done
+identifier_store:__sameValue:shared:specialized_function:start
+identifier_store:__sameValue:shared:specialized_function:done
+identifier_store:__sameValue:shared:proxy:start
+identifier_store:__sameValue:shared:proxy:done
+identifier_store:__sameValue:shared:object_literal_members:start
+identifier_store:__sameValue:shared:object_literal_members:done
+identifier_store:__sameValue:shared:array_binding:start
+identifier_store:__sameValue:shared:array_binding:done
+identifier_store:__sameValue:shared:resizable_array_buffer:start
+identifier_store:__sameValue:shared:resizable_array_buffer:done
+identifier_store:__sameValue:shared:typed_array_view:start
+identifier_store:__sameValue:shared:typed_array_view:done
+identifier_store:__sameValue:shared:iterator_step:start
+identifier_store:__sameValue:shared:iterator_step:done
+identifier_store:__sameValue:shared:object_binding:start
+identifier_store:__sameValue:shared:object_binding:done
+identifier_store:__sameValue:shared:arguments_binding:start
+identifier_store:__sameValue:shared:arguments_binding:done
+identifier_store:__sameValue:shared:descriptor_binding:start
+identifier_store:__sameValue:shared:descriptor_binding:done
+identifier_store:__sameValue:shared:iterator_source:start
+identifier_store:__sameValue:shared:iterator_source:done
+identifier_store:__sameValue:shared:array_iterator_binding:start
+identifier_store:__sameValue:shared:array_iterator_binding:done
+identifier_store:__sameValue:shared_updates:done
+identifier_store:__sameValue:store_declared_global
+identifier_store:__sameValue:runtime_shadows target_owner=__sameValue source_owner=None object_binding_props=[]
+identifier_store:__sameValue:done
+identifier_read:start name=__assertToString
+identifier_read:path direct_fallback name=__assertToString
+identifier_read:fallback:start name=__assertToString
+identifier_read:fallback:path global name=__assertToString global_index=14
+identifier_read:fallback:done name=__assertToString
+identifier_store:__assertToString:canonical
+identifier_store:__assertToString:tracked
+identifier_store:__assertToString:descriptor
+identifier_store:__assertToString:call_snapshot
+identifier_store:__assertToString:function_binding
+identifier_store:__assertToString:object_binding
+identifier_store:__assertToString:kind
+identifier_store:__assertToString:string
+identifier_store:__assertToString:number
+identifier_store:__assertToString:array
+identifier_store:__assertToString:module
+identifier_store:__assertToString:prepared
+identifier_store:__assertToString:shared_updates:start
+identifier_store:__assertToString:shared:member_bindings:start
+identifier_store:__assertToString:shared:member_bindings:done
+identifier_store:__assertToString:shared:local_function:start
+identifier_store:__assertToString:shared:local_function:done
+identifier_store:__assertToString:shared:specialized_function:start
+identifier_store:__assertToString:shared:specialized_function:done
+identifier_store:__assertToString:shared:proxy:start
+identifier_store:__assertToString:shared:proxy:done
+identifier_store:__assertToString:shared:object_literal_members:start
+identifier_store:__assertToString:shared:object_literal_members:done
+identifier_store:__assertToString:shared:array_binding:start
+identifier_store:__assertToString:shared:array_binding:done
+identifier_store:__assertToString:shared:resizable_array_buffer:start
+identifier_store:__assertToString:shared:resizable_array_buffer:done
+identifier_store:__assertToString:shared:typed_array_view:start
+identifier_store:__assertToString:shared:typed_array_view:done
+identifier_store:__assertToString:shared:iterator_step:start
+identifier_store:__assertToString:shared:iterator_step:done
+identifier_store:__assertToString:shared:object_binding:start
+identifier_store:__assertToString:shared:object_binding:done
+identifier_store:__assertToString:shared:arguments_binding:start
+identifier_store:__assertToString:shared:arguments_binding:done
+identifier_store:__assertToString:shared:descriptor_binding:start
+identifier_store:__assertToString:shared:descriptor_binding:done
+identifier_store:__assertToString:shared:iterator_source:start
+identifier_store:__assertToString:shared:iterator_source:done
+identifier_store:__assertToString:shared:array_iterator_binding:start
+identifier_store:__assertToString:shared:array_iterator_binding:done
+identifier_store:__assertToString:shared_updates:done
+identifier_store:__assertToString:store_declared_global
+identifier_store:__assertToString:runtime_shadows target_owner=__assertToString source_owner=None object_binding_props=[]
+identifier_store:__assertToString:done
+identifier_read:start name=assert
+identifier_read:path direct_fallback name=assert
+identifier_read:fallback:start name=assert
+identifier_read:fallback:path global name=assert global_index=15
+identifier_read:fallback:done name=assert
+identifier_store:assert:canonical
+identifier_store:assert:tracked
+identifier_store:assert:descriptor
+identifier_store:assert:call_snapshot
+identifier_store:assert:function_binding
+identifier_store:assert:object_binding
+identifier_store:assert:kind
+identifier_store:assert:string
+identifier_store:assert:number
+identifier_store:assert:array
+identifier_store:assert:module
+identifier_store:assert:prepared
+identifier_store:assert:shared_updates:start
+identifier_store:assert:shared:member_bindings:start
+identifier_store:assert:shared:member_bindings:done
+identifier_store:assert:shared:local_function:start
+identifier_store:assert:shared:local_function:done
+identifier_store:assert:shared:specialized_function:start
+identifier_store:assert:shared:specialized_function:done
+identifier_store:assert:shared:proxy:start
+identifier_store:assert:shared:proxy:done
+identifier_store:assert:shared:object_literal_members:start
+identifier_store:assert:shared:object_literal_members:done
+identifier_store:assert:shared:array_binding:start
+identifier_store:assert:shared:array_binding:done
+identifier_store:assert:shared:resizable_array_buffer:start
+identifier_store:assert:shared:resizable_array_buffer:done
+identifier_store:assert:shared:typed_array_view:start
+identifier_store:assert:shared:typed_array_view:done
+identifier_store:assert:shared:iterator_step:start
+identifier_store:assert:shared:iterator_step:done
+identifier_store:assert:shared:object_binding:start
+identifier_store:assert:shared:object_binding:done
+identifier_store:assert:shared:arguments_binding:start
+identifier_store:assert:shared:arguments_binding:done
+identifier_store:assert:shared:descriptor_binding:start
+identifier_store:assert:shared:descriptor_binding:done
+identifier_store:assert:shared:iterator_source:start
+identifier_store:assert:shared:iterator_source:done
+identifier_store:assert:shared:array_iterator_binding:start
+identifier_store:assert:shared:array_iterator_binding:done
+identifier_store:assert:shared_updates:done
+identifier_store:assert:store_declared_global
+identifier_store:assert:runtime_shadows target_owner=assert source_owner=None object_binding_props=[]
+identifier_store:assert:done
+identifier_read:start name=__assert
+identifier_read:path direct_fallback name=__assert
+identifier_read:fallback:start name=__assert
+identifier_read:fallback:path global name=__assert global_index=16
+identifier_read:fallback:done name=__assert
+identifier_store:__assert:canonical
+identifier_store:__assert:tracked
+identifier_store:__assert:descriptor
+identifier_store:__assert:call_snapshot
+identifier_store:__assert:function_binding
+identifier_store:__assert:object_binding
+identifier_store:__assert:kind
+identifier_store:__assert:string
+identifier_store:__assert:number
+identifier_store:__assert:array
+identifier_store:__assert:module
+identifier_store:__assert:prepared
+identifier_store:__assert:shared_updates:start
+identifier_store:__assert:shared:member_bindings:start
+identifier_store:__assert:shared:member_bindings:done
+identifier_store:__assert:shared:local_function:start
+identifier_store:__assert:shared:local_function:done
+identifier_store:__assert:shared:specialized_function:start
+identifier_store:__assert:shared:specialized_function:done
+identifier_store:__assert:shared:proxy:start
+identifier_store:__assert:shared:proxy:done
+identifier_store:__assert:shared:object_literal_members:start
+identifier_store:__assert:shared:object_literal_members:done
+identifier_store:__assert:shared:array_binding:start
+identifier_store:__assert:shared:array_binding:done
+identifier_store:__assert:shared:resizable_array_buffer:start
+identifier_store:__assert:shared:resizable_array_buffer:done
+identifier_store:__assert:shared:typed_array_view:start
+identifier_store:__assert:shared:typed_array_view:done
+identifier_store:__assert:shared:iterator_step:start
+identifier_store:__assert:shared:iterator_step:done
+identifier_store:__assert:shared:object_binding:start
+identifier_store:__assert:shared:object_binding:done
+identifier_store:__assert:shared:arguments_binding:start
+identifier_store:__assert:shared:arguments_binding:done
+identifier_store:__assert:shared:descriptor_binding:start
+identifier_store:__assert:shared:descriptor_binding:done
+identifier_store:__assert:shared:iterator_source:start
+identifier_store:__assert:shared:iterator_source:done
+identifier_store:__assert:shared:array_iterator_binding:start
+identifier_store:__assert:shared:array_iterator_binding:done
+identifier_store:__assert:shared_updates:done
+identifier_store:__assert:store_declared_global
+identifier_store:__assert:runtime_shadows target_owner=__assert source_owner=None object_binding_props=[]
+identifier_store:__assert:done
+identifier_read:start name=__assertSameValue
+identifier_read:path direct_fallback name=__assertSameValue
+identifier_read:fallback:start name=__assertSameValue
+identifier_read:fallback:path global name=__assertSameValue global_index=17
+identifier_read:fallback:done name=__assertSameValue
+identifier_store:__assertSameValue:canonical
+identifier_store:__assertSameValue:tracked
+identifier_store:__assertSameValue:descriptor
+identifier_store:__assertSameValue:call_snapshot
+identifier_store:__assertSameValue:function_binding
+identifier_store:__assertSameValue:object_binding
+identifier_store:__assertSameValue:kind
+identifier_store:__assertSameValue:string
+identifier_store:__assertSameValue:number
+identifier_store:__assertSameValue:array
+identifier_store:__assertSameValue:module
+identifier_store:__assertSameValue:prepared
+identifier_store:__assertSameValue:shared_updates:start
+identifier_store:__assertSameValue:shared:member_bindings:start
+identifier_store:__assertSameValue:shared:member_bindings:done
+identifier_store:__assertSameValue:shared:local_function:start
+identifier_store:__assertSameValue:shared:local_function:done
+identifier_store:__assertSameValue:shared:specialized_function:start
+identifier_store:__assertSameValue:shared:specialized_function:done
+identifier_store:__assertSameValue:shared:proxy:start
+identifier_store:__assertSameValue:shared:proxy:done
+identifier_store:__assertSameValue:shared:object_literal_members:start
+identifier_store:__assertSameValue:shared:object_literal_members:done
+identifier_store:__assertSameValue:shared:array_binding:start
+identifier_store:__assertSameValue:shared:array_binding:done
+identifier_store:__assertSameValue:shared:resizable_array_buffer:start
+identifier_store:__assertSameValue:shared:resizable_array_buffer:done
+identifier_store:__assertSameValue:shared:typed_array_view:start
+identifier_store:__assertSameValue:shared:typed_array_view:done
+identifier_store:__assertSameValue:shared:iterator_step:start
+identifier_store:__assertSameValue:shared:iterator_step:done
+identifier_store:__assertSameValue:shared:object_binding:start
+identifier_store:__assertSameValue:shared:object_binding:done
+identifier_store:__assertSameValue:shared:arguments_binding:start
+identifier_store:__assertSameValue:shared:arguments_binding:done
+identifier_store:__assertSameValue:shared:descriptor_binding:start
+identifier_store:__assertSameValue:shared:descriptor_binding:done
+identifier_store:__assertSameValue:shared:iterator_source:start
+identifier_store:__assertSameValue:shared:iterator_source:done
+identifier_store:__assertSameValue:shared:array_iterator_binding:start
+identifier_store:__assertSameValue:shared:array_iterator_binding:done
+identifier_store:__assertSameValue:shared_updates:done
+identifier_store:__assertSameValue:store_declared_global
+identifier_store:__assertSameValue:runtime_shadows target_owner=__assertSameValue source_owner=None object_binding_props=[]
+identifier_store:__assertSameValue:done
+identifier_read:start name=__assertNotSameValue
+identifier_read:path direct_fallback name=__assertNotSameValue
+identifier_read:fallback:start name=__assertNotSameValue
+identifier_read:fallback:path global name=__assertNotSameValue global_index=18
+identifier_read:fallback:done name=__assertNotSameValue
+identifier_store:__assertNotSameValue:canonical
+identifier_store:__assertNotSameValue:tracked
+identifier_store:__assertNotSameValue:descriptor
+identifier_store:__assertNotSameValue:call_snapshot
+identifier_store:__assertNotSameValue:function_binding
+identifier_store:__assertNotSameValue:object_binding
+identifier_store:__assertNotSameValue:kind
+identifier_store:__assertNotSameValue:string
+identifier_store:__assertNotSameValue:number
+identifier_store:__assertNotSameValue:array
+identifier_store:__assertNotSameValue:module
+identifier_store:__assertNotSameValue:prepared
+identifier_store:__assertNotSameValue:shared_updates:start
+identifier_store:__assertNotSameValue:shared:member_bindings:start
+identifier_store:__assertNotSameValue:shared:member_bindings:done
+identifier_store:__assertNotSameValue:shared:local_function:start
+identifier_store:__assertNotSameValue:shared:local_function:done
+identifier_store:__assertNotSameValue:shared:specialized_function:start
+identifier_store:__assertNotSameValue:shared:specialized_function:done
+identifier_store:__assertNotSameValue:shared:proxy:start
+identifier_store:__assertNotSameValue:shared:proxy:done
+identifier_store:__assertNotSameValue:shared:object_literal_members:start
+identifier_store:__assertNotSameValue:shared:object_literal_members:done
+identifier_store:__assertNotSameValue:shared:array_binding:start
+identifier_store:__assertNotSameValue:shared:array_binding:done
+identifier_store:__assertNotSameValue:shared:resizable_array_buffer:start
+identifier_store:__assertNotSameValue:shared:resizable_array_buffer:done
+identifier_store:__assertNotSameValue:shared:typed_array_view:start
+identifier_store:__assertNotSameValue:shared:typed_array_view:done
+identifier_store:__assertNotSameValue:shared:iterator_step:start
+identifier_store:__assertNotSameValue:shared:iterator_step:done
+identifier_store:__assertNotSameValue:shared:object_binding:start
+identifier_store:__assertNotSameValue:shared:object_binding:done
+identifier_store:__assertNotSameValue:shared:arguments_binding:start
+identifier_store:__assertNotSameValue:shared:arguments_binding:done
+identifier_store:__assertNotSameValue:shared:descriptor_binding:start
+identifier_store:__assertNotSameValue:shared:descriptor_binding:done
+identifier_store:__assertNotSameValue:shared:iterator_source:start
+identifier_store:__assertNotSameValue:shared:iterator_source:done
+identifier_store:__assertNotSameValue:shared:array_iterator_binding:start
+identifier_store:__assertNotSameValue:shared:array_iterator_binding:done
+identifier_store:__assertNotSameValue:shared_updates:done
+identifier_store:__assertNotSameValue:store_declared_global
+identifier_store:__assertNotSameValue:runtime_shadows target_owner=__assertNotSameValue source_owner=None object_binding_props=[]
+identifier_store:__assertNotSameValue:done
+identifier_read:start name=__ayyAssertThrows
+identifier_read:path direct_fallback name=__ayyAssertThrows
+identifier_read:fallback:start name=__ayyAssertThrows
+identifier_read:fallback:path global name=__ayyAssertThrows global_index=19
+identifier_read:fallback:done name=__ayyAssertThrows
+identifier_store:__ayyAssertThrows:canonical
+identifier_store:__ayyAssertThrows:tracked
+identifier_store:__ayyAssertThrows:descriptor
+identifier_store:__ayyAssertThrows:call_snapshot
+identifier_store:__ayyAssertThrows:function_binding
+identifier_store:__ayyAssertThrows:object_binding
+identifier_store:__ayyAssertThrows:kind
+identifier_store:__ayyAssertThrows:string
+identifier_store:__ayyAssertThrows:number
+identifier_store:__ayyAssertThrows:array
+identifier_store:__ayyAssertThrows:module
+identifier_store:__ayyAssertThrows:prepared
+identifier_store:__ayyAssertThrows:shared_updates:start
+identifier_store:__ayyAssertThrows:shared:member_bindings:start
+identifier_store:__ayyAssertThrows:shared:member_bindings:done
+identifier_store:__ayyAssertThrows:shared:local_function:start
+identifier_store:__ayyAssertThrows:shared:local_function:done
+identifier_store:__ayyAssertThrows:shared:specialized_function:start
+identifier_store:__ayyAssertThrows:shared:specialized_function:done
+identifier_store:__ayyAssertThrows:shared:proxy:start
+identifier_store:__ayyAssertThrows:shared:proxy:done
+identifier_store:__ayyAssertThrows:shared:object_literal_members:start
+identifier_store:__ayyAssertThrows:shared:object_literal_members:done
+identifier_store:__ayyAssertThrows:shared:array_binding:start
+identifier_store:__ayyAssertThrows:shared:array_binding:done
+identifier_store:__ayyAssertThrows:shared:resizable_array_buffer:start
+identifier_store:__ayyAssertThrows:shared:resizable_array_buffer:done
+identifier_store:__ayyAssertThrows:shared:typed_array_view:start
+identifier_store:__ayyAssertThrows:shared:typed_array_view:done
+identifier_store:__ayyAssertThrows:shared:iterator_step:start
+identifier_store:__ayyAssertThrows:shared:iterator_step:done
+identifier_store:__ayyAssertThrows:shared:object_binding:start
+identifier_store:__ayyAssertThrows:shared:object_binding:done
+identifier_store:__ayyAssertThrows:shared:arguments_binding:start
+identifier_store:__ayyAssertThrows:shared:arguments_binding:done
+identifier_store:__ayyAssertThrows:shared:descriptor_binding:start
+identifier_store:__ayyAssertThrows:shared:descriptor_binding:done
+identifier_store:__ayyAssertThrows:shared:iterator_source:start
+identifier_store:__ayyAssertThrows:shared:iterator_source:done
+identifier_store:__ayyAssertThrows:shared:array_iterator_binding:start
+identifier_store:__ayyAssertThrows:shared:array_iterator_binding:done
+identifier_store:__ayyAssertThrows:shared_updates:done
+identifier_store:__ayyAssertThrows:store_declared_global
+identifier_store:__ayyAssertThrows:runtime_shadows target_owner=__ayyAssertThrows source_owner=None object_binding_props=[]
+identifier_store:__ayyAssertThrows:done
+identifier_read:start name=compareArray
+identifier_read:path direct_fallback name=compareArray
+identifier_read:fallback:start name=compareArray
+identifier_read:fallback:path global name=compareArray global_index=20
+identifier_read:fallback:done name=compareArray
+identifier_store:compareArray:canonical
+identifier_store:compareArray:tracked
+identifier_store:compareArray:descriptor
+identifier_store:compareArray:call_snapshot
+identifier_store:compareArray:function_binding
+identifier_store:compareArray:object_binding
+identifier_store:compareArray:kind
+identifier_store:compareArray:string
+identifier_store:compareArray:number
+identifier_store:compareArray:array
+identifier_store:compareArray:module
+identifier_store:compareArray:prepared
+identifier_store:compareArray:shared_updates:start
+identifier_store:compareArray:shared:member_bindings:start
+identifier_store:compareArray:shared:member_bindings:done
+identifier_store:compareArray:shared:local_function:start
+identifier_store:compareArray:shared:local_function:done
+identifier_store:compareArray:shared:specialized_function:start
+identifier_store:compareArray:shared:specialized_function:done
+identifier_store:compareArray:shared:proxy:start
+identifier_store:compareArray:shared:proxy:done
+identifier_store:compareArray:shared:object_literal_members:start
+identifier_store:compareArray:shared:object_literal_members:done
+identifier_store:compareArray:shared:array_binding:start
+identifier_store:compareArray:shared:array_binding:done
+identifier_store:compareArray:shared:resizable_array_buffer:start
+identifier_store:compareArray:shared:resizable_array_buffer:done
+identifier_store:compareArray:shared:typed_array_view:start
+identifier_store:compareArray:shared:typed_array_view:done
+identifier_store:compareArray:shared:iterator_step:start
+identifier_store:compareArray:shared:iterator_step:done
+identifier_store:compareArray:shared:object_binding:start
+identifier_store:compareArray:shared:object_binding:done
+identifier_store:compareArray:shared:arguments_binding:start
+identifier_store:compareArray:shared:arguments_binding:done
+identifier_store:compareArray:shared:descriptor_binding:start
+identifier_store:compareArray:shared:descriptor_binding:done
+identifier_store:compareArray:shared:iterator_source:start
+identifier_store:compareArray:shared:iterator_source:done
+identifier_store:compareArray:shared:array_iterator_binding:start
+identifier_store:compareArray:shared:array_iterator_binding:done
+identifier_store:compareArray:shared_updates:done
+identifier_store:compareArray:store_declared_global
+identifier_store:compareArray:runtime_shadows target_owner=compareArray source_owner=None object_binding_props=[]
+identifier_store:compareArray:done
+identifier_read:start name=__ayyAssertCompareArray
+identifier_read:path direct_fallback name=__ayyAssertCompareArray
+identifier_read:fallback:start name=__ayyAssertCompareArray
+identifier_read:fallback:path global name=__ayyAssertCompareArray global_index=21
+identifier_read:fallback:done name=__ayyAssertCompareArray
+identifier_store:__ayyAssertCompareArray:canonical
+identifier_store:__ayyAssertCompareArray:tracked
+identifier_store:__ayyAssertCompareArray:descriptor
+identifier_store:__ayyAssertCompareArray:call_snapshot
+identifier_store:__ayyAssertCompareArray:function_binding
+identifier_store:__ayyAssertCompareArray:object_binding
+identifier_store:__ayyAssertCompareArray:kind
+identifier_store:__ayyAssertCompareArray:string
+identifier_store:__ayyAssertCompareArray:number
+identifier_store:__ayyAssertCompareArray:array
+identifier_store:__ayyAssertCompareArray:module
+identifier_store:__ayyAssertCompareArray:prepared
+identifier_store:__ayyAssertCompareArray:shared_updates:start
+identifier_store:__ayyAssertCompareArray:shared:member_bindings:start
+identifier_store:__ayyAssertCompareArray:shared:member_bindings:done
+identifier_store:__ayyAssertCompareArray:shared:local_function:start
+identifier_store:__ayyAssertCompareArray:shared:local_function:done
+identifier_store:__ayyAssertCompareArray:shared:specialized_function:start
+identifier_store:__ayyAssertCompareArray:shared:specialized_function:done
+identifier_store:__ayyAssertCompareArray:shared:proxy:start
+identifier_store:__ayyAssertCompareArray:shared:proxy:done
+identifier_store:__ayyAssertCompareArray:shared:object_literal_members:start
+identifier_store:__ayyAssertCompareArray:shared:object_literal_members:done
+identifier_store:__ayyAssertCompareArray:shared:array_binding:start
+identifier_store:__ayyAssertCompareArray:shared:array_binding:done
+identifier_store:__ayyAssertCompareArray:shared:resizable_array_buffer:start
+identifier_store:__ayyAssertCompareArray:shared:resizable_array_buffer:done
+identifier_store:__ayyAssertCompareArray:shared:typed_array_view:start
+identifier_store:__ayyAssertCompareArray:shared:typed_array_view:done
+identifier_store:__ayyAssertCompareArray:shared:iterator_step:start
+identifier_store:__ayyAssertCompareArray:shared:iterator_step:done
+identifier_store:__ayyAssertCompareArray:shared:object_binding:start
+identifier_store:__ayyAssertCompareArray:shared:object_binding:done
+identifier_store:__ayyAssertCompareArray:shared:arguments_binding:start
+identifier_store:__ayyAssertCompareArray:shared:arguments_binding:done
+identifier_store:__ayyAssertCompareArray:shared:descriptor_binding:start
+identifier_store:__ayyAssertCompareArray:shared:descriptor_binding:done
+identifier_store:__ayyAssertCompareArray:shared:iterator_source:start
+identifier_store:__ayyAssertCompareArray:shared:iterator_source:done
+identifier_store:__ayyAssertCompareArray:shared:array_iterator_binding:start
+identifier_store:__ayyAssertCompareArray:shared:array_iterator_binding:done
+identifier_store:__ayyAssertCompareArray:shared_updates:done
+identifier_store:__ayyAssertCompareArray:store_declared_global
+identifier_store:__ayyAssertCompareArray:runtime_shadows target_owner=__ayyAssertCompareArray source_owner=None object_binding_props=[]
+identifier_store:__ayyAssertCompareArray:done
+identifier_read:start name=$DONE
+identifier_read:path direct_fallback name=$DONE
+identifier_read:fallback:start name=$DONE
+identifier_read:fallback:path global name=$DONE global_index=22
+identifier_read:fallback:done name=$DONE
+identifier_store:$DONE:canonical
+identifier_store:$DONE:tracked
+identifier_store:$DONE:descriptor
+identifier_store:$DONE:call_snapshot
+identifier_store:$DONE:function_binding
+identifier_store:$DONE:object_binding
+identifier_store:$DONE:kind
+identifier_store:$DONE:string
+identifier_store:$DONE:number
+identifier_store:$DONE:array
+identifier_store:$DONE:module
+identifier_store:$DONE:prepared
+identifier_store:$DONE:shared_updates:start
+identifier_store:$DONE:shared:member_bindings:start
+identifier_store:$DONE:shared:member_bindings:done
+identifier_store:$DONE:shared:local_function:start
+identifier_store:$DONE:shared:local_function:done
+identifier_store:$DONE:shared:specialized_function:start
+identifier_store:$DONE:shared:specialized_function:done
+identifier_store:$DONE:shared:proxy:start
+identifier_store:$DONE:shared:proxy:done
+identifier_store:$DONE:shared:object_literal_members:start
+identifier_store:$DONE:shared:object_literal_members:done
+identifier_store:$DONE:shared:array_binding:start
+identifier_store:$DONE:shared:array_binding:done
+identifier_store:$DONE:shared:resizable_array_buffer:start
+identifier_store:$DONE:shared:resizable_array_buffer:done
+identifier_store:$DONE:shared:typed_array_view:start
+identifier_store:$DONE:shared:typed_array_view:done
+identifier_store:$DONE:shared:iterator_step:start
+identifier_store:$DONE:shared:iterator_step:done
+identifier_store:$DONE:shared:object_binding:start
+identifier_store:$DONE:shared:object_binding:done
+identifier_store:$DONE:shared:arguments_binding:start
+identifier_store:$DONE:shared:arguments_binding:done
+identifier_store:$DONE:shared:descriptor_binding:start
+identifier_store:$DONE:shared:descriptor_binding:done
+identifier_store:$DONE:shared:iterator_source:start
+identifier_store:$DONE:shared:iterator_source:done
+identifier_store:$DONE:shared:array_iterator_binding:start
+identifier_store:$DONE:shared:array_iterator_binding:done
+identifier_store:$DONE:shared_updates:done
+identifier_store:$DONE:store_declared_global
+identifier_store:$DONE:runtime_shadows target_owner=$DONE source_owner=None object_binding_props=[]
+identifier_store:$DONE:done
+identifier_read:start name=globalThis
+identifier_read:path no_implicit_global name=globalThis
+identifier_read:fallback:start name=globalThis
+identifier_read:fallback:path inferred_kind name=globalThis
+identifier_read:fallback:done name=globalThis
+identifier_read:start name=assert
+identifier_read:path direct_fallback name=assert
+identifier_read:fallback:start name=assert
+identifier_read:fallback:path local_function name=assert
+identifier_read:fallback:done name=assert
+identifier_read:start name=__sameValue
+identifier_read:path direct_fallback name=__sameValue
+identifier_read:fallback:start name=__sameValue
+identifier_read:fallback:path local_function name=__sameValue
+identifier_read:fallback:done name=__sameValue
+identifier_read:start name=__assertToString
+identifier_read:path direct_fallback name=__assertToString
+identifier_read:fallback:start name=__assertToString
+identifier_read:fallback:path local_function name=__assertToString
+identifier_read:fallback:done name=__assertToString
+identifier_read:start name=__assertSameValue
+identifier_read:path direct_fallback name=__assertSameValue
+identifier_read:fallback:start name=__assertSameValue
+identifier_read:fallback:path local_function name=__assertSameValue
+identifier_read:fallback:done name=__assertSameValue
+identifier_read:start name=__assertNotSameValue
+identifier_read:path direct_fallback name=__assertNotSameValue
+identifier_read:fallback:start name=__assertNotSameValue
+identifier_read:fallback:path local_function name=__assertNotSameValue
+identifier_read:fallback:done name=__assertNotSameValue
+identifier_read:start name=__ayyAssertThrows
+identifier_read:path direct_fallback name=__ayyAssertThrows
+identifier_read:fallback:start name=__ayyAssertThrows
+identifier_read:fallback:path local_function name=__ayyAssertThrows
+identifier_read:fallback:done name=__ayyAssertThrows
+identifier_read:start name=__ayy_fnexpr_1
+identifier_read:path no_implicit_global name=__ayy_fnexpr_1
+identifier_read:fallback:start name=__ayy_fnexpr_1
+identifier_read:fallback:path internal_user_function name=__ayy_fnexpr_1
+identifier_read:fallback:done name=__ayy_fnexpr_1
+identifier_read:start name=__ayyAssertCompareArray
+identifier_read:path direct_fallback name=__ayyAssertCompareArray
+identifier_read:fallback:start name=__ayyAssertCompareArray
+identifier_read:fallback:path local_function name=__ayyAssertCompareArray
+identifier_read:fallback:done name=__ayyAssertCompareArray
+identifier_read:start name=__ayy_class_ctor___ayy_ctor_13__name_C
+identifier_read:path no_implicit_global name=__ayy_class_ctor___ayy_ctor_13__name_C
+identifier_read:fallback:start name=__ayy_class_ctor___ayy_ctor_13__name_C
+identifier_read:fallback:path internal_user_function name=__ayy_class_ctor___ayy_ctor_13__name_C
+identifier_read:fallback:done name=__ayy_class_ctor___ayy_ctor_13__name_C
+identifier_store:C:canonical
+identifier_store:C:tracked
+identifier_store:C:descriptor
+identifier_store:C:call_snapshot
+identifier_store:C:function_binding
+identifier_store:C:object_binding
+identifier_store:C:kind
+identifier_store:C:string
+identifier_store:C:number
+identifier_store:C:array
+identifier_store:C:module
+identifier_store:C:prepared
+identifier_store:C:shared_updates:start
+identifier_store:C:shared:member_bindings:start
+identifier_store:C:shared:member_bindings:done
+identifier_store:C:shared:local_function:start
+identifier_store:C:shared:local_function:done
+identifier_store:C:shared:specialized_function:start
+identifier_store:C:shared:specialized_function:done
+identifier_store:C:shared:proxy:start
+identifier_store:C:shared:proxy:done
+identifier_store:C:shared:object_literal_members:start
+identifier_store:C:shared:object_literal_members:done
+identifier_store:C:shared:array_binding:start
+identifier_store:C:shared:array_binding:done
+identifier_store:C:shared:resizable_array_buffer:start
+identifier_store:C:shared:resizable_array_buffer:done
+identifier_store:C:shared:typed_array_view:start
+identifier_store:C:shared:typed_array_view:done
+identifier_store:C:shared:iterator_step:start
+identifier_store:C:shared:iterator_step:done
+identifier_store:C:shared:object_binding:start
+identifier_store:C:shared:object_binding:done
+identifier_store:C:shared:arguments_binding:start
+identifier_store:C:shared:arguments_binding:done
+identifier_store:C:shared:descriptor_binding:start
+identifier_store:C:shared:descriptor_binding:done
+identifier_store:C:shared:iterator_source:start
+identifier_store:C:shared:iterator_source:done
+identifier_store:C:shared:array_iterator_binding:start
+identifier_store:C:shared:array_iterator_binding:done
+identifier_store:C:shared_updates:done
+identifier_store:C:store_declared_global
+identifier_store:C:runtime_shadows target_owner=C source_owner=None object_binding_props=[]
+identifier_store:C:done
+identifier_read:start name=C
+identifier_read:path direct_fallback name=C
+identifier_read:fallback:start name=C
+identifier_read:fallback:path local_function name=C
+identifier_read:fallback:done name=C
+identifier_read:start name=Object
+identifier_read:path no_implicit_global name=Object
+identifier_read:fallback:start name=Object
+identifier_read:fallback:path inferred_kind name=Object
+identifier_read:fallback:done name=Object
+identifier_read:start name=C
+identifier_read:path direct_fallback name=C
+identifier_read:fallback:start name=C
+identifier_read:fallback:path local_function name=C
+identifier_read:fallback:done name=C
+identifier_read:start name=C
+identifier_read:path direct_fallback name=C
+identifier_read:fallback:start name=C
+identifier_read:fallback:path local_function name=C
+identifier_read:fallback:done name=C
+identifier_read:start name=__ayy_class_method_2__name_#f
+identifier_read:path no_implicit_global name=__ayy_class_method_2__name_#f
+identifier_read:fallback:start name=__ayy_class_method_2__name_#f
+identifier_read:fallback:path internal_user_function name=__ayy_class_method_2__name_#f
+identifier_read:fallback:done name=__ayy_class_method_2__name_#f
+identifier_read:start name=C
+identifier_read:path direct_fallback name=C
+identifier_read:fallback:start name=C
+identifier_read:fallback:path local_function name=C
+identifier_read:fallback:done name=C
+identifier_read:start name=__ayy_class_method_3
+identifier_read:path no_implicit_global name=__ayy_class_method_3
+identifier_read:fallback:start name=__ayy_class_method_3
+identifier_read:fallback:path internal_user_function name=__ayy_class_method_3
+identifier_read:fallback:done name=__ayy_class_method_3
+identifier_read:start name=C
+identifier_read:path direct_fallback name=C
+identifier_read:fallback:start name=C
+identifier_read:fallback:path local_function name=C
+identifier_read:fallback:done name=C
+identifier_read:start name=C
+identifier_read:path direct_fallback name=C
+identifier_read:fallback:start name=C
+identifier_read:fallback:path global name=C global_index=5
+identifier_read:fallback:done name=C
+identifier_read:start name=__ayy_fnexpr_4__name___ayy_assert_throws_callback_14
+identifier_read:path no_implicit_global name=__ayy_fnexpr_4__name___ayy_assert_throws_callback_14
+identifier_read:fallback:start name=__ayy_fnexpr_4__name___ayy_assert_throws_callback_14
+identifier_read:fallback:path internal_user_function name=__ayy_fnexpr_4__name___ayy_assert_throws_callback_14
+identifier_read:fallback:done name=__ayy_fnexpr_4__name___ayy_assert_throws_callback_14
+identifier_store:__ayy_assert_throws_callback_14:canonical
+identifier_store:__ayy_assert_throws_callback_14:tracked
+identifier_store:__ayy_assert_throws_callback_14:descriptor
+identifier_store:__ayy_assert_throws_callback_14:call_snapshot
+identifier_store:__ayy_assert_throws_callback_14:function_binding
+identifier_store:__ayy_assert_throws_callback_14:object_binding
+identifier_store:__ayy_assert_throws_callback_14:kind
+identifier_store:__ayy_assert_throws_callback_14:string
+identifier_store:__ayy_assert_throws_callback_14:number
+identifier_store:__ayy_assert_throws_callback_14:array
+identifier_store:__ayy_assert_throws_callback_14:module
+identifier_store:__ayy_assert_throws_callback_14:prepared
+identifier_store:__ayy_assert_throws_callback_14:shared_updates:start
+identifier_store:__ayy_assert_throws_callback_14:shared:member_bindings:start
+identifier_store:__ayy_assert_throws_callback_14:shared:member_bindings:done
+identifier_store:__ayy_assert_throws_callback_14:shared:local_function:start
+identifier_store:__ayy_assert_throws_callback_14:shared:local_function:done
+identifier_store:__ayy_assert_throws_callback_14:shared:specialized_function:start
+identifier_store:__ayy_assert_throws_callback_14:shared:specialized_function:done
+identifier_store:__ayy_assert_throws_callback_14:shared:proxy:start
+identifier_store:__ayy_assert_throws_callback_14:shared:proxy:done
+identifier_store:__ayy_assert_throws_callback_14:shared:object_literal_members:start
+identifier_store:__ayy_assert_throws_callback_14:shared:object_literal_members:done
+identifier_store:__ayy_assert_throws_callback_14:shared:array_binding:start
+identifier_store:__ayy_assert_throws_callback_14:shared:array_binding:done
+identifier_store:__ayy_assert_throws_callback_14:shared:resizable_array_buffer:start
+identifier_store:__ayy_assert_throws_callback_14:shared:resizable_array_buffer:done
+identifier_store:__ayy_assert_throws_callback_14:shared:typed_array_view:start
+identifier_store:__ayy_assert_throws_callback_14:shared:typed_array_view:done
+identifier_store:__ayy_assert_throws_callback_14:shared:iterator_step:start
+identifier_store:__ayy_assert_throws_callback_14:shared:iterator_step:done
+identifier_store:__ayy_assert_throws_callback_14:shared:object_binding:start
+identifier_store:__ayy_assert_throws_callback_14:shared:object_binding:done
+identifier_store:__ayy_assert_throws_callback_14:shared:arguments_binding:start
+identifier_store:__ayy_assert_throws_callback_14:shared:arguments_binding:done
+identifier_store:__ayy_assert_throws_callback_14:shared:descriptor_binding:start
+identifier_store:__ayy_assert_throws_callback_14:shared:descriptor_binding:done
+identifier_store:__ayy_assert_throws_callback_14:shared:iterator_source:start
+identifier_store:__ayy_assert_throws_callback_14:shared:iterator_source:done
+identifier_store:__ayy_assert_throws_callback_14:shared:array_iterator_binding:start
+identifier_store:__ayy_assert_throws_callback_14:shared:array_iterator_binding:done
+identifier_store:__ayy_assert_throws_callback_14:shared_updates:done
+identifier_store:__ayy_assert_throws_callback_14:store_declared_global
+identifier_store:__ayy_assert_throws_callback_14:runtime_shadows target_owner=__ayy_assert_throws_callback_14 source_owner=None object_binding_props=[]
+identifier_store:__ayy_assert_throws_callback_14:done
+identifier_store:__ayy_assert_throws_caught_15:canonical
+identifier_store:__ayy_assert_throws_caught_15:tracked
+identifier_store:__ayy_assert_throws_caught_15:descriptor
+identifier_store:__ayy_assert_throws_caught_15:call_snapshot
+identifier_store:__ayy_assert_throws_caught_15:function_binding
+identifier_store:__ayy_assert_throws_caught_15:object_binding
+identifier_store:__ayy_assert_throws_caught_15:kind
+identifier_store:__ayy_assert_throws_caught_15:string
+identifier_store:__ayy_assert_throws_caught_15:number
+identifier_store:__ayy_assert_throws_caught_15:array
+identifier_store:__ayy_assert_throws_caught_15:module
+identifier_store:__ayy_assert_throws_caught_15:prepared
+identifier_store:__ayy_assert_throws_caught_15:shared_updates:start
+identifier_store:__ayy_assert_throws_caught_15:shared:member_bindings:start
+identifier_store:__ayy_assert_throws_caught_15:shared:member_bindings:done
+identifier_store:__ayy_assert_throws_caught_15:shared:local_function:start
+identifier_store:__ayy_assert_throws_caught_15:shared:local_function:done
+identifier_store:__ayy_assert_throws_caught_15:shared:specialized_function:start
+identifier_store:__ayy_assert_throws_caught_15:shared:specialized_function:done
+identifier_store:__ayy_assert_throws_caught_15:shared:proxy:start
+identifier_store:__ayy_assert_throws_caught_15:shared:proxy:done
+identifier_store:__ayy_assert_throws_caught_15:shared:object_literal_members:start
+identifier_store:__ayy_assert_throws_caught_15:shared:object_literal_members:done
+identifier_store:__ayy_assert_throws_caught_15:shared:array_binding:start
+identifier_store:__ayy_assert_throws_caught_15:shared:array_binding:done
+identifier_store:__ayy_assert_throws_caught_15:shared:resizable_array_buffer:start
+identifier_store:__ayy_assert_throws_caught_15:shared:resizable_array_buffer:done
+identifier_store:__ayy_assert_throws_caught_15:shared:typed_array_view:start
+identifier_store:__ayy_assert_throws_caught_15:shared:typed_array_view:done
+identifier_store:__ayy_assert_throws_caught_15:shared:iterator_step:start
+identifier_store:__ayy_assert_throws_caught_15:shared:iterator_step:done
+identifier_store:__ayy_assert_throws_caught_15:shared:object_binding:start
+identifier_store:__ayy_assert_throws_caught_15:shared:object_binding:done
+identifier_store:__ayy_assert_throws_caught_15:shared:arguments_binding:start
+identifier_store:__ayy_assert_throws_caught_15:shared:arguments_binding:done
+identifier_store:__ayy_assert_throws_caught_15:shared:descriptor_binding:start
+identifier_store:__ayy_assert_throws_caught_15:shared:descriptor_binding:done
+identifier_store:__ayy_assert_throws_caught_15:shared:iterator_source:start
+identifier_store:__ayy_assert_throws_caught_15:shared:iterator_source:done
+identifier_store:__ayy_assert_throws_caught_15:shared:array_iterator_binding:start
+identifier_store:__ayy_assert_throws_caught_15:shared:array_iterator_binding:done
+identifier_store:__ayy_assert_throws_caught_15:shared_updates:done
+identifier_store:__ayy_assert_throws_caught_15:store_declared_global
+identifier_store:__ayy_assert_throws_caught_15:runtime_shadows target_owner=__ayy_assert_throws_caught_15 source_owner=None object_binding_props=[]
+identifier_store:__ayy_assert_throws_caught_15:done
+identifier_store:__ayy_assert_throws_caught_15:canonical
+identifier_store:__ayy_assert_throws_caught_15:tracked
+identifier_store:__ayy_assert_throws_caught_15:descriptor
+identifier_store:__ayy_assert_throws_caught_15:call_snapshot
+identifier_store:__ayy_assert_throws_caught_15:function_binding
+identifier_store:__ayy_assert_throws_caught_15:object_binding
+identifier_store:__ayy_assert_throws_caught_15:kind
+identifier_store:__ayy_assert_throws_caught_15:string
+identifier_store:__ayy_assert_throws_caught_15:number
+identifier_store:__ayy_assert_throws_caught_15:array
+identifier_store:__ayy_assert_throws_caught_15:module
+identifier_store:__ayy_assert_throws_caught_15:prepared
+identifier_store:__ayy_assert_throws_caught_15:shared_updates:start
+identifier_store:__ayy_assert_throws_caught_15:shared:member_bindings:start
+identifier_store:__ayy_assert_throws_caught_15:shared:member_bindings:done
+identifier_store:__ayy_assert_throws_caught_15:shared:local_function:start
+identifier_store:__ayy_assert_throws_caught_15:shared:local_function:done
+identifier_store:__ayy_assert_throws_caught_15:shared:specialized_function:start
+identifier_store:__ayy_assert_throws_caught_15:shared:specialized_function:done
+identifier_store:__ayy_assert_throws_caught_15:shared:proxy:start
+identifier_store:__ayy_assert_throws_caught_15:shared:proxy:done
+identifier_store:__ayy_assert_throws_caught_15:shared:object_literal_members:start
+identifier_store:__ayy_assert_throws_caught_15:shared:object_literal_members:done
+identifier_store:__ayy_assert_throws_caught_15:shared:array_binding:start
+identifier_store:__ayy_assert_throws_caught_15:shared:array_binding:done
+identifier_store:__ayy_assert_throws_caught_15:shared:resizable_array_buffer:start
+identifier_store:__ayy_assert_throws_caught_15:shared:resizable_array_buffer:done
+identifier_store:__ayy_assert_throws_caught_15:shared:typed_array_view:start
+identifier_store:__ayy_assert_throws_caught_15:shared:typed_array_view:done
+identifier_store:__ayy_assert_throws_caught_15:shared:iterator_step:start
+identifier_store:__ayy_assert_throws_caught_15:shared:iterator_step:done
+identifier_store:__ayy_assert_throws_caught_15:shared:object_binding:start
+identifier_store:__ayy_assert_throws_caught_15:shared:object_binding:done
+identifier_store:__ayy_assert_throws_caught_15:shared:arguments_binding:start
+identifier_store:__ayy_assert_throws_caught_15:shared:arguments_binding:done
+identifier_store:__ayy_assert_throws_caught_15:shared:descriptor_binding:start
+identifier_store:__ayy_assert_throws_caught_15:shared:descriptor_binding:done
+identifier_store:__ayy_assert_throws_caught_15:shared:iterator_source:start
+identifier_store:__ayy_assert_throws_caught_15:shared:iterator_source:done
+identifier_store:__ayy_assert_throws_caught_15:shared:array_iterator_binding:start
+identifier_store:__ayy_assert_throws_caught_15:shared:array_iterator_binding:done
+identifier_store:__ayy_assert_throws_caught_15:shared_updates:done
+identifier_store:__ayy_assert_throws_caught_15:store_declared_global
+identifier_store:__ayy_assert_throws_caught_15:runtime_shadows target_owner=__ayy_assert_throws_caught_15 source_owner=None object_binding_props=[]
+identifier_store:__ayy_assert_throws_caught_15:done
+identifier_read:start name=__ayy_assert_throws_caught_15
+identifier_read:path direct_fallback name=__ayy_assert_throws_caught_15
+identifier_read:fallback:start name=__ayy_assert_throws_caught_15
+identifier_read:fallback:path global name=__ayy_assert_throws_caught_15 global_index=9
+identifier_read:fallback:done name=__ayy_assert_throws_caught_15

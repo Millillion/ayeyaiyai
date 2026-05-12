@@ -18,6 +18,12 @@ impl<'a> FunctionCompiler<'a> {
         materialized_target: &Expression,
         property_name: &str,
     ) -> Option<PropertyDescriptorBinding> {
+        if self.runtime_object_property_shadow_deletion_may_hide_static_property(
+            target,
+            &Expression::String(property_name.to_string()),
+        ) {
+            return None;
+        }
         let function_binding = self
             .resolve_function_binding_from_expression(target)
             .or_else(|| {
@@ -30,6 +36,23 @@ impl<'a> FunctionCompiler<'a> {
             });
         let binding = function_binding?;
         if property_name == "prototype" {
+            if let LocalFunctionBinding::User(function_name) = &binding {
+                let property = Expression::String("prototype".to_string());
+                if let Some(value) =
+                    self.explicit_function_self_binding_property_value(function_name, &property)
+                {
+                    return Some(PropertyDescriptorBinding {
+                        value: Some(value),
+                        configurable: false,
+                        enumerable: false,
+                        writable: Some(true),
+                        getter: None,
+                        setter: None,
+                        has_get: false,
+                        has_set: false,
+                    });
+                }
+            }
             let has_prototype = match &binding {
                 LocalFunctionBinding::User(function_name)
                 | LocalFunctionBinding::Builtin(function_name) => self
@@ -44,7 +67,7 @@ impl<'a> FunctionCompiler<'a> {
                     }),
                     configurable: false,
                     enumerable: false,
-                    writable: Some(false),
+                    writable: Some(true),
                     getter: None,
                     setter: None,
                     has_get: false,

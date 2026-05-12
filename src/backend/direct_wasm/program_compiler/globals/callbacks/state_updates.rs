@@ -33,7 +33,13 @@ impl DirectWasmCompiler {
         let materialized_value =
             self.materialize_callback_state_expression(value, value_bindings, object_bindings);
         value_bindings.insert(name.to_string(), materialized_value.clone());
-        if let Some(binding) = self.infer_global_object_binding_with_state(
+        if let Some(binding) = self.define_property_result_object_binding_for_parameter_state(
+            value,
+            value_bindings,
+            object_bindings,
+        ) {
+            object_bindings.insert(name.to_string(), binding);
+        } else if let Some(binding) = self.infer_global_object_binding_with_state(
             &materialized_value,
             value_bindings,
             object_bindings,

@@ -169,6 +169,12 @@ impl<'a> FunctionCompiler<'a> {
         name: &str,
         index_local: u32,
     ) -> DirectResult<bool> {
+        if self.is_named_global_array_binding(name)
+            && (!self.state.speculation.execution_context.top_level_function
+                || self.uses_global_runtime_array_state(name))
+        {
+            return Ok(false);
+        }
         let Some(indices) = self
             .state
             .speculation

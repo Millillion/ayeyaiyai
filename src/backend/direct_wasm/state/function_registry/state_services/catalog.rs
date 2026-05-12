@@ -55,6 +55,20 @@ impl FunctionRegistryState {
             .set_user_function_home_object_binding(function_name, home_object_name);
     }
 
+    pub(in crate::backend::direct_wasm) fn record_runtime_called_user_function(
+        &mut self,
+        function_name: &str,
+    ) {
+        self.runtime_called_user_functions
+            .insert(function_name.to_string());
+    }
+
+    pub(in crate::backend::direct_wasm) fn runtime_called_user_function_names(
+        &self,
+    ) -> HashSet<String> {
+        self.runtime_called_user_functions.clone()
+    }
+
     #[cfg(test)]
     pub(in crate::backend::direct_wasm) fn prepared_metadata_snapshot(
         &self,

@@ -10,7 +10,26 @@ impl<'a> FunctionCompiler<'a> {
             && let Expression::String(property_name) = property
         {
             return match (property_name.as_str(), step_binding) {
-                ("done", _) => Some(StaticValueKind::Bool),
+                (
+                    "done",
+                    IteratorStepBinding::Runtime {
+                        static_done: Some(_done),
+                        ..
+                    },
+                ) => Some(StaticValueKind::Bool),
+                (
+                    "done",
+                    IteratorStepBinding::Runtime {
+                        static_value: Some(static_value),
+                        ..
+                    },
+                ) => self
+                    .infer_value_kind(&Expression::Member {
+                        object: Box::new(static_value),
+                        property: Box::new(Expression::String("done".to_string())),
+                    })
+                    .or(Some(StaticValueKind::Unknown)),
+                ("done", _) => Some(StaticValueKind::Unknown),
                 (
                     "value",
                     IteratorStepBinding::Runtime {

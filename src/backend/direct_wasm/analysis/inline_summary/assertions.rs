@@ -6,7 +6,11 @@ pub(in crate::backend::direct_wasm) fn expression_mentions_assertion_builtin(
     match expression {
         Expression::Identifier(name) => matches!(
             name.as_str(),
-            "__assert" | "__assertSameValue" | "__assertNotSameValue" | "__ayyAssertThrows"
+            "assert"
+                | "__assert"
+                | "__assertSameValue"
+                | "__assertNotSameValue"
+                | "__ayyAssertThrows"
         ),
         Expression::Member { object, property } => {
             (matches!(object.as_ref(), Expression::Identifier(name) if name == "assert")

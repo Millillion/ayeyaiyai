@@ -8,7 +8,7 @@ use super::{
     await_rewrite::rewrite_script_await_identifiers,
     source::{
         parse_module_program_with_path, parse_program_source, parse_script_program_source,
-        validate_script_source,
+        script_source_has_direct_using_declaration, validate_script_source,
     },
 };
 
@@ -53,6 +53,10 @@ pub fn parse_module_goal(source: &str) -> Result<Program> {
 #[allow(dead_code)]
 pub fn validate_script_goal(source: &str) -> Result<()> {
     validate_script_source(source)
+}
+
+pub fn script_goal_has_direct_using_declaration(source: &str) -> bool {
+    script_source_has_direct_using_declaration(source)
 }
 
 pub fn parse_module_goal_with_path(path: &Path, source: &str) -> Result<Program> {

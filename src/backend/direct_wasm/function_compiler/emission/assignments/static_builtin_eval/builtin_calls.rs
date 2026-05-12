@@ -1,6 +1,20 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    pub(in crate::backend::direct_wasm) fn resolve_static_bound_has_own_property_result(
+        &self,
+        receiver: &Expression,
+        property: &Expression,
+    ) -> Option<bool> {
+        self.resolve_static_has_own_property_call_result(&Expression::Call {
+            callee: Box::new(Expression::Member {
+                object: Box::new(receiver.clone()),
+                property: Box::new(Expression::String("hasOwnProperty".to_string())),
+            }),
+            arguments: vec![CallArgument::Expression(property.clone())],
+        })
+    }
+
     pub(in crate::backend::direct_wasm) fn resolve_static_builtin_function_outcome(
         &self,
         function_name: &str,
@@ -26,6 +40,77 @@ impl<'a> FunctionCompiler<'a> {
         }
 
         match function_name {
+            "Object.getOwnPropertyDescriptor" => {
+                let receiver = match arguments.first()? {
+                    CallArgument::Expression(receiver) | CallArgument::Spread(receiver) => receiver,
+                };
+                let property = match arguments.get(1) {
+                    Some(CallArgument::Expression(property) | CallArgument::Spread(property)) => {
+                        property.clone()
+                    }
+                    None => Expression::Undefined,
+                };
+                let descriptor_call = Expression::Call {
+                    callee: Box::new(Expression::Member {
+                        object: Box::new(Expression::Identifier("Object".to_string())),
+                        property: Box::new(Expression::String(
+                            "getOwnPropertyDescriptor".to_string(),
+                        )),
+                    }),
+                    arguments: vec![
+                        CallArgument::Expression(receiver.clone()),
+                        CallArgument::Expression(property.clone()),
+                    ],
+                };
+                if self.runtime_object_property_shadow_deletion_may_affect_property(
+                    receiver, &property,
+                ) {
+                    return None;
+                }
+                if let Some(descriptor) =
+                    self.resolve_descriptor_binding_from_expression(&descriptor_call)
+                {
+                    return Some(StaticEvalOutcome::Value(object_binding_to_expression(
+                        &self.object_binding_from_property_descriptor(&descriptor),
+                    )));
+                }
+                if self
+                    .resolve_function_binding_from_expression(receiver)
+                    .is_some()
+                    && self.resolve_function_object_has_own_property(receiver, &property)
+                        == Some(false)
+                {
+                    return Some(StaticEvalOutcome::Value(Expression::Undefined));
+                }
+                if self.resolve_static_object_has_own_property_result(receiver, &property)
+                    == Some(Some(false))
+                {
+                    return Some(StaticEvalOutcome::Value(Expression::Undefined));
+                }
+                None
+            }
+            "Reflect.has" => {
+                let target = match arguments.first() {
+                    Some(CallArgument::Expression(target) | CallArgument::Spread(target)) => target,
+                    None => return None,
+                };
+                let property = match arguments.get(1) {
+                    Some(CallArgument::Expression(property) | CallArgument::Spread(property)) => {
+                        property.clone()
+                    }
+                    None => Expression::Undefined,
+                };
+                self.resolve_static_reflect_has_result(target, &property)
+                    .map(Expression::Bool)
+                    .map(StaticEvalOutcome::Value)
+            }
+            "Math.abs" => Some(StaticEvalOutcome::Value(Expression::Number(
+                self.resolve_static_builtin_math_argument_number(
+                    arguments.first()?,
+                    current_function_name,
+                )?
+                .abs(),
+            ))),
             "Math.atan" => Some(StaticEvalOutcome::Value(Expression::Number(
                 self.resolve_static_builtin_math_argument_number(
                     arguments.first()?,
@@ -40,11 +125,35 @@ impl<'a> FunctionCompiler<'a> {
                 )?
                 .exp(),
             ))),
+            "Math.floor" => Some(StaticEvalOutcome::Value(Expression::Number(
+                self.resolve_static_builtin_math_argument_number(
+                    arguments.first()?,
+                    current_function_name,
+                )?
+                .floor(),
+            ))),
             "Math.max" => Some(StaticEvalOutcome::Value(Expression::Number(
                 self.resolve_static_math_extremum(arguments, current_function_name, true)?,
             ))),
             "Math.min" => Some(StaticEvalOutcome::Value(Expression::Number(
                 self.resolve_static_math_extremum(arguments, current_function_name, false)?,
+            ))),
+            "Math.pow" => Some(StaticEvalOutcome::Value(Expression::Number(
+                self.resolve_static_builtin_math_argument_number(
+                    arguments.first()?,
+                    current_function_name,
+                )?
+                .powf(self.resolve_static_builtin_math_argument_number(
+                    arguments.get(1)?,
+                    current_function_name,
+                )?),
+            ))),
+            "Math.sin" => Some(StaticEvalOutcome::Value(Expression::Number(
+                self.resolve_static_builtin_math_argument_number(
+                    arguments.first()?,
+                    current_function_name,
+                )?
+                .sin(),
             ))),
             _ => None,
         }
@@ -102,21 +211,8 @@ impl<'a> FunctionCompiler<'a> {
                 else {
                     return Some(Expression::Bool(false));
                 };
-                Some(Expression::Bool(
-                    self.resolve_descriptor_binding_from_expression(&Expression::Call {
-                        callee: Box::new(Expression::Member {
-                            object: Box::new(Expression::Identifier("Object".to_string())),
-                            property: Box::new(Expression::String(
-                                "getOwnPropertyDescriptor".to_string(),
-                            )),
-                        }),
-                        arguments: vec![
-                            CallArgument::Expression(receiver.clone()),
-                            CallArgument::Expression(property.clone()),
-                        ],
-                    })
-                    .is_some(),
-                ))
+                self.resolve_static_bound_has_own_property_result(receiver, property)
+                    .map(Expression::Bool)
             }
             "Object.prototype.propertyIsEnumerable" => {
                 let Some(CallArgument::Expression(property) | CallArgument::Spread(property)) =
@@ -124,21 +220,8 @@ impl<'a> FunctionCompiler<'a> {
                 else {
                     return Some(Expression::Bool(false));
                 };
-                Some(Expression::Bool(
-                    self.resolve_descriptor_binding_from_expression(&Expression::Call {
-                        callee: Box::new(Expression::Member {
-                            object: Box::new(Expression::Identifier("Object".to_string())),
-                            property: Box::new(Expression::String(
-                                "getOwnPropertyDescriptor".to_string(),
-                            )),
-                        }),
-                        arguments: vec![
-                            CallArgument::Expression(receiver.clone()),
-                            CallArgument::Expression(property.clone()),
-                        ],
-                    })
-                    .is_some_and(|descriptor| descriptor.enumerable),
-                ))
+                self.resolve_bound_function_prototype_call_descriptor(receiver, property)
+                    .map(|descriptor| Expression::Bool(descriptor.enumerable))
             }
             _ => None,
         }
@@ -152,9 +235,14 @@ impl<'a> FunctionCompiler<'a> {
     ) -> Option<Expression> {
         match function_name {
             "String" => Some(Expression::String(match arguments.first() {
-                Some(CallArgument::Expression(argument) | CallArgument::Spread(argument)) => {
-                    self.resolve_static_string_concat_value(argument, current_function_name)?
-                }
+                Some(CallArgument::Expression(argument) | CallArgument::Spread(argument)) => self
+                    .resolve_static_symbol_to_string_value_with_context(
+                        argument,
+                        current_function_name,
+                    )
+                    .or_else(|| {
+                        self.resolve_static_string_concat_value(argument, current_function_name)
+                    })?,
                 None => String::new(),
             })),
             "JSON.stringify" => match arguments.first() {
@@ -195,6 +283,61 @@ impl<'a> FunctionCompiler<'a> {
                 }
                 None => false,
             })),
+            "Math.abs" => Some(Expression::Number(
+                self.resolve_static_builtin_math_argument_number(
+                    arguments.first()?,
+                    current_function_name,
+                )?
+                .abs(),
+            )),
+            "Math.atan" => Some(Expression::Number(
+                self.resolve_static_builtin_math_argument_number(
+                    arguments.first()?,
+                    current_function_name,
+                )?
+                .atan(),
+            )),
+            "Math.exp" => Some(Expression::Number(
+                self.resolve_static_builtin_math_argument_number(
+                    arguments.first()?,
+                    current_function_name,
+                )?
+                .exp(),
+            )),
+            "Math.floor" => Some(Expression::Number(
+                self.resolve_static_builtin_math_argument_number(
+                    arguments.first()?,
+                    current_function_name,
+                )?
+                .floor(),
+            )),
+            "Math.max" => Some(Expression::Number(self.resolve_static_math_extremum(
+                arguments,
+                current_function_name,
+                true,
+            )?)),
+            "Math.min" => Some(Expression::Number(self.resolve_static_math_extremum(
+                arguments,
+                current_function_name,
+                false,
+            )?)),
+            "Math.pow" => Some(Expression::Number(
+                self.resolve_static_builtin_math_argument_number(
+                    arguments.first()?,
+                    current_function_name,
+                )?
+                .powf(self.resolve_static_builtin_math_argument_number(
+                    arguments.get(1)?,
+                    current_function_name,
+                )?),
+            )),
+            "Math.sin" => Some(Expression::Number(
+                self.resolve_static_builtin_math_argument_number(
+                    arguments.first()?,
+                    current_function_name,
+                )?
+                .sin(),
+            )),
             _ => None,
         }
     }

@@ -6,12 +6,19 @@ impl StaticFunctionConstructorLowerer {
         callee: &Expression,
         arguments: &[CallArgument],
     ) -> Result<Option<Expression>> {
-        if !self.is_function_constructor_callee(callee) {
+        let constructor_arguments = if self.is_function_constructor_callee(callee) {
+            arguments
+        } else if self.is_function_constructor_call_callee(callee) {
+            let [_, constructor_arguments @ ..] = arguments else {
+                return Ok(None);
+            };
+            constructor_arguments
+        } else {
             return Ok(None);
-        }
+        };
 
         let Some((parameter_source, body_source)) =
-            function_constructor_literal_source_parts(arguments)
+            function_constructor_literal_source_parts(constructor_arguments)
         else {
             return Ok(None);
         };
@@ -19,9 +26,9 @@ impl StaticFunctionConstructorLowerer {
         let function_name = self.fresh_function_name();
         let wrapper_source =
             format!("function {function_name}({parameter_source}) {{\n{body_source}\n}}");
-        let parsed = crate::frontend::parse(&wrapper_source).with_context(|| {
-            format!("failed to parse static Function constructor source for `{function_name}`")
-        })?;
+        let Ok(parsed) = crate::frontend::parse(&wrapper_source) else {
+            return Ok(None);
+        };
         let Some(function) = parsed
             .functions
             .into_iter()
@@ -65,5 +72,14 @@ impl StaticFunctionConstructorLowerer {
                     if self.is_global_identifier(object, "globalThis")
                         && self.is_string_literal(property, "Function")
             )
+    }
+
+    pub(super) fn is_function_constructor_call_callee(&self, callee: &Expression) -> bool {
+        matches!(
+            callee,
+            Expression::Member { object, property }
+                if self.is_function_constructor_callee(object)
+                    && self.is_string_literal(property, "call")
+        )
     }
 }

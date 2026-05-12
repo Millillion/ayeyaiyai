@@ -7,12 +7,11 @@ impl<'a> FunctionCompiler<'a> {
         bindings: &HashMap<String, Expression>,
     ) -> Option<Expression> {
         match expression {
-            Expression::Identifier(name) => Some(
-                bindings
-                    .get(name)
-                    .cloned()
-                    .unwrap_or_else(|| expression.clone()),
-            ),
+            Expression::Identifier(name) => bindings.get(name).cloned().or_else(|| {
+                (name == "undefined" && self.is_unshadowed_builtin_identifier(name))
+                    .then_some(Expression::Undefined)
+                    .or_else(|| Some(expression.clone()))
+            }),
             Expression::Number(_)
             | Expression::BigInt(_)
             | Expression::String(_)
@@ -74,6 +73,7 @@ impl<'a> FunctionCompiler<'a> {
         bindings: &HashMap<String, Expression>,
     ) -> Option<(Expression, HashMap<String, Expression>)> {
         let function = self.resolve_registered_function_declaration(function_name)?;
+        let user_function = self.user_function(function_name)?;
         let mut local_bindings = bindings.clone();
         for statement in &function.body {
             match statement {
@@ -86,12 +86,13 @@ impl<'a> FunctionCompiler<'a> {
                     local_bindings.insert(name.clone(), value);
                 }
                 Statement::Assign { name, value } => {
-                    let Some(value) = self
-                        .evaluate_simple_static_expression_with_bindings(value, &local_bindings)
-                    else {
+                    if let Some(value) =
+                        self.evaluate_simple_static_expression_with_bindings(value, &local_bindings)
+                    {
+                        local_bindings.insert(name.clone(), value);
+                    } else if user_function.scope_bindings.contains(name) {
                         return None;
-                    };
-                    local_bindings.insert(name.clone(), value);
+                    }
                 }
                 Statement::Return(value) => {
                     let Some(value) = self

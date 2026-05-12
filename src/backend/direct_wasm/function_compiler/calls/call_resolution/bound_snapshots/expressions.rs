@@ -18,9 +18,12 @@ impl<'a> FunctionCompiler<'a> {
     ) -> Option<Expression> {
         let _guard = BoundSnapshotExpressionGuard::enter(expression, current_function_name)?;
         match expression {
-            Expression::Identifier(name) => {
-                self.evaluate_bound_snapshot_identifier(name, expression, bindings)
-            }
+            Expression::Identifier(name) => self.evaluate_bound_snapshot_identifier(
+                name,
+                expression,
+                bindings,
+                current_function_name,
+            ),
             Expression::Number(_)
             | Expression::BigInt(_)
             | Expression::String(_)
@@ -40,6 +43,12 @@ impl<'a> FunctionCompiler<'a> {
                     bindings,
                     current_function_name,
                 ),
+            Expression::Unary { op, expression } => self.evaluate_bound_snapshot_unary_expression(
+                *op,
+                expression,
+                bindings,
+                current_function_name,
+            ),
             Expression::Member { object, property } => self
                 .evaluate_bound_snapshot_member_expression(
                     object,

@@ -9,9 +9,9 @@ use crate::backend::direct_wasm::{
     GlobalMemberCaptureMutationAccess, GlobalMemberCaptureQueryAccess,
     GlobalMemberFunctionMutationAccess, GlobalMemberFunctionQueryAccess,
     GlobalObjectValueQueryAccess, GlobalRuntimePrototypeQueryAccess, GlobalStaticSemanticsSnapshot,
-    GlobalValueBindingQueryAccess, ImplicitGlobalBinding, LocalFunctionBinding,
-    MemberFunctionBindingKey, ObjectValueBinding, PreparedModuleLayout, Program,
-    ReturnedMemberFunctionBinding, StaticValueKind, UserFunction,
+    GlobalValueBindingQueryAccess, ImplicitGlobalBinding, JS_UNDEFINED_TAG, LocalFunctionBinding,
+    MemberFunctionBindingKey, NEXT_PRIVATE_BRAND_GLOBAL_INDEX, ObjectValueBinding,
+    PreparedModuleLayout, Program, ReturnedMemberFunctionBinding, StaticValueKind, UserFunction,
 };
 use std::collections::{BTreeMap, HashMap, HashSet};
 

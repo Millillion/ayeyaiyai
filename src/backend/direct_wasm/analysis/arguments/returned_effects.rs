@@ -10,16 +10,51 @@ pub(in crate::backend::direct_wasm) fn collect_returned_arguments_effects(
     effects
 }
 
+fn apply_returned_arguments_named_assignment_effect(
+    name: &str,
+    value: &Expression,
+    effects: &mut ReturnedArgumentsEffects,
+) {
+    let effect = ArgumentsPropertyEffect::Assign(value.clone());
+    match name {
+        "callee" => effects.callee = Some(effect),
+        "length" => effects.length = Some(effect),
+        _ => {}
+    }
+}
+
 pub(in crate::backend::direct_wasm) fn collect_returned_arguments_effects_from_statement(
     statement: &Statement,
     effects: &mut ReturnedArgumentsEffects,
 ) {
+    collect_returned_arguments_effects_from_statement_with_arguments_with(
+        statement, effects, false,
+    );
+}
+
+fn collect_returned_arguments_effects_from_statement_with_arguments_with(
+    statement: &Statement,
+    effects: &mut ReturnedArgumentsEffects,
+    active_arguments_with: bool,
+) {
+    if active_arguments_with {
+        match statement {
+            Statement::Assign { name, value } | Statement::Var { name, value } => {
+                apply_returned_arguments_named_assignment_effect(name, value, effects);
+            }
+            _ => {}
+        }
+    }
     match statement {
         Statement::Declaration { body }
         | Statement::Block { body }
         | Statement::Labeled { body, .. } => {
             for statement in body {
-                collect_returned_arguments_effects_from_statement(statement, effects);
+                collect_returned_arguments_effects_from_statement_with_arguments_with(
+                    statement,
+                    effects,
+                    active_arguments_with,
+                );
             }
         }
         Statement::Var { value, .. }
@@ -45,6 +80,16 @@ pub(in crate::backend::direct_wasm) fn collect_returned_arguments_effects_from_s
                     "length" => effects.length = Some(effect),
                     _ => {}
                 }
+            }
+        }
+        Statement::With { object, body } => {
+            let nested_arguments_with = is_arguments_identifier(object);
+            for statement in body {
+                collect_returned_arguments_effects_from_statement_with_arguments_with(
+                    statement,
+                    effects,
+                    nested_arguments_with,
+                );
             }
         }
         _ => {}

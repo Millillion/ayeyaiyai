@@ -25,6 +25,7 @@ struct RefinedAotValidator<'a> {
     validated_functions: HashSet<&'a str>,
     scopes: ScopeStack,
     known_kinds: Vec<HashMap<String, KnownValueKind>>,
+    known_string_values: Vec<HashMap<String, String>>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -46,6 +47,7 @@ impl<'a> RefinedAotValidator<'a> {
             validated_functions: HashSet::new(),
             scopes: ScopeStack::default(),
             known_kinds: Vec::new(),
+            known_string_values: Vec::new(),
         }
     }
 
@@ -63,6 +65,7 @@ impl<'a> RefinedAotValidator<'a> {
 
         self.scopes.push(global_scope);
         self.known_kinds.push(HashMap::new());
+        self.known_string_values.push(HashMap::new());
         self.validate_statement_list(&self.program.statements)?;
         for function in self
             .program
@@ -74,6 +77,7 @@ impl<'a> RefinedAotValidator<'a> {
         }
         self.scopes.pop();
         self.known_kinds.pop();
+        self.known_string_values.pop();
 
         Ok(())
     }
@@ -99,6 +103,7 @@ impl<'a> RefinedAotValidator<'a> {
 
         self.scopes.push(function_scope);
         self.known_kinds.push(HashMap::new());
+        self.known_string_values.push(HashMap::new());
 
         for parameter in &function.params {
             if let Some(default) = &parameter.default {
@@ -109,6 +114,7 @@ impl<'a> RefinedAotValidator<'a> {
 
         self.scopes.pop();
         self.known_kinds.pop();
+        self.known_string_values.pop();
         Ok(())
     }
 
@@ -130,7 +136,9 @@ impl<'a> RefinedAotValidator<'a> {
         scope.extend(extra_bindings);
         self.scopes.push(scope);
         self.known_kinds.push(HashMap::new());
+        self.known_string_values.push(HashMap::new());
         let result = self.validate_statement_list(statements);
+        self.known_string_values.pop();
         self.known_kinds.pop();
         self.scopes.pop();
         result
@@ -145,18 +153,21 @@ impl<'a> RefinedAotValidator<'a> {
                 self.validate_expression(value)?;
                 let kind = self.infer_known_kind(value);
                 self.record_known_kind(name, kind);
+                self.record_known_string_value(name, self.resolve_compile_time_string(value));
                 Ok(())
             }
             Statement::Let { name, value, .. } => {
                 self.validate_expression(value)?;
                 let kind = self.infer_known_kind(value);
                 self.record_known_kind(name, kind);
+                self.record_known_string_value(name, self.resolve_compile_time_string(value));
                 Ok(())
             }
             Statement::Assign { name, value } => {
                 self.validate_expression(value)?;
                 let kind = self.infer_known_kind(value);
                 self.record_known_kind(name, kind);
+                self.record_known_string_value(name, self.resolve_compile_time_string(value));
                 Ok(())
             }
             Statement::Expression(value)
@@ -405,6 +416,7 @@ impl<'a> RefinedAotValidator<'a> {
                 self.validate_arguments(arguments)?;
 
                 if self.is_direct_literal_eval_call(callee, arguments)
+                    || self.is_direct_compile_time_string_eval_call(callee, arguments)
                     || self.is_direct_comment_eval_call(callee, arguments)
                     || self.is_direct_non_string_eval_call(callee, arguments)
                 {
@@ -465,6 +477,40 @@ impl<'a> RefinedAotValidator<'a> {
     fn record_known_kind(&mut self, name: &str, kind: KnownValueKind) {
         if let Some(scope) = self.known_kinds.last_mut() {
             scope.insert(name.to_string(), kind);
+        }
+    }
+
+    fn record_known_string_value(&mut self, name: &str, value: Option<String>) {
+        if let Some(scope) = self.known_string_values.last_mut() {
+            if let Some(value) = value {
+                scope.insert(name.to_string(), value);
+            } else {
+                scope.remove(name);
+            }
+        }
+    }
+
+    fn lookup_known_string_value(&self, name: &str) -> Option<String> {
+        self.known_string_values
+            .iter()
+            .rev()
+            .find_map(|scope| scope.get(name).cloned())
+    }
+
+    fn resolve_compile_time_string(&self, expression: &Expression) -> Option<String> {
+        match expression {
+            Expression::String(text) => Some(text.clone()),
+            Expression::Identifier(name) => self.lookup_known_string_value(name),
+            Expression::Binary {
+                op: crate::ir::hir::BinaryOp::Add,
+                left,
+                right,
+            } => Some(format!(
+                "{}{}",
+                self.resolve_compile_time_string(left)?,
+                self.resolve_compile_time_string(right)?
+            )),
+            _ => None,
         }
     }
 

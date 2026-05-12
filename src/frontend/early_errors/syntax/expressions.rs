@@ -1,8 +1,12 @@
 use super::super::*;
 use super::{
+    bindings::{
+        collect_pattern_binding_names, collect_using_decl_bound_names, collect_var_decl_bound_names,
+    },
     declarations::{
         BindingRestrictions, is_await_like_identifier, is_yield_like_identifier,
-        validate_pattern_syntax, validate_pattern_syntax_with_restrictions,
+        validate_escaped_identifier_text, validate_pattern_syntax,
+        validate_pattern_syntax_with_restrictions,
     },
     functions::{
         ensure_parameter_names_are_valid, validate_class_syntax, validate_function_syntax,
@@ -133,6 +137,195 @@ pub(crate) fn validate_expression_syntax(
     validate_expression_syntax_with_restrictions(expression, file, BindingRestrictions::default())
 }
 
+fn validate_assignment_identifier_reference_syntax(
+    identifier: &Ident,
+    file: &swc_common::SourceFile,
+    restrictions: BindingRestrictions,
+) -> Result<()> {
+    let raw = source_slice_for_span(file, identifier.span)?;
+    if raw.contains('\\') {
+        validate_escaped_identifier_text(raw)?;
+    }
+    ensure!(
+        !identifier.is_reserved(),
+        "reserved word `{}` cannot be used as an assignment identifier reference",
+        identifier.sym
+    );
+    ensure!(
+        !(restrictions.await_reserved && is_await_like_identifier(identifier.sym.as_ref())),
+        "`await` cannot be used as an identifier in an async function"
+    );
+    ensure!(
+        !(restrictions.yield_reserved && is_yield_like_identifier(identifier.sym.as_ref())),
+        "`yield` cannot be used as an identifier in a generator function"
+    );
+    Ok(())
+}
+
+fn validate_assignment_pattern_syntax(
+    pattern: &Pat,
+    file: &swc_common::SourceFile,
+    restrictions: BindingRestrictions,
+) -> Result<()> {
+    match pattern {
+        Pat::Ident(identifier) => {
+            validate_assignment_identifier_reference_syntax(&identifier.id, file, restrictions)?
+        }
+        Pat::Assign(assign) => {
+            validate_assignment_pattern_syntax(&assign.left, file, restrictions)?;
+            validate_expression_syntax_with_restrictions(&assign.right, file, restrictions)?;
+        }
+        Pat::Array(array) => {
+            for element in array.elems.iter().flatten() {
+                validate_assignment_pattern_syntax(element, file, restrictions)?;
+            }
+        }
+        Pat::Object(object) => {
+            for property in &object.props {
+                match property {
+                    ObjectPatProp::KeyValue(property) => {
+                        validate_property_name_syntax(&property.key, file)?;
+                        validate_assignment_pattern_syntax(&property.value, file, restrictions)?;
+                    }
+                    ObjectPatProp::Assign(property) => {
+                        validate_assignment_identifier_reference_syntax(
+                            &property.key,
+                            file,
+                            restrictions,
+                        )?;
+                        if let Some(value) = &property.value {
+                            validate_expression_syntax_with_restrictions(
+                                value,
+                                file,
+                                restrictions,
+                            )?;
+                        }
+                    }
+                    ObjectPatProp::Rest(rest) => {
+                        validate_assignment_pattern_syntax(&rest.arg, file, restrictions)?
+                    }
+                }
+            }
+        }
+        Pat::Rest(rest) => validate_assignment_pattern_syntax(&rest.arg, file, restrictions)?,
+        Pat::Expr(expression) => {
+            validate_expression_syntax_with_restrictions(expression, file, restrictions)?
+        }
+        _ => {}
+    }
+
+    Ok(())
+}
+
+fn collect_direct_block_lexically_declared_names(statements: &[Stmt]) -> Result<Vec<String>> {
+    let mut names = Vec::new();
+
+    for statement in statements {
+        match statement {
+            Stmt::Decl(Decl::Var(variable_declaration))
+                if !matches!(variable_declaration.kind, VarDeclKind::Var) =>
+            {
+                names.extend(collect_var_decl_bound_names(variable_declaration)?);
+            }
+            Stmt::Decl(Decl::Using(using_declaration)) => {
+                names.extend(collect_using_decl_bound_names(using_declaration)?);
+            }
+            Stmt::Decl(Decl::Fn(function_declaration)) => {
+                names.push(function_declaration.ident.sym.to_string());
+            }
+            Stmt::Decl(Decl::Class(class_declaration)) => {
+                names.push(class_declaration.ident.sym.to_string());
+            }
+            _ => {}
+        }
+    }
+
+    Ok(names)
+}
+
+fn validate_arrow_parameters_do_not_overlap_body_lexical_names(
+    parameters: &[Pat],
+    body: &BlockStmt,
+) -> Result<()> {
+    let lexical_names = collect_direct_block_lexically_declared_names(&body.stmts)?
+        .into_iter()
+        .collect::<HashSet<_>>();
+
+    if lexical_names.is_empty() {
+        return Ok(());
+    }
+
+    for parameter in parameters {
+        let mut parameter_names = Vec::new();
+        collect_pattern_binding_names(parameter, &mut parameter_names)?;
+        for name in parameter_names {
+            ensure!(
+                !lexical_names.contains(&name),
+                "arrow parameter name `{name}` conflicts with lexical declaration in body"
+            );
+        }
+    }
+
+    Ok(())
+}
+
+fn validate_assignment_target_syntax(
+    target: &AssignTarget,
+    file: &swc_common::SourceFile,
+    restrictions: BindingRestrictions,
+) -> Result<()> {
+    match target {
+        AssignTarget::Simple(SimpleAssignTarget::Ident(identifier)) => {
+            validate_assignment_identifier_reference_syntax(&identifier.id, file, restrictions)?
+        }
+        AssignTarget::Simple(SimpleAssignTarget::Member(member)) => {
+            validate_expression_syntax_with_restrictions(&member.obj, file, restrictions)?;
+            if let MemberProp::Computed(property) = &member.prop {
+                validate_expression_syntax_with_restrictions(&property.expr, file, restrictions)?;
+            }
+        }
+        AssignTarget::Simple(SimpleAssignTarget::SuperProp(super_property)) => {
+            if let SuperProp::Computed(property) = &super_property.prop {
+                validate_expression_syntax_with_restrictions(&property.expr, file, restrictions)?;
+            }
+        }
+        AssignTarget::Simple(SimpleAssignTarget::Paren(parenthesized)) => {
+            validate_expression_syntax_with_restrictions(&parenthesized.expr, file, restrictions)?
+        }
+        AssignTarget::Simple(SimpleAssignTarget::OptChain(optional_chain)) => {
+            match optional_chain.base.as_ref() {
+                OptChainBase::Member(member) => {
+                    validate_expression_syntax_with_restrictions(&member.obj, file, restrictions)?;
+                    if let MemberProp::Computed(property) = &member.prop {
+                        validate_expression_syntax_with_restrictions(
+                            &property.expr,
+                            file,
+                            restrictions,
+                        )?;
+                    }
+                }
+                OptChainBase::Call(call) => {
+                    validate_expression_syntax_with_restrictions(&call.callee, file, restrictions)?;
+                    for argument in &call.args {
+                        validate_expression_syntax_with_restrictions(
+                            &argument.expr,
+                            file,
+                            restrictions,
+                        )?;
+                    }
+                }
+            }
+        }
+        AssignTarget::Pat(pattern) => {
+            let pattern: Pat = pattern.clone().into();
+            validate_assignment_pattern_syntax(&pattern, file, restrictions)?;
+        }
+        AssignTarget::Simple(_) => {}
+    }
+
+    Ok(())
+}
+
 pub(super) fn validate_expression_syntax_with_restrictions(
     expression: &Expr,
     file: &swc_common::SourceFile,
@@ -169,6 +362,10 @@ pub(super) fn validate_expression_syntax_with_restrictions(
             }
         }
         Expr::Await(await_expression) => {
+            ensure!(
+                !restrictions.await_expression_forbidden,
+                "`await` cannot be used in a class static initialization block"
+            );
             validate_expression_syntax_with_restrictions(
                 &await_expression.arg,
                 file,
@@ -253,19 +450,7 @@ pub(super) fn validate_expression_syntax_with_restrictions(
             validate_expression_syntax_with_restrictions(&binary.right, file, restrictions)?;
         }
         Expr::Assign(assignment) => {
-            match &assignment.left {
-                AssignTarget::Simple(SimpleAssignTarget::Member(member)) => {
-                    validate_expression_syntax_with_restrictions(&member.obj, file, restrictions)?;
-                    if let MemberProp::Computed(property) = &member.prop {
-                        validate_expression_syntax_with_restrictions(
-                            &property.expr,
-                            file,
-                            restrictions,
-                        )?;
-                    }
-                }
-                AssignTarget::Simple(_) | AssignTarget::Pat(_) => {}
-            }
+            validate_assignment_target_syntax(&assignment.left, file, restrictions)?;
             validate_expression_syntax_with_restrictions(&assignment.right, file, restrictions)?;
         }
         Expr::Cond(conditional) => {
@@ -278,11 +463,33 @@ pub(super) fn validate_expression_syntax_with_restrictions(
                 validate_expression_syntax_with_restrictions(expression, file, restrictions)?;
             }
         }
-        Expr::Fn(function) => validate_function_syntax(&function.function, file)?,
+        Expr::Fn(function) => {
+            if let Some(identifier) = &function.ident {
+                ensure!(
+                    !(function.function.is_async
+                        && is_await_like_identifier(identifier.sym.as_ref())),
+                    "`await` cannot be used as a binding identifier in an async function"
+                );
+                ensure!(
+                    !(function.function.is_generator
+                        && is_yield_like_identifier(identifier.sym.as_ref())),
+                    "`yield` cannot be used as a binding identifier in a generator function"
+                );
+            }
+            validate_function_syntax(&function.function, file)?
+        }
         Expr::Arrow(arrow) => {
-            let restrictions = BindingRestrictions {
-                await_reserved: arrow.is_async,
+            let body_restrictions = BindingRestrictions {
+                await_reserved: restrictions.await_reserved || arrow.is_async,
                 yield_reserved: false,
+                await_expression_forbidden: false,
+            };
+            let parameter_restrictions = BindingRestrictions {
+                await_reserved: body_restrictions.await_reserved,
+                yield_reserved: body_restrictions.yield_reserved,
+                await_expression_forbidden: restrictions.await_expression_forbidden
+                    || restrictions.await_reserved
+                    || arrow.is_async,
             };
             ensure_parameter_names_are_valid(
                 arrow.params.iter(),
@@ -290,23 +497,47 @@ pub(super) fn validate_expression_syntax_with_restrictions(
                     .params
                     .iter()
                     .all(|parameter| matches!(parameter, Pat::Ident(_))),
-                false,
+                true,
             )?;
             for parameter in &arrow.params {
-                validate_pattern_syntax_with_restrictions(parameter, file, restrictions)?;
+                validate_pattern_syntax_with_restrictions(parameter, file, parameter_restrictions)?;
             }
             match &*arrow.body {
                 BlockStmtOrExpr::BlockStmt(block) => {
+                    validate_arrow_parameters_do_not_overlap_body_lexical_names(
+                        &arrow.params,
+                        block,
+                    )?;
                     for statement in &block.stmts {
-                        validate_statement_syntax_with_restrictions(statement, file, restrictions)?;
+                        validate_statement_syntax_with_restrictions(
+                            statement,
+                            file,
+                            body_restrictions,
+                        )?;
                     }
                 }
-                BlockStmtOrExpr::Expr(expression) => {
-                    validate_expression_syntax_with_restrictions(expression, file, restrictions)?
-                }
+                BlockStmtOrExpr::Expr(expression) => validate_expression_syntax_with_restrictions(
+                    expression,
+                    file,
+                    body_restrictions,
+                )?,
             }
         }
-        Expr::Class(class) => validate_class_syntax(&class.class, file)?,
+        Expr::Class(class) => {
+            if let Some(identifier) = &class.ident {
+                ensure!(
+                    !(restrictions.await_reserved
+                        && is_await_like_identifier(identifier.sym.as_ref())),
+                    "`await` cannot be used as a binding identifier in an async function"
+                );
+                ensure!(
+                    !(restrictions.yield_reserved
+                        && is_yield_like_identifier(identifier.sym.as_ref())),
+                    "`yield` cannot be used as a binding identifier in a generator function"
+                );
+            }
+            validate_class_syntax(&class.class, file)?
+        }
         Expr::Tpl(template) => {
             for expression in &template.exprs {
                 validate_expression_syntax_with_restrictions(expression, file, restrictions)?;

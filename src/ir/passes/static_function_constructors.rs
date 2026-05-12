@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use anyhow::{Context, Result, bail};
+use anyhow::{Result, bail};
 
 use crate::ir::hir::{
     ArrayElement, CallArgument, Expression, FunctionDeclaration, ObjectEntry, Program, Statement,
@@ -13,6 +13,7 @@ use super::{
 };
 
 mod function_constructor;
+mod realm_eval;
 
 pub fn lower(program: Program) -> Result<Program> {
     StaticFunctionConstructorLowerer::new(&program).lower(program)
@@ -439,6 +440,11 @@ impl StaticFunctionConstructorLowerer {
                 let arguments = self.lower_arguments(arguments)?;
                 if let Some(lowered) =
                     self.try_lower_static_function_constructor(&callee, &arguments)?
+                {
+                    return Ok(lowered);
+                }
+                if let Some(lowered) =
+                    self.try_lower_static_member_eval_function_expression(&callee, &arguments)?
                 {
                     return Ok(lowered);
                 }

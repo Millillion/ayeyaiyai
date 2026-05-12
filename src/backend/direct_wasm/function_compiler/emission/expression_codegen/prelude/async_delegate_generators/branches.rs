@@ -16,9 +16,10 @@ impl<'a> FunctionCompiler<'a> {
         index_local: u32,
     ) -> DirectResult<()> {
         self.with_current_user_function_name(Some(plan.function_name.clone()), |compiler| {
-            if let Some(completion_expression) = delegate_snapshot_bindings
-                .and_then(|snapshot_bindings| snapshot_bindings.get(delegate_completion_name))
-                .cloned()
+            if property_name != "return"
+                && let Some(completion_expression) = delegate_snapshot_bindings
+                    .and_then(|snapshot_bindings| snapshot_bindings.get(delegate_completion_name))
+                    .cloned()
             {
                 compiler.emit_statement(&Statement::Assign {
                     name: delegate_completion_name.to_string(),
@@ -29,6 +30,8 @@ impl<'a> FunctionCompiler<'a> {
                 runtime_step_result_expression,
                 delegate_completion_name,
                 "value",
+                None,
+                None,
             )? {
                 compiler.emit_statement(&Statement::Assign {
                     name: delegate_completion_name.to_string(),
@@ -91,14 +94,21 @@ impl<'a> FunctionCompiler<'a> {
             runtime_step_result_expression,
             promise_value_name,
             "value",
+            None,
+            None,
         )? {
-            self.emit_statement(&Statement::Assign {
-                name: promise_value_name.to_string(),
-                value: Expression::Member {
-                    object: Box::new(runtime_step_result_expression.clone()),
-                    property: Box::new(Expression::String("value".to_string())),
-                },
+            let Some((_, promise_value_local)) =
+                self.resolve_current_local_binding(promise_value_name)
+            else {
+                return Err(Unsupported("missing async delegate value local"));
+            };
+            self.emit_numeric_expression(&Expression::Member {
+                object: Box::new(runtime_step_result_expression.clone()),
+                property: Box::new(Expression::String("value".to_string())),
             })?;
+            self.push_local_set(promise_value_local);
+            self.state
+                .clear_local_static_binding_metadata(promise_value_name);
         }
         self.emit_statement(&Statement::Assign {
             name: promise_done_name.to_string(),

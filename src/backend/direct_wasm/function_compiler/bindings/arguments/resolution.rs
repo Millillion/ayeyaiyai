@@ -46,10 +46,14 @@ impl<'a> FunctionCompiler<'a> {
                     })
             }
             Expression::Call { callee, arguments } | Expression::New { callee, arguments } => {
-                let Expression::Identifier(name) = callee.as_ref() else {
-                    return None;
-                };
-                let user_function = self.resolve_user_function_from_callee_name(name)?;
+                let user_function =
+                    self.resolve_user_function_from_expression(callee)
+                        .or_else(|| match callee.as_ref() {
+                            Expression::Identifier(name) => {
+                                self.resolve_user_function_from_callee_name(name)
+                            }
+                            _ => None,
+                        })?;
                 if !user_function.returns_arguments_object {
                     return None;
                 }

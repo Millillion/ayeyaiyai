@@ -1,21 +1,87 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    pub(in crate::backend::direct_wasm) fn bound_snapshot_identifier_is_value_builtin(
+        &self,
+        name: &str,
+    ) -> bool {
+        matches!(name, "undefined" | "NaN" | "Infinity")
+            && self.is_unshadowed_builtin_identifier(name)
+    }
+
     pub(super) fn evaluate_bound_snapshot_identifier(
         &self,
         name: &str,
         expression: &Expression,
         bindings: &mut HashMap<String, Expression>,
+        current_function_name: Option<&str>,
     ) -> Option<Expression> {
         let resolved_name = self.resolve_bound_snapshot_binding_name(name, bindings);
         if let Some(value) = bindings.get(resolved_name).cloned() {
-            if static_expression_matches(&value, expression) {
-                return None;
+            if !static_expression_matches(&value, expression) {
+                if let Expression::Identifier(value_name) = &value {
+                    if self.bound_snapshot_identifier_is_value_builtin(value_name) {
+                        return self.evaluate_bound_snapshot_expression(&value, bindings, None);
+                    }
+                    if let Some(resolved) = self
+                        .resolve_global_value_expression(&value)
+                        .filter(|resolved| !static_expression_matches(resolved, &value))
+                        && let Some(primitive) = self
+                            .evaluate_bound_snapshot_expression(&resolved, bindings, None)
+                            .or_else(|| {
+                                self.resolve_static_primitive_expression_with_context(
+                                    &resolved, None,
+                                )
+                            })
+                        && matches!(
+                            primitive,
+                            Expression::Number(_)
+                                | Expression::BigInt(_)
+                                | Expression::String(_)
+                                | Expression::Bool(_)
+                                | Expression::Null
+                                | Expression::Undefined
+                        )
+                    {
+                        return Some(primitive);
+                    }
+                    return Some(value);
+                }
+                if !matches!(
+                    value,
+                    Expression::Number(_)
+                        | Expression::BigInt(_)
+                        | Expression::String(_)
+                        | Expression::Bool(_)
+                        | Expression::Null
+                        | Expression::Undefined
+                ) {
+                    if let Some(evaluated) =
+                        self.evaluate_bound_snapshot_expression(&value, bindings, None)
+                    {
+                        return Some(evaluated);
+                    }
+                }
+                return Some(value);
             }
-            return Some(value);
         }
         if resolved_name == "undefined" && self.is_unshadowed_builtin_identifier(resolved_name) {
             return Some(Expression::Undefined);
+        }
+        if resolved_name == "NaN" && self.is_unshadowed_builtin_identifier(resolved_name) {
+            return Some(Expression::Number(f64::NAN));
+        }
+        if resolved_name == "Infinity" && self.is_unshadowed_builtin_identifier(resolved_name) {
+            return Some(Expression::Number(f64::INFINITY));
+        }
+        if let Some(function) = current_function_name
+            .and_then(|function_name| self.resolve_registered_function_declaration(function_name))
+        {
+            let declared_bindings =
+                collect_declared_bindings_from_statements_recursive(&function.body);
+            if declared_bindings.contains(resolved_name) {
+                return Some(Expression::Undefined);
+            }
         }
         let identifier = Expression::Identifier(resolved_name.to_string());
         if let Some(array_binding) = self.resolve_array_binding_from_expression(&identifier) {
@@ -27,7 +93,16 @@ impl<'a> FunctionCompiler<'a> {
                     .collect(),
             ));
         }
+        if self
+            .resolve_function_binding_from_expression_with_context(&identifier, current_function_name)
+            .is_some()
+        {
+            return Some(identifier);
+        }
         if let Some(object_binding) = self.resolve_object_binding_from_expression(&identifier) {
+            if !object_binding.property_descriptors.is_empty() {
+                return Some(identifier);
+            }
             return Some(object_binding_to_expression(&object_binding));
         }
         if let Some(resolved) = self
@@ -35,6 +110,14 @@ impl<'a> FunctionCompiler<'a> {
             .filter(|resolved| !static_expression_matches(resolved, &identifier))
         {
             return Some(self.materialize_static_expression(&resolved));
+        }
+        if let Some(resolved) = self
+            .resolve_global_value_expression(&identifier)
+            .filter(|resolved| !static_expression_matches(resolved, &identifier))
+        {
+            return self
+                .evaluate_bound_snapshot_expression(&resolved, bindings, None)
+                .or_else(|| Some(self.materialize_static_expression(&resolved)));
         }
         Some(identifier)
     }
@@ -52,7 +135,15 @@ impl<'a> FunctionCompiler<'a> {
                 {
                     return None;
                 }
+                if matches!(binding, Expression::Identifier(_))
+                    && self
+                        .resolve_static_reference_identity_key(&binding)
+                        .is_some()
+                {
+                    return Some(binding);
+                }
                 self.evaluate_bound_snapshot_expression(&binding, bindings, current_function_name)
+                    .or_else(|| Some(self.materialize_static_expression(&binding)))
             }
             None => Some(Expression::Undefined),
         }
@@ -71,15 +162,21 @@ impl<'a> FunctionCompiler<'a> {
         let right =
             self.evaluate_bound_snapshot_expression(right, bindings, current_function_name)?;
         match op {
-            BinaryOp::Add => match (&left, &right) {
-                (Expression::Number(lhs), Expression::Number(rhs)) => {
-                    Some(Expression::Number(lhs + rhs))
+            BinaryOp::Add => {
+                if matches!(left, Expression::String(_)) || matches!(right, Expression::String(_)) {
+                    let left = bound_snapshot_primitive_to_string(&left)?;
+                    let right = bound_snapshot_primitive_to_string(&right)?;
+                    Some(Expression::String(format!("{left}{right}")))
+                } else {
+                    match (
+                        bound_snapshot_primitive_to_number(&left),
+                        bound_snapshot_primitive_to_number(&right),
+                    ) {
+                        (Some(lhs), Some(rhs)) => Some(Expression::Number(lhs + rhs)),
+                        _ => None,
+                    }
                 }
-                (Expression::String(lhs), Expression::String(rhs)) => {
-                    Some(Expression::String(format!("{lhs}{rhs}")))
-                }
-                _ => None,
-            },
+            }
             BinaryOp::GreaterThanOrEqual => match (&left, &right) {
                 (Expression::Number(lhs), Expression::Number(rhs)) => {
                     Some(Expression::Bool(lhs >= rhs))
@@ -135,6 +232,51 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    pub(super) fn evaluate_bound_snapshot_unary_expression(
+        &self,
+        op: UnaryOp,
+        expression: &Expression,
+        bindings: &mut HashMap<String, Expression>,
+        current_function_name: Option<&str>,
+    ) -> Option<Expression> {
+        match op {
+            UnaryOp::Void => {
+                self.evaluate_bound_snapshot_expression(
+                    expression,
+                    bindings,
+                    current_function_name,
+                )?;
+                Some(Expression::Undefined)
+            }
+            UnaryOp::Plus => {
+                let value = self.evaluate_bound_snapshot_expression(
+                    expression,
+                    bindings,
+                    current_function_name,
+                )?;
+                bound_snapshot_primitive_to_number(&value).map(Expression::Number)
+            }
+            UnaryOp::Negate => {
+                let value = self.evaluate_bound_snapshot_expression(
+                    expression,
+                    bindings,
+                    current_function_name,
+                )?;
+                bound_snapshot_primitive_to_number(&value).map(|number| Expression::Number(-number))
+            }
+            UnaryOp::Not => {
+                let value = self.evaluate_bound_snapshot_expression(
+                    expression,
+                    bindings,
+                    current_function_name,
+                )?;
+                self.resolve_static_boolean_expression(&value)
+                    .map(|truthy| Expression::Bool(!truthy))
+            }
+            UnaryOp::BitwiseNot | UnaryOp::TypeOf | UnaryOp::Delete => None,
+        }
+    }
+
     pub(super) fn evaluate_bound_snapshot_member_expression(
         &self,
         object: &Expression,
@@ -156,13 +298,11 @@ impl<'a> FunctionCompiler<'a> {
             return Some(value);
         }
         match (object, property) {
-            (Expression::Array(elements), Expression::String(name)) if name == "length" => {
-                Some(Expression::Number(elements.len() as f64))
-            }
-            (Expression::Array(elements), Expression::Number(index))
-                if index.is_finite() && index.fract() == 0.0 && index >= 0.0 =>
-            {
-                let index = index as usize;
+            (Expression::Array(elements), property) => {
+                if matches!(property, Expression::String(ref name) if name == "length") {
+                    return Some(Expression::Number(elements.len() as f64));
+                }
+                let index = argument_index_from_expression(&property)? as usize;
                 match elements.get(index) {
                     Some(ArrayElement::Expression(value)) => Some(value.clone()),
                     Some(ArrayElement::Spread(_)) => None,
@@ -204,5 +344,43 @@ impl<'a> FunctionCompiler<'a> {
         } else {
             Expression::Number(current_number)
         })
+    }
+}
+
+fn bound_snapshot_primitive_to_string(expression: &Expression) -> Option<String> {
+    match expression {
+        Expression::String(value) => Some(value.clone()),
+        Expression::Number(value) => Some(bound_snapshot_number_to_string(*value)),
+        Expression::Bool(value) => Some(value.to_string()),
+        Expression::Null => Some("null".to_string()),
+        Expression::Undefined => Some("undefined".to_string()),
+        Expression::BigInt(value) => Some(value.trim_end_matches('n').to_string()),
+        _ => None,
+    }
+}
+
+fn bound_snapshot_primitive_to_number(expression: &Expression) -> Option<f64> {
+    match expression {
+        Expression::Number(value) => Some(*value),
+        Expression::Bool(value) => Some(if *value { 1.0 } else { 0.0 }),
+        Expression::Null => Some(0.0),
+        Expression::Undefined => Some(f64::NAN),
+        _ => None,
+    }
+}
+
+fn bound_snapshot_number_to_string(value: f64) -> String {
+    if value.is_nan() {
+        "NaN".to_string()
+    } else if value == f64::INFINITY {
+        "Infinity".to_string()
+    } else if value == f64::NEG_INFINITY {
+        "-Infinity".to_string()
+    } else if value == 0.0 {
+        "0".to_string()
+    } else if value.is_finite() && value.fract() == 0.0 {
+        (value as i64).to_string()
+    } else {
+        value.to_string()
     }
 }

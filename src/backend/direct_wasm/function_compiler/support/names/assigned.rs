@@ -1,5 +1,63 @@
 use super::*;
 
+fn statement_unconditionally_transfers_control(statement: &Statement) -> bool {
+    match statement {
+        Statement::Break { .. }
+        | Statement::Continue { .. }
+        | Statement::Return(_)
+        | Statement::Throw(_) => true,
+        Statement::Declaration { body } | Statement::Block { body } => {
+            statement_list_unconditionally_transfers_control(body)
+        }
+        Statement::Labeled { body, .. } => statement_list_unconditionally_transfers_control(body),
+        Statement::If {
+            then_branch,
+            else_branch,
+            ..
+        } if !else_branch.is_empty() => {
+            statement_list_unconditionally_transfers_control(then_branch)
+                && statement_list_unconditionally_transfers_control(else_branch)
+        }
+        _ => false,
+    }
+}
+
+fn statement_list_unconditionally_transfers_control(statements: &[Statement]) -> bool {
+    statements
+        .iter()
+        .any(statement_unconditionally_transfers_control)
+}
+
+fn collect_assigned_binding_names_from_statement_list(
+    statements: &[Statement],
+    names: &mut HashSet<String>,
+) {
+    for statement in statements {
+        collect_assigned_binding_names_from_statement(statement, names);
+        if statement_unconditionally_transfers_control(statement) {
+            break;
+        }
+    }
+}
+
+fn collect_global_member_assignment_binding_name(
+    object: &Expression,
+    property: &Expression,
+    names: &mut HashSet<String>,
+) {
+    let writes_global_object = matches!(object, Expression::This)
+        || matches!(object, Expression::Identifier(name) if name == "globalThis");
+    if !writes_global_object {
+        return;
+    }
+    let Expression::String(name) = property else {
+        return;
+    };
+    if !name.starts_with("__ayy") {
+        names.insert(name.clone());
+    }
+}
+
 pub(in crate::backend::direct_wasm) fn collect_assigned_binding_names_from_statement(
     statement: &Statement,
     names: &mut HashSet<String>,
@@ -8,9 +66,7 @@ pub(in crate::backend::direct_wasm) fn collect_assigned_binding_names_from_state
         Statement::Declaration { body }
         | Statement::Block { body }
         | Statement::Labeled { body, .. } => {
-            for statement in body {
-                collect_assigned_binding_names_from_statement(statement, names);
-            }
+            collect_assigned_binding_names_from_statement_list(body, names);
         }
         Statement::Var { name, value } | Statement::Let { name, value, .. } => {
             names.insert(name.clone());
@@ -25,6 +81,7 @@ pub(in crate::backend::direct_wasm) fn collect_assigned_binding_names_from_state
             property,
             value,
         } => {
+            collect_global_member_assignment_binding_name(object, property, names);
             collect_assigned_binding_names_from_expression(object, names);
             collect_assigned_binding_names_from_expression(property, names);
             collect_assigned_binding_names_from_expression(value, names);
@@ -43,9 +100,7 @@ pub(in crate::backend::direct_wasm) fn collect_assigned_binding_names_from_state
         }
         Statement::With { object, body } => {
             collect_assigned_binding_names_from_expression(object, names);
-            for statement in body {
-                collect_assigned_binding_names_from_statement(statement, names);
-            }
+            collect_assigned_binding_names_from_statement_list(body, names);
         }
         Statement::If {
             condition,
@@ -53,12 +108,8 @@ pub(in crate::backend::direct_wasm) fn collect_assigned_binding_names_from_state
             else_branch,
         } => {
             collect_assigned_binding_names_from_expression(condition, names);
-            for statement in then_branch {
-                collect_assigned_binding_names_from_statement(statement, names);
-            }
-            for statement in else_branch {
-                collect_assigned_binding_names_from_statement(statement, names);
-            }
+            collect_assigned_binding_names_from_statement_list(then_branch, names);
+            collect_assigned_binding_names_from_statement_list(else_branch, names);
         }
         Statement::Try {
             body,
@@ -66,15 +117,9 @@ pub(in crate::backend::direct_wasm) fn collect_assigned_binding_names_from_state
             catch_body,
             ..
         } => {
-            for statement in body {
-                collect_assigned_binding_names_from_statement(statement, names);
-            }
-            for statement in catch_setup {
-                collect_assigned_binding_names_from_statement(statement, names);
-            }
-            for statement in catch_body {
-                collect_assigned_binding_names_from_statement(statement, names);
-            }
+            collect_assigned_binding_names_from_statement_list(body, names);
+            collect_assigned_binding_names_from_statement_list(catch_setup, names);
+            collect_assigned_binding_names_from_statement_list(catch_body, names);
         }
         Statement::Switch {
             discriminant,
@@ -86,9 +131,7 @@ pub(in crate::backend::direct_wasm) fn collect_assigned_binding_names_from_state
                 if let Some(test) = &case.test {
                     collect_assigned_binding_names_from_expression(test, names);
                 }
-                for statement in &case.body {
-                    collect_assigned_binding_names_from_statement(statement, names);
-                }
+                collect_assigned_binding_names_from_statement_list(&case.body, names);
             }
         }
         Statement::For {
@@ -99,9 +142,7 @@ pub(in crate::backend::direct_wasm) fn collect_assigned_binding_names_from_state
             body,
             ..
         } => {
-            for statement in init {
-                collect_assigned_binding_names_from_statement(statement, names);
-            }
+            collect_assigned_binding_names_from_statement_list(init, names);
             if let Some(condition) = condition {
                 collect_assigned_binding_names_from_expression(condition, names);
             }
@@ -111,9 +152,7 @@ pub(in crate::backend::direct_wasm) fn collect_assigned_binding_names_from_state
             if let Some(break_hook) = break_hook {
                 collect_assigned_binding_names_from_expression(break_hook, names);
             }
-            for statement in body {
-                collect_assigned_binding_names_from_statement(statement, names);
-            }
+            collect_assigned_binding_names_from_statement_list(body, names);
         }
         Statement::While {
             condition,
@@ -131,9 +170,7 @@ pub(in crate::backend::direct_wasm) fn collect_assigned_binding_names_from_state
             if let Some(break_hook) = break_hook {
                 collect_assigned_binding_names_from_expression(break_hook, names);
             }
-            for statement in body {
-                collect_assigned_binding_names_from_statement(statement, names);
-            }
+            collect_assigned_binding_names_from_statement_list(body, names);
         }
         Statement::Break { .. } | Statement::Continue { .. } => {}
     }
@@ -173,6 +210,7 @@ pub(in crate::backend::direct_wasm) fn collect_assigned_binding_names_from_expre
             property,
             value,
         } => {
+            collect_global_member_assignment_binding_name(object, property, names);
             collect_assigned_binding_names_from_expression(object, names);
             collect_assigned_binding_names_from_expression(property, names);
             collect_assigned_binding_names_from_expression(value, names);

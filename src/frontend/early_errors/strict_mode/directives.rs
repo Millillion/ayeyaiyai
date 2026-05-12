@@ -4,6 +4,21 @@ pub(super) fn is_strict_mode_restricted_identifier(name: &str) -> bool {
     matches!(name, "eval" | "arguments")
 }
 
+pub(super) fn is_strict_mode_reserved_identifier(name: &str) -> bool {
+    matches!(
+        name,
+        "implements"
+            | "interface"
+            | "let"
+            | "package"
+            | "private"
+            | "protected"
+            | "public"
+            | "static"
+            | "yield"
+    )
+}
+
 pub(crate) fn script_has_use_strict_directive(statements: &[Stmt]) -> bool {
     for statement in statements {
         let Stmt::Expr(ExprStmt { expr, .. }) = statement else {

@@ -1,5 +1,10 @@
 use super::*;
 
+thread_local! {
+    static STATIC_STRING_RESOLUTION_STACK: std::cell::RefCell<Vec<Expression>> =
+        const { std::cell::RefCell::new(Vec::new()) };
+}
+
 impl<'a> FunctionCompiler<'a> {
     pub(in crate::backend::direct_wasm) fn resolve_static_string_value(
         &self,
@@ -9,6 +14,32 @@ impl<'a> FunctionCompiler<'a> {
     }
 
     pub(in crate::backend::direct_wasm) fn resolve_static_string_value_with_context(
+        &self,
+        expression: &Expression,
+        current_function_name: Option<&str>,
+    ) -> Option<String> {
+        let reentered = STATIC_STRING_RESOLUTION_STACK.with(|stack| {
+            stack
+                .borrow()
+                .iter()
+                .any(|visited| static_expression_matches(visited, expression))
+        });
+        if reentered {
+            return None;
+        }
+
+        STATIC_STRING_RESOLUTION_STACK.with(|stack| {
+            stack.borrow_mut().push(expression.clone());
+        });
+        let result =
+            self.resolve_static_string_value_with_context_inner(expression, current_function_name);
+        STATIC_STRING_RESOLUTION_STACK.with(|stack| {
+            stack.borrow_mut().pop();
+        });
+        result
+    }
+
+    fn resolve_static_string_value_with_context_inner(
         &self,
         expression: &Expression,
         current_function_name: Option<&str>,
@@ -83,6 +114,49 @@ impl<'a> FunctionCompiler<'a> {
                 self.resolve_static_string_value_with_context(&resolved, current_function_name)
             }
             Expression::Member { object, property } => {
+                if std::env::var_os("AYY_TRACE_THIS_FLOW").is_some()
+                    && matches!(object.as_ref(), Expression::This)
+                {
+                    eprintln!(
+                        "this_flow string_resolution fn={:?} expr={:?} runtime_dynamic_this={}",
+                        current_function_name,
+                        expression,
+                        self.state
+                            .runtime
+                            .locals
+                            .runtime_dynamic_bindings
+                            .contains("this")
+                    );
+                }
+                if let Some(shadow_binding_name) = self
+                    .runtime_object_property_shadow_binding_name_for_expression(object, property)
+                {
+                    let shadow_value =
+                        self.global_value_binding(&shadow_binding_name).or_else(|| {
+                            self.backend
+                                .shared_global_semantics
+                                .values
+                                .value_bindings
+                                .get(&shadow_binding_name)
+                        });
+                    if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+                        eprintln!(
+                            "runtime_shadow_string_lookup expr={expression:?} shadow_name={shadow_binding_name} shadow_value={shadow_value:?}"
+                        );
+                    }
+                    if std::env::var_os("AYY_TRACE_THIS_FLOW").is_some() {
+                        eprintln!(
+                            "this_flow string_resolution shadow fn={:?} name={} value={:?}",
+                            current_function_name, shadow_binding_name, shadow_value
+                        );
+                    }
+                    if let Some(value) = shadow_value {
+                        return self.resolve_static_string_value_with_context(
+                            value,
+                            current_function_name,
+                        );
+                    }
+                }
                 if let Some(function_name) = self.resolve_function_name_value(object, property) {
                     return Some(function_name);
                 }
@@ -107,8 +181,26 @@ impl<'a> FunctionCompiler<'a> {
                             )
                         });
                 }
+                let materialized_object = self.materialize_static_expression(object);
+                let materialized_property = self.materialize_static_expression(property);
+                if let Expression::String(text) = &materialized_object {
+                    let index = argument_index_from_expression(&materialized_property)? as usize;
+                    return text
+                        .chars()
+                        .nth(index)
+                        .map(|character| character.to_string());
+                }
                 if let Some(object_binding) = self.resolve_object_binding_from_expression(object) {
-                    let materialized_property = self.materialize_static_expression(property);
+                    if std::env::var_os("AYY_TRACE_THIS_FLOW").is_some()
+                        && matches!(object.as_ref(), Expression::This)
+                    {
+                        eprintln!(
+                            "this_flow string_resolution binding fn={:?} property={:?} value={:?}",
+                            current_function_name,
+                            materialized_property,
+                            object_binding_lookup_value(&object_binding, &materialized_property)
+                        );
+                    }
                     return object_binding_lookup_value(&object_binding, &materialized_property)
                         .and_then(|value| {
                             self.resolve_static_string_value_with_context(
@@ -116,13 +208,6 @@ impl<'a> FunctionCompiler<'a> {
                                 current_function_name,
                             )
                         });
-                }
-                if let Expression::String(text) = object.as_ref() {
-                    let index = argument_index_from_expression(property)? as usize;
-                    return text
-                        .chars()
-                        .nth(index)
-                        .map(|character| character.to_string());
                 }
                 None
             }

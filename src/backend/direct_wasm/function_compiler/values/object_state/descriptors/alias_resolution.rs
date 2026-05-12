@@ -26,6 +26,93 @@ impl Drop for BoundAliasResolutionGuard {
 }
 
 impl<'a> FunctionCompiler<'a> {
+    fn function_references_nested_function(
+        &self,
+        function: &FunctionDeclaration,
+        nested_function_name: &str,
+    ) -> bool {
+        if collect_referenced_binding_names_from_statements(&function.body)
+            .contains(nested_function_name)
+        {
+            return true;
+        }
+        function.params.iter().any(|parameter| {
+            parameter.default.as_ref().is_some_and(|default| {
+                let mut referenced = HashSet::new();
+                collect_referenced_binding_names_from_expression(default, &mut referenced);
+                referenced.contains(nested_function_name)
+            })
+        })
+    }
+
+    fn enclosing_function_name_for_alias_resolution(&self, function_name: &str) -> Option<String> {
+        self.user_functions()
+            .into_iter()
+            .filter(|candidate| candidate.name != function_name)
+            .find(|candidate| {
+                self.resolve_registered_function_declaration(&candidate.name)
+                    .is_some_and(|function| {
+                        self.function_references_nested_function(function, function_name)
+                    })
+            })
+            .map(|candidate| candidate.name.clone())
+    }
+
+    fn statement_capture_source_value(
+        statement: &Statement,
+        source_name: &str,
+    ) -> Option<Expression> {
+        match statement {
+            Statement::Var { name, value }
+            | Statement::Let { name, value, .. }
+            | Statement::Assign { name, value } => {
+                let binding_source = scoped_binding_source_name(name).unwrap_or(name);
+                (binding_source == source_name).then_some(value.clone())
+            }
+            Statement::Declaration { body }
+            | Statement::Block { body }
+            | Statement::Labeled { body, .. } => body
+                .iter()
+                .filter_map(|statement| {
+                    Self::statement_capture_source_value(statement, source_name)
+                })
+                .last(),
+            _ => None,
+        }
+    }
+
+    fn resolve_captured_alias_expression(
+        &self,
+        function_name: &str,
+        source_name: &str,
+        visited: &mut HashSet<(String, String)>,
+    ) -> Option<Expression> {
+        if !visited.insert((function_name.to_string(), source_name.to_string())) {
+            return None;
+        }
+        if source_name == "this" {
+            return Some(Expression::This);
+        }
+        let enclosing_name = self.enclosing_function_name_for_alias_resolution(function_name)?;
+        let enclosing_function = self.resolve_registered_function_declaration(&enclosing_name)?;
+        let source_value = enclosing_function
+            .body
+            .iter()
+            .filter_map(|statement| Self::statement_capture_source_value(statement, source_name))
+            .last()?;
+        match source_value {
+            Expression::Identifier(identifier) => {
+                if identifier == "this" {
+                    Some(Expression::This)
+                } else {
+                    self.resolve_captured_alias_expression(&enclosing_name, &identifier, visited)
+                        .or(Some(Expression::Identifier(identifier)))
+                }
+            }
+            other => Some(other),
+        }
+    }
+
     pub(in crate::backend::direct_wasm) fn resolve_bound_alias_expression_with_state(
         &self,
         expression: &Expression,
@@ -51,7 +138,9 @@ impl<'a> FunctionCompiler<'a> {
         expression: &Expression,
     ) -> Option<Expression> {
         let _guard = BoundAliasResolutionGuard::enter(expression);
+        let trace_private = std::env::var_os("AYY_TRACE_PRIVATE_MEMBER_LOOKUP").is_some();
         let mut current = expression;
+        let mut current_owned = None;
         let mut visited = HashSet::new();
         loop {
             let Expression::Identifier(name) = current else {
@@ -72,25 +161,26 @@ impl<'a> FunctionCompiler<'a> {
             if !visited.insert(name.clone()) {
                 return None;
             }
-            if let Some((resolved_name, _)) = self.resolve_current_local_binding(name)
-                && self
+            if let Some((resolved_name, _)) = self.resolve_current_local_binding(name) {
+                if self
                     .state
                     .runtime
                     .locals
                     .runtime_dynamic_bindings
                     .contains(&resolved_name)
-            {
-                return Some(Expression::Identifier(resolved_name));
-            }
-            if let Some((resolved_name, _)) = self.resolve_current_local_binding(name)
-                && let Some(value) = self
+                {
+                    return Some(Expression::Identifier(resolved_name));
+                }
+                if let Some(value) = self
                     .state
                     .speculation
                     .static_semantics
                     .local_value_binding(&resolved_name)
-            {
-                current = value;
-                continue;
+                {
+                    current = value;
+                    continue;
+                }
+                return Some(Expression::Identifier(resolved_name));
             }
             if let Some(value) = self
                 .state
@@ -104,15 +194,78 @@ impl<'a> FunctionCompiler<'a> {
             if let Some(hidden_name) = self.resolve_user_function_capture_hidden_name(name)
                 && let Some(value) = self.global_value_binding(&hidden_name)
             {
+                if trace_private {
+                    eprintln!(
+                        "private_lookup alias current_fn={:?} name={} source=hidden-global hidden={} value={:?}",
+                        self.current_function_name(),
+                        name,
+                        hidden_name,
+                        value,
+                    );
+                }
                 current = value;
                 continue;
             }
+            if let Some(function_name) = self.current_function_name()
+                && self
+                    .resolve_user_function_capture_hidden_name(name)
+                    .is_some()
+                && let Some(value) =
+                    self.resolve_captured_alias_expression(function_name, name, &mut HashSet::new())
+            {
+                if trace_private {
+                    eprintln!(
+                        "private_lookup alias current_fn={:?} name={} source=captured-enclosing value={:?}",
+                        self.current_function_name(),
+                        name,
+                        value,
+                    );
+                }
+                current_owned = Some(value);
+                current = current_owned.as_ref().expect("owned alias expression");
+                continue;
+            }
             if let Some(value) = self.backend.global_value_binding(name) {
+                if trace_private {
+                    eprintln!(
+                        "private_lookup alias current_fn={:?} name={} source=global value={:?}",
+                        self.current_function_name(),
+                        name,
+                        value,
+                    );
+                }
                 current = value;
                 continue;
             }
             return Some(current.clone());
         }
+    }
+
+    pub(in crate::backend::direct_wasm) fn expression_aliases_captured_top_level_this(
+        &self,
+        expression: &Expression,
+    ) -> bool {
+        let Expression::Identifier(name) = expression else {
+            return false;
+        };
+        if self.resolve_current_local_binding(name).is_none()
+            && matches!(self.global_value_binding(name), Some(Expression::This))
+        {
+            return true;
+        }
+        let Some(function_name) = self.current_function_name() else {
+            return false;
+        };
+        if self
+            .resolve_user_function_capture_hidden_name(name)
+            .is_none()
+        {
+            return false;
+        }
+        matches!(
+            self.resolve_captured_alias_expression(function_name, name, &mut HashSet::new()),
+            Some(Expression::This)
+        )
     }
 
     pub(in crate::backend::direct_wasm) fn resolve_symbol_identity_expression(
@@ -151,19 +304,26 @@ impl<'a> FunctionCompiler<'a> {
             if !visited.insert(current_name.clone()) {
                 return None;
             }
-            if let Some((resolved_name, _)) = self.resolve_current_local_binding(&current_name)
-                && resolved_name != current_name
-                && self.lookup_identifier_kind(&resolved_name) == Some(StaticValueKind::Symbol)
+            let next = if let Some((resolved_name, _)) =
+                self.resolve_current_local_binding(&current_name)
             {
-                current_name = resolved_name;
-                continue;
-            }
-            let next = self
-                .state
-                .speculation
-                .static_semantics
-                .local_value_binding(&current_name)
-                .or_else(|| self.backend.global_value_binding(&current_name));
+                if resolved_name != current_name
+                    && self.lookup_identifier_kind(&resolved_name) == Some(StaticValueKind::Symbol)
+                {
+                    current_name = resolved_name;
+                    continue;
+                }
+                self.state
+                    .speculation
+                    .static_semantics
+                    .local_value_binding(&resolved_name)
+            } else {
+                self.state
+                    .speculation
+                    .static_semantics
+                    .local_value_binding(&current_name)
+                    .or_else(|| self.backend.global_value_binding(&current_name))
+            };
             match next {
                 Some(Expression::Identifier(next_name))
                     if self.lookup_identifier_kind(next_name) == Some(StaticValueKind::Symbol) =>
@@ -192,6 +352,9 @@ impl<'a> FunctionCompiler<'a> {
             return Some(expression.clone());
         };
         if self.with_scope_blocks_static_identifier_resolution(name) {
+            return None;
+        }
+        if self.resolve_current_local_binding(name).is_some() {
             return None;
         }
         if !visited.insert(name.clone()) {

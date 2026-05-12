@@ -7,6 +7,19 @@ pub(in crate::backend::direct_wasm) fn resolve_stateful_object_binding_name_in_e
     environment: &Environment,
 ) -> Option<String> {
     match expression {
+        Expression::This => environment
+            .contains_object_binding("this")
+            .then(|| "this".to_string())
+            .or_else(|| {
+                environment
+                    .contains_object_binding(
+                        crate::backend::direct_wasm::FunctionCompiler::STATIC_NEW_THIS_BINDING,
+                    )
+                    .then(|| {
+                        crate::backend::direct_wasm::FunctionCompiler::STATIC_NEW_THIS_BINDING
+                            .to_string()
+                    })
+            }),
         Expression::Identifier(name) if environment.contains_object_binding(name) => {
             Some(name.clone())
         }

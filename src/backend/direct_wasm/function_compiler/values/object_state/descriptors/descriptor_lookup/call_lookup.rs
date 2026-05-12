@@ -6,17 +6,43 @@ impl<'a> FunctionCompiler<'a> {
         callee: &Expression,
         arguments: &[CallArgument],
     ) -> Option<PropertyDescriptorBinding> {
-        let resolved_callee = self
-            .resolve_bound_alias_expression(callee)
-            .unwrap_or_else(|| self.materialize_static_expression(callee));
-        let Expression::Member { object, property } = &resolved_callee else {
-            return None;
-        };
-        if !matches!(object.as_ref(), Expression::Identifier(name) if name == "Object") {
-            return None;
-        }
-        if !matches!(property.as_ref(), Expression::String(name) if name == "getOwnPropertyDescriptor")
-        {
+        let direct_member_is_get_own_property_descriptor = matches!(
+            callee,
+            Expression::Member { object, property }
+                if matches!(object.as_ref(), Expression::Identifier(name) if name == "Object")
+                    && matches!(
+                        property.as_ref(),
+                        Expression::String(name) if name == "getOwnPropertyDescriptor"
+                    )
+        );
+
+        let (resolved_callee, callee_function_binding) =
+            if direct_member_is_get_own_property_descriptor {
+                (callee.clone(), None)
+            } else if matches!(callee, Expression::Identifier(_)) {
+                (
+                    self.resolve_bound_alias_expression(callee)
+                        .unwrap_or_else(|| self.materialize_static_expression(callee)),
+                    self.resolve_function_binding_from_expression(callee),
+                )
+            } else {
+                return None;
+            };
+
+        let is_get_own_property_descriptor_member = matches!(
+            &resolved_callee,
+            Expression::Member { object, property }
+                if matches!(object.as_ref(), Expression::Identifier(name) if name == "Object")
+                    && matches!(
+                        property.as_ref(),
+                        Expression::String(name) if name == "getOwnPropertyDescriptor"
+                    )
+        );
+        let is_get_own_property_descriptor_binding = matches!(
+            callee_function_binding,
+            Some(LocalFunctionBinding::Builtin(name)) if name == "Object.getOwnPropertyDescriptor"
+        );
+        if !is_get_own_property_descriptor_member && !is_get_own_property_descriptor_binding {
             return None;
         }
         let [
@@ -27,6 +53,18 @@ impl<'a> FunctionCompiler<'a> {
         else {
             return None;
         };
+        if let Expression::Identifier(identifier) = property_name
+            && self.resolve_current_local_binding(identifier).is_some()
+            && self
+                .resolve_bound_alias_expression(property_name)
+                .filter(|resolved| !static_expression_matches(resolved, property_name))
+                .is_none()
+            && self
+                .resolve_symbol_identity_expression(property_name)
+                .is_none()
+        {
+            return None;
+        }
         let property = self
             .resolve_property_key_expression(property_name)
             .unwrap_or_else(|| self.materialize_static_expression(property_name));
@@ -35,6 +73,23 @@ impl<'a> FunctionCompiler<'a> {
             self.resolve_arguments_descriptor_binding(target, string_property_name.as_deref())
         {
             return Some(descriptor);
+        }
+        if string_property_name.as_deref() == Some("length")
+            && self.resolve_array_binding_from_expression(target).is_some()
+        {
+            return Some(PropertyDescriptorBinding {
+                value: Some(Expression::Member {
+                    object: Box::new(target.clone()),
+                    property: Box::new(Expression::String("length".to_string())),
+                }),
+                configurable: false,
+                enumerable: false,
+                writable: Some(true),
+                getter: None,
+                setter: None,
+                has_get: false,
+                has_set: false,
+            });
         }
         if self.state.speculation.execution_context.top_level_function
             && matches!(target, Expression::This)

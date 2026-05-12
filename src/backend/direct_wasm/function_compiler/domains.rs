@@ -76,6 +76,11 @@ impl<'b, 'a> AsyncGeneratorDomain<'b, 'a> {
     pub(in crate::backend::direct_wasm) fn current_function_is_async_generator(&self) -> bool {
         self.compiler
             .current_user_function()
+            .or_else(|| {
+                self.compiler
+                    .current_function_name()
+                    .and_then(|function_name| self.compiler.user_function(function_name))
+            })
             .is_some_and(|user_function| user_function.is_async() && user_function.is_generator())
     }
 }
