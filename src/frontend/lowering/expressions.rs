@@ -1216,6 +1216,9 @@ impl Lowerer {
         &mut self,
         call: &swc_ecma_ast::CallExpr,
     ) -> Result<Option<Expression>> {
+        if self.with_scope_depth > 0 {
+            return Ok(None);
+        }
         if call.args.len() != 1 || call.args[0].spread.is_some() {
             return Ok(None);
         }

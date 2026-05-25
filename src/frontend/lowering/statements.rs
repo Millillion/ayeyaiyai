@@ -675,14 +675,17 @@ impl Lowerer {
                     true,
                 )?,
             }]),
-            Stmt::With(with_statement) => Ok(vec![Statement::With {
-                object: self.lower_expression(&with_statement.obj)?,
-                body: self.lower_block_or_statement(
-                    &with_statement.body,
-                    allow_return,
-                    allow_loop_control,
-                )?,
-            }]),
+            Stmt::With(with_statement) => {
+                let object = self.lower_expression(&with_statement.obj)?;
+                let body = self.lower_inside_with_scope(|lowerer| {
+                    lowerer.lower_block_or_statement(
+                        &with_statement.body,
+                        allow_return,
+                        allow_loop_control,
+                    )
+                })?;
+                Ok(vec![Statement::With { object, body }])
+            }
             Stmt::While(while_statement) => Ok(vec![Statement::While {
                 labels: Vec::new(),
                 condition: self.lower_expression(&while_statement.test)?,

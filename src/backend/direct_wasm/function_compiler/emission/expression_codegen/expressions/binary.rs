@@ -313,12 +313,13 @@ impl<'a> FunctionCompiler<'a> {
         collect_referenced_binding_names_from_expression(expression, &mut referenced_names);
         referenced_names.iter().any(|name| {
             let source_name = scoped_binding_source_name(name).unwrap_or(name);
-            self.resolve_current_local_binding(source_name).is_none()
-                && (self.global_has_binding(source_name)
-                    || self.global_has_implicit_binding(source_name)
-                    || self
-                        .resolve_user_function_capture_hidden_name(source_name)
-                        .is_some())
+            self.with_scope_blocks_static_identifier_resolution(source_name)
+                || (self.resolve_current_local_binding(source_name).is_none()
+                    && (self.global_has_binding(source_name)
+                        || self.global_has_implicit_binding(source_name)
+                        || self
+                            .resolve_user_function_capture_hidden_name(source_name)
+                            .is_some()))
         })
     }
 
@@ -2633,7 +2634,9 @@ impl<'a> FunctionCompiler<'a> {
             }
             return self.emit_literal_expression(&Expression::Bool(value));
         }
-        if self.emit_static_strict_type_mismatch_comparison(op, left, right)? {
+        if !equality_reads_runtime_nonlocal_binding
+            && self.emit_static_strict_type_mismatch_comparison(op, left, right)?
+        {
             return Ok(());
         }
         if self.emit_stringified_division_split_length_comparison(op, left, right)? {

@@ -18,6 +18,7 @@ pub(crate) struct Lowerer {
     pub(super) immutable_class_binding_stack: Vec<String>,
     pub(super) constructor_super_stack: Vec<Option<String>>,
     pub(super) class_field_initializer_depth: usize,
+    pub(super) with_scope_depth: usize,
     pub(super) this_replacements: Vec<Option<Expression>>,
     pub(super) super_member_replacements: Vec<Option<Expression>>,
     pub(crate) strict_modes: Vec<bool>,

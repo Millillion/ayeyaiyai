@@ -6914,6 +6914,57 @@ fn compiles_direct_eval_nested_local_and_with_scope_resolution() {
 }
 
 #[test]
+fn compiles_direct_eval_assertion_inside_with_scope() {
+    let tempdir = tempdir().unwrap();
+    let input = tempdir.path().join("direct-eval-with-assertion.js");
+    let output = tempdir.path().join("direct-eval-with-assertion.wasm");
+
+    fs::write(
+        &input,
+        r#"
+        var __10_4_2_1_4 = "str";
+
+        function testcase() {
+          var o = new Object();
+          o.__10_4_2_1_4 = "str2";
+          var __10_4_2_1_4 = "str1";
+          with (o) {
+            __assert(eval("'str2' === __10_4_2_1_4"), "direct eval");
+          }
+        }
+
+        testcase();
+        console.log("ok");
+        "#,
+    )
+    .unwrap();
+
+    let compile = Command::new(env!("CARGO_BIN_EXE_ayeyaiyai"))
+        .arg(&input)
+        .arg("-o")
+        .arg(&output)
+        .output()
+        .unwrap();
+
+    assert!(
+        compile.status.success(),
+        "compiler failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&compile.stdout),
+        String::from_utf8_lossy(&compile.stderr),
+    );
+
+    let run = Command::new("wasmtime").arg(&output).output().unwrap();
+
+    assert!(
+        run.status.success(),
+        "wasmtime failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&run.stdout),
+        String::from_utf8_lossy(&run.stderr),
+    );
+    assert_eq!(String::from_utf8_lossy(&run.stdout), "ok\n");
+}
+
+#[test]
 fn rejects_direct_eval_var_updates_current_function_binding() {
     let tempdir = tempdir().unwrap();
     let input = tempdir.path().join("direct-eval-var-binding.js");

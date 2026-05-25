@@ -380,6 +380,16 @@ impl Lowerer {
         name.to_string()
     }
 
+    pub(crate) fn lower_inside_with_scope<T>(
+        &mut self,
+        lower: impl FnOnce(&mut Self) -> Result<T>,
+    ) -> Result<T> {
+        self.with_scope_depth += 1;
+        let result = lower(self);
+        self.with_scope_depth -= 1;
+        result
+    }
+
     pub(crate) fn current_this_replacement(&self) -> Option<Expression> {
         self.this_replacements.last().cloned().flatten()
     }

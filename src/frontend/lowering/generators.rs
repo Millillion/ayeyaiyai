@@ -389,10 +389,11 @@ impl Lowerer {
         allow_return: bool,
     ) -> Result<Vec<Statement>> {
         let Expr::Object(object) = &*with_statement.obj else {
-            return Ok(vec![Statement::With {
-                object: self.lower_expression(&with_statement.obj)?,
-                body: self.lower_generator_loop_body(&with_statement.body, allow_return)?,
-            }]);
+            let object = self.lower_expression(&with_statement.obj)?;
+            let body = self.lower_inside_with_scope(|lowerer| {
+                lowerer.lower_generator_loop_body(&with_statement.body, allow_return)
+            })?;
+            return Ok(vec![Statement::With { object, body }]);
         };
 
         let mut bindings = HashMap::new();

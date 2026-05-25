@@ -158,6 +158,11 @@ impl<'a> FunctionCompiler<'a> {
             {
                 Some(StaticValueKind::Number)
             }
+            Expression::Identifier(name)
+                if self.with_scope_blocks_static_identifier_resolution(name) =>
+            {
+                None
+            }
             Expression::Identifier(name) => self
                 .lookup_identifier_kind(name)
                 .or(Some(StaticValueKind::Undefined)),
