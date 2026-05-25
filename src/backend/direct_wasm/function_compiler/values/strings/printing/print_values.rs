@@ -19,6 +19,14 @@ fn format_static_number(value: f64) -> String {
     }
 }
 
+fn is_direct_eval_call_expression(value: &Expression) -> bool {
+    matches!(
+        value,
+        Expression::Call { callee, .. }
+            if matches!(callee.as_ref(), Expression::Identifier(name) if name == "eval")
+    )
+}
+
 impl<'a> FunctionCompiler<'a> {
     pub(in crate::backend::direct_wasm) fn emit_print(
         &mut self,
@@ -123,10 +131,13 @@ impl<'a> FunctionCompiler<'a> {
                 Ok(())
             }
             _ => {
-                if let Some(primitive) = self.resolve_static_primitive_expression_with_context(
-                    value,
-                    self.current_function_name(),
-                ) && !static_expression_matches(&primitive, value)
+                let direct_eval_call = is_direct_eval_call_expression(value);
+                if !direct_eval_call
+                    && let Some(primitive) = self.resolve_static_primitive_expression_with_context(
+                        value,
+                        self.current_function_name(),
+                    )
+                    && !static_expression_matches(&primitive, value)
                 {
                     if !inline_summary_side_effect_free_expression(value) {
                         self.emit_numeric_expression(value)?;
@@ -137,7 +148,8 @@ impl<'a> FunctionCompiler<'a> {
                 if !matches!(
                     value,
                     Expression::Member { .. } | Expression::SuperMember { .. }
-                ) && let Some(number) = self.resolve_static_number_value(value)
+                ) && !direct_eval_call
+                    && let Some(number) = self.resolve_static_number_value(value)
                     && (number.is_nan()
                         || !number.is_finite()
                         || number.fract() != 0.0
@@ -145,7 +157,7 @@ impl<'a> FunctionCompiler<'a> {
                 {
                     return self.emit_print_value(&Expression::Number(number));
                 }
-                if let Some(text) = self.resolve_static_string_value(value) {
+                if !direct_eval_call && let Some(text) = self.resolve_static_string_value(value) {
                     self.emit_print_string(&text)?;
                     return Ok(());
                 }

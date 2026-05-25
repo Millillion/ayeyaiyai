@@ -93,6 +93,15 @@ impl<'a> FunctionCompiler<'a> {
             } else {
                 self.push_local_get(local_index);
             }
+        } else if let Some((active_name, global_index)) =
+            self.resolve_active_global_lexical_binding(name)
+        {
+            if trace_identifier_reads {
+                eprintln!(
+                    "identifier_read:fallback:path active_global_lexical name={name} active_name={active_name} global_index={global_index}",
+                );
+            }
+            self.emit_declared_global_binding_read(&active_name, global_index)?;
         } else if self.current_function_name().is_none()
             && self.backend.lexical_global_binding(name).is_some()
             && let Some(global_index) = self.global_binding_index(name)
@@ -141,15 +150,6 @@ impl<'a> FunctionCompiler<'a> {
             if trace_identifier_reads {
                 eprintln!("identifier_read:fallback:path user_capture name={name}");
             }
-        } else if let Some((active_name, global_index)) =
-            self.resolve_active_global_lexical_binding(name)
-        {
-            if trace_identifier_reads {
-                eprintln!(
-                    "identifier_read:fallback:path active_global_lexical name={name} active_name={active_name} global_index={global_index}",
-                );
-            }
-            self.emit_declared_global_binding_read(&active_name, global_index)?;
         } else if let Some(global_index) = self.global_binding_index(name) {
             if trace_identifier_reads {
                 eprintln!(

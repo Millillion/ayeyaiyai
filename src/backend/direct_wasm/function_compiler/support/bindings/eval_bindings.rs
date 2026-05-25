@@ -10,7 +10,7 @@ pub(in crate::backend::direct_wasm) fn collect_direct_eval_lexical_binding_names
     statements: &[Statement],
 ) -> Vec<String> {
     fn should_collect_eval_lexical_name(name: &str) -> bool {
-        !name.starts_with("__ayy_") || name.starts_with("__ayy_eval_lex$")
+        !name.starts_with("__ayy_") || scoped_binding_source_name(name).is_some()
     }
 
     fn collect_direct_statement_name(statement: &Statement, bindings: &mut Vec<String>) {
