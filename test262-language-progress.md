@@ -1,4 +1,4 @@
-22589/23637 (95.58%) — avg(last 10): 0.74 min/check
+22590/23637 (95.58%) — avg(last 10): 0.74 min/check
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -25,7 +25,7 @@ Sub-category progress
 - identifier-resolution: 14/14 (100.00%)
 - computed-property-names: 48/48 (100.00%)
 - destructuring: 18/19 (94.74%)
-- eval-code: 41/347 (11.82%)
+- eval-code: 42/347 (12.10%)
 - import: 0/123 (0.00%)
 - export: 0/3 (0.00%)
 - module-code: 0/592 (0.00%)
@@ -22691,7 +22691,7 @@ Sub-category progress
   - [x] (2026-05-25T06:06:36-06:00) test/language/eval-code/direct/async-func-expr-nameless-a-preceding-parameter-is-named-arguments-declare-arguments-and-assign.js
   - [x] (2026-05-25T06:07:25-06:00) test/language/eval-code/direct/async-func-expr-nameless-a-preceding-parameter-is-named-arguments-declare-arguments.js
   - [x] (2026-05-25T06:08:08-06:00) test/language/eval-code/direct/async-func-expr-nameless-fn-body-cntns-arguments-func-decl-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-func-expr-nameless-fn-body-cntns-arguments-func-decl-declare-arguments.js
+  - [x] (2026-05-25T06:08:46-06:00) test/language/eval-code/direct/async-func-expr-nameless-fn-body-cntns-arguments-func-decl-declare-arguments.js
   - [ ] test/language/eval-code/direct/async-func-expr-nameless-fn-body-cntns-arguments-lex-bind-declare-arguments-and-assign.js
   - [ ] test/language/eval-code/direct/async-func-expr-nameless-fn-body-cntns-arguments-lex-bind-declare-arguments.js
   - [ ] test/language/eval-code/direct/async-func-expr-nameless-fn-body-cntns-arguments-var-bind-declare-arguments-and-assign.js
