@@ -1,4 +1,4 @@
-22686/23637 (95.98%) — avg(last 10): 0.98 min/check
+22687/23637 (95.98%) — avg(last 10): 0.98 min/check
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -25,7 +25,7 @@ Sub-category progress
 - identifier-resolution: 14/14 (100.00%)
 - computed-property-names: 48/48 (100.00%)
 - destructuring: 18/19 (94.74%)
-- eval-code: 138/347 (39.77%)
+- eval-code: 139/347 (40.06%)
 - import: 0/123 (0.00%)
 - export: 0/3 (0.00%)
 - module-code: 0/592 (0.00%)
@@ -22788,7 +22788,7 @@ Sub-category progress
   - [x] (2026-05-25T07:15:33-06:00) test/language/eval-code/direct/func-expr-a-following-parameter-is-named-arguments-declare-arguments-and-assign.js
   - [x] (2026-05-25T07:16:12-06:00) test/language/eval-code/direct/func-expr-a-following-parameter-is-named-arguments-declare-arguments.js
   - [x] (2026-05-25T07:16:51-06:00) test/language/eval-code/direct/func-expr-a-preceding-parameter-is-named-arguments-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/func-expr-a-preceding-parameter-is-named-arguments-declare-arguments.js
+  - [x] (2026-05-25T07:17:18-06:00) test/language/eval-code/direct/func-expr-a-preceding-parameter-is-named-arguments-declare-arguments.js
   - [ ] test/language/eval-code/direct/func-expr-fn-body-cntns-arguments-func-decl-declare-arguments-and-assign.js
   - [ ] test/language/eval-code/direct/func-expr-fn-body-cntns-arguments-func-decl-declare-arguments.js
   - [ ] test/language/eval-code/direct/func-expr-fn-body-cntns-arguments-lex-bind-declare-arguments-and-assign.js
