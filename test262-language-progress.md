@@ -1,4 +1,4 @@
-22620/23637 (95.70%) — avg(last 10): 0.48 min/check
+22621/23637 (95.70%) — avg(last 10): 0.49 min/check
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -25,7 +25,7 @@ Sub-category progress
 - identifier-resolution: 14/14 (100.00%)
 - computed-property-names: 48/48 (100.00%)
 - destructuring: 18/19 (94.74%)
-- eval-code: 72/347 (20.75%)
+- eval-code: 73/347 (21.04%)
 - import: 0/123 (0.00%)
 - export: 0/3 (0.00%)
 - module-code: 0/592 (0.00%)
@@ -22722,7 +22722,7 @@ Sub-category progress
   - [x] (2026-05-25T06:29:58-06:00) test/language/eval-code/direct/async-gen-func-expr-fn-body-cntns-arguments-var-bind-declare-arguments.js
   - [x] (2026-05-25T06:30:24-06:00) test/language/eval-code/direct/async-gen-func-expr-no-pre-existing-arguments-bindings-are-present-declare-arguments-and-assign.js
   - [x] (2026-05-25T06:30:52-06:00) test/language/eval-code/direct/async-gen-func-expr-no-pre-existing-arguments-bindings-are-present-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-gen-meth-a-following-parameter-is-named-arguments-declare-arguments-and-assign.js
+  - [x] (2026-05-25T06:31:31-06:00) test/language/eval-code/direct/async-gen-meth-a-following-parameter-is-named-arguments-declare-arguments-and-assign.js
   - [ ] test/language/eval-code/direct/async-gen-meth-a-following-parameter-is-named-arguments-declare-arguments.js
   - [ ] test/language/eval-code/direct/async-gen-meth-a-preceding-parameter-is-named-arguments-declare-arguments-and-assign.js
   - [ ] test/language/eval-code/direct/async-gen-meth-a-preceding-parameter-is-named-arguments-declare-arguments.js
