@@ -113,13 +113,6 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         expression: &Expression,
     ) -> Option<LocalFunctionBinding> {
-        if self
-            .resolve_primitive_property_key_expression(expression)
-            .is_some()
-        {
-            return None;
-        }
-
         let object_binding = match expression {
             Expression::Object(_) => None,
             _ => self.resolve_object_binding_from_expression(expression),
@@ -142,12 +135,6 @@ impl<'a> FunctionCompiler<'a> {
         if let Expression::Sequence(expressions) = expression {
             return self.resolve_property_key_sequence_with_internal_assignments(expressions);
         }
-        if let Some(key) = self.resolve_primitive_property_key_expression(expression) {
-            return Some(ResolvedPropertyKey {
-                key,
-                coercion: None,
-            });
-        }
 
         let object_binding = match expression {
             Expression::Object(_) => None,
@@ -159,7 +146,25 @@ impl<'a> FunctionCompiler<'a> {
                 Expression::Object(_) => None,
                 _ => self.resolve_object_binding_from_expression(&materialized),
             }
-        })?;
+        });
+        if let Some(object_binding) = object_binding.as_ref()
+            && let Some((coercion, key)) =
+                self.resolve_property_key_coercion_from_object_binding(object_binding)
+        {
+            return Some(ResolvedPropertyKey {
+                key,
+                coercion: Some(coercion),
+            });
+        }
+
+        if let Some(key) = self.resolve_primitive_property_key_expression(expression) {
+            return Some(ResolvedPropertyKey {
+                key,
+                coercion: None,
+            });
+        }
+
+        let object_binding = object_binding?;
         let (coercion, key) =
             self.resolve_property_key_coercion_from_object_binding(&object_binding)?;
         Some(ResolvedPropertyKey {

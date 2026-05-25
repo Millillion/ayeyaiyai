@@ -26,5 +26,10 @@ impl UserFunctionCatalog {
         if let Some(user_function) = self.user_function_mut(function_name) {
             user_function.home_object_binding = Some(home_object_name.to_string());
         }
+        for user_function in &mut self.user_functions {
+            if user_function.name == function_name {
+                user_function.home_object_binding = Some(home_object_name.to_string());
+            }
+        }
     }
 }

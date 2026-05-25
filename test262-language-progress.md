@@ -1,4 +1,4 @@
-22515/23637 (95.25%) — avg(last 10): 5.91 min/check
+22530/23637 (95.32%) — avg(last 10): 11.31 min/check
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -23,7 +23,7 @@ Sub-category progress
 - rest-parameters: 11/11 (100.00%)
 - block-scope: 145/145 (100.00%)
 - identifier-resolution: 14/14 (100.00%)
-- computed-property-names: 33/48 (68.75%)
+- computed-property-names: 48/48 (100.00%)
 - destructuring: 0/19 (0.00%)
 - eval-code: 0/347 (0.00%)
 - import: 0/123 (0.00%)
@@ -22612,21 +22612,21 @@ Sub-category progress
   - [x] (2026-05-23T23:55:58-06:00) test/language/computed-property-names/class/static/setter-constructor.js
   - [x] (2026-05-23T23:56:24-06:00) test/language/computed-property-names/class/static/setter-prototype.js
   - [x] (2026-05-23T23:59:37-06:00) test/language/computed-property-names/object/accessor/getter-duplicates.js
-  - [ ] test/language/computed-property-names/object/accessor/getter-super.js
-  - [ ] test/language/computed-property-names/object/accessor/getter.js
-  - [ ] test/language/computed-property-names/object/accessor/setter-duplicates.js
-  - [ ] test/language/computed-property-names/object/accessor/setter-super.js
-  - [ ] test/language/computed-property-names/object/accessor/setter.js
-  - [ ] test/language/computed-property-names/object/method/generator.js
-  - [ ] test/language/computed-property-names/object/method/number.js
-  - [ ] test/language/computed-property-names/object/method/string.js
-  - [ ] test/language/computed-property-names/object/method/super.js
-  - [ ] test/language/computed-property-names/object/method/symbol.js
-  - [ ] test/language/computed-property-names/object/property/number-duplicates.js
-  - [ ] test/language/computed-property-names/to-name-side-effects/class.js
-  - [ ] test/language/computed-property-names/to-name-side-effects/numbers-class.js
-  - [ ] test/language/computed-property-names/to-name-side-effects/numbers-object.js
-  - [ ] test/language/computed-property-names/to-name-side-effects/object.js
+  - [x] (2026-05-25T00:12:08-06:00) test/language/computed-property-names/object/accessor/getter-super.js
+  - [x] (2026-05-25T00:13:47-06:00) test/language/computed-property-names/object/accessor/getter.js
+  - [x] (2026-05-25T00:14:20-06:00) test/language/computed-property-names/object/accessor/setter-duplicates.js
+  - [x] (2026-05-25T00:45:42-06:00) test/language/computed-property-names/object/accessor/setter-super.js
+  - [x] (2026-05-25T00:46:39-06:00) test/language/computed-property-names/object/accessor/setter.js
+  - [x] (2026-05-25T00:47:58-06:00) test/language/computed-property-names/object/method/generator.js
+  - [x] (2026-05-25T00:48:33-06:00) test/language/computed-property-names/object/method/number.js
+  - [x] (2026-05-25T00:48:39-06:00) test/language/computed-property-names/object/method/string.js
+  - [x] (2026-05-25T00:48:44-06:00) test/language/computed-property-names/object/method/super.js
+  - [x] (2026-05-25T00:48:46-06:00) test/language/computed-property-names/object/method/symbol.js
+  - [x] (2026-05-25T00:49:06-06:00) test/language/computed-property-names/object/property/number-duplicates.js
+  - [x] (2026-05-25T02:29:42-06:00) test/language/computed-property-names/to-name-side-effects/class.js
+  - [x] (2026-05-25T02:29:43-06:00) test/language/computed-property-names/to-name-side-effects/numbers-class.js
+  - [x] (2026-05-25T00:50:10-06:00) test/language/computed-property-names/to-name-side-effects/numbers-object.js
+  - [x] (2026-05-25T00:50:32-06:00) test/language/computed-property-names/to-name-side-effects/object.js
 
 - [ ] destructuring (19 tests)
   - [ ] test/language/destructuring/binding/initialization-requires-object-coercible-null.js

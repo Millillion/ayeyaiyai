@@ -2122,6 +2122,12 @@ impl<'a> FunctionCompiler<'a> {
                     );
                 }
                 self.update_member_function_assignment_binding(object, property, value);
+                if self
+                    .resolve_property_key_coercion_binding(property)
+                    .is_some()
+                {
+                    self.emit_property_key_expression_effects(property)?;
+                }
                 self.emit_numeric_expression(value)?;
                 return Ok(true);
             }
@@ -2155,6 +2161,12 @@ impl<'a> FunctionCompiler<'a> {
                     );
                 }
                 self.update_member_function_assignment_binding(object, property, value);
+                if self
+                    .resolve_property_key_coercion_binding(property)
+                    .is_some()
+                {
+                    self.emit_property_key_expression_effects(property)?;
+                }
                 self.emit_numeric_expression(value)?;
                 return Ok(true);
             }
@@ -2800,6 +2812,12 @@ impl<'a> FunctionCompiler<'a> {
         {
             let emitted_value = self.member_assignment_emission_value(value);
             let value_local = self.allocate_temp_local();
+            if self
+                .resolve_property_key_coercion_binding(property)
+                .is_some()
+            {
+                self.emit_property_key_expression_effects(property)?;
+            }
             self.emit_numeric_expression(&emitted_value)?;
             self.push_local_set(value_local);
             self.emit_scoped_property_store_from_local(
@@ -2918,6 +2936,14 @@ impl<'a> FunctionCompiler<'a> {
                 }
             }
             let value_local = self.allocate_temp_local();
+            if dynamic_property_candidates.is_empty()
+                && !value_references_internal_iterator_step
+                && self
+                    .resolve_property_key_coercion_binding(property)
+                    .is_some()
+            {
+                self.emit_property_key_expression_effects(property)?;
+            }
             self.emit_numeric_expression(value)?;
             self.push_local_set(value_local);
             if dynamic_property_candidates.is_empty() && !value_references_internal_iterator_step {
@@ -2994,6 +3020,14 @@ impl<'a> FunctionCompiler<'a> {
                 }
             }
             let value_local = self.allocate_temp_local();
+            if dynamic_property_candidates.is_empty()
+                && !value_references_internal_iterator_step
+                && self
+                    .resolve_property_key_coercion_binding(property)
+                    .is_some()
+            {
+                self.emit_property_key_expression_effects(property)?;
+            }
             self.emit_numeric_expression(value)?;
             self.push_local_set(value_local);
             if dynamic_property_candidates.is_empty() && !value_references_internal_iterator_step {

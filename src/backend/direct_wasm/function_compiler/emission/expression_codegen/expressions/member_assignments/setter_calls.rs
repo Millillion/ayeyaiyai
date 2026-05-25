@@ -112,6 +112,112 @@ impl<'a> FunctionCompiler<'a> {
         Ok(())
     }
 
+    fn sync_simple_setter_updated_binding_metadata(
+        &mut self,
+        source_name: &str,
+        value: &Expression,
+        user_function: &UserFunction,
+        environment: &mut StaticResolutionEnvironment,
+    ) -> DirectResult<()> {
+        if source_name == "this"
+            || source_name == "arguments"
+            || user_function
+                .params
+                .iter()
+                .any(|param| param == source_name)
+            || user_function.scope_bindings.contains(source_name)
+        {
+            environment.assign_binding_value(source_name.to_string(), value.clone());
+            return Ok(());
+        }
+
+        if self.global_has_binding(source_name) || self.global_has_implicit_binding(source_name) {
+            self.update_static_global_assignment_metadata(source_name, value);
+            self.update_global_specialized_function_value(source_name, value)?;
+            self.sync_simple_setter_function_value_capture_slots(source_name, value, environment)?;
+            self.update_global_property_descriptor_value(source_name, value);
+        } else {
+            self.sync_bound_capture_source_binding_metadata(source_name, value)?;
+        }
+        environment.assign_binding_value(source_name.to_string(), value.clone());
+        Ok(())
+    }
+
+    fn simple_setter_bound_snapshot_bindings(
+        environment: &StaticResolutionEnvironment,
+    ) -> HashMap<String, Expression> {
+        let mut bindings = environment
+            .global_value_bindings
+            .iter()
+            .map(|(name, value)| (name.clone(), value.clone()))
+            .collect::<HashMap<_, _>>();
+        bindings.extend(
+            environment
+                .global_value_overrides
+                .iter()
+                .map(|(name, value)| (name.clone(), value.clone())),
+        );
+        bindings.extend(
+            environment
+                .local_bindings
+                .iter()
+                .map(|(name, value)| (name.clone(), value.clone())),
+        );
+        bindings
+    }
+
+    fn sync_simple_setter_expression_call_metadata(
+        &mut self,
+        expression: &Expression,
+        user_function: &UserFunction,
+        arguments: &[CallArgument],
+        receiver_expression: &Expression,
+        environment: &mut StaticResolutionEnvironment,
+    ) -> DirectResult<bool> {
+        if !matches!(
+            expression,
+            Expression::Call { .. } | Expression::SuperCall { .. }
+        ) {
+            return Ok(false);
+        }
+
+        let substituted =
+            self.substitute_user_function_argument_bindings(expression, user_function, arguments);
+        let substituted =
+            self.substitute_setter_receiver_this_binding(&substituted, receiver_expression);
+        let mut bindings = Self::simple_setter_bound_snapshot_bindings(environment);
+        bindings.insert("this".to_string(), receiver_expression.clone());
+        let previous_bindings = bindings.clone();
+        if self
+            .evaluate_bound_snapshot_expression(
+                &substituted,
+                &mut bindings,
+                Some(&user_function.name),
+            )
+            .is_none()
+        {
+            return Ok(false);
+        }
+
+        for (name, value) in bindings {
+            if previous_bindings
+                .get(&name)
+                .is_some_and(|previous| static_expression_matches(previous, &value))
+            {
+                continue;
+            }
+            let source_name = scoped_binding_source_name(&name).unwrap_or(&name);
+            self.sync_simple_setter_updated_binding_metadata(
+                source_name,
+                &value,
+                user_function,
+                environment,
+            )?;
+        }
+
+        Ok(true)
+    }
+
     pub(in crate::backend::direct_wasm) fn sync_simple_setter_nonlocal_assignment_metadata(
         &mut self,
         setter_binding: &LocalFunctionBinding,
@@ -133,9 +239,29 @@ impl<'a> FunctionCompiler<'a> {
         let arguments = [CallArgument::Expression(value_expression.clone())];
         let mut environment = self.snapshot_static_resolution_environment();
         environment.set_local_binding("this".to_string(), receiver_expression.clone());
+        for (index, param_name) in user_function.params.iter().enumerate() {
+            let argument = match arguments.get(index) {
+                Some(CallArgument::Expression(value) | CallArgument::Spread(value)) => {
+                    value.clone()
+                }
+                None => Expression::Undefined,
+            };
+            environment.set_local_binding(param_name.clone(), argument);
+        }
 
         for statement in &function.body {
             let Statement::Assign { name, value } = statement else {
+                if let Statement::Expression(expression) = statement
+                    && self.sync_simple_setter_expression_call_metadata(
+                        expression,
+                        &user_function,
+                        &arguments,
+                        receiver_expression,
+                        &mut environment,
+                    )?
+                {
+                    continue;
+                }
                 if !self.evaluate_simple_setter_statement_for_nonlocal_metadata(
                     statement,
                     &mut environment,
@@ -160,20 +286,12 @@ impl<'a> FunctionCompiler<'a> {
                 self.substitute_user_function_argument_bindings(value, &user_function, &arguments);
             let substituted =
                 self.substitute_setter_receiver_this_binding(&substituted, receiver_expression);
-            if self.global_has_binding(source_name) || self.global_has_implicit_binding(source_name)
-            {
-                self.update_static_global_assignment_metadata(source_name, &substituted);
-                self.update_global_specialized_function_value(source_name, &substituted)?;
-                self.sync_simple_setter_function_value_capture_slots(
-                    source_name,
-                    &substituted,
-                    &environment,
-                )?;
-                self.update_global_property_descriptor_value(source_name, &substituted);
-            } else {
-                self.sync_bound_capture_source_binding_metadata(source_name, &substituted)?;
-            }
-            environment.assign_binding_value(source_name.to_string(), substituted);
+            self.sync_simple_setter_updated_binding_metadata(
+                source_name,
+                &substituted,
+                &user_function,
+                &mut environment,
+            )?;
         }
 
         Ok(())

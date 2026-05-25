@@ -44,6 +44,79 @@ impl DirectWasmCompiler {
         }
     }
 
+    fn static_global_property_key_from_expression(
+        &self,
+        expression: &Expression,
+    ) -> Option<Expression> {
+        if self.global_expression_is_static_symbol_property_key(expression) {
+            return Some(expression.clone());
+        }
+        static_property_name_from_expression(expression).map(Expression::String)
+    }
+
+    fn resolve_global_property_key_from_function_binding(
+        &self,
+        binding: &LocalFunctionBinding,
+    ) -> Option<Expression> {
+        let LocalFunctionBinding::User(function_name) = binding else {
+            return None;
+        };
+        let user_function = self.user_function(function_name)?;
+        let return_value = user_function
+            .inline_summary
+            .as_ref()?
+            .return_value
+            .as_ref()?;
+        self.static_global_property_key_from_expression(return_value)
+    }
+
+    fn resolve_global_property_key_coercion_from_object_binding(
+        &self,
+        object_binding: &ObjectValueBinding,
+    ) -> Option<Expression> {
+        let symbol_property = symbol_to_primitive_expression();
+        if let Some(method_value) = object_binding_lookup_value(object_binding, &symbol_property) {
+            if matches!(method_value, Expression::Null | Expression::Undefined) {
+                // Fall through to ordinary coercion when @@toPrimitive is absent.
+            } else {
+                let binding = self.infer_global_function_binding(method_value)?;
+                return self.resolve_global_property_key_from_function_binding(&binding);
+            }
+        }
+
+        for method_name in ["toString", "valueOf"] {
+            let method_value = object_binding_lookup_value(
+                object_binding,
+                &Expression::String(method_name.to_string()),
+            );
+            match method_value {
+                None | Some(Expression::Null | Expression::Undefined) => continue,
+                Some(value) => {
+                    let binding = self.infer_global_function_binding(value)?;
+                    return self.resolve_global_property_key_from_function_binding(&binding);
+                }
+            }
+        }
+
+        None
+    }
+
+    fn resolve_global_property_key_coercion(&self, expression: &Expression) -> Option<Expression> {
+        let object_binding = match expression {
+            Expression::Object(_) => None,
+            _ => self.infer_global_object_binding(expression),
+        }
+        .or_else(|| {
+            let materialized = self.materialize_global_expression(expression);
+            match materialized {
+                Expression::Object(_) => None,
+                _ => self.infer_global_object_binding(&materialized),
+            }
+        })?;
+
+        self.resolve_global_property_key_coercion_from_object_binding(&object_binding)
+    }
+
     pub(in crate::backend::direct_wasm) fn canonical_global_object_property_expression(
         &self,
         property: &Expression,
@@ -61,6 +134,9 @@ impl DirectWasmCompiler {
                 .unwrap_or_else(|| property.clone()),
             _ => property.clone(),
         };
+        if let Some(resolved_key) = self.resolve_global_property_key_coercion(&resolved) {
+            return resolved_key;
+        }
         if self.global_property_key_requires_runtime_coercion(&resolved) {
             return resolved;
         }

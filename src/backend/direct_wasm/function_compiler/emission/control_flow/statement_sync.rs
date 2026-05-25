@@ -82,6 +82,8 @@ impl<'a> FunctionCompiler<'a> {
             return;
         };
 
+        self.sync_static_property_key_coercion_side_effects(property);
+
         let mut environment = self.snapshot_static_resolution_environment();
         let property = self
             .evaluate_static_expression_with_state(property, &mut environment)
@@ -197,6 +199,215 @@ impl<'a> FunctionCompiler<'a> {
             self.backend
                 .set_global_binding_kind(&target_name, target_kind);
         }
+    }
+
+    fn sync_static_property_key_coercion_side_effects(&mut self, property: &Expression) {
+        let Some(LocalFunctionBinding::User(function_name)) = self
+            .resolve_property_key_expression_with_coercion(property)
+            .and_then(|resolved| resolved.coercion)
+        else {
+            return;
+        };
+        let Some(user_function) = self.user_function(&function_name).cloned() else {
+            return;
+        };
+
+        let capture_source_bindings = self
+            .static_property_key_coercion_capture_source_bindings(&function_name, &user_function);
+
+        if let Some(mut execution) = self.prepare_static_user_function_execution(
+            &function_name,
+            &user_function,
+            &[],
+            property,
+            Some(&capture_source_bindings),
+            capture_source_bindings.clone(),
+            |statement| statement,
+        ) && self
+            .execute_static_statements_with_state(
+                &execution.substituted_body,
+                &mut execution.environment,
+            )
+            .is_some()
+        {
+            let mut synced_bindings =
+                self.collect_user_function_assigned_nonlocal_bindings(&user_function);
+            synced_bindings
+                .extend(self.collect_user_function_updated_nonlocal_bindings(&user_function));
+            synced_bindings
+                .extend(self.collect_user_function_call_effect_nonlocal_bindings(&user_function));
+            for name in synced_bindings {
+                let Some(value) = execution.environment.binding(&name).cloned() else {
+                    continue;
+                };
+                if self
+                    .sync_bound_capture_source_binding_metadata(&name, &value)
+                    .is_err()
+                {
+                    let mut invalidated = HashSet::new();
+                    invalidated.insert(name);
+                    self.invalidate_static_binding_metadata_for_names(&invalidated);
+                }
+            }
+            return;
+        }
+
+        let mut invalidated_bindings =
+            self.collect_user_function_assigned_nonlocal_bindings(&user_function);
+        invalidated_bindings
+            .extend(self.collect_user_function_updated_nonlocal_bindings(&user_function));
+        invalidated_bindings
+            .extend(self.collect_user_function_call_effect_nonlocal_bindings(&user_function));
+        self.invalidate_static_binding_metadata_for_names(&invalidated_bindings);
+    }
+
+    fn static_property_key_coercion_capture_source_bindings(
+        &self,
+        function_name: &str,
+        user_function: &UserFunction,
+    ) -> HashMap<String, Expression> {
+        let mut bindings = HashMap::new();
+
+        if let Some(captures) = self.user_function_capture_bindings(function_name) {
+            for (source_name, hidden_name) in captures {
+                bindings.insert(
+                    source_name.clone(),
+                    self.static_property_key_coercion_capture_source_expression(
+                        &source_name,
+                        &hidden_name,
+                    ),
+                );
+            }
+        }
+
+        let mut source_names = self.collect_user_function_assigned_nonlocal_bindings(user_function);
+        source_names.extend(self.collect_user_function_updated_nonlocal_bindings(user_function));
+        source_names
+            .extend(self.collect_user_function_call_effect_nonlocal_bindings(user_function));
+        if let Some(function) = self.resolve_registered_function_declaration(function_name) {
+            source_names.extend(collect_referenced_binding_names_from_statements(
+                &function.body,
+            ));
+            for parameter in &function.params {
+                if let Some(default) = &parameter.default {
+                    collect_referenced_binding_names_from_expression(default, &mut source_names);
+                }
+            }
+        }
+
+        for source_name in source_names {
+            if bindings.contains_key(&source_name)
+                || source_name == "arguments"
+                || user_function
+                    .params
+                    .iter()
+                    .any(|param| param == &source_name)
+                || user_function.scope_bindings.contains(&source_name)
+            {
+                continue;
+            }
+            let source_expression = self
+                .static_property_key_coercion_capture_source_expression(&source_name, &source_name);
+            if matches!(&source_expression, Expression::Identifier(name) if name == &source_name) {
+                continue;
+            }
+            bindings.insert(source_name, source_expression);
+        }
+
+        bindings
+    }
+
+    fn static_property_key_coercion_capture_source_expression(
+        &self,
+        source_name: &str,
+        hidden_name: &str,
+    ) -> Expression {
+        if source_name == "this" {
+            return Expression::This;
+        }
+        if source_name == "new.target" {
+            return Expression::NewTarget;
+        }
+
+        let source_identifier = Expression::Identifier(source_name.to_string());
+        let hidden_identifier = Expression::Identifier(hidden_name.to_string());
+
+        if let Some(value) = self
+            .state
+            .speculation
+            .static_semantics
+            .local_value_binding(source_name)
+            .filter(|value| !static_expression_matches(value, &source_identifier))
+        {
+            return value.clone();
+        }
+
+        if let Some(value) = self
+            .global_value_binding(source_name)
+            .filter(|value| !static_expression_matches(value, &source_identifier))
+        {
+            return value.clone();
+        }
+
+        if let Some(array_binding) = self
+            .state
+            .speculation
+            .static_semantics
+            .local_array_binding(source_name)
+            .or_else(|| self.global_array_binding(source_name))
+        {
+            return Self::static_property_key_coercion_array_expression(array_binding);
+        }
+
+        if let Some(object_binding) = self
+            .state
+            .speculation
+            .static_semantics
+            .local_object_binding(source_name)
+            .or_else(|| self.global_object_binding(source_name))
+            .filter(|binding| binding.property_descriptors.is_empty())
+        {
+            return object_binding_to_expression(object_binding);
+        }
+
+        if let Some(value) = self
+            .global_value_binding(hidden_name)
+            .filter(|value| !static_expression_matches(value, &hidden_identifier))
+        {
+            return value.clone();
+        }
+
+        if let Some(array_binding) = self.global_array_binding(hidden_name) {
+            return Self::static_property_key_coercion_array_expression(array_binding);
+        }
+
+        if let Some(object_binding) = self
+            .global_object_binding(hidden_name)
+            .filter(|binding| binding.property_descriptors.is_empty())
+        {
+            return object_binding_to_expression(object_binding);
+        }
+
+        if let Some(alias) = self
+            .resolve_bound_alias_expression(&source_identifier)
+            .filter(|alias| !static_expression_matches(alias, &source_identifier))
+        {
+            return self.materialize_static_expression(&alias);
+        }
+
+        source_identifier
+    }
+
+    fn static_property_key_coercion_array_expression(binding: &ArrayValueBinding) -> Expression {
+        Expression::Array(
+            binding
+                .values
+                .iter()
+                .map(|value| {
+                    ArrayElement::Expression(value.clone().unwrap_or(Expression::Undefined))
+                })
+                .collect(),
+        )
     }
 
     fn sync_static_assign_member_tracking_effect(

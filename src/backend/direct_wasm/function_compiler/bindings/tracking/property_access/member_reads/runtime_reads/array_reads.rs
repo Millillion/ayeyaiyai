@@ -106,6 +106,7 @@ impl<'a> FunctionCompiler<'a> {
         if let Some(binding_name) = self.runtime_array_binding_name_for_expression(object)
             && argument_index_from_expression(static_array_property).is_none()
             && !static_array_property_is_known_non_index(static_array_property)
+            && !matches!(static_array_property, Expression::String(text) if text == "length")
             && !binding_name.starts_with("__ayy_for_in_keys_")
         {
             let property_local = self.allocate_temp_local();
@@ -124,7 +125,19 @@ impl<'a> FunctionCompiler<'a> {
             }
         }
 
-        let Some(array_binding) = self.resolve_array_binding_from_expression(object) else {
+        let array_binding = self.resolve_array_binding_from_expression(object);
+        if matches!(static_array_property, Expression::String(text) if text == "length")
+            && let Some(binding_name) = self.runtime_array_binding_name_for_expression(object)
+            && self.emit_global_runtime_array_length_read(&binding_name)
+        {
+            if std::env::var_os("AYY_TRACE_MEMBER_READS").is_some() {
+                eprintln!(
+                    "runtime_array_read:length_global object={object:?} binding={binding_name}"
+                );
+            }
+            return Ok(true);
+        }
+        let Some(array_binding) = array_binding else {
             if std::env::var_os("AYY_TRACE_MEMBER_READS").is_some() {
                 eprintln!("runtime_array_read:no_static_binding object={object:?}");
             }

@@ -35,9 +35,49 @@ fn class_init_define_property_data_value(expression: &Expression) -> Option<&Exp
     class_init_descriptor_data_value(descriptor)
 }
 
+fn class_init_define_property_property_key(expression: &Expression) -> Option<&Expression> {
+    let Expression::Call { callee, arguments } = expression else {
+        return None;
+    };
+    let Expression::Member { object, property } = callee.as_ref() else {
+        return None;
+    };
+    if !matches!(
+        object.as_ref(),
+        Expression::Identifier(name) if name == "Object" || name == "Reflect"
+    ) || !matches!(property.as_ref(), Expression::String(name) if name == "defineProperty")
+    {
+        return None;
+    }
+    let Some(CallArgument::Expression(property)) = arguments.get(1) else {
+        return None;
+    };
+    Some(property)
+}
+
+fn class_init_property_key_can_have_to_property_key_side_effects(expression: &Expression) -> bool {
+    match expression {
+        Expression::String(_)
+        | Expression::Number(_)
+        | Expression::BigInt(_)
+        | Expression::Bool(_)
+        | Expression::Null
+        | Expression::Undefined => false,
+        Expression::Sequence(expressions) => expressions
+            .last()
+            .is_some_and(class_init_property_key_can_have_to_property_key_side_effects),
+        _ => true,
+    }
+}
+
 fn class_init_expression_has_external_side_effects(expression: &Expression) -> bool {
     if let Some(value) = class_init_define_property_data_value(expression) {
         if !inline_summary_side_effect_free_expression(value) {
+            return true;
+        }
+    }
+    if let Some(property_key) = class_init_define_property_property_key(expression) {
+        if class_init_property_key_can_have_to_property_key_side_effects(property_key) {
             return true;
         }
     }

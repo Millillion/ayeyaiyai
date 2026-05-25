@@ -1118,22 +1118,98 @@ impl DirectWasmCompiler {
         None
     }
 
-    fn register_global_bindings_in_statements(
+    fn global_define_property_metadata_target_key<'expression>(
+        &self,
+        expression: &'expression Expression,
+    ) -> Option<(String, &'expression Expression)> {
+        let Expression::Call { callee, arguments } = expression else {
+            return None;
+        };
+        if !matches!(
+            callee.as_ref(),
+            Expression::Member { object, property }
+                if matches!(object.as_ref(), Expression::Identifier(name) if name == "Object")
+                    && matches!(property.as_ref(), Expression::String(name) if name == "defineProperty")
+        ) {
+            return None;
+        }
+        let [
+            CallArgument::Expression(target),
+            CallArgument::Expression(property),
+            ..,
+        ] = arguments.as_slice()
+        else {
+            return None;
+        };
+        match target {
+            Expression::Identifier(name) => Some((format!("object:{name}"), property)),
+            Expression::Member {
+                object,
+                property: target_property,
+            } if matches!(target_property.as_ref(), Expression::String(name) if name == "prototype") =>
+            {
+                let Expression::Identifier(name) = object.as_ref() else {
+                    return None;
+                };
+                Some((format!("prototype:{name}"), property))
+            }
+            _ => None,
+        }
+    }
+
+    fn global_define_property_key_can_have_to_property_key_side_effects(
+        &self,
+        property: &Expression,
+    ) -> bool {
+        let canonical_property = self.canonical_global_object_property_expression(property);
+        if static_property_name_from_expression(&canonical_property).is_none()
+            && !self.global_expression_is_static_symbol_property_key(&canonical_property)
+        {
+            return true;
+        }
+
+        match property {
+            Expression::Sequence(expressions) => expressions.iter().any(|expression| {
+                self.global_define_property_key_can_have_to_property_key_side_effects(expression)
+            }),
+            Expression::Assign { value, .. } | Expression::Await(value) => {
+                self.global_define_property_key_can_have_to_property_key_side_effects(value)
+            }
+            Expression::Identifier(name) => {
+                self.global_object_binding(name).is_some()
+                    || self.global_binding_kind(name) == Some(StaticValueKind::Object)
+            }
+            Expression::Array(_) | Expression::Object(_) => true,
+            _ => false,
+        }
+    }
+
+    fn register_global_bindings_in_statements_with_metadata_barriers(
         &mut self,
         statements: &[Statement],
         next_global_index: &mut u32,
+        blocked_define_property_targets: &mut HashSet<String>,
     ) {
         for statement in statements {
             match statement {
                 Statement::Declaration { body }
                 | Statement::Block { body }
                 | Statement::Labeled { body, .. } => {
-                    self.register_global_bindings_in_statements(body, next_global_index);
+                    self.register_global_bindings_in_statements_with_metadata_barriers(
+                        body,
+                        next_global_index,
+                        blocked_define_property_targets,
+                    );
                 }
-                Statement::Var { name, .. } => {
+                Statement::Var { name, value } => {
                     self.ensure_global_binding_index(name, next_global_index);
                     if self.global_binding_kind(name).is_none() {
                         self.set_global_binding_kind(name, StaticValueKind::Undefined);
+                    }
+                    if matches!(value, Expression::Object(_)) {
+                        self.update_global_object_literal_member_bindings_for_value(name, value);
+                        self.update_global_object_literal_home_bindings(name, value);
+                        self.update_global_object_prototype_binding_from_value(name, value);
                     }
                 }
                 Statement::Let {
@@ -1161,6 +1237,19 @@ impl DirectWasmCompiler {
                     self.update_global_member_assignment_metadata(object, property, value);
                 }
                 Statement::Expression(expression) => {
+                    if let Some((target_key, property)) =
+                        self.global_define_property_metadata_target_key(expression)
+                    {
+                        if blocked_define_property_targets.contains(&target_key) {
+                            continue;
+                        }
+                        if self.global_define_property_key_can_have_to_property_key_side_effects(
+                            property,
+                        ) {
+                            blocked_define_property_targets.insert(target_key);
+                            continue;
+                        }
+                    }
                     self.update_global_expression_metadata(expression);
                 }
                 Statement::If {
@@ -1181,12 +1270,29 @@ impl DirectWasmCompiler {
                         } else {
                             else_branch
                         };
-                        self.register_global_bindings_in_statements(branch, next_global_index);
+                        self.register_global_bindings_in_statements_with_metadata_barriers(
+                            branch,
+                            next_global_index,
+                            blocked_define_property_targets,
+                        );
                     }
                 }
                 _ => {}
             }
         }
+    }
+
+    fn register_global_bindings_in_statements(
+        &mut self,
+        statements: &[Statement],
+        next_global_index: &mut u32,
+    ) {
+        let mut blocked_define_property_targets = HashSet::new();
+        self.register_global_bindings_in_statements_with_metadata_barriers(
+            statements,
+            next_global_index,
+            &mut blocked_define_property_targets,
+        );
     }
 
     fn resolve_static_global_condition_property_name(
