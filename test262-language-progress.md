@@ -1,4 +1,4 @@
-22558/23637 (95.43%) — avg(last 10): 8.96 min/check
+22559/23637 (95.44%) — avg(last 10): 4.61 min/check
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -25,7 +25,7 @@ Sub-category progress
 - identifier-resolution: 14/14 (100.00%)
 - computed-property-names: 48/48 (100.00%)
 - destructuring: 18/19 (94.74%)
-- eval-code: 10/347 (2.88%)
+- eval-code: 11/347 (3.17%)
 - import: 0/123 (0.00%)
 - export: 0/3 (0.00%)
 - module-code: 0/592 (0.00%)
@@ -22660,7 +22660,7 @@ Sub-category progress
   - [x] (2026-05-25T05:46:36-06:00) test/language/eval-code/direct/arrow-fn-body-cntns-arguments-lex-bind-arrow-func-declare-arguments-assign.js
   - [x] (2026-05-25T05:47:05-06:00) test/language/eval-code/direct/arrow-fn-body-cntns-arguments-var-bind-arrow-func-declare-arguments-assign-incl-def-param-arrow-arguments.js
   - [x] (2026-05-25T05:47:33-06:00) test/language/eval-code/direct/arrow-fn-body-cntns-arguments-var-bind-arrow-func-declare-arguments-assign.js
-  - [ ] test/language/eval-code/direct/arrow-fn-no-pre-existing-arguments-bindings-are-present-arrow-func-declare-arguments-assign-incl-def-param-arrow-arguments.js
+  - [x] (2026-05-25T05:48:04-06:00) test/language/eval-code/direct/arrow-fn-no-pre-existing-arguments-bindings-are-present-arrow-func-declare-arguments-assign-incl-def-param-arrow-arguments.js
   - [ ] test/language/eval-code/direct/arrow-fn-no-pre-existing-arguments-bindings-are-present-arrow-func-declare-arguments-assign.js
   - [ ] test/language/eval-code/direct/async-func-decl-a-following-parameter-is-named-arguments-declare-arguments-and-assign.js
   - [ ] test/language/eval-code/direct/async-func-decl-a-following-parameter-is-named-arguments-declare-arguments.js
