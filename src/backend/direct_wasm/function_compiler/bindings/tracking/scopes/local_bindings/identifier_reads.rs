@@ -279,13 +279,6 @@ impl<'a> FunctionCompiler<'a> {
             if trace_identifier_reads {
                 eprintln!("identifier_read:fallback:path missing name={name}");
             }
-            self.emit_print(&[Expression::String(format!(
-                "missing identifier {name} in {:?}",
-                self.state
-                    .speculation
-                    .execution_context
-                    .current_user_function_name
-            ))])?;
             self.emit_named_error_throw("ReferenceError")?;
         }
         if trace_identifier_reads {

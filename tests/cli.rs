@@ -8836,6 +8836,62 @@ fn compiles_strict_indirect_eval_function_declarations_without_global_leakage() 
 }
 
 #[test]
+fn compiles_strict_direct_eval_block_function_declarations_without_leakage() {
+    let tempdir = tempdir().unwrap();
+    let input = tempdir
+        .path()
+        .join("strict-direct-eval-block-function-scope.js");
+    let output = tempdir
+        .path()
+        .join("strict-direct-eval-block-function-scope.wasm");
+
+    fs::write(
+        &input,
+        r#"
+        var err;
+
+        eval('"use strict"; { function fun() {} }');
+
+        try {
+          fun;
+        } catch (error) {
+          err = error;
+        }
+
+        console.log("strict-direct-eval-block-fn", err instanceof ReferenceError);
+        "#,
+    )
+    .unwrap();
+
+    let compile = Command::new(env!("CARGO_BIN_EXE_ayeyaiyai"))
+        .arg(&input)
+        .arg("-o")
+        .arg(&output)
+        .output()
+        .unwrap();
+
+    assert!(
+        compile.status.success(),
+        "compiler failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&compile.stdout),
+        String::from_utf8_lossy(&compile.stderr),
+    );
+
+    let run = Command::new("wasmtime").arg(&output).output().unwrap();
+
+    assert!(
+        run.status.success(),
+        "wasmtime failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&run.stdout),
+        String::from_utf8_lossy(&run.stderr),
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&run.stdout),
+        "strict-direct-eval-block-fn true\n"
+    );
+}
+
+#[test]
 fn compiles_indirect_eval_global_lexical_var_collisions_throw_syntax_error() {
     let tempdir = tempdir().unwrap();
     let input = tempdir

@@ -20,7 +20,11 @@ impl DirectWasmCompiler {
     pub(in crate::backend::direct_wasm) fn normalize_eval_scoped_bindings_to_source_names_impl(
         program: &mut Program,
     ) {
-        let eval_local_function_bindings = Self::collect_eval_local_function_bindings(program);
+        let eval_local_function_bindings = if program.strict {
+            HashSet::new()
+        } else {
+            Self::collect_eval_local_function_bindings(program)
+        };
         let declared_bindings = Self::collect_eval_scoped_declared_bindings(program);
 
         for statement in &mut program.statements {
