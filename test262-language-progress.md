@@ -1,4 +1,4 @@
-22740/23637 (96.21%) — avg(last 10): 0.49 min/check
+22741/23637 (96.21%) — avg(last 10): 0.49 min/check
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -25,7 +25,7 @@ Sub-category progress
 - identifier-resolution: 14/14 (100.00%)
 - computed-property-names: 48/48 (100.00%)
 - destructuring: 18/19 (94.74%)
-- eval-code: 192/347 (55.33%)
+- eval-code: 193/347 (55.62%)
 - import: 0/123 (0.00%)
 - export: 0/3 (0.00%)
 - module-code: 0/592 (0.00%)
@@ -22842,7 +22842,7 @@ Sub-category progress
   - [x] (2026-05-25T07:41:17-06:00) test/language/eval-code/direct/gen-meth-fn-body-cntns-arguments-lex-bind-declare-arguments-and-assign.js
   - [x] (2026-05-25T07:41:48-06:00) test/language/eval-code/direct/gen-meth-fn-body-cntns-arguments-lex-bind-declare-arguments.js
   - [x] (2026-05-25T07:42:24-06:00) test/language/eval-code/direct/gen-meth-fn-body-cntns-arguments-var-bind-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/gen-meth-fn-body-cntns-arguments-var-bind-declare-arguments.js
+  - [x] (2026-05-25T07:42:51-06:00) test/language/eval-code/direct/gen-meth-fn-body-cntns-arguments-var-bind-declare-arguments.js
   - [ ] test/language/eval-code/direct/gen-meth-no-pre-existing-arguments-bindings-are-present-declare-arguments-and-assign.js
   - [ ] test/language/eval-code/direct/gen-meth-no-pre-existing-arguments-bindings-are-present-declare-arguments.js
   - [ ] test/language/eval-code/direct/global-env-rec-catch.js
