@@ -1,4 +1,4 @@
-22745/23637 (96.23%) — avg(last 10): 0.53 min/check
+22746/23637 (96.23%) — avg(last 10): 0.52 min/check
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -25,7 +25,7 @@ Sub-category progress
 - identifier-resolution: 14/14 (100.00%)
 - computed-property-names: 48/48 (100.00%)
 - destructuring: 18/19 (94.74%)
-- eval-code: 197/347 (56.77%)
+- eval-code: 198/347 (57.06%)
 - import: 0/123 (0.00%)
 - export: 0/3 (0.00%)
 - module-code: 0/592 (0.00%)
@@ -22847,7 +22847,7 @@ Sub-category progress
   - [x] (2026-05-25T07:43:57-06:00) test/language/eval-code/direct/gen-meth-no-pre-existing-arguments-bindings-are-present-declare-arguments.js
   - [x] (2026-05-25T07:44:33-06:00) test/language/eval-code/direct/global-env-rec-catch.js
   - [x] (2026-05-25T07:45:17-06:00) test/language/eval-code/direct/global-env-rec-eval.js
-  - [ ] test/language/eval-code/direct/global-env-rec-fun.js
+  - [x] (2026-05-25T07:45:43-06:00) test/language/eval-code/direct/global-env-rec-fun.js
   - [ ] test/language/eval-code/direct/global-env-rec-with.js
   - [ ] test/language/eval-code/direct/global-env-rec.js
   - [ ] test/language/eval-code/direct/import.js
