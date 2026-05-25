@@ -2373,12 +2373,19 @@ impl<'a> FunctionCompiler<'a> {
                 if let Some(catch_binding) = catch_binding {
                     catch_assigned_bindings.insert(catch_binding.clone());
                 }
+                let catch_body_has_deterministic_terminal_throw =
+                    self.statements_have_deterministic_terminal_throw(catch_body);
+                let try_body_has_deterministic_terminal_throw =
+                    !catch_body_has_deterministic_terminal_throw
+                        && self.statements_have_deterministic_terminal_throw(body);
                 let try_body_metadata_survives_catch = catch_binding.is_some()
-                    && (self.statements_have_deterministic_terminal_throw(body)
-                        || self.statements_have_deterministic_terminal_throw(catch_body));
-                let static_catch_value = catch_binding
-                    .as_ref()
-                    .and_then(|_| self.resolve_static_catch_value_from_try_body(body));
+                    && (catch_body_has_deterministic_terminal_throw
+                        || try_body_has_deterministic_terminal_throw);
+                let static_catch_value = catch_binding.as_ref().and_then(|_| {
+                    try_body_has_deterministic_terminal_throw
+                        .then(|| self.resolve_static_catch_value_from_try_body(body))
+                        .flatten()
+                });
                 let assert_throws_single_call_try = catch_binding.is_none()
                     && catch_setup.is_empty()
                     && matches!(

@@ -22647,7 +22647,7 @@ Sub-category progress
   - [x] (2026-05-25T04:27:10-06:00) test/language/destructuring/binding/syntax/property-list-single-name-bindings.js
   - [x] (2026-05-25T04:27:34-06:00) test/language/destructuring/binding/syntax/property-list-with-property-list.js
   - [x] (2026-05-25T04:27:59-06:00) test/language/destructuring/binding/syntax/recursive-array-and-object-patterns.js
-  - [ ] test/language/destructuring/binding/typedarray-backed-by-resizable-buffer.js
+  - [ ] (SKIPPED 2026-05-25T05:02:33-06:00 after 1h) test/language/destructuring/binding/typedarray-backed-by-resizable-buffer.js
 
 - [ ] eval-code (347 tests)
   - [ ] test/language/eval-code/direct/arrow-fn-a-following-parameter-is-named-arguments-arrow-func-declare-arguments-assign-incl-def-param-arrow-arguments.js

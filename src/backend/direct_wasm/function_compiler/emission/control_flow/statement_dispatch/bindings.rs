@@ -115,35 +115,35 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         statement: &Statement,
     ) -> DirectResult<bool> {
-        let static_step = match statement {
+        let static_simple_generator_step = match statement {
             Statement::Let { name, value, .. }
             | Statement::Var { name, value }
             | Statement::Assign { name, value } => {
-                self.has_static_tracked_array_step_initializer(name, value)
-                    && self
-                        .tracked_array_step_initializer_parts(name, value)
-                        .and_then(|(_, object, _, _)| match object {
-                            Expression::Identifier(iterator_name) => {
-                                let iterator_binding_name = self
-                                    .resolve_local_array_iterator_binding_name(iterator_name)
-                                    .unwrap_or_else(|| iterator_name.clone());
-                                self.state
-                                    .speculation
-                                    .static_semantics
-                                    .local_array_iterator_binding(&iterator_binding_name)
-                            }
-                            _ => None,
-                        })
-                        .is_some_and(|iterator_binding| {
-                            matches!(
-                                iterator_binding.source,
-                                IteratorSourceKind::SimpleGenerator { .. }
-                            )
-                        })
+                let Some((_, object, _, _)) =
+                    self.tracked_array_step_initializer_parts(name, value)
+                else {
+                    return Ok(false);
+                };
+                let Expression::Identifier(iterator_name) = object else {
+                    return Ok(false);
+                };
+                let iterator_binding_name = self
+                    .resolve_local_array_iterator_binding_name(iterator_name)
+                    .unwrap_or_else(|| iterator_name.clone());
+                self.state
+                    .speculation
+                    .static_semantics
+                    .local_array_iterator_binding(&iterator_binding_name)
+                    .is_some_and(|iterator_binding| {
+                        matches!(
+                            iterator_binding.source,
+                            IteratorSourceKind::SimpleGenerator { .. }
+                        ) && self.has_static_tracked_array_step_initializer(name, value)
+                    })
             }
             _ => false,
         };
-        if !static_step {
+        if !static_simple_generator_step {
             return Ok(false);
         }
         self.try_emit_static_simple_generator_binding_effect(statement, &[])
@@ -194,6 +194,9 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         value: &Expression,
     ) -> Option<Expression> {
+        if self.is_local_array_iterator_next_call(value) {
+            return None;
+        }
         let Expression::Call { callee, arguments } = value else {
             return None;
         };
@@ -218,6 +221,29 @@ impl<'a> FunctionCompiler<'a> {
                 .as_deref()
                 .or_else(|| self.current_function_name()),
         )
+    }
+
+    fn is_local_array_iterator_next_call(&self, value: &Expression) -> bool {
+        let Expression::Call { callee, arguments } = value else {
+            return false;
+        };
+        if !arguments.is_empty() {
+            return false;
+        }
+        let Expression::Member { object, property } = callee.as_ref() else {
+            return false;
+        };
+        let Expression::String(property_name) = property.as_ref() else {
+            return false;
+        };
+        if property_name != "next" {
+            return false;
+        }
+        let Expression::Identifier(iterator_name) = object.as_ref() else {
+            return false;
+        };
+        self.resolve_local_array_iterator_binding_name(iterator_name)
+            .is_some()
     }
 
     fn lowered_optional_member_non_nullish_target(

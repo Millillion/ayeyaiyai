@@ -79,8 +79,8 @@ impl<'a> FunctionCompiler<'a> {
         result: &Expression,
     ) -> bool {
         if !Self::is_internal_iterator_step_binding_name(name)
-            || self.iterator_next_result_is_static_non_object(result)
             || Self::expression_is_direct_iterator_next_call(result)
+            || self.iterator_next_result_is_static_non_object(result)
         {
             return false;
         }
