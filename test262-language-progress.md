@@ -1,4 +1,4 @@
-22748/23637 (96.24%) — avg(last 10): 2.52 min/check
+22749/23637 (96.24%) — avg(last 10): 2.58 min/check
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -25,7 +25,7 @@ Sub-category progress
 - identifier-resolution: 14/14 (100.00%)
 - computed-property-names: 48/48 (100.00%)
 - destructuring: 18/19 (94.74%)
-- eval-code: 200/347 (57.64%)
+- eval-code: 201/347 (57.93%)
 - import: 0/123 (0.00%)
 - export: 0/3 (0.00%)
 - module-code: 0/592 (0.00%)
@@ -22850,7 +22850,7 @@ Sub-category progress
   - [x] (2026-05-25T07:45:43-06:00) test/language/eval-code/direct/global-env-rec-fun.js
   - [x] (2026-05-25T08:01:44-06:00) test/language/eval-code/direct/global-env-rec-with.js
   - [x] (2026-05-25T08:04:28-06:00) test/language/eval-code/direct/global-env-rec.js
-  - [ ] test/language/eval-code/direct/import.js
+  - [x] (2026-05-25T08:05:31-06:00) test/language/eval-code/direct/import.js
   - [ ] test/language/eval-code/direct/lex-env-distinct-cls.js
   - [ ] test/language/eval-code/direct/lex-env-distinct-const.js
   - [ ] test/language/eval-code/direct/lex-env-distinct-let.js
