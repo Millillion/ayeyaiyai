@@ -565,6 +565,15 @@ impl<'a> FunctionCompiler<'a> {
         if capture_name == "new.target" {
             return Some((Expression::NewTarget, true));
         }
+        if self
+            .parameter_scope_arguments_local_for(capture_name)
+            .is_some()
+        {
+            return Some((
+                Expression::Identifier(Self::parameter_scope_arguments_binding_name().to_string()),
+                true,
+            ));
+        }
         if capture_name == "this" {
             if let Some(hidden_name) = self.resolve_user_function_capture_hidden_name("this") {
                 return Some((Expression::Identifier(hidden_name), true));

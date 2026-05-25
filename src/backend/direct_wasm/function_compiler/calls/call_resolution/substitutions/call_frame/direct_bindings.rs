@@ -26,6 +26,7 @@ impl<'a> FunctionCompiler<'a> {
                 if (name == "arguments"
                     || scoped_binding_source_name(name)
                         .is_some_and(|source_name| source_name == "arguments"))
+                    && !user_function.lexical_this
                     && !arguments_shadowed =>
             {
                 Some(arguments_binding.clone())

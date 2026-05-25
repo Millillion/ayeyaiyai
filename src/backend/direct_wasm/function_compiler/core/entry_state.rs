@@ -178,7 +178,7 @@ impl<'a> FunctionCompiler<'a> {
             parameter_defaults,
         ) = Self::reserve_parameter_layout(user_function);
         let mut next_local_index = total_param_count + 3;
-        let bindings = Self::prepare_binding_state(
+        let mut bindings = Self::prepare_binding_state(
             module,
             user_function,
             declaration,
@@ -200,6 +200,16 @@ impl<'a> FunctionCompiler<'a> {
                 needs_parameter_scope_arguments_local,
                 &mut next_local_index,
             );
+        if let Some(parameter_scope_arguments_local) = parameter_scope_arguments_local {
+            let name = Self::parameter_scope_arguments_binding_name().to_string();
+            bindings
+                .locals
+                .insert(name.clone(), parameter_scope_arguments_local);
+            bindings
+                .static_bindings
+                .local_kinds
+                .insert(name, StaticValueKind::Unknown);
+        }
         let execution_context =
             Self::prepare_execution_context(&bindings, user_function, declaration, strict_mode);
 

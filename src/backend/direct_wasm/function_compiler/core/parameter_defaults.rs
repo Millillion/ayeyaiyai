@@ -1,6 +1,11 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    pub(in crate::backend::direct_wasm) fn parameter_scope_arguments_binding_name() -> &'static str
+    {
+        "__ayy_parameter_scope_arguments"
+    }
+
     pub(in crate::backend::direct_wasm) fn initialize_parameter_defaults(
         &mut self,
     ) -> DirectResult<()> {

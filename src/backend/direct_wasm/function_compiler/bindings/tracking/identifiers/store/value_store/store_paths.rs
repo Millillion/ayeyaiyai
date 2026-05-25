@@ -369,6 +369,55 @@ impl<'a> FunctionCompiler<'a> {
         )
     }
 
+    fn update_parameter_scope_arguments_static_metadata(
+        &mut self,
+        state: &PreparedIdentifierStoreState,
+    ) {
+        let name = Self::parameter_scope_arguments_binding_name();
+        self.update_local_value_binding(name, &state.module_assignment_expression);
+
+        if let Some(object_binding) = state.object_binding.clone() {
+            self.state
+                .speculation
+                .static_semantics
+                .set_local_object_binding(name, object_binding);
+        } else {
+            self.state
+                .speculation
+                .static_semantics
+                .clear_local_object_binding(name);
+        }
+
+        if let Some(array_binding) = state.array_binding.clone() {
+            self.state
+                .speculation
+                .static_semantics
+                .set_local_array_binding(name, array_binding);
+        } else {
+            self.state
+                .speculation
+                .static_semantics
+                .clear_local_array_binding(name);
+        }
+
+        if let Some(function_binding) = state.function_binding.clone() {
+            self.state
+                .speculation
+                .static_semantics
+                .set_local_function_binding(name, function_binding);
+        } else {
+            self.state
+                .speculation
+                .static_semantics
+                .clear_local_function_binding(name);
+        }
+
+        self.state
+            .speculation
+            .static_semantics
+            .set_local_kind(name, state.kind.unwrap_or(StaticValueKind::Unknown));
+    }
+
     fn store_prepared_identifier_value_local_with_target(
         &mut self,
         name: &str,
@@ -477,6 +526,7 @@ impl<'a> FunctionCompiler<'a> {
         {
             self.push_local_get(value_local);
             self.push_local_set(parameter_scope_arguments_local);
+            self.update_parameter_scope_arguments_static_metadata(&state);
         }
 
         if trace_identifier_store {
