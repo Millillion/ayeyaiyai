@@ -1,4 +1,4 @@
-22667/23637 (95.90%) — avg(last 10): 0.54 min/check
+22668/23637 (95.90%) — avg(last 10): 0.55 min/check
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -25,7 +25,7 @@ Sub-category progress
 - identifier-resolution: 14/14 (100.00%)
 - computed-property-names: 48/48 (100.00%)
 - destructuring: 18/19 (94.74%)
-- eval-code: 119/347 (34.29%)
+- eval-code: 120/347 (34.58%)
 - import: 0/123 (0.00%)
 - export: 0/3 (0.00%)
 - module-code: 0/592 (0.00%)
@@ -22769,7 +22769,7 @@ Sub-category progress
   - [x] (2026-05-25T07:00:09-06:00) test/language/eval-code/direct/cptn-nrml-empty-switch.js
   - [x] (2026-05-25T07:00:42-06:00) test/language/eval-code/direct/cptn-nrml-empty-var.js
   - [x] (2026-05-25T07:01:13-06:00) test/language/eval-code/direct/cptn-nrml-empty-while.js
-  - [ ] test/language/eval-code/direct/cptn-nrml-expr-obj.js
+  - [x] (2026-05-25T07:01:51-06:00) test/language/eval-code/direct/cptn-nrml-expr-obj.js
   - [ ] test/language/eval-code/direct/cptn-nrml-expr-prim.js
   - [ ] test/language/eval-code/direct/cptn-thrw-prim.js
   - [ ] test/language/eval-code/direct/export.js
