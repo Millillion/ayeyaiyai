@@ -1,4 +1,4 @@
-22757/23637 (96.28%) — avg(last 10): 8.33 min/check
+22758/23637 (96.28%) — avg(last 10): 8.38 min/check
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -25,7 +25,7 @@ Sub-category progress
 - identifier-resolution: 14/14 (100.00%)
 - computed-property-names: 48/48 (100.00%)
 - destructuring: 18/19 (94.74%)
-- eval-code: 209/347 (60.23%)
+- eval-code: 210/347 (60.52%)
 - import: 0/123 (0.00%)
 - export: 0/3 (0.00%)
 - module-code: 0/592 (0.00%)
@@ -22859,7 +22859,7 @@ Sub-category progress
   - [x] (2026-05-25T08:59:59-06:00) test/language/eval-code/direct/lex-env-no-init-const.js
   - [x] (2026-05-25T09:00:36-06:00) test/language/eval-code/direct/lex-env-no-init-let.js
   - [x] (2026-05-25T09:01:24-06:00) test/language/eval-code/direct/meth-a-following-parameter-is-named-arguments-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/meth-a-following-parameter-is-named-arguments-declare-arguments.js
+  - [x] (2026-05-25T09:02:08-06:00) test/language/eval-code/direct/meth-a-following-parameter-is-named-arguments-declare-arguments.js
   - [ ] test/language/eval-code/direct/meth-a-preceding-parameter-is-named-arguments-declare-arguments-and-assign.js
   - [ ] test/language/eval-code/direct/meth-a-preceding-parameter-is-named-arguments-declare-arguments.js
   - [ ] test/language/eval-code/direct/meth-fn-body-cntns-arguments-func-decl-declare-arguments-and-assign.js
