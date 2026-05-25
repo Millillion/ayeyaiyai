@@ -1,4 +1,4 @@
-22769/23637 (96.33%) — avg(last 10): 1.61 min/check
+22770/23637 (96.33%) — avg(last 10): 1.65 min/check
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -25,7 +25,7 @@ Sub-category progress
 - identifier-resolution: 14/14 (100.00%)
 - computed-property-names: 48/48 (100.00%)
 - destructuring: 18/19 (94.74%)
-- eval-code: 221/347 (63.69%)
+- eval-code: 222/347 (63.98%)
 - import: 0/123 (0.00%)
 - export: 0/3 (0.00%)
 - module-code: 0/592 (0.00%)
@@ -22871,7 +22871,7 @@ Sub-category progress
   - [x] (2026-05-25T09:11:00-06:00) test/language/eval-code/direct/meth-no-pre-existing-arguments-bindings-are-present-declare-arguments-and-assign.js
   - [x] (2026-05-25T09:11:53-06:00) test/language/eval-code/direct/meth-no-pre-existing-arguments-bindings-are-present-declare-arguments.js
   - [x] (2026-05-25T09:18:08-06:00) test/language/eval-code/direct/new.target-arrow.js
-  - [ ] test/language/eval-code/direct/new.target-fn.js
+  - [x] (2026-05-25T09:19:11-06:00) test/language/eval-code/direct/new.target-fn.js
   - [ ] test/language/eval-code/direct/new.target.js
   - [ ] test/language/eval-code/direct/non-definable-function-with-function.js
   - [ ] test/language/eval-code/direct/non-definable-function-with-variable.js
