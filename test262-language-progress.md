@@ -1,4 +1,4 @@
-22535/23637 (95.33%) — avg(last 10): 23.62 min/check
+22548/23637 (95.39%) — avg(last 10): 0.39 min/check
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -24,7 +24,7 @@ Sub-category progress
 - block-scope: 145/145 (100.00%)
 - identifier-resolution: 14/14 (100.00%)
 - computed-property-names: 48/48 (100.00%)
-- destructuring: 5/19 (26.32%)
+- destructuring: 18/19 (94.74%)
 - eval-code: 0/347 (0.00%)
 - import: 0/123 (0.00%)
 - export: 0/3 (0.00%)
@@ -22634,19 +22634,19 @@ Sub-category progress
   - [x] (2026-05-25T02:32:56-06:00) test/language/destructuring/binding/initialization-returns-normal-completion-for-empty-objects.js
   - [x] (2026-05-25T03:18:16-06:00) test/language/destructuring/binding/keyed-destructuring-property-reference-target-evaluation-order-with-bindings.js
   - [x] (2026-05-25T04:21:41-06:00) test/language/destructuring/binding/syntax/array-elements-with-initializer.js
-  - [ ] test/language/destructuring/binding/syntax/array-elements-with-object-patterns.js
-  - [ ] test/language/destructuring/binding/syntax/array-elements-without-initializer.js
-  - [ ] test/language/destructuring/binding/syntax/array-pattern-with-elisions.js
-  - [ ] test/language/destructuring/binding/syntax/array-pattern-with-no-elements.js
-  - [ ] test/language/destructuring/binding/syntax/array-rest-elements.js
-  - [ ] test/language/destructuring/binding/syntax/destructuring-array-parameters-function-arguments-length.js
-  - [ ] test/language/destructuring/binding/syntax/destructuring-object-parameters-function-arguments-length.js
-  - [ ] test/language/destructuring/binding/syntax/object-pattern-with-no-property-list.js
-  - [ ] test/language/destructuring/binding/syntax/property-list-bindings-elements.js
-  - [ ] test/language/destructuring/binding/syntax/property-list-followed-by-a-single-comma.js
-  - [ ] test/language/destructuring/binding/syntax/property-list-single-name-bindings.js
-  - [ ] test/language/destructuring/binding/syntax/property-list-with-property-list.js
-  - [ ] test/language/destructuring/binding/syntax/recursive-array-and-object-patterns.js
+  - [x] (2026-05-25T04:22:59-06:00) test/language/destructuring/binding/syntax/array-elements-with-object-patterns.js
+  - [x] (2026-05-25T04:23:41-06:00) test/language/destructuring/binding/syntax/array-elements-without-initializer.js
+  - [x] (2026-05-25T04:24:03-06:00) test/language/destructuring/binding/syntax/array-pattern-with-elisions.js
+  - [x] (2026-05-25T04:24:26-06:00) test/language/destructuring/binding/syntax/array-pattern-with-no-elements.js
+  - [x] (2026-05-25T04:24:47-06:00) test/language/destructuring/binding/syntax/array-rest-elements.js
+  - [x] (2026-05-25T04:25:12-06:00) test/language/destructuring/binding/syntax/destructuring-array-parameters-function-arguments-length.js
+  - [x] (2026-05-25T04:25:34-06:00) test/language/destructuring/binding/syntax/destructuring-object-parameters-function-arguments-length.js
+  - [x] (2026-05-25T04:25:59-06:00) test/language/destructuring/binding/syntax/object-pattern-with-no-property-list.js
+  - [x] (2026-05-25T04:26:19-06:00) test/language/destructuring/binding/syntax/property-list-bindings-elements.js
+  - [x] (2026-05-25T04:26:44-06:00) test/language/destructuring/binding/syntax/property-list-followed-by-a-single-comma.js
+  - [x] (2026-05-25T04:27:10-06:00) test/language/destructuring/binding/syntax/property-list-single-name-bindings.js
+  - [x] (2026-05-25T04:27:34-06:00) test/language/destructuring/binding/syntax/property-list-with-property-list.js
+  - [x] (2026-05-25T04:27:59-06:00) test/language/destructuring/binding/syntax/recursive-array-and-object-patterns.js
   - [ ] test/language/destructuring/binding/typedarray-backed-by-resizable-buffer.js
 
 - [ ] eval-code (347 tests)
