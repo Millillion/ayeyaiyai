@@ -8706,6 +8706,56 @@ fn compiles_direct_eval_new_target_arrow_early_error() {
 }
 
 #[test]
+fn compiles_direct_eval_return_early_error_in_function_context() {
+    let tempdir = tempdir().unwrap();
+    let input = tempdir.path().join("direct-eval-return-early-error.js");
+    let output = tempdir.path().join("direct-eval-return-early-error.wasm");
+
+    fs::write(
+        &input,
+        r#"
+        function f() {
+          var caught;
+          try {
+            eval("return;");
+          } catch (err) {
+            caught = err;
+          }
+
+          console.log(typeof caught, caught.constructor === SyntaxError);
+        }
+
+        f();
+        "#,
+    )
+    .unwrap();
+
+    let compile = Command::new(env!("CARGO_BIN_EXE_ayeyaiyai"))
+        .arg(&input)
+        .arg("-o")
+        .arg(&output)
+        .output()
+        .unwrap();
+
+    assert!(
+        compile.status.success(),
+        "compiler failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&compile.stdout),
+        String::from_utf8_lossy(&compile.stderr),
+    );
+
+    let run = Command::new("wasmtime").arg(&output).output().unwrap();
+
+    assert!(
+        run.status.success(),
+        "wasmtime failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&run.stdout),
+        String::from_utf8_lossy(&run.stderr),
+    );
+    assert_eq!(String::from_utf8_lossy(&run.stdout), "object true\n");
+}
+
+#[test]
 fn compiles_direct_eval_non_definable_global_function_throws() {
     let tempdir = tempdir().unwrap();
     let input = tempdir

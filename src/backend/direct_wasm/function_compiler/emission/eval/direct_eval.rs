@@ -144,6 +144,10 @@ impl<'a> FunctionCompiler<'a> {
                     self.emit_named_error_throw("SyntaxError")?;
                     return Ok(true);
                 };
+                if eval_program_contains_top_level_return(&program) {
+                    self.emit_named_error_throw("SyntaxError")?;
+                    return Ok(true);
+                }
                 let mut program = lower_eval_static_function_constructors(program);
                 namespace_eval_program_internal_function_names(
                     &mut program,

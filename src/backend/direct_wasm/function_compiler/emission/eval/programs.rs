@@ -2283,6 +2283,63 @@ pub(in crate::backend::direct_wasm) fn eval_program_contains_arguments(program: 
             .any(|function| function.body.iter().any(eval_statement_contains_arguments))
 }
 
+pub(in crate::backend::direct_wasm) fn eval_program_contains_top_level_return(
+    program: &Program,
+) -> bool {
+    program
+        .statements
+        .iter()
+        .any(eval_statement_contains_return)
+}
+
+fn eval_statement_contains_return(statement: &Statement) -> bool {
+    match statement {
+        Statement::Return(_) => true,
+        Statement::Declaration { body }
+        | Statement::Block { body }
+        | Statement::Labeled { body, .. }
+        | Statement::With { body, .. }
+        | Statement::While { body, .. }
+        | Statement::DoWhile { body, .. } => body.iter().any(eval_statement_contains_return),
+        Statement::If {
+            then_branch,
+            else_branch,
+            ..
+        } => {
+            then_branch.iter().any(eval_statement_contains_return)
+                || else_branch.iter().any(eval_statement_contains_return)
+        }
+        Statement::For { init, body, .. } => {
+            init.iter().any(eval_statement_contains_return)
+                || body.iter().any(eval_statement_contains_return)
+        }
+        Statement::Try {
+            body,
+            catch_setup,
+            catch_body,
+            ..
+        } => {
+            body.iter().any(eval_statement_contains_return)
+                || catch_setup.iter().any(eval_statement_contains_return)
+                || catch_body.iter().any(eval_statement_contains_return)
+        }
+        Statement::Switch { cases, .. } => cases
+            .iter()
+            .any(|case| case.body.iter().any(eval_statement_contains_return)),
+        Statement::Var { .. }
+        | Statement::Let { .. }
+        | Statement::Assign { .. }
+        | Statement::AssignMember { .. }
+        | Statement::Print { .. }
+        | Statement::Expression(_)
+        | Statement::Throw(_)
+        | Statement::Break { .. }
+        | Statement::Continue { .. }
+        | Statement::Yield { .. }
+        | Statement::YieldDelegate { .. } => false,
+    }
+}
+
 fn eval_statement_contains_arguments(statement: &Statement) -> bool {
     match statement {
         Statement::Declaration { body }

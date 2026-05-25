@@ -1,4 +1,4 @@
-22782/23637 (96.38%) — avg(last 10): 0.83 min/check
+22783/23637 (96.39%) — avg(last 10): 1.46 min/check
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -25,7 +25,7 @@ Sub-category progress
 - identifier-resolution: 14/14 (100.00%)
 - computed-property-names: 48/48 (100.00%)
 - destructuring: 18/19 (94.74%)
-- eval-code: 234/347 (67.44%)
+- eval-code: 235/347 (67.72%)
 - import: 0/123 (0.00%)
 - export: 0/3 (0.00%)
 - module-code: 0/592 (0.00%)
@@ -22884,7 +22884,7 @@ Sub-category progress
   - [x] (2026-05-25T09:26:08-06:00) test/language/eval-code/direct/parse-failure-2.js
   - [x] (2026-05-25T09:27:11-06:00) test/language/eval-code/direct/parse-failure-3.js
   - [x] (2026-05-25T09:28:04-06:00) test/language/eval-code/direct/parse-failure-4.js
-  - [ ] test/language/eval-code/direct/parse-failure-5.js
+  - [x] (2026-05-25T09:33:36-06:00) test/language/eval-code/direct/parse-failure-5.js
   - [ ] test/language/eval-code/direct/parse-failure-6.js
   - [ ] test/language/eval-code/direct/strict-caller-function-context.js
   - [ ] test/language/eval-code/direct/strict-caller-global.js
