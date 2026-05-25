@@ -1,4 +1,4 @@
-22658/23637 (95.86%) — avg(last 10): 1.17 min/check
+22659/23637 (95.86%) — avg(last 10): 1.15 min/check
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -25,7 +25,7 @@ Sub-category progress
 - identifier-resolution: 14/14 (100.00%)
 - computed-property-names: 48/48 (100.00%)
 - destructuring: 18/19 (94.74%)
-- eval-code: 110/347 (31.70%)
+- eval-code: 111/347 (31.99%)
 - import: 0/123 (0.00%)
 - export: 0/3 (0.00%)
 - module-code: 0/592 (0.00%)
@@ -22760,7 +22760,7 @@ Sub-category progress
   - [x] (2026-05-25T06:49:58-06:00) test/language/eval-code/direct/async-meth-no-pre-existing-arguments-bindings-are-present-declare-arguments.js
   - [x] (2026-05-25T06:55:55-06:00) test/language/eval-code/direct/block-decl-eval-source-is-strict-nostrict.js
   - [x] (2026-05-25T06:56:29-06:00) test/language/eval-code/direct/block-decl-eval-source-is-strict-onlystrict.js
-  - [ ] test/language/eval-code/direct/block-decl-onlystrict.js
+  - [x] (2026-05-25T06:57:01-06:00) test/language/eval-code/direct/block-decl-onlystrict.js
   - [ ] test/language/eval-code/direct/cptn-nrml-empty-block.js
   - [ ] test/language/eval-code/direct/cptn-nrml-empty-do-while.js
   - [ ] test/language/eval-code/direct/cptn-nrml-empty-empty.js
