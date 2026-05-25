@@ -149,11 +149,6 @@ impl Lowerer {
             }
             Pat::Assign(assign) => {
                 let temporary_name = self.fresh_temporary_name("binding_value");
-                statements.push(Statement::Let {
-                    name: temporary_name.clone(),
-                    mutable: true,
-                    value,
-                });
                 let generator_default = if generator_body {
                     self.lower_generator_assignment_value_with_name_hint(
                         &assign.right,
@@ -173,6 +168,11 @@ impl Lowerer {
                 if let Pat::Ident(ident) = assign.left.as_ref() {
                     let name = self.resolve_binding_name(ident.id.sym.as_ref());
                     if let Some((mut generator_prefix, default_value)) = generator_default {
+                        statements.push(Statement::Let {
+                            name: temporary_name.clone(),
+                            mutable: true,
+                            value,
+                        });
                         let then_value = Expression::Identifier(temporary_name.clone());
                         let then_branch = vec![match binding_kind {
                             ForOfPatternBindingKind::Var => Statement::Var {
@@ -217,6 +217,47 @@ impl Lowerer {
                         });
                         return Ok(());
                     }
+
+                    if matches!(value, Expression::Member { .. })
+                        && matches!(
+                            binding_kind,
+                            ForOfPatternBindingKind::Var | ForOfPatternBindingKind::Assignment
+                        )
+                    {
+                        if matches!(binding_kind, ForOfPatternBindingKind::Var) {
+                            statements.push(Statement::Var {
+                                name: name.clone(),
+                                value: Expression::Undefined,
+                            });
+                        }
+                        statements.push(Statement::Let {
+                            name: temporary_name.clone(),
+                            mutable: true,
+                            value: Expression::Undefined,
+                        });
+                        statements.push(Statement::Assign {
+                            name,
+                            value: Expression::Conditional {
+                                condition: Box::new(Expression::Binary {
+                                    op: BinaryOp::NotEqual,
+                                    left: Box::new(Expression::Assign {
+                                        name: temporary_name.clone(),
+                                        value: Box::new(value),
+                                    }),
+                                    right: Box::new(Expression::Undefined),
+                                }),
+                                then_expression: Box::new(Expression::Identifier(temporary_name)),
+                                else_expression: Box::new(default_value),
+                            },
+                        });
+                        return Ok(());
+                    }
+
+                    statements.push(Statement::Let {
+                        name: temporary_name.clone(),
+                        mutable: true,
+                        value,
+                    });
                     statements.push(match binding_kind {
                         ForOfPatternBindingKind::Var => Statement::Var {
                             name: name.clone(),
@@ -249,6 +290,51 @@ impl Lowerer {
                     });
                     return Ok(());
                 }
+
+                if matches!(binding_kind, ForOfPatternBindingKind::Assignment)
+                    && let Expression::Member { object, property } = value.clone()
+                    && let Pat::Expr(expression) = assign.left.as_ref()
+                    && Self::is_cached_member_assignment_target(expression)
+                {
+                    let property_name = self.fresh_temporary_name("source_property");
+                    statements.push(Statement::Let {
+                        name: property_name.clone(),
+                        mutable: true,
+                        value: Self::property_key_value_expression(*property),
+                    });
+                    if let Some(target) =
+                        self.lower_cached_member_assignment_target(expression, statements)?
+                    {
+                        statements.push(Statement::Let {
+                            name: temporary_name.clone(),
+                            mutable: true,
+                            value: Expression::Undefined,
+                        });
+                        let source_value = Expression::Member {
+                            object,
+                            property: Box::new(Expression::Identifier(property_name)),
+                        };
+                        statements.push(target.into_statement(Expression::Conditional {
+                            condition: Box::new(Expression::Binary {
+                                op: BinaryOp::NotEqual,
+                                left: Box::new(Expression::Assign {
+                                    name: temporary_name.clone(),
+                                    value: Box::new(source_value),
+                                }),
+                                right: Box::new(Expression::Undefined),
+                            }),
+                            then_expression: Box::new(Expression::Identifier(temporary_name)),
+                            else_expression: Box::new(default_value),
+                        }));
+                        return Ok(());
+                    }
+                }
+
+                statements.push(Statement::Let {
+                    name: temporary_name.clone(),
+                    mutable: true,
+                    value,
+                });
                 let mut then_branch = Vec::new();
                 self.lower_for_of_pattern_binding_with_generator_defaults(
                     &assign.left,
@@ -963,6 +1049,86 @@ impl Lowerer {
         }
     }
 
+    fn lower_cached_member_assignment_target(
+        &mut self,
+        expression: &Expr,
+        statements: &mut Vec<Statement>,
+    ) -> Result<Option<AssignmentTarget>> {
+        match expression {
+            Expr::Member(member) => {
+                let object = self.lower_expression(&member.obj)?;
+                let property = self.lower_member_property(&member.prop)?;
+                let object_name = self.fresh_temporary_name("target_object");
+                let property_name = self.fresh_temporary_name("target_property");
+                statements.push(Statement::Let {
+                    name: object_name.clone(),
+                    mutable: true,
+                    value: object,
+                });
+                statements.push(Statement::Let {
+                    name: property_name.clone(),
+                    mutable: true,
+                    value: property,
+                });
+                Ok(Some(AssignmentTarget::Member {
+                    object: Expression::Identifier(object_name),
+                    property: Expression::Identifier(property_name),
+                }))
+            }
+            Expr::Paren(parenthesized) => {
+                self.lower_cached_member_assignment_target(&parenthesized.expr, statements)
+            }
+            _ => Ok(None),
+        }
+    }
+
+    fn lower_cached_member_assignment_target_to_expressions(
+        &mut self,
+        expression: &Expr,
+        expressions: &mut Vec<Expression>,
+    ) -> Result<Option<AssignmentTarget>> {
+        match expression {
+            Expr::Member(member) => {
+                let object = self.lower_expression(&member.obj)?;
+                let property = self.lower_member_property(&member.prop)?;
+                let object_name = self.fresh_temporary_name("target_object");
+                let property_name = self.fresh_temporary_name("target_property");
+                expressions.push(Expression::Assign {
+                    name: object_name.clone(),
+                    value: Box::new(object),
+                });
+                expressions.push(Expression::Assign {
+                    name: property_name.clone(),
+                    value: Box::new(property),
+                });
+                Ok(Some(AssignmentTarget::Member {
+                    object: Expression::Identifier(object_name),
+                    property: Expression::Identifier(property_name),
+                }))
+            }
+            Expr::Paren(parenthesized) => self
+                .lower_cached_member_assignment_target_to_expressions(
+                    &parenthesized.expr,
+                    expressions,
+                ),
+            _ => Ok(None),
+        }
+    }
+
+    fn is_cached_member_assignment_target(expression: &Expr) -> bool {
+        match expression {
+            Expr::Member(_) => true,
+            Expr::Paren(parenthesized) => {
+                Self::is_cached_member_assignment_target(&parenthesized.expr)
+            }
+            _ => false,
+        }
+    }
+
+    fn property_key_value_expression(expression: Expression) -> Expression {
+        expression
+    }
+
     fn lower_for_of_expression_target_with_iterator_close(
         &mut self,
         expression: &Expr,
@@ -1124,6 +1290,45 @@ impl Lowerer {
                     &assign.right,
                     pattern_name_hint(&assign.left),
                 )?;
+                if let Expression::Member { object, property } = value.clone()
+                    && let Pat::Expr(expression) = assign.left.as_ref()
+                    && Self::is_cached_member_assignment_target(expression)
+                {
+                    let property_name = self.fresh_temporary_name("source_property");
+                    expressions.push(Expression::Assign {
+                        name: property_name.clone(),
+                        value: Box::new(Self::property_key_value_expression(*property)),
+                    });
+                    if let Some(target) = self
+                        .lower_cached_member_assignment_target_to_expressions(
+                            expression,
+                            expressions,
+                        )?
+                    {
+                        let binding_value_name = self.fresh_temporary_name("binding_value");
+                        expressions.push(Expression::Assign {
+                            name: binding_value_name.clone(),
+                            value: Box::new(Expression::Undefined),
+                        });
+                        let source_value = Expression::Member {
+                            object,
+                            property: Box::new(Expression::Identifier(property_name)),
+                        };
+                        expressions.push(target.into_expression(Expression::Conditional {
+                            condition: Box::new(Expression::Binary {
+                                op: BinaryOp::NotEqual,
+                                left: Box::new(Expression::Assign {
+                                    name: binding_value_name.clone(),
+                                    value: Box::new(source_value),
+                                }),
+                                right: Box::new(Expression::Undefined),
+                            }),
+                            then_expression: Box::new(Expression::Identifier(binding_value_name)),
+                            else_expression: Box::new(default_value),
+                        }));
+                        return Ok(());
+                    }
+                }
                 let assigned_value = Expression::Conditional {
                     condition: Box::new(Expression::Binary {
                         op: BinaryOp::NotEqual,

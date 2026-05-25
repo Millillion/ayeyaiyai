@@ -652,11 +652,20 @@ impl<'a> FunctionCompiler<'a> {
                 let resolved_store_value = self
                     .static_for_await_iterator_initializer_result(name, value)
                     .or_else(|| self.static_class_constructor_call_initializer_result(value));
-                let store_value = resolved_store_value.as_ref().unwrap_or(value);
+                let mut source_property_store_value = None;
                 if trace {
                     eprintln!("binding_statement:let:start name={name} value={value:?}");
                 }
-                self.emit_binding_initializer_value(name, value)?;
+                if name.starts_with("__ayy_source_property_") {
+                    if let Some(resolved_key) = self.emit_property_key_expression_effects(value)? {
+                        self.emit_numeric_expression(&resolved_key)?;
+                        source_property_store_value = Some(resolved_key);
+                    } else {
+                        self.emit_binding_initializer_value(name, value)?;
+                    }
+                } else {
+                    self.emit_binding_initializer_value(name, value)?;
+                }
                 if trace {
                     eprintln!("binding_statement:let:after_emit name={name}");
                 }
@@ -683,6 +692,10 @@ impl<'a> FunctionCompiler<'a> {
                 if trace {
                     eprintln!("binding_statement:let:before_initialize name={name}");
                 }
+                let store_value = source_property_store_value
+                    .as_ref()
+                    .or(resolved_store_value.as_ref())
+                    .unwrap_or(value);
                 self.emit_initialize_identifier_value_local(name, store_value, value_local)?;
                 if trace {
                     eprintln!("binding_statement:let:after_initialize name={name}");

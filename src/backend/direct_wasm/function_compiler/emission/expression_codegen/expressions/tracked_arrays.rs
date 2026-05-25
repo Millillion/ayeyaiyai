@@ -116,12 +116,7 @@ impl<'a> FunctionCompiler<'a> {
             .speculation
             .static_semantics
             .has_local_array_binding(name)
-            || self
-                .backend
-                .global_semantics
-                .values
-                .array_bindings
-                .contains_key(name)
+            || self.global_array_binding(name).is_some()
             || self
                 .state
                 .speculation
@@ -142,12 +137,7 @@ impl<'a> FunctionCompiler<'a> {
                     .speculation
                     .static_semantics
                     .has_local_array_binding(hidden_name)
-                    || self
-                        .backend
-                        .global_semantics
-                        .values
-                        .array_bindings
-                        .contains_key(hidden_name)
+                    || self.global_array_binding(hidden_name).is_some()
                     || self
                         .state
                         .speculation
@@ -176,12 +166,7 @@ impl<'a> FunctionCompiler<'a> {
             .speculation
             .static_semantics
             .has_local_array_binding(&binding_name)
-            && !self
-                .backend
-                .global_semantics
-                .values
-                .array_bindings
-                .contains_key(&binding_name)
+            && self.global_array_binding(&binding_name).is_none()
             && !has_runtime_array_state
         {
             if trace {
@@ -279,8 +264,7 @@ impl<'a> FunctionCompiler<'a> {
             .backend
             .global_semantics
             .values
-            .array_bindings
-            .get_mut(&binding_name)
+            .array_binding_mut(&binding_name)
         {
             old_length = Some(array_binding.values.len() as u32);
             array_binding
@@ -292,6 +276,16 @@ impl<'a> FunctionCompiler<'a> {
         if self.binding_name_is_global(&binding_name) {
             self.backend
                 .sync_global_array_binding(&binding_name, synced_array_binding.clone());
+            self.backend
+                .shared_global_semantics
+                .values
+                .sync_array_binding(&binding_name, synced_array_binding.clone());
+            if use_global_runtime_array {
+                self.backend
+                    .shared_global_semantics
+                    .values
+                    .mark_array_with_runtime_state(&binding_name);
+            }
         }
         let mut used_runtime_push = false;
         if let Some(old_length) = old_length {

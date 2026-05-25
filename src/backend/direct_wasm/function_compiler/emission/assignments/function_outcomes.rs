@@ -103,10 +103,15 @@ impl<'a> FunctionCompiler<'a> {
                 else {
                     return Ok(());
                 };
-                let Some((_, effect_statements)) = function.body.split_last() else {
+                let Some((last_statement, prefix_statements)) = function.body.split_last() else {
                     return Ok(());
                 };
-                let effect_statements = effect_statements.to_vec();
+                let effect_statements =
+                    if matches!(last_statement, Statement::Return(_) | Statement::Throw(_)) {
+                        prefix_statements.to_vec()
+                    } else {
+                        function.body.clone()
+                    };
                 let call_arguments = arguments
                     .iter()
                     .cloned()

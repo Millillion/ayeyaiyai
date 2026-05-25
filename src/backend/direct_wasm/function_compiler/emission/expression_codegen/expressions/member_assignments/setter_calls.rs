@@ -634,6 +634,7 @@ impl<'a> FunctionCompiler<'a> {
                 &function_binding,
             )?;
         }
+        self.emit_property_key_expression_effects(property)?;
         if self.emit_function_binding_call_with_function_this_binding_from_argument_locals(
             &function_binding,
             &[value_local],

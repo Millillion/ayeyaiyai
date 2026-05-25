@@ -504,15 +504,6 @@ impl<'a> FunctionCompiler<'a> {
                 "member_assignment:start object={object:?} property={property:?} value={value:?}"
             );
         }
-        let materialized_target_object = if let Expression::Identifier(name) = object
-            && name.starts_with("__ayy_target_object_")
-        {
-            let candidate = self.materialize_static_expression(object);
-            matches!(candidate, Expression::Identifier(_) | Expression::This).then_some(candidate)
-        } else {
-            None
-        };
-        let object = materialized_target_object.as_ref().unwrap_or(object);
         let value_references_internal_iterator_step =
             assign_member_expression_references_internal_iterator_step(value);
         if self.is_array_prototype_symbol_iterator_member(object, property) {

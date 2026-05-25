@@ -96,20 +96,36 @@ impl<'a> GlobalObjectValueQueryAccess for FunctionCompilerBackend<'a> {
 
 impl<'a> GlobalArrayValueQueryAccess for FunctionCompilerBackend<'a> {
     fn global_array_binding(&self, name: &str) -> Option<&ArrayValueBinding> {
-        self.global_semantics.values.array_binding(name)
+        self.global_semantics
+            .values
+            .array_binding(name)
+            .or_else(|| self.shared_global_semantics.values.array_binding(name))
     }
 
     fn global_array_binding_entries(&self) -> Vec<(String, ArrayValueBinding)> {
-        self.global_semantics
+        let mut entries = self
+            .shared_global_semantics
             .values
             .array_bindings()
             .iter()
             .map(|(name, binding)| (name.clone(), binding.clone()))
-            .collect()
+            .collect::<HashMap<_, _>>();
+        entries.extend(
+            self.global_semantics
+                .values
+                .array_bindings()
+                .iter()
+                .map(|(name, binding)| (name.clone(), binding.clone())),
+        );
+        entries.into_iter().collect()
     }
 
     fn global_array_uses_runtime_state(&self, name: &str) -> bool {
         self.global_semantics.values.array_uses_runtime_state(name)
+            || self
+                .shared_global_semantics
+                .values
+                .array_uses_runtime_state(name)
     }
 }
 

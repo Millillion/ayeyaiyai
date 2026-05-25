@@ -247,6 +247,9 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         name: &str,
     ) -> DirectResult<Option<Expression>> {
+        if name.starts_with("__ayy_") {
+            return Ok(None);
+        }
         let scopes = self.state.emission.lexical_scopes.with_scopes.clone();
         let property = Expression::String(name.to_string());
         if std::env::var_os("AYY_TRACE_WITH_SCOPE").is_some() {

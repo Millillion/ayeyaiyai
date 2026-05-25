@@ -22,9 +22,11 @@ impl<'a> FunctionCompiler<'a> {
         if !self.is_named_global_array_binding(name) {
             return false;
         }
-        if !self.state.speculation.execution_context.top_level_function {
-            self.backend.mark_global_array_with_runtime_state(name);
-        }
+        self.backend.mark_global_array_with_runtime_state(name);
+        self.backend
+            .shared_global_semantics
+            .values
+            .mark_array_with_runtime_state(name);
         let binding = self.global_runtime_array_length_binding(name);
         self.push_i32_const(length);
         self.push_global_set(binding.value_index);
@@ -93,9 +95,11 @@ impl<'a> FunctionCompiler<'a> {
         if !self.is_named_global_array_binding(name) {
             return Ok(false);
         }
-        if !self.state.speculation.execution_context.top_level_function {
-            self.backend.mark_global_array_with_runtime_state(name);
-        }
+        self.backend.mark_global_array_with_runtime_state(name);
+        self.backend
+            .shared_global_semantics
+            .values
+            .mark_array_with_runtime_state(name);
         let binding = self.global_runtime_array_slot_binding(name, index);
         self.push_local_get(value_local);
         self.push_global_set(binding.value_index);
@@ -133,9 +137,11 @@ impl<'a> FunctionCompiler<'a> {
         if !self.is_named_global_array_binding(name) {
             return false;
         }
-        if !self.state.speculation.execution_context.top_level_function {
-            self.backend.mark_global_array_with_runtime_state(name);
-        }
+        self.backend.mark_global_array_with_runtime_state(name);
+        self.backend
+            .shared_global_semantics
+            .values
+            .mark_array_with_runtime_state(name);
         let binding = self.global_runtime_array_slot_binding(name, index);
         self.push_i32_const(JS_UNDEFINED_TAG);
         self.push_global_set(binding.value_index);
