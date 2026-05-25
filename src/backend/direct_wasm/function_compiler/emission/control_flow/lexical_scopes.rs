@@ -78,9 +78,37 @@ impl<'a> FunctionCompiler<'a> {
         names: Vec<String>,
         body: impl FnOnce(&mut Self) -> DirectResult<T>,
     ) -> DirectResult<T> {
+        let source_names = names
+            .iter()
+            .map(|name| {
+                scoped_binding_source_name(name)
+                    .unwrap_or(name.as_str())
+                    .to_string()
+            })
+            .collect::<HashSet<_>>();
         self.push_active_eval_lexical_scope(names);
         let result = body(self);
         self.pop_active_eval_lexical_scope();
+        for source_name in source_names {
+            if self
+                .state
+                .emission
+                .lexical_scopes
+                .active_eval_lexical_binding_counts
+                .contains_key(&source_name)
+                || self.resolve_current_local_binding(&source_name).is_some()
+                || self.global_has_binding(&source_name)
+                || self.backend.global_has_lexical_binding(&source_name)
+                || self.global_has_implicit_binding(&source_name)
+            {
+                continue;
+            }
+            self.state.clear_local_static_binding_metadata(&source_name);
+            self.backend
+                .clear_global_static_binding_metadata(&source_name);
+            self.backend
+                .clear_shared_global_static_binding_metadata(&source_name);
+        }
         result
     }
 

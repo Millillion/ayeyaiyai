@@ -47,6 +47,14 @@ impl<'a> FunctionCompilerBackend<'a> {
             .clear_global_static_binding_metadata(name);
     }
 
+    pub(in crate::backend::direct_wasm) fn clear_shared_global_static_binding_metadata(
+        &mut self,
+        name: &str,
+    ) {
+        self.shared_global_semantics
+            .clear_global_static_binding_metadata(name);
+    }
+
     pub(in crate::backend::direct_wasm) fn clear_global_object_literal_member_bindings_for_name(
         &mut self,
         name: &str,

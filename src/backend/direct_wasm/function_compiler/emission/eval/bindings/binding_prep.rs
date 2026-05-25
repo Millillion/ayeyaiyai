@@ -1,6 +1,21 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn allocate_eval_lexical_hidden_local(&mut self, source_name: &str) -> String {
+        let next_local_index = self.state.runtime.locals.next_local_index;
+        let name = format!("__ayy_eval_lex${source_name}${next_local_index}");
+        self.state
+            .runtime
+            .locals
+            .insert(name.clone(), next_local_index);
+        self.state
+            .speculation
+            .static_semantics
+            .set_local_kind(&name, StaticValueKind::Unknown);
+        self.state.runtime.locals.next_local_index += 1;
+        name
+    }
+
     pub(in crate::backend::direct_wasm) fn register_bindings_skipping_eval_local_function_declarations(
         &mut self,
         statements: &[Statement],
@@ -176,21 +191,43 @@ impl<'a> FunctionCompiler<'a> {
         statements: &mut [Statement],
         eval_local_function_declarations: &HashMap<String, String>,
     ) -> DirectResult<()> {
-        let lexical_names = statements
-            .iter()
-            .filter_map(|statement| match statement {
-                Statement::Let { name, .. }
-                    if !name.starts_with("__ayy_")
-                        && !is_eval_local_function_declaration_statement(
-                            statement,
-                            eval_local_function_declarations,
-                        ) =>
-                {
-                    Some(name.clone())
+        fn collect_eval_lexical_names(
+            statements: &[Statement],
+            eval_local_function_declarations: &HashMap<String, String>,
+        ) -> Vec<String> {
+            let mut names = Vec::new();
+            for statement in statements {
+                match statement {
+                    Statement::Let { name, .. }
+                        if !name.starts_with("__ayy_")
+                            && !is_eval_local_function_declaration_statement(
+                                statement,
+                                eval_local_function_declarations,
+                            ) =>
+                    {
+                        names.push(name.clone());
+                    }
+                    Statement::Declaration { body } => {
+                        for statement in body {
+                            if let Statement::Let { name, .. } = statement
+                                && !name.starts_with("__ayy_")
+                                && !is_eval_local_function_declaration_statement(
+                                    statement,
+                                    eval_local_function_declarations,
+                                )
+                            {
+                                names.push(name.clone());
+                            }
+                        }
+                    }
+                    _ => {}
                 }
-                _ => None,
-            })
-            .collect::<Vec<_>>();
+            }
+            names
+        }
+
+        let lexical_names =
+            collect_eval_lexical_names(statements, eval_local_function_declarations);
         if lexical_names.is_empty() {
             return Ok(());
         }
@@ -200,8 +237,7 @@ impl<'a> FunctionCompiler<'a> {
             if renamed_bindings.contains_key(&name) {
                 continue;
             }
-            let hidden_name =
-                self.allocate_named_hidden_local("eval_lex", StaticValueKind::Unknown);
+            let hidden_name = self.allocate_eval_lexical_hidden_local(&name);
             let initialized_local = self.allocate_temp_local();
             let hidden_local = self
                 .state

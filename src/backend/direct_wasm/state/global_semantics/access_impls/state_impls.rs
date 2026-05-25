@@ -1,5 +1,8 @@
 use super::super::super::super::*;
-use super::super::access_trait::{clear_global_binding_state, snapshot_global_static_semantics};
+use super::super::access_trait::{
+    clear_global_binding_state, clear_global_static_binding_metadata,
+    snapshot_global_static_semantics,
+};
 use super::super::*;
 
 impl GlobalSemanticState {
@@ -68,6 +71,13 @@ impl GlobalSemanticState {
 
     pub(in crate::backend::direct_wasm) fn clear_global_function_binding(&mut self, name: &str) {
         self.functions.clear_function_binding(name);
+    }
+
+    pub(in crate::backend::direct_wasm) fn clear_global_static_binding_metadata(
+        &mut self,
+        name: &str,
+    ) {
+        clear_global_static_binding_metadata(self, name);
     }
 
     pub(in crate::backend::direct_wasm) fn clear_global_binding_state(&mut self, name: &str) {

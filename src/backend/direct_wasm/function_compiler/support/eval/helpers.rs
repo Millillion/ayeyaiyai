@@ -3,7 +3,8 @@ use super::*;
 pub(in crate::backend::direct_wasm) fn scoped_binding_source_name(name: &str) -> Option<&str> {
     let rest = name
         .strip_prefix("__ayy_scope$")
-        .or_else(|| name.strip_prefix("__ayy_local$"))?;
+        .or_else(|| name.strip_prefix("__ayy_local$"))
+        .or_else(|| name.strip_prefix("__ayy_eval_lex$"))?;
     let (source_name, scope_id) = rest.rsplit_once('$')?;
     scope_id
         .chars()
