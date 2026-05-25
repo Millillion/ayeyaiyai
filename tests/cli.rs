@@ -7642,7 +7642,7 @@ fn rejects_direct_eval_super_early_errors_before_side_effects() {
 }
 
 #[test]
-fn rejects_direct_eval_new_target_context_rules() {
+fn compiles_direct_eval_new_target_context_rules() {
     let tempdir = tempdir().unwrap();
     let input = tempdir.path().join("direct-eval-new-target.js");
     let output = tempdir.path().join("direct-eval-new-target.wasm");
@@ -7650,20 +7650,22 @@ fn rejects_direct_eval_new_target_context_rules() {
     fs::write(
         &input,
         r#"
-        var caught = "none";
+        var caught;
         try {
           eval("new.target;");
         } catch (error) {
-          caught = error.name;
+          caught = error;
         }
-        console.log("global", caught);
+        console.log("global", typeof caught, caught.constructor === SyntaxError);
 
         var arrow = () => {
+          var arrowCaught;
           try {
             eval("new.target;");
           } catch (error) {
-            console.log("arrow", error.name);
+            arrowCaught = error;
           }
+          console.log("arrow", typeof arrowCaught, arrowCaught.constructor === SyntaxError);
         };
         arrow();
 
@@ -7678,7 +7680,32 @@ fn rejects_direct_eval_new_target_context_rules() {
     )
     .unwrap();
 
-    assert_cli_compile_rejected(&input, &output, "runtime source evaluation");
+    let compile = Command::new(env!("CARGO_BIN_EXE_ayeyaiyai"))
+        .arg(&input)
+        .arg("-o")
+        .arg(&output)
+        .output()
+        .unwrap();
+
+    assert!(
+        compile.status.success(),
+        "compiler failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&compile.stdout),
+        String::from_utf8_lossy(&compile.stderr),
+    );
+
+    let run = Command::new("wasmtime").arg(&output).output().unwrap();
+
+    assert!(
+        run.status.success(),
+        "wasmtime failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&run.stdout),
+        String::from_utf8_lossy(&run.stderr),
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&run.stdout),
+        "global object true\narrow object true\nfunction true false\nfunction false true\n"
+    );
 }
 
 #[test]
@@ -8628,6 +8655,54 @@ fn compiles_direct_eval_new_target_in_function_code() {
         String::from_utf8_lossy(&run.stdout),
         "direct-eval-call true\ndirect-eval-new true\n"
     );
+}
+
+#[test]
+fn compiles_direct_eval_new_target_arrow_early_error() {
+    let tempdir = tempdir().unwrap();
+    let input = tempdir.path().join("direct-eval-new-target-arrow.js");
+    let output = tempdir.path().join("direct-eval-new-target-arrow.wasm");
+
+    fs::write(
+        &input,
+        r#"
+        var caught;
+        var f = () => eval("new.target;");
+
+        try {
+          f();
+        } catch (err) {
+          caught = err;
+        }
+
+        console.log(typeof caught, caught.constructor === SyntaxError);
+        "#,
+    )
+    .unwrap();
+
+    let compile = Command::new(env!("CARGO_BIN_EXE_ayeyaiyai"))
+        .arg(&input)
+        .arg("-o")
+        .arg(&output)
+        .output()
+        .unwrap();
+
+    assert!(
+        compile.status.success(),
+        "compiler failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&compile.stdout),
+        String::from_utf8_lossy(&compile.stderr),
+    );
+
+    let run = Command::new("wasmtime").arg(&output).output().unwrap();
+
+    assert!(
+        run.status.success(),
+        "wasmtime failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&run.stdout),
+        String::from_utf8_lossy(&run.stderr),
+    );
+    assert_eq!(String::from_utf8_lossy(&run.stdout), "object true\n");
 }
 
 #[test]

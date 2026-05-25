@@ -2188,7 +2188,12 @@ impl<'a> FunctionCompiler<'a> {
             }
         }
 
-        if current_function_name.is_some()
+        let current_function_allows_new_target_eval_context = current_function_name.is_some()
+            && !self
+                .current_user_function()
+                .is_some_and(|function| function.lexical_this);
+
+        if current_function_allows_new_target_eval_context
             || self
                 .state
                 .speculation
