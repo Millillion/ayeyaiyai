@@ -1,4 +1,4 @@
-22767/23637 (96.32%) — avg(last 10): 0.99 min/check
+22768/23637 (96.32%) — avg(last 10): 1.00 min/check
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -25,7 +25,7 @@ Sub-category progress
 - identifier-resolution: 14/14 (100.00%)
 - computed-property-names: 48/48 (100.00%)
 - destructuring: 18/19 (94.74%)
-- eval-code: 219/347 (63.11%)
+- eval-code: 220/347 (63.40%)
 - import: 0/123 (0.00%)
 - export: 0/3 (0.00%)
 - module-code: 0/592 (0.00%)
@@ -22869,7 +22869,7 @@ Sub-category progress
   - [x] (2026-05-25T09:07:48-06:00) test/language/eval-code/direct/meth-fn-body-cntns-arguments-var-bind-declare-arguments-and-assign.js
   - [x] (2026-05-25T09:08:40-06:00) test/language/eval-code/direct/meth-fn-body-cntns-arguments-var-bind-declare-arguments.js
   - [x] (2026-05-25T09:11:00-06:00) test/language/eval-code/direct/meth-no-pre-existing-arguments-bindings-are-present-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/meth-no-pre-existing-arguments-bindings-are-present-declare-arguments.js
+  - [x] (2026-05-25T09:11:53-06:00) test/language/eval-code/direct/meth-no-pre-existing-arguments-bindings-are-present-declare-arguments.js
   - [ ] test/language/eval-code/direct/new.target-arrow.js
   - [ ] test/language/eval-code/direct/new.target-fn.js
   - [ ] test/language/eval-code/direct/new.target.js
