@@ -1,4 +1,4 @@
-22530/23637 (95.32%) — avg(last 10): 11.31 min/check
+22533/23637 (95.33%) — avg(last 10): 11.58 min/check
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -24,7 +24,7 @@ Sub-category progress
 - block-scope: 145/145 (100.00%)
 - identifier-resolution: 14/14 (100.00%)
 - computed-property-names: 48/48 (100.00%)
-- destructuring: 0/19 (0.00%)
+- destructuring: 3/19 (15.79%)
 - eval-code: 0/347 (0.00%)
 - import: 0/123 (0.00%)
 - export: 0/3 (0.00%)
@@ -22629,9 +22629,9 @@ Sub-category progress
   - [x] (2026-05-25T00:50:32-06:00) test/language/computed-property-names/to-name-side-effects/object.js
 
 - [ ] destructuring (19 tests)
-  - [ ] test/language/destructuring/binding/initialization-requires-object-coercible-null.js
-  - [ ] test/language/destructuring/binding/initialization-requires-object-coercible-undefined.js
-  - [ ] test/language/destructuring/binding/initialization-returns-normal-completion-for-empty-objects.js
+  - [x] (2026-05-25T02:31:38-06:00) test/language/destructuring/binding/initialization-requires-object-coercible-null.js
+  - [x] (2026-05-25T02:32:17-06:00) test/language/destructuring/binding/initialization-requires-object-coercible-undefined.js
+  - [x] (2026-05-25T02:32:56-06:00) test/language/destructuring/binding/initialization-returns-normal-completion-for-empty-objects.js
   - [ ] test/language/destructuring/binding/keyed-destructuring-property-reference-target-evaluation-order-with-bindings.js
   - [ ] test/language/destructuring/binding/syntax/array-elements-with-initializer.js
   - [ ] test/language/destructuring/binding/syntax/array-elements-with-object-patterns.js
