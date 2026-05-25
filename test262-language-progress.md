@@ -1,4 +1,4 @@
-22778/23637 (96.37%) — avg(last 10): 1.58 min/check
+22779/23637 (96.37%) — avg(last 10): 0.80 min/check
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -25,7 +25,7 @@ Sub-category progress
 - identifier-resolution: 14/14 (100.00%)
 - computed-property-names: 48/48 (100.00%)
 - destructuring: 18/19 (94.74%)
-- eval-code: 230/347 (66.28%)
+- eval-code: 231/347 (66.57%)
 - import: 0/123 (0.00%)
 - export: 0/3 (0.00%)
 - module-code: 0/592 (0.00%)
@@ -22880,7 +22880,7 @@ Sub-category progress
   - [x] (2026-05-25T09:23:12-06:00) test/language/eval-code/direct/non-definable-global-var.js
   - [x] (2026-05-25T09:23:52-06:00) test/language/eval-code/direct/non-string-object.js
   - [x] (2026-05-25T09:24:42-06:00) test/language/eval-code/direct/non-string-primitive.js
-  - [ ] test/language/eval-code/direct/parse-failure-1.js
+  - [x] (2026-05-25T09:25:32-06:00) test/language/eval-code/direct/parse-failure-1.js
   - [ ] test/language/eval-code/direct/parse-failure-2.js
   - [ ] test/language/eval-code/direct/parse-failure-3.js
   - [ ] test/language/eval-code/direct/parse-failure-4.js
