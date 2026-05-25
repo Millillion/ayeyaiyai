@@ -6,20 +6,31 @@ pub(in crate::backend::direct_wasm) fn copy_enumerable_object_binding_properties
 ) -> Option<ObjectValueBinding> {
     let mut copied_binding = empty_object_value_binding();
     for name in ordered_object_property_names(source_binding) {
+        let property = Expression::String(name.clone());
         if source_binding
             .non_enumerable_string_properties
             .iter()
             .any(|hidden_name| hidden_name == &name)
+            || object_binding_lookup_descriptor(source_binding, &property)
+                .is_some_and(|descriptor| !descriptor.enumerable)
         {
             continue;
         }
-        let property = Expression::String(name.clone());
         let copied_value = resolve_property_value(&property)?;
-        object_binding_set_property(&mut copied_binding, property, copied_value);
+        object_binding_define_copied_data_property(&mut copied_binding, property, copied_value);
     }
     for (property, _) in &source_binding.symbol_properties {
+        if object_binding_lookup_descriptor(source_binding, property)
+            .is_some_and(|descriptor| !descriptor.enumerable)
+        {
+            continue;
+        }
         let copied_value = resolve_property_value(property)?;
-        object_binding_set_property(&mut copied_binding, property.clone(), copied_value);
+        object_binding_define_copied_data_property(
+            &mut copied_binding,
+            property.clone(),
+            copied_value,
+        );
     }
     Some(copied_binding)
 }
@@ -74,13 +85,28 @@ fn primitive_copy_data_properties_binding(expression: &Expression) -> Option<Obj
 fn string_primitive_copy_data_properties_binding(text: &str) -> ObjectValueBinding {
     let mut binding = empty_object_value_binding();
     for (index, character) in text.chars().enumerate() {
-        object_binding_set_property(
+        object_binding_define_copied_data_property(
             &mut binding,
             Expression::String(index.to_string()),
             Expression::String(character.to_string()),
         );
     }
     binding
+}
+
+fn static_property_key_is_symbol_to_string_tag(key: &Expression) -> bool {
+    matches!(
+        key,
+        Expression::Member { object, property }
+            if matches!(object.as_ref(), Expression::Identifier(name) if name == "Symbol")
+                && matches!(property.as_ref(), Expression::String(name) if name == "toStringTag")
+    )
+}
+
+fn materialized_object_binding_property_key(key: Expression) -> Expression {
+    static_property_name_from_expression(&key)
+        .map(Expression::String)
+        .unwrap_or(key)
 }
 
 pub(in crate::backend::direct_wasm) fn resolve_structural_object_binding<Context>(
@@ -115,11 +141,27 @@ fn resolve_structural_object_binding_dyn<Context>(
         &mut Context,
     ) -> Option<ObjectValueBinding>,
 ) -> Option<ObjectValueBinding> {
+    let module_namespace_literal = entries.iter().any(|entry| {
+        matches!(
+            entry,
+            ObjectEntry::Data {
+                key: Expression::String(name),
+                value: Expression::Bool(true),
+            } if name == "__ayy$module$namespace"
+        )
+    });
     let mut object_binding = empty_object_value_binding();
+    if module_namespace_literal {
+        object_binding.extensible = false;
+    }
     for entry in entries {
         match entry {
             ObjectEntry::Data { key, value } => {
-                let key = materialize_expression(key, context)?;
+                if object_entry_is_literal_proto_setter(entry) {
+                    continue;
+                }
+                let key =
+                    materialized_object_binding_property_key(materialize_expression(key, context)?);
                 let mut value = materialize_expression(value, context)?;
                 if let Expression::Object(entries) = &value
                     && entries
@@ -136,14 +178,26 @@ fn resolve_structural_object_binding_dyn<Context>(
                 {
                     value = object_binding_to_expression(&nested_binding);
                 }
+                let (configurable, enumerable, writable) = if module_namespace_literal {
+                    if static_property_key_is_symbol_to_string_tag(&key) {
+                        (false, false, Some(false))
+                    } else if matches!(&key, Expression::String(name) if name == "__ayy$module$namespace")
+                    {
+                        (false, false, Some(false))
+                    } else {
+                        (false, true, Some(true))
+                    }
+                } else {
+                    (true, true, Some(true))
+                };
                 object_binding_define_property_descriptor(
                     &mut object_binding,
                     key,
                     PropertyDescriptorBinding {
                         value: Some(value),
-                        configurable: true,
-                        enumerable: true,
-                        writable: Some(true),
+                        configurable,
+                        enumerable,
+                        writable,
                         getter: None,
                         setter: None,
                         has_get: false,
@@ -152,7 +206,8 @@ fn resolve_structural_object_binding_dyn<Context>(
                 );
             }
             ObjectEntry::Getter { key, getter } => {
-                let key = materialize_expression(key, context)?;
+                let key =
+                    materialized_object_binding_property_key(materialize_expression(key, context)?);
                 let existing = object_binding_lookup_descriptor(&object_binding, &key).cloned();
                 object_binding_define_property_descriptor(
                     &mut object_binding,
@@ -174,7 +229,8 @@ fn resolve_structural_object_binding_dyn<Context>(
                 );
             }
             ObjectEntry::Setter { key, setter } => {
-                let key = materialize_expression(key, context)?;
+                let key =
+                    materialized_object_binding_property_key(materialize_expression(key, context)?);
                 let existing = object_binding_lookup_descriptor(&object_binding, &key).cloned();
                 object_binding_define_property_descriptor(
                     &mut object_binding,

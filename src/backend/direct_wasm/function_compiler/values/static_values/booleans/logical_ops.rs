@@ -14,6 +14,9 @@ impl<'a> FunctionCompiler<'a> {
                 BinaryOp::NotEqual | BinaryOp::LooseNotEqual => Some(lhs != rhs),
                 _ => None,
             };
+            if let Some(result) = self.resolve_static_property_key_condition(*op, left, right) {
+                return Some(result);
+            }
             if let Some(lhs) = self.resolve_static_is_nan_call_result(left)
                 && let Expression::Bool(rhs) = self.materialize_static_expression(right)
             {
@@ -26,6 +29,31 @@ impl<'a> FunctionCompiler<'a> {
             }
         }
         self.resolve_static_boolean_expression(expression)
+    }
+
+    fn resolve_static_property_key_condition(
+        &self,
+        op: BinaryOp,
+        left: &Expression,
+        right: &Expression,
+    ) -> Option<bool> {
+        if !matches!(
+            op,
+            BinaryOp::Equal | BinaryOp::LooseEqual | BinaryOp::NotEqual | BinaryOp::LooseNotEqual
+        ) {
+            return None;
+        }
+
+        let left = self.static_condition_property_name(left)?;
+        let right = self.static_condition_property_name(right)?;
+        let not_equal = matches!(op, BinaryOp::NotEqual | BinaryOp::LooseNotEqual);
+        Some((left == right) ^ not_equal)
+    }
+
+    fn static_condition_property_name(&self, expression: &Expression) -> Option<String> {
+        let canonical = self.canonical_object_property_expression(expression);
+        static_property_name_from_expression(&canonical)
+            .or_else(|| static_property_name_from_expression(expression))
     }
 
     pub(in crate::backend::direct_wasm) fn resolve_static_logical_result_expression(

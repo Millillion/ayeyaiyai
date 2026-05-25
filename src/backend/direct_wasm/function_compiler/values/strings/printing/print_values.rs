@@ -101,31 +101,25 @@ impl<'a> FunctionCompiler<'a> {
             }
             Expression::Unary {
                 op: UnaryOp::Delete,
-                expression,
+                ..
             } => {
-                match expression.as_ref() {
-                    Expression::Identifier(name) => {
-                        if self.is_identifier_bound(name) {
-                            self.emit_print_string("false")?;
-                        } else {
-                            self.emit_print_string("true")?;
-                        }
-                    }
-                    Expression::Member { .. }
-                    | Expression::SuperMember { .. }
-                    | Expression::AssignMember { .. }
-                    | Expression::AssignSuperMember { .. }
-                    | Expression::This => {
-                        self.emit_numeric_expression(expression.as_ref())?;
-                        self.state.emission.output.instructions.push(0x1a);
-                        self.emit_print_string("true")?;
-                    }
-                    _ => {
-                        self.emit_numeric_expression(expression.as_ref())?;
-                        self.state.emission.output.instructions.push(0x1a);
-                        self.emit_print_string("true")?;
-                    }
-                }
+                let bool_local = self.allocate_temp_local();
+                self.emit_numeric_expression(value)?;
+                self.push_local_set(bool_local);
+                self.push_local_get(bool_local);
+                self.state.emission.output.instructions.push(0x45);
+                self.state.emission.output.instructions.push(0x04);
+                self.state
+                    .emission
+                    .output
+                    .instructions
+                    .push(EMPTY_BLOCK_TYPE);
+                self.push_control_frame();
+                self.emit_print_string("false")?;
+                self.state.emission.output.instructions.push(0x05);
+                self.emit_print_string("true")?;
+                self.state.emission.output.instructions.push(0x0b);
+                self.pop_control_frame();
                 Ok(())
             }
             _ => {

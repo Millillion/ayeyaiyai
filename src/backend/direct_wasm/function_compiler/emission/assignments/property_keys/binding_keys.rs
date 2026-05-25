@@ -1,13 +1,25 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn private_member_class_name_matches(candidate: &str, class_name: &str) -> bool {
+        candidate == class_name
+            || candidate
+                .strip_prefix(class_name)
+                .is_some_and(|suffix| suffix.starts_with("____evalctx_"))
+            || class_name
+                .strip_prefix(candidate)
+                .is_some_and(|suffix| suffix.starts_with("____evalctx_"))
+    }
+
     fn private_member_target_matches_class_name(
         target: &MemberFunctionBindingTarget,
         class_name: &str,
     ) -> bool {
         match target {
             MemberFunctionBindingTarget::Identifier(name)
-            | MemberFunctionBindingTarget::Prototype(name) => name == class_name,
+            | MemberFunctionBindingTarget::Prototype(name) => {
+                Self::private_member_class_name_matches(name, class_name)
+            }
         }
     }
 
@@ -103,17 +115,18 @@ impl<'a> FunctionCompiler<'a> {
         if let Some(class_name) = declaring_class_name {
             let filtered_targets = targets
                 .iter()
-                .filter(|target| match target {
-                    MemberFunctionBindingTarget::Identifier(name)
-                    | MemberFunctionBindingTarget::Prototype(name) => name == class_name,
-                })
+                .filter(|target| Self::private_member_target_matches_class_name(target, class_name))
                 .cloned()
                 .collect::<Vec<_>>();
             if !filtered_targets.is_empty() {
                 targets = filtered_targets;
             }
         }
-
+        if std::env::var_os("AYY_TRACE_PRIVATE_MEMBER_LOOKUP").is_some() {
+            eprintln!(
+                "private_binding_targets property={name} current_fn={current_function_name:?} declaring={declaring_class_name:?} targets={targets:?}"
+            );
+        }
         if let Some(current_function_name) = current_function_name
             && let Some(home_object_name) =
                 self.resolve_home_object_name_for_function(current_function_name)

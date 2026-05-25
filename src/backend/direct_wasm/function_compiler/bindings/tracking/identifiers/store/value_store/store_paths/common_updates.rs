@@ -84,6 +84,30 @@ fn expression_references_internal_iterator_step(expression: &Expression) -> bool
     }
 }
 
+fn expression_is_function_prototype_bind_call(expression: &Expression) -> bool {
+    matches!(
+        expression,
+        Expression::Call { callee, .. }
+            if matches!(
+                callee.as_ref(),
+                Expression::Member { property, .. }
+                    if matches!(property.as_ref(), Expression::String(name) if name == "bind")
+            )
+    )
+}
+
+fn import_meta_shadow_source_module_index(name: &str) -> Option<&str> {
+    let suffix = name.strip_prefix("__ayy_import_meta_").or_else(|| {
+        name.rsplit_once("__ayy_import_meta_")
+            .map(|(_, suffix)| suffix)
+    })?;
+    let digit_count = suffix
+        .bytes()
+        .take_while(|byte| byte.is_ascii_digit())
+        .count();
+    (digit_count > 0 && digit_count == suffix.len()).then_some(suffix)
+}
+
 impl<'a> FunctionCompiler<'a> {
     fn identifier_store_value_is_local_simple_async_generator_next_call(
         &self,
@@ -98,6 +122,9 @@ impl<'a> FunctionCompiler<'a> {
         if !matches!(property.as_ref(), Expression::String(property_name) if property_name == "next")
         {
             return false;
+        }
+        if self.is_async_generator_iterator_expression(object) {
+            return true;
         }
         let Expression::Identifier(iterator_name) = object.as_ref() else {
             return false;
@@ -151,8 +178,10 @@ impl<'a> FunctionCompiler<'a> {
                 true,
             ));
         }
-        if self.resolve_current_local_binding(capture_name).is_some() {
-            return Some((Expression::Identifier(capture_name.to_string()), true));
+        if let Some((resolved_name, _)) =
+            self.resolve_current_local_binding_by_source_name(capture_name)
+        {
+            return Some((Expression::Identifier(resolved_name), true));
         }
         if let Some(hidden_name) = self.resolve_eval_local_function_hidden_name(capture_name) {
             return Some((Expression::Identifier(hidden_name), true));
@@ -286,7 +315,10 @@ impl<'a> FunctionCompiler<'a> {
                         .speculation
                         .static_semantics
                         .capture_slot_source_bindings
-                        .insert(hidden_name.clone(), source_binding_name.clone());
+                        .insert(
+                            hidden_name.clone(),
+                            self.capture_slot_live_source_binding_name(source_binding_name),
+                        );
                 } else if matches!(source_expression, Expression::This) {
                     self.state
                         .speculation
@@ -347,10 +379,25 @@ impl<'a> FunctionCompiler<'a> {
                             && matches!(
                                 callee.as_ref(),
                                 Expression::Member { property, .. }
-                                    if is_symbol_iterator_expression(property)
+                                    if self.is_iterator_method_property_for_cached_next(property)
                             )
                 )
         })
+    }
+
+    fn is_iterator_method_property_for_cached_next(&self, property: &Expression) -> bool {
+        if is_symbol_iterator_expression(property)
+            || self
+                .well_known_symbol_name(property)
+                .is_some_and(|name| name == "Symbol.asyncIterator")
+        {
+            return true;
+        }
+        let materialized = self.materialize_static_expression(property);
+        is_symbol_iterator_expression(&materialized)
+            || self
+                .well_known_symbol_name(&materialized)
+                .is_some_and(|name| name == "Symbol.asyncIterator")
     }
 
     fn get_iterator_call_result_expression_for_cached_next(
@@ -456,7 +503,7 @@ impl<'a> FunctionCompiler<'a> {
                     && matches!(
                         callee.as_ref(),
                         Expression::Member { property, .. }
-                            if is_symbol_iterator_expression(property)
+                            if self.is_iterator_method_property_for_cached_next(property)
                     ) =>
             {
                 self.get_iterator_call_result_expression_for_cached_next(callee, arguments)
@@ -597,14 +644,413 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         expression: &Expression,
     ) -> Option<String> {
+        self.resolve_identifier_store_shadow_source_owner_with_depth(expression, 0)
+    }
+
+    fn resolve_identifier_store_shadow_source_owner_with_depth(
+        &self,
+        expression: &Expression,
+        depth: usize,
+    ) -> Option<String> {
+        if depth > 4 {
+            return None;
+        }
+
         match expression {
             Expression::Identifier(name) => {
-                self.runtime_object_property_shadow_owner_name_for_identifier(name)
+                if name.starts_with("__ayy_class_expr_") || name.starts_with("__ayy_class_ctor_") {
+                    Some(name.clone())
+                } else {
+                    self.runtime_object_property_shadow_owner_name_for_identifier(name)
+                }
             }
             Expression::This => {
                 self.runtime_object_property_shadow_owner_name_for_identifier("this")
             }
+            Expression::Object(entries) if entries.len() == 1 => {
+                let ObjectEntry::Spread(spread) = &entries[0] else {
+                    return None;
+                };
+                self.resolve_identifier_store_shadow_source_owner_with_depth(spread, depth + 1)
+            }
+            Expression::Call { callee, arguments } => {
+                let Expression::Identifier(function_name) = callee.as_ref() else {
+                    return self
+                        .resolve_static_call_result_expression(callee, arguments)
+                        .filter(|result| !static_expression_matches(result, expression))
+                        .and_then(|result| {
+                            self.resolve_identifier_store_shadow_source_owner_with_depth(
+                                &result,
+                                depth + 1,
+                            )
+                        });
+                };
+                if arguments.is_empty()
+                    && let Some(owner) = self.resolve_class_init_return_shadow_owner(function_name)
+                {
+                    return Some(owner);
+                }
+                self.resolve_direct_eval_user_call_return_shadow_owner(callee, arguments, depth)
+                    .or_else(|| {
+                        self.resolve_static_call_result_expression(callee, arguments)
+                            .filter(|result| !static_expression_matches(result, expression))
+                            .and_then(|result| {
+                                self.resolve_identifier_store_shadow_source_owner_with_depth(
+                                    &result,
+                                    depth + 1,
+                                )
+                            })
+                    })
+            }
             _ => None,
+        }
+    }
+
+    fn resolve_direct_eval_user_call_return_shadow_owner(
+        &self,
+        callee: &Expression,
+        arguments: &[CallArgument],
+        depth: usize,
+    ) -> Option<String> {
+        let LocalFunctionBinding::User(function_name) = self
+            .resolve_function_binding_from_expression_with_context(
+                callee,
+                self.current_function_name(),
+            )
+            .or_else(|| self.resolve_function_binding_from_expression(callee))?
+        else {
+            return None;
+        };
+        let user_function = self.user_function(&function_name)?;
+        let function = self.resolve_registered_function_declaration(&function_name)?;
+        let [Statement::Return(return_expression)] = function.body.as_slice() else {
+            return None;
+        };
+        let is_direct_eval_return = matches!(return_expression, Expression::Call { callee, .. } if matches!(callee.as_ref(), Expression::Identifier(name) if name == "eval"));
+        let arguments_binding = Expression::Array(
+            arguments
+                .iter()
+                .map(|argument| match argument {
+                    CallArgument::Expression(expression) => {
+                        ArrayElement::Expression(expression.clone())
+                    }
+                    CallArgument::Spread(expression) => ArrayElement::Spread(expression.clone()),
+                })
+                .collect(),
+        );
+        let this_binding =
+            if self.should_box_sloppy_function_this(user_function, &Expression::Undefined) {
+                Expression::This
+            } else {
+                Expression::Undefined
+            };
+        let return_expression = self.substitute_user_function_call_frame_bindings(
+            return_expression,
+            user_function,
+            arguments,
+            &this_binding,
+            &arguments_binding,
+        );
+        let Expression::Call {
+            callee: eval_callee,
+            arguments: eval_arguments,
+        } = &return_expression
+        else {
+            return self.resolve_identifier_store_shadow_source_owner_with_depth(
+                &return_expression,
+                depth + 1,
+            );
+        };
+        let realm_eval_builtin = self
+            .resolve_function_binding_from_expression_with_context(
+                eval_callee,
+                self.current_function_name(),
+            )
+            .or_else(|| self.resolve_function_binding_from_expression(eval_callee))
+            .and_then(|binding| match binding {
+                LocalFunctionBinding::Builtin(function_name)
+                    if parse_test262_realm_eval_builtin(&function_name).is_some() =>
+                {
+                    Some(function_name)
+                }
+                _ => None,
+            });
+        if !matches!(eval_callee.as_ref(), Expression::Identifier(name) if name == "eval")
+            && realm_eval_builtin.is_none()
+        {
+            return self.resolve_identifier_store_shadow_source_owner_with_depth(
+                &return_expression,
+                depth + 1,
+            );
+        }
+        let eval_outcome = if let Some(realm_eval_builtin) = realm_eval_builtin {
+            self.resolve_static_indirect_eval_completion_outcome_with_context(
+                eval_arguments,
+                Some(realm_eval_builtin.as_str()),
+            )
+        } else if is_direct_eval_return {
+            self.resolve_static_direct_eval_completion_outcome_with_context(
+                eval_arguments,
+                Some(function.name.as_str()),
+            )
+        } else {
+            self.resolve_static_indirect_eval_completion_outcome_with_context(
+                eval_arguments,
+                Some(function.name.as_str()),
+            )
+        };
+        let Some(StaticEvalOutcome::Value(eval_completion)) = eval_outcome else {
+            return None;
+        };
+        self.resolve_identifier_store_shadow_source_owner_with_depth(&eval_completion, depth + 1)
+    }
+
+    fn resolve_class_init_return_shadow_owner(&self, function_name: &str) -> Option<String> {
+        if !function_name.starts_with("__ayy_class_init_") {
+            return None;
+        }
+        let function = self.resolve_registered_function_declaration(function_name)?;
+        function.body.iter().find_map(|statement| match statement {
+            Statement::Return(Expression::Identifier(name))
+                if name.starts_with("__ayy_class_expr_")
+                    || name.starts_with("__ayy_class_ctor_") =>
+            {
+                Some(name.clone())
+            }
+            _ => None,
+        })
+    }
+
+    fn expression_is_single_spread_shadow_copy(&self, expression: &Expression) -> bool {
+        let Expression::Object(entries) = expression else {
+            return false;
+        };
+        let [ObjectEntry::Spread(spread)] = entries.as_slice() else {
+            return false;
+        };
+        self.resolve_identifier_store_shadow_source_owner(spread)
+            .is_some()
+    }
+
+    fn data_copy_runtime_shadow_property_value(
+        &self,
+        source_owner: &str,
+        source_binding: &ObjectValueBinding,
+        property: &Expression,
+    ) -> Expression {
+        if let Some(descriptor) = object_binding_lookup_descriptor(source_binding, property) {
+            if descriptor.has_get
+                || descriptor.has_set
+                || descriptor.getter.is_some()
+                || descriptor.setter.is_some()
+            {
+                if descriptor.getter.is_none() && !descriptor.has_get {
+                    return Expression::Undefined;
+                }
+                let source_expression = if source_owner == "this" {
+                    Expression::This
+                } else {
+                    Expression::Identifier(source_owner.to_string())
+                };
+                if let Some(value) = descriptor
+                    .getter
+                    .as_ref()
+                    .and_then(|getter| self.resolve_function_binding_from_expression(getter))
+                    .and_then(|getter_binding| {
+                        self.data_copy_runtime_shadow_getter_return_value(
+                            &getter_binding,
+                            &source_expression,
+                        )
+                    })
+                {
+                    return value;
+                }
+                if let Some(getter_binding) =
+                    self.resolve_member_getter_binding(&source_expression, property)
+                {
+                    let context = self.static_eval_context();
+                    let mut environment = self.snapshot_static_resolution_environment();
+                    if let Some(value) = execute_static_user_function_binding_in_environment(
+                        &context,
+                        &getter_binding,
+                        &[],
+                        &mut environment,
+                        StaticFunctionEffectMode::Discard,
+                    ) {
+                        return self.materialize_static_expression(&value);
+                    }
+                    if let Some(value) = self
+                        .resolve_function_binding_static_return_expression_with_call_frame(
+                            &getter_binding,
+                            &[],
+                            &source_expression,
+                        )
+                    {
+                        return self.materialize_static_expression(&value);
+                    }
+                }
+                return Expression::Undefined;
+            }
+            if let Some(value) = descriptor.value.clone() {
+                return value;
+            }
+        }
+        object_binding_lookup_value(source_binding, property)
+            .cloned()
+            .unwrap_or(Expression::Undefined)
+    }
+
+    fn data_copy_runtime_shadow_getter_return_value(
+        &self,
+        getter_binding: &LocalFunctionBinding,
+        source_expression: &Expression,
+    ) -> Option<Expression> {
+        if let Some(value) = self.resolve_function_binding_static_return_expression_with_call_frame(
+            getter_binding,
+            &[],
+            source_expression,
+        ) {
+            return Some(self.materialize_static_expression(&value));
+        }
+        let LocalFunctionBinding::User(function_name) = getter_binding else {
+            return None;
+        };
+        let user_function = self.user_function(function_name)?;
+        let function = self.resolve_registered_function_declaration(function_name)?;
+        let Statement::Return(return_value) = function.body.last()? else {
+            return None;
+        };
+        let call_arguments = Vec::new();
+        let arguments_binding = Expression::Array(Vec::new());
+        Some(self.materialize_static_expression(
+            &self.substitute_user_function_call_frame_bindings(
+                return_value,
+                user_function,
+                &call_arguments,
+                source_expression,
+                &arguments_binding,
+            ),
+        ))
+    }
+
+    fn data_copy_runtime_shadow_object_binding(
+        &self,
+        source_owner: &str,
+        source_binding: &ObjectValueBinding,
+    ) -> ObjectValueBinding {
+        let mut copied_binding = empty_object_value_binding();
+        for property_name in ordered_object_property_names(source_binding) {
+            if source_binding
+                .non_enumerable_string_properties
+                .iter()
+                .any(|hidden_name| hidden_name == &property_name)
+            {
+                continue;
+            }
+            let property = Expression::String(property_name);
+            let value = self.data_copy_runtime_shadow_property_value(
+                source_owner,
+                source_binding,
+                &property,
+            );
+            object_binding_define_copied_data_property(&mut copied_binding, property, value);
+        }
+        for (property, _) in &source_binding.symbol_properties {
+            let value = self.data_copy_runtime_shadow_property_value(
+                source_owner,
+                source_binding,
+                property,
+            );
+            object_binding_define_copied_data_property(
+                &mut copied_binding,
+                property.clone(),
+                value,
+            );
+        }
+        copied_binding
+    }
+
+    fn class_object_private_brand_marker_shadow_slot_name(
+        &mut self,
+        source_owner: &str,
+        target_owner: &str,
+    ) -> Option<String> {
+        let marker_property = self
+            .runtime_object_property_shadow_copy_entries(source_owner)
+            .into_iter()
+            .map(|(property, _)| property)
+            .find(|property| {
+                matches!(
+                    property,
+                    Expression::String(property_name)
+                        if property_name.starts_with("__ayy$private_brand$")
+                )
+            })?;
+        let suffix = Self::runtime_object_property_shadow_key(&marker_property);
+        let slot_name = format!("__ayy_object_property__{target_owner}__{suffix}");
+        self.ensure_implicit_global_binding(&slot_name);
+        Some(slot_name)
+    }
+
+    fn copy_class_object_member_bindings_for_shadow_alias(
+        &mut self,
+        target_owner: &str,
+        source_owner: &str,
+    ) {
+        if !source_owner.starts_with("__ayy_class_expr_")
+            && !source_owner.starts_with("__ayy_class_ctor_")
+        {
+            return;
+        }
+        self.copy_member_bindings_for_alias(target_owner, source_owner);
+        let Some(marker_slot_name) =
+            self.class_object_private_brand_marker_shadow_slot_name(source_owner, target_owner)
+        else {
+            return;
+        };
+
+        let local_capture_slots = self
+            .state
+            .speculation
+            .static_semantics
+            .objects
+            .member_function_capture_slots
+            .iter()
+            .map(|(key, slots)| (key.clone(), slots.clone()));
+        let global_capture_slots = self.backend.global_member_function_capture_slot_entries();
+        let capture_slot_entries = local_capture_slots
+            .chain(global_capture_slots)
+            .collect::<Vec<_>>();
+
+        for (key, mut capture_slots) in capture_slot_entries {
+            if !matches!(
+                &key.target,
+                MemberFunctionBindingTarget::Identifier(target) if target == target_owner
+            ) {
+                continue;
+            }
+            let mut rewritten = false;
+            for (capture_name, slot_name) in capture_slots.iter_mut() {
+                if capture_name.starts_with("__ayy_class_brand_")
+                    || slot_name.starts_with("__ayy_class_brand_")
+                {
+                    *slot_name = marker_slot_name.clone();
+                    rewritten = true;
+                }
+            }
+            if !rewritten {
+                continue;
+            }
+            self.state
+                .speculation
+                .static_semantics
+                .objects
+                .member_function_capture_slots
+                .insert(key.clone(), capture_slots.clone());
+            if self.binding_name_is_global(target_owner) {
+                self.backend
+                    .set_global_member_function_capture_slots(key, capture_slots);
+            }
         }
     }
 
@@ -618,6 +1064,28 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(());
         }
         let trace_identifier_store = std::env::var_os("AYY_TRACE_IDENTIFIER_STORE").is_some();
+        if expression_is_function_prototype_bind_call(&state.canonical_value_expression)
+            || expression_is_function_prototype_bind_call(&state.tracked_value_expression)
+            || expression_is_function_prototype_bind_call(&state.module_assignment_expression)
+            || expression_is_function_prototype_bind_call(&state.object_binding_expression)
+        {
+            if trace_identifier_store {
+                eprintln!("identifier_store:{target_name}:runtime_shadows skipped_bind_call");
+            }
+            return Ok(());
+        }
+        if matches!(
+            state.function_binding.as_ref(),
+            Some(LocalFunctionBinding::Builtin(function_name))
+                if parse_bound_function_prototype_call_builtin_name(function_name).is_some()
+        ) {
+            if trace_identifier_store {
+                eprintln!(
+                    "identifier_store:{target_name}:runtime_shadows skipped_bound_call_builtin"
+                );
+            }
+            return Ok(());
+        }
         let target_owner = self
             .runtime_object_property_shadow_owner_name_for_identifier(target_name)
             .unwrap_or_else(|| fallback_owner.to_string());
@@ -628,20 +1096,34 @@ impl<'a> FunctionCompiler<'a> {
                     &state.module_assignment_expression,
                 )
             });
+        let source_owner_is_data_copy = self
+            .expression_is_single_spread_shadow_copy(&state.canonical_value_expression)
+            || self.expression_is_single_spread_shadow_copy(&state.module_assignment_expression);
+        let source_shadow_object_binding = source_owner
+            .as_deref()
+            .and_then(|source_owner| self.resolve_runtime_shadow_object_binding(source_owner))
+            .map(|binding| {
+                if source_owner_is_data_copy {
+                    self.data_copy_runtime_shadow_object_binding(
+                        source_owner.as_deref().expect("source owner checked"),
+                        &binding,
+                    )
+                } else {
+                    binding
+                }
+            });
         let object_binding = self
             .state
             .speculation
             .static_semantics
             .local_object_binding(&state.resolved_name)
             .cloned()
+            .filter(|_| source_owner.is_none())
+            .or_else(|| source_shadow_object_binding.clone())
             .or_else(|| {
                 self.resolve_object_binding_from_expression(&state.object_binding_expression)
             })
-            .or_else(|| {
-                source_owner.as_deref().and_then(|source_owner| {
-                    self.resolve_runtime_shadow_object_binding(source_owner)
-                })
-            })
+            .or(source_shadow_object_binding)
             .map(|object_binding| {
                 self.rewrite_static_new_this_object_binding_for_owner(
                     &object_binding,
@@ -701,9 +1183,40 @@ impl<'a> FunctionCompiler<'a> {
         }
 
         self.clear_runtime_object_property_shadow_prefix(&target_owner);
+        self.clear_runtime_object_property_shadow_static_metadata_prefix(&target_owner);
 
         if let Some(source_owner) = source_owner {
+            if import_meta_shadow_source_module_index(&source_owner).is_some() {
+                let source_expression = Expression::Identifier(source_owner.clone());
+                self.update_local_value_binding(&state.resolved_name, &source_expression);
+                if target_owner != state.resolved_name {
+                    self.update_local_value_binding(&target_owner, &source_expression);
+                }
+            }
+            if source_owner_is_data_copy {
+                if let Some(object_binding) = object_binding.as_ref() {
+                    self.emit_runtime_object_property_shadow_seed_from_binding(
+                        &target_owner,
+                        object_binding,
+                    )?;
+                    self.sync_runtime_object_property_shadow_static_metadata_from_binding(
+                        &target_owner,
+                        object_binding,
+                    );
+                }
+                return Ok(());
+            }
+            if (source_owner.starts_with("__ayy_class_expr_")
+                || source_owner.starts_with("__ayy_class_ctor_"))
+                && let Some(object_binding) = object_binding.as_ref()
+            {
+                self.sync_runtime_object_property_shadow_static_metadata_from_binding(
+                    &source_owner,
+                    object_binding,
+                );
+            }
             self.emit_runtime_object_property_shadow_copy(&source_owner, &target_owner)?;
+            self.copy_class_object_member_bindings_for_shadow_alias(&target_owner, &source_owner);
             if let Some(object_binding) = object_binding.as_ref() {
                 self.sync_runtime_object_property_shadow_static_metadata_from_binding(
                     &target_owner,
@@ -731,6 +1244,17 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         state: &PreparedIdentifierStoreState,
     ) -> Option<IteratorSourceKind> {
+        let primary_expression = state
+            .call_source_snapshot_expression
+            .as_ref()
+            .unwrap_or(&state.canonical_value_expression);
+        if matches!(primary_expression, Expression::Call { .. })
+            && let Some(source) =
+                self.resolve_simple_generator_iterator_source_kind(primary_expression)
+        {
+            return Some(source);
+        }
+
         let iterator_source_expression = match state
             .call_source_snapshot_expression
             .as_ref()
@@ -738,22 +1262,14 @@ impl<'a> FunctionCompiler<'a> {
         {
             Expression::GetIterator(_) | Expression::Call { .. }
                 if self
-                    .resolve_simple_generator_source(
+                    .resolve_async_yield_delegate_generator_plan(
                         state
                             .call_source_snapshot_expression
                             .as_ref()
                             .unwrap_or(&state.canonical_value_expression),
+                        "__ayy_async_delegate_completion",
                     )
-                    .is_some()
-                    || self
-                        .resolve_async_yield_delegate_generator_plan(
-                            state
-                                .call_source_snapshot_expression
-                                .as_ref()
-                                .unwrap_or(&state.canonical_value_expression),
-                            "__ayy_async_delegate_completion",
-                        )
-                        .is_some() =>
+                    .is_some() =>
             {
                 state
                     .call_source_snapshot_expression
@@ -919,15 +1435,19 @@ impl<'a> FunctionCompiler<'a> {
         }
         trace_step("member_bindings:done");
         if !state.is_internal_iterator_temp && !value_references_internal_iterator_step {
-            let specialized_value_expression = match &state.canonical_value_expression {
-                Expression::Member { object, property }
-                    if self
-                        .resolve_member_getter_binding(object, property)
-                        .is_some() =>
-                {
-                    &state.canonical_value_expression
+            let specialized_value_expression = if state.function_binding.is_some() {
+                &state.tracked_value_expression
+            } else {
+                match &state.canonical_value_expression {
+                    Expression::Member { object, property }
+                        if self
+                            .resolve_member_getter_binding(object, property)
+                            .is_some() =>
+                    {
+                        &state.canonical_value_expression
+                    }
+                    _ => &state.tracked_value_expression,
                 }
-                _ => &state.tracked_value_expression,
             };
             trace_step("local_function:start");
             if let Some(function_binding) = state.function_binding.clone() {
@@ -997,9 +1517,15 @@ impl<'a> FunctionCompiler<'a> {
                 self.state
                     .speculation
                     .static_semantics
+                    .clear_runtime_array_length_local(&state.resolved_name);
+                self.state
+                    .speculation
+                    .static_semantics
+                    .clear_runtime_array_slots(&state.resolved_name);
+                self.state
+                    .speculation
+                    .static_semantics
                     .set_local_kind(&state.resolved_name, StaticValueKind::Object);
-                self.backend
-                    .mark_global_array_with_runtime_state(&state.resolved_name);
                 if self.binding_name_is_global(&state.resolved_name) {
                     self.backend
                         .sync_global_array_binding(&state.resolved_name, None);

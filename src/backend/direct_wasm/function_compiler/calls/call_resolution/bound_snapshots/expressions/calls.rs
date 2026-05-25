@@ -13,6 +13,23 @@ fn bound_snapshot_builtin_number_argument(value: &Expression) -> Option<f64> {
 }
 
 impl<'a> FunctionCompiler<'a> {
+    fn evaluate_bound_snapshot_call_receiver(
+        &self,
+        callee: &Expression,
+        bindings: &mut HashMap<String, Expression>,
+        current_function_name: Option<&str>,
+    ) -> Expression {
+        match callee {
+            Expression::Member { object, .. } => self
+                .evaluate_bound_snapshot_expression(object, bindings, current_function_name)
+                .unwrap_or_else(|| self.materialize_static_expression(object)),
+            Expression::SuperMember { .. } => {
+                bindings.get("this").cloned().unwrap_or(Expression::This)
+            }
+            _ => Expression::Undefined,
+        }
+    }
+
     pub(super) fn evaluate_bound_snapshot_call_expression(
         &self,
         callee: &Expression,
@@ -95,6 +112,11 @@ impl<'a> FunctionCompiler<'a> {
             effective_callee,
             current_function_name,
         )?;
+        let call_receiver = self.evaluate_bound_snapshot_call_receiver(
+            effective_callee,
+            bindings,
+            current_function_name,
+        );
         let mut evaluated_arguments = Vec::new();
         for argument in arguments {
             match argument {
@@ -137,13 +159,36 @@ impl<'a> FunctionCompiler<'a> {
             }
         }
         let this_binding = match &binding {
-            LocalFunctionBinding::User(function_name) => self
-                .user_function(function_name)
-                .filter(|user_function| user_function.lexical_this)
-                .and_then(|_| bindings.get("this").cloned())
-                .unwrap_or(Expression::Undefined),
+            LocalFunctionBinding::User(function_name) => {
+                let user_function = self.user_function(function_name)?;
+                if user_function.lexical_this {
+                    bindings
+                        .get("this")
+                        .cloned()
+                        .unwrap_or(Expression::Undefined)
+                } else if self.should_box_sloppy_function_this(user_function, &call_receiver) {
+                    Expression::This
+                } else {
+                    call_receiver.clone()
+                }
+            }
             LocalFunctionBinding::Builtin(_) => Expression::Undefined,
         };
+        if let LocalFunctionBinding::Builtin(function_name) = &binding {
+            let call_arguments = evaluated_arguments
+                .iter()
+                .cloned()
+                .map(CallArgument::Expression)
+                .collect::<Vec<_>>();
+            return match self.resolve_static_builtin_function_outcome(
+                function_name,
+                &call_arguments,
+                current_function_name,
+            )? {
+                StaticEvalOutcome::Value(value) => Some(value),
+                StaticEvalOutcome::Throw(_) => None,
+            };
+        }
         let (result, updated_bindings) = self
             .resolve_bound_snapshot_function_result_with_arguments_and_this(
                 &binding,
@@ -151,7 +196,7 @@ impl<'a> FunctionCompiler<'a> {
                 &evaluated_arguments,
                 &this_binding,
             )?;
-        *bindings = updated_bindings;
+        Self::merge_bound_snapshot_updated_bindings(bindings, updated_bindings);
         Some(result)
     }
 }

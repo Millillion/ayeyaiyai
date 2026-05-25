@@ -1,6 +1,33 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    pub(in crate::backend::direct_wasm) fn with_eval_template_cache_epoch<T>(
+        &mut self,
+        callback: impl FnOnce(&mut Self) -> DirectResult<T>,
+    ) -> DirectResult<T> {
+        let current_epoch = self.ensure_implicit_global_binding(EVAL_TEMPLATE_CURRENT_EPOCH_GLOBAL);
+        let next_epoch = self.ensure_implicit_global_binding(EVAL_TEMPLATE_NEXT_EPOCH_GLOBAL);
+        let saved_epoch_local = self.allocate_temp_local();
+
+        self.push_global_get(current_epoch.value_index);
+        self.push_local_set(saved_epoch_local);
+
+        self.push_global_get(next_epoch.value_index);
+        self.push_i32_const(1);
+        self.state.emission.output.instructions.push(0x6a);
+        self.push_global_set(next_epoch.value_index);
+
+        self.push_global_get(next_epoch.value_index);
+        self.push_global_set(current_epoch.value_index);
+
+        let result = callback(self);
+
+        self.push_local_get(saved_epoch_local);
+        self.push_global_set(current_epoch.value_index);
+
+        result
+    }
+
     fn with_class_field_initializer_eval_new_target_undefined<T>(
         &mut self,
         enabled: bool,
@@ -18,6 +45,41 @@ impl<'a> FunctionCompiler<'a> {
         let result = callback(self);
         self.push_local_get(saved_new_target_local);
         self.push_global_set(CURRENT_NEW_TARGET_GLOBAL_INDEX);
+        result
+    }
+
+    fn with_static_class_field_initializer_eval_this<T>(
+        &mut self,
+        enabled: bool,
+        callback: impl FnOnce(&mut Self) -> DirectResult<T>,
+    ) -> DirectResult<T> {
+        let Some(current_function_name) = self.current_function_name().map(str::to_string) else {
+            return callback(self);
+        };
+        if !enabled || !current_function_name.starts_with("__ayy_class_init_") {
+            return callback(self);
+        }
+        let Some(class_binding_name) = self.class_binding_name_for_function(&current_function_name)
+        else {
+            return callback(self);
+        };
+
+        let saved_this_local = self.allocate_temp_local();
+        self.push_global_get(CURRENT_THIS_GLOBAL_INDEX);
+        self.push_local_set(saved_this_local);
+        if let Some((_, class_local)) = self.resolve_current_local_binding(&class_binding_name) {
+            self.push_local_get(class_local);
+        } else {
+            self.emit_identifier_expression_value(&class_binding_name)?;
+        }
+        self.push_global_set(CURRENT_THIS_GLOBAL_INDEX);
+        if let Some(initialized_local) = self.local_lexical_initialized_local(&class_binding_name) {
+            self.push_i32_const(1);
+            self.push_local_set(initialized_local);
+        }
+        let result = callback(self);
+        self.push_local_get(saved_this_local);
+        self.push_global_set(CURRENT_THIS_GLOBAL_INDEX);
         result
     }
 
@@ -120,6 +182,11 @@ impl<'a> FunctionCompiler<'a> {
                     return Ok(true);
                 }
 
+                if self.eval_program_declares_non_declarable_global_var(&program, false) {
+                    self.emit_named_error_throw("TypeError")?;
+                    return Ok(true);
+                }
+
                 let preexisting_locals = self
                     .state
                     .runtime
@@ -149,8 +216,8 @@ impl<'a> FunctionCompiler<'a> {
                     &program.statements,
                     &eval_local_function_declarations,
                 )?;
-                self.instantiate_eval_var_bindings(&program, &preexisting_locals)?;
-                self.instantiate_eval_global_functions(&program.functions)?;
+                self.instantiate_eval_var_bindings(&program, &preexisting_locals, true)?;
+                self.instantiate_eval_global_functions(&program.functions, true)?;
                 self.instantiate_eval_local_functions(&eval_local_function_declarations)?;
                 let class_field_initializer_eval = self
                     .state
@@ -162,33 +229,43 @@ impl<'a> FunctionCompiler<'a> {
                     compiler.with_class_field_initializer_eval_new_target_undefined(
                         class_field_initializer_eval,
                         |compiler| {
-                            compiler.with_active_eval_lexical_scope(
-                                collect_direct_eval_lexical_binding_names(&program.statements),
+                            compiler.with_static_class_field_initializer_eval_this(
+                                class_field_initializer_eval,
                                 |compiler| {
-                                    let completion_local = compiler.allocate_temp_local();
-                                    compiler.push_i32_const(JS_UNDEFINED_TAG);
-                                    compiler.push_local_set(completion_local);
-                                    let eval_statements = program
-                                        .statements
-                                        .iter()
-                                        .filter(|statement| {
-                                            !is_eval_local_function_declaration_statement(
-                                                statement,
-                                                &eval_local_function_declarations,
-                                            )
-                                        })
-                                        .collect::<Vec<_>>();
+                                    compiler.with_active_eval_lexical_scope(
+                                        collect_direct_eval_lexical_binding_names(
+                                            &program.statements,
+                                        ),
+                                        |compiler| {
+                                            compiler.with_eval_template_cache_epoch(|compiler| {
+                                                let completion_local =
+                                                    compiler.allocate_temp_local();
+                                                compiler.push_i32_const(JS_UNDEFINED_TAG);
+                                                compiler.push_local_set(completion_local);
+                                                let eval_statements = program
+                                                    .statements
+                                                    .iter()
+                                                    .filter(|statement| {
+                                                        !is_eval_local_function_declaration_statement(
+                                                            statement,
+                                                            &eval_local_function_declarations,
+                                                        )
+                                                    })
+                                                    .collect::<Vec<_>>();
 
-                                    for statement in eval_statements {
-                                        compiler.emit_eval_statement_completion_value(
-                                            statement,
-                                            completion_local,
-                                        )?;
-                                    }
+                                                for statement in eval_statements {
+                                                    compiler.emit_eval_statement_completion_value(
+                                                        statement,
+                                                        completion_local,
+                                                    )?;
+                                                }
 
-                                    compiler.push_local_get(completion_local);
+                                                compiler.push_local_get(completion_local);
 
-                                    Ok(())
+                                                Ok(())
+                                            })
+                                        },
+                                    )
                                 },
                             )
                         },

@@ -14,6 +14,9 @@ impl<'a> FunctionCompiler<'a> {
                 .unwrap_or_else(|| expression.clone()),
             Expression::Identifier(name) => bindings
                 .get(name)
+                .or_else(|| {
+                    scoped_binding_source_name(name).and_then(|source| bindings.get(source))
+                })
                 .cloned()
                 .map(Expression::Identifier)
                 .unwrap_or_else(|| expression.clone()),
@@ -22,7 +25,13 @@ impl<'a> FunctionCompiler<'a> {
                 property: Box::new(self.substitute_capture_slot_bindings(property, bindings)),
             },
             Expression::Assign { name, value } => Expression::Assign {
-                name: bindings.get(name).cloned().unwrap_or_else(|| name.clone()),
+                name: bindings
+                    .get(name)
+                    .or_else(|| {
+                        scoped_binding_source_name(name).and_then(|source| bindings.get(source))
+                    })
+                    .cloned()
+                    .unwrap_or_else(|| name.clone()),
                 value: Box::new(self.substitute_capture_slot_bindings(value, bindings)),
             },
             Expression::AssignMember {

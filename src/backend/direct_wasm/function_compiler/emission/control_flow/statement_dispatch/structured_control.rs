@@ -39,6 +39,27 @@ struct DestructuringDefaultIteratorClosePattern {
 }
 
 impl<'a> FunctionCompiler<'a> {
+    fn concrete_static_binding_value_condition_operand(
+        &self,
+        expression: Expression,
+    ) -> Option<Expression> {
+        match expression {
+            Expression::Identifier(name)
+                if name == "undefined" && self.is_unshadowed_builtin_identifier(&name) =>
+            {
+                Some(Expression::Undefined)
+            }
+            Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined => Some(expression),
+            Expression::Array(_) | Expression::Object(_) => Some(Expression::Object(Vec::new())),
+            _ => None,
+        }
+    }
+
     fn identifier_undefined_not_equal_condition_binding(condition: &Expression) -> Option<&str> {
         let Expression::Binary {
             op: BinaryOp::NotEqual,
@@ -51,6 +72,105 @@ impl<'a> FunctionCompiler<'a> {
         match (left.as_ref(), right.as_ref()) {
             (Expression::Identifier(name), Expression::Undefined)
             | (Expression::Undefined, Expression::Identifier(name)) => Some(name),
+            _ => None,
+        }
+    }
+
+    fn static_binding_value_condition_operand(
+        &self,
+        expression: &Expression,
+    ) -> Option<Expression> {
+        match expression {
+            Expression::Identifier(name) if name.starts_with("__ayy_binding_value_") => {
+                if let Some(value) = self
+                    .state
+                    .speculation
+                    .static_semantics
+                    .local_value_binding(name)
+                {
+                    let materialized = self.materialize_static_expression(value);
+                    if let Some(operand) =
+                        self.concrete_static_binding_value_condition_operand(materialized)
+                    {
+                        return Some(operand);
+                    }
+                    return None;
+                }
+                if self
+                    .state
+                    .speculation
+                    .static_semantics
+                    .has_local_object_binding(name)
+                    || self
+                        .state
+                        .speculation
+                        .static_semantics
+                        .has_local_array_binding(name)
+                    || self
+                        .state
+                        .speculation
+                        .static_semantics
+                        .has_local_function_binding(name)
+                {
+                    return Some(Expression::Object(Vec::new()));
+                }
+                match self.state.speculation.static_semantics.local_kind(name) {
+                    Some(StaticValueKind::Null) => Some(Expression::Null),
+                    Some(StaticValueKind::Undefined) => Some(Expression::Undefined),
+                    Some(
+                        StaticValueKind::Object
+                        | StaticValueKind::Function
+                        | StaticValueKind::Symbol,
+                    ) => Some(Expression::Object(Vec::new())),
+                    _ => None,
+                }
+            }
+            Expression::Null | Expression::Undefined | Expression::Bool(_) => {
+                Some(expression.clone())
+            }
+            _ => None,
+        }
+    }
+
+    fn resolve_static_binding_value_condition(&self, condition: &Expression) -> Option<bool> {
+        let Expression::Binary { op, left, right } = condition else {
+            return None;
+        };
+        match op {
+            BinaryOp::LogicalOr => {
+                if self.resolve_static_binding_value_condition(left)? {
+                    Some(true)
+                } else {
+                    self.resolve_static_binding_value_condition(right)
+                }
+            }
+            BinaryOp::LogicalAnd => {
+                if !self.resolve_static_binding_value_condition(left)? {
+                    Some(false)
+                } else {
+                    self.resolve_static_binding_value_condition(right)
+                }
+            }
+            BinaryOp::Equal
+            | BinaryOp::NotEqual
+            | BinaryOp::LooseEqual
+            | BinaryOp::LooseNotEqual => {
+                let left = self.static_binding_value_condition_operand(left)?;
+                let right = self.static_binding_value_condition_operand(right)?;
+                let loosely_equal_nullish = matches!(
+                    (&left, &right),
+                    (Expression::Null, Expression::Undefined)
+                        | (Expression::Undefined, Expression::Null)
+                );
+                let equal = static_expression_matches(&left, &right);
+                match op {
+                    BinaryOp::Equal => Some(equal),
+                    BinaryOp::NotEqual => Some(!equal),
+                    BinaryOp::LooseEqual => Some(equal || loosely_equal_nullish),
+                    BinaryOp::LooseNotEqual => Some(!(equal || loosely_equal_nullish)),
+                    _ => unreachable!("filtered by enclosing match arm"),
+                }
+            }
             _ => None,
         }
     }
@@ -407,6 +527,162 @@ impl<'a> FunctionCompiler<'a> {
         })
     }
 
+    fn static_if_condition_calls_user_function(&self, expression: &Expression) -> bool {
+        match expression {
+            Expression::Call { callee, arguments }
+            | Expression::SuperCall { callee, arguments }
+            | Expression::New { callee, arguments } => {
+                matches!(callee.as_ref(), Expression::Identifier(name) if self.contains_user_function(name))
+                    || matches!(
+                        self.resolve_function_binding_from_expression(callee),
+                        Some(LocalFunctionBinding::User(_))
+                    )
+                    || self.static_if_condition_calls_user_function(callee)
+                    || arguments.iter().any(|argument| match argument {
+                        CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                            self.static_if_condition_calls_user_function(expression)
+                        }
+                    })
+            }
+            Expression::Unary {
+                op: UnaryOp::Delete,
+                ..
+            } => false,
+            Expression::Unary { expression, .. }
+            | Expression::Await(expression)
+            | Expression::EnumerateKeys(expression)
+            | Expression::GetIterator(expression)
+            | Expression::IteratorClose(expression)
+            | Expression::Assign {
+                value: expression, ..
+            } => self.static_if_condition_calls_user_function(expression),
+            Expression::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                self.static_if_condition_calls_user_function(object)
+                    || self.static_if_condition_calls_user_function(property)
+                    || self.static_if_condition_calls_user_function(value)
+            }
+            Expression::AssignSuperMember { property, value } => {
+                self.static_if_condition_calls_user_function(property)
+                    || self.static_if_condition_calls_user_function(value)
+            }
+            Expression::Binary { left, right, .. } => {
+                self.static_if_condition_calls_user_function(left)
+                    || self.static_if_condition_calls_user_function(right)
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                self.static_if_condition_calls_user_function(condition)
+                    || self.static_if_condition_calls_user_function(then_expression)
+                    || self.static_if_condition_calls_user_function(else_expression)
+            }
+            Expression::Sequence(expressions) => expressions
+                .iter()
+                .any(|expression| self.static_if_condition_calls_user_function(expression)),
+            Expression::Array(elements) => elements.iter().any(|element| match element {
+                ArrayElement::Expression(expression) | ArrayElement::Spread(expression) => {
+                    self.static_if_condition_calls_user_function(expression)
+                }
+            }),
+            Expression::Object(entries) => entries.iter().any(|entry| match entry {
+                ObjectEntry::Data { key, value } => {
+                    self.static_if_condition_calls_user_function(key)
+                        || self.static_if_condition_calls_user_function(value)
+                }
+                ObjectEntry::Getter { key, getter } => {
+                    self.static_if_condition_calls_user_function(key)
+                        || self.static_if_condition_calls_user_function(getter)
+                }
+                ObjectEntry::Setter { key, setter } => {
+                    self.static_if_condition_calls_user_function(key)
+                        || self.static_if_condition_calls_user_function(setter)
+                }
+                ObjectEntry::Spread(expression) => {
+                    self.static_if_condition_calls_user_function(expression)
+                }
+            }),
+            Expression::Member { object, property } => {
+                self.static_if_condition_calls_user_function(object)
+                    || self.static_if_condition_calls_user_function(property)
+            }
+            Expression::SuperMember { property } => {
+                self.static_if_condition_calls_user_function(property)
+            }
+            Expression::Identifier(_)
+            | Expression::Update { .. }
+            | Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined
+            | Expression::NewTarget
+            | Expression::This
+            | Expression::Sent => false,
+        }
+    }
+
+    fn static_if_condition_side_effects_can_be_skipped(&self, expression: &Expression) -> bool {
+        if inline_summary_side_effect_free_expression(expression) {
+            return true;
+        }
+        match expression {
+            Expression::Call { callee, arguments } => {
+                if matches!(callee.as_ref(), Expression::Identifier(name) if name == "__ayyImportMeta")
+                    && matches!(
+                        arguments.as_slice(),
+                        [] | [CallArgument::Expression(Expression::Number(_))]
+                            | [CallArgument::Spread(Expression::Number(_))]
+                    )
+                {
+                    return true;
+                }
+                self.resolve_static_has_own_property_call_result(expression)
+                    .is_some()
+                    && self.static_if_condition_side_effects_can_be_skipped(callee)
+                    && arguments.iter().all(|argument| match argument {
+                        CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                            self.static_if_condition_side_effects_can_be_skipped(expression)
+                        }
+                    })
+            }
+            Expression::Unary {
+                op: UnaryOp::Delete,
+                ..
+            } => false,
+            Expression::Unary { expression, .. }
+            | Expression::Await(expression)
+            | Expression::EnumerateKeys(expression)
+            | Expression::GetIterator(expression)
+            | Expression::IteratorClose(expression) => {
+                self.static_if_condition_side_effects_can_be_skipped(expression)
+            }
+            Expression::Binary { left, right, .. } => {
+                self.static_if_condition_side_effects_can_be_skipped(left)
+                    && self.static_if_condition_side_effects_can_be_skipped(right)
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                self.static_if_condition_side_effects_can_be_skipped(condition)
+                    && self.static_if_condition_side_effects_can_be_skipped(then_expression)
+                    && self.static_if_condition_side_effects_can_be_skipped(else_expression)
+            }
+            Expression::Sequence(expressions) => expressions
+                .iter()
+                .all(|expression| self.static_if_condition_side_effects_can_be_skipped(expression)),
+            _ => false,
+        }
+    }
+
     fn restore_try_metadata_map_entry<T: Clone>(
         target: &mut HashMap<String, T>,
         source: &HashMap<String, T>,
@@ -608,7 +884,9 @@ impl<'a> FunctionCompiler<'a> {
             Statement::Var { value, .. }
             | Statement::Let { value, .. }
             | Statement::Assign { value, .. }
-            | Statement::Expression(value) => inline_summary_side_effect_free_expression(value),
+            | Statement::Expression(value) => {
+                self.expression_preserves_try_metadata_before_terminal_throw(value)
+            }
             Statement::With { object, body } => {
                 inline_summary_side_effect_free_expression(object)
                     && body.iter().all(|statement| {
@@ -624,6 +902,126 @@ impl<'a> FunctionCompiler<'a> {
                 self.statement_preserves_try_metadata_before_terminal_throw(statement)
             }),
             _ => false,
+        }
+    }
+
+    fn expression_preserves_try_metadata_before_terminal_throw(
+        &self,
+        expression: &Expression,
+    ) -> bool {
+        inline_summary_side_effect_free_expression(expression)
+            && self
+                .resolve_terminal_expression_throw_value(expression)
+                .is_none()
+            && self.expression_has_no_uncertain_try_prefix_coercion(expression)
+    }
+
+    fn expression_has_no_uncertain_try_prefix_coercion(&self, expression: &Expression) -> bool {
+        match expression {
+            Expression::Unary { op, expression } => {
+                self.expression_has_no_uncertain_try_prefix_coercion(expression)
+                    && self
+                        .unary_operand_preserves_try_metadata_before_terminal_throw(*op, expression)
+            }
+            Expression::Binary { left, right, .. } => {
+                self.expression_has_no_uncertain_try_prefix_coercion(left)
+                    && self.expression_has_no_uncertain_try_prefix_coercion(right)
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                self.expression_has_no_uncertain_try_prefix_coercion(condition)
+                    && self.expression_has_no_uncertain_try_prefix_coercion(then_expression)
+                    && self.expression_has_no_uncertain_try_prefix_coercion(else_expression)
+            }
+            Expression::Sequence(expressions) => expressions
+                .iter()
+                .all(|expression| self.expression_has_no_uncertain_try_prefix_coercion(expression)),
+            Expression::Array(elements) => elements.iter().all(|element| match element {
+                ArrayElement::Expression(expression) | ArrayElement::Spread(expression) => {
+                    self.expression_has_no_uncertain_try_prefix_coercion(expression)
+                }
+            }),
+            Expression::Object(entries) => entries.iter().all(|entry| match entry {
+                ObjectEntry::Data { key, value } => {
+                    self.expression_has_no_uncertain_try_prefix_coercion(key)
+                        && self.expression_has_no_uncertain_try_prefix_coercion(value)
+                }
+                ObjectEntry::Getter { key, getter } => {
+                    self.expression_has_no_uncertain_try_prefix_coercion(key)
+                        && self.expression_has_no_uncertain_try_prefix_coercion(getter)
+                }
+                ObjectEntry::Setter { key, setter } => {
+                    self.expression_has_no_uncertain_try_prefix_coercion(key)
+                        && self.expression_has_no_uncertain_try_prefix_coercion(setter)
+                }
+                ObjectEntry::Spread(expression) => {
+                    self.expression_has_no_uncertain_try_prefix_coercion(expression)
+                }
+            }),
+            Expression::Member { object, property } => {
+                self.expression_has_no_uncertain_try_prefix_coercion(object)
+                    && self.expression_has_no_uncertain_try_prefix_coercion(property)
+            }
+            Expression::SuperMember { property } => {
+                self.expression_has_no_uncertain_try_prefix_coercion(property)
+            }
+            Expression::Await(expression)
+            | Expression::EnumerateKeys(expression)
+            | Expression::GetIterator(expression)
+            | Expression::IteratorClose(expression) => {
+                self.expression_has_no_uncertain_try_prefix_coercion(expression)
+            }
+            Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined
+            | Expression::Identifier(_)
+            | Expression::This
+            | Expression::NewTarget
+            | Expression::Sent => true,
+            Expression::Assign { .. }
+            | Expression::AssignMember { .. }
+            | Expression::AssignSuperMember { .. }
+            | Expression::Call { .. }
+            | Expression::SuperCall { .. }
+            | Expression::New { .. }
+            | Expression::Update { .. } => false,
+        }
+    }
+
+    fn unary_operand_preserves_try_metadata_before_terminal_throw(
+        &self,
+        op: UnaryOp,
+        expression: &Expression,
+    ) -> bool {
+        match op {
+            UnaryOp::Plus => matches!(
+                self.infer_value_kind(expression),
+                Some(
+                    StaticValueKind::Number
+                        | StaticValueKind::String
+                        | StaticValueKind::Bool
+                        | StaticValueKind::Null
+                        | StaticValueKind::Undefined
+                )
+            ),
+            UnaryOp::Negate | UnaryOp::BitwiseNot => matches!(
+                self.infer_value_kind(expression),
+                Some(
+                    StaticValueKind::Number
+                        | StaticValueKind::BigInt
+                        | StaticValueKind::String
+                        | StaticValueKind::Bool
+                        | StaticValueKind::Null
+                        | StaticValueKind::Undefined
+                )
+            ),
+            UnaryOp::Not | UnaryOp::TypeOf | UnaryOp::Void | UnaryOp::Delete => true,
         }
     }
 
@@ -1565,7 +1963,10 @@ impl<'a> FunctionCompiler<'a> {
             Statement::Declaration { body } => {
                 let global_static_semantics = self.backend.snapshot_global_static_semantics();
                 let local_static_metadata = self.state.snapshot_static_binding_metadata();
-                self.emit_statements(body)?;
+                self.with_active_eval_lexical_scope(
+                    collect_direct_eval_lexical_binding_names(body),
+                    |compiler| compiler.emit_statements(body),
+                )?;
                 self.backend
                     .restore_global_static_semantics(global_static_semantics);
                 self.state
@@ -1587,14 +1988,51 @@ impl<'a> FunctionCompiler<'a> {
             ),
             Statement::With { object, body } => {
                 let object_kind = self.infer_value_kind(object);
+                let object_is_statically_nullish = matches!(
+                    object,
+                    Expression::Null | Expression::Undefined
+                ) || matches!(
+                    object,
+                        Expression::Identifier(name)
+                            if name == "undefined" && self.is_unshadowed_builtin_identifier(name)
+                );
                 self.emit_numeric_expression(object)?;
-                self.state.emission.output.instructions.push(0x1a);
                 if matches!(
                     object_kind,
                     Some(StaticValueKind::Null | StaticValueKind::Undefined)
-                ) {
+                ) && object_is_statically_nullish
+                {
+                    self.state.emission.output.instructions.push(0x1a);
                     self.emit_named_error_throw("TypeError")?;
                     return Ok(());
+                } else if matches!(
+                    object_kind,
+                    Some(StaticValueKind::Null | StaticValueKind::Undefined)
+                ) || matches!(object_kind, None | Some(StaticValueKind::Unknown))
+                {
+                    let object_local = self.allocate_temp_local();
+                    self.push_local_set(object_local);
+
+                    self.push_local_get(object_local);
+                    self.push_i32_const(JS_NULL_TAG);
+                    self.push_binary_op(BinaryOp::Equal)?;
+                    self.push_local_get(object_local);
+                    self.push_i32_const(JS_UNDEFINED_TAG);
+                    self.push_binary_op(BinaryOp::Equal)?;
+                    self.state.emission.output.instructions.push(0x72);
+
+                    self.state.emission.output.instructions.push(0x04);
+                    self.state
+                        .emission
+                        .output
+                        .instructions
+                        .push(EMPTY_BLOCK_TYPE);
+                    self.push_control_frame();
+                    self.emit_named_error_throw("TypeError")?;
+                    self.state.emission.output.instructions.push(0x0b);
+                    self.pop_control_frame();
+                } else {
+                    self.state.emission.output.instructions.push(0x1a);
                 }
                 let with_scope = self.canonicalize_with_scope_expression(object);
                 self.state.push_with_scope(with_scope);
@@ -1607,42 +2045,52 @@ impl<'a> FunctionCompiler<'a> {
                 then_branch,
                 else_branch,
             } => {
-                let static_condition_value =
-                    if control_if_condition_references_compiler_finally(condition)
-                        || Self::expression_contains_assignment_or_update(condition)
-                        || self.static_if_condition_reads_runtime_nonlocal_binding(condition)
-                    {
+                let references_finally =
+                    control_if_condition_references_compiler_finally(condition);
+                let contains_assignment_or_update =
+                    Self::expression_contains_assignment_or_update(condition);
+                let calls_user_function = self.static_if_condition_calls_user_function(condition);
+                let reads_runtime_nonlocal =
+                    self.static_if_condition_reads_runtime_nonlocal_binding(condition);
+                let static_condition_value = if references_finally
+                    || contains_assignment_or_update
+                    || calls_user_function
+                    || reads_runtime_nonlocal
+                {
+                    None
+                } else if control_if_condition_references_internal_iterator_temp(condition) {
+                    if self.if_condition_depends_on_active_loop_assignment(condition) {
                         None
-                    } else if control_if_condition_references_internal_iterator_temp(condition) {
-                        self.resolve_static_iterator_step_condition_value(condition)
                     } else {
-                        let condition_depends_on_active_loop =
-                            self.if_condition_depends_on_active_loop_assignment(condition);
-                        let condition_depends_on_active_iterator_loop =
-                            self.if_condition_depends_on_active_iterator_loop_assignment(condition);
-                        if self.expression_has_dynamic_member_property_access(condition) {
-                            if condition_depends_on_active_loop {
-                                self.resolve_active_loop_indexed_member_if_condition_value(
-                                    condition,
-                                )
-                            } else {
-                                None
-                            }
-                        } else if condition_depends_on_active_iterator_loop {
-                            self.resolve_static_loop_dependent_if_condition_value(condition)
-                        } else if condition_depends_on_active_loop {
-                            None
+                        self.resolve_static_iterator_step_condition_value(condition)
+                            .or_else(|| self.resolve_static_binding_value_condition(condition))
+                    }
+                } else {
+                    let condition_depends_on_active_loop =
+                        self.if_condition_depends_on_active_loop_assignment(condition);
+                    let condition_depends_on_active_iterator_loop =
+                        self.if_condition_depends_on_active_iterator_loop_assignment(condition);
+                    if self.expression_has_dynamic_member_property_access(condition) {
+                        if condition_depends_on_active_loop {
+                            self.resolve_active_loop_indexed_member_if_condition_value(condition)
                         } else {
-                            self.resolve_static_if_condition_value(condition)
+                            None
                         }
-                    };
+                    } else if condition_depends_on_active_iterator_loop {
+                        self.resolve_static_loop_dependent_if_condition_value(condition)
+                    } else if condition_depends_on_active_loop {
+                        None
+                    } else {
+                        self.resolve_static_if_condition_value(condition)
+                    }
+                };
                 if let Some(condition_value) = static_condition_value {
                     if trace_static_if {
                         eprintln!(
                             "static_if:start condition_value={condition_value} statement={statement:?}"
                         );
                     }
-                    if !inline_summary_side_effect_free_expression(condition) {
+                    if !self.static_if_condition_side_effects_can_be_skipped(condition) {
                         self.emit_numeric_expression(condition)?;
                         self.state.emission.output.instructions.push(0x1a);
                     }
@@ -1930,10 +2378,7 @@ impl<'a> FunctionCompiler<'a> {
                         || self.statements_have_deterministic_terminal_throw(catch_body));
                 let static_catch_value = catch_binding
                     .as_ref()
-                    .and_then(|_| self.resolve_terminal_throw_value_from_try_body(body));
-                let possible_catch_kind = catch_binding
-                    .as_ref()
-                    .and_then(|_| self.resolve_possible_throw_kind_from_try_body(body));
+                    .and_then(|_| self.resolve_static_catch_value_from_try_body(body));
                 let assert_throws_single_call_try = catch_binding.is_none()
                     && catch_setup.is_empty()
                     && matches!(
@@ -1960,7 +2405,10 @@ impl<'a> FunctionCompiler<'a> {
                     .try_stack
                     .push(TryContext { catch_target });
 
-                self.emit_statements(body)?;
+                self.with_active_eval_lexical_scope(
+                    collect_direct_eval_lexical_binding_names(body),
+                    |compiler| compiler.emit_statements(body),
+                )?;
                 let try_body_local_static_metadata = try_body_metadata_survives_catch
                     .then(|| self.state.snapshot_static_binding_metadata());
                 let try_body_global_static_metadata = try_body_metadata_survives_catch
@@ -1993,6 +2441,20 @@ impl<'a> FunctionCompiler<'a> {
                     self.invalidate_static_binding_metadata_for_names(&invalidated_bindings);
                     if let Some(static_catch_value) = static_catch_value.as_ref() {
                         self.update_local_value_binding(catch_binding, static_catch_value);
+                        if let Some(object_binding) =
+                            self.resolve_object_binding_from_expression(static_catch_value)
+                        {
+                            let object_binding = self
+                                .object_binding_with_constructed_constructor_shadow(
+                                    object_binding,
+                                    static_catch_value,
+                                );
+                            self.update_local_object_binding_from_resolved(
+                                catch_binding,
+                                static_catch_value,
+                                object_binding,
+                            );
+                        }
                         self.state.speculation.static_semantics.set_local_kind(
                             catch_binding,
                             self.infer_value_kind(static_catch_value)
@@ -2002,13 +2464,6 @@ impl<'a> FunctionCompiler<'a> {
                             catch_binding,
                             static_catch_value,
                         )?;
-                    } else if let Some(possible_catch_kind) = possible_catch_kind
-                        && possible_catch_kind != StaticValueKind::Unknown
-                    {
-                        self.state
-                            .speculation
-                            .static_semantics
-                            .set_local_kind(catch_binding, possible_catch_kind);
                     }
                 } else {
                     self.push_i32_const(JS_UNDEFINED_TAG);

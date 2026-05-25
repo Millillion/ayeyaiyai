@@ -56,6 +56,15 @@ impl DirectWasmCompiler {
             object_bindings,
             current_function_name,
         );
+        self.register_constructor_bindings_for_call(
+            callee,
+            arguments,
+            aliases,
+            bindings,
+            array_bindings,
+            object_bindings,
+            current_function_name,
+        );
         self.collect_parameter_bindings_from_call_arguments(
             arguments,
             aliases,

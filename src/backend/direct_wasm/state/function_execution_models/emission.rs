@@ -19,4 +19,5 @@ pub(in crate::backend::direct_wasm) struct FunctionEmissionState {
     pub(in crate::backend::direct_wasm) output: FunctionOutputState,
     pub(in crate::backend::direct_wasm) control_flow: FunctionControlFlowState,
     pub(in crate::backend::direct_wasm) lexical_scopes: FunctionLexicalScopeState,
+    pub(in crate::backend::direct_wasm) emitted_value_bindings: HashSet<String>,
 }

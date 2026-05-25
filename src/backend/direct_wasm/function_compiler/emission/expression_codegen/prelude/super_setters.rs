@@ -22,18 +22,6 @@ impl<'a> FunctionCompiler<'a> {
         capture_slots: Option<&BTreeMap<String, String>>,
         value_local: u32,
     ) -> DirectResult<()> {
-        if capture_slots.is_none()
-            && self.with_suspended_with_scopes(|compiler| {
-                compiler.emit_inline_user_function_summary_with_argument_locals(
-                    user_function,
-                    &[value_local],
-                    1,
-                )
-            })?
-        {
-            self.state.emission.output.instructions.push(0x1a);
-            return Ok(());
-        }
         if let Some(capture_slots) = capture_slots {
             self.emit_user_function_call_with_new_target_and_this_expression_and_bound_captures_from_argument_locals(
                 user_function,

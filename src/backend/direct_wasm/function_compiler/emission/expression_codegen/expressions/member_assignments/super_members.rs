@@ -1,6 +1,47 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn current_super_assignment_requires_strict_rejection(&self) -> bool {
+        self.state.speculation.execution_context.strict_mode
+            || self.current_user_function().is_some_and(|function| {
+                function.strict
+                    || function
+                        .home_object_binding
+                        .as_deref()
+                        .is_some_and(|binding| binding.ends_with(".prototype"))
+            })
+    }
+
+    fn emit_strict_super_assignment_rejection_for_static_base(
+        &mut self,
+        super_base: Option<&Expression>,
+        property: &Expression,
+        value: &Expression,
+    ) -> DirectResult<bool> {
+        if !self.current_super_assignment_requires_strict_rejection() {
+            return Ok(false);
+        }
+        let materialized_property = self.canonical_object_property_expression(property);
+        let base_rejects = super_base
+            .and_then(|base| self.resolve_object_binding_from_expression(base))
+            .is_some_and(|base_binding| {
+                !object_binding_can_define_property(&base_binding, &materialized_property)
+            });
+        let receiver_rejects = self
+            .resolve_object_binding_from_expression(&Expression::This)
+            .is_some_and(|receiver_binding| {
+                !object_binding_can_define_property(&receiver_binding, &materialized_property)
+            });
+        if !base_rejects && !receiver_rejects {
+            return Ok(false);
+        }
+
+        self.emit_numeric_expression(value)?;
+        self.state.emission.output.instructions.push(0x1a);
+        self.emit_named_error_throw("TypeError")?;
+        Ok(true)
+    }
+
     fn emit_super_property_key_expression_effects(
         &mut self,
         property: &Expression,
@@ -11,7 +52,7 @@ impl<'a> FunctionCompiler<'a> {
         Ok(resolved)
     }
 
-    fn emit_super_property_key_coercion_effect(
+    pub(in crate::backend::direct_wasm) fn emit_super_property_key_coercion_effect(
         &mut self,
         binding: &LocalFunctionBinding,
     ) -> DirectResult<()> {
@@ -43,7 +84,10 @@ impl<'a> FunctionCompiler<'a> {
         Ok(())
     }
 
-    fn super_base_is_statically_nullish(&self, super_base: Option<&Expression>) -> bool {
+    pub(in crate::backend::direct_wasm) fn super_base_is_statically_nullish(
+        &self,
+        super_base: Option<&Expression>,
+    ) -> bool {
         super_base.is_some_and(|base| {
             matches!(
                 self.infer_value_kind(base),
@@ -130,6 +174,14 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(());
         }
 
+        if self.emit_strict_super_assignment_rejection_for_static_base(
+            super_base.as_ref(),
+            &effective_property,
+            value,
+        )? {
+            return Ok(());
+        }
+
         if let Some((_, binding)) = runtime_prototype_binding.as_ref()
             && let Some(state_local) = runtime_state_local
         {
@@ -156,8 +208,7 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(());
         }
 
-        if runtime_prototype_binding.is_none()
-            && let Some(super_base) = super_base.as_ref()
+        if let Some(super_base) = super_base.as_ref()
             && let Some((user_function, capture_slots)) =
                 self.resolve_user_super_setter_call(super_base, &effective_property)
         {

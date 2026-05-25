@@ -7,7 +7,7 @@ mod parameters;
 
 pub(crate) use self::analysis::{
     assert_throws_call, console_log_arguments, parse_bigint_literal, pattern_name_hint,
-    static_member_property_name, template_quasi_text,
+    static_member_property_name, template_quasi_text, template_raw_text,
 };
 pub(crate) use self::async_lowering::asyncify_statements;
 pub(crate) use self::bindings::{

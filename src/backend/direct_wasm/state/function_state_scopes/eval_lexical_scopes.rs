@@ -20,8 +20,7 @@ impl FunctionCompilerState {
                 .active_eval_lexical_binding_counts
                 .entry(source_name.clone())
                 .or_insert(0) += 1;
-            let active_binding =
-                (name != source_name && self.runtime.locals.contains_key(&name)).then_some(name);
+            let active_binding = (name != source_name).then_some(name);
             if let Some(active_binding) = active_binding.as_ref() {
                 self.push_scoped_lexical_binding(&source_name, active_binding.clone());
             }

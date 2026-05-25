@@ -57,6 +57,10 @@ impl<'a> FunctionCompiler<'a> {
             self.push_i32_const(JS_NAN_TAG);
             return Ok(true);
         }
+        if property_name == "Infinity" {
+            self.emit_numeric_expression(&Expression::Number(f64::INFINITY))?;
+            return Ok(true);
+        }
         if property_name == "undefined" {
             self.push_i32_const(JS_UNDEFINED_TAG);
             return Ok(true);
@@ -124,6 +128,10 @@ impl<'a> FunctionCompiler<'a> {
                 }
                 if property_name == "NaN" {
                     self.push_i32_const(JS_NAN_TAG);
+                    return Ok(true);
+                }
+                if property_name == "Infinity" {
+                    self.emit_numeric_expression(&Expression::Number(f64::INFINITY))?;
                     return Ok(true);
                 }
                 if property_name == "undefined" {
@@ -269,6 +277,12 @@ impl<'a> FunctionCompiler<'a> {
                 self.emit_static_string_literal(&text)?;
                 return Ok(true);
             }
+            if let Some(value) =
+                self.resolve_primitive_prototype_property_value(object, static_array_property)
+            {
+                self.emit_numeric_expression(&value)?;
+                return Ok(true);
+            }
         }
         if let Expression::Identifier(name) = object {
             let resolved_view_name = self
@@ -354,6 +368,19 @@ impl<'a> FunctionCompiler<'a> {
             self.push_i32_const(bytes_per_element as i32);
             return Ok(true);
         }
+        if let Expression::Member {
+            object: prototype_owner,
+            property: prototype_property,
+        } = self.materialize_static_expression(object)
+            && matches!(prototype_property.as_ref(), Expression::String(name) if name == "prototype")
+            && let Expression::Identifier(object_name) = prototype_owner.as_ref()
+            && self.is_unshadowed_builtin_identifier(object_name)
+            && let Expression::String(property_name) = self.materialize_static_expression(property)
+            && let Some(value) = builtin_prototype_number_value(object_name, &property_name)
+        {
+            self.emit_numeric_expression(&Expression::Number(value))?;
+            return Ok(true);
+        }
         if let Some(function_name) = self.resolve_function_name_value(object, property) {
             self.emit_static_string_literal(&function_name)?;
             return Ok(true);
@@ -362,7 +389,26 @@ impl<'a> FunctionCompiler<'a> {
             self.push_i32_const(function_length as i32);
             return Ok(true);
         }
+        if matches!(property, Expression::String(property_name) if property_name == "prototype")
+            && matches!(
+                object,
+                Expression::Identifier(name)
+                    if matches!(name.as_str(), "GeneratorFunction" | "AsyncGeneratorFunction")
+                        && self.is_unshadowed_builtin_identifier(name)
+            )
+        {
+            self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
+            return Ok(true);
+        }
         if matches!(property, Expression::String(property_name) if property_name == "prototype") {
+            if let Expression::Identifier(object_name) = self.materialize_static_expression(object)
+                && self.is_unshadowed_builtin_identifier(&object_name)
+                && let Some(kind) = builtin_constructor_prototype_kind(&object_name)
+                && let Some(tag) = kind.as_typeof_tag()
+            {
+                self.push_i32_const(tag);
+                return Ok(true);
+            }
             let resolved_object = self
                 .resolve_bound_alias_expression(object)
                 .filter(|resolved| !static_expression_matches(resolved, object));

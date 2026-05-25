@@ -17,6 +17,18 @@ impl<'a> FunctionCompiler<'a> {
     ) -> Option<String> {
         self.current_user_function()
             .and_then(|user_function| user_function.private_brand_binding.clone())
+            .or_else(|| {
+                let mut local_brand_names = self
+                    .state
+                    .speculation
+                    .static_semantics
+                    .values
+                    .local_value_bindings_snapshot()
+                    .into_keys()
+                    .filter(|name| name.starts_with("__ayy_class_brand_"));
+                let brand_name = local_brand_names.next()?;
+                local_brand_names.next().is_none().then_some(brand_name)
+            })
     }
 
     pub(in crate::backend::direct_wasm) fn synthetic_private_brand_runtime_value(
@@ -30,10 +42,41 @@ impl<'a> FunctionCompiler<'a> {
         (0x5000_0000_u32 | (hash & 0x0fff_ffff)) as i32
     }
 
+    fn synthetic_private_brand_runtime_value_for_binding_name(binding_name: &str) -> Option<i32> {
+        let private_brand_offset = binding_name.find("__ayy_class_brand_")?;
+        Some(Self::synthetic_private_brand_runtime_value(
+            &binding_name[private_brand_offset..],
+        ))
+    }
+
     pub(in crate::backend::direct_wasm) fn emit_private_brand_direct_or_synthetic_runtime_value_for_binding_name(
         &mut self,
         binding_name: &str,
     ) -> DirectResult<()> {
+        if self.resolve_current_local_binding(binding_name).is_none()
+            && self.resolve_global_binding_index(binding_name).is_none()
+            && let Some(binding) = self.hidden_implicit_global_binding(binding_name)
+            && let Some(synthetic_value) =
+                Self::synthetic_private_brand_runtime_value_for_binding_name(binding_name)
+        {
+            if std::env::var_os("AYY_TRACE_PRIVATE_BRAND_COMPILE").is_some() {
+                eprintln!(
+                    "private_brand_direct_value current_fn={:?} binding={binding_name} source=hidden_or_synthetic",
+                    self.current_function_name(),
+                );
+            }
+            self.push_global_get(binding.present_index);
+            self.state.emission.output.instructions.push(0x04);
+            self.state.emission.output.instructions.push(I32_TYPE);
+            self.push_control_frame();
+            self.push_global_get(binding.value_index);
+            self.state.emission.output.instructions.push(0x05);
+            self.push_i32_const(synthetic_value);
+            self.state.emission.output.instructions.push(0x0b);
+            self.pop_control_frame();
+            return Ok(());
+        }
+
         if self.resolve_current_local_binding(binding_name).is_some()
             || self.resolve_global_binding_index(binding_name).is_some()
             || self.hidden_implicit_global_binding(binding_name).is_some()
@@ -48,17 +91,17 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(());
         }
 
-        if let Some(private_brand_offset) = binding_name.find("__ayy_class_brand_") {
+        if let Some(synthetic_value) =
+            Self::synthetic_private_brand_runtime_value_for_binding_name(binding_name)
+        {
             if std::env::var_os("AYY_TRACE_PRIVATE_BRAND_COMPILE").is_some() {
                 eprintln!(
                     "private_brand_direct_value current_fn={:?} binding={binding_name} source=synthetic suffix={}",
                     self.current_function_name(),
-                    &binding_name[private_brand_offset..],
+                    &binding_name[binding_name.find("__ayy_class_brand_").unwrap_or(0)..],
                 );
             }
-            self.push_i32_const(Self::synthetic_private_brand_runtime_value(
-                &binding_name[private_brand_offset..],
-            ));
+            self.push_i32_const(synthetic_value);
             return Ok(());
         }
 
@@ -83,7 +126,6 @@ impl<'a> FunctionCompiler<'a> {
         if self.resolve_current_local_binding(binding_name).is_some()
             || self.resolve_global_binding_index(binding_name).is_some()
             || self.hidden_implicit_global_binding(binding_name).is_some()
-            || self.lookup_identifier_kind(binding_name).is_some()
         {
             if std::env::var_os("AYY_TRACE_PRIVATE_BRAND_COMPILE").is_some() {
                 eprintln!(
@@ -109,10 +151,25 @@ impl<'a> FunctionCompiler<'a> {
             self.push_control_frame();
             self.push_global_get(binding.value_index);
             self.state.emission.output.instructions.push(0x05);
-            self.emit_numeric_expression(&Expression::Identifier(binding_name.to_string()))?;
+            if let Some(synthetic_value) =
+                Self::synthetic_private_brand_runtime_value_for_binding_name(binding_name)
+            {
+                self.push_i32_const(synthetic_value);
+            } else {
+                self.emit_numeric_expression(&Expression::Identifier(binding_name.to_string()))?;
+            }
             self.state.emission.output.instructions.push(0x0b);
             self.pop_control_frame();
             return Ok(true);
+        }
+        if self.lookup_identifier_kind(binding_name).is_some() {
+            if std::env::var_os("AYY_TRACE_PRIVATE_BRAND_COMPILE").is_some() {
+                eprintln!(
+                    "private_brand_value_source current_fn={:?} binding={binding_name} source=kind",
+                    self.current_function_name(),
+                );
+            }
+            return Ok(false);
         }
         Ok(false)
     }
@@ -208,7 +265,13 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(false);
         }
 
-        self.emit_private_brand_direct_or_synthetic_runtime_value_for_binding_name(slot_name)?;
+        if private_brand_binding.starts_with("__ayy_class_brand_") {
+            self.emit_private_brand_direct_or_synthetic_runtime_value_for_binding_name(
+                private_brand_binding,
+            )?;
+        } else {
+            self.emit_private_brand_direct_or_synthetic_runtime_value_for_binding_name(slot_name)?;
+        }
         Ok(true)
     }
 
@@ -245,6 +308,28 @@ impl<'a> FunctionCompiler<'a> {
         Ok(true)
     }
 
+    fn emit_function_binding_synthetic_private_brand_runtime_value(
+        &mut self,
+        binding: &LocalFunctionBinding,
+    ) -> DirectResult<bool> {
+        let LocalFunctionBinding::User(function_name) = binding else {
+            return Ok(false);
+        };
+        let Some(private_brand_binding) = self
+            .user_function(function_name)
+            .and_then(|function| function.private_brand_binding.clone())
+        else {
+            return Ok(false);
+        };
+        let Some(synthetic_value) =
+            Self::synthetic_private_brand_runtime_value_for_binding_name(&private_brand_binding)
+        else {
+            return Ok(false);
+        };
+        self.push_i32_const(synthetic_value);
+        Ok(true)
+    }
+
     pub(in crate::backend::direct_wasm) fn emit_private_member_binding_match_from_local(
         &mut self,
         binding: &LocalFunctionBinding,
@@ -253,6 +338,10 @@ impl<'a> FunctionCompiler<'a> {
         let matches_local = self.allocate_temp_local();
         self.push_i32_const(0);
         self.push_local_set(matches_local);
+        let trace_private_values = std::env::var_os("AYY_TRACE_PRIVATE_MEMBER_VALUES").is_some();
+        if trace_private_values {
+            self.emit_runtime_shadow_debug_print_local("private_member_match_marker", value_local)?;
+        }
 
         if let Some(expected_value) = self.local_function_binding_runtime_value(binding) {
             self.push_local_get(value_local);
@@ -270,6 +359,15 @@ impl<'a> FunctionCompiler<'a> {
         }
 
         if self.emit_current_private_brand_value()? {
+            if trace_private_values {
+                let expected_local = self.allocate_temp_local();
+                self.push_local_set(expected_local);
+                self.emit_runtime_shadow_debug_print_local(
+                    "private_member_match_current_brand",
+                    expected_local,
+                )?;
+                self.push_local_get(expected_local);
+            }
             self.push_local_get(value_local);
             self.push_binary_op(BinaryOp::Equal)?;
             self.state.emission.output.instructions.push(0x04);
@@ -284,6 +382,38 @@ impl<'a> FunctionCompiler<'a> {
         }
 
         if self.emit_function_binding_private_brand_runtime_value(binding)? {
+            if trace_private_values {
+                let expected_local = self.allocate_temp_local();
+                self.push_local_set(expected_local);
+                self.emit_runtime_shadow_debug_print_local(
+                    "private_member_match_function_brand",
+                    expected_local,
+                )?;
+                self.push_local_get(expected_local);
+            }
+            self.push_local_get(value_local);
+            self.push_binary_op(BinaryOp::Equal)?;
+            self.state.emission.output.instructions.push(0x04);
+            self.state.emission.output.instructions.push(I32_TYPE);
+            self.push_control_frame();
+            self.push_i32_const(1);
+            self.state.emission.output.instructions.push(0x05);
+            self.push_local_get(matches_local);
+            self.state.emission.output.instructions.push(0x0b);
+            self.pop_control_frame();
+            self.push_local_set(matches_local);
+        }
+
+        if self.emit_function_binding_synthetic_private_brand_runtime_value(binding)? {
+            if trace_private_values {
+                let expected_local = self.allocate_temp_local();
+                self.push_local_set(expected_local);
+                self.emit_runtime_shadow_debug_print_local(
+                    "private_member_match_synthetic_function_brand",
+                    expected_local,
+                )?;
+                self.push_local_get(expected_local);
+            }
             self.push_local_get(value_local);
             self.push_binary_op(BinaryOp::Equal)?;
             self.state.emission.output.instructions.push(0x04);
@@ -344,8 +474,79 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         marker_local: u32,
         field_presence_fallback: Option<ImplicitGlobalBinding>,
+        property: Option<&Expression>,
     ) -> DirectResult<()> {
         let expected_local = self.allocate_temp_local();
+        if matches!(
+            property,
+            Some(Expression::String(property_name))
+                if property_name.starts_with("__ayy$private$")
+                    && (property_name.contains("__ayy_class_expr_")
+                        || property_name.contains("__ayy_class_ctor_"))
+        ) {
+            let accepted_local = self.allocate_temp_local();
+            self.push_i32_const(0);
+            self.push_local_set(accepted_local);
+
+            if self.emit_current_private_brand_value()? {
+                let expected_local = self.allocate_temp_local();
+                self.push_local_set(expected_local);
+                if std::env::var_os("AYY_TRACE_PRIVATE_MEMBER_VALUES").is_some() {
+                    self.emit_runtime_shadow_debug_print_local(
+                        "private_brand_check_marker",
+                        marker_local,
+                    )?;
+                    self.emit_runtime_shadow_debug_print_local(
+                        "private_brand_check_expected",
+                        expected_local,
+                    )?;
+                }
+                self.push_local_get(marker_local);
+                self.push_local_get(expected_local);
+                self.push_binary_op(BinaryOp::Equal)?;
+                self.state.emission.output.instructions.push(0x04);
+                self.state
+                    .emission
+                    .output
+                    .instructions
+                    .push(EMPTY_BLOCK_TYPE);
+                self.push_control_frame();
+                self.push_i32_const(1);
+                self.push_local_set(accepted_local);
+                self.state.emission.output.instructions.push(0x0b);
+                self.pop_control_frame();
+            } else {
+                self.push_local_get(marker_local);
+                self.push_i32_const(1);
+                self.push_binary_op(BinaryOp::Equal)?;
+                self.state.emission.output.instructions.push(0x04);
+                self.state
+                    .emission
+                    .output
+                    .instructions
+                    .push(EMPTY_BLOCK_TYPE);
+                self.push_control_frame();
+                self.push_i32_const(1);
+                self.push_local_set(accepted_local);
+                self.state.emission.output.instructions.push(0x0b);
+                self.pop_control_frame();
+            }
+
+            self.push_local_get(accepted_local);
+            self.push_i32_const(0);
+            self.push_binary_op(BinaryOp::Equal)?;
+            self.state.emission.output.instructions.push(0x04);
+            self.state
+                .emission
+                .output
+                .instructions
+                .push(EMPTY_BLOCK_TYPE);
+            self.push_control_frame();
+            self.emit_named_error_throw("TypeError")?;
+            self.state.emission.output.instructions.push(0x0b);
+            self.pop_control_frame();
+            return Ok(());
+        }
         if !self.emit_current_private_brand_value()? {
             if std::env::var_os("AYY_TRACE_PRIVATE_MEMBER_VALUES").is_some() {
                 self.emit_runtime_shadow_debug_print_local(
@@ -403,14 +604,99 @@ impl<'a> FunctionCompiler<'a> {
         Ok(())
     }
 
+    fn static_private_property_class_token(property: &Expression) -> Option<String> {
+        let Expression::String(property_name) = property else {
+            return None;
+        };
+        let start = property_name
+            .find("__ayy_class_expr_")
+            .or_else(|| property_name.find("__ayy_class_ctor_"))?;
+        let rest = &property_name[start..];
+        let end = rest.find('$').unwrap_or(rest.len());
+        Some(rest[..end].to_string())
+    }
+
+    fn push_static_private_owner_candidate(
+        candidates: &mut Vec<String>,
+        expression: Option<Expression>,
+    ) {
+        if let Some(Expression::Identifier(name)) = expression {
+            candidates.push(name);
+        }
+    }
+
+    fn static_private_property_matches_object_class_owner(
+        &self,
+        object: &Expression,
+        property: &Expression,
+    ) -> bool {
+        let Some(class_token) = Self::static_private_property_class_token(property) else {
+            return false;
+        };
+        let mut candidates = Vec::new();
+        match object {
+            Expression::Identifier(name) => {
+                candidates.push(name.clone());
+                Self::push_static_private_owner_candidate(
+                    &mut candidates,
+                    self.global_value_binding(name).cloned(),
+                );
+                Self::push_static_private_owner_candidate(
+                    &mut candidates,
+                    self.state
+                        .speculation
+                        .static_semantics
+                        .local_value_binding(name)
+                        .cloned(),
+                );
+                Self::push_static_private_owner_candidate(
+                    &mut candidates,
+                    self.resolve_bound_alias_expression(object),
+                );
+            }
+            Expression::This => {
+                if let Some(function) = self.current_user_function() {
+                    if let Some(home_object) = function.home_object_binding.as_ref() {
+                        candidates.push(home_object.clone());
+                    }
+                    if let Some(home_object) =
+                        self.find_global_home_object_binding_name(&function.name)
+                    {
+                        candidates.push(home_object);
+                    }
+                }
+                if let Some(function_name) = self.current_function_name()
+                    && let Some(home_object) =
+                        self.find_global_home_object_binding_name(function_name)
+                {
+                    candidates.push(home_object);
+                }
+            }
+            _ => {
+                Self::push_static_private_owner_candidate(
+                    &mut candidates,
+                    self.resolve_bound_alias_expression(object),
+                );
+            }
+        }
+        Self::push_static_private_owner_candidate(
+            &mut candidates,
+            Some(self.materialize_static_expression(object)),
+        );
+        candidates
+            .into_iter()
+            .any(|candidate| candidate.contains(&class_token))
+    }
+
     fn emit_private_data_field_brand_check_from_marker_expression(
         &mut self,
         marker_value: &Expression,
+        property: Option<&Expression>,
     ) -> DirectResult<()> {
         let marker_local = self.allocate_temp_local();
         self.emit_numeric_expression(marker_value)?;
         self.push_local_set(marker_local);
-        self.emit_private_data_field_brand_check_against_local(marker_local, None)
+        self.emit_private_data_field_brand_check_against_local(marker_local, None, property)
     }
 
     pub(in crate::backend::direct_wasm) fn emit_private_member_assignment_target_base_or_throw(
@@ -478,12 +764,18 @@ impl<'a> FunctionCompiler<'a> {
                         compiler.state.emission.output.instructions.len(),
                     );
                 }
-                compiler.emit_private_data_field_brand_check_from_marker_expression(static_marker)
+                compiler.emit_private_data_field_brand_check_from_marker_expression(
+                    static_marker,
+                    Some(property),
+                )
             } else {
                 if std::env::var_os("AYY_TRACE_PRIVATE_MEMBER_VALUES").is_some() {
-                    compiler.emit_print(&[Expression::String(
-                        "private_brand_check_missing_marker".to_string(),
-                    )])?;
+                    compiler.emit_print(&[Expression::String(format!(
+                        "private_brand_check_missing_marker {property:?}"
+                    ))])?;
+                }
+                if compiler.static_private_property_matches_object_class_owner(object, property) {
+                    return Ok(());
                 }
                 compiler.emit_named_error_throw("TypeError")
             }
@@ -540,6 +832,7 @@ impl<'a> FunctionCompiler<'a> {
         self.emit_private_data_field_brand_check_against_local(
             marker_local,
             private_field_runtime_binding,
+            Some(property),
         )?;
         self.state.emission.output.instructions.push(0x05);
         emit_field_presence_or_static_or_throw(self)?;
@@ -581,6 +874,23 @@ impl<'a> FunctionCompiler<'a> {
             self.state.emission.output.instructions.push(I32_TYPE);
             self.push_control_frame();
             match binding {
+                LocalFunctionBinding::User(ref function_name) => {
+                    self.emit_member_getter_call_with_bound_this(
+                        &function_name,
+                        object,
+                        capture_slots.as_ref(),
+                    )?;
+                }
+                LocalFunctionBinding::Builtin(ref function_name) => {
+                    let callee = Expression::Identifier(function_name.clone());
+                    if !self.emit_arguments_slot_accessor_call(&callee, &[], 0, Some(&[]))? {
+                        self.push_i32_const(JS_UNDEFINED_TAG);
+                    }
+                }
+            }
+            self.state.emission.output.instructions.push(0x05);
+            self.emit_private_data_field_brand_check_after_base_or_throw(object, property)?;
+            match binding {
                 LocalFunctionBinding::User(function_name) => {
                     self.emit_member_getter_call_with_bound_this(
                         &function_name,
@@ -595,8 +905,6 @@ impl<'a> FunctionCompiler<'a> {
                     }
                 }
             }
-            self.state.emission.output.instructions.push(0x05);
-            self.emit_named_error_throw("TypeError")?;
             self.state.emission.output.instructions.push(0x0b);
             self.pop_control_frame();
             return Ok(());
@@ -613,7 +921,12 @@ impl<'a> FunctionCompiler<'a> {
                 self.push_local_get(value_local);
             }
             self.state.emission.output.instructions.push(0x05);
-            self.emit_named_error_throw("TypeError")?;
+            self.emit_private_data_field_brand_check_after_base_or_throw(object, property)?;
+            if let Some(runtime_value) = self.local_function_binding_runtime_value(&binding) {
+                self.push_i32_const(runtime_value);
+            } else {
+                self.push_local_get(value_local);
+            }
             self.state.emission.output.instructions.push(0x0b);
             self.pop_control_frame();
             return Ok(());
@@ -688,12 +1001,99 @@ impl<'a> FunctionCompiler<'a> {
         self.emit_named_error_throw("TypeError")
     }
 
+    pub(in crate::backend::direct_wasm) fn emit_private_member_missing_shadow_read_fallback(
+        &mut self,
+        object: &Expression,
+        property: &Expression,
+    ) -> DirectResult<bool> {
+        if !self.expression_is_current_this_reference(object) {
+            return Ok(false);
+        }
+        if let Some((binding, capture_slots)) =
+            self.resolve_current_private_getter_binding(property)
+        {
+            self.emit_private_data_field_brand_check_after_base_or_throw(object, property)?;
+            match binding {
+                LocalFunctionBinding::User(function_name) => {
+                    self.emit_member_getter_call_with_bound_this(
+                        &function_name,
+                        object,
+                        capture_slots.as_ref(),
+                    )?;
+                }
+                LocalFunctionBinding::Builtin(function_name) => {
+                    let callee = Expression::Identifier(function_name);
+                    if !self.emit_arguments_slot_accessor_call(&callee, &[], 0, Some(&[]))? {
+                        self.push_i32_const(JS_UNDEFINED_TAG);
+                    }
+                }
+            }
+            return Ok(true);
+        }
+
+        if let Some(binding) = self.resolve_current_private_method_binding(property) {
+            self.emit_private_data_field_brand_check_after_base_or_throw(object, property)?;
+            if let Some(runtime_value) = self.local_function_binding_runtime_value(&binding) {
+                self.push_i32_const(runtime_value);
+                return Ok(true);
+            }
+        }
+
+        Ok(false)
+    }
+
     pub(super) fn emit_runtime_or_object_member_read_without_prelude(
         &mut self,
         object: &Expression,
         property: &Expression,
         static_array_property: &Expression,
     ) -> DirectResult<bool> {
+        let object_uses_internal_assignment_temp =
+            Self::expression_references_internal_assignment_temp(object);
+        let property_is_arguments_own_property =
+            argument_index_from_expression(static_array_property).is_some()
+                || matches!(
+                    static_array_property,
+                    Expression::String(text) if text == "length" || text == "callee"
+                );
+        if property_is_arguments_own_property
+            && (self.is_direct_arguments_object(object)
+                || self
+                    .resolve_arguments_binding_from_expression(object)
+                    .is_some())
+            && self.emit_runtime_arguments_member_read(object, static_array_property)?
+        {
+            if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+                eprintln!(
+                    "runtime_shadow_member_branch arguments_own object={object:?} property={property:?}"
+                );
+            }
+            return Ok(true);
+        }
+        if object_uses_internal_assignment_temp
+            && self.emit_runtime_array_member_read(object, static_array_property)?
+        {
+            if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some()
+                || std::env::var_os("AYY_TRACE_MEMBER_READS").is_some()
+            {
+                eprintln!(
+                    "runtime_shadow_member_branch internal_temp_array object={object:?} property={property:?}"
+                );
+            }
+            return Ok(true);
+        }
+        if object_uses_internal_assignment_temp
+            && self.emit_runtime_object_binding_member_read(object, property)?
+        {
+            if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some()
+                || std::env::var_os("AYY_TRACE_MEMBER_READS").is_some()
+            {
+                eprintln!(
+                    "runtime_shadow_member_branch internal_temp_object object={object:?} property={property:?}"
+                );
+            }
+            return Ok(true);
+        }
         if self.emit_runtime_descriptor_member_read(object, property)? {
             if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
                 eprintln!(
@@ -706,6 +1106,16 @@ impl<'a> FunctionCompiler<'a> {
             if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
                 eprintln!(
                     "runtime_shadow_member_branch array object={object:?} property={property:?}"
+                );
+            }
+            return Ok(true);
+        }
+        if self.emit_runtime_object_dynamic_shadow_member_read_without_static_fallback(
+            object, property,
+        )? {
+            if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+                eprintln!(
+                    "runtime_shadow_member_branch dynamic_shadow object={object:?} property={property:?}"
                 );
             }
             return Ok(true);

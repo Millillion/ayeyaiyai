@@ -348,7 +348,7 @@ impl ModuleLinker {
             return Ok(existing.clone());
         }
 
-        let param_name = self.lowerer.fresh_temporary_name("module_dep");
+        let param_name = format!("__ayy_module_dep_{dependency_index}");
         dependency_param_by_index.insert(dependency_index, param_name.clone());
         dependency_params.push(ModuleDependencyParam {
             module_index: dependency_index,

@@ -24,7 +24,6 @@ impl<'a> FunctionCompiler<'a> {
         else {
             return Ok(false);
         };
-
         let mut runtime_bindings = Vec::new();
         let mut push_runtime_binding = |compiler: &Self, name: &str| {
             if runtime_bindings
@@ -51,6 +50,39 @@ impl<'a> FunctionCompiler<'a> {
             push_runtime_binding(self, &name);
         }
         let materialized_prototype = self.materialize_static_expression(prototype_expression);
+        let mut synced_static_prototype_target = false;
+        if let Expression::Member {
+            object: target_object,
+            property: target_property,
+        } = target_expression
+            && matches!(target_property.as_ref(), Expression::String(name) if name == "prototype")
+            && let Some((realm_id, constructor_name)) =
+                self.test262_realm_constructor_member(target_object)
+        {
+            let realm_prototype_key = format!(
+                "{}.{}.prototype",
+                test262_realm_global_identifier(realm_id),
+                constructor_name
+            );
+            self.backend.sync_global_object_prototype_expression(
+                &realm_prototype_key,
+                Some(materialized_prototype.clone()),
+            );
+            synced_static_prototype_target = true;
+        } else if let Expression::Member {
+            object: target_object,
+            property: target_property,
+        } = target_expression
+            && matches!(target_property.as_ref(), Expression::String(name) if name == "prototype")
+            && let Expression::Identifier(constructor_name) = target_object.as_ref()
+        {
+            let prototype_key = format!("{constructor_name}.prototype");
+            self.backend.sync_global_object_prototype_expression(
+                &prototype_key,
+                Some(materialized_prototype.clone()),
+            );
+            synced_static_prototype_target = true;
+        }
         fn push_prototype_candidate(
             prototype_candidates: &mut Vec<Expression>,
             candidate: Expression,
@@ -103,11 +135,30 @@ impl<'a> FunctionCompiler<'a> {
             }
         }
 
-        self.emit_numeric_expression(target_expression)?;
-        self.state.emission.output.instructions.push(0x1a);
+        if !synced_static_prototype_target {
+            self.emit_numeric_expression(target_expression)?;
+            self.state.emission.output.instructions.push(0x1a);
+        }
         self.emit_numeric_expression(prototype_expression)?;
         self.state.emission.output.instructions.push(0x1a);
         self.discard_call_arguments(rest)?;
+
+        let target_binding = self
+            .resolve_object_binding_from_expression(target_expression)
+            .or_else(|| match target_expression {
+                Expression::Identifier(name) => {
+                    self.resolve_identifier_object_binding_fallback(name)
+                }
+                _ => None,
+            });
+        if target_binding
+            .as_ref()
+            .is_some_and(Self::object_binding_has_module_namespace_marker)
+            && !matches!(materialized_prototype, Expression::Null)
+        {
+            self.emit_named_error_throw("TypeError")?;
+            return Ok(true);
+        }
 
         for (_, binding) in runtime_bindings {
             if let Some(global_index) = binding.global_index

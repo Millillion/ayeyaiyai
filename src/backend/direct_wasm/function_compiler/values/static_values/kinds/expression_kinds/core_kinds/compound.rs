@@ -21,7 +21,10 @@ impl<'a> FunctionCompiler<'a> {
             Expression::Member { object, property } => {
                 self.infer_member_expression_kind(object, property)
             }
-            Expression::SuperMember { .. } => Some(StaticValueKind::Unknown),
+            Expression::SuperMember { property } => self
+                .resolve_super_value_expression_with_context(property, self.current_function_name())
+                .and_then(|value| self.infer_value_kind(&value))
+                .or(Some(StaticValueKind::Unknown)),
             Expression::Update { .. } => Some(StaticValueKind::Number),
             Expression::Array(_) | Expression::Object(_) => Some(StaticValueKind::Object),
             Expression::This => Some(StaticValueKind::Object),

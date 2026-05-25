@@ -1063,6 +1063,14 @@ impl<'a> FunctionCompiler<'a> {
             if matches!(callee, Expression::Identifier(identifier) if identifier == "eval") {
                 return self.emit_eval_call(arguments);
             }
+            if let Expression::Member { object, property } = callee
+                && matches!(property.as_ref(), Expression::String(property_name) if property_name == "eval")
+                && let Some(realm_id) = self.resolve_test262_realm_global_id_from_expression(object)
+            {
+                let realm_eval_name = test262_realm_eval_builtin_name(realm_id);
+                return self
+                    .emit_indirect_eval_call_with_context(arguments, Some(&realm_eval_name));
+            }
             return self.emit_indirect_eval_call(arguments);
         }
 

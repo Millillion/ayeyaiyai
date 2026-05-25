@@ -113,10 +113,9 @@ impl<'a> FunctionCompiler<'a> {
         match call_outcome {
             StaticEvalOutcome::Throw(throw_value) => self.simple_generator_throw_step(throw_value),
             StaticEvalOutcome::Value(iterator_value) => {
-                if !self.static_iterator_method_result_is_object(
-                    &iterator_value,
-                    current_function_name,
-                ) {
+                if !self
+                    .static_iterator_method_result_is_object(&iterator_value, current_function_name)
+                {
                     return self
                         .simple_generator_throw_step(StaticThrowValue::NamedError("TypeError"));
                 }

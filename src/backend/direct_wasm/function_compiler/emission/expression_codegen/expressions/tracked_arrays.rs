@@ -170,6 +170,7 @@ impl<'a> FunctionCompiler<'a> {
                 "tracked_array_push:start name={name} binding={binding_name} args={arguments:?}"
             );
         }
+        let has_runtime_array_state = self.runtime_array_binding_has_state(&binding_name);
         if !self
             .state
             .speculation
@@ -181,6 +182,7 @@ impl<'a> FunctionCompiler<'a> {
                 .values
                 .array_bindings
                 .contains_key(&binding_name)
+            && !has_runtime_array_state
         {
             if trace {
                 eprintln!("tracked_array_push:skip untracked binding={binding_name}");
@@ -196,6 +198,16 @@ impl<'a> FunctionCompiler<'a> {
         let use_global_runtime_array = self.is_named_global_array_binding(&binding_name)
             && (!self.state.speculation.execution_context.top_level_function
                 || self.uses_global_runtime_array_state(&binding_name));
+        if trace {
+            let length_local = self
+                .state
+                .speculation
+                .static_semantics
+                .runtime_array_length_local(&binding_name);
+            eprintln!(
+                "tracked_array_push:runtime name={name} binding={binding_name} use_global={use_global_runtime_array} length_local={length_local:?}"
+            );
+        }
         self.emit_numeric_expression(object)?;
         self.state.emission.output.instructions.push(0x1a);
         let argument_locals = expanded_arguments
@@ -288,9 +300,16 @@ impl<'a> FunctionCompiler<'a> {
                     && self
                         .emit_global_runtime_array_push_from_local(&binding_name, *argument_local)?
                 {
+                    let index = old_length + offset as u32;
                     self.update_tracked_array_specialized_function_value(
                         &binding_name,
-                        old_length + offset as u32,
+                        index,
+                        &expanded_arguments[offset],
+                    )?;
+                    let index_property = Expression::Number(index as f64);
+                    self.initialize_member_function_assignment_capture_slots(
+                        &Expression::Identifier(binding_name.clone()),
+                        &index_property,
                         &expanded_arguments[offset],
                     )?;
                     used_runtime_push = true;
@@ -306,9 +325,16 @@ impl<'a> FunctionCompiler<'a> {
                         &expanded_arguments[offset],
                     )?
                 {
+                    let index = old_length + offset as u32;
                     self.update_tracked_array_specialized_function_value(
                         &binding_name,
-                        old_length + offset as u32,
+                        index,
+                        &expanded_arguments[offset],
+                    )?;
+                    let index_property = Expression::Number(index as f64);
+                    self.initialize_member_function_assignment_capture_slots(
+                        &Expression::Identifier(binding_name.clone()),
+                        &index_property,
                         &expanded_arguments[offset],
                     )?;
                     used_runtime_push = true;
@@ -317,29 +343,75 @@ impl<'a> FunctionCompiler<'a> {
                     }
                     continue;
                 }
+                let index = old_length + offset as u32;
                 self.update_tracked_array_specialized_function_value(
                     &binding_name,
-                    old_length + offset as u32,
+                    index,
+                    &expanded_arguments[offset],
+                )?;
+                let index_property = Expression::Number(index as f64);
+                self.initialize_member_function_assignment_capture_slots(
+                    &Expression::Identifier(binding_name.clone()),
+                    &index_property,
                     &expanded_arguments[offset],
                 )?;
                 if use_global_runtime_array {
                     if self.emit_global_runtime_array_slot_write_from_local(
                         &binding_name,
-                        old_length + offset as u32,
+                        index,
                         *argument_local,
                     )? {
                         self.state.emission.output.instructions.push(0x1a);
                     }
                 } else if self.emit_runtime_array_slot_write_from_local(
                     &binding_name,
-                    old_length + offset as u32,
+                    index,
                     *argument_local,
                 )? {
                     self.state.emission.output.instructions.push(0x1a);
                 }
             }
+        } else if has_runtime_array_state {
+            if !use_global_runtime_array
+                && !self
+                    .state
+                    .speculation
+                    .static_semantics
+                    .has_runtime_array_slots(&binding_name)
+            {
+                for index in 0..TRACKED_ARRAY_SLOT_LIMIT {
+                    self.ensure_runtime_array_slot_entry(&binding_name, index);
+                }
+            }
+            for (offset, argument_local) in argument_locals.iter().enumerate() {
+                let emitted_runtime_push = if use_global_runtime_array {
+                    self.emit_global_runtime_array_push_from_local(&binding_name, *argument_local)?
+                } else {
+                    self.emit_runtime_array_push_from_local(
+                        &binding_name,
+                        *argument_local,
+                        &expanded_arguments[offset],
+                    )?
+                };
+                if emitted_runtime_push {
+                    used_runtime_push = true;
+                    if offset + 1 < argument_locals.len() {
+                        self.state.emission.output.instructions.push(0x1a);
+                    }
+                    continue;
+                }
+                if trace {
+                    eprintln!(
+                        "tracked_array_push:runtime_state_without_push binding={binding_name}"
+                    );
+                }
+                return Ok(false);
+            }
         }
         if used_runtime_push {
+            if trace {
+                eprintln!("tracked_array_push:used_runtime_push binding={binding_name}");
+            }
             return Ok(true);
         }
         let new_length = new_length.expect("tracked push length should exist");
@@ -355,6 +427,11 @@ impl<'a> FunctionCompiler<'a> {
         }
         if use_global_runtime_array {
             self.emit_global_runtime_array_length_write(&binding_name, new_length);
+        }
+        if trace {
+            eprintln!(
+                "tracked_array_push:static_length binding={binding_name} new_length={new_length}"
+            );
         }
         self.push_i32_const(new_length);
         Ok(true)

@@ -1,6 +1,98 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn expression_is_global_object_has_own_receiver(&self, expression: &Expression) -> bool {
+        if self.state.speculation.execution_context.top_level_function
+            && matches!(expression, Expression::This)
+        {
+            return true;
+        }
+        if matches!(expression, Expression::Identifier(name) if name == "globalThis" && self.is_unshadowed_builtin_identifier(name))
+        {
+            return true;
+        }
+        if self.expression_aliases_captured_top_level_this(expression) {
+            return true;
+        }
+        if let Some(resolved) = self
+            .resolve_bound_alias_expression(expression)
+            .filter(|resolved| !static_expression_matches(resolved, expression))
+            && (matches!(resolved, Expression::This)
+                || matches!(resolved, Expression::Identifier(ref name) if name == "globalThis" && self.is_unshadowed_builtin_identifier(name))
+                || self.expression_aliases_captured_top_level_this(&resolved))
+        {
+            return true;
+        }
+        let materialized = self.materialize_static_expression(expression);
+        !static_expression_matches(&materialized, expression)
+            && (matches!(materialized, Expression::This)
+                || matches!(materialized, Expression::Identifier(ref name) if name == "globalThis" && self.is_unshadowed_builtin_identifier(name))
+                || self.expression_aliases_captured_top_level_this(&materialized))
+    }
+
+    pub(in crate::backend::direct_wasm) fn resolve_top_level_global_object_has_own_property_result(
+        &self,
+        object: &Expression,
+        property: &Expression,
+    ) -> Option<bool> {
+        if !self.expression_is_global_object_has_own_receiver(object) {
+            return None;
+        }
+        let property = self
+            .resolve_property_key_expression(property)
+            .unwrap_or_else(|| self.materialize_static_expression(property));
+        let property_name = static_property_name_from_expression(&property)?;
+        Some(
+            self.resolve_top_level_global_property_descriptor_binding(&property_name)
+                .is_some(),
+        )
+    }
+
+    fn has_own_receiver_is_import_meta_object(expression: &Expression) -> bool {
+        matches!(
+            expression,
+            Expression::Call { callee, arguments }
+                if matches!(
+                    arguments.as_slice(),
+                    []
+                        | [CallArgument::Expression(Expression::Number(_))]
+                        | [CallArgument::Spread(Expression::Number(_))]
+                )
+                    && matches!(callee.as_ref(), Expression::Identifier(name) if name == "__ayyImportMeta")
+        )
+    }
+
+    fn has_own_receiver_is_dynamic_import_promise(expression: &Expression) -> bool {
+        matches!(
+            expression,
+            Expression::Call { callee, .. }
+                if matches!(callee.as_ref(), Expression::Identifier(name) if name == "__ayyDynamicImport")
+        )
+    }
+
+    fn import_meta_known_property_presence(property: &Expression) -> Option<bool> {
+        if matches!(property, Expression::String(name) if name == "toString") {
+            return Some(true);
+        }
+        if matches!(property, Expression::String(name) if name == "valueOf")
+            || static_expression_matches(property, &symbol_to_primitive_expression())
+        {
+            return Some(false);
+        }
+        None
+    }
+
+    fn dynamic_import_promise_known_own_property_presence(property: &Expression) -> Option<bool> {
+        match property {
+            Expression::String(property_name)
+                if matches!(property_name.as_str(), "then" | "catch" | "finally") =>
+            {
+                Some(false)
+            }
+            _ => None,
+        }
+    }
+
     fn resolve_static_reflect_has_result_with_depth(
         &self,
         object: &Expression,
@@ -82,6 +174,39 @@ impl<'a> FunctionCompiler<'a> {
                 .then_some(&materialized_property),
         ];
 
+        if object_candidates
+            .iter()
+            .flatten()
+            .any(|candidate| Self::has_own_receiver_is_dynamic_import_promise(candidate))
+            && let Some(has_own_property) =
+                property_candidates.iter().flatten().find_map(|candidate| {
+                    Self::dynamic_import_promise_known_own_property_presence(candidate)
+                })
+        {
+            return Some(Some(has_own_property));
+        }
+        for object_candidate in object_candidates.iter().flatten() {
+            for property_candidate in property_candidates.iter().flatten() {
+                if let Some(has_own_property) = self
+                    .resolve_top_level_global_object_has_own_property_result(
+                        object_candidate,
+                        property_candidate,
+                    )
+                {
+                    return Some(Some(has_own_property));
+                }
+            }
+        }
+        for object_candidate in object_candidates.iter().flatten() {
+            for property_candidate in property_candidates.iter().flatten() {
+                if self
+                    .static_builtin_prototype_has_own_property(object_candidate, property_candidate)
+                {
+                    return Some(Some(true));
+                }
+            }
+        }
+
         let mut saw_object_binding = false;
         let mut saw_dynamic_property_lookup = false;
         let mut saw_symbol_property_lookup = false;
@@ -148,11 +273,23 @@ impl<'a> FunctionCompiler<'a> {
             for property_candidate in property_candidates.into_iter().flatten() {
                 let canonical_property =
                     self.canonical_object_property_expression(property_candidate);
+                let requested_well_known_symbol = self
+                    .well_known_symbol_name(&canonical_property)
+                    .or_else(|| self.well_known_symbol_name(property_candidate));
                 let requested_symbol = self
                     .resolve_symbol_identity_expression(&canonical_property)
                     .or_else(|| self.resolve_symbol_identity_expression(property_candidate));
+                if requested_well_known_symbol.is_some()
+                    && Self::object_binding_has_module_namespace_marker(&object_binding)
+                    && self
+                        .resolve_object_binding_property_value(&object_binding, property_candidate)
+                        .is_none()
+                {
+                    return Some(Some(false));
+                }
                 if static_property_name_from_expression(&canonical_property).is_none()
                     && requested_symbol.is_none()
+                    && requested_well_known_symbol.is_none()
                     && (!object_binding.string_properties.is_empty()
                         || !object_binding.symbol_properties.is_empty())
                 {
@@ -305,6 +442,19 @@ impl<'a> FunctionCompiler<'a> {
             }
             _ => return None,
         };
+
+        if Self::has_own_receiver_is_import_meta_object(object)
+            && let Some(has_own_property) =
+                Self::import_meta_known_property_presence(argument_property)
+        {
+            return Some(has_own_property);
+        }
+        if Self::has_own_receiver_is_dynamic_import_promise(object)
+            && let Some(has_own_property) =
+                Self::dynamic_import_promise_known_own_property_presence(argument_property)
+        {
+            return Some(has_own_property);
+        }
 
         if let Some(array_binding) = self.resolve_array_binding_from_expression(object) {
             return Some(

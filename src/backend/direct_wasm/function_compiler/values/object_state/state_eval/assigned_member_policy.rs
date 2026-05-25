@@ -9,6 +9,43 @@ impl StaticAssignedMemberPolicySource for FunctionStaticEvalContext<'_, '_> {
         value: &Expression,
         environment: &mut Self::Environment,
     ) -> Option<()> {
+        if let Some(index) = argument_index_from_expression(property).map(|index| index as usize)
+            && let Some(target_name) = self.static_mutable_array_target_name(object, environment)
+        {
+            if !environment.contains_object_binding(&target_name) {
+                let mut binding = self.resolve_array_binding_with_state(
+                    &Expression::Identifier(target_name.clone()),
+                    environment,
+                )?;
+                if binding.values.len() <= index {
+                    binding.values.resize(index + 1, None);
+                }
+                binding.values[index] = Some(value.clone());
+                environment.sync_object_binding(
+                    &target_name,
+                    Some(object_binding_from_array_binding(&binding)),
+                );
+                return Some(());
+            }
+
+            let binding = environment.object_binding_mut(&target_name)?;
+            object_binding_set_property(
+                binding,
+                Expression::String(index.to_string()),
+                value.clone(),
+            );
+            let current_length = array_length_from_object_binding(binding).unwrap_or(0);
+            if index >= current_length {
+                object_binding_set_property(
+                    binding,
+                    Expression::String("length".to_string()),
+                    Expression::Number((index + 1) as f64),
+                );
+                object_binding_set_string_property_enumerable(binding, "length", false);
+            }
+            return Some(());
+        }
+
         if !is_private_property_name_expression(property) {
             return None;
         }
@@ -48,9 +85,9 @@ impl StaticAssignedMemberPolicySource for FunctionStaticEvalContext<'_, '_> {
     fn static_resolve_assigned_member_property_key(
         &self,
         property: &Expression,
-        _environment: &mut Self::Environment,
+        environment: &mut Self::Environment,
     ) -> Option<Expression> {
-        self.resolve_property_key(property)
+        self.resolve_property_key_with_state(property, environment)
     }
 
     fn static_should_seed_assigned_member_target_object_binding(

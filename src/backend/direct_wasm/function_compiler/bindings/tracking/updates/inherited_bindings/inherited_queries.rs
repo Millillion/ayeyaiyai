@@ -1,6 +1,29 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    pub(super) fn resolve_static_class_init_new_constructor_name(
+        &self,
+        callee: &Expression,
+    ) -> Option<String> {
+        match callee {
+            Expression::Identifier(constructor_name) => Some(constructor_name.clone()),
+            Expression::Call {
+                callee: init_callee,
+                arguments: init_arguments,
+            } if init_arguments.is_empty() => {
+                let Expression::Identifier(function_name) = init_callee.as_ref() else {
+                    return None;
+                };
+                self.infer_static_class_init_call_result_expression(function_name)
+                    .and_then(|result| match result {
+                        Expression::Identifier(name) => Some(name),
+                        _ => None,
+                    })
+            }
+            _ => None,
+        }
+    }
+
     fn resolve_static_member_call_return_expression(
         &self,
         callee: &Expression,
@@ -44,6 +67,9 @@ impl<'a> FunctionCompiler<'a> {
                 let Expression::String(property) = key else {
                     return None;
                 };
+                if matches!(value, Expression::Sequence(_)) {
+                    return None;
+                }
                 let binding = self.resolve_function_binding_from_expression(value)?;
                 Some(ReturnedMemberFunctionBinding {
                     target: ReturnedMemberFunctionBindingTarget::Value,
@@ -113,6 +139,18 @@ impl<'a> FunctionCompiler<'a> {
                 if trace_inherited_bindings {
                     eprintln!("inherited_member_function_bindings:identifier source={source_name}");
                 }
+                let mut source_names = vec![source_name.clone()];
+                if let Some(function) = self.resolve_registered_function_declaration(source_name) {
+                    if let Some(self_binding) = function.self_binding.as_ref() {
+                        source_names.push(self_binding.clone());
+                    }
+                    if let Some(top_level_binding) = function.top_level_binding.as_ref() {
+                        source_names.push(top_level_binding.clone());
+                    }
+                }
+                if let Some(scoped_source_name) = scoped_binding_source_name(source_name) {
+                    source_names.push(scoped_source_name.to_string());
+                }
                 let local_bindings = self
                     .state
                     .speculation
@@ -126,7 +164,9 @@ impl<'a> FunctionCompiler<'a> {
                     .chain(global_bindings)
                     .filter_map(|(key, binding)| match &key.target {
                         MemberFunctionBindingTarget::Identifier(target)
-                            if target.as_str() == source_name.as_str() =>
+                            if source_names
+                                .iter()
+                                .any(|source_name| target.as_str() == source_name.as_str()) =>
                         {
                             let MemberFunctionBindingProperty::String(property) = &key.property
                             else {
@@ -139,7 +179,9 @@ impl<'a> FunctionCompiler<'a> {
                             })
                         }
                         MemberFunctionBindingTarget::Prototype(target)
-                            if target.as_str() == source_name.as_str() =>
+                            if source_names
+                                .iter()
+                                .any(|source_name| target.as_str() == source_name.as_str()) =>
                         {
                             let MemberFunctionBindingProperty::String(property) = &key.property
                             else {
@@ -156,7 +198,9 @@ impl<'a> FunctionCompiler<'a> {
                     .collect()
             }
             Expression::New { callee, .. } => {
-                let Expression::Identifier(constructor_name) = callee.as_ref() else {
+                let Some(constructor_name) =
+                    self.resolve_static_class_init_new_constructor_name(callee)
+                else {
                     return Vec::new();
                 };
                 let mut bindings = self
@@ -198,7 +242,7 @@ impl<'a> FunctionCompiler<'a> {
                         (
                             MemberFunctionBindingTarget::Prototype(target),
                             MemberFunctionBindingProperty::String(property),
-                        ) if target == constructor_name || target == &normalized_target => {
+                        ) if target == &constructor_name || target == &normalized_target => {
                             Some(ReturnedMemberFunctionBinding {
                                 target: ReturnedMemberFunctionBindingTarget::Value,
                                 property: property.clone(),
@@ -213,7 +257,7 @@ impl<'a> FunctionCompiler<'a> {
                     return bindings;
                 }
                 let Some(prototype_binding) = self
-                    .resolve_function_prototype_object_binding(constructor_name)
+                    .resolve_function_prototype_object_binding(&constructor_name)
                     .or_else(|| self.resolve_function_prototype_object_binding(&normalized_target))
                 else {
                     return Vec::new();
@@ -376,7 +420,9 @@ impl<'a> FunctionCompiler<'a> {
                     .collect()
             }
             Expression::New { callee, .. } => {
-                let Expression::Identifier(constructor_name) = callee.as_ref() else {
+                let Some(constructor_name) =
+                    self.resolve_static_class_init_new_constructor_name(callee)
+                else {
                     return Vec::new();
                 };
                 let normalized_target = self
@@ -400,7 +446,7 @@ impl<'a> FunctionCompiler<'a> {
                         (
                             MemberFunctionBindingTarget::Prototype(target),
                             MemberFunctionBindingProperty::String(property),
-                        ) if target == constructor_name || target == &normalized_target => {
+                        ) if target == &constructor_name || target == &normalized_target => {
                             Some(ReturnedMemberFunctionBinding {
                                 target: ReturnedMemberFunctionBindingTarget::Value,
                                 property: property.clone(),
@@ -481,7 +527,9 @@ impl<'a> FunctionCompiler<'a> {
                     .collect()
             }
             Expression::New { callee, .. } => {
-                let Expression::Identifier(constructor_name) = callee.as_ref() else {
+                let Some(constructor_name) =
+                    self.resolve_static_class_init_new_constructor_name(callee)
+                else {
                     return Vec::new();
                 };
                 let normalized_target = self
@@ -505,7 +553,7 @@ impl<'a> FunctionCompiler<'a> {
                         (
                             MemberFunctionBindingTarget::Prototype(target),
                             MemberFunctionBindingProperty::String(property),
-                        ) if target == constructor_name || target == &normalized_target => {
+                        ) if target == &constructor_name || target == &normalized_target => {
                             Some(ReturnedMemberFunctionBinding {
                                 target: ReturnedMemberFunctionBindingTarget::Value,
                                 property: property.clone(),

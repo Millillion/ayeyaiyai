@@ -54,6 +54,13 @@ impl<'a> FunctionCompiler<'a> {
                 true,
             );
         }
+        if self.global_has_binding(name)
+            || self.backend.global_has_lexical_binding(name)
+            || self.global_has_implicit_binding(name)
+            || self.backend.global_function_binding(name).is_some()
+        {
+            self.preserve_identifier_function_capture_slots_for_global_store(name, state)?;
+        }
         self.emit_store_user_function_capture_binding_from_local(name, value_local)?;
         let fallback_owner = self
             .resolve_user_function_capture_hidden_name(name)

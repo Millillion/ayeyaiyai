@@ -15,16 +15,22 @@ impl ModuleLinker {
         let mut dependency_param_by_index = HashMap::new();
         let mut import_bindings = HashMap::new();
         let mut export_expressions = BTreeMap::<String, Expression>::new();
+        let mut namespace_export_module_indices = BTreeMap::<String, usize>::new();
+        let mut reexport_sources = BTreeMap::<String, (usize, String)>::new();
         let mut export_resolutions = self.modules[module_index].export_resolutions.clone();
+        let mut late_export_getters = HashSet::<String>::new();
         let mut star_export_expressions = BTreeMap::<String, Expression>::new();
         let mut star_export_resolutions = BTreeMap::<String, ExportResolution>::new();
+        let mut star_reexport_sources = BTreeMap::<String, (usize, String)>::new();
         let mut ambiguous_star_exports = HashSet::<String>::new();
         let mut pending_self_reexports = Vec::<(String, String)>::new();
         let mut hoisted_statements = Vec::new();
         let mut body_statements = Vec::new();
 
-        for source in collect_literal_dynamic_import_specifiers(module) {
-            if let Ok(dependency_path) = resolve_module_specifier(&module_path, &source) {
+        let dynamic_import_sources =
+            self.dynamic_import_specifier_sources_for_module(module, &source_text);
+        for source in &dynamic_import_sources {
+            if let Ok(dependency_path) = resolve_module_specifier(&module_path, source) {
                 self.load_module(&dependency_path)?;
             }
         }
@@ -68,6 +74,8 @@ impl ModuleLinker {
         self.lowerer.source_text = Some(source_text);
         self.lowerer.current_module_path = Some(module_path.clone());
         self.lowerer.module_index_lookup = self.module_indices.clone();
+        self.lowerer.dynamic_import_specifier_lookup =
+            self.dynamic_import_specifier_index_lookup(&module_path, &dynamic_import_sources);
         let function_start = self.lowerer.functions.len();
 
         for item in &module.body {
@@ -94,6 +102,7 @@ impl ModuleLinker {
                                 export_name.clone(),
                                 Expression::Identifier(export_name.clone()),
                             );
+                            late_export_getters.insert(export_name.clone());
                             export_resolutions.insert(
                                 export_name.clone(),
                                 ExportResolution::Binding {
@@ -141,12 +150,16 @@ impl ModuleLinker {
                         other => bail!("unsupported export declaration: {other:?}"),
                     },
                     ModuleDecl::ExportDefaultDecl(export_default) => {
+                        let default_is_class = matches!(export_default.decl, DefaultDecl::Class(_));
                         let expression = self.lower_default_export_declaration(
                             export_default,
                             &mut hoisted_statements,
                             &mut body_statements,
                         )?;
                         export_expressions.insert("default".to_string(), expression.clone());
+                        if default_is_class {
+                            late_export_getters.insert("default".to_string());
+                        }
                         export_resolutions.insert(
                             "default".to_string(),
                             ExportResolution::Binding {
@@ -258,6 +271,12 @@ impl ModuleLinker {
                                             )),
                                         },
                                     );
+                                    if !self_reexport {
+                                        reexport_sources.insert(
+                                            export_name.clone(),
+                                            (dependency_index, imported_name.clone()),
+                                        );
+                                    }
                                     if self_reexport {
                                         pending_self_reexports.push((export_name, imported_name));
                                     } else if !dependency_finalized {
@@ -285,6 +304,8 @@ impl ModuleLinker {
                                         export_name.clone(),
                                         Expression::Identifier(namespace_param.clone()),
                                     );
+                                    namespace_export_module_indices
+                                        .insert(export_name.clone(), dependency_index);
                                     export_resolutions.insert(
                                         export_name,
                                         ExportResolution::Namespace {
@@ -305,6 +326,12 @@ impl ModuleLinker {
                                             )),
                                         },
                                     );
+                                    if !self_reexport {
+                                        reexport_sources.insert(
+                                            export_name.clone(),
+                                            (dependency_index, "default".to_string()),
+                                        );
+                                    }
                                     if self_reexport {
                                         pending_self_reexports
                                             .push((export_name, "default".to_string()));
@@ -364,11 +391,14 @@ impl ModuleLinker {
                                 if previous_resolution != &resolution {
                                     star_export_expressions.remove(&export_name);
                                     star_export_resolutions.remove(&export_name);
+                                    star_reexport_sources.remove(&export_name);
                                     ambiguous_star_exports.insert(export_name);
                                 }
                             } else {
                                 star_export_expressions.insert(export_name.clone(), expression);
-                                star_export_resolutions.insert(export_name, resolution);
+                                star_export_resolutions.insert(export_name.clone(), resolution);
+                                star_reexport_sources
+                                    .insert(export_name.clone(), (dependency_index, export_name));
                             }
                         }
                     }
@@ -379,6 +409,9 @@ impl ModuleLinker {
 
         for (export_name, expression) in star_export_expressions {
             if !export_expressions.contains_key(&export_name) {
+                if let Some(source) = star_reexport_sources.get(&export_name).cloned() {
+                    reexport_sources.insert(export_name.clone(), source);
+                }
                 export_expressions.insert(export_name, expression);
             }
         }
@@ -419,22 +452,52 @@ impl ModuleLinker {
         self.lowerer.source_text = None;
         self.lowerer.current_module_path = None;
         self.lowerer.module_index_lookup.clear();
+        self.lowerer.dynamic_import_specifier_lookup.clear();
 
-        self.rewrite_import_bindings_in_statements(&mut hoisted_statements, &import_bindings)?;
-        self.rewrite_import_bindings_in_statements(&mut body_statements, &import_bindings)?;
+        self.rewrite_module_import_bindings_in_statements(
+            module_index,
+            &mut hoisted_statements,
+            &import_bindings,
+        )?;
+        self.rewrite_module_import_bindings_in_statements(
+            module_index,
+            &mut body_statements,
+            &import_bindings,
+        )?;
         for function in &mut self.lowerer.functions[function_start..] {
-            rewrite_import_bindings_in_function(function, &import_bindings)?;
+            rewrite_module_import_bindings_in_function(function, &import_bindings, module_index)?;
         }
+
+        let early_export_expressions = export_expressions
+            .iter()
+            .filter(|(name, _)| !late_export_getters.contains(*name))
+            .map(|(name, expression)| (name.clone(), expression.clone()))
+            .collect::<BTreeMap<_, _>>();
+        let late_export_expressions = export_expressions
+            .iter()
+            .filter(|(name, _)| late_export_getters.contains(*name))
+            .map(|(name, expression)| (name.clone(), expression.clone()))
+            .collect::<BTreeMap<_, _>>();
 
         let mut init_body = self.build_module_namespace_prelude(&exports_param);
         init_body.extend(self.build_export_getter_statements(
             module_index,
             &exports_param,
-            &export_expressions,
+            &early_export_expressions,
+            &namespace_export_module_indices,
+            &reexport_sources,
             &import_bindings,
         )?);
         init_body.extend(hoisted_statements);
         init_body.extend(body_statements);
+        init_body.extend(self.build_export_getter_statements(
+            module_index,
+            &exports_param,
+            &late_export_expressions,
+            &namespace_export_module_indices,
+            &reexport_sources,
+            &import_bindings,
+        )?);
         let (init_body, init_async) = asyncify_statements(init_body);
 
         let mut params = vec![Parameter {
@@ -459,6 +522,7 @@ impl ModuleLinker {
             mapped_arguments: false,
             strict: true,
             lexical_this: false,
+            constructible: true,
             derived_constructor: false,
             direct_eval_in_class_field_initializer: false,
             length: dependency_params.len() + 1,

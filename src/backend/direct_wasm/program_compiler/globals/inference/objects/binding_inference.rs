@@ -99,28 +99,84 @@ impl DirectWasmCompiler {
         value_bindings: &mut HashMap<String, Expression>,
         object_bindings: &mut HashMap<String, ObjectValueBinding>,
     ) -> Option<ObjectValueBinding> {
+        if let Some(binding) = self.infer_define_property_result_object_binding_with_state(
+            expression,
+            value_bindings,
+            object_bindings,
+        ) {
+            return Some(binding);
+        }
+
         match expression {
-            Expression::Identifier(name) => object_bindings
-                .get(name)
-                .cloned()
-                .or_else(|| self.global_prototype_object_binding(name).cloned())
-                .or_else(|| {
-                    value_bindings
-                        .get(name)
-                        .cloned()
-                        .filter(
-                            |value| !matches!(value, Expression::Identifier(alias) if alias == name),
+            Expression::Call { callee, arguments } if matches!(callee.as_ref(), Expression::Identifier(name) if name == "__ayyTemplateObject") =>
+            {
+                let Some(CallArgument::Expression(raw) | CallArgument::Spread(raw)) =
+                    arguments.get(2)
+                else {
+                    return Some(empty_object_value_binding());
+                };
+                let raw_array = Self::template_object_array_binding_from_array(raw)
+                    .or_else(|| self.infer_global_array_binding(raw))
+                    .map(|binding| {
+                        Expression::Array(
+                            binding
+                                .values
+                                .into_iter()
+                                .map(|value| {
+                                    ArrayElement::Expression(value.unwrap_or(Expression::Undefined))
+                                })
+                                .collect(),
                         )
-                        .and_then(|value| {
-                            self.infer_global_object_binding_with_state(
-                                &value,
-                                value_bindings,
-                                object_bindings,
+                    })
+                    .unwrap_or_else(|| raw.clone());
+                let mut binding = empty_object_value_binding();
+                object_binding_set_property(
+                    &mut binding,
+                    Expression::String("raw".to_string()),
+                    raw_array,
+                );
+                Some(binding)
+            }
+            Expression::Identifier(name) => {
+                if let Some(realm_id) = parse_test262_realm_identifier(name) {
+                    let mut realm_binding = empty_object_value_binding();
+                    object_binding_set_property(
+                        &mut realm_binding,
+                        Expression::String("global".to_string()),
+                        Expression::Identifier(test262_realm_global_identifier(realm_id)),
+                    );
+                    return Some(realm_binding);
+                }
+                if let Some(realm_id) = parse_test262_realm_global_identifier(name) {
+                    let mut global_binding = empty_object_value_binding();
+                    object_binding_set_property(
+                        &mut global_binding,
+                        Expression::String("eval".to_string()),
+                        Expression::Identifier(test262_realm_eval_builtin_name(realm_id)),
+                    );
+                    return Some(global_binding);
+                }
+                object_bindings
+                    .get(name)
+                    .cloned()
+                    .or_else(|| self.global_prototype_object_binding(name).cloned())
+                    .or_else(|| {
+                        value_bindings
+                            .get(name)
+                            .cloned()
+                            .filter(
+                                |value| !matches!(value, Expression::Identifier(alias) if alias == name),
                             )
-                        })
-                }),
-            Expression::Member { object, property }
-                if matches!(property.as_ref(), Expression::String(name) if name == "prototype") =>
+                            .and_then(|value| {
+                                self.infer_global_object_binding_with_state(
+                                    &value,
+                                    value_bindings,
+                                    object_bindings,
+                                )
+                            })
+                    })
+            }
+            Expression::Member { object, property } if matches!(property.as_ref(), Expression::String(name) if name == "prototype") =>
             {
                 let Expression::Identifier(name) = object.as_ref() else {
                     return None;
@@ -187,6 +243,161 @@ impl DirectWasmCompiler {
                 },
                 |_, _| None,
             ),
+        }
+    }
+
+    fn infer_define_property_result_object_binding_with_state(
+        &self,
+        expression: &Expression,
+        value_bindings: &mut HashMap<String, Expression>,
+        object_bindings: &mut HashMap<String, ObjectValueBinding>,
+    ) -> Option<ObjectValueBinding> {
+        let Expression::Call { callee, arguments } = expression else {
+            return None;
+        };
+        let Expression::Member { object, property } = callee.as_ref() else {
+            return None;
+        };
+        if !matches!(object.as_ref(), Expression::Identifier(name) if name == "Object")
+            || !matches!(property.as_ref(), Expression::String(name) if name == "defineProperty")
+        {
+            return None;
+        }
+        let [
+            CallArgument::Expression(target),
+            CallArgument::Expression(property),
+            CallArgument::Expression(descriptor_expression),
+            ..,
+        ] = arguments.as_slice()
+        else {
+            return None;
+        };
+        let descriptor = resolve_property_descriptor_definition(descriptor_expression)?;
+        let property = self
+            .materialize_global_expression_with_state(
+                property,
+                &HashMap::new(),
+                value_bindings,
+                object_bindings,
+            )
+            .unwrap_or_else(|| self.materialize_global_expression(property));
+        let materialized_target = self
+            .materialize_global_expression_with_state(
+                target,
+                &HashMap::new(),
+                value_bindings,
+                object_bindings,
+            )
+            .unwrap_or_else(|| self.materialize_global_expression(target));
+        let mut target_value_bindings = value_bindings.clone();
+        let mut target_object_bindings = object_bindings.clone();
+        let mut object_binding = self
+            .infer_global_object_binding_with_state(
+                &materialized_target,
+                &mut target_value_bindings,
+                &mut target_object_bindings,
+            )
+            .or_else(|| {
+                self.infer_global_object_binding_with_state(
+                    target,
+                    &mut target_value_bindings,
+                    &mut target_object_bindings,
+                )
+            })
+            .unwrap_or_else(empty_object_value_binding);
+        let descriptor_binding = self.global_property_descriptor_binding_with_state(
+            &object_binding,
+            &property,
+            &descriptor,
+            value_bindings,
+            object_bindings,
+        );
+        object_binding_define_property_descriptor(
+            &mut object_binding,
+            property,
+            descriptor_binding,
+        );
+        Some(object_binding)
+    }
+
+    fn global_property_descriptor_binding_with_state(
+        &self,
+        object_binding: &ObjectValueBinding,
+        property: &Expression,
+        descriptor: &PropertyDescriptorDefinition,
+        value_bindings: &HashMap<String, Expression>,
+        object_bindings: &HashMap<String, ObjectValueBinding>,
+    ) -> PropertyDescriptorBinding {
+        let property_name = static_property_name_from_expression(property);
+        let existing_value = object_binding_lookup_value(object_binding, property).cloned();
+        let existing_descriptor =
+            object_binding_lookup_descriptor(object_binding, property).cloned();
+        let current_enumerable = property_name.as_ref().is_some_and(|property_name| {
+            !object_binding
+                .non_enumerable_string_properties
+                .iter()
+                .any(|hidden_name| hidden_name == property_name)
+        });
+        let enumerable = descriptor.enumerable.unwrap_or_else(|| {
+            existing_descriptor
+                .as_ref()
+                .map(|descriptor| descriptor.enumerable)
+                .unwrap_or(current_enumerable)
+        });
+        let configurable = descriptor.configurable.unwrap_or_else(|| {
+            existing_descriptor
+                .as_ref()
+                .map(|descriptor| descriptor.configurable)
+                .unwrap_or(false)
+        });
+        let materialize_descriptor_value = |expression: &Expression| {
+            self.materialize_global_expression_with_state(
+                expression,
+                &HashMap::new(),
+                value_bindings,
+                object_bindings,
+            )
+            .unwrap_or_else(|| self.materialize_global_expression(expression))
+        };
+        if descriptor.is_accessor() {
+            return PropertyDescriptorBinding {
+                value: None,
+                configurable,
+                enumerable,
+                writable: None,
+                getter: descriptor.getter.as_ref().map(materialize_descriptor_value),
+                setter: descriptor.setter.as_ref().map(materialize_descriptor_value),
+                has_get: descriptor.getter.is_some(),
+                has_set: descriptor.setter.is_some(),
+            };
+        }
+
+        let value = descriptor
+            .value
+            .as_ref()
+            .map(materialize_descriptor_value)
+            .or(existing_value)
+            .or_else(|| {
+                existing_descriptor
+                    .as_ref()
+                    .and_then(|descriptor| descriptor.value.clone())
+            })
+            .unwrap_or(Expression::Undefined);
+        let writable = descriptor.writable.or_else(|| {
+            existing_descriptor
+                .as_ref()
+                .and_then(|descriptor| descriptor.writable)
+        });
+
+        PropertyDescriptorBinding {
+            value: Some(value),
+            configurable,
+            enumerable,
+            writable: Some(writable.unwrap_or(false)),
+            getter: None,
+            setter: None,
+            has_get: false,
+            has_set: false,
         }
     }
 
@@ -319,6 +530,7 @@ impl DirectWasmCompiler {
                         property_expression,
                         &local_bindings,
                     );
+                    let property = self.canonical_global_object_property_expression(&property);
                     let value =
                         self.resolve_static_class_init_local_expression(value, &local_bindings);
                     object_binding_define_property(

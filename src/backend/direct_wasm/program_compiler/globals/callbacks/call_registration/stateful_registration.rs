@@ -13,67 +13,141 @@ impl DirectWasmCompiler {
         object_state: &HashMap<String, ObjectValueBinding>,
         overwrite_existing: bool,
     ) {
-        let (called_function_name, call_arguments) = match callee {
-            Expression::Member { object, property } if matches!(property.as_ref(), Expression::String(name) if name == "call") =>
-            {
-                let Some(LocalFunctionBinding::User(called_function_name)) =
-                    self.resolve_function_binding_from_expression_with_aliases(object, aliases)
-                else {
-                    return;
-                };
-                (
-                    called_function_name,
-                    self.expanded_global_static_call_arguments(arguments)
-                        .into_iter()
-                        .skip(1)
-                        .collect::<Vec<_>>(),
-                )
-            }
-            Expression::Member { object, property } if matches!(property.as_ref(), Expression::String(name) if name == "apply") =>
-            {
-                let Some(LocalFunctionBinding::User(called_function_name)) =
-                    self.resolve_function_binding_from_expression_with_aliases(object, aliases)
-                else {
-                    return;
-                };
-                let expanded_arguments = self.expanded_global_static_call_arguments(arguments);
-                let apply_expression = expanded_arguments
-                    .get(1)
-                    .cloned()
-                    .unwrap_or(Expression::Undefined);
-                let Some(call_arguments) = self
-                    .expand_apply_parameter_call_arguments_from_expression_with_state(
-                        &apply_expression,
-                        value_bindings,
-                        object_state,
+        let dynamic_import_callback =
+            self.dynamic_import_then_callback_namespace_argument(callee, arguments, aliases);
+        let (called_function_name, call_arguments) = if let Some((
+            called_function_name,
+            namespace_argument,
+        )) = dynamic_import_callback
+        {
+            (called_function_name, vec![namespace_argument])
+        } else {
+            match callee {
+                Expression::Member { object, property } if matches!(property.as_ref(), Expression::String(name) if name == "call") =>
+                {
+                    let Some(LocalFunctionBinding::User(called_function_name)) =
+                        self.resolve_function_binding_from_expression_with_aliases(object, aliases)
+                    else {
+                        return;
+                    };
+                    (
+                        called_function_name,
+                        self.expanded_global_static_call_arguments(arguments)
+                            .into_iter()
+                            .skip(1)
+                            .collect::<Vec<_>>(),
                     )
-                else {
-                    return;
-                };
-                (called_function_name, call_arguments)
+                }
+                Expression::Member { object, property } if matches!(property.as_ref(), Expression::String(name) if name == "apply") =>
+                {
+                    let Some(LocalFunctionBinding::User(called_function_name)) =
+                        self.resolve_function_binding_from_expression_with_aliases(object, aliases)
+                    else {
+                        return;
+                    };
+                    let expanded_arguments = self.expanded_global_static_call_arguments(arguments);
+                    let apply_expression = expanded_arguments
+                        .get(1)
+                        .cloned()
+                        .unwrap_or(Expression::Undefined);
+                    let Some(call_arguments) = self
+                        .expand_apply_parameter_call_arguments_from_expression_with_state(
+                            &apply_expression,
+                            value_bindings,
+                            object_state,
+                        )
+                    else {
+                        return;
+                    };
+                    (called_function_name, call_arguments)
+                }
+                _ => {
+                    let Some(LocalFunctionBinding::User(called_function_name)) =
+                        self.resolve_function_binding_from_expression_with_aliases(callee, aliases)
+                    else {
+                        return;
+                    };
+                    (
+                        called_function_name,
+                        self.expanded_global_static_call_arguments(arguments),
+                    )
+                }
             }
-            _ => {
-                let Some(LocalFunctionBinding::User(called_function_name)) =
-                    self.resolve_function_binding_from_expression_with_aliases(callee, aliases)
-                else {
-                    return;
+        };
+        self.register_stateful_parameter_binding_candidates(
+            &called_function_name,
+            &call_arguments,
+            aliases,
+            bindings,
+            array_bindings,
+            object_bindings,
+            value_bindings,
+            object_state,
+            overwrite_existing,
+        );
+    }
+
+    pub(in crate::backend::direct_wasm) fn register_constructor_bindings_for_call_with_state(
+        &self,
+        callee: &Expression,
+        arguments: &[CallArgument],
+        aliases: &HashMap<String, Option<LocalFunctionBinding>>,
+        bindings: &mut HashMap<String, HashMap<String, Option<LocalFunctionBinding>>>,
+        array_bindings: &mut HashMap<String, HashMap<String, Option<ArrayValueBinding>>>,
+        object_bindings: &mut HashMap<String, HashMap<String, Option<ObjectValueBinding>>>,
+        value_bindings: &HashMap<String, Expression>,
+        object_state: &HashMap<String, ObjectValueBinding>,
+        overwrite_existing: bool,
+    ) {
+        let constructor_binding = self
+            .resolve_function_binding_from_expression_with_aliases(callee, aliases)
+            .or_else(|| {
+                let Expression::Identifier(name) = callee else {
+                    return None;
                 };
-                (
-                    called_function_name,
-                    self.expanded_global_static_call_arguments(arguments),
-                )
-            }
-        };
-        let Some(user_function) = self.user_function(&called_function_name) else {
+                let resolved = self.resolve_static_class_init_local_alias_expression(name)?;
+                self.resolve_function_binding_from_expression_with_aliases(&resolved, aliases)
+            });
+        let Some(LocalFunctionBinding::User(called_function_name)) = constructor_binding else {
             return;
         };
-        let Some(parameter_bindings) = bindings.get_mut(&called_function_name) else {
+        let call_arguments = self.expanded_global_static_call_arguments(arguments);
+
+        self.register_stateful_parameter_binding_candidates(
+            &called_function_name,
+            &call_arguments,
+            aliases,
+            bindings,
+            array_bindings,
+            object_bindings,
+            value_bindings,
+            object_state,
+            overwrite_existing,
+        );
+    }
+
+    fn register_stateful_parameter_binding_candidates(
+        &self,
+        called_function_name: &str,
+        call_arguments: &[Expression],
+        aliases: &HashMap<String, Option<LocalFunctionBinding>>,
+        bindings: &mut HashMap<String, HashMap<String, Option<LocalFunctionBinding>>>,
+        array_bindings: &mut HashMap<String, HashMap<String, Option<ArrayValueBinding>>>,
+        object_bindings: &mut HashMap<String, HashMap<String, Option<ObjectValueBinding>>>,
+        value_bindings: &HashMap<String, Expression>,
+        object_state: &HashMap<String, ObjectValueBinding>,
+        overwrite_existing: bool,
+    ) {
+        let Some(user_function) = self.user_function(called_function_name) else {
             return;
         };
-        let Some(parameter_array_bindings) = array_bindings.get_mut(&called_function_name) else {
+        let Some(parameter_bindings) = bindings.get_mut(called_function_name) else {
             return;
         };
-        let Some(parameter_object_bindings) = object_bindings.get_mut(&called_function_name) else {
+        let Some(parameter_array_bindings) = array_bindings.get_mut(called_function_name) else {
+            return;
+        };
+        let Some(parameter_object_bindings) = object_bindings.get_mut(called_function_name) else {
             return;
         };
 
@@ -85,7 +159,7 @@ impl DirectWasmCompiler {
                 Some(binding) => match parameter_bindings.get(param_name) {
                     Some(None) => {}
                     Some(Some(existing)) if *existing == binding => {}
-                    Some(Some(_)) if !overwrite_existing => {
+                    Some(Some(_)) => {
                         parameter_bindings.insert(param_name.to_string(), None);
                     }
                     _ => {
@@ -99,7 +173,7 @@ impl DirectWasmCompiler {
                     parameter_object_bindings.insert(param_name.to_string(), None);
                 }
                 Some(binding) => match parameter_object_bindings.get(param_name) {
-                    Some(None) => {}
+                    Some(None) if !overwrite_existing => {}
                     Some(Some(existing)) if *existing == binding => {}
                     Some(Some(_)) if !overwrite_existing => {
                         parameter_object_bindings.insert(param_name.to_string(), None);
@@ -115,7 +189,7 @@ impl DirectWasmCompiler {
                     parameter_array_bindings.insert(param_name.to_string(), None);
                 }
                 Some(binding) => match parameter_array_bindings.get(param_name) {
-                    Some(None) => {}
+                    Some(None) if !overwrite_existing => {}
                     Some(Some(existing)) if *existing == binding => {}
                     Some(Some(_)) if !overwrite_existing => {
                         parameter_array_bindings.insert(param_name.to_string(), None);

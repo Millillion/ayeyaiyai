@@ -1,6 +1,38 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    pub(in crate::backend::direct_wasm) fn simple_generator_yield_result_value(
+        &self,
+        result: &Expression,
+        sent_value: &Expression,
+    ) -> Expression {
+        let result = Self::substitute_sent_expression(result, sent_value);
+        let value = self
+            .resolve_object_binding_from_expression(&result)
+            .and_then(|binding| {
+                object_binding_lookup_value(&binding, &Expression::String("value".to_string()))
+                    .cloned()
+            })
+            .unwrap_or(Expression::Undefined);
+        self.materialize_static_expression(&value)
+    }
+
+    pub(in crate::backend::direct_wasm) fn simple_generator_step_yield_value(
+        &self,
+        outcome: &SimpleGeneratorStepOutcome,
+        sent_value: &Expression,
+    ) -> Option<Expression> {
+        match outcome {
+            SimpleGeneratorStepOutcome::Yield(value) => Some(self.materialize_static_expression(
+                &Self::substitute_sent_expression(value, sent_value),
+            )),
+            SimpleGeneratorStepOutcome::YieldResult(result) => {
+                Some(self.simple_generator_yield_result_value(result, sent_value))
+            }
+            SimpleGeneratorStepOutcome::Throw(_) => None,
+        }
+    }
+
     fn simple_generator_cached_binding_value(value: Expression) -> Expression {
         match value {
             Expression::Sequence(expressions) => expressions
@@ -162,15 +194,14 @@ impl<'a> FunctionCompiler<'a> {
                 IteratorSourceKind::SimpleGenerator { steps, .. } => {
                     return steps
                         .into_iter()
-                        .map(|step| match step.outcome {
-                            SimpleGeneratorStepOutcome::Yield(value) => {
-                                Some(Some(self.materialize_static_expression(
-                                    &Self::substitute_sent_expression(
-                                        &value,
-                                        &Expression::Undefined,
-                                    ),
-                                )))
-                            }
+                        .map(|step| match &step.outcome {
+                            SimpleGeneratorStepOutcome::Yield(_)
+                            | SimpleGeneratorStepOutcome::YieldResult(_) => self
+                                .simple_generator_step_yield_value(
+                                    &step.outcome,
+                                    &Expression::Undefined,
+                                )
+                                .map(Some),
                             SimpleGeneratorStepOutcome::Throw(_) => None,
                         })
                         .collect();
@@ -243,11 +274,10 @@ impl<'a> FunctionCompiler<'a> {
                 .iter()
                 .skip(start_index)
                 .map(|step| match &step.outcome {
-                    SimpleGeneratorStepOutcome::Yield(value) => {
-                        Some(Some(self.materialize_static_expression(
-                            &Self::substitute_sent_expression(value, &Expression::Undefined),
-                        )))
-                    }
+                    SimpleGeneratorStepOutcome::Yield(_)
+                    | SimpleGeneratorStepOutcome::YieldResult(_) => self
+                        .simple_generator_step_yield_value(&step.outcome, &Expression::Undefined)
+                        .map(Some),
                     SimpleGeneratorStepOutcome::Throw(_) => None,
                 })
                 .collect(),
@@ -413,7 +443,7 @@ impl<'a> FunctionCompiler<'a> {
     fn simple_generator_string_object_binding(text: &str) -> ObjectValueBinding {
         let mut binding = empty_object_value_binding();
         for (index, character) in text.chars().enumerate() {
-            object_binding_set_property(
+            object_binding_define_copied_data_property(
                 &mut binding,
                 Expression::String(index.to_string()),
                 Expression::String(character.to_string()),
@@ -580,7 +610,7 @@ impl<'a> FunctionCompiler<'a> {
                     .cloned()
                     .unwrap_or(Expression::Undefined)
             };
-            object_binding_set_property(&mut copied_binding, property, value);
+            object_binding_define_copied_data_property(&mut copied_binding, property, value);
         }
         for (property, value) in &source_binding.symbol_properties {
             let value = if self
@@ -595,7 +625,11 @@ impl<'a> FunctionCompiler<'a> {
             } else {
                 value.clone()
             };
-            object_binding_set_property(&mut copied_binding, property.clone(), value);
+            object_binding_define_copied_data_property(
+                &mut copied_binding,
+                property.clone(),
+                value,
+            );
         }
         Some(copied_binding)
     }
@@ -831,6 +865,9 @@ impl<'a> FunctionCompiler<'a> {
                         Expression::Number(left),
                         Expression::Number(right),
                     ) => Some(Expression::Bool(left >= right)),
+                    (BinaryOp::In, _, _) => self
+                        .resolve_static_in_expression_result(&left, &right)
+                        .map(Expression::Bool),
                     _ => None,
                 }
             }
@@ -856,7 +893,14 @@ impl<'a> FunctionCompiler<'a> {
                     for entry in entries {
                         match entry {
                             ObjectEntry::Data { key, value } => {
-                                let key = self.materialize_static_expression(key);
+                                let key = self.resolve_property_key_expression(key).unwrap_or_else(
+                                    || {
+                                        let materialized = self.materialize_static_expression(key);
+                                        static_property_name_from_expression(&materialized)
+                                            .map(Expression::String)
+                                            .unwrap_or(materialized)
+                                    },
+                                );
                                 let value = self
                                     .simple_generator_effect_expression(value, effects)
                                     .unwrap_or_else(|| self.materialize_static_expression(value));
@@ -900,7 +944,15 @@ impl<'a> FunctionCompiler<'a> {
                             .iter()
                             .map(|entry| match entry {
                                 ObjectEntry::Data { key, value } => Some(ObjectEntry::Data {
-                                    key: self.materialize_static_expression(key),
+                                    key: self.resolve_property_key_expression(key).unwrap_or_else(
+                                        || {
+                                            let materialized =
+                                                self.materialize_static_expression(key);
+                                            static_property_name_from_expression(&materialized)
+                                                .map(Expression::String)
+                                                .unwrap_or(materialized)
+                                        },
+                                    ),
                                     value: self
                                         .simple_generator_effect_expression(value, effects)
                                         .unwrap_or_else(|| {
@@ -1059,18 +1111,26 @@ impl<'a> FunctionCompiler<'a> {
                 ..
             },
             Statement::If { condition, .. },
-            value_binding @ Statement::Let {
-                value:
-                    Expression::Member {
-                        object: value_object,
-                        property: value_property,
-                    },
-                ..
-            },
+            value_binding @ Statement::Let { .. },
             rest @ ..,
         ] = body
         else {
             return None;
+        };
+        let Statement::Let {
+            value: value_expression,
+            ..
+        } = value_binding
+        else {
+            return None;
+        };
+        let (value_object, value_property) = match value_expression {
+            Expression::Member { object, property } => (object, property),
+            Expression::Await(awaited) => match awaited.as_ref() {
+                Expression::Member { object, property } => (object, property),
+                _ => return None,
+            },
+            _ => return None,
         };
         let Expression::Member { object, property } = callee.as_ref() else {
             return None;
@@ -1153,31 +1213,241 @@ impl<'a> FunctionCompiler<'a> {
         Some(expanded)
     }
 
+    fn scoped_loop_binding_matches_update_name(binding_name: &str, update_name: &str) -> bool {
+        if binding_name == update_name {
+            return true;
+        }
+        binding_name
+            .strip_prefix("__ayy_scope$")
+            .and_then(|name| name.split('$').next())
+            .is_some_and(|scoped_name| scoped_name == update_name)
+    }
+
+    fn expand_static_numeric_for_for_simple_generator(
+        &self,
+        statement: &Statement,
+        prior_effects: &[Statement],
+    ) -> Option<Vec<Statement>> {
+        let Statement::For {
+            labels,
+            init,
+            per_iteration_bindings,
+            condition: Some(Expression::Binary { op, left, right }),
+            update:
+                Some(Expression::Update {
+                    name: update_name,
+                    op: update_op,
+                    ..
+                }),
+            break_hook: None,
+            body,
+        } = statement
+        else {
+            return None;
+        };
+        if !labels.is_empty() || !per_iteration_bindings.is_empty() {
+            return None;
+        }
+
+        let [init_statement] = init.as_slice() else {
+            return None;
+        };
+        let (loop_name, initial_value) = match init_statement {
+            Statement::Var { name, value }
+            | Statement::Let { name, value, .. }
+            | Statement::Assign { name, value } => (name, value),
+            _ => return None,
+        };
+        let initial_value = self
+            .simple_generator_effect_expression(initial_value, prior_effects)
+            .unwrap_or_else(|| self.materialize_static_expression(initial_value));
+        let Expression::Number(mut current) = initial_value else {
+            return None;
+        };
+
+        let Expression::Identifier(condition_name) = left.as_ref() else {
+            return None;
+        };
+        if condition_name != loop_name
+            || !Self::scoped_loop_binding_matches_update_name(loop_name, update_name)
+        {
+            return None;
+        }
+        let condition_limit = self
+            .simple_generator_effect_expression(right, prior_effects)
+            .unwrap_or_else(|| self.materialize_static_expression(right));
+        let Expression::Number(limit) = condition_limit else {
+            return None;
+        };
+        let delta = match update_op {
+            UpdateOp::Increment => 1.0,
+            UpdateOp::Decrement => -1.0,
+        };
+        let condition_holds = |current: f64| match op {
+            BinaryOp::LessThan => current < limit,
+            BinaryOp::LessThanOrEqual => current <= limit,
+            BinaryOp::GreaterThan => current > limit,
+            BinaryOp::GreaterThanOrEqual => current >= limit,
+            _ => false,
+        };
+        if !condition_holds(current) {
+            let mut expanded = init.clone();
+            expanded.push(Statement::Assign {
+                name: loop_name.clone(),
+                value: Expression::Number(current),
+            });
+            return Some(expanded);
+        }
+        if (delta > 0.0 && !matches!(op, BinaryOp::LessThan | BinaryOp::LessThanOrEqual))
+            || (delta < 0.0 && !matches!(op, BinaryOp::GreaterThan | BinaryOp::GreaterThanOrEqual))
+        {
+            return None;
+        }
+
+        let mut expanded = init.clone();
+        let mut iterations = 0usize;
+        while condition_holds(current) {
+            if iterations >= 1024 {
+                return None;
+            }
+            expanded.push(Statement::Assign {
+                name: loop_name.clone(),
+                value: Expression::Number(current),
+            });
+            let bindings = HashMap::from([(loop_name.clone(), Expression::Number(current))]);
+            expanded.extend(
+                body.iter()
+                    .map(|statement| self.substitute_statement_bindings(statement, &bindings)),
+            );
+            current += delta;
+            iterations += 1;
+        }
+        expanded.push(Statement::Assign {
+            name: loop_name.clone(),
+            value: Expression::Number(current),
+        });
+        Some(expanded)
+    }
+
+    fn simple_generator_reference_error_expression() -> Expression {
+        Expression::Call {
+            callee: Box::new(Expression::Identifier("ReferenceError".to_string())),
+            arguments: Vec::new(),
+        }
+    }
+
+    pub(in crate::backend::direct_wasm) fn simple_generator_identifier_read_is_unresolvable(
+        &self,
+        name: &str,
+    ) -> bool {
+        let implicit_global_binding = self.backend.implicit_global_binding(name);
+        let implicit_global_has_static_value =
+            implicit_global_binding.is_some() && self.global_value_binding(name).is_some();
+        let implicit_global_kind_is_reserved_absent = implicit_global_binding.is_some()
+            && self.global_value_binding(name).is_none()
+            && self.lookup_identifier_kind(name) == Some(StaticValueKind::Unknown);
+        let is_known_static_builtin =
+            matches!(name, "NaN" | "Infinity" | "undefined" | "globalThis")
+                || builtin_function_runtime_value(name).is_some()
+                || is_function_constructor_builtin(name);
+        self.parameter_scope_arguments_local_for(name).is_none()
+            && !self.is_current_arguments_binding_name(name)
+            && self.resolve_current_local_binding(name).is_none()
+            && !self
+                .state
+                .speculation
+                .static_semantics
+                .has_local_function_binding(name)
+            && self.resolve_global_binding_index(name).is_none()
+            && !implicit_global_has_static_value
+            && self.backend.global_property_descriptor(name).is_none()
+            && self
+                .backend
+                .shared_global_semantics
+                .values
+                .property_descriptor(name)
+                .is_none()
+            && self
+                .resolve_user_function_capture_hidden_name(name)
+                .is_none()
+            && self.resolve_eval_local_function_hidden_name(name).is_none()
+            && (self.lookup_identifier_kind(name).is_none()
+                || implicit_global_kind_is_reserved_absent)
+            && !is_known_static_builtin
+    }
+
+    fn simple_generator_yield_operand_throw_value(&self, value: &Expression) -> Option<Expression> {
+        if let Expression::Identifier(name) = value
+            && self.simple_generator_identifier_read_is_unresolvable(name)
+        {
+            return Some(Self::simple_generator_reference_error_expression());
+        }
+        self.resolve_terminal_expression_throw_value(value)
+    }
+
+    fn simple_generator_try_body_throw_for_expansion(
+        &self,
+        statement: &Statement,
+        async_generator: bool,
+    ) -> Option<(Vec<Statement>, Expression)> {
+        match statement {
+            Statement::Throw(value) if !Self::statement_contains_generator_yield(statement) => {
+                Some((Vec::new(), value.clone()))
+            }
+            Statement::Yield { value } => self
+                .simple_generator_yield_operand_throw_value(value)
+                .map(|throw_value| (Vec::new(), throw_value)),
+            Statement::YieldDelegate { value } => {
+                let (steps, completion_effects, _) =
+                    self.resolve_simple_yield_delegate_source(value, async_generator)?;
+                if !completion_effects.is_empty() {
+                    return None;
+                }
+                let [first_step] = steps.as_slice() else {
+                    return None;
+                };
+                let SimpleGeneratorStepOutcome::Throw(throw_value) = &first_step.outcome else {
+                    return None;
+                };
+                if first_step
+                    .effects
+                    .iter()
+                    .any(Self::statement_contains_generator_yield)
+                {
+                    return None;
+                }
+                Some((first_step.effects.clone(), throw_value.clone()))
+            }
+            _ => None,
+        }
+    }
+
     fn expand_static_throwing_try_catch_for_simple_generator(
+        &self,
         body: &[Statement],
         catch_binding: &Option<String>,
         catch_setup: &[Statement],
         catch_body: &[Statement],
+        async_generator: bool,
     ) -> Option<Vec<Statement>> {
-        let throw_index = body.iter().position(|statement| {
-            matches!(statement, Statement::Throw(_))
-                && !Self::statement_contains_generator_yield(statement)
-        })?;
+        let (throw_index, prefix_effects, throw_value) =
+            body.iter().enumerate().find_map(|(index, statement)| {
+                self.simple_generator_try_body_throw_for_expansion(statement, async_generator)
+                    .map(|(prefix_effects, value)| (index, prefix_effects, value))
+            })?;
         if body[..throw_index]
             .iter()
             .any(Self::statement_contains_generator_yield)
         {
             return None;
         }
-        let Statement::Throw(value) = &body[throw_index] else {
-            return None;
-        };
         let mut expanded = body[..throw_index].to_vec();
+        expanded.extend(prefix_effects);
         if let Some(catch_binding) = catch_binding {
             expanded.push(Statement::Let {
                 name: catch_binding.clone(),
                 mutable: true,
-                value: value.clone(),
+                value: throw_value,
             });
         }
         expanded.extend(catch_setup.iter().cloned());
@@ -1194,12 +1464,32 @@ impl<'a> FunctionCompiler<'a> {
         active_close_effects: &[Statement],
     ) -> Option<()> {
         let trace_analyze = std::env::var_os("AYY_TRACE_SIMPLE_GENERATOR_SOURCE").is_some();
+        let mut pending_sent_replacement = None;
         for (index, statement) in statements.iter().enumerate() {
+            let substituted_statement;
+            let statement = if let Some(replacement) = pending_sent_replacement.as_ref() {
+                substituted_statement = match statement {
+                    Statement::Yield { value } => Statement::Yield {
+                        value: Self::substitute_sent_expression(value, replacement),
+                    },
+                    Statement::YieldDelegate { value } => Statement::YieldDelegate {
+                        value: Self::substitute_sent_expression(value, replacement),
+                    },
+                    _ if !Self::statement_contains_generator_yield(statement) => {
+                        Self::substitute_sent_statement(statement, replacement)
+                    }
+                    _ => statement.clone(),
+                };
+                &substituted_statement
+            } else {
+                statement
+            };
             if trace_analyze {
                 eprintln!("simple_generator_analyze:statement={statement:?}");
             }
             match statement {
                 Statement::Yield { value } => {
+                    pending_sent_replacement = None;
                     steps.push(SimpleGeneratorStep {
                         effects: std::mem::take(effects),
                         close_effects: active_close_effects.to_vec(),
@@ -1207,8 +1497,11 @@ impl<'a> FunctionCompiler<'a> {
                     });
                 }
                 Statement::YieldDelegate { value } => {
-                    let (mut delegate_steps, mut delegate_completion_effects) =
-                        self.resolve_simple_yield_delegate_source(value, async_generator)?;
+                    let (
+                        mut delegate_steps,
+                        mut delegate_completion_effects,
+                        delegate_completion_value,
+                    ) = self.resolve_simple_yield_delegate_source(value, async_generator)?;
                     let delegate_ends_in_throw = delegate_steps.last().is_some_and(|step| {
                         matches!(step.outcome, SimpleGeneratorStepOutcome::Throw(_))
                     });
@@ -1225,6 +1518,7 @@ impl<'a> FunctionCompiler<'a> {
                     }
                     steps.extend(delegate_steps);
                     effects.append(&mut delegate_completion_effects);
+                    pending_sent_replacement = Some(delegate_completion_value);
                     if delegate_ends_in_throw {
                         return Some(());
                     }
@@ -1256,11 +1550,12 @@ impl<'a> FunctionCompiler<'a> {
                     .chain(catch_body)
                     .any(Self::statement_contains_generator_yield) =>
                 {
-                    let expanded = Self::expand_static_throwing_try_catch_for_simple_generator(
+                    let expanded = self.expand_static_throwing_try_catch_for_simple_generator(
                         body,
                         catch_binding,
                         catch_setup,
                         catch_body,
+                        async_generator,
                     )?;
                     self.analyze_simple_generator_statements_with_close_effects(
                         &expanded,
@@ -1272,6 +1567,7 @@ impl<'a> FunctionCompiler<'a> {
                 }
                 Statement::Try {
                     body,
+                    catch_binding,
                     catch_setup,
                     catch_body,
                     ..
@@ -1296,6 +1592,25 @@ impl<'a> FunctionCompiler<'a> {
                     } else {
                         active_close_effects.to_vec()
                     };
+                    if let Some(expanded) = self
+                        .expand_static_throwing_try_catch_for_simple_generator(
+                            body,
+                            catch_binding,
+                            catch_setup,
+                            catch_body,
+                            async_generator,
+                        )
+                    {
+                        self.analyze_simple_generator_statements_with_close_effects(
+                            &expanded,
+                            async_generator,
+                            steps,
+                            effects,
+                            &scoped_close_effects,
+                        )?;
+                        continue;
+                    }
+                    let step_start = steps.len();
                     self.analyze_simple_generator_statements_with_close_effects(
                         body,
                         async_generator,
@@ -1303,6 +1618,18 @@ impl<'a> FunctionCompiler<'a> {
                         effects,
                         &scoped_close_effects,
                     )?;
+                    for step in &mut steps[step_start..] {
+                        if step.close_effects.is_empty() {
+                            continue;
+                        }
+                        let close_effects = std::mem::take(&mut step.close_effects);
+                        step.close_effects = vec![Statement::Try {
+                            body: close_effects,
+                            catch_binding: catch_binding.clone(),
+                            catch_setup: catch_setup.to_vec(),
+                            catch_body: catch_body.to_vec(),
+                        }];
+                    }
                 }
                 Statement::Var { .. } | Statement::Let { .. } => {
                     effects.push(statement.clone());
@@ -1356,8 +1683,11 @@ impl<'a> FunctionCompiler<'a> {
                 | Statement::Expression(_)
                 | Statement::Print { .. } => effects.push(statement.clone()),
                 Statement::For { .. } if Self::statement_contains_generator_yield(statement) => {
-                    let expanded =
-                        self.expand_static_lowered_for_of_for_simple_generator(statement, effects)?;
+                    let expanded = self
+                        .expand_static_lowered_for_of_for_simple_generator(statement, effects)
+                        .or_else(|| {
+                            self.expand_static_numeric_for_for_simple_generator(statement, effects)
+                        })?;
                     self.analyze_simple_generator_statements_with_close_effects(
                         &expanded,
                         async_generator,

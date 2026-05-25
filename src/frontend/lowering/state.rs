@@ -1,4 +1,4 @@
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use super::*;
 
@@ -7,12 +7,15 @@ pub(crate) struct Lowerer {
     pub(crate) source_text: Option<String>,
     pub(crate) functions: Vec<FunctionDeclaration>,
     pub(super) next_function_expression_id: usize,
+    pub(super) next_template_object_id: usize,
     pub(super) next_temporary_id: usize,
     pub(super) binding_scopes: Vec<BindingScope>,
     pub(super) active_binding_counts: HashMap<String, usize>,
     pub(super) private_name_scopes: Vec<HashMap<String, String>>,
     pub(super) private_name_brand_scopes: Vec<HashMap<String, String>>,
     pub(super) pending_private_brand_captures: Vec<BTreeSet<String>>,
+    pub(super) private_brand_capture_suppression_depth: usize,
+    pub(super) immutable_class_binding_stack: Vec<String>,
     pub(super) constructor_super_stack: Vec<Option<String>>,
     pub(super) class_field_initializer_depth: usize,
     pub(super) this_replacements: Vec<Option<Expression>>,
@@ -21,6 +24,7 @@ pub(crate) struct Lowerer {
     pub(crate) module_mode: bool,
     pub(crate) current_module_path: Option<PathBuf>,
     pub(crate) module_index_lookup: HashMap<PathBuf, usize>,
+    pub(crate) dynamic_import_specifier_lookup: BTreeMap<String, usize>,
 }
 
 #[derive(Default)]

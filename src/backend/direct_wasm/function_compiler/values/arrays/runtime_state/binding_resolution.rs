@@ -1,6 +1,24 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    pub(in crate::backend::direct_wasm) fn runtime_array_binding_has_state(
+        &self,
+        name: &str,
+    ) -> bool {
+        self.state
+            .speculation
+            .static_semantics
+            .runtime_array_length_local(name)
+            .is_some()
+            || self
+                .state
+                .speculation
+                .static_semantics
+                .has_runtime_array_slots(name)
+            || (self.is_named_global_array_binding(name)
+                && self.uses_global_runtime_array_state(name))
+    }
+
     pub(in crate::backend::direct_wasm) fn ensure_runtime_array_length_local(
         &mut self,
         name: &str,
@@ -103,7 +121,15 @@ impl<'a> FunctionCompiler<'a> {
         expression: &Expression,
     ) -> Option<String> {
         if let Expression::Identifier(name) = expression {
-            return self
+            if let Some(alias_expression) = self.direct_identifier_value_binding(name)
+                && !static_expression_matches(alias_expression, expression)
+                && let Some(alias_binding_name) =
+                    self.runtime_array_binding_name_for_expression(alias_expression)
+                && self.runtime_array_binding_has_state(&alias_binding_name)
+            {
+                return Some(alias_binding_name);
+            }
+            if let Some(binding_name) = self
                 .resolve_runtime_array_binding_name(name)
                 .or_else(|| {
                     self.state
@@ -125,7 +151,10 @@ impl<'a> FunctionCompiler<'a> {
                         && (self.uses_global_runtime_array_state(name)
                             || self.backend.global_array_binding(name).is_some()))
                     .then(|| name.clone())
-                });
+                })
+            {
+                return Some(binding_name);
+            }
         }
 
         if let Some(resolved) = self
@@ -173,6 +202,23 @@ impl<'a> FunctionCompiler<'a> {
             return self.runtime_array_binding_name_for_expression(&materialized);
         }
         None
+    }
+
+    fn direct_identifier_value_binding(&self, name: &str) -> Option<&Expression> {
+        if let Some((resolved_name, _)) = self.resolve_current_local_binding(name)
+            && let Some(value) = self
+                .state
+                .speculation
+                .static_semantics
+                .local_value_binding(&resolved_name)
+        {
+            return Some(value);
+        }
+        self.state
+            .speculation
+            .static_semantics
+            .local_value_binding(name)
+            .or_else(|| self.backend.global_value_binding(name))
     }
 
     pub(in crate::backend::direct_wasm) fn ensure_runtime_array_slots_for_binding(

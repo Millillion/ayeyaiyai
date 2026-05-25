@@ -7,7 +7,73 @@ mod member_builtins;
 #[path = "static_call_results/specialized_results.rs"]
 mod specialized_results;
 
+thread_local! {
+    static ACTIVE_STATIC_CALL_RESULT_SHAPES: std::cell::RefCell<HashSet<String>> =
+        std::cell::RefCell::new(HashSet::new());
+}
+
+struct StaticCallResultResolutionShapeGuard {
+    key: String,
+}
+
+impl StaticCallResultResolutionShapeGuard {
+    fn enter(
+        callee: &Expression,
+        arguments: &[CallArgument],
+        current_function_name: Option<&str>,
+    ) -> Option<Self> {
+        let key = format!("{current_function_name:?}:{callee:?}:{arguments:?}");
+        let inserted =
+            ACTIVE_STATIC_CALL_RESULT_SHAPES.with(|active| active.borrow_mut().insert(key.clone()));
+        inserted.then_some(Self { key })
+    }
+}
+
+impl Drop for StaticCallResultResolutionShapeGuard {
+    fn drop(&mut self) {
+        ACTIVE_STATIC_CALL_RESULT_SHAPES.with(|active| {
+            active.borrow_mut().remove(&self.key);
+        });
+    }
+}
+
 impl<'a> FunctionCompiler<'a> {
+    fn snapshot_live_capture_source_expression(&self, source_name: &str) -> Option<Expression> {
+        let identifier = Expression::Identifier(source_name.to_string());
+        if let Some(value) = self
+            .state
+            .speculation
+            .static_semantics
+            .local_value_binding(source_name)
+            .cloned()
+            .or_else(|| self.global_value_binding(source_name).cloned())
+        {
+            if !static_expression_matches(&value, &identifier) {
+                return Some(self.materialize_static_expression(&value));
+            }
+        }
+        if let Some(array_binding) = self.resolve_array_binding_from_expression(&identifier) {
+            return Some(Expression::Array(
+                array_binding
+                    .values
+                    .iter()
+                    .map(|value| {
+                        ArrayElement::Expression(value.clone().unwrap_or(Expression::Undefined))
+                    })
+                    .collect(),
+            ));
+        }
+        if let Some(object_binding) = self.resolve_object_binding_from_expression(&identifier) {
+            if object_binding.property_descriptors.is_empty() {
+                return Some(object_binding_to_expression(&object_binding));
+            }
+            return Some(identifier);
+        }
+        self.resolve_bound_alias_expression(&identifier)
+            .filter(|value| !static_expression_matches(value, &identifier))
+            .map(|value| self.materialize_static_expression(&value))
+    }
+
     pub(in crate::backend::direct_wasm) fn resolve_static_call_result_expression(
         &self,
         callee: &Expression,
@@ -27,6 +93,8 @@ impl<'a> FunctionCompiler<'a> {
         arguments: &[CallArgument],
         current_function_name: Option<&str>,
     ) -> Option<(Expression, Option<String>)> {
+        let _guard =
+            StaticCallResultResolutionShapeGuard::enter(callee, arguments, current_function_name)?;
         if let Some(result) = self.resolve_static_member_builtin_call_result_with_context(
             callee,
             arguments,
@@ -97,7 +165,10 @@ impl<'a> FunctionCompiler<'a> {
                     .into_iter()
                     .map(|(capture_name, slot_name)| {
                         let slot_expression = Expression::Identifier(slot_name.clone());
-                        let source_expression = if self
+                        let source_expression = if capture_name == slot_name {
+                            self.snapshot_live_capture_source_expression(&slot_name)
+                                .unwrap_or(slot_expression)
+                        } else if self
                             .resolve_function_binding_from_expression(&slot_expression)
                             .is_some()
                         {

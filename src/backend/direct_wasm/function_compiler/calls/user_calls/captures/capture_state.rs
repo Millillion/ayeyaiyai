@@ -8,9 +8,21 @@ impl<'a> FunctionCompiler<'a> {
     }
 
     fn capture_source_expression(&self, source_name: &str) -> Expression {
+        self.capture_source_expression_with_this_override(source_name, None)
+    }
+
+    fn capture_source_expression_with_this_override(
+        &self,
+        source_name: &str,
+        this_expression_override: Option<&Expression>,
+    ) -> Expression {
         if source_name == "this" {
-            self.resolve_user_function_capture_hidden_name("this")
-                .map(Expression::Identifier)
+            this_expression_override
+                .cloned()
+                .or_else(|| {
+                    self.resolve_user_function_capture_hidden_name("this")
+                        .map(Expression::Identifier)
+                })
                 .unwrap_or(Expression::This)
         } else if source_name == "new.target" {
             self.resolve_user_function_capture_hidden_name("new.target")
@@ -55,14 +67,14 @@ impl<'a> FunctionCompiler<'a> {
         function: &FunctionDeclaration,
         source_name: &str,
     ) -> bool {
-        source_name == "arguments"
+        (!function.lexical_this && source_name == "arguments")
             || function.params.iter().any(|parameter| {
                 scoped_binding_source_name(&parameter.name).unwrap_or(&parameter.name)
                     == source_name
             })
     }
 
-    fn user_function_capture_originates_in_enclosing_local(
+    pub(in crate::backend::direct_wasm) fn user_function_capture_originates_in_enclosing_local(
         &self,
         function_name: &str,
         source_name: &str,
@@ -134,10 +146,34 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         source_name: &str,
         source_expression: &Expression,
+        prefer_global_source: bool,
     ) -> DirectResult<()> {
         if source_name == "new.target" {
             self.push_global_get(CURRENT_NEW_TARGET_GLOBAL_INDEX);
             return Ok(());
+        }
+        if is_internal_user_function_identifier(source_name)
+            && let Some(runtime_value) = self.user_function_runtime_value(source_name)
+        {
+            self.push_i32_const(runtime_value);
+            return Ok(());
+        }
+        if prefer_global_source {
+            if let Some(global_index) = self.resolve_global_binding_index(source_name) {
+                return self.emit_declared_global_binding_read(source_name, global_index);
+            }
+            if let Some(binding) = self.implicit_global_binding(source_name) {
+                self.push_global_get(binding.present_index);
+                self.state.emission.output.instructions.push(0x04);
+                self.state.emission.output.instructions.push(I32_TYPE);
+                self.push_control_frame();
+                self.push_global_get(binding.value_index);
+                self.state.emission.output.instructions.push(0x05);
+                self.emit_named_error_throw("ReferenceError")?;
+                self.state.emission.output.instructions.push(0x0b);
+                self.pop_control_frame();
+                return Ok(());
+            }
         }
         if self.user_function_capture_source_is_unshadowed_builtin(source_name) {
             if let Some(runtime_value) = builtin_function_runtime_value(source_name) {
@@ -251,6 +287,14 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         function_name: &str,
     ) -> DirectResult<()> {
+        self.emit_prepare_user_function_capture_globals_with_this_expression(function_name, None)
+    }
+
+    pub(in crate::backend::direct_wasm) fn emit_prepare_user_function_capture_globals_with_this_expression(
+        &mut self,
+        function_name: &str,
+        this_expression_override: Option<&Expression>,
+    ) -> DirectResult<()> {
         let Some(capture_bindings) = self.user_function_capture_bindings(function_name) else {
             return Ok(());
         };
@@ -291,8 +335,17 @@ impl<'a> FunctionCompiler<'a> {
             if !source_is_directly_bound {
                 continue;
             }
-            let source_expression = self.capture_source_expression(&source_name);
+            let source_expression = self.capture_source_expression_with_this_override(
+                &source_name,
+                this_expression_override,
+            );
             let resolved_local_binding = self.resolve_current_local_binding(&source_name);
+            let prefer_global_source = !capture_originates_in_enclosing_local
+                && resolved_local_binding.is_none()
+                && (self.global_has_binding(&source_name)
+                    || self.global_has_implicit_binding(&source_name)
+                    || self.backend.global_has_lexical_binding(&source_name)
+                    || self.backend.global_function_binding(&source_name).is_some());
             let value_local = self.allocate_temp_local();
             let lexical_initialized_local = resolved_local_binding
                 .as_ref()
@@ -324,7 +377,10 @@ impl<'a> FunctionCompiler<'a> {
                 self.push_global_set(binding.present_index);
                 continue;
             }
-            self.sync_user_function_capture_static_metadata(&source_name, &hidden_name);
+            self.sync_user_function_capture_static_metadata_from_expression(
+                &hidden_name,
+                &source_expression,
+            );
             if let Some(initialized_local) = lexical_initialized_local {
                 self.push_local_get(initialized_local);
                 self.state.emission.output.instructions.push(0x04);
@@ -334,7 +390,11 @@ impl<'a> FunctionCompiler<'a> {
                     .instructions
                     .push(EMPTY_BLOCK_TYPE);
                 self.push_control_frame();
-                self.emit_user_function_capture_source_value(&source_name, &source_expression)?;
+                self.emit_user_function_capture_source_value(
+                    &source_name,
+                    &source_expression,
+                    prefer_global_source,
+                )?;
                 self.push_local_set(value_local);
                 self.push_local_get(value_local);
                 self.push_global_set(binding.value_index);
@@ -353,7 +413,11 @@ impl<'a> FunctionCompiler<'a> {
                 self.state.emission.output.instructions.push(0x0b);
                 self.pop_control_frame();
             } else {
-                self.emit_user_function_capture_source_value(&source_name, &source_expression)?;
+                self.emit_user_function_capture_source_value(
+                    &source_name,
+                    &source_expression,
+                    prefer_global_source,
+                )?;
                 self.push_local_set(value_local);
                 self.push_local_get(value_local);
                 self.push_global_set(binding.value_index);
@@ -414,6 +478,17 @@ impl<'a> FunctionCompiler<'a> {
         hidden_name: &str,
     ) {
         let source_expression = self.capture_source_expression(source_name);
+        self.sync_user_function_capture_static_metadata_from_expression(
+            hidden_name,
+            &source_expression,
+        );
+    }
+
+    fn sync_user_function_capture_static_metadata_from_expression(
+        &mut self,
+        hidden_name: &str,
+        source_expression: &Expression,
+    ) {
         let inferred_kind = self.infer_value_kind(&source_expression);
         let resolved_value = self.resolve_bound_alias_expression(&source_expression);
 
@@ -446,11 +521,31 @@ impl<'a> FunctionCompiler<'a> {
         prepared: &[PreparedCaptureBinding],
     ) {
         for binding in prepared.iter().rev() {
+            if !self.prepared_capture_binding_should_restore_after_call(binding) {
+                continue;
+            }
             self.push_local_get(binding.saved_value_local);
             self.push_global_set(binding.binding.value_index);
             self.push_local_get(binding.saved_present_local);
             self.push_global_set(binding.binding.present_index);
         }
+    }
+
+    fn prepared_capture_binding_should_restore_after_call(
+        &self,
+        binding: &PreparedCaptureBinding,
+    ) -> bool {
+        matches!(binding.source_name.as_str(), "this" | "new.target")
+            || binding.source_name.starts_with("__ayy_class_brand_")
+            || binding.source_name.starts_with("__ayy_class_super_")
+            || self.user_function_capture_source_is_locally_bound(&binding.source_name)
+    }
+
+    fn preferred_this_capture_target_owner<'b>(
+        &self,
+        this_capture_target_owner: Option<&'b str>,
+    ) -> Option<&'b str> {
+        this_capture_target_owner.filter(|owner| !owner.contains("saved_this_shadow"))
     }
 
     pub(in crate::backend::direct_wasm) fn sync_user_function_capture_source_bindings(
@@ -505,7 +600,9 @@ impl<'a> FunctionCompiler<'a> {
             }
             if binding.source_name == "this" {
                 if let Some(owner_name) = self
-                    .resolve_user_function_capture_hidden_name("this")
+                    .preferred_this_capture_target_owner(this_capture_target_owner)
+                    .map(str::to_string)
+                    .or_else(|| self.resolve_user_function_capture_hidden_name("this"))
                     .or_else(|| this_capture_target_owner.map(str::to_string))
                     .or_else(|| {
                         self.runtime_object_property_shadow_owner_name_for_identifier("this")
@@ -533,7 +630,8 @@ impl<'a> FunctionCompiler<'a> {
             }
             let source_is_immutable_local = self
                 .resolve_current_local_binding(&binding.source_name)
-                .is_some_and(|(resolved_name, _)| self.local_binding_is_immutable(&resolved_name));
+                .is_some_and(|(resolved_name, _)| self.local_binding_is_immutable(&resolved_name))
+                || self.binding_is_immutable_function_self_binding_source(&binding.source_name);
             if !source_is_immutable_local {
                 self.emit_sync_identifier_runtime_value_from_local(
                     &binding.source_name,
@@ -568,6 +666,48 @@ impl<'a> FunctionCompiler<'a> {
                 }
             }
         }
+        Ok(())
+    }
+
+    pub(in crate::backend::direct_wasm) fn sync_current_function_capture_runtime_values_for_call_effects(
+        &mut self,
+        names: &HashSet<String>,
+    ) -> DirectResult<()> {
+        let syncs = names
+            .iter()
+            .filter(|source_name| source_name.as_str() != "this")
+            .filter(|source_name| source_name.as_str() != "new.target")
+            .filter(|source_name| {
+                self.global_has_binding(source_name)
+                    || self.global_has_implicit_binding(source_name)
+                    || self.backend.global_has_lexical_binding(source_name)
+            })
+            .filter_map(|source_name| {
+                self.resolve_user_function_capture_hidden_name(source_name)
+                    .map(|hidden_name| (source_name.clone(), hidden_name))
+            })
+            .collect::<Vec<_>>();
+
+        for (source_name, hidden_name) in syncs {
+            let binding = self
+                .implicit_global_binding(&hidden_name)
+                .unwrap_or_else(|| self.ensure_implicit_global_binding(&hidden_name));
+            let value_local = self.allocate_temp_local();
+            let source_expression = Expression::Identifier(source_name.clone());
+            self.emit_user_function_capture_source_value(&source_name, &source_expression, true)?;
+            self.push_local_set(value_local);
+            self.push_local_get(value_local);
+            self.push_global_set(binding.value_index);
+            self.push_i32_const(1);
+            self.push_global_set(binding.present_index);
+            self.clear_user_function_capture_static_metadata(&hidden_name);
+            self.sync_user_function_capture_runtime_object_shadows_for_source(
+                &hidden_name,
+                &source_name,
+                &source_expression,
+            )?;
+        }
+
         Ok(())
     }
 

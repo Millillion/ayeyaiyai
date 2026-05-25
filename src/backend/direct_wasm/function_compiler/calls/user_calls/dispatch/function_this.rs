@@ -1,6 +1,99 @@
 use super::*;
 
+fn simple_return_expression_from_statements(statements: &[Statement]) -> Option<&Expression> {
+    let [statement] = statements else {
+        return None;
+    };
+    simple_return_expression_from_statement(statement)
+}
+
+fn simple_return_expression_from_statement(statement: &Statement) -> Option<&Expression> {
+    match statement {
+        Statement::Return(expression) => Some(expression),
+        Statement::Declaration { body } | Statement::Block { body } => {
+            simple_return_expression_from_statements(body)
+        }
+        _ => None,
+    }
+}
+
 impl<'a> FunctionCompiler<'a> {
+    pub(in crate::backend::direct_wasm) fn generated_function_statement_source_name(
+        function_name: &str,
+    ) -> Option<&str> {
+        function_name
+            .strip_prefix("__ayy_fnstmt_")
+            .and_then(|rest| rest.rsplit_once('_'))
+            .map(|(source_name, _)| source_name)
+    }
+
+    pub(in crate::backend::direct_wasm) fn function_statement_binding_name_for_source(
+        &self,
+        source_name: &str,
+    ) -> Option<String> {
+        self.user_functions().into_iter().find_map(|function| {
+            (Self::generated_function_statement_source_name(&function.name) == Some(source_name))
+                .then_some(function.name)
+        })
+    }
+
+    pub(in crate::backend::direct_wasm) fn current_function_statement_binding_name_for_source(
+        &self,
+        source_name: &str,
+    ) -> Option<String> {
+        let current_function_name = self.current_function_name()?;
+        (Self::generated_function_statement_source_name(current_function_name) == Some(source_name))
+            .then(|| current_function_name.to_string())
+    }
+
+    pub(in crate::backend::direct_wasm) fn simple_zero_arg_function_statement_return_expression(
+        &self,
+        binding_name: &str,
+    ) -> Option<&Expression> {
+        let source_name = scoped_binding_source_name(binding_name).unwrap_or(binding_name);
+        let function_name = self.function_statement_binding_name_for_source(source_name)?;
+        let declaration = self.prepared_function_declaration(&function_name)?;
+        if !declaration.params.is_empty() {
+            return None;
+        }
+        simple_return_expression_from_statements(&declaration.body)
+    }
+
+    pub(in crate::backend::direct_wasm) fn resolve_user_function_capture_slot_binding_name(
+        &self,
+        capture_name: &str,
+    ) -> Option<String> {
+        let capture_source_name = scoped_binding_source_name(capture_name).unwrap_or(capture_name);
+        if capture_name == "this" {
+            return self
+                .resolve_user_function_capture_hidden_name("this")
+                .or_else(|| self.resolve_eval_local_function_hidden_name("this"))
+                .or_else(|| Some("this".to_string()));
+        }
+
+        self.resolve_current_local_binding(capture_name)
+            .map(|(resolved_name, _)| resolved_name)
+            .or_else(|| {
+                self.resolve_current_local_binding(capture_source_name)
+                    .map(|(resolved_name, _)| resolved_name)
+            })
+            .or_else(|| {
+                self.current_function_statement_binding_name_for_source(capture_source_name)
+            })
+            .or_else(|| self.resolve_user_function_capture_hidden_name(capture_name))
+            .or_else(|| self.resolve_eval_local_function_hidden_name(capture_name))
+            .or_else(|| {
+                (self.global_has_binding(capture_source_name)
+                    || self.backend.global_has_lexical_binding(capture_source_name)
+                    || self
+                        .backend
+                        .global_function_binding(capture_source_name)
+                        .is_some()
+                    || self.global_has_implicit_binding(capture_source_name))
+                .then_some(capture_source_name.to_string())
+            })
+    }
+
     fn resolve_user_function_capture_slots_by_name(
         &self,
         function_name: &str,
@@ -15,26 +108,7 @@ impl<'a> FunctionCompiler<'a> {
         capture_names.sort();
         let mut capture_slots = BTreeMap::new();
         for capture_name in capture_names {
-            let slot_name = if capture_name == "this" {
-                self.resolve_user_function_capture_hidden_name("this")
-                    .or_else(|| self.resolve_eval_local_function_hidden_name("this"))
-                    .or_else(|| Some("this".to_string()))
-            } else {
-                self.resolve_current_local_binding(&capture_name)
-                    .map(|(resolved_name, _)| resolved_name)
-                    .or_else(|| self.resolve_user_function_capture_hidden_name(&capture_name))
-                    .or_else(|| self.resolve_eval_local_function_hidden_name(&capture_name))
-                    .or_else(|| {
-                        (self.global_has_binding(&capture_name)
-                            || self.backend.global_has_lexical_binding(&capture_name)
-                            || self
-                                .backend
-                                .global_function_binding(&capture_name)
-                                .is_some()
-                            || self.global_has_implicit_binding(&capture_name))
-                        .then_some(capture_name.clone())
-                    })
-            };
+            let slot_name = self.resolve_user_function_capture_slot_binding_name(&capture_name);
             let Some(slot_name) = slot_name else {
                 if trace_private {
                     eprintln!(
@@ -147,6 +221,35 @@ impl<'a> FunctionCompiler<'a> {
         )
     }
 
+    pub(in crate::backend::direct_wasm) fn static_sloppy_function_this_binding(
+        &self,
+        user_function: &UserFunction,
+        this_expression: &Expression,
+    ) -> Option<Expression> {
+        if user_function.strict || user_function.lexical_this {
+            return None;
+        }
+        let primitive = self
+            .resolve_static_primitive_expression_with_context(
+                this_expression,
+                self.current_function_name(),
+            )
+            .or_else(|| self.resolve_static_boxed_primitive_value(this_expression))?;
+        let constructor_name = match primitive {
+            Expression::Number(_) => "Number",
+            Expression::String(_) => "String",
+            Expression::Bool(_) => "Boolean",
+            Expression::BigInt(_) => "Object",
+            Expression::Undefined | Expression::Null => return Some(Expression::This),
+            _ if self.infer_value_kind(&primitive) == Some(StaticValueKind::Symbol) => "Object",
+            _ => return None,
+        };
+        Some(Expression::New {
+            callee: Box::new(Expression::Identifier(constructor_name.to_string())),
+            arguments: vec![CallArgument::Expression(primitive)],
+        })
+    }
+
     pub(in crate::backend::direct_wasm) fn emit_user_function_call_with_function_this_binding(
         &mut self,
         user_function: &UserFunction,
@@ -176,7 +279,10 @@ impl<'a> FunctionCompiler<'a> {
         if capture_slots.is_none()
             && !self.should_box_sloppy_function_this(user_function, this_expression)
         {
-            let materialized_this_expression = self.materialize_static_expression(this_expression);
+            let materialized_this_expression = self
+                .with_suspended_with_scopes_if_active_scope_object(this_expression, |compiler| {
+                    Ok(compiler.materialize_static_expression(this_expression))
+                })?;
             let materialized_call_arguments = expanded_arguments
                 .iter()
                 .map(|argument| self.materialize_static_expression(argument))

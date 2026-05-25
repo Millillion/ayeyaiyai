@@ -24,6 +24,16 @@ pub(in crate::backend::direct_wasm) fn infer_own_property_names_binding_from_exp
         return Some(own_property_names_from_array_binding(&array_binding));
     }
     let object_binding = resolve_object_binding(expression);
+    if std::env::var_os("AYY_TRACE_OWN_PROPERTY_NAMES").is_some() {
+        eprintln!(
+            "own_property_names expression={expression:?} function_shape={} object_props={:?}",
+            has_function_property_shape(expression),
+            object_binding
+                .as_ref()
+                .map(ordered_object_property_names)
+                .unwrap_or_default()
+        );
+    }
     if has_function_property_shape(expression) {
         return Some(own_property_names_from_function_binding(
             object_binding.as_ref(),
@@ -53,19 +63,28 @@ pub(in crate::backend::direct_wasm) fn infer_builtin_object_array_call_binding(
     let Expression::Member { object, property } = callee else {
         return None;
     };
-    if !matches!(object.as_ref(), Expression::Identifier(name) if name == "Object") {
+    let Expression::Identifier(object_name) = object.as_ref() else {
         return None;
-    }
+    };
     let [CallArgument::Expression(target), ..] = arguments else {
         return None;
     };
-    match property.as_ref() {
-        Expression::String(name) if name == "keys" => infer_enumerated_keys_binding(target),
-        Expression::String(name) if name == "getOwnPropertyNames" => {
+    match (object_name.as_str(), property.as_ref()) {
+        ("Object", Expression::String(name)) if name == "keys" => {
+            infer_enumerated_keys_binding(target)
+        }
+        ("Object", Expression::String(name)) if name == "getOwnPropertyNames" => {
             infer_own_property_names_binding(target)
         }
-        Expression::String(name) if name == "getOwnPropertySymbols" => {
+        ("Object", Expression::String(name)) if name == "getOwnPropertySymbols" => {
             infer_own_property_symbols_binding(target)
+        }
+        ("Reflect", Expression::String(name)) if name == "ownKeys" => {
+            let mut names = infer_own_property_names_binding(target)?;
+            if let Some(symbols) = infer_own_property_symbols_binding(target) {
+                names.values.extend(symbols.values);
+            }
+            Some(names)
         }
         _ => None,
     }

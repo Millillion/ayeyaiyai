@@ -29,12 +29,21 @@ impl<'a> FunctionCompiler<'a> {
         name: &str,
         value_expression: &Expression,
     ) {
+        let value_kind = self.infer_value_kind(value_expression);
+        if self
+            .resolve_function_binding_from_expression(value_expression)
+            .is_some()
+        {
+            return;
+        }
+        if value_kind != Some(StaticValueKind::Number)
+            || self.resolve_static_string_value(value_expression).is_some()
+        {
+            return;
+        }
         let Some(number) = self.resolve_static_number_value(value_expression) else {
             return;
         };
-        if number.is_nan() {
-            return;
-        }
         if number.is_finite()
             && number.fract() == 0.0
             && !(number == 0.0 && number.is_sign_negative())

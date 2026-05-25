@@ -75,6 +75,8 @@ impl<'a> FunctionCompiler<'a> {
                         self.state.emission.output.instructions.push(0x1a);
                     }
                 }
+                self.push_local_get(value_local);
+                return Ok(());
             } else if slot.state.writable {
                 if slot.state.mapped {
                     if let Some(source_param_local) = slot.source_param_local {

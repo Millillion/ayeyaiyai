@@ -1,6 +1,268 @@
 use super::*;
 
+fn class_init_descriptor_data_value(expression: &Expression) -> Option<&Expression> {
+    let Expression::Object(entries) = expression else {
+        return None;
+    };
+
+    entries.iter().find_map(|entry| match entry {
+        ObjectEntry::Data { key, value }
+            if matches!(key, Expression::String(name) if name == "value") =>
+        {
+            Some(value)
+        }
+        _ => None,
+    })
+}
+
+fn class_init_define_property_data_value(expression: &Expression) -> Option<&Expression> {
+    let Expression::Call { callee, arguments } = expression else {
+        return None;
+    };
+    let Expression::Member { object, property } = callee.as_ref() else {
+        return None;
+    };
+    if !matches!(
+        object.as_ref(),
+        Expression::Identifier(name) if name == "Object" || name == "Reflect"
+    ) || !matches!(property.as_ref(), Expression::String(name) if name == "defineProperty")
+    {
+        return None;
+    }
+    let Some(CallArgument::Expression(descriptor)) = arguments.get(2) else {
+        return None;
+    };
+    class_init_descriptor_data_value(descriptor)
+}
+
+fn class_init_expression_has_external_side_effects(expression: &Expression) -> bool {
+    if let Some(value) = class_init_define_property_data_value(expression) {
+        if !inline_summary_side_effect_free_expression(value) {
+            return true;
+        }
+    }
+
+    match expression {
+        Expression::Array(elements) => elements.iter().any(|element| match element {
+            ArrayElement::Expression(expression) | ArrayElement::Spread(expression) => {
+                class_init_expression_has_external_side_effects(expression)
+            }
+        }),
+        Expression::Object(entries) => entries.iter().any(|entry| match entry {
+            ObjectEntry::Data { key, value } => {
+                class_init_expression_has_external_side_effects(key)
+                    || class_init_expression_has_external_side_effects(value)
+            }
+            ObjectEntry::Getter { key, getter } => {
+                class_init_expression_has_external_side_effects(key)
+                    || class_init_expression_has_external_side_effects(getter)
+            }
+            ObjectEntry::Setter { key, setter } => {
+                class_init_expression_has_external_side_effects(key)
+                    || class_init_expression_has_external_side_effects(setter)
+            }
+            ObjectEntry::Spread(expression) => {
+                class_init_expression_has_external_side_effects(expression)
+            }
+        }),
+        Expression::Member { object, property } => {
+            class_init_expression_has_external_side_effects(object)
+                || class_init_expression_has_external_side_effects(property)
+        }
+        Expression::SuperMember { property } => {
+            class_init_expression_has_external_side_effects(property)
+        }
+        Expression::Assign { value, .. }
+        | Expression::AssignMember { value, .. }
+        | Expression::AssignSuperMember { value, .. }
+        | Expression::Await(value)
+        | Expression::EnumerateKeys(value)
+        | Expression::GetIterator(value)
+        | Expression::IteratorClose(value)
+        | Expression::Unary {
+            expression: value, ..
+        } => class_init_expression_has_external_side_effects(value),
+        Expression::Binary { left, right, .. } => {
+            class_init_expression_has_external_side_effects(left)
+                || class_init_expression_has_external_side_effects(right)
+        }
+        Expression::Conditional {
+            condition,
+            then_expression,
+            else_expression,
+        } => {
+            class_init_expression_has_external_side_effects(condition)
+                || class_init_expression_has_external_side_effects(then_expression)
+                || class_init_expression_has_external_side_effects(else_expression)
+        }
+        Expression::Sequence(expressions) => expressions
+            .iter()
+            .any(class_init_expression_has_external_side_effects),
+        Expression::Call { callee, arguments }
+        | Expression::SuperCall { callee, arguments }
+        | Expression::New { callee, arguments } => {
+            class_init_expression_has_external_side_effects(callee)
+                || arguments.iter().any(|argument| {
+                    class_init_expression_has_external_side_effects(argument.expression())
+                })
+        }
+        Expression::Number(_)
+        | Expression::BigInt(_)
+        | Expression::String(_)
+        | Expression::Bool(_)
+        | Expression::Null
+        | Expression::Undefined
+        | Expression::NewTarget
+        | Expression::Identifier(_)
+        | Expression::This
+        | Expression::Sent
+        | Expression::Update { .. } => false,
+    }
+}
+
+fn class_init_statement_has_external_side_effects(statement: &Statement) -> bool {
+    match statement {
+        Statement::Declaration { body }
+        | Statement::Block { body }
+        | Statement::Labeled { body, .. }
+        | Statement::With { body, .. } => body
+            .iter()
+            .any(class_init_statement_has_external_side_effects),
+        Statement::Var { value, .. }
+        | Statement::Let { value, .. }
+        | Statement::Assign { value, .. }
+        | Statement::Throw(value)
+        | Statement::Return(value)
+        | Statement::Yield { value }
+        | Statement::YieldDelegate { value }
+        | Statement::Expression(value) => class_init_expression_has_external_side_effects(value),
+        Statement::AssignMember {
+            object,
+            property,
+            value,
+        } => {
+            class_init_expression_has_external_side_effects(object)
+                || class_init_expression_has_external_side_effects(property)
+                || class_init_expression_has_external_side_effects(value)
+        }
+        Statement::Print { values } => values
+            .iter()
+            .any(class_init_expression_has_external_side_effects),
+        Statement::If {
+            condition,
+            then_branch,
+            else_branch,
+        } => {
+            class_init_expression_has_external_side_effects(condition)
+                || then_branch
+                    .iter()
+                    .any(class_init_statement_has_external_side_effects)
+                || else_branch
+                    .iter()
+                    .any(class_init_statement_has_external_side_effects)
+        }
+        Statement::Try {
+            body,
+            catch_setup,
+            catch_body,
+            ..
+        } => body
+            .iter()
+            .chain(catch_setup)
+            .chain(catch_body)
+            .any(class_init_statement_has_external_side_effects),
+        Statement::Switch {
+            discriminant,
+            cases,
+            ..
+        } => {
+            class_init_expression_has_external_side_effects(discriminant)
+                || cases.iter().any(|case| {
+                    case.test
+                        .as_ref()
+                        .is_some_and(class_init_expression_has_external_side_effects)
+                        || case
+                            .body
+                            .iter()
+                            .any(class_init_statement_has_external_side_effects)
+                })
+        }
+        Statement::For {
+            init,
+            condition,
+            update,
+            break_hook,
+            body,
+            ..
+        } => {
+            init.iter()
+                .any(class_init_statement_has_external_side_effects)
+                || condition
+                    .as_ref()
+                    .is_some_and(class_init_expression_has_external_side_effects)
+                || update
+                    .as_ref()
+                    .is_some_and(class_init_expression_has_external_side_effects)
+                || break_hook
+                    .as_ref()
+                    .is_some_and(class_init_expression_has_external_side_effects)
+                || body
+                    .iter()
+                    .any(class_init_statement_has_external_side_effects)
+        }
+        Statement::While {
+            condition,
+            break_hook,
+            body,
+            ..
+        }
+        | Statement::DoWhile {
+            condition,
+            break_hook,
+            body,
+            ..
+        } => {
+            class_init_expression_has_external_side_effects(condition)
+                || break_hook
+                    .as_ref()
+                    .is_some_and(class_init_expression_has_external_side_effects)
+                || body
+                    .iter()
+                    .any(class_init_statement_has_external_side_effects)
+        }
+        Statement::Break { .. } | Statement::Continue { .. } => false,
+    }
+}
+
 impl<'a> FunctionCompiler<'a> {
+    fn registered_static_class_init_function_declaration(
+        &self,
+        function_name: &str,
+    ) -> Option<&FunctionDeclaration> {
+        if !function_name.starts_with("__ayy_class_init_") {
+            return None;
+        }
+        if let Some(function) = self.resolve_registered_function_declaration(function_name) {
+            return Some(function);
+        }
+
+        let namespace_suffix = function_name
+            .find("____evalctx_")
+            .map(|index| &function_name[index..])?;
+        let mut matches = self
+            .backend
+            .function_registry
+            .catalog
+            .registered_function_declarations
+            .iter()
+            .filter(|function| {
+                function.name.starts_with("__ayy_class_init_")
+                    && function.name.ends_with(namespace_suffix)
+            });
+        let first = matches.next()?;
+        matches.next().is_none().then_some(first)
+    }
+
     fn resolve_static_class_init_local_identifier(
         &self,
         name: &str,
@@ -202,10 +464,14 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         function_name: &str,
     ) -> Option<Expression> {
-        if !function_name.starts_with("__ayy_class_init_") {
+        let function = self.registered_static_class_init_function_declaration(function_name)?;
+        if function
+            .body
+            .iter()
+            .any(class_init_statement_has_external_side_effects)
+        {
             return None;
         }
-        let function = self.resolve_registered_function_declaration(function_name)?;
         let mut local_bindings = std::collections::HashMap::new();
 
         for statement in &function.body {
@@ -260,6 +526,150 @@ impl<'a> FunctionCompiler<'a> {
                 Expression::Identifier(name) => Some(name),
                 _ => None,
             })
+    }
+
+    pub(in crate::backend::direct_wasm) fn resolve_static_class_init_call_constructor_alias(
+        &self,
+        function_name: &str,
+    ) -> Option<String> {
+        let function = self.registered_static_class_init_function_declaration(function_name)?;
+        let mut aliases = std::collections::HashMap::new();
+
+        for statement in &function.body {
+            match statement {
+                Statement::Var { name, value }
+                | Statement::Let { name, value, .. }
+                | Statement::Assign { name, value } => {
+                    aliases.insert(name.clone(), value.clone());
+                }
+                Statement::Return(Expression::Identifier(name)) => {
+                    let mut current = name.clone();
+                    let mut visited = std::collections::HashSet::new();
+                    while visited.insert(current.clone()) {
+                        let Some(Expression::Identifier(next)) = aliases.get(&current) else {
+                            break;
+                        };
+                        current = next.clone();
+                    }
+                    return self
+                        .resolve_registered_function_declaration(&current)
+                        .map(|_| current);
+                }
+                _ => {}
+            }
+        }
+
+        None
+    }
+
+    pub(in crate::backend::direct_wasm) fn resolve_static_class_init_class_binding_for_constructor_alias(
+        &self,
+        constructor_name: &str,
+    ) -> Option<String> {
+        for function in &self
+            .backend
+            .function_registry
+            .catalog
+            .registered_function_declarations
+        {
+            if !function.name.starts_with("__ayy_class_init_") {
+                continue;
+            }
+
+            let mut aliases = std::collections::HashMap::new();
+            for statement in &function.body {
+                match statement {
+                    Statement::Var { name, value }
+                    | Statement::Let { name, value, .. }
+                    | Statement::Assign { name, value } => {
+                        aliases.insert(name.clone(), value.clone());
+                    }
+                    Statement::Return(Expression::Identifier(name)) => {
+                        let mut current = name.clone();
+                        let mut visited = std::collections::HashSet::new();
+                        while visited.insert(current.clone()) {
+                            let Some(Expression::Identifier(next)) = aliases.get(&current) else {
+                                break;
+                            };
+                            current = next.clone();
+                        }
+                        if current == constructor_name {
+                            return Some(name.clone());
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        None
+    }
+
+    pub(in crate::backend::direct_wasm) fn resolve_static_class_init_prototype_parent_expression(
+        &self,
+        class_or_constructor_name: &str,
+    ) -> Option<Expression> {
+        for function in &self
+            .backend
+            .function_registry
+            .catalog
+            .registered_function_declarations
+        {
+            if !function.name.starts_with("__ayy_class_init_") {
+                continue;
+            }
+
+            let mut local_bindings = std::collections::HashMap::new();
+            for statement in &function.body {
+                match statement {
+                    Statement::Var { name, value }
+                    | Statement::Let { name, value, .. }
+                    | Statement::Assign { name, value } => {
+                        local_bindings.insert(
+                            name.clone(),
+                            self.resolve_static_class_init_local_expression(value, &local_bindings),
+                        );
+                    }
+                    Statement::Expression(Expression::Call { callee, arguments }) if matches!(callee.as_ref(), Expression::Identifier(name) if name == "__ayyClassPrototypeInit") =>
+                    {
+                        let [
+                            CallArgument::Expression(target),
+                            CallArgument::Expression(prototype_parent),
+                            ..,
+                        ] = arguments.as_slice()
+                        else {
+                            continue;
+                        };
+                        let raw_target_matches = matches!(
+                            target,
+                            Expression::Identifier(name) if name == class_or_constructor_name
+                        );
+                        let resolved_target = self
+                            .resolve_static_class_init_local_expression(target, &local_bindings);
+                        let resolved_target_matches = matches!(
+                            &resolved_target,
+                            Expression::Identifier(name) if name == class_or_constructor_name
+                        );
+                        if !raw_target_matches && !resolved_target_matches {
+                            continue;
+                        }
+                        let prototype_parent = self.resolve_static_class_init_local_expression(
+                            prototype_parent,
+                            &local_bindings,
+                        );
+                        return Some(match prototype_parent {
+                            Expression::Sequence(expressions) => {
+                                expressions.last().cloned().unwrap_or(Expression::Undefined)
+                            }
+                            other => other,
+                        });
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        None
     }
 
     pub(in crate::backend::direct_wasm) fn resolve_static_class_init_local_alias_expression(
@@ -333,6 +743,299 @@ impl<'a> FunctionCompiler<'a> {
             ),
             _ => expression.clone(),
         }
+    }
+
+    fn static_class_init_constructor_target_matches(
+        &self,
+        target: &Expression,
+        returned_constructor: &Expression,
+    ) -> bool {
+        if static_expression_matches(target, returned_constructor) {
+            return true;
+        }
+        let resolved = self.resolve_static_class_init_local_aliases_in_expression(target);
+        static_expression_matches(&resolved, returned_constructor)
+    }
+
+    fn infer_static_class_init_constructor_define_property(
+        &self,
+        arguments: &[CallArgument],
+        returned_constructor: &Expression,
+        local_bindings: &std::collections::HashMap<String, Expression>,
+        constructor_binding: &mut ObjectValueBinding,
+    ) -> bool {
+        let [
+            CallArgument::Expression(target_expression),
+            CallArgument::Expression(property_expression),
+            CallArgument::Expression(descriptor_expression),
+            ..,
+        ] = arguments
+        else {
+            return false;
+        };
+        let resolved_target =
+            self.resolve_static_class_init_local_expression(target_expression, local_bindings);
+        if !self
+            .static_class_init_constructor_target_matches(&resolved_target, returned_constructor)
+        {
+            return false;
+        }
+        let Some(descriptor) = resolve_property_descriptor_definition(descriptor_expression) else {
+            return false;
+        };
+        let property =
+            self.resolve_static_class_init_local_expression(property_expression, local_bindings);
+        let property = self.canonical_object_property_expression(&property);
+        let property_name = static_property_name_from_expression(&property);
+        let existing_value = object_binding_lookup_value(constructor_binding, &property).cloned();
+        let existing_descriptor =
+            object_binding_lookup_descriptor(constructor_binding, &property).cloned();
+        let current_enumerable = property_name.as_ref().is_some_and(|property_name| {
+            !constructor_binding
+                .non_enumerable_string_properties
+                .iter()
+                .any(|hidden_name| hidden_name == property_name)
+        });
+        let enumerable = descriptor.enumerable.unwrap_or_else(|| {
+            existing_descriptor
+                .as_ref()
+                .map(|descriptor| descriptor.enumerable)
+                .unwrap_or(current_enumerable)
+        });
+        let configurable = descriptor.configurable.unwrap_or_else(|| {
+            existing_descriptor
+                .as_ref()
+                .map(|descriptor| descriptor.configurable)
+                .unwrap_or(false)
+        });
+        let (value, writable, getter, setter, has_get, has_set) = if descriptor.is_accessor() {
+            (
+                None,
+                None,
+                descriptor
+                    .getter
+                    .as_ref()
+                    .map(|value| {
+                        self.resolve_static_class_init_local_expression(value, local_bindings)
+                    })
+                    .or_else(|| {
+                        existing_descriptor
+                            .as_ref()
+                            .and_then(|descriptor| descriptor.getter.clone())
+                    }),
+                descriptor
+                    .setter
+                    .as_ref()
+                    .map(|value| {
+                        self.resolve_static_class_init_local_expression(value, local_bindings)
+                    })
+                    .or_else(|| {
+                        existing_descriptor
+                            .as_ref()
+                            .and_then(|descriptor| descriptor.setter.clone())
+                    }),
+                descriptor.getter.is_some()
+                    || existing_descriptor
+                        .as_ref()
+                        .is_some_and(|descriptor| descriptor.has_get),
+                descriptor.setter.is_some()
+                    || existing_descriptor
+                        .as_ref()
+                        .is_some_and(|descriptor| descriptor.has_set),
+            )
+        } else {
+            let value = descriptor
+                .value
+                .as_ref()
+                .map(|value| self.resolve_static_class_init_local_expression(value, local_bindings))
+                .or_else(|| existing_value.clone())
+                .or_else(|| {
+                    existing_descriptor
+                        .as_ref()
+                        .and_then(|descriptor| descriptor.value.clone())
+                })
+                .unwrap_or(Expression::Undefined);
+            let writable = descriptor.writable.or_else(|| {
+                existing_descriptor
+                    .as_ref()
+                    .and_then(|descriptor| descriptor.writable)
+            });
+            (
+                Some(value),
+                Some(writable.unwrap_or(false)),
+                None,
+                None,
+                false,
+                false,
+            )
+        };
+        object_binding_define_property_descriptor(
+            constructor_binding,
+            property,
+            PropertyDescriptorBinding {
+                value,
+                configurable,
+                enumerable,
+                writable,
+                getter,
+                setter,
+                has_get,
+                has_set,
+            },
+        );
+        true
+    }
+
+    fn infer_static_class_init_constructor_assignment(
+        &self,
+        object: &Expression,
+        property: &Expression,
+        value: &Expression,
+        returned_constructor: &Expression,
+        local_bindings: &std::collections::HashMap<String, Expression>,
+        constructor_binding: &mut ObjectValueBinding,
+    ) -> bool {
+        let resolved_object =
+            self.resolve_static_class_init_local_expression(object, local_bindings);
+        if !self
+            .static_class_init_constructor_target_matches(&resolved_object, returned_constructor)
+        {
+            return false;
+        }
+        let property = self.resolve_static_class_init_local_expression(property, local_bindings);
+        let property = self.canonical_object_property_expression(&property);
+        let value = self.resolve_static_class_init_local_expression(value, local_bindings);
+        let enumerable = !matches!(
+            &property,
+            Expression::String(property_name) if property_name.starts_with("__ayy$private$")
+        );
+        object_binding_define_property(constructor_binding, property, value, enumerable);
+        true
+    }
+
+    fn infer_static_class_init_constructor_statement(
+        &self,
+        statement: &Statement,
+        returned_constructor: &Expression,
+        local_bindings: &mut std::collections::HashMap<String, Expression>,
+        constructor_binding: &mut ObjectValueBinding,
+        found_property: &mut bool,
+    ) {
+        match statement {
+            Statement::Declaration { body }
+            | Statement::Block { body }
+            | Statement::Labeled { body, .. } => {
+                for statement in body {
+                    self.infer_static_class_init_constructor_statement(
+                        statement,
+                        returned_constructor,
+                        local_bindings,
+                        constructor_binding,
+                        found_property,
+                    );
+                }
+            }
+            Statement::Var { name, value } | Statement::Let { name, value, .. } => {
+                local_bindings.insert(
+                    name.clone(),
+                    self.resolve_static_class_init_local_expression(value, local_bindings),
+                );
+            }
+            Statement::Assign { name, value } => {
+                local_bindings.insert(
+                    name.clone(),
+                    self.resolve_static_class_init_local_expression(value, local_bindings),
+                );
+            }
+            Statement::Expression(Expression::Call { callee, arguments })
+                if matches!(
+                    callee.as_ref(),
+                    Expression::Member { object, property }
+                        if matches!(object.as_ref(), Expression::Identifier(name) if name == "Object")
+                            && matches!(property.as_ref(), Expression::String(name) if name == "defineProperty")
+                ) =>
+            {
+                *found_property |= self.infer_static_class_init_constructor_define_property(
+                    arguments,
+                    returned_constructor,
+                    local_bindings,
+                    constructor_binding,
+                );
+            }
+            Statement::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                *found_property |= self.infer_static_class_init_constructor_assignment(
+                    object,
+                    property,
+                    value,
+                    returned_constructor,
+                    local_bindings,
+                    constructor_binding,
+                );
+            }
+            Statement::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                let condition =
+                    self.resolve_static_class_init_local_expression(condition, local_bindings);
+                let Some(condition_value) = self.resolve_static_if_condition_value(&condition)
+                else {
+                    return;
+                };
+                let branch = if condition_value {
+                    then_branch
+                } else {
+                    else_branch
+                };
+                for statement in branch {
+                    self.infer_static_class_init_constructor_statement(
+                        statement,
+                        returned_constructor,
+                        local_bindings,
+                        constructor_binding,
+                        found_property,
+                    );
+                }
+            }
+            _ => {}
+        }
+    }
+
+    pub(in crate::backend::direct_wasm) fn infer_static_class_init_constructor_object_binding(
+        &self,
+        function_name: &str,
+    ) -> Option<ObjectValueBinding> {
+        let function = self.registered_static_class_init_function_declaration(function_name)?;
+        if function
+            .body
+            .iter()
+            .any(class_init_statement_has_external_side_effects)
+        {
+            return None;
+        }
+        let body = function.body.clone();
+        let returned_constructor =
+            self.infer_static_class_init_call_result_expression(function_name)?;
+        let mut local_bindings = std::collections::HashMap::new();
+        let mut constructor_binding = empty_object_value_binding();
+        let mut found_property = false;
+
+        for statement in &body {
+            self.infer_static_class_init_constructor_statement(
+                statement,
+                &returned_constructor,
+                &mut local_bindings,
+                &mut constructor_binding,
+                &mut found_property,
+            );
+        }
+
+        found_property.then_some(constructor_binding)
     }
 
     fn resolve_static_class_init_storage_name_from_expression(
@@ -652,6 +1355,18 @@ impl<'a> FunctionCompiler<'a> {
             constructor_expression,
             false,
         );
+        if matches!(
+            function_binding,
+            LocalFunctionBinding::Builtin(function_name)
+                if matches!(function_name.as_str(), "GeneratorFunction" | "AsyncGeneratorFunction")
+        ) {
+            object_binding_define_property(
+                &mut object_binding,
+                Expression::String("prototype".to_string()),
+                Expression::Object(Vec::new()),
+                false,
+            );
+        }
         Some(object_binding)
     }
 
@@ -699,39 +1414,127 @@ impl<'a> FunctionCompiler<'a> {
                 self.global_value_binding(name),
             );
         }
-        let stored_binding = self
+        let mut prototype_binding_names = vec![name.to_string(), resolved_storage_name.clone()];
+        if let Some(Expression::Identifier(alias)) = self
             .state
             .speculation
             .static_semantics
-            .objects
-            .local_prototype_object_bindings
-            .get(name)
-            .cloned()
-            .or_else(|| {
+            .local_value_binding(name)
+            .or_else(|| self.global_value_binding(name))
+        {
+            prototype_binding_names.push(alias.clone());
+        }
+        if let Some(Expression::Identifier(alias)) =
+            self.resolve_bound_alias_expression(&Expression::Identifier(name.to_string()))
+        {
+            prototype_binding_names.push(alias);
+        }
+        if let Some(Expression::Identifier(alias)) =
+            self.resolve_static_class_init_local_alias_expression(name)
+        {
+            prototype_binding_names.push(alias);
+        }
+        if let Some(function) = self.resolve_registered_function_declaration(name)
+            && let Some(self_binding) = function.self_binding.as_ref()
+        {
+            prototype_binding_names.push(self_binding.clone());
+        }
+        if let Some(class_binding_name) =
+            self.resolve_static_class_init_class_binding_for_constructor_alias(name)
+        {
+            prototype_binding_names.push(class_binding_name);
+        }
+        if resolved_storage_name != name {
+            if let Some(Expression::Identifier(alias)) = self
+                .state
+                .speculation
+                .static_semantics
+                .local_value_binding(&resolved_storage_name)
+                .or_else(|| self.global_value_binding(&resolved_storage_name))
+            {
+                prototype_binding_names.push(alias.clone());
+            }
+            if let Some(Expression::Identifier(alias)) = self.resolve_bound_alias_expression(
+                &Expression::Identifier(resolved_storage_name.clone()),
+            ) {
+                prototype_binding_names.push(alias);
+            }
+            if let Some(Expression::Identifier(alias)) =
+                self.resolve_static_class_init_local_alias_expression(&resolved_storage_name)
+            {
+                prototype_binding_names.push(alias);
+            }
+            if let Some(function) =
+                self.resolve_registered_function_declaration(&resolved_storage_name)
+                && let Some(self_binding) = function.self_binding.as_ref()
+            {
+                prototype_binding_names.push(self_binding.clone());
+            }
+            if let Some(class_binding_name) = self
+                .resolve_static_class_init_class_binding_for_constructor_alias(
+                    &resolved_storage_name,
+                )
+            {
+                prototype_binding_names.push(class_binding_name);
+            }
+        }
+        let mut candidate_index = 0;
+        while candidate_index < prototype_binding_names.len() {
+            let candidate_name = prototype_binding_names[candidate_index].clone();
+            for (alias_name, alias_value) in self
+                .backend
+                .global_semantics
+                .values
+                .value_bindings
+                .iter()
+                .chain(
+                    self.backend
+                        .shared_global_semantics
+                        .values
+                        .value_bindings
+                        .iter(),
+                )
+            {
+                if matches!(alias_value, Expression::Identifier(target_name) if target_name == &candidate_name)
+                    && !prototype_binding_names
+                        .iter()
+                        .any(|name| name == alias_name)
+                {
+                    prototype_binding_names.push(alias_name.clone());
+                }
+            }
+            candidate_index += 1;
+        }
+        prototype_binding_names.dedup();
+
+        let mut stored_binding: Option<ObjectValueBinding> = None;
+        for candidate_name in &prototype_binding_names {
+            let candidate_bindings = [
                 self.state
                     .speculation
                     .static_semantics
                     .objects
                     .local_prototype_object_bindings
-                    .get(&resolved_storage_name)
-                    .cloned()
-            })
-            .or_else(|| {
+                    .get(candidate_name),
                 self.backend
                     .global_semantics
                     .values
                     .prototype_object_bindings
-                    .get(name)
-                    .cloned()
-            })
-            .or_else(|| {
+                    .get(candidate_name),
                 self.backend
-                    .global_semantics
+                    .shared_global_semantics
                     .values
                     .prototype_object_bindings
-                    .get(&resolved_storage_name)
-                    .cloned()
-            });
+                    .get(candidate_name),
+            ];
+            for candidate_binding in candidate_bindings.into_iter().flatten() {
+                if let Some(stored_binding) = stored_binding.as_mut() {
+                    Self::merge_object_binding_properties(stored_binding, candidate_binding);
+                } else {
+                    stored_binding = Some(candidate_binding.clone());
+                }
+            }
+        }
         let inferred_binding = self
             .infer_static_class_init_prototype_object_binding(name)
             .or_else(|| {

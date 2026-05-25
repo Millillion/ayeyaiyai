@@ -1,4 +1,8 @@
-use super::{FunctionRegistryState, GlobalSemanticState, ModuleArtifactsState, Test262State};
+use super::{
+    ArrayValueBinding, FunctionRegistryState, GlobalSemanticState, ModuleArtifactsState,
+    Test262State,
+};
+use std::collections::HashMap;
 
 #[derive(Default)]
 pub(in crate::backend::direct_wasm) struct DirectWasmCompiler {
@@ -11,6 +15,10 @@ pub(in crate::backend::direct_wasm) struct CompilerState {
     pub(in crate::backend::direct_wasm) function_registry: FunctionRegistryState,
     pub(in crate::backend::direct_wasm) global_semantics: GlobalSemanticState,
     pub(in crate::backend::direct_wasm) test262: Test262State,
+    pub(in crate::backend::direct_wasm) template_object_array_bindings:
+        HashMap<i32, ArrayValueBinding>,
+    pub(in crate::backend::direct_wasm) template_object_raw_array_bindings:
+        HashMap<i32, ArrayValueBinding>,
 }
 
 #[derive(Clone, Copy)]

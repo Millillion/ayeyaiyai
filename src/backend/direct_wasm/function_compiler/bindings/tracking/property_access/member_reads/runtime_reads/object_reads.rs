@@ -1,6 +1,27 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    pub(in crate::backend::direct_wasm) fn emit_runtime_property_key_match_from_local(
+        &mut self,
+        property_local: u32,
+        existing_key: &Expression,
+    ) -> DirectResult<()> {
+        self.push_local_get(property_local);
+        self.emit_numeric_expression(existing_key)?;
+        self.push_binary_op(BinaryOp::Equal)?;
+
+        if let Expression::String(property_name) = existing_key
+            && let Some(index) = canonical_array_index_from_property_name(property_name)
+        {
+            self.push_local_get(property_local);
+            self.emit_numeric_expression(&Expression::Number(index as f64))?;
+            self.push_binary_op(BinaryOp::Equal)?;
+            self.state.emission.output.instructions.push(0x71);
+        }
+
+        Ok(())
+    }
+
     fn emit_runtime_object_binding_property_value(
         &mut self,
         owner_name: Option<&str>,
@@ -62,9 +83,7 @@ impl<'a> FunctionCompiler<'a> {
             self.object_binding_string_property_values_with_inherited(object, object_binding)
         {
             let existing_key = Expression::String(property_name);
-            self.push_local_get(property_local);
-            self.emit_numeric_expression(&existing_key)?;
-            self.push_binary_op(BinaryOp::Equal)?;
+            self.emit_runtime_property_key_match_from_local(property_local, &existing_key)?;
             self.state.emission.output.instructions.push(0x04);
             self.state.emission.output.instructions.push(I32_TYPE);
             self.push_control_frame();
@@ -147,14 +166,16 @@ impl<'a> FunctionCompiler<'a> {
         object: &Expression,
         property: &Expression,
     ) -> DirectResult<bool> {
-        if !matches!(property, Expression::String(_) | Expression::Number(_))
-            && self.resolve_property_key_expression(property).is_none()
-        {
-            return Ok(false);
-        }
         let Some(object_binding) = self.resolve_object_binding_from_expression(object) else {
             return Ok(false);
         };
+        if !matches!(property, Expression::String(_) | Expression::Number(_))
+            && self.resolve_property_key_expression(property).is_none()
+            && object_binding.string_properties.is_empty()
+            && object_binding.symbol_properties.is_empty()
+        {
+            return Ok(false);
+        }
         let is_private_property = self.is_private_member_read_property(property);
         let resolved_object = self
             .resolve_bound_alias_expression(object)

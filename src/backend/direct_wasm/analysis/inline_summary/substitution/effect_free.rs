@@ -21,6 +21,10 @@ pub(in crate::backend::direct_wasm) fn inline_summary_side_effect_free_expressio
         Expression::SuperMember { property } => {
             inline_summary_side_effect_free_expression(property)
         }
+        Expression::Unary {
+            op: UnaryOp::Delete,
+            ..
+        } => false,
         Expression::Unary { expression, .. }
         | Expression::Await(expression)
         | Expression::EnumerateKeys(expression)

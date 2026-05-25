@@ -18,6 +18,10 @@ pub(in crate::backend::direct_wasm) struct GlobalPropertyDescriptorState {
     pub(in crate::backend::direct_wasm) writable: Option<bool>,
     pub(in crate::backend::direct_wasm) enumerable: bool,
     pub(in crate::backend::direct_wasm) configurable: bool,
+    pub(in crate::backend::direct_wasm) getter: Option<Expression>,
+    pub(in crate::backend::direct_wasm) setter: Option<Expression>,
+    pub(in crate::backend::direct_wasm) has_get: bool,
+    pub(in crate::backend::direct_wasm) has_set: bool,
 }
 
 #[derive(Clone)]

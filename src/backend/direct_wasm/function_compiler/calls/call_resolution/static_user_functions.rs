@@ -81,6 +81,37 @@ impl<'a> FunctionCompiler<'a> {
         )
     }
 
+    fn set_static_user_function_substitution_argument(
+        arguments: &mut Vec<CallArgument>,
+        index: usize,
+        value: Expression,
+    ) {
+        while arguments.len() <= index {
+            arguments.push(CallArgument::Expression(Expression::Undefined));
+        }
+        arguments[index] = CallArgument::Expression(value);
+    }
+
+    fn static_user_function_parameter_default_value(
+        &self,
+        default: &Expression,
+        local_bindings: &mut HashMap<String, Expression>,
+        function_name: &str,
+    ) -> Option<Expression> {
+        if !inline_summary_side_effect_free_expression(default) {
+            return None;
+        }
+        self.evaluate_bound_snapshot_expression(default, local_bindings, Some(function_name))
+            .or_else(|| {
+                let substituted = self.substitute_expression_bindings(default, local_bindings);
+                self.resolve_static_primitive_expression_with_context(
+                    &substituted,
+                    Some(function_name),
+                )
+                .or_else(|| Some(self.materialize_static_expression(&substituted)))
+            })
+    }
+
     pub(in crate::backend::direct_wasm) fn prepare_static_user_function_execution(
         &self,
         function_name: &str,
@@ -102,23 +133,16 @@ impl<'a> FunctionCompiler<'a> {
                 }
             })
             .collect::<Vec<_>>();
-        let substituted_body = function
-            .body
-            .iter()
-            .map(|statement| {
-                transform_statement(self.substitute_user_function_statement_call_frame_bindings(
-                    statement,
-                    user_function,
-                    &call_arguments,
-                    this_binding,
-                    &arguments_binding,
-                ))
-            })
-            .collect::<Vec<_>>();
+        let mut substitution_call_arguments = call_arguments.clone();
         let mut local_bindings = extra_local_bindings;
+        self.seed_static_user_function_capture_bindings_with_sources(
+            function_name,
+            capture_source_bindings,
+            &mut local_bindings,
+        );
         if !function.params.is_empty() {
             for (index, parameter) in function.params.iter().enumerate() {
-                let value = if parameter.rest {
+                let mut value = if parameter.rest {
                     Expression::Array(
                         argument_values
                             .iter()
@@ -133,22 +157,69 @@ impl<'a> FunctionCompiler<'a> {
                         .cloned()
                         .unwrap_or(Expression::Undefined)
                 };
-                local_bindings.insert(parameter.name.clone(), value);
+                if !parameter.rest
+                    && matches!(value, Expression::Undefined)
+                    && let Some(default) = parameter.default.as_ref().or_else(|| {
+                        user_function
+                            .parameter_defaults
+                            .get(index)
+                            .and_then(Option::as_ref)
+                    })
+                {
+                    value = self.static_user_function_parameter_default_value(
+                        default,
+                        &mut local_bindings,
+                        function_name,
+                    )?;
+                }
+                local_bindings.insert(parameter.name.clone(), value.clone());
+                if !parameter.rest {
+                    Self::set_static_user_function_substitution_argument(
+                        &mut substitution_call_arguments,
+                        index,
+                        value,
+                    );
+                }
             }
         } else {
             for (index, parameter_name) in user_function.params.iter().enumerate() {
-                let value = argument_values
+                let mut value = argument_values
                     .get(index)
                     .cloned()
                     .unwrap_or(Expression::Undefined);
-                local_bindings.insert(parameter_name.clone(), value);
+                if matches!(value, Expression::Undefined)
+                    && let Some(default) = user_function
+                        .parameter_defaults
+                        .get(index)
+                        .and_then(Option::as_ref)
+                {
+                    value = self.static_user_function_parameter_default_value(
+                        default,
+                        &mut local_bindings,
+                        function_name,
+                    )?;
+                }
+                local_bindings.insert(parameter_name.clone(), value.clone());
+                Self::set_static_user_function_substitution_argument(
+                    &mut substitution_call_arguments,
+                    index,
+                    value,
+                );
             }
         }
-        self.seed_static_user_function_capture_bindings_with_sources(
-            function_name,
-            capture_source_bindings,
-            &mut local_bindings,
-        );
+        let substituted_body = function
+            .body
+            .iter()
+            .map(|statement| {
+                transform_statement(self.substitute_user_function_statement_call_frame_bindings(
+                    statement,
+                    user_function,
+                    &substitution_call_arguments,
+                    this_binding,
+                    &arguments_binding,
+                ))
+            })
+            .collect::<Vec<_>>();
         let seeded_names = local_bindings.keys().cloned().collect::<Vec<_>>();
         let mut environment =
             self.snapshot_static_resolution_environment_with_local_bindings(local_bindings);

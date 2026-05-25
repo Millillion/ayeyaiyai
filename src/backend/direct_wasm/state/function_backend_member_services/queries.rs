@@ -42,12 +42,26 @@ impl<'a> GlobalMemberCaptureQueryAccess for FunctionCompilerBackend<'a> {
     fn global_member_function_capture_slot_entries(
         &self,
     ) -> Vec<(MemberFunctionBindingKey, BTreeMap<String, String>)> {
-        self.global_semantics
+        let mut entries = self
+            .global_semantics
             .global_members()
             .function_capture_slots_map()
             .iter()
             .map(|(key, capture_slots)| (key.clone(), capture_slots.clone()))
-            .collect()
+            .collect::<Vec<_>>();
+        let local_keys = self
+            .global_semantics
+            .global_members()
+            .function_capture_slots_map();
+        entries.extend(
+            self.shared_global_semantics
+                .global_members()
+                .function_capture_slots_map()
+                .iter()
+                .filter(|(key, _)| !local_keys.contains_key(*key))
+                .map(|(key, capture_slots)| (key.clone(), capture_slots.clone())),
+        );
+        entries
     }
 }
 

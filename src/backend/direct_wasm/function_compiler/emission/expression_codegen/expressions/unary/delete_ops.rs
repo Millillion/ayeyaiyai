@@ -64,6 +64,119 @@ impl<'a> FunctionCompiler<'a> {
         (None, matching_keys)
     }
 
+    fn object_binding_static_delete_result(
+        &self,
+        object_binding: &ObjectValueBinding,
+        property: &Expression,
+    ) -> Option<bool> {
+        let resolved_property = self.canonical_object_property_expression(property);
+        object_binding_lookup_descriptor(object_binding, &resolved_property)
+            .or_else(|| object_binding_lookup_descriptor(object_binding, property))
+            .map(|descriptor| descriptor.configurable)
+    }
+
+    fn object_binding_is_module_namespace_for_delete(object_binding: &ObjectValueBinding) -> bool {
+        object_binding
+            .string_properties
+            .iter()
+            .any(|(name, value)| {
+                name == "__ayy$module$namespace" && matches!(value, Expression::Bool(true))
+            })
+    }
+
+    fn reflect_delete_property_static_result(
+        &self,
+        target: &Expression,
+        property: &Expression,
+    ) -> Option<bool> {
+        let object_binding = self.resolve_object_binding_from_expression(target)?;
+        let materialized_property = self.canonical_object_property_expression(property);
+        self.object_binding_static_delete_result(&object_binding, &materialized_property)
+            .or_else(|| self.object_binding_static_delete_result(&object_binding, property))
+            .or_else(|| {
+                Self::object_binding_is_module_namespace_for_delete(&object_binding).then_some(true)
+            })
+    }
+
+    pub(in crate::backend::direct_wasm) fn emit_reflect_delete_property_call(
+        &mut self,
+        callee_object: &Expression,
+        callee_property: &Expression,
+        arguments: &[CallArgument],
+    ) -> DirectResult<bool> {
+        if !matches!(callee_object, Expression::Identifier(name) if name == "Reflect") {
+            return Ok(false);
+        }
+        if !matches!(callee_property, Expression::String(name) if name == "deleteProperty") {
+            return Ok(false);
+        }
+        let [
+            CallArgument::Expression(target) | CallArgument::Spread(target),
+            CallArgument::Expression(property) | CallArgument::Spread(property),
+            ..,
+        ] = arguments
+        else {
+            return Ok(false);
+        };
+        let Some(result) = self.reflect_delete_property_static_result(target, property) else {
+            return Ok(false);
+        };
+
+        self.emit_ignored_call_arguments(arguments)?;
+        self.push_i32_const(result as i32);
+        Ok(true)
+    }
+
+    fn object_binding_has_own_property_or_descriptor(
+        &self,
+        object_binding: &ObjectValueBinding,
+        property: &Expression,
+    ) -> bool {
+        let resolved_property = self.canonical_object_property_expression(property);
+        object_binding_lookup_value(object_binding, &resolved_property).is_some()
+            || object_binding_lookup_value(object_binding, property).is_some()
+            || object_binding_lookup_descriptor(object_binding, &resolved_property).is_some()
+            || object_binding_lookup_descriptor(object_binding, property).is_some()
+    }
+
+    fn runtime_shadow_binding_exists_for_static_member_delete(
+        &self,
+        object: &Expression,
+        property: &Expression,
+    ) -> bool {
+        let Some(shadow_binding_name) =
+            self.runtime_object_property_shadow_binding_name_for_expression(object, property)
+        else {
+            return false;
+        };
+        self.backend
+            .implicit_global_binding(&shadow_binding_name)
+            .is_some()
+            || self
+                .backend
+                .global_binding_index(&shadow_binding_name)
+                .is_some()
+    }
+
+    fn runtime_shadow_static_delete_result(
+        &self,
+        object: &Expression,
+        property: &Expression,
+    ) -> Option<bool> {
+        let shadow_binding_name =
+            self.runtime_object_property_shadow_binding_name_for_expression(object, property)?;
+        self.backend
+            .global_property_descriptor(&shadow_binding_name)
+            .or_else(|| {
+                self.backend
+                    .shared_global_semantics
+                    .values
+                    .property_descriptors
+                    .get(&shadow_binding_name)
+            })
+            .map(|descriptor| descriptor.configurable)
+    }
+
     fn emit_dynamic_symbol_named_object_member_delete(
         &mut self,
         name: &str,
@@ -304,6 +417,9 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         expression: &Expression,
     ) -> DirectResult<()> {
+        if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+            eprintln!("emit_delete_expression expression={expression:?}");
+        }
         if let Expression::Identifier(name) = expression
             && let Some(scope_object) = self.resolve_with_scope_binding(name)?
         {
@@ -360,7 +476,11 @@ impl<'a> FunctionCompiler<'a> {
             {
                 self.push_i32_const(0);
             }
-            Expression::Identifier(name) if self.is_identifier_bound(name) => {
+            Expression::Identifier(name)
+                if self
+                    .lookup_identifier_kind_ignoring_with_scopes(name)
+                    .is_some() =>
+            {
                 self.push_i32_const(0);
             }
             Expression::Identifier(_) => {
@@ -534,6 +654,37 @@ impl<'a> FunctionCompiler<'a> {
                     self.push_i32_const(0);
                     return Ok(());
                 }
+                if let (Expression::Identifier(object_name), Expression::String(property_name)) = (
+                    self.materialize_static_expression(object),
+                    resolved_property.clone(),
+                ) && self.is_unshadowed_builtin_identifier(&object_name)
+                    && builtin_member_function_name(&object_name, &property_name).is_some()
+                {
+                    self.mark_runtime_object_property_shadow_deleted_binding(
+                        object,
+                        &Expression::String(property_name),
+                    );
+                    self.push_i32_const(1);
+                    return Ok(());
+                }
+                if self
+                    .runtime_shadow_static_delete_result(object, &resolved_property)
+                    .is_some_and(|result| !result)
+                {
+                    self.push_i32_const(0);
+                    self.emit_delete_result_or_throw_if_strict()?;
+                    return Ok(());
+                }
+                if matches!(object.as_ref(), Expression::This) {
+                    let materialized_property =
+                        self.canonical_object_property_expression(&resolved_property);
+                    self.mark_runtime_object_property_shadow_deleted_binding(
+                        object,
+                        &materialized_property,
+                    );
+                    self.push_i32_const(1);
+                    return Ok(());
+                }
                 if let Expression::Identifier(name) = object.as_ref() {
                     let materialized_property =
                         self.canonical_object_property_expression(&resolved_property);
@@ -560,6 +711,73 @@ impl<'a> FunctionCompiler<'a> {
                                 &materialized_property,
                             )
                         });
+                    let local_static_delete_result = self
+                        .state
+                        .speculation
+                        .static_semantics
+                        .local_object_binding(name)
+                        .and_then(|binding| {
+                            self.object_binding_static_delete_result(
+                                binding,
+                                &materialized_property,
+                            )
+                        });
+                    let global_static_delete_result = self
+                        .backend
+                        .global_semantics
+                        .values
+                        .object_bindings
+                        .get(name)
+                        .and_then(|binding| {
+                            self.object_binding_static_delete_result(
+                                binding,
+                                &materialized_property,
+                            )
+                        });
+                    if local_static_delete_result
+                        .or(global_static_delete_result)
+                        .is_some_and(|result| !result)
+                    {
+                        self.push_i32_const(0);
+                        self.emit_delete_result_or_throw_if_strict()?;
+                        return Ok(());
+                    }
+                    let local_known_own_property = self
+                        .state
+                        .speculation
+                        .static_semantics
+                        .local_object_binding(name)
+                        .map(|binding| {
+                            self.object_binding_has_own_property_or_descriptor(
+                                binding,
+                                &materialized_property,
+                            )
+                        });
+                    let global_known_own_property = self
+                        .backend
+                        .global_semantics
+                        .values
+                        .object_bindings
+                        .get(name)
+                        .map(|binding| {
+                            self.object_binding_has_own_property_or_descriptor(
+                                binding,
+                                &materialized_property,
+                            )
+                        });
+                    if static_property_name_from_expression(&materialized_property).is_some()
+                        && (local_known_own_property.is_some()
+                            || global_known_own_property.is_some())
+                        && !local_known_own_property.unwrap_or(false)
+                        && !global_known_own_property.unwrap_or(false)
+                        && !self.runtime_shadow_binding_exists_for_static_member_delete(
+                            object,
+                            &materialized_property,
+                        )
+                    {
+                        self.push_i32_const(1);
+                        return Ok(());
+                    }
                     if static_property_name_from_expression(&materialized_property).is_none()
                         && self.emit_dynamic_string_named_object_member_delete(name, property)?
                     {

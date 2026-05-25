@@ -1,1 +1,0 @@
-throw_site name=TypeError fn=Some("__ayy_class_ctor___ayy_ctor_2__name_C") instruction=4607 caller=src/backend/direct_wasm/function_compiler/emission/expression_codegen/expressions/member_assignments/setter_calls.rs:144

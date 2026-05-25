@@ -51,6 +51,9 @@ impl<'a> FunctionCompiler<'a> {
         if !self.state.speculation.execution_context.strict_mode {
             return Ok(());
         }
+        if is_private_property_name_expression(property) {
+            return Ok(());
+        }
         let Some(deleted_binding) =
             self.resolve_runtime_object_property_shadow_deleted_binding(scope_object, property)
         else {
@@ -324,8 +327,12 @@ impl<'a> FunctionCompiler<'a> {
             && self.current_function_name().is_none()
             && !name.starts_with("__ayy")
         {
-            let binding = self.ensure_implicit_global_binding(name);
-            self.emit_store_implicit_global_from_local(binding, value_local)?;
+            if let Some(global_index) = self.backend.global_binding_index(name) {
+                self.emit_store_declared_global_from_local(name, value_local, global_index)?;
+            } else {
+                let binding = self.ensure_implicit_global_binding(name);
+                self.emit_store_implicit_global_from_local(binding, value_local)?;
+            }
             self.update_static_global_assignment_metadata(name, &materialized_value);
         }
         if let Some(binding) =
@@ -346,6 +353,100 @@ impl<'a> FunctionCompiler<'a> {
                         shadow_binding_name,
                     );
                 }
+                self.update_static_global_assignment_metadata(
+                    &shadow_binding_name,
+                    &materialized_value,
+                );
+                self.backend
+                    .shared_global_semantics
+                    .values
+                    .set_value_binding(shadow_binding_name.clone(), materialized_value.clone());
+                if let Some(kind) = self.infer_value_kind(&materialized_value) {
+                    self.backend
+                        .shared_global_semantics
+                        .set_global_binding_kind(&shadow_binding_name, kind);
+                }
+            }
+        }
+        let captured_receiver_source_name = match scope_object {
+            Expression::This => self
+                .resolve_user_function_capture_hidden_name("this")
+                .and_then(|hidden_name| {
+                    self.resolve_capture_slot_source_binding_name(&hidden_name)
+                }),
+            Expression::Identifier(scope_name) => {
+                self.resolve_capture_slot_source_binding_name(scope_name)
+            }
+            _ => None,
+        }
+        .filter(|source_name| {
+            source_name != "this"
+                && source_name != "new.target"
+                && Self::capture_slot_member_source_key_parts(source_name).is_none()
+        });
+        if let Some(source_name) = captured_receiver_source_name {
+            let source_object = Expression::Identifier(source_name.clone());
+            self.update_member_function_assignment_binding(
+                &source_object,
+                &property,
+                value_expression,
+            );
+            if let Some(object_binding) = self
+                .state
+                .speculation
+                .static_semantics
+                .local_object_binding_mut(&source_name)
+            {
+                object_binding_set_property(
+                    object_binding,
+                    property.clone(),
+                    materialized_value.clone(),
+                );
+            }
+            if let Some(object_binding) = self
+                .backend
+                .global_semantics
+                .values
+                .object_bindings
+                .get_mut(&source_name)
+            {
+                object_binding_set_property(
+                    object_binding,
+                    property.clone(),
+                    materialized_value.clone(),
+                );
+            }
+            if let Some(object_binding) = self
+                .backend
+                .shared_global_semantics
+                .values
+                .object_bindings
+                .get_mut(&source_name)
+            {
+                object_binding_set_property(
+                    object_binding,
+                    property.clone(),
+                    materialized_value.clone(),
+                );
+            }
+            let owner_name = self
+                .runtime_object_property_shadow_owner_name_for_identifier(&source_name)
+                .unwrap_or_else(|| source_name.clone());
+            let source_binding =
+                self.runtime_object_property_shadow_binding_by_property(&owner_name, &property);
+            let source_deleted = self
+                .runtime_object_property_shadow_deleted_binding_by_property(&owner_name, &property);
+            self.push_local_get(value_local);
+            self.push_global_set(source_binding.value_index);
+            self.push_i32_const(1);
+            self.push_global_set(source_binding.present_index);
+            self.push_i32_const(JS_UNDEFINED_TAG);
+            self.push_global_set(source_deleted.value_index);
+            self.push_i32_const(0);
+            self.push_global_set(source_deleted.present_index);
+            if let Expression::String(property_name) = &property {
+                let shadow_binding_name =
+                    Self::runtime_object_property_shadow_binding_name(&owner_name, property_name);
                 self.update_static_global_assignment_metadata(
                     &shadow_binding_name,
                     &materialized_value,
@@ -442,6 +543,7 @@ impl<'a> FunctionCompiler<'a> {
             self.sync_simple_setter_nonlocal_assignment_metadata(
                 &setter_binding,
                 value_expression,
+                &receiver_expression,
             )?;
             match scope_object {
                 Expression::Identifier(name) => {
@@ -700,6 +802,52 @@ impl<'a> FunctionCompiler<'a> {
             object: Box::new(scope_object.clone()),
             property: Box::new(property.clone()),
         };
+        if let Some(getter_binding) = self.resolve_member_getter_binding(scope_object, &property) {
+            let getter_value =
+                self.with_suspended_with_scopes_if_active_scope_object(scope_object, |compiler| {
+                    Ok(compiler
+                        .resolve_function_binding_static_return_expression_with_call_frame(
+                            &getter_binding,
+                            &[],
+                            scope_object,
+                        )
+                        .or_else(|| {
+                            compiler.resolve_function_binding_static_return_expression(
+                                &getter_binding,
+                                &[],
+                            )
+                        }))
+                })?;
+            if let Some(previous_number) = getter_value
+                .as_ref()
+                .and_then(|value| self.resolve_static_number_value(value))
+            {
+                let increment = match op {
+                    UpdateOp::Increment => 1.0,
+                    UpdateOp::Decrement => -1.0,
+                };
+                let previous_local = self.allocate_temp_local();
+                let next_local = self.allocate_temp_local();
+                let next_expression = Expression::Number(previous_number + increment);
+                self.emit_scoped_property_read(scope_object, name)?;
+                self.push_local_set(previous_local);
+                self.emit_numeric_expression(&next_expression)?;
+                self.push_local_set(next_local);
+                self.emit_scoped_property_store_from_local(
+                    scope_object,
+                    name,
+                    next_local,
+                    &next_expression,
+                )?;
+                self.state.emission.output.instructions.push(0x1a);
+                if prefix {
+                    self.push_local_get(next_local);
+                } else {
+                    self.push_local_get(previous_local);
+                }
+                return Ok(());
+            }
+        }
         let previous_kind = self
             .infer_value_kind(&member_expression)
             .unwrap_or(StaticValueKind::Unknown);

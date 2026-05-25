@@ -1,6 +1,13 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn generated_import_meta_binding_name(name: &str) -> bool {
+        let Some(suffix) = name.strip_prefix("__ayy_import_meta_") else {
+            return false;
+        };
+        !suffix.is_empty() && suffix.bytes().all(|byte| byte.is_ascii_digit())
+    }
+
     pub(super) fn apply_object_set_prototype_of_update(&mut self, arguments: &[CallArgument]) {
         let [
             CallArgument::Expression(target),
@@ -13,10 +20,16 @@ impl<'a> FunctionCompiler<'a> {
         let Some(target_name) = self.resolve_global_set_prototype_of_target_name(target) else {
             return;
         };
-        let prototype = self
-            .resolve_bound_alias_expression(prototype_expression)
-            .filter(|resolved| !static_expression_matches(resolved, prototype_expression))
-            .unwrap_or_else(|| self.materialize_static_expression(prototype_expression));
+        let prototype = if matches!(
+            prototype_expression,
+            Expression::Identifier(_) | Expression::Null
+        ) {
+            prototype_expression.clone()
+        } else {
+            self.resolve_bound_alias_expression(prototype_expression)
+                .filter(|resolved| !static_expression_matches(resolved, prototype_expression))
+                .unwrap_or_else(|| self.materialize_static_expression(prototype_expression))
+        };
         let prototype = match prototype {
             Expression::Sequence(expressions) => {
                 expressions.last().cloned().unwrap_or(Expression::Undefined)
@@ -44,7 +57,9 @@ impl<'a> FunctionCompiler<'a> {
                 },
             },
         };
-        self.binding_name_is_global(&target_name)
-            .then_some(target_name)
+        (self.binding_name_is_global(&target_name)
+            || (Self::generated_import_meta_binding_name(&target_name)
+                && self.global_has_binding(&target_name)))
+        .then_some(target_name)
     }
 }

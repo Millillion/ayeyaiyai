@@ -25,6 +25,29 @@ impl<'a> FunctionCompiler<'a> {
             })
     }
 
+    fn cached_iterator_branch_return_value<'b>(
+        branch: &'b [Statement],
+        assigned_nonlocals: &HashSet<String>,
+    ) -> Option<&'b Expression> {
+        let (last, setup) = branch.split_last()?;
+        if !setup.iter().all(|statement| {
+            Self::statement_is_ignorable_for_cached_iterator_next_step(statement)
+                || Self::statement_assigns_only_cached_iterator_nonlocals(
+                    statement,
+                    assigned_nonlocals,
+                )
+        }) {
+            return None;
+        }
+        match last {
+            Statement::Return(value) => Some(value),
+            Statement::Block { body } | Statement::Declaration { body } => {
+                Self::cached_iterator_branch_return_value(body, assigned_nonlocals)
+            }
+            _ => None,
+        }
+    }
+
     fn iterator_result_object_member_value(
         &self,
         result: &Expression,
@@ -57,6 +80,7 @@ impl<'a> FunctionCompiler<'a> {
     ) -> bool {
         if !Self::is_internal_iterator_step_binding_name(name)
             || self.iterator_next_result_is_static_non_object(result)
+            || Self::expression_is_direct_iterator_next_call(result)
         {
             return false;
         }
@@ -123,6 +147,22 @@ impl<'a> FunctionCompiler<'a> {
         true
     }
 
+    fn expression_is_direct_iterator_next_call(expression: &Expression) -> bool {
+        matches!(
+            expression,
+            Expression::Call { callee, arguments }
+                if arguments.is_empty()
+                    && matches!(
+                        callee.as_ref(),
+                        Expression::Member { property, .. }
+                            if matches!(
+                                property.as_ref(),
+                                Expression::String(property_name) if property_name == "next"
+                            )
+                    )
+        )
+    }
+
     fn cached_iterator_next_step_returns(
         &self,
         binding: &CachedIteratorNextMethodBinding,
@@ -141,35 +181,67 @@ impl<'a> FunctionCompiler<'a> {
             }
             return None;
         };
-        let user_function = self.user_function(function_name)?;
+        let Some(user_function) = self.user_function(function_name).cloned().or_else(|| {
+            self.backend
+                .function_registry
+                .user_function(function_name)
+                .cloned()
+        }) else {
+            if trace {
+                eprintln!("iterator_step_cached_returns:reject_user_miss function={function_name}");
+            }
+            return None;
+        };
         let assigned_nonlocals =
-            self.collect_user_function_assigned_nonlocal_bindings(user_function);
-        if self.user_function_mentions_direct_eval(user_function)
-            || self.user_function_references_captured_user_function(user_function)
+            self.collect_user_function_assigned_nonlocal_bindings(&user_function);
+        if self.user_function_mentions_direct_eval(&user_function)
+            || self.user_function_references_captured_user_function(&user_function)
             || user_function.has_lowered_pattern_parameters()
             || !self
-                .user_function_parameter_iterator_consumption_indices(user_function)
+                .user_function_parameter_iterator_consumption_indices(&user_function)
                 .is_empty()
         {
             if trace {
                 eprintln!(
                     "iterator_step_cached_returns:reject_effects function={function_name} direct_eval={} private={} captured_ref={} lowered={} param_iter={} assigned={} call_effect={}",
-                    self.user_function_mentions_direct_eval(user_function),
-                    self.user_function_mentions_private_member_access(user_function),
-                    self.user_function_references_captured_user_function(user_function),
+                    self.user_function_mentions_direct_eval(&user_function),
+                    self.user_function_mentions_private_member_access(&user_function),
+                    self.user_function_references_captured_user_function(&user_function),
                     user_function.has_lowered_pattern_parameters(),
                     !self
-                        .user_function_parameter_iterator_consumption_indices(user_function)
+                        .user_function_parameter_iterator_consumption_indices(&user_function)
                         .is_empty(),
                     !assigned_nonlocals.is_empty(),
                     !self
-                        .collect_user_function_call_effect_nonlocal_bindings(user_function)
+                        .collect_user_function_call_effect_nonlocal_bindings(&user_function)
                         .is_empty()
                 );
             }
             return None;
         }
-        let function = self.resolve_registered_function_declaration(function_name)?;
+        let Some(function) = self.resolve_registered_function_declaration(function_name) else {
+            if trace {
+                eprintln!(
+                    "iterator_step_cached_returns:reject_declaration_miss function={function_name}"
+                );
+            }
+            return None;
+        };
+        let call_this_binding = match &binding.this_expression {
+            Expression::Object(_) => self
+                .state
+                .speculation
+                .static_semantics
+                .arrays
+                .cached_iterator_next_method_bindings
+                .iter()
+                .find_map(|(name, candidate)| {
+                    static_expression_matches(&candidate.this_expression, &binding.this_expression)
+                        .then(|| Expression::Identifier(name.clone()))
+                })
+                .unwrap_or_else(|| binding.this_expression.clone()),
+            _ => binding.this_expression.clone(),
+        };
         let arguments_binding = Expression::Array(
             arguments
                 .iter()
@@ -188,21 +260,28 @@ impl<'a> FunctionCompiler<'a> {
                     then_branch,
                     else_branch,
                 } if else_branch.is_empty() => {
-                    let [Statement::Return(return_value)] = then_branch.as_slice() else {
+                    let Some(return_value) =
+                        Self::cached_iterator_branch_return_value(then_branch, &assigned_nonlocals)
+                    else {
+                        if trace {
+                            eprintln!(
+                                "iterator_step_cached_returns:reject_then_branch function={function_name} branch={then_branch:?}"
+                            );
+                        }
                         return None;
                     };
                     let condition = self.substitute_user_function_call_frame_bindings(
                         condition,
-                        user_function,
+                        &user_function,
                         arguments,
-                        &binding.this_expression,
+                        &call_this_binding,
                         &arguments_binding,
                     );
                     let return_value = self.substitute_user_function_call_frame_bindings(
                         return_value,
-                        user_function,
+                        &user_function,
                         arguments,
-                        &binding.this_expression,
+                        &call_this_binding,
                         &arguments_binding,
                     );
                     let (condition, return_value) =
@@ -219,9 +298,9 @@ impl<'a> FunctionCompiler<'a> {
                 Statement::Return(return_value) => {
                     let return_value = self.substitute_user_function_call_frame_bindings(
                         return_value,
-                        user_function,
+                        &user_function,
                         arguments,
-                        &binding.this_expression,
+                        &call_this_binding,
                         &arguments_binding,
                     );
                     let return_value = binding
@@ -321,6 +400,9 @@ impl<'a> FunctionCompiler<'a> {
         value_local: u32,
     ) -> DirectResult<()> {
         if let Some(value) = self.iterator_result_object_member_value(result, "value") {
+            if self.emit_cached_iterator_post_update_value_slot(&value, value_local)? {
+                return Ok(());
+            }
             self.emit_numeric_expression(&value)?;
         } else {
             let value = Self::iterator_result_member_expression(result, "value");
@@ -328,6 +410,48 @@ impl<'a> FunctionCompiler<'a> {
         }
         self.push_local_set(value_local);
         Ok(())
+    }
+
+    fn emit_cached_iterator_post_update_value_slot(
+        &mut self,
+        value: &Expression,
+        value_local: u32,
+    ) -> DirectResult<bool> {
+        let Expression::AssignMember {
+            object,
+            property,
+            value: assigned_value,
+        } = value
+        else {
+            return Ok(false);
+        };
+        let Expression::Binary {
+            op: BinaryOp::Add,
+            left,
+            right,
+        } = assigned_value.as_ref()
+        else {
+            return Ok(false);
+        };
+        if !matches!(right.as_ref(), Expression::Number(value) if *value == 1.0) {
+            return Ok(false);
+        }
+        let previous_value = Expression::Member {
+            object: object.clone(),
+            property: property.clone(),
+        };
+        if !static_expression_matches(left, &previous_value) {
+            return Ok(false);
+        }
+
+        let old_value_local = self.allocate_temp_local();
+        self.emit_numeric_expression(&previous_value)?;
+        self.push_local_set(old_value_local);
+        self.emit_numeric_expression(value)?;
+        self.state.emission.output.instructions.push(0x1a);
+        self.push_local_get(old_value_local);
+        self.push_local_set(value_local);
+        Ok(true)
     }
 
     fn emit_iterator_result_value_slot_if_not_done(
@@ -577,12 +701,26 @@ impl<'a> FunctionCompiler<'a> {
                     .unwrap_or(0)
             );
         }
-        let Some(returns) = self.cached_iterator_next_step_returns(&binding, arguments) else {
+        let Some(mut returns) = self.cached_iterator_next_step_returns(&binding, arguments) else {
             if trace {
                 eprintln!("iterator_step_update:cached_no_returns name={name}");
             }
             return false;
         };
+        if matches!(object, Expression::Identifier(iterator_name) if iterator_name.starts_with("__ayy_for_await_iter_"))
+        {
+            returns = returns
+                .into_iter()
+                .map(|(condition, result)| {
+                    let awaited_result = match self.resolve_static_await_resolution_outcome(&result)
+                    {
+                        Some(StaticEvalOutcome::Value(value)) => value,
+                        _ => result,
+                    };
+                    (condition, awaited_result)
+                })
+                .collect();
+        }
         if trace {
             eprintln!(
                 "iterator_step_update:cached_returns name={name} count={}",
@@ -852,6 +990,42 @@ impl<'a> FunctionCompiler<'a> {
             current_static_index,
             &sent_value,
         );
+        if self.static_array_iterator_is_exhausted(&iterator_binding.source, current_static_index) {
+            if let Some(current_index) = iterator_binding.static_index {
+                iterator_binding.static_index = Some(current_index.saturating_add(1));
+            }
+            self.push_i32_const(1);
+            self.push_local_set(done_local);
+            self.push_i32_const(JS_UNDEFINED_TAG);
+            self.push_local_set(value_local);
+            self.state
+                .speculation
+                .static_semantics
+                .set_local_array_iterator_binding(&iterator_binding_name, iterator_binding);
+            self.state
+                .speculation
+                .static_semantics
+                .set_local_iterator_step_binding(
+                    name,
+                    IteratorStepBinding::Runtime {
+                        done_local,
+                        value_local,
+                        function_binding,
+                        static_done,
+                        static_value,
+                        value_candidates,
+                        entry_array: entry_array.take(),
+                    },
+                );
+            self.state
+                .speculation
+                .static_semantics
+                .set_local_kind(name, StaticValueKind::Object);
+            if trace {
+                eprintln!("iterator_step_update:exhausted_static_array name={name}");
+            }
+            return;
+        }
 
         let current_index_local = self.allocate_temp_local();
         self.push_local_get(iterator_binding.index_local);
@@ -899,6 +1073,44 @@ impl<'a> FunctionCompiler<'a> {
             .set_local_kind(name, StaticValueKind::Object);
         if trace {
             eprintln!("iterator_step_update:runtime_source_hit name={name}");
+        }
+    }
+
+    fn static_array_iterator_is_exhausted(
+        &self,
+        source: &IteratorSourceKind,
+        current_static_index: Option<usize>,
+    ) -> bool {
+        let Some(current_static_index) = current_static_index else {
+            return false;
+        };
+        match source {
+            IteratorSourceKind::StaticArray {
+                values,
+                length_local,
+                runtime_name,
+                ..
+            } if !self
+                .static_array_source_has_dynamic_length(*length_local, runtime_name.as_deref()) =>
+            {
+                current_static_index >= values.len()
+            }
+            IteratorSourceKind::StaticArrayEntries {
+                values,
+                length_local,
+                runtime_name,
+            } if !self
+                .static_array_source_has_dynamic_length(*length_local, runtime_name.as_deref()) =>
+            {
+                current_static_index >= values.len()
+            }
+            IteratorSourceKind::StaticMapEntries {
+                values,
+                length_local: None,
+                key_runtime_name: None,
+                value_runtime_name: None,
+            } => current_static_index >= values.len(),
+            _ => false,
         }
     }
 
@@ -970,6 +1182,21 @@ fn iterator_step_value_candidates(source: &IteratorSourceKind) -> Vec<Expression
             .iter()
             .filter_map(|step| match &step.outcome {
                 SimpleGeneratorStepOutcome::Yield(value) => Some(value.clone()),
+                SimpleGeneratorStepOutcome::YieldResult(result) => match result {
+                    Expression::Object(entries) => Some(
+                        entries
+                            .iter()
+                            .find_map(|entry| match entry {
+                                ObjectEntry::Data {
+                                    key: Expression::String(name),
+                                    value,
+                                } if name == "value" => Some(value.clone()),
+                                _ => None,
+                            })
+                            .unwrap_or(Expression::Undefined),
+                    ),
+                    _ => None,
+                },
                 SimpleGeneratorStepOutcome::Throw(_) => None,
             })
             .collect(),

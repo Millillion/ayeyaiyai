@@ -21,5 +21,6 @@ pub(in crate::backend::direct_wasm) struct AsyncYieldDelegateGeneratorPlan {
 #[derive(Clone)]
 pub(in crate::backend::direct_wasm) enum SimpleGeneratorStepOutcome {
     Yield(Expression),
+    YieldResult(Expression),
     Throw(Expression),
 }

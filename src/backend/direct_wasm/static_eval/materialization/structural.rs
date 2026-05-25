@@ -64,6 +64,13 @@ pub(in crate::backend::direct_wasm) fn materialize_recursive_expression(
     recurse: &dyn Fn(&Expression) -> Option<Expression>,
 ) -> Option<Expression> {
     match expression {
+        Expression::Unary {
+            op: UnaryOp::Delete,
+            expression,
+        } if matches!(expression.as_ref(), Expression::Identifier(_)) => Some(Expression::Unary {
+            op: UnaryOp::Delete,
+            expression: expression.clone(),
+        }),
         Expression::Unary { op, expression } => Some(Expression::Unary {
             op: *op,
             expression: Box::new(recurse(expression)?),

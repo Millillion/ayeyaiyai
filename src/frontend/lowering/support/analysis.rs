@@ -12,6 +12,22 @@ pub(crate) fn template_quasi_text(element: &swc_ecma_ast::TplElement) -> Result<
     }
 }
 
+pub(crate) fn template_raw_text(raw: &str) -> String {
+    let mut output = String::with_capacity(raw.len());
+    let mut chars = raw.chars().peekable();
+    while let Some(ch) = chars.next() {
+        if ch == '\r' {
+            if matches!(chars.peek(), Some('\n')) {
+                chars.next();
+            }
+            output.push('\n');
+        } else {
+            output.push(ch);
+        }
+    }
+    output
+}
+
 pub(crate) fn pattern_name_hint(pattern: &Pat) -> Option<&str> {
     match pattern {
         Pat::Ident(identifier) => Some(identifier.id.sym.as_ref()),

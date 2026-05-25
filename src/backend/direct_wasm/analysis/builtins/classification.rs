@@ -6,12 +6,14 @@ pub(in crate::backend::direct_wasm) fn infer_call_result_kind(
     match name {
         "Number" => Some(StaticValueKind::Number),
         "String" => Some(StaticValueKind::String),
+        "Date" => Some(StaticValueKind::String),
         "Boolean" => Some(StaticValueKind::Bool),
         "isNaN" => Some(StaticValueKind::Bool),
-        "Object" | "Array" | "ArrayBuffer" | "SharedArrayBuffer" | "DataView" | "Date"
-        | "RegExp" | "Map" | "Set" | "Error" | "EvalError" | "RangeError" | "ReferenceError"
+        "Object" | "Array" | "ArrayBuffer" | "SharedArrayBuffer" | "DataView" | "RegExp"
+        | "Map" | "Set" | "Error" | "EvalError" | "RangeError" | "ReferenceError"
         | "SyntaxError" | "TypeError" | "URIError" | "AggregateError" | "SuppressedError"
-        | "Promise" | "WeakMap" | "WeakRef" | "WeakSet" => Some(StaticValueKind::Object),
+        | "Promise" | "__ayyDynamicImport" | "__ayyImportMeta" | "WeakMap" | "WeakRef"
+        | "WeakSet" => Some(StaticValueKind::Object),
         "Uint8Array" | "Int8Array" | "Uint16Array" | "Int16Array" | "Uint32Array"
         | "Int32Array" | "Float32Array" | "Float64Array" | "Uint8ClampedArray"
         | "BigInt64Array" | "BigUint64Array" => Some(StaticValueKind::Object),
@@ -37,6 +39,7 @@ pub(in crate::backend::direct_wasm) fn is_builtin_like_capture_identifier(name: 
                 | "__assertNotSameValue"
                 | "__ayyAssertThrows"
                 | "__ayyClassPrototypeInit"
+                | "__ayyTemplateObject"
         )
         || builtin_identifier_kind(name).is_some()
         || infer_call_result_kind(name).is_some()

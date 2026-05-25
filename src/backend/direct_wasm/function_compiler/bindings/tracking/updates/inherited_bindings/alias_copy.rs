@@ -18,7 +18,11 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
-    pub(super) fn copy_member_bindings_for_alias(&mut self, name: &str, source_name: &str) {
+    pub(in crate::backend::direct_wasm) fn copy_member_bindings_for_alias(
+        &mut self,
+        name: &str,
+        source_name: &str,
+    ) {
         let normalized_source_name = self
             .resolve_registered_function_declaration(source_name)
             .and_then(|function| {
@@ -36,16 +40,25 @@ impl<'a> FunctionCompiler<'a> {
         let mut getter_bindings = Vec::new();
         let mut setter_bindings = Vec::new();
 
-        let local_function_bindings = self
+        let mut function_binding_entries = self
             .state
             .speculation
             .static_semantics
             .objects
             .member_function_bindings
             .iter()
-            .map(|(key, binding)| (key.clone(), binding.clone()));
-        let global_function_bindings = self.backend.global_member_function_binding_entries();
-        for (key, binding) in local_function_bindings.chain(global_function_bindings) {
+            .map(|(key, binding)| (key.clone(), binding.clone()))
+            .collect::<Vec<_>>();
+        function_binding_entries.extend(self.backend.global_member_function_binding_entries());
+        function_binding_entries.extend(
+            self.backend
+                .shared_global_semantics
+                .global_members()
+                .function_bindings()
+                .iter()
+                .map(|(key, binding)| (key.clone(), binding.clone())),
+        );
+        for (key, binding) in function_binding_entries {
             let Some(target) = self.rebound_member_target(&key.target, name, source_name) else {
                 continue;
             };
@@ -68,20 +81,40 @@ impl<'a> FunctionCompiler<'a> {
                         .cloned()
                 })
             {
+                let mut capture_slots = capture_slots;
+                if matches!(
+                    key.target,
+                    MemberFunctionBindingTarget::Identifier(ref target)
+                        if target == source_name
+                ) && capture_slots
+                    .get("this")
+                    .is_some_and(|slot_name| slot_name == source_name)
+                {
+                    capture_slots.insert("this".to_string(), name.to_string());
+                }
                 function_capture_slots.push((rebound_key, capture_slots));
             }
         }
 
-        let local_getter_bindings = self
+        let mut getter_binding_entries = self
             .state
             .speculation
             .static_semantics
             .objects
             .member_getter_bindings
             .iter()
-            .map(|(key, binding)| (key.clone(), binding.clone()));
-        let global_getter_bindings = self.backend.global_member_getter_binding_entries();
-        for (key, binding) in local_getter_bindings.chain(global_getter_bindings) {
+            .map(|(key, binding)| (key.clone(), binding.clone()))
+            .collect::<Vec<_>>();
+        getter_binding_entries.extend(self.backend.global_member_getter_binding_entries());
+        getter_binding_entries.extend(
+            self.backend
+                .shared_global_semantics
+                .global_members()
+                .getter_bindings()
+                .iter()
+                .map(|(key, binding)| (key.clone(), binding.clone())),
+        );
+        for (key, binding) in getter_binding_entries {
             let Some(target) = self.rebound_member_target(&key.target, name, source_name) else {
                 continue;
             };
@@ -94,16 +127,25 @@ impl<'a> FunctionCompiler<'a> {
             ));
         }
 
-        let local_setter_bindings = self
+        let mut setter_binding_entries = self
             .state
             .speculation
             .static_semantics
             .objects
             .member_setter_bindings
             .iter()
-            .map(|(key, binding)| (key.clone(), binding.clone()));
-        let global_setter_bindings = self.backend.global_member_setter_binding_entries();
-        for (key, binding) in local_setter_bindings.chain(global_setter_bindings) {
+            .map(|(key, binding)| (key.clone(), binding.clone()))
+            .collect::<Vec<_>>();
+        setter_binding_entries.extend(self.backend.global_member_setter_binding_entries());
+        setter_binding_entries.extend(
+            self.backend
+                .shared_global_semantics
+                .global_members()
+                .setter_bindings()
+                .iter()
+                .map(|(key, binding)| (key.clone(), binding.clone())),
+        );
+        for (key, binding) in setter_binding_entries {
             let Some(target) = self.rebound_member_target(&key.target, name, source_name) else {
                 continue;
             };

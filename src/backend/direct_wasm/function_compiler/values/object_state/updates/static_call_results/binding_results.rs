@@ -26,9 +26,44 @@ impl<'a> FunctionCompiler<'a> {
         ) {
             return Some(result);
         }
+        if self
+            .resolve_function_prototype_bind_call(callee, current_function_name)
+            .is_some()
+        {
+            return None;
+        }
 
         let binding = self
             .resolve_function_binding_from_expression_with_context(callee, current_function_name)?;
+        if std::env::var_os("AYY_TRACE_STATIC_EVAL_RESULT").is_some() {
+            eprintln!(
+                "static_eval_result binding callee={callee:?} current={current_function_name:?} binding={binding:?} args={arguments:?}"
+            );
+        }
+        if matches!(
+            binding,
+            LocalFunctionBinding::Builtin(ref function_name) if function_name == "eval"
+        ) && !matches!(callee, Expression::Identifier(name) if name == "eval")
+            && let Some(outcome) = self
+                .resolve_static_indirect_eval_completion_outcome_with_context(
+                    arguments,
+                    current_function_name,
+                )
+        {
+            if std::env::var_os("AYY_TRACE_STATIC_EVAL_RESULT").is_some() {
+                let outcome_kind = match &outcome {
+                    StaticEvalOutcome::Value(_) => "value",
+                    StaticEvalOutcome::Throw(_) => "throw",
+                };
+                eprintln!(
+                    "static_eval_result indirect_outcome callee={callee:?} outcome={outcome_kind}"
+                );
+            }
+            return match outcome {
+                StaticEvalOutcome::Value(value) => Some((value, None)),
+                StaticEvalOutcome::Throw(_) => None,
+            };
+        }
         if let Some(outcome) = self.resolve_static_function_outcome_from_binding_with_context(
             &binding,
             arguments,
@@ -72,13 +107,11 @@ impl<'a> FunctionCompiler<'a> {
         {
             return None;
         }
-        if self
-            .collect_user_function_assigned_nonlocal_bindings(user_function)
-            .is_empty()
-            && self
-                .collect_user_function_call_effect_nonlocal_bindings(user_function)
-                .is_empty()
-        {
+        let assigned_nonlocals =
+            self.collect_user_function_assigned_nonlocal_bindings(user_function);
+        let call_effect_nonlocals =
+            self.collect_user_function_call_effect_nonlocal_bindings(user_function);
+        if assigned_nonlocals.is_empty() && call_effect_nonlocals.is_empty() {
             let expanded_arguments = self.expand_call_arguments(arguments);
             if let Some((result, _)) = self
                 .resolve_bound_snapshot_user_function_result_with_arguments(
@@ -87,6 +120,13 @@ impl<'a> FunctionCompiler<'a> {
                     &expanded_arguments,
                 )
             {
+                return Some((result, Some(function_name)));
+            }
+            if let Some(result) = self.resolve_static_return_expression_from_user_function_call(
+                &function_name,
+                arguments,
+                None,
+            ) {
                 return Some((result, Some(function_name)));
             }
         }
@@ -177,6 +217,9 @@ impl<'a> FunctionCompiler<'a> {
         if let Expression::Member { object, property } = callee
             && matches!(property.as_ref(), Expression::String(name) if name == "call" || name == "apply")
         {
+            if !self.state.emission.control_flow.try_stack.is_empty() {
+                return None;
+            }
             let function_binding = self.resolve_function_binding_from_expression_with_context(
                 object,
                 current_function_name,

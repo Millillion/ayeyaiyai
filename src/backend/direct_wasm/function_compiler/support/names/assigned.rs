@@ -58,6 +58,33 @@ fn collect_global_member_assignment_binding_name(
     }
 }
 
+fn collect_mutating_member_call_receiver(callee: &Expression, names: &mut HashSet<String>) {
+    let Expression::Member { object, property } = callee else {
+        return;
+    };
+    let method_name = match property.as_ref() {
+        Expression::String(name) | Expression::Identifier(name) => name.as_str(),
+        _ => return,
+    };
+    if !matches!(
+        method_name,
+        "copyWithin"
+            | "fill"
+            | "pop"
+            | "push"
+            | "reverse"
+            | "shift"
+            | "sort"
+            | "splice"
+            | "unshift"
+    ) {
+        return;
+    }
+    if let Expression::Identifier(name) = object.as_ref() {
+        names.insert(name.clone());
+    }
+}
+
 pub(in crate::backend::direct_wasm) fn collect_assigned_binding_names_from_statement(
     statement: &Statement,
     names: &mut HashSet<String>,
@@ -247,6 +274,7 @@ pub(in crate::backend::direct_wasm) fn collect_assigned_binding_names_from_expre
         Expression::Call { callee, arguments }
         | Expression::SuperCall { callee, arguments }
         | Expression::New { callee, arguments } => {
+            collect_mutating_member_call_receiver(callee, names);
             collect_assigned_binding_names_from_expression(callee, names);
             for argument in arguments {
                 match argument {

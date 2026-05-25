@@ -7,6 +7,24 @@ impl StaticSpecialExpressionSource for FunctionStaticEvalContext<'_, '_> {
         expression: &Expression,
         environment: &mut Self::Environment,
     ) -> Option<Expression> {
+        if let Some(value) = self.static_evaluate_assertion_call(expression, environment) {
+            return Some(value);
+        }
+
+        if let Some(value) = self.static_evaluate_array_push_call(expression, environment) {
+            return Some(value);
+        }
+
+        if let Some(value) = self.static_evaluate_array_index_of_call(expression, environment) {
+            return Some(value);
+        }
+
+        if let Some(value) =
+            self.static_evaluate_object_array_member_expression(expression, environment)
+        {
+            return Some(value);
+        }
+
         if let Expression::Call { callee, arguments } = expression
             && let Expression::Member { object, property } = callee.as_ref()
             && matches!(object.as_ref(), Expression::Identifier(name) if name == "Object" || name == "Reflect")
@@ -39,6 +57,9 @@ impl StaticSpecialExpressionSource for FunctionStaticEvalContext<'_, '_> {
             let property = self
                 .evaluate_expression_with_state(property, environment)
                 .or_else(|| self.materialize_expression_with_state(property, environment))?;
+            let property = self
+                .resolve_property_key_with_state(&property, environment)
+                .unwrap_or(property);
             let target_name = self
                 .static_define_property_target_name(target, environment)
                 .or_else(|| {
@@ -120,7 +141,44 @@ impl StaticSpecialExpressionSource for FunctionStaticEvalContext<'_, '_> {
             });
         }
 
+        if let Expression::Call { callee, arguments } = expression
+            && let Expression::Member { object, property } = callee.as_ref()
+            && matches!(object.as_ref(), Expression::Identifier(name) if name == "Object")
+            && matches!(property.as_ref(), Expression::String(name) if name == "freeze" || name == "seal")
+        {
+            let Some(CallArgument::Expression(target) | CallArgument::Spread(target)) =
+                arguments.first()
+            else {
+                return Some(Expression::Undefined);
+            };
+
+            let resolved_target_name = match target {
+                Expression::This => environment
+                    .contains_object_binding(FunctionCompiler::STATIC_NEW_THIS_BINDING)
+                    .then(|| FunctionCompiler::STATIC_NEW_THIS_BINDING.to_string()),
+                _ => resolve_stateful_object_binding_name_in_environment(target, environment),
+            };
+            if let Some(target_name) = resolved_target_name
+                && let Some(binding) = environment.object_binding_mut(&target_name)
+            {
+                object_binding_freeze(binding);
+                return Some(Expression::Identifier(target_name));
+            }
+
+            return self
+                .evaluate_expression_with_state(target, environment)
+                .or_else(|| Some(self.materialize_expression(target)));
+        }
+
         if let Expression::Call { callee, arguments } = expression {
+            if let Some(binding) = self.static_builtin_object_array_call_binding_with_state(
+                callee,
+                arguments,
+                environment,
+            ) {
+                return Some(array_value_binding_to_expression(binding));
+            }
+
             let mut evaluated_arguments = Vec::with_capacity(arguments.len());
             for argument in arguments {
                 let evaluated_argument = match argument {
@@ -170,6 +228,16 @@ impl StaticSpecialExpressionSource for FunctionStaticEvalContext<'_, '_> {
                 };
             };
             let user_function = self.user_function(function_name)?;
+            if function_name.starts_with("__ayy_function_ctor_")
+                && let Some(function) = self.registered_function_declaration(function_name)
+                && let [Statement::Return(return_value)] = function.body.as_slice()
+            {
+                return Some(self.substitute_user_function_arguments(
+                    return_value,
+                    user_function,
+                    &evaluated_arguments,
+                ));
+            }
             if user_function.is_async()
                 || user_function.is_generator()
                 || !user_function
@@ -304,6 +372,320 @@ impl StaticSpecialExpressionSource for FunctionStaticEvalContext<'_, '_> {
 }
 
 impl FunctionStaticEvalContext<'_, '_> {
+    fn static_evaluate_assertion_call(
+        &self,
+        expression: &Expression,
+        environment: &mut StaticResolutionEnvironment,
+    ) -> Option<Expression> {
+        let Expression::Call { callee, arguments } = expression else {
+            return None;
+        };
+        if !Self::is_static_noop_assertion_callee(callee) {
+            return None;
+        }
+
+        for argument in arguments {
+            let CallArgument::Expression(expression) = argument else {
+                return None;
+            };
+            if self
+                .evaluate_expression_with_state(expression, environment)
+                .or_else(|| self.materialize_expression_with_state(expression, environment))
+                .is_none()
+                && !inline_summary_side_effect_free_expression(expression)
+            {
+                return None;
+            }
+        }
+
+        Some(Expression::Undefined)
+    }
+
+    fn is_static_noop_assertion_callee(callee: &Expression) -> bool {
+        match callee {
+            Expression::Identifier(name) => matches!(
+                name.as_str(),
+                "__assert"
+                    | "__assertSameValue"
+                    | "__assertNotSameValue"
+                    | "__ayyAssertCompareArray"
+            ),
+            Expression::Member { object, property } => {
+                matches!(object.as_ref(), Expression::Identifier(name) if name == "assert")
+                    && matches!(
+                        property.as_ref(),
+                        Expression::String(name)
+                            if matches!(name.as_str(), "sameValue" | "notSameValue" | "compareArray")
+                    )
+            }
+            _ => false,
+        }
+    }
+
+    fn static_evaluate_array_push_call(
+        &self,
+        expression: &Expression,
+        environment: &mut StaticResolutionEnvironment,
+    ) -> Option<Expression> {
+        let Expression::Call { callee, arguments } = expression else {
+            return None;
+        };
+        let Expression::Member { object, property } = callee.as_ref() else {
+            return None;
+        };
+        if !matches!(property.as_ref(), Expression::String(name) if name == "push") {
+            return None;
+        }
+        let target_name = self.static_mutable_array_target_name(object, environment)?;
+        let mut binding = self.resolve_array_binding_with_state(
+            &Expression::Identifier(target_name.clone()),
+            environment,
+        )?;
+
+        for argument in arguments {
+            match argument {
+                CallArgument::Expression(expression) => {
+                    let value = self
+                        .evaluate_expression_with_state(expression, environment)
+                        .or_else(|| self.materialize_expression_with_state(expression, environment))
+                        .unwrap_or_else(|| expression.clone());
+                    binding.values.push(Some(value));
+                }
+                CallArgument::Spread(expression) => {
+                    let spread_value = self
+                        .evaluate_expression_with_state(expression, environment)
+                        .or_else(|| self.materialize_expression_with_state(expression, environment))
+                        .unwrap_or_else(|| expression.clone());
+                    let spread_binding =
+                        self.resolve_array_binding_with_state(&spread_value, environment)?;
+                    binding.values.extend(spread_binding.values);
+                }
+            }
+        }
+
+        environment.assign_binding_value(
+            target_name.clone(),
+            array_value_binding_to_expression(binding.clone()),
+        );
+        environment.sync_object_binding(
+            &target_name,
+            Some(object_binding_from_array_binding(&binding)),
+        );
+        Some(Expression::Number(binding.values.len() as f64))
+    }
+
+    fn static_evaluate_array_index_of_call(
+        &self,
+        expression: &Expression,
+        environment: &mut StaticResolutionEnvironment,
+    ) -> Option<Expression> {
+        let Expression::Call { callee, arguments } = expression else {
+            return None;
+        };
+        let Expression::Member { object, property } = callee.as_ref() else {
+            return None;
+        };
+        if !matches!(property.as_ref(), Expression::String(name) if name == "indexOf") {
+            return None;
+        }
+        let Some(
+            CallArgument::Expression(search_expression) | CallArgument::Spread(search_expression),
+        ) = arguments.first()
+        else {
+            return Some(Expression::Number(-1.0));
+        };
+        let search_value = self
+            .evaluate_expression_with_state(search_expression, environment)
+            .or_else(|| self.materialize_expression_with_state(search_expression, environment))
+            .unwrap_or_else(|| search_expression.clone());
+        let search_value = self
+            .resolve_property_key_with_state(&search_value, environment)
+            .unwrap_or(search_value);
+        let array_binding = self.resolve_array_binding_with_state(object, environment)?;
+        let found_index = array_binding
+            .values
+            .iter()
+            .enumerate()
+            .find_map(|(index, value)| {
+                let value = value.as_ref()?;
+                let value = self
+                    .evaluate_expression_with_state(value, environment)
+                    .or_else(|| self.materialize_expression_with_state(value, environment))
+                    .unwrap_or_else(|| value.clone());
+                let value = self
+                    .resolve_property_key_with_state(&value, environment)
+                    .unwrap_or(value);
+                static_expression_matches(&value, &search_value).then_some(index as f64)
+            })
+            .unwrap_or(-1.0);
+        Some(Expression::Number(found_index))
+    }
+
+    pub(super) fn static_mutable_array_target_name(
+        &self,
+        target: &Expression,
+        environment: &mut StaticResolutionEnvironment,
+    ) -> Option<String> {
+        match target {
+            Expression::Identifier(name) => Some(name.clone()),
+            _ => self
+                .evaluate_expression_with_state(target, environment)
+                .or_else(|| self.materialize_expression_with_state(target, environment))
+                .and_then(|target| match target {
+                    Expression::Identifier(name) => Some(name),
+                    _ => None,
+                }),
+        }
+    }
+
+    pub(super) fn resolve_array_binding_with_state(
+        &self,
+        expression: &Expression,
+        environment: &StaticResolutionEnvironment,
+    ) -> Option<ArrayValueBinding> {
+        if let Expression::Identifier(name) = expression
+            && let Some(object_binding) = environment.object_binding(name)
+            && let Some(binding) = array_binding_from_object_binding(object_binding)
+        {
+            return Some(binding);
+        }
+        if let Expression::Identifier(name) = expression
+            && let Some(value) = environment.binding(name)
+            && !matches!(value, Expression::Identifier(alias) if alias == name)
+            && let Some(binding) = self.resolve_array_binding(value)
+        {
+            return Some(binding);
+        }
+        self.resolve_array_binding(expression)
+    }
+
+    fn static_evaluate_object_array_member_expression(
+        &self,
+        expression: &Expression,
+        environment: &mut StaticResolutionEnvironment,
+    ) -> Option<Expression> {
+        let Expression::Member { object, property } = expression else {
+            return None;
+        };
+        let property = self
+            .evaluate_expression_with_state(property, environment)
+            .or_else(|| self.materialize_expression_with_state(property, environment))
+            .unwrap_or_else(|| property.as_ref().clone());
+        if !matches!(property, Expression::String(ref name) if name == "length") {
+            return None;
+        }
+
+        if let Expression::Call { callee, arguments } = object.as_ref()
+            && let Some(binding) = self.static_builtin_object_array_call_binding_with_state(
+                callee,
+                arguments,
+                environment,
+            )
+        {
+            return Some(Expression::Number(binding.values.len() as f64));
+        }
+
+        let object = self
+            .evaluate_expression_with_state(object, environment)
+            .or_else(|| self.materialize_expression_with_state(object, environment))
+            .unwrap_or_else(|| object.as_ref().clone());
+        match object {
+            Expression::Array(elements) => Some(Expression::Number(elements.len() as f64)),
+            _ => self
+                .resolve_array_binding_with_state(&object, environment)
+                .map(|binding| Expression::Number(binding.values.len() as f64)),
+        }
+    }
+
+    fn static_builtin_object_array_call_binding_with_state(
+        &self,
+        callee: &Expression,
+        arguments: &[CallArgument],
+        environment: &mut StaticResolutionEnvironment,
+    ) -> Option<ArrayValueBinding> {
+        let Expression::Member { object, property } = callee else {
+            return None;
+        };
+        let Expression::Identifier(object_name) = object.as_ref() else {
+            return None;
+        };
+        let [
+            CallArgument::Expression(target) | CallArgument::Spread(target),
+            ..,
+        ] = arguments
+        else {
+            return None;
+        };
+
+        match (object_name.as_str(), property.as_ref()) {
+            ("Object", Expression::String(name)) if name == "keys" => {
+                self.static_enumerated_keys_binding_with_state(target, environment)
+            }
+            ("Object", Expression::String(name)) if name == "getOwnPropertyNames" => {
+                self.static_own_property_names_binding_with_state(target, environment)
+            }
+            ("Object", Expression::String(name)) if name == "getOwnPropertySymbols" => {
+                self.static_own_property_symbols_binding_with_state(target, environment)
+            }
+            ("Reflect", Expression::String(name)) if name == "ownKeys" => {
+                let mut names =
+                    self.static_own_property_names_binding_with_state(target, environment)?;
+                if let Some(symbols) =
+                    self.static_own_property_symbols_binding_with_state(target, environment)
+                {
+                    names.values.extend(symbols.values);
+                }
+                Some(names)
+            }
+            _ => None,
+        }
+    }
+
+    fn static_enumerated_keys_binding_with_state(
+        &self,
+        target: &Expression,
+        environment: &mut StaticResolutionEnvironment,
+    ) -> Option<ArrayValueBinding> {
+        if let Some(array_binding) = self.resolve_array_binding_with_state(target, environment) {
+            return Some(enumerated_keys_from_array_binding(&array_binding));
+        }
+        self.resolve_object_binding_with_state(target, environment)
+            .map(|binding| enumerated_keys_from_object_binding(&binding))
+    }
+
+    fn static_own_property_names_binding_with_state(
+        &self,
+        target: &Expression,
+        environment: &mut StaticResolutionEnvironment,
+    ) -> Option<ArrayValueBinding> {
+        if let Some(array_binding) = self.resolve_array_binding_with_state(target, environment) {
+            return Some(own_property_names_from_array_binding(&array_binding));
+        }
+        let object_binding = self.resolve_object_binding_with_state(target, environment);
+        if self.resolve_function_binding(target).is_some()
+            || matches!(
+                target,
+                Expression::Identifier(name)
+                    if self.has_local_prototype_object_binding(name)
+                        || self.has_global_prototype_object_binding(name)
+            )
+        {
+            return Some(own_property_names_from_function_binding(
+                object_binding.as_ref(),
+            ));
+        }
+        object_binding.map(|binding| own_property_names_from_object_binding(&binding))
+    }
+
+    fn static_own_property_symbols_binding_with_state(
+        &self,
+        target: &Expression,
+        environment: &mut StaticResolutionEnvironment,
+    ) -> Option<ArrayValueBinding> {
+        self.resolve_object_binding_with_state(target, environment)
+            .map(|binding| own_property_symbols_from_object_binding(&binding))
+    }
+
     fn static_define_property_target_name(
         &self,
         target: &Expression,
@@ -368,4 +750,14 @@ impl FunctionStaticEvalContext<'_, '_> {
             has_set: descriptor.setter.is_some(),
         }
     }
+}
+
+pub(super) fn array_value_binding_to_expression(binding: ArrayValueBinding) -> Expression {
+    Expression::Array(
+        binding
+            .values
+            .into_iter()
+            .map(|value| ArrayElement::Expression(value.unwrap_or(Expression::Undefined)))
+            .collect(),
+    )
 }

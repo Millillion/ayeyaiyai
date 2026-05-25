@@ -143,29 +143,68 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(false);
         }
 
+        match expression {
+            Expression::Binary { op, left, right } => match op {
+                BinaryOp::LogicalAnd if matches!(left.as_ref(), Expression::Bool(true)) => {
+                    return self.emit_self_tail_call_restart(right);
+                }
+                BinaryOp::LogicalOr if matches!(left.as_ref(), Expression::Bool(false)) => {
+                    return self.emit_self_tail_call_restart(right);
+                }
+                BinaryOp::NullishCoalescing
+                    if matches!(left.as_ref(), Expression::Null | Expression::Undefined)
+                        || matches!(
+                            left.as_ref(),
+                            Expression::Identifier(name)
+                                if name == "undefined"
+                                    && self.is_unshadowed_builtin_identifier(name)
+                        ) =>
+                {
+                    return self.emit_self_tail_call_restart(right);
+                }
+                _ => {}
+            },
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => match condition.as_ref() {
+                Expression::Bool(true) => {
+                    return self.emit_self_tail_call_restart(then_expression);
+                }
+                Expression::Bool(false) => {
+                    return self.emit_self_tail_call_restart(else_expression);
+                }
+                _ => {}
+            },
+            Expression::Sequence(expressions) => {
+                let Some((tail_expression, prefix_expressions)) = expressions.split_last() else {
+                    return Ok(false);
+                };
+                for expression in prefix_expressions {
+                    self.emit_numeric_expression(expression)?;
+                    self.state.emission.output.instructions.push(0x1a);
+                }
+                return self.emit_self_tail_call_restart(tail_expression);
+            }
+            _ => {}
+        }
+
         let Expression::Call { callee, arguments } = expression else {
             return Ok(false);
         };
-        let Expression::Identifier(callee_name) = callee.as_ref() else {
-            return Ok(false);
-        };
-
-        let current_function_name = self.current_function_name().map(str::to_owned);
-        let declaration_references_this_or_new_target = self
-            .current_user_function_declaration()
-            .is_some_and(|declaration| statements_reference_this_or_new_target(&declaration.body));
-        let self_binding = self
-            .current_user_function_declaration()
-            .and_then(|declaration| declaration.self_binding.clone());
-        let is_self_call = current_function_name.as_deref() == Some(callee_name.as_str())
-            || self_binding.as_deref() == Some(callee_name.as_str());
-        if !is_self_call {
-            return Ok(false);
-        }
-
         let Some(function) = self.current_user_function().cloned() else {
             return Ok(false);
         };
+        let is_direct_self_callee = matches!(
+            callee.as_ref(),
+            Expression::Identifier(name)
+                if self.identifier_matches_current_self_tail_callee(name, &function)
+        );
+
+        let declaration_references_this_or_new_target = self
+            .current_user_function_declaration()
+            .is_some_and(|declaration| statements_reference_this_or_new_target(&declaration.body));
         if function.is_async()
             || function.is_generator()
             || function.has_parameter_defaults()
@@ -176,6 +215,11 @@ impl<'a> FunctionCompiler<'a> {
             || arguments
                 .iter()
                 .any(|argument| matches!(argument, CallArgument::Spread(_)))
+        {
+            return Ok(false);
+        }
+        if !is_direct_self_callee
+            && !self.expression_resolves_to_current_self_tail_callee(callee, &function)
         {
             return Ok(false);
         }
@@ -196,6 +240,12 @@ impl<'a> FunctionCompiler<'a> {
             })
             .collect::<Option<Vec<_>>>()
             .expect("spread arguments were rejected above");
+
+        if !is_direct_self_callee {
+            self.emit_numeric_expression(callee)?;
+            self.emit_check_global_throw_for_user_call()?;
+            self.state.emission.output.instructions.push(0x1a);
+        }
 
         let argument_locals = argument_expressions
             .iter()
@@ -225,6 +275,122 @@ impl<'a> FunctionCompiler<'a> {
         self.clear_global_throw_state();
         self.push_br(self.relative_depth(restart_target));
         Ok(true)
+    }
+
+    fn expression_resolves_to_current_self_tail_callee(
+        &self,
+        expression: &Expression,
+        function: &UserFunction,
+    ) -> bool {
+        if let Expression::Identifier(name) = expression {
+            return self.identifier_matches_current_self_tail_callee(name, function);
+        }
+        if self.zero_arg_function_call_returns_current_self_tail_callee(expression, function) {
+            return true;
+        }
+        matches!(
+            self.resolve_function_binding_from_expression(expression),
+            Some(LocalFunctionBinding::User(function_name))
+                if self.identifier_matches_current_self_tail_callee(&function_name, function)
+        )
+    }
+
+    fn zero_arg_function_call_returns_current_self_tail_callee(
+        &self,
+        expression: &Expression,
+        function: &UserFunction,
+    ) -> bool {
+        let Expression::Call { callee, arguments } = expression else {
+            return false;
+        };
+        if !arguments.is_empty() {
+            return false;
+        }
+        let Expression::Identifier(name) = callee.as_ref() else {
+            return false;
+        };
+        let Some(returned_expression) =
+            self.simple_zero_arg_function_statement_return_expression(name)
+        else {
+            return false;
+        };
+        self.returned_expression_matches_current_self_tail_callee(returned_expression, function)
+    }
+
+    fn returned_expression_matches_current_self_tail_callee(
+        &self,
+        expression: &Expression,
+        function: &UserFunction,
+    ) -> bool {
+        if let Expression::Identifier(name) = expression {
+            if self.identifier_matches_current_self_tail_callee(name, function) {
+                return true;
+            }
+            let source_name = scoped_binding_source_name(name).unwrap_or(name);
+            if let Some(function_name) =
+                self.function_statement_binding_name_for_source(source_name)
+                && self.identifier_matches_current_self_tail_callee(&function_name, function)
+            {
+                return true;
+            }
+        }
+        matches!(
+            self.resolve_function_binding_from_expression(expression),
+            Some(LocalFunctionBinding::User(function_name))
+                if self.identifier_matches_current_self_tail_callee(&function_name, function)
+        )
+    }
+
+    fn identifier_matches_current_self_tail_callee(
+        &self,
+        name: &str,
+        function: &UserFunction,
+    ) -> bool {
+        if name == function.name {
+            return true;
+        }
+        if self.current_function_name() == Some(name) {
+            return true;
+        }
+        if let Some(source_name) = scoped_binding_source_name(name) {
+            if source_name == function.name || self.current_function_name() == Some(source_name) {
+                return true;
+            }
+            if Self::generated_function_statement_source_name(&function.name) == Some(source_name)
+                || self.current_function_name().is_some_and(|current_name| {
+                    Self::generated_function_statement_source_name(current_name)
+                        == Some(source_name)
+                })
+            {
+                return true;
+            }
+        }
+        if Self::generated_function_statement_source_name(&function.name) == Some(name)
+            || self.current_function_name().is_some_and(|current_name| {
+                Self::generated_function_statement_source_name(current_name) == Some(name)
+            })
+        {
+            return true;
+        }
+        let Some(declaration) = self.current_user_function_declaration() else {
+            return false;
+        };
+        declaration
+            .self_binding
+            .as_deref()
+            .is_some_and(|self_binding| {
+                name == self_binding
+                    || scoped_binding_source_name(name)
+                        .is_some_and(|source_name| source_name == self_binding)
+            })
+            || declaration
+                .top_level_binding
+                .as_deref()
+                .is_some_and(|top_level_binding| {
+                    name == top_level_binding
+                        || scoped_binding_source_name(name)
+                            .is_some_and(|source_name| source_name == top_level_binding)
+                })
     }
 }
 

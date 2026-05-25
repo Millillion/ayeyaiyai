@@ -51,6 +51,61 @@ pub(in crate::backend::direct_wasm) fn object_binding_prevent_extensions(
     object_binding.extensible = false;
 }
 
+pub(in crate::backend::direct_wasm) fn object_binding_freeze(
+    object_binding: &mut ObjectValueBinding,
+) {
+    object_binding.extensible = false;
+    for (_, descriptor) in &mut object_binding.property_descriptors {
+        descriptor.configurable = false;
+        if descriptor.writable.is_some() {
+            descriptor.writable = Some(false);
+        }
+    }
+
+    for (property_name, value) in object_binding.string_properties.clone() {
+        let property = Expression::String(property_name.clone());
+        if object_binding_lookup_descriptor(object_binding, &property).is_some() {
+            continue;
+        }
+        let enumerable = !object_binding
+            .non_enumerable_string_properties
+            .iter()
+            .any(|hidden_name| hidden_name == &property_name);
+        object_binding.property_descriptors.push((
+            property,
+            PropertyDescriptorBinding {
+                value: Some(value),
+                configurable: false,
+                enumerable,
+                writable: Some(false),
+                getter: None,
+                setter: None,
+                has_get: false,
+                has_set: false,
+            },
+        ));
+    }
+
+    for (property, value) in object_binding.symbol_properties.clone() {
+        if object_binding_lookup_descriptor(object_binding, &property).is_some() {
+            continue;
+        }
+        object_binding.property_descriptors.push((
+            property,
+            PropertyDescriptorBinding {
+                value: Some(value),
+                configurable: false,
+                enumerable: true,
+                writable: Some(false),
+                getter: None,
+                setter: None,
+                has_get: false,
+                has_set: false,
+            },
+        ));
+    }
+}
+
 pub(in crate::backend::direct_wasm) fn object_binding_can_define_property(
     object_binding: &ObjectValueBinding,
     property: &Expression,
@@ -65,6 +120,11 @@ pub(in crate::backend::direct_wasm) fn object_binding_set_property(
     value: Expression,
 ) {
     if let Some(property_name) = static_property_name_from_expression(&property) {
+        object_binding
+            .property_descriptors
+            .retain(|(existing_property, _)| {
+                !matches!(existing_property, Expression::String(name) if name == &property_name)
+            });
         if let Some((_, existing_value)) = object_binding
             .string_properties
             .iter_mut()
@@ -80,6 +140,9 @@ pub(in crate::backend::direct_wasm) fn object_binding_set_property(
         return;
     }
 
+    object_binding
+        .property_descriptors
+        .retain(|(existing_property, _)| existing_property != &property);
     if let Some((_, existing_value)) = object_binding
         .symbol_properties
         .iter_mut()
@@ -152,6 +215,27 @@ pub(in crate::backend::direct_wasm) fn object_binding_define_property_descriptor
     }
 }
 
+pub(in crate::backend::direct_wasm) fn object_binding_define_copied_data_property(
+    object_binding: &mut ObjectValueBinding,
+    property: Expression,
+    value: Expression,
+) {
+    object_binding_define_property_descriptor(
+        object_binding,
+        property,
+        PropertyDescriptorBinding {
+            value: Some(value),
+            configurable: true,
+            enumerable: true,
+            writable: Some(true),
+            getter: None,
+            setter: None,
+            has_get: false,
+            has_set: false,
+        },
+    );
+}
+
 pub(in crate::backend::direct_wasm) fn object_binding_remove_property(
     object_binding: &mut ObjectValueBinding,
     property: &Expression,
@@ -187,16 +271,24 @@ pub(in crate::backend::direct_wasm) fn merge_enumerable_object_binding(
     source: &ObjectValueBinding,
 ) {
     for (name, value) in &source.string_properties {
+        let property = Expression::String(name.clone());
         if source
             .non_enumerable_string_properties
             .iter()
             .any(|hidden_name| hidden_name == name)
+            || object_binding_lookup_descriptor(source, &property)
+                .is_some_and(|descriptor| !descriptor.enumerable)
         {
             continue;
         }
-        object_binding_set_property(target, Expression::String(name.clone()), value.clone());
+        object_binding_define_copied_data_property(target, property, value.clone());
     }
     for (property, value) in &source.symbol_properties {
-        object_binding_set_property(target, property.clone(), value.clone());
+        if object_binding_lookup_descriptor(source, property)
+            .is_some_and(|descriptor| !descriptor.enumerable)
+        {
+            continue;
+        }
+        object_binding_define_copied_data_property(target, property.clone(), value.clone());
     }
 }

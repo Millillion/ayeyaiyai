@@ -5,6 +5,10 @@ pub(in crate::backend::direct_wasm) const BOXED_PRIMITIVE_VALUE_PROPERTY: &str =
 pub(in crate::backend::direct_wasm) const DATE_VALUE_PROPERTY: &str = "__ayy[[DateValue]]";
 pub(in crate::backend::direct_wasm) const FUNCTION_CONSTRUCTOR_SOURCE_PROPERTY: &str =
     "__ayy[[FunctionConstructorSource]]";
+pub(in crate::backend::direct_wasm) const FUNCTION_CONSTRUCTOR_REALM_ID_PROPERTY: &str =
+    "__ayy[[FunctionConstructorRealmId]]";
+pub(in crate::backend::direct_wasm) const FUNCTION_CONSTRUCTOR_REALM_OBJECT_PROTOTYPE_PROPERTY:
+    &str = "__ayy[[FunctionConstructorRealmObjectPrototype]]";
 pub(in crate::backend::direct_wasm) const MAP_COLLECTION_MARKER_PROPERTY: &str =
     "__ayy[[BuiltinMap]]";
 pub(in crate::backend::direct_wasm) const MAP_COLLECTION_KIND_PROPERTY: &str = "__ayy[[MapKind]]";
@@ -33,6 +37,16 @@ pub(in crate::backend::direct_wasm) fn date_value_property_expression() -> Expre
 pub(in crate::backend::direct_wasm) fn function_constructor_source_property_expression()
 -> Expression {
     Expression::String(FUNCTION_CONSTRUCTOR_SOURCE_PROPERTY.to_string())
+}
+
+pub(in crate::backend::direct_wasm) fn function_constructor_realm_id_property_expression()
+-> Expression {
+    Expression::String(FUNCTION_CONSTRUCTOR_REALM_ID_PROPERTY.to_string())
+}
+
+pub(in crate::backend::direct_wasm) fn function_constructor_realm_object_prototype_property_expression()
+-> Expression {
+    Expression::String(FUNCTION_CONSTRUCTOR_REALM_OBJECT_PROTOTYPE_PROPERTY.to_string())
 }
 
 pub(in crate::backend::direct_wasm) fn map_collection_marker_property_expression() -> Expression {

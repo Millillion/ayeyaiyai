@@ -75,6 +75,31 @@ impl<'a> FunctionCompiler<'a> {
                 });
             }
         }
+        if property_name == "name" {
+            let property = Expression::String("name".to_string());
+            let value = self
+                .resolve_function_name_value(target, &property)
+                .or_else(|| {
+                    resolved_target
+                        .and_then(|resolved| self.resolve_function_name_value(resolved, &property))
+                })
+                .or_else(|| {
+                    (!static_expression_matches(materialized_target, target))
+                        .then(|| self.resolve_function_name_value(materialized_target, &property))?
+                });
+            if let Some(value) = value {
+                return Some(PropertyDescriptorBinding {
+                    value: Some(Expression::String(value)),
+                    configurable: true,
+                    enumerable: false,
+                    writable: Some(false),
+                    getter: None,
+                    setter: None,
+                    has_get: false,
+                    has_set: false,
+                });
+            }
+        }
         let value = match &binding {
             LocalFunctionBinding::User(function_name) => {
                 self.user_function(function_name).and_then(|user_function| {

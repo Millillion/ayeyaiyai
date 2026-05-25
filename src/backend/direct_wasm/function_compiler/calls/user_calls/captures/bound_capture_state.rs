@@ -1,6 +1,428 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn collect_lexical_this_member_assignment_properties_from_expression(
+        &self,
+        expression: &Expression,
+        properties: &mut BTreeMap<String, Expression>,
+    ) {
+        match expression {
+            Expression::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                if matches!(object.as_ref(), Expression::This) {
+                    let property = self.canonical_object_property_expression(property);
+                    if let Some(property_name) = static_property_name_from_expression(&property) {
+                        properties.insert(property_name, property);
+                    }
+                }
+                self.collect_lexical_this_member_assignment_properties_from_expression(
+                    object, properties,
+                );
+                self.collect_lexical_this_member_assignment_properties_from_expression(
+                    property, properties,
+                );
+                self.collect_lexical_this_member_assignment_properties_from_expression(
+                    value, properties,
+                );
+            }
+            Expression::AssignSuperMember { property, value } => {
+                let property = self.canonical_object_property_expression(property);
+                if let Some(property_name) = static_property_name_from_expression(&property) {
+                    properties.insert(property_name, property);
+                }
+                self.collect_lexical_this_member_assignment_properties_from_expression(
+                    value, properties,
+                );
+            }
+            Expression::Array(elements) => {
+                for element in elements {
+                    match element {
+                        ArrayElement::Expression(value) | ArrayElement::Spread(value) => self
+                            .collect_lexical_this_member_assignment_properties_from_expression(
+                                value, properties,
+                            ),
+                    }
+                }
+            }
+            Expression::Object(entries) => {
+                for entry in entries {
+                    match entry {
+                        ObjectEntry::Data { key, value } => {
+                            self.collect_lexical_this_member_assignment_properties_from_expression(
+                                key, properties,
+                            );
+                            self.collect_lexical_this_member_assignment_properties_from_expression(
+                                value, properties,
+                            );
+                        }
+                        ObjectEntry::Getter { key, getter } => {
+                            self.collect_lexical_this_member_assignment_properties_from_expression(
+                                key, properties,
+                            );
+                            self.collect_lexical_this_member_assignment_properties_from_expression(
+                                getter, properties,
+                            );
+                        }
+                        ObjectEntry::Setter { key, setter } => {
+                            self.collect_lexical_this_member_assignment_properties_from_expression(
+                                key, properties,
+                            );
+                            self.collect_lexical_this_member_assignment_properties_from_expression(
+                                setter, properties,
+                            );
+                        }
+                        ObjectEntry::Spread(value) => self
+                            .collect_lexical_this_member_assignment_properties_from_expression(
+                                value, properties,
+                            ),
+                    }
+                }
+            }
+            Expression::Member { object, property } => {
+                self.collect_lexical_this_member_assignment_properties_from_expression(
+                    object, properties,
+                );
+                self.collect_lexical_this_member_assignment_properties_from_expression(
+                    property, properties,
+                );
+            }
+            Expression::Assign { value, .. }
+            | Expression::Await(value)
+            | Expression::EnumerateKeys(value)
+            | Expression::GetIterator(value)
+            | Expression::IteratorClose(value)
+            | Expression::Unary {
+                expression: value, ..
+            } => self.collect_lexical_this_member_assignment_properties_from_expression(
+                value, properties,
+            ),
+            Expression::Binary { left, right, .. } => {
+                self.collect_lexical_this_member_assignment_properties_from_expression(
+                    left, properties,
+                );
+                self.collect_lexical_this_member_assignment_properties_from_expression(
+                    right, properties,
+                );
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                self.collect_lexical_this_member_assignment_properties_from_expression(
+                    condition, properties,
+                );
+                self.collect_lexical_this_member_assignment_properties_from_expression(
+                    then_expression,
+                    properties,
+                );
+                self.collect_lexical_this_member_assignment_properties_from_expression(
+                    else_expression,
+                    properties,
+                );
+            }
+            Expression::Sequence(expressions) => {
+                for expression in expressions {
+                    self.collect_lexical_this_member_assignment_properties_from_expression(
+                        expression, properties,
+                    );
+                }
+            }
+            Expression::Call { callee, arguments }
+            | Expression::New { callee, arguments }
+            | Expression::SuperCall { callee, arguments } => {
+                self.collect_lexical_this_member_assignment_properties_from_expression(
+                    callee, properties,
+                );
+                for argument in arguments {
+                    match argument {
+                        CallArgument::Expression(value) | CallArgument::Spread(value) => self
+                            .collect_lexical_this_member_assignment_properties_from_expression(
+                                value, properties,
+                            ),
+                    }
+                }
+            }
+            Expression::SuperMember { property } => {
+                self.collect_lexical_this_member_assignment_properties_from_expression(
+                    property, properties,
+                );
+            }
+            Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined
+            | Expression::NewTarget
+            | Expression::Identifier(_)
+            | Expression::This
+            | Expression::Sent
+            | Expression::Update { .. } => {}
+        }
+    }
+
+    fn collect_lexical_this_member_assignment_properties_from_statements(
+        &self,
+        statements: &[Statement],
+        properties: &mut BTreeMap<String, Expression>,
+    ) {
+        for statement in statements {
+            match statement {
+                Statement::Declaration { body }
+                | Statement::Block { body }
+                | Statement::Labeled { body, .. } => {
+                    self.collect_lexical_this_member_assignment_properties_from_statements(
+                        body, properties,
+                    );
+                }
+                Statement::Var { value, .. }
+                | Statement::Let { value, .. }
+                | Statement::Assign { value, .. } => self
+                    .collect_lexical_this_member_assignment_properties_from_expression(
+                        value, properties,
+                    ),
+                Statement::Print { values } => {
+                    for value in values {
+                        self.collect_lexical_this_member_assignment_properties_from_expression(
+                            value, properties,
+                        );
+                    }
+                }
+                Statement::Expression(value)
+                | Statement::Throw(value)
+                | Statement::Return(value)
+                | Statement::Yield { value }
+                | Statement::YieldDelegate { value } => {
+                    self.collect_lexical_this_member_assignment_properties_from_expression(
+                        value, properties,
+                    );
+                }
+                Statement::AssignMember {
+                    object,
+                    property,
+                    value,
+                } => {
+                    if matches!(object, Expression::This) {
+                        let property = self.canonical_object_property_expression(property);
+                        if let Some(property_name) = static_property_name_from_expression(&property)
+                        {
+                            properties.insert(property_name, property);
+                        }
+                    }
+                    self.collect_lexical_this_member_assignment_properties_from_expression(
+                        object, properties,
+                    );
+                    self.collect_lexical_this_member_assignment_properties_from_expression(
+                        property, properties,
+                    );
+                    self.collect_lexical_this_member_assignment_properties_from_expression(
+                        value, properties,
+                    );
+                }
+                Statement::If {
+                    condition,
+                    then_branch,
+                    else_branch,
+                } => {
+                    self.collect_lexical_this_member_assignment_properties_from_expression(
+                        condition, properties,
+                    );
+                    self.collect_lexical_this_member_assignment_properties_from_statements(
+                        then_branch,
+                        properties,
+                    );
+                    self.collect_lexical_this_member_assignment_properties_from_statements(
+                        else_branch,
+                        properties,
+                    );
+                }
+                Statement::With { object, body } => {
+                    self.collect_lexical_this_member_assignment_properties_from_expression(
+                        object, properties,
+                    );
+                    self.collect_lexical_this_member_assignment_properties_from_statements(
+                        body, properties,
+                    );
+                }
+                Statement::Try {
+                    body,
+                    catch_setup,
+                    catch_body,
+                    ..
+                } => {
+                    self.collect_lexical_this_member_assignment_properties_from_statements(
+                        body, properties,
+                    );
+                    self.collect_lexical_this_member_assignment_properties_from_statements(
+                        catch_setup,
+                        properties,
+                    );
+                    self.collect_lexical_this_member_assignment_properties_from_statements(
+                        catch_body, properties,
+                    );
+                }
+                Statement::Switch {
+                    discriminant,
+                    cases,
+                    ..
+                } => {
+                    self.collect_lexical_this_member_assignment_properties_from_expression(
+                        discriminant,
+                        properties,
+                    );
+                    for case in cases {
+                        if let Some(test) = &case.test {
+                            self.collect_lexical_this_member_assignment_properties_from_expression(
+                                test, properties,
+                            );
+                        }
+                        self.collect_lexical_this_member_assignment_properties_from_statements(
+                            &case.body, properties,
+                        );
+                    }
+                }
+                Statement::For {
+                    init,
+                    condition,
+                    update,
+                    break_hook,
+                    body,
+                    ..
+                } => {
+                    self.collect_lexical_this_member_assignment_properties_from_statements(
+                        init, properties,
+                    );
+                    if let Some(condition) = condition {
+                        self.collect_lexical_this_member_assignment_properties_from_expression(
+                            condition, properties,
+                        );
+                    }
+                    if let Some(update) = update {
+                        self.collect_lexical_this_member_assignment_properties_from_expression(
+                            update, properties,
+                        );
+                    }
+                    if let Some(break_hook) = break_hook {
+                        self.collect_lexical_this_member_assignment_properties_from_expression(
+                            break_hook, properties,
+                        );
+                    }
+                    self.collect_lexical_this_member_assignment_properties_from_statements(
+                        body, properties,
+                    );
+                }
+                Statement::While {
+                    condition,
+                    break_hook,
+                    body,
+                    ..
+                }
+                | Statement::DoWhile {
+                    condition,
+                    break_hook,
+                    body,
+                    ..
+                } => {
+                    self.collect_lexical_this_member_assignment_properties_from_expression(
+                        condition, properties,
+                    );
+                    if let Some(break_hook) = break_hook {
+                        self.collect_lexical_this_member_assignment_properties_from_expression(
+                            break_hook, properties,
+                        );
+                    }
+                    self.collect_lexical_this_member_assignment_properties_from_statements(
+                        body, properties,
+                    );
+                }
+                Statement::Break { .. } | Statement::Continue { .. } => {}
+            }
+        }
+    }
+
+    fn lexical_this_member_assignment_properties(
+        &self,
+        user_function: &UserFunction,
+    ) -> BTreeMap<String, Expression> {
+        let mut properties = BTreeMap::new();
+        if !user_function.lexical_this {
+            return properties;
+        }
+        if let Some(declaration) = self.prepared_function_declaration(&user_function.name) {
+            self.collect_lexical_this_member_assignment_properties_from_statements(
+                &declaration.body,
+                &mut properties,
+            );
+        }
+        properties
+    }
+
+    fn emit_present_runtime_object_property_shadow_copy(
+        &mut self,
+        source_owner: &str,
+        target_owner: &str,
+        property: &Expression,
+    ) -> DirectResult<()> {
+        let source_binding =
+            self.runtime_object_property_shadow_binding_by_property(source_owner, property);
+        let target_binding =
+            self.runtime_object_property_shadow_binding_by_property(target_owner, property);
+        let target_deleted =
+            self.runtime_object_property_shadow_deleted_binding_by_property(target_owner, property);
+        self.push_global_get(source_binding.present_index);
+        self.state.emission.output.instructions.push(0x04);
+        self.state
+            .emission
+            .output
+            .instructions
+            .push(EMPTY_BLOCK_TYPE);
+        self.push_control_frame();
+        self.push_i32_const(JS_UNDEFINED_TAG);
+        self.push_global_set(target_deleted.value_index);
+        self.push_i32_const(0);
+        self.push_global_set(target_deleted.present_index);
+        self.push_global_get(source_binding.value_index);
+        self.push_global_set(target_binding.value_index);
+        self.push_i32_const(1);
+        self.push_global_set(target_binding.present_index);
+        self.state.emission.output.instructions.push(0x0b);
+        self.pop_control_frame();
+        Ok(())
+    }
+
+    fn emit_lexical_this_member_assignment_shadow_writebacks(
+        &mut self,
+        user_function: &UserFunction,
+        capture_hidden_name: &str,
+        source_binding_name: &str,
+    ) -> DirectResult<()> {
+        if source_binding_name == "this"
+            || source_binding_name == "new.target"
+            || Self::capture_slot_member_source_key_parts(source_binding_name).is_some()
+        {
+            return Ok(());
+        }
+        let properties = self.lexical_this_member_assignment_properties(user_function);
+        if properties.is_empty() {
+            return Ok(());
+        }
+        let target_owner = self
+            .runtime_object_property_shadow_owner_name_for_identifier(source_binding_name)
+            .unwrap_or_else(|| source_binding_name.to_string());
+        for property in properties.values() {
+            self.emit_present_runtime_object_property_shadow_copy(
+                capture_hidden_name,
+                &target_owner,
+                property,
+            )?;
+        }
+        Ok(())
+    }
+
     pub(in crate::backend::direct_wasm) fn bound_capture_slots_include_member_source(
         &self,
         capture_slots: &BTreeMap<String, String>,
@@ -33,6 +455,46 @@ impl<'a> FunctionCompiler<'a> {
             || self.backend.global_function_binding(source_name).is_some()
     }
 
+    fn invalidate_bound_capture_source_binding_static_metadata(&mut self, source_name: &str) {
+        if let Some((resolved_name, _)) = self.resolve_current_local_binding(source_name) {
+            self.state
+                .clear_local_static_binding_metadata(&resolved_name);
+        } else if self.state.runtime.locals.bindings.contains_key(source_name)
+            || self
+                .parameter_scope_arguments_local_for(source_name)
+                .is_some()
+        {
+            self.state.clear_local_static_binding_metadata(source_name);
+        } else {
+            self.clear_static_identifier_binding_metadata(source_name);
+            self.backend
+                .shared_global_semantics
+                .clear_global_binding_state(source_name);
+            self.backend
+                .shared_global_semantics
+                .clear_global_object_literal_member_bindings_for_name(source_name);
+        }
+    }
+
+    fn user_function_capture_targets_immutable_class_binding(
+        &self,
+        user_function: &UserFunction,
+        capture_name: &str,
+    ) -> bool {
+        let Some(declaration) = self.resolve_registered_function_declaration(&user_function.name)
+        else {
+            return false;
+        };
+        let capture_source_name = scoped_binding_source_name(capture_name).unwrap_or(capture_name);
+        declaration.immutable_class_bindings.iter().any(|binding| {
+            let binding_source_name = scoped_binding_source_name(binding).unwrap_or(binding);
+            binding == capture_name
+                || binding == capture_source_name
+                || binding_source_name == capture_name
+                || binding_source_name == capture_source_name
+        })
+    }
+
     fn emit_sync_bound_capture_member_source_from_local(
         &mut self,
         source_name: &str,
@@ -49,14 +511,19 @@ impl<'a> FunctionCompiler<'a> {
             value_local
         } else {
             let store_local = self.allocate_temp_local();
-            self.emit_numeric_expression(value)?;
+            self.with_suspended_with_scopes_if_active_scope_object(&object, |compiler| {
+                compiler.emit_numeric_expression(value)
+            })?;
             self.push_local_set(store_local);
             store_local
         };
         let property = Expression::String(property_name.clone());
-        if let Some(deleted_binding) =
-            self.resolve_runtime_object_property_shadow_deleted_binding(&object, &property)
-        {
+        let deleted_binding =
+            self.with_suspended_with_scopes_if_active_scope_object(&object, |compiler| {
+                Ok(compiler
+                    .resolve_runtime_object_property_shadow_deleted_binding(&object, &property))
+            })?;
+        if let Some(deleted_binding) = deleted_binding {
             self.push_global_get(deleted_binding.present_index);
             self.state.emission.output.instructions.push(0x04);
             self.state
@@ -607,9 +1074,34 @@ impl<'a> FunctionCompiler<'a> {
             .resolve_bound_alias_expression(&identifier)
             .filter(|value| !static_expression_matches(value, &identifier))
         {
+            if self.resolve_simple_generator_source(&value).is_some() {
+                return value;
+            }
             return self.materialize_static_expression(&value);
         }
         identifier
+    }
+
+    pub(in crate::backend::direct_wasm) fn snapshot_prepared_bound_user_function_capture_bindings(
+        &self,
+        prepared: &[PreparedBoundCaptureBinding],
+    ) -> HashMap<String, Expression> {
+        prepared
+            .iter()
+            .map(|binding| {
+                let snapshot = self.snapshot_bound_capture_slot_expression(&binding.slot_name);
+                let snapshot = if matches!(snapshot, Expression::Undefined)
+                    && let Some(source_binding_name) = binding.source_binding_name.as_ref()
+                    && !matches!(source_binding_name.as_str(), "this" | "new.target")
+                    && Self::capture_slot_member_source_key_parts(source_binding_name).is_none()
+                {
+                    Expression::Identifier(source_binding_name.clone())
+                } else {
+                    snapshot
+                };
+                (binding.capture_name.clone(), snapshot)
+            })
+            .collect()
     }
 
     pub(in crate::backend::direct_wasm) fn prepare_bound_user_function_capture_bindings(
@@ -674,17 +1166,25 @@ impl<'a> FunctionCompiler<'a> {
             } else if let Some(slot_local) =
                 self.state.runtime.locals.bindings.get(slot_name).copied()
             {
-                let source_binding_name = self
+                let slot_is_member_closure = slot_name.starts_with("__ayy_member_closure_slot_");
+                let explicit_slot_source = self
                     .state
                     .speculation
                     .static_semantics
                     .capture_slot_source_bindings
                     .get(slot_name)
-                    .cloned()
+                    .cloned();
+                let source_binding_name = explicit_slot_source
                     .or_else(|| {
+                        if slot_is_member_closure {
+                            return None;
+                        }
                         self.runtime_object_property_shadow_owner_name_for_identifier(slot_name)
                     })
                     .or_else(|| {
+                        if slot_is_member_closure {
+                            return None;
+                        }
                         self.state
                             .speculation
                             .static_semantics
@@ -707,12 +1207,11 @@ impl<'a> FunctionCompiler<'a> {
                             source_name
                         }
                     })
+                    .map(|source_name| self.capture_slot_live_source_binding_name(&source_name))
                     .filter(|source_name| {
                         self.bound_capture_source_binding_is_available(source_name)
                     });
-                if capture_name == "this"
-                    && source_binding_name.as_deref() == Some("this")
-                {
+                if capture_name == "this" && source_binding_name.as_deref() == Some("this") {
                     let dynamic_slot_local_name = self.allocate_named_hidden_local(
                         &format!("bound_capture_slot_{}_{}", user_function.name, capture_name),
                         StaticValueKind::Unknown,
@@ -812,11 +1311,15 @@ impl<'a> FunctionCompiler<'a> {
                     .get(slot_name)
                     .cloned()
                     .unwrap_or_else(|| slot_name.clone());
+                let source_binding_name =
+                    self.capture_slot_live_source_binding_name(&source_binding_name);
                 (slot_local, Some(source_binding_name))
             } else if self.global_has_binding(slot_name)
                 || self.backend.global_has_lexical_binding(slot_name)
                 || self.global_has_implicit_binding(slot_name)
                 || self.backend.global_function_binding(slot_name).is_some()
+                || (is_internal_user_function_identifier(slot_name)
+                    && self.user_function_runtime_value(slot_name).is_some())
             {
                 let slot_local_name = self.allocate_named_hidden_local(
                     &format!("bound_capture_slot_{}_{}", user_function.name, capture_name),
@@ -850,16 +1353,6 @@ impl<'a> FunctionCompiler<'a> {
                 }
                 continue;
             };
-            if trace_capture_bindings {
-                eprintln!(
-                    "capture_bindings bound_prepare target={} capture={} hidden={} slot={} source={:?}",
-                    user_function.name,
-                    capture_name,
-                    capture_hidden_name,
-                    slot_name,
-                    source_binding_name
-                );
-            }
             if let Some(source_binding_name) = source_binding_name.as_ref() {
                 self.state
                     .speculation
@@ -870,6 +1363,18 @@ impl<'a> FunctionCompiler<'a> {
             let binding = self
                 .implicit_global_binding(&capture_hidden_name)
                 .unwrap_or_else(|| self.ensure_implicit_global_binding(&capture_hidden_name));
+            if trace_capture_bindings {
+                eprintln!(
+                    "capture_bindings bound_prepare target={} capture={} hidden={} slot={} source={:?} value_index={} present_index={}",
+                    user_function.name,
+                    capture_name,
+                    capture_hidden_name,
+                    slot_name,
+                    source_binding_name,
+                    binding.value_index,
+                    binding.present_index,
+                );
+            }
             let saved_value_local = self.allocate_temp_local();
             let saved_present_local = self.allocate_temp_local();
             self.push_global_get(binding.value_index);
@@ -1014,6 +1519,8 @@ impl<'a> FunctionCompiler<'a> {
         updated_bindings: Option<&HashMap<String, Expression>>,
         this_capture_target_owner: Option<&str>,
     ) -> DirectResult<()> {
+        let assigned_nonlocal_bindings =
+            self.collect_user_function_assigned_nonlocal_bindings(user_function);
         for binding in prepared {
             let shadow_writeback_name =
                 binding.source_binding_name.as_ref().cloned().or_else(|| {
@@ -1037,6 +1544,14 @@ impl<'a> FunctionCompiler<'a> {
             let value_local = self.allocate_temp_local();
             self.push_global_get(binding.binding.value_index);
             self.push_local_set(value_local);
+            let capture_targets_immutable_class_binding = self
+                .user_function_capture_targets_immutable_class_binding(
+                    user_function,
+                    &binding.capture_name,
+                );
+            if capture_targets_immutable_class_binding {
+                continue;
+            }
             let hidden_capture_expression =
                 Expression::Identifier(binding.capture_hidden_name.clone());
             let updated_capture_binding =
@@ -1047,6 +1562,16 @@ impl<'a> FunctionCompiler<'a> {
                 };
             let capture_writeback_is_dynamic = updated_capture_binding.is_none()
                 && self.user_function_mentions_direct_eval(user_function);
+            let capture_writeback_may_update_source = capture_writeback_is_dynamic
+                || assigned_nonlocal_bindings.contains(&binding.capture_name)
+                || binding
+                    .source_binding_name
+                    .as_ref()
+                    .is_some_and(|source_name| {
+                        let source_name =
+                            scoped_binding_source_name(source_name).unwrap_or(source_name);
+                        assigned_nonlocal_bindings.contains(source_name)
+                    });
             let source_writeback_expression = updated_capture_binding
                 .map(|value| {
                     if binding.source_binding_name.as_deref() == Some("this") {
@@ -1070,16 +1595,7 @@ impl<'a> FunctionCompiler<'a> {
                         {
                             return updated_expression;
                         }
-                        let materialized_capture =
-                            self.materialize_static_expression(&hidden_capture_expression);
-                        if static_expression_matches(
-                            &materialized_capture,
-                            &hidden_capture_expression,
-                        ) {
-                            Expression::Identifier(binding.slot_name.clone())
-                        } else {
-                            materialized_capture
-                        }
+                        Expression::Identifier(binding.slot_name.clone())
                     } else {
                         hidden_capture_expression.clone()
                     }
@@ -1220,6 +1736,13 @@ impl<'a> FunctionCompiler<'a> {
                         self.state
                             .clear_local_static_binding_metadata(&binding.slot_name);
                     }
+                } else if let Some(hidden_binding) =
+                    self.hidden_implicit_global_binding(source_binding_name)
+                {
+                    self.push_local_get(value_local);
+                    self.push_global_set(hidden_binding.value_index);
+                    self.push_i32_const(1);
+                    self.push_global_set(hidden_binding.present_index);
                 } else if !source_binding_name.starts_with("__ayy_class_brand_")
                     && !source_binding_name.starts_with("__ayy_class_super_")
                 {
@@ -1227,13 +1750,27 @@ impl<'a> FunctionCompiler<'a> {
                         .resolve_current_local_binding(source_binding_name)
                         .is_some_and(|(resolved_name, _)| {
                             self.local_binding_is_immutable(&resolved_name)
-                        });
+                        })
+                        || self
+                            .binding_is_immutable_function_self_binding_source(source_binding_name);
                     if !source_is_immutable_local {
                         self.emit_sync_identifier_runtime_value_from_local(
                             source_binding_name,
                             value_local,
                         )?;
                     }
+                }
+                if updated_capture_binding.is_none()
+                    && capture_writeback_may_update_source
+                    && source_binding_name != "this"
+                    && source_binding_name != "new.target"
+                    && Self::capture_slot_member_source_key_parts(source_binding_name).is_none()
+                    && !source_binding_name.starts_with("__ayy_class_brand_")
+                    && !source_binding_name.starts_with("__ayy_class_super_")
+                {
+                    self.invalidate_bound_capture_source_binding_static_metadata(
+                        source_binding_name,
+                    );
                 }
                 if source_binding_name != "this"
                     && Self::capture_slot_member_source_key_parts(source_binding_name).is_none()
@@ -1242,6 +1779,13 @@ impl<'a> FunctionCompiler<'a> {
                         &binding.capture_hidden_name,
                         source_binding_name,
                     )?;
+                    if user_function.lexical_this && binding.capture_name == "this" {
+                        self.emit_lexical_this_member_assignment_shadow_writebacks(
+                            user_function,
+                            &binding.capture_hidden_name,
+                            source_binding_name,
+                        )?;
+                    }
                     if let Some(object_binding) =
                         self.resolve_runtime_shadow_object_binding(&binding.capture_hidden_name)
                     {

@@ -13838,6 +13838,209 @@ fn resolves_name_property_for_anonymous_class_expression_binding() {
 }
 
 #[test]
+fn resolves_object_literal_class_expression_name_properties() {
+    let program = crate::ir::pipeline::prepare(
+        frontend::parse(
+            r#"
+            var namedSym = Symbol('test262');
+            var anonSym = Symbol();
+            var o;
+            o = {
+              xId: class x {},
+              id: class {},
+              [anonSym]: class {},
+              [namedSym]: class {}
+            };
+            assert(o.xId.name !== 'xId');
+        "#,
+        )
+        .expect("program should parse"),
+    )
+    .expect("program should prepare");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should construct");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+
+    for statement in &program.statements {
+        if matches!(
+            statement,
+            Statement::Expression(Expression::Call { callee, .. })
+                if matches!(callee.as_ref(), Expression::Identifier(name) if name == "assert")
+        ) {
+            break;
+        }
+        function_compiler
+            .emit_statement(statement)
+            .expect("setup statement should emit");
+    }
+
+    let class_name_member = |property: Expression| Expression::Member {
+        object: Box::new(Expression::Member {
+            object: Box::new(Expression::Identifier("o".to_string())),
+            property: Box::new(property),
+        }),
+        property: Box::new(Expression::String("name".to_string())),
+    };
+
+    assert_eq!(
+        function_compiler
+            .resolve_static_string_value(&class_name_member(Expression::String("xId".to_string()))),
+        Some("x".to_string()),
+        "named class expression should keep its explicit name",
+    );
+    assert_eq!(
+        function_compiler
+            .resolve_static_string_value(&class_name_member(Expression::String("id".to_string()))),
+        Some("id".to_string()),
+        "anonymous class expression should take the string property name",
+    );
+    assert_eq!(
+        function_compiler.resolve_static_string_value(&class_name_member(Expression::Identifier(
+            "anonSym".to_string()
+        ))),
+        Some(String::new()),
+        "anonymous symbol property should infer an empty function name fragment",
+    );
+    assert_eq!(
+        function_compiler.resolve_static_string_value(&class_name_member(Expression::Identifier(
+            "namedSym".to_string()
+        ))),
+        Some("[test262]".to_string()),
+        "described symbol property should infer a bracketed function name fragment",
+    );
+}
+
+#[test]
+fn resolves_object_literal_cover_function_expression_name_properties() {
+    let program = crate::ir::pipeline::prepare(
+        frontend::parse(
+            r#"
+            var namedSym = Symbol('test262');
+            var anonSym = Symbol();
+            var o;
+            o = {
+              xId: (0, function() {}),
+              id: (function() {}),
+              [anonSym]: (function() {}),
+              [namedSym]: (function() {})
+            };
+            assert(o.xId.name !== 'xId');
+        "#,
+        )
+        .expect("program should parse"),
+    )
+    .expect("program should prepare");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should construct");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+
+    for statement in &program.statements {
+        if matches!(
+            statement,
+            Statement::Expression(Expression::Call { callee, .. })
+                if matches!(callee.as_ref(), Expression::Identifier(name) if name == "assert")
+        ) {
+            break;
+        }
+        function_compiler
+            .emit_statement(statement)
+            .expect("setup statement should emit");
+    }
+
+    let function_name_member = |property: Expression| Expression::Member {
+        object: Box::new(Expression::Member {
+            object: Box::new(Expression::Identifier("o".to_string())),
+            property: Box::new(property),
+        }),
+        property: Box::new(Expression::String("name".to_string())),
+    };
+
+    assert!(
+        function_compiler
+            .resolve_member_function_binding(
+                &Expression::Identifier("o".to_string()),
+                &Expression::String("xId".to_string())
+            )
+            .is_some(),
+        "sequence-wrapped function property should remain callable",
+    );
+    assert_eq!(
+        function_compiler.resolve_static_string_value(&function_name_member(Expression::String(
+            "xId".to_string()
+        ))),
+        Some(String::new()),
+        "sequence-wrapped anonymous function expression should not take the property name",
+    );
+    assert_eq!(
+        function_compiler.resolve_static_string_value(&function_name_member(Expression::String(
+            "id".to_string()
+        ))),
+        Some("id".to_string()),
+        "parenthesized anonymous function expression should take the string property name",
+    );
+    assert_eq!(
+        function_compiler.resolve_static_string_value(&function_name_member(
+            Expression::Identifier("anonSym".to_string())
+        )),
+        Some(String::new()),
+        "anonymous symbol property should infer an empty function name fragment",
+    );
+    assert_eq!(
+        function_compiler.resolve_static_string_value(&function_name_member(
+            Expression::Identifier("namedSym".to_string())
+        )),
+        Some("[test262]".to_string()),
+        "described symbol property should infer a bracketed function name fragment",
+    );
+}
+
+#[test]
 fn resolves_static_object_prototype_expression_for_class_extends_constructor_binding() {
     let program = frontend::parse(
         r#"
@@ -24635,6 +24838,182 @@ fn resolves_static_numeric_class_super_bindings_from_class_home_object_metadata(
     assert_eq!(
         function_compiler.resolve_super_getter_binding(&Expression::Number(5.0)),
         Some(base_getter_binding)
+    );
+}
+
+#[test]
+fn resolves_object_literal_super_getter_value_from_home_object_metadata() {
+    let program = frontend::parse(
+        r#"
+            var proto = {
+              _x: 42,
+              get x() {
+                return "proto" + this._x;
+              }
+            };
+
+            var object = {
+              get x() {
+                return super.x;
+              }
+            };
+
+            Object.setPrototypeOf(object, proto);
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+    compiler.reserve_global_runtime_prototype_binding_globals();
+
+    let proto_getter_binding = compiler
+        .state
+        .global_semantics
+        .members
+        .member_getter_bindings
+        .iter()
+        .find_map(|(key, binding)| {
+            let target_name = match &key.target {
+                crate::backend::direct_wasm::MemberFunctionBindingTarget::Identifier(name) => name,
+                _ => return None,
+            };
+            let property_name = match &key.property {
+                crate::backend::direct_wasm::MemberFunctionBindingProperty::String(name) => name,
+                _ => return None,
+            };
+            (target_name == "proto" && property_name == "x").then_some(binding.clone())
+        })
+        .expect("expected proto getter binding");
+
+    let object_getter_name = compiler
+        .state
+        .global_semantics
+        .members
+        .member_getter_bindings
+        .iter()
+        .find_map(|(key, binding)| {
+            let target_name = match &key.target {
+                crate::backend::direct_wasm::MemberFunctionBindingTarget::Identifier(name) => name,
+                _ => return None,
+            };
+            let property_name = match &key.property {
+                crate::backend::direct_wasm::MemberFunctionBindingProperty::String(name) => name,
+                _ => return None,
+            };
+            let LocalFunctionBinding::User(function_name) = binding else {
+                return None;
+            };
+            (target_name == "object" && property_name == "x").then_some(function_name.clone())
+        })
+        .expect("expected object getter binding");
+
+    assert_eq!(
+        compiler
+            .state
+            .function_registry
+            .catalog
+            .user_function_map
+            .get(&object_getter_name)
+            .and_then(|function| function.home_object_binding.as_deref()),
+        Some("object")
+    );
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        program.strict,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+
+    function_compiler
+        .state
+        .speculation
+        .execution_context
+        .current_user_function_name = Some(object_getter_name);
+
+    assert_eq!(
+        function_compiler.resolve_super_base_expression_with_context(
+            function_compiler
+                .state
+                .speculation
+                .execution_context
+                .current_user_function_name
+                .as_deref()
+        ),
+        Some(Expression::Identifier("proto".to_string()))
+    );
+    assert_eq!(
+        function_compiler.resolve_super_getter_binding(&Expression::String("x".to_string())),
+        Some(proto_getter_binding)
+    );
+    assert_eq!(
+        function_compiler.resolve_static_string_value_with_context(
+            &Expression::Member {
+                object: Box::new(Expression::Identifier("object".to_string())),
+                property: Box::new(Expression::String("x".to_string())),
+            },
+            None,
+        ),
+        Some("proto42".to_string())
+    );
+    assert_eq!(
+        function_compiler.materialize_static_expression(&Expression::Member {
+            object: Box::new(Expression::Call {
+                callee: Box::new(Expression::Member {
+                    object: Box::new(Expression::Identifier("Object".to_string())),
+                    property: Box::new(Expression::String("getPrototypeOf".to_string())),
+                }),
+                arguments: vec![CallArgument::Expression(Expression::Identifier(
+                    "object".to_string(),
+                ))],
+            }),
+            property: Box::new(Expression::String("_x".to_string())),
+        }),
+        Expression::Number(42.0)
+    );
+    function_compiler
+        .state
+        .speculation
+        .execution_context
+        .current_user_function_name = None;
+    let top_level_prototype_x = Expression::Member {
+        object: Box::new(Expression::Call {
+            callee: Box::new(Expression::Member {
+                object: Box::new(Expression::Identifier("Object".to_string())),
+                property: Box::new(Expression::String("getPrototypeOf".to_string())),
+            }),
+            arguments: vec![CallArgument::Expression(Expression::Identifier(
+                "object".to_string(),
+            ))],
+        }),
+        property: Box::new(Expression::String("_x".to_string())),
+    };
+    assert_eq!(
+        function_compiler.materialize_static_expression(&top_level_prototype_x),
+        Expression::Number(42.0)
+    );
+    assert_eq!(
+        function_compiler.resolve_static_same_value_result_with_context(
+            &top_level_prototype_x,
+            &Expression::Number(42.0),
+            None,
+        ),
+        Some(true)
     );
 }
 

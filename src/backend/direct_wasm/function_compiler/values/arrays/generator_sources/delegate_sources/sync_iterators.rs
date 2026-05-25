@@ -5,19 +5,37 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         expression: &Expression,
         async_generator: bool,
-    ) -> Option<(Vec<SimpleGeneratorStep>, Vec<Statement>)> {
+    ) -> Option<(Vec<SimpleGeneratorStep>, Vec<Statement>, Expression)> {
+        if let Expression::Identifier(name) = expression
+            && self.simple_generator_identifier_read_is_unresolvable(name)
+        {
+            return Some((
+                vec![SimpleGeneratorStep {
+                    effects: Vec::new(),
+                    close_effects: Vec::new(),
+                    outcome: SimpleGeneratorStepOutcome::Throw(Expression::Call {
+                        callee: Box::new(Expression::Identifier("ReferenceError".to_string())),
+                        arguments: Vec::new(),
+                    }),
+                }],
+                Vec::new(),
+                Expression::Undefined,
+            ));
+        }
         if let Expression::Await(_) = expression {
             return match self.resolve_static_await_resolution_outcome(expression)? {
                 StaticEvalOutcome::Value(value) => {
                     self.resolve_simple_yield_delegate_source(&value, async_generator)
                 }
                 StaticEvalOutcome::Throw(throw_value) => {
-                    self.simple_generator_throw_step(throw_value)
+                    self.simple_generator_throw_step_with_completion(throw_value)
                 }
             };
         }
         if let Some(source) = self.resolve_iterator_source_kind(expression) {
-            if let Some(flattened) = self.flatten_simple_yield_delegate_iterator_source(&source) {
+            if let Some(flattened) =
+                self.flatten_simple_yield_delegate_iterator_source_with_completion(&source)
+            {
                 return Some(flattened);
             }
         }
@@ -25,10 +43,20 @@ impl<'a> FunctionCompiler<'a> {
         if async_generator
             && let Some(source) = self.resolve_simple_async_yield_delegate_source(expression)
         {
-            return Some(source);
+            return Some((source.0, source.1, Expression::Undefined));
         }
         if async_generator && self.expression_has_async_iterator_entry(expression) {
             return None;
+        }
+
+        if let Some(primitive) = self.resolve_static_primitive_expression_with_context(
+            expression,
+            self.current_function_name(),
+        ) && !static_expression_matches(&primitive, expression)
+            && let Some(source) =
+                self.resolve_primitive_simple_yield_delegate_source(&primitive, async_generator)
+        {
+            return Some(source);
         }
 
         let materialized = self.materialize_static_expression(expression);
@@ -46,7 +74,7 @@ impl<'a> FunctionCompiler<'a> {
                 self.current_function_name(),
             )? {
                 StaticEvalOutcome::Throw(throw_value) => {
-                    return self.simple_generator_throw_step(throw_value);
+                    return self.simple_generator_throw_step_with_completion(throw_value);
                 }
                 StaticEvalOutcome::Value(method_value) => {
                     self.resolve_static_sync_iterator_method_call_outcome(&method_value)?
@@ -76,16 +104,19 @@ impl<'a> FunctionCompiler<'a> {
                         }),
                     }],
                     Vec::new(),
+                    Expression::Undefined,
                 ));
             };
             self.resolve_static_sync_iterator_method_call_outcome(method_value)?
         };
 
         match call_outcome {
-            StaticEvalOutcome::Throw(throw_value) => self.simple_generator_throw_step(throw_value),
+            StaticEvalOutcome::Throw(throw_value) => {
+                self.simple_generator_throw_step_with_completion(throw_value)
+            }
             StaticEvalOutcome::Value(iterator_value) => {
                 let source = self.resolve_iterator_source_kind(&iterator_value)?;
-                self.flatten_simple_yield_delegate_iterator_source(&source)
+                self.flatten_simple_yield_delegate_iterator_source_with_completion(&source)
             }
         }
     }
@@ -104,6 +135,63 @@ impl<'a> FunctionCompiler<'a> {
             }],
             Vec::new(),
         ))
+    }
+
+    fn simple_generator_throw_step_with_completion(
+        &self,
+        throw_value: StaticThrowValue,
+    ) -> Option<(Vec<SimpleGeneratorStep>, Vec<Statement>, Expression)> {
+        let (steps, effects) = self.simple_generator_throw_step(throw_value)?;
+        Some((steps, effects, Expression::Undefined))
+    }
+
+    fn resolve_primitive_simple_yield_delegate_source(
+        &self,
+        primitive: &Expression,
+        async_generator: bool,
+    ) -> Option<(Vec<SimpleGeneratorStep>, Vec<Statement>, Expression)> {
+        if async_generator {
+            return None;
+        }
+        let iterator_property = self.materialize_static_expression(&symbol_iterator_expression());
+        let LocalFunctionBinding::User(function_name) =
+            self.resolve_member_function_binding(primitive, &iterator_property)?
+        else {
+            return None;
+        };
+        let user_function = self.user_function(&function_name)?;
+        if !user_function.is_generator()
+            || !user_function.params.is_empty()
+            || user_function.has_parameter_defaults()
+            || !user_function.extra_argument_indices.is_empty()
+        {
+            return None;
+        }
+        let function = self.resolve_registered_function_declaration(&function_name)?;
+        let mut call_argument_values = Vec::new();
+        let mut arguments_values = Vec::new();
+        let substituted_body = self
+            .substitute_simple_generator_statements_with_call_frame_bindings(
+                &function.body,
+                user_function,
+                function.mapped_arguments && !function.strict,
+                &mut call_argument_values,
+                &mut arguments_values,
+                primitive,
+            )?;
+        let substituted_body =
+            self.expand_static_lowered_for_of_completion_effects(&substituted_body);
+        let (substituted_body, completion_value) =
+            self.split_simple_generator_completion(substituted_body)?;
+        let mut steps = Vec::new();
+        let mut effects = Vec::new();
+        self.analyze_simple_generator_statements(
+            &substituted_body,
+            false,
+            &mut steps,
+            &mut effects,
+        )?;
+        Some((steps, effects, completion_value))
     }
 
     pub(in crate::backend::direct_wasm) fn resolve_static_sync_iterator_method_call_outcome(
@@ -171,12 +259,25 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         source: &IteratorSourceKind,
     ) -> Option<(Vec<SimpleGeneratorStep>, Vec<Statement>)> {
+        self.flatten_simple_yield_delegate_iterator_source_with_completion(source)
+            .map(|(steps, completion_effects, _)| (steps, completion_effects))
+    }
+
+    fn flatten_simple_yield_delegate_iterator_source_with_completion(
+        &self,
+        source: &IteratorSourceKind,
+    ) -> Option<(Vec<SimpleGeneratorStep>, Vec<Statement>, Expression)> {
         match source {
             IteratorSourceKind::SimpleGenerator {
                 steps,
                 completion_effects,
+                completion_value,
                 ..
-            } => Some((steps.clone(), completion_effects.clone())),
+            } => Some((
+                steps.clone(),
+                completion_effects.clone(),
+                completion_value.clone(),
+            )),
             IteratorSourceKind::StaticArray {
                 values,
                 keys_only,
@@ -197,6 +298,7 @@ impl<'a> FunctionCompiler<'a> {
                     })
                     .collect(),
                 Vec::new(),
+                Expression::Undefined,
             )),
             _ => None,
         }

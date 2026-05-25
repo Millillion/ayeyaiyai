@@ -1,7 +1,7 @@
 use super::parse;
 use crate::{
     frontend,
-    ir::hir::{Expression, Statement, UpdateOp},
+    ir::hir::{BinaryOp, Expression, Statement, UnaryOp, UpdateOp},
 };
 
 #[test]
@@ -135,14 +135,36 @@ fn parses_top_level_global_this_update_as_binding_update() {
             program.statements.as_slice(),
             [
                 Statement::Var { name, value },
-                Statement::Expression(Expression::Update {
-                    name: update_name,
-                    op: UpdateOp::Increment,
-                    prefix: false,
+                Statement::Expression(Expression::AssignMember {
+                    object,
+                    property,
+                    value: assign_value,
                 }),
             ] if name == "y"
                 && matches!(value, Expression::Undefined)
-                && update_name == "y"
+                && matches!(object.as_ref(), Expression::This)
+                && matches!(property.as_ref(), Expression::String(property_name) if property_name == "y")
+                && matches!(
+                    assign_value.as_ref(),
+                    Expression::Binary {
+                        op: BinaryOp::Add,
+                        left,
+                        right,
+                    } if matches!(
+                        left.as_ref(),
+                        Expression::Unary {
+                            op: UnaryOp::Plus,
+                            expression,
+                        } if matches!(
+                            expression.as_ref(),
+                            Expression::Member {
+                                object: member_object,
+                                property: member_property,
+                            } if matches!(member_object.as_ref(), Expression::This)
+                                && matches!(member_property.as_ref(), Expression::String(member_property_name) if member_property_name == "y")
+                        )
+                    ) && matches!(right.as_ref(), Expression::Number(1.0))
+                )
         ),
         "{:#?}",
         program.statements
@@ -381,6 +403,22 @@ fn parse_script_goal_rejects_await_arrow_parameter_default_in_static_block() {
 }
 
 #[test]
+fn parse_script_goal_rejects_await_object_shorthand_in_static_block() {
+    let source = r#"
+    class C {
+      static {
+        ({ await });
+      }
+    }
+    "#;
+
+    assert!(
+        frontend::parse_script_goal(source).is_err(),
+        "source should fail to parse:\n{source}"
+    );
+}
+
+#[test]
 fn parse_script_goal_rejects_await_arrow_parameter_default_in_async_arrow_body() {
     let source = r#"
     async() => { (a = await/r/g) => {} };
@@ -428,6 +466,23 @@ fn parse_script_goal_accepts_decorator_member_private_identifier_in_static_block
         class D {}
       }
     }
+    "#;
+
+    frontend::parse_script_goal(source).expect("source should parse");
+}
+
+#[test]
+fn parse_script_goal_accepts_class_expression_decorator_member_expression() {
+    let source = r#"
+    var ns;
+    var C = @ns.$
+    @ns._
+    @ns.\u{6F}
+    @ns.\u2118
+    @ns.ZW_\u200C_NJ
+    @ns.ZW_\u200D_J
+    @ns.yield
+    @ns.await class {};
     "#;
 
     frontend::parse_script_goal(source).expect("source should parse");
@@ -520,6 +575,28 @@ fn parse_script_goal_accepts_escaped_reserved_object_assignment_property_name() 
 }
 
 #[test]
+fn parse_script_goal_accepts_escaped_reserved_object_method_name() {
+    let source = r#"
+    var obj = {
+      bre\u0061k() { return 42; }
+    };
+    "#;
+
+    frontend::parse_script_goal(source).expect("escaped reserved object method name should parse");
+}
+
+#[test]
+fn parse_script_goal_accepts_bigint_literal_property_names() {
+    let source = r#"
+    let o = { 999999999999999999n: true, 1n() { return 42; } };
+    class C { 1n() { return 42; } }
+    let { 1n: value } = { "1": 42 };
+    "#;
+
+    frontend::parse_script_goal(source).expect("BigInt property names should lower");
+}
+
+#[test]
 fn parse_script_goal_accepts_escaped_reserved_member_property_name() {
     let source = r#"
     var obj = {};
@@ -546,6 +623,45 @@ fn parse_script_goal_rejects_duplicate_parameters_in_async_class_method() {
 }
 
 #[test]
+fn parse_script_goal_rejects_duplicate_parameters_in_object_methods() {
+    for source in ["({ foo(a, a) { } });", "({ async foo(a, a) { } });"] {
+        assert!(
+            frontend::validate_script_goal(source).is_err(),
+            "duplicate parameters in object methods should be rejected"
+        );
+    }
+}
+
+#[test]
+fn parse_script_goal_rejects_line_terminator_in_async_object_method_head() {
+    let source = "({ async\nfoo() { } });";
+
+    assert!(
+        frontend::validate_script_goal(source).is_err(),
+        "line terminators between async and object method names should be rejected"
+    );
+}
+
+#[test]
+fn parse_script_goal_rejects_escaped_object_accessor_keywords() {
+    for source in [
+        r"({ g\u0065t m() {} });",
+        r"({ \u0067et m() {} });",
+        r"({ ge\u0074 m() {} });",
+        r"({ \u0067\u0065\u0074 m() {} });",
+        r"({ s\u0065t m(v) {} });",
+        r"({ \u0073et m(v) {} });",
+        r"({ se\u0074 m(v) {} });",
+        r"({ \u0073\u0065\u0074 m(v) {} });",
+    ] {
+        assert!(
+            frontend::validate_script_goal(source).is_err(),
+            "escaped object accessor keywords should be rejected"
+        );
+    }
+}
+
+#[test]
 fn parse_script_goal_rejects_duplicate_arrow_parameters() {
     let source = "0, (a, a) => { };";
 
@@ -553,6 +669,20 @@ fn parse_script_goal_rejects_duplicate_arrow_parameters() {
         frontend::validate_script_goal(source).is_err(),
         "duplicate arrow parameters should be rejected"
     );
+}
+
+#[test]
+fn parse_script_goal_rejects_new_import_phase_calls() {
+    for source in [
+        "let f = () => new import('./empty_FIXTURE.js');",
+        "let f = () => new import.defer('./empty_FIXTURE.js');",
+        "let f = () => new import.source('./empty_FIXTURE.js');",
+    ] {
+        assert!(
+            frontend::validate_script_goal(source).is_err(),
+            "dynamic import constructor form should be rejected:\n{source}"
+        );
+    }
 }
 
 #[test]

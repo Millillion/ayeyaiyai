@@ -9,9 +9,55 @@ fn simple_regexp_pattern_is_plain_literal(pattern: &str) -> bool {
     })
 }
 
-fn simple_regexp_pattern_matches(pattern: &str, subject: &str) -> Option<bool> {
+fn simple_regexp_single_character_class_matches(pattern: &str, subject: &str) -> Option<bool> {
+    let class = pattern.strip_prefix('[')?.strip_suffix(']')?;
+    if class.is_empty() || class.starts_with('^') || class.contains('\\') {
+        return None;
+    }
+
+    let class_chars = class.chars().collect::<Vec<_>>();
+    let mut index = 0;
+    let mut ranges = Vec::new();
+    while index < class_chars.len() {
+        let start = class_chars[index];
+        if index + 2 < class_chars.len() && class_chars[index + 1] == '-' {
+            let end = class_chars[index + 2];
+            if start > end {
+                return None;
+            }
+            ranges.push((start, end));
+            index += 3;
+        } else if start == '-' {
+            return None;
+        } else {
+            ranges.push((start, start));
+            index += 1;
+        }
+    }
+
+    Some(subject.chars().any(|subject_char| {
+        ranges
+            .iter()
+            .any(|(start, end)| *start <= subject_char && subject_char <= *end)
+    }))
+}
+
+fn simple_regexp_pattern_matches(pattern: &str, subject: &str, ignore_case: bool) -> Option<bool> {
+    let normalized_pattern;
+    let normalized_subject;
+    let (pattern, subject) = if ignore_case {
+        normalized_pattern = pattern.to_lowercase();
+        normalized_subject = subject.to_lowercase();
+        (normalized_pattern.as_str(), normalized_subject.as_str())
+    } else {
+        (pattern, subject)
+    };
+
     if simple_regexp_pattern_is_plain_literal(pattern) {
         return Some(subject.contains(pattern));
+    }
+    if let Some(matches) = simple_regexp_single_character_class_matches(pattern, subject) {
+        return Some(matches);
     }
     if let Some(required_prefix) = pattern.strip_suffix('?') {
         if simple_regexp_pattern_is_plain_literal(required_prefix) {
@@ -75,12 +121,51 @@ fn format_js_number_to_exponential(number: f64, digits: usize) -> String {
 }
 
 impl<'a> FunctionCompiler<'a> {
-    pub(super) fn resolve_static_member_builtin_call_result_with_context(
+    pub(in crate::backend::direct_wasm) fn resolve_static_member_builtin_call_result_with_context(
         &self,
         callee: &Expression,
         arguments: &[CallArgument],
         current_function_name: Option<&str>,
     ) -> Option<(Expression, Option<String>)> {
+        if let Expression::Member { object, property } = callee
+            && matches!(object.as_ref(), Expression::Identifier(name) if name == "Proxy")
+            && matches!(property.as_ref(), Expression::String(name) if name == "revocable")
+            && let [
+                CallArgument::Expression(target) | CallArgument::Spread(target),
+                CallArgument::Expression(handler) | CallArgument::Spread(handler),
+                ..,
+            ] = arguments
+        {
+            return Some((
+                Expression::Object(vec![
+                    ObjectEntry::Data {
+                        key: Expression::String("proxy".to_string()),
+                        value: Expression::New {
+                            callee: Box::new(Expression::Identifier("Proxy".to_string())),
+                            arguments: vec![
+                                CallArgument::Expression(target.clone()),
+                                CallArgument::Expression(handler.clone()),
+                            ],
+                        },
+                    },
+                    ObjectEntry::Data {
+                        key: Expression::String("revoke".to_string()),
+                        value: Expression::Identifier("__ayy_proxy_revoke".to_string()),
+                    },
+                ]),
+                None,
+            ));
+        }
+
+        if let Expression::Member { object, property } = callee
+            && matches!(property.as_ref(), Expression::String(name) if name == "toString")
+            && arguments.is_empty()
+            && let Some(text) = self
+                .resolve_static_symbol_to_string_value_with_context(object, current_function_name)
+        {
+            return Some((Expression::String(text), None));
+        }
+
         if let Expression::Member { object, property } = callee
             && matches!(property.as_ref(), Expression::String(name) if name == "replace")
             && let [
@@ -119,6 +204,40 @@ impl<'a> FunctionCompiler<'a> {
                 _ => return None,
             };
             return Some((Expression::String(value), None));
+        }
+
+        if let Expression::Member { object, property } = callee
+            && matches!(property.as_ref(), Expression::String(property_name) if property_name == "charAt")
+        {
+            let string_value = self
+                .resolve_static_boxed_primitive_value(object)
+                .and_then(|value| match value {
+                    Expression::String(text) => Some(text),
+                    _ => None,
+                })
+                .or_else(|| {
+                    self.resolve_static_string_value_with_context(object, current_function_name)
+                })?;
+            let expanded_arguments = self.expand_call_arguments(arguments);
+            let index_value = expanded_arguments
+                .first()
+                .and_then(|argument| self.resolve_static_number_value(argument))
+                .unwrap_or(0.0);
+            let index = if index_value.is_nan() {
+                0.0
+            } else {
+                index_value.trunc()
+            };
+            let text = if index < 0.0 || !index.is_finite() {
+                String::new()
+            } else {
+                string_value
+                    .chars()
+                    .nth(index as usize)
+                    .map(|character| character.to_string())
+                    .unwrap_or_default()
+            };
+            return Some((Expression::String(text), None));
         }
 
         if let Expression::Member { object, property } = callee
@@ -214,7 +333,25 @@ impl<'a> FunctionCompiler<'a> {
 
         if let Expression::Member { object, property } = callee
             && matches!(object.as_ref(), Expression::Identifier(name) if name == "Object")
+            && matches!(property.as_ref(), Expression::String(name) if name == "isSealed" || name == "isFrozen")
+            && let [CallArgument::Expression(target), ..] = arguments
+        {
+            return self
+                .resolve_static_object_extensibility(target)
+                .map(|extensible| (Expression::Bool(!extensible), None));
+        }
+
+        if let Expression::Member { object, property } = callee
+            && matches!(object.as_ref(), Expression::Identifier(name) if name == "Object")
             && matches!(property.as_ref(), Expression::String(name) if name == "preventExtensions")
+            && let [CallArgument::Expression(target), ..] = arguments
+        {
+            return Some((target.clone(), None));
+        }
+
+        if let Expression::Member { object, property } = callee
+            && matches!(object.as_ref(), Expression::Identifier(name) if name == "Object")
+            && matches!(property.as_ref(), Expression::String(name) if name == "freeze" || name == "seal")
             && let [CallArgument::Expression(target), ..] = arguments
         {
             return Some((target.clone(), None));
@@ -269,9 +406,20 @@ impl<'a> FunctionCompiler<'a> {
         subject_expression: &Expression,
         current_function_name: Option<&str>,
     ) -> Option<bool> {
-        let resolved = self
+        let resolved_alias = self
             .resolve_bound_alias_expression(regexp_expression)
-            .unwrap_or_else(|| self.materialize_static_expression(regexp_expression));
+            .filter(|resolved| !static_expression_matches(resolved, regexp_expression));
+        let materialized = self.materialize_static_expression(regexp_expression);
+        let resolved = [Some(regexp_expression), resolved_alias.as_ref(), Some(&materialized)]
+            .into_iter()
+            .flatten()
+            .find(|candidate| {
+                matches!(
+                    candidate,
+                    Expression::Call { callee, .. } | Expression::New { callee, .. }
+                        if matches!(callee.as_ref(), Expression::Identifier(name) if name == "RegExp" && self.is_unshadowed_builtin_identifier(name))
+                )
+            })?;
         let (callee, arguments) = match resolved {
             Expression::Call { callee, arguments } | Expression::New { callee, arguments } => {
                 (callee, arguments)
@@ -297,12 +445,18 @@ impl<'a> FunctionCompiler<'a> {
             }
             None => String::new(),
         };
-        if !flags.is_empty() {
+        let ignore_case = match flags.as_str() {
+            "" => false,
+            "i" => true,
+            _ => return None,
+        };
+
+        if flags.contains('g') || flags.contains('y') {
             return None;
         }
 
         let subject =
             self.resolve_static_string_concat_value(subject_expression, current_function_name)?;
-        simple_regexp_pattern_matches(&pattern, &subject)
+        simple_regexp_pattern_matches(&pattern, &subject, ignore_case)
     }
 }

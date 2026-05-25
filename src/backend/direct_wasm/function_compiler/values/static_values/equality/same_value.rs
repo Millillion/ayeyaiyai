@@ -1,6 +1,14 @@
 use super::*;
 use std::collections::HashSet;
 
+fn expression_is_dynamic_import_call(expression: &Expression) -> bool {
+    matches!(
+        expression,
+        Expression::Call { callee, .. }
+            if matches!(callee.as_ref(), Expression::Identifier(name) if name == "__ayyDynamicImport")
+    )
+}
+
 impl<'a> FunctionCompiler<'a> {
     pub(in crate::backend::direct_wasm) fn resolve_static_same_value_result_with_context(
         &self,
@@ -59,7 +67,7 @@ impl<'a> FunctionCompiler<'a> {
                 (Expression::Bool(actual), Expression::Bool(expected)) => Some(actual == expected),
                 (Expression::Null, Expression::Null)
                 | (Expression::Undefined, Expression::Undefined) => Some(true),
-                _ => None,
+                _ => Some(false),
             };
         }
 
@@ -68,6 +76,21 @@ impl<'a> FunctionCompiler<'a> {
                 || matches!(expected, Expression::Identifier(_)))
         {
             return None;
+        }
+
+        let actual_reference_key = self.resolve_static_reference_identity_key(actual);
+        let expected_reference_key = self.resolve_static_reference_identity_key(expected);
+        if current_function_name.is_none()
+            && ((actual_reference_key
+                .as_deref()
+                .is_some_and(|key| key.starts_with("new-object:"))
+                && expected_reference_key.as_deref() == Some("this"))
+                || (expected_reference_key
+                    .as_deref()
+                    .is_some_and(|key| key.starts_with("new-object:"))
+                    && actual_reference_key.as_deref() == Some("this")))
+        {
+            return Some(false);
         }
 
         let materializes_to_top_level_this = |expression: &Expression| {
@@ -81,9 +104,6 @@ impl<'a> FunctionCompiler<'a> {
         if materializes_to_top_level_this(actual) ^ materializes_to_top_level_this(expected) {
             return None;
         }
-
-        let actual_reference_key = self.resolve_static_reference_identity_key(actual);
-        let expected_reference_key = self.resolve_static_reference_identity_key(expected);
         if current_function_name.is_none()
             && ((actual_reference_key.as_deref() == Some("this"))
                 ^ (expected_reference_key.as_deref() == Some("this")))
@@ -135,6 +155,49 @@ impl<'a> FunctionCompiler<'a> {
             apply_member_call_capture_slots(actual, self.materialize_static_expression(actual));
         let expected_materialized =
             apply_member_call_capture_slots(expected, self.materialize_static_expression(expected));
+
+        if expression_is_dynamic_import_call(&actual_materialized)
+            || expression_is_dynamic_import_call(&expected_materialized)
+        {
+            return Some(false);
+        }
+
+        let actual_materialized_primitive = self.resolve_static_primitive_expression_with_context(
+            &actual_materialized,
+            current_function_name,
+        );
+        let expected_materialized_primitive = self
+            .resolve_static_primitive_expression_with_context(
+                &expected_materialized,
+                current_function_name,
+            );
+        if let (Some(actual_primitive), Some(expected_primitive)) = (
+            actual_materialized_primitive,
+            expected_materialized_primitive,
+        ) {
+            return match (actual_primitive, expected_primitive) {
+                (Expression::Number(actual), Expression::Number(expected)) => {
+                    if actual.is_nan() && expected.is_nan() {
+                        Some(true)
+                    } else if actual == 0.0 && expected == 0.0 {
+                        Some(actual.is_sign_negative() == expected.is_sign_negative())
+                    } else {
+                        Some(actual == expected)
+                    }
+                }
+                (Expression::BigInt(actual), Expression::BigInt(expected)) => Some(
+                    parse_static_bigint_literal(&actual)?
+                        == parse_static_bigint_literal(&expected)?,
+                ),
+                (Expression::String(actual), Expression::String(expected)) => {
+                    Some(actual == expected)
+                }
+                (Expression::Bool(actual), Expression::Bool(expected)) => Some(actual == expected),
+                (Expression::Null, Expression::Null)
+                | (Expression::Undefined, Expression::Undefined) => Some(true),
+                _ => Some(false),
+            };
+        }
 
         let actual_is_this = matches!(actual_materialized, Expression::This);
         let expected_is_this = matches!(expected_materialized, Expression::This);

@@ -55,6 +55,10 @@ impl<'a> FunctionCompiler<'a> {
                     .is_some_and(|object_binding| {
                         object_binding_has_property(&object_binding, &property)
                     })
+                || (name == "constructor"
+                    && self
+                        .resolve_constructed_object_constructor_binding(object)
+                        .is_some())
         };
         let result = has_property(scope_object)
             || {
@@ -346,6 +350,34 @@ impl<'a> FunctionCompiler<'a> {
                 compiler.emit_scoped_property_read(&proxy_binding.target, name)
             });
         }
+        if let Some(getter_binding) = self.resolve_member_getter_binding(scope_object, &property) {
+            match getter_binding {
+                LocalFunctionBinding::User(function_name) => {
+                    if let Some(user_function) = self.user_function(&function_name).cloned() {
+                        self.with_suspended_with_scopes_if_active_scope_object(
+                            scope_object,
+                            |compiler| {
+                                compiler.emit_user_function_call_with_function_this_binding(
+                                    &user_function,
+                                    &[],
+                                    scope_object,
+                                    None,
+                                )
+                            },
+                        )?;
+                    } else {
+                        self.push_i32_const(JS_UNDEFINED_TAG);
+                    }
+                }
+                LocalFunctionBinding::Builtin(function_name) => {
+                    let callee = Expression::Identifier(function_name);
+                    if !self.emit_arguments_slot_accessor_call(&callee, &[], 0, Some(&[]))? {
+                        self.push_i32_const(JS_UNDEFINED_TAG);
+                    }
+                }
+            }
+            return Ok(());
+        }
         if let Some(object_binding) = self.resolve_object_binding_from_expression(scope_object)
             && let Some(value) = object_binding_lookup_value(&object_binding, &property)
         {
@@ -396,25 +428,23 @@ impl<'a> FunctionCompiler<'a> {
             }
             return Ok(());
         }
-        if let Some(getter_binding) = self.resolve_member_getter_binding(scope_object, &property) {
-            match getter_binding {
+        if name == "constructor"
+            && let Some(function_binding) =
+                self.resolve_constructed_object_constructor_binding(scope_object)
+        {
+            match function_binding {
                 LocalFunctionBinding::User(function_name) => {
-                    if let Some(user_function) = self.user_function(&function_name).cloned() {
-                        self.emit_user_function_call_with_function_this_binding(
-                            &user_function,
-                            &[],
-                            scope_object,
-                            None,
-                        )?;
+                    if let Some(user_function) = self.user_function(&function_name) {
+                        self.push_i32_const(user_function_runtime_value(user_function));
                     } else {
-                        self.push_i32_const(JS_UNDEFINED_TAG);
+                        self.push_i32_const(JS_TYPEOF_FUNCTION_TAG);
                     }
                 }
                 LocalFunctionBinding::Builtin(function_name) => {
-                    let callee = Expression::Identifier(function_name);
-                    if !self.emit_arguments_slot_accessor_call(&callee, &[], 0, Some(&[]))? {
-                        self.push_i32_const(JS_UNDEFINED_TAG);
-                    }
+                    self.push_i32_const(
+                        builtin_function_runtime_value(&function_name)
+                            .unwrap_or(JS_TYPEOF_FUNCTION_TAG),
+                    );
                 }
             }
             return Ok(());

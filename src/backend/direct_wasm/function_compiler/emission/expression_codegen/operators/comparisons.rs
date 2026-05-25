@@ -1,6 +1,53 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn resolve_static_non_finite_number_value(&self, expression: &Expression) -> Option<f64> {
+        if let Some(value) = self
+            .resolve_static_number_value(expression)
+            .filter(|value| value.is_nan() || !value.is_finite())
+        {
+            return Some(value);
+        }
+
+        match expression {
+            Expression::Number(value) if value.is_nan() || !value.is_finite() => Some(*value),
+            Expression::Identifier(name)
+                if name == "NaN" && self.is_unshadowed_builtin_identifier(name) =>
+            {
+                Some(f64::NAN)
+            }
+            Expression::Identifier(name)
+                if name == "Infinity" && self.is_unshadowed_builtin_identifier(name) =>
+            {
+                Some(f64::INFINITY)
+            }
+            Expression::Unary {
+                op: UnaryOp::Plus,
+                expression,
+            } => self.resolve_static_non_finite_number_value(expression),
+            Expression::Unary {
+                op: UnaryOp::Negate,
+                expression,
+            } => self
+                .resolve_static_non_finite_number_value(expression)
+                .map(|value| -value),
+            Expression::Member { object, property }
+                if matches!(object.as_ref(), Expression::Identifier(name) if name == "Number" && self.is_unshadowed_builtin_identifier(name))
+                    && matches!(property.as_ref(), Expression::String(name) if matches!(name.as_str(), "NaN" | "POSITIVE_INFINITY" | "NEGATIVE_INFINITY")) =>
+            {
+                match property.as_ref() {
+                    Expression::String(name) if name == "NaN" => Some(f64::NAN),
+                    Expression::String(name) if name == "NEGATIVE_INFINITY" => {
+                        Some(f64::NEG_INFINITY)
+                    }
+                    Expression::String(_) => Some(f64::INFINITY),
+                    _ => None,
+                }
+            }
+            _ => None,
+        }
+    }
+
     fn expression_is_top_level_global_object_for_property_query(
         &self,
         expression: &Expression,
@@ -49,6 +96,11 @@ impl<'a> FunctionCompiler<'a> {
     }
 
     fn static_property_name_for_in_query(&self, property: &Expression) -> Option<String> {
+        if let Expression::Sequence(expressions) = property
+            && let Some(last) = expressions.last()
+        {
+            return self.static_property_name_for_in_query(last);
+        }
         let resolved = self.resolve_property_key_expression(property).or_else(|| {
             self.resolve_bound_alias_expression(property)
                 .filter(|resolved| !static_expression_matches(resolved, property))
@@ -60,6 +112,121 @@ impl<'a> FunctionCompiler<'a> {
         }
         let materialized = self.materialize_static_expression(property);
         static_property_name_from_expression(&materialized)
+    }
+
+    fn static_builtin_object_name_for_in_query(&self, object: &Expression) -> Option<String> {
+        if let Expression::Sequence(expressions) = object
+            && let Some(last) = expressions.last()
+        {
+            return self.static_builtin_object_name_for_in_query(last);
+        }
+        if let Expression::Identifier(name) = object
+            && name == "Number"
+            && self.is_unshadowed_builtin_identifier(name)
+        {
+            return Some(name.clone());
+        }
+        if let Expression::Identifier(name) = object
+            && let Some(Expression::Identifier(alias)) = self
+                .state
+                .speculation
+                .static_semantics
+                .local_value_binding(name)
+                .or_else(|| self.global_value_binding(name))
+            && alias == "Number"
+            && self.is_unshadowed_builtin_identifier(alias)
+        {
+            return Some(alias.clone());
+        }
+
+        let resolved = self
+            .resolve_bound_alias_expression(object)
+            .filter(|resolved| !static_expression_matches(resolved, object));
+        if let Some(Expression::Identifier(name)) = resolved.as_ref()
+            && name == "Number"
+            && self.is_unshadowed_builtin_identifier(name)
+        {
+            return Some(name.clone());
+        }
+
+        let materialized = self.materialize_static_expression(object);
+        if let Expression::Identifier(name) = materialized
+            && name == "Number"
+            && self.is_unshadowed_builtin_identifier(&name)
+        {
+            return Some(name);
+        }
+
+        None
+    }
+
+    fn last_assignment_value_to_identifier_in_expression<'b>(
+        expression: &'b Expression,
+        target_name: &str,
+    ) -> Option<&'b Expression> {
+        match expression {
+            Expression::Assign { name, value } if name == target_name => Some(value),
+            Expression::Sequence(expressions) => {
+                expressions.iter().fold(None, |last, expression| {
+                    Self::last_assignment_value_to_identifier_in_expression(expression, target_name)
+                        .or(last)
+                })
+            }
+            _ => None,
+        }
+    }
+
+    fn static_builtin_object_name_for_in_query_after_left(
+        &self,
+        left: &Expression,
+        right: &Expression,
+    ) -> Option<String> {
+        self.static_builtin_object_name_for_in_query(right)
+            .or_else(|| {
+                let Expression::Identifier(name) = right else {
+                    return None;
+                };
+                let assigned_value =
+                    Self::last_assignment_value_to_identifier_in_expression(left, name)?;
+                self.static_builtin_object_name_for_in_query(assigned_value)
+            })
+    }
+
+    fn static_builtin_object_has_in_property(object_name: &str, property_name: &str) -> bool {
+        match object_name {
+            "Number" => matches!(
+                property_name,
+                "MAX_VALUE" | "MIN_VALUE" | "NaN" | "POSITIVE_INFINITY" | "NEGATIVE_INFINITY"
+            ),
+            _ => false,
+        }
+    }
+
+    fn static_in_rhs_is_primitive(&self, right: &Expression) -> bool {
+        matches!(
+            self.infer_value_kind(right),
+            Some(
+                StaticValueKind::Number
+                    | StaticValueKind::Bool
+                    | StaticValueKind::String
+                    | StaticValueKind::BigInt
+                    | StaticValueKind::Symbol
+                    | StaticValueKind::Null
+                    | StaticValueKind::Undefined
+            )
+        )
+    }
+
+    fn emit_in_expression_static_type_error(
+        &mut self,
+        left: &Expression,
+        right: &Expression,
+    ) -> DirectResult<()> {
+        self.emit_numeric_expression(left)?;
+        self.state.emission.output.instructions.push(0x1a);
+        self.emit_numeric_expression(right)?;
+        self.state.emission.output.instructions.push(0x1a);
+        self.emit_named_error_throw("TypeError")
     }
 
     fn for_in_key_array_property_names(&self, expression: &Expression) -> Option<Vec<String>> {
@@ -118,6 +285,7 @@ impl<'a> FunctionCompiler<'a> {
                     self.static_top_level_global_object_has_property_name(&property_name)
                 );
             }
+            self.emit_static_in_operand_effects(property, object)?;
             self.push_i32_const(
                 if self.static_top_level_global_object_has_property_name(&property_name) {
                     1
@@ -139,6 +307,7 @@ impl<'a> FunctionCompiler<'a> {
                     "for_in_keys:global_in dynamic_properties={property_names:?} present=true"
                 );
             }
+            self.emit_static_in_operand_effects(property, object)?;
             self.push_i32_const(1);
             return Ok(true);
         }
@@ -147,11 +316,28 @@ impl<'a> FunctionCompiler<'a> {
             if trace_for_in_keys {
                 eprintln!("for_in_keys:global_in lowered_for_in_member present=true");
             }
+            self.emit_static_in_operand_effects(property, object)?;
             self.push_i32_const(1);
             return Ok(true);
         }
 
         Ok(false)
+    }
+
+    fn emit_static_in_operand_effects(
+        &mut self,
+        left: &Expression,
+        right: &Expression,
+    ) -> DirectResult<()> {
+        if !inline_summary_side_effect_free_expression(left) {
+            self.emit_numeric_expression(left)?;
+            self.state.emission.output.instructions.push(0x1a);
+        }
+        if !inline_summary_side_effect_free_expression(right) {
+            self.emit_numeric_expression(right)?;
+            self.state.emission.output.instructions.push(0x1a);
+        }
+        Ok(())
     }
 
     pub(in crate::backend::direct_wasm) fn emit_loose_comparison(
@@ -164,6 +350,35 @@ impl<'a> FunctionCompiler<'a> {
         Ok(())
     }
 
+    pub(in crate::backend::direct_wasm) fn emit_static_bigint_non_finite_loose_equality(
+        &mut self,
+        op: BinaryOp,
+        left: &Expression,
+        right: &Expression,
+    ) -> DirectResult<bool> {
+        if !matches!(op, BinaryOp::LooseEqual | BinaryOp::LooseNotEqual)
+            || !inline_summary_side_effect_free_expression(left)
+            || !inline_summary_side_effect_free_expression(right)
+        {
+            return Ok(false);
+        }
+
+        let left_is_bigint = self.resolve_static_bigint_value(left).is_some();
+        let right_is_bigint = self.resolve_static_bigint_value(right).is_some();
+        let left_is_non_finite_number = self.resolve_static_non_finite_number_value(left).is_some();
+        let right_is_non_finite_number =
+            self.resolve_static_non_finite_number_value(right).is_some();
+
+        if (left_is_bigint && right_is_non_finite_number)
+            || (right_is_bigint && left_is_non_finite_number)
+        {
+            self.push_i32_const(matches!(op, BinaryOp::LooseNotEqual) as i32);
+            return Ok(true);
+        }
+
+        Ok(false)
+    }
+
     pub(in crate::backend::direct_wasm) fn emit_in_expression(
         &mut self,
         left: &Expression,
@@ -173,8 +388,15 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(());
         }
 
+        if let Some(result) = self.resolve_static_in_expression_result(left, right) {
+            self.emit_static_in_operand_effects(left, right)?;
+            self.push_i32_const(i32::from(result));
+            return Ok(());
+        }
+
         if let Some(array_binding) = self.resolve_array_binding_from_expression(right) {
             if matches!(left, Expression::String(property_name) if property_name == "length") {
+                self.emit_static_in_operand_effects(left, right)?;
                 self.push_i32_const(1);
                 return Ok(());
             }
@@ -182,6 +404,7 @@ impl<'a> FunctionCompiler<'a> {
             if let Some(index) = argument_index_from_expression(left)
                 .or_else(|| argument_index_from_expression(&materialized_left))
             {
+                self.emit_static_in_operand_effects(left, right)?;
                 self.push_i32_const(
                     if array_binding
                         .values
@@ -212,6 +435,7 @@ impl<'a> FunctionCompiler<'a> {
                     )
                 })
             {
+                self.emit_static_in_operand_effects(left, right)?;
                 self.push_i32_const(1);
                 return Ok(());
             }
@@ -221,6 +445,21 @@ impl<'a> FunctionCompiler<'a> {
             && self.emit_runtime_known_object_has_property_check(right, left)?
         {
             return Ok(());
+        }
+        if let Some(object_name) =
+            self.static_builtin_object_name_for_in_query_after_left(left, right)
+            && let Some(property_name) = self.static_property_name_for_in_query(left)
+        {
+            let has_property =
+                Self::static_builtin_object_has_in_property(&object_name, &property_name);
+            if has_property {
+                self.emit_static_in_operand_effects(left, right)?;
+                self.push_i32_const(1);
+                return Ok(());
+            }
+        }
+        if self.static_in_rhs_is_primitive(right) {
+            return self.emit_in_expression_static_type_error(left, right);
         }
         if let Some(object_binding) = self.resolve_object_binding_from_expression(right) {
             if self.emit_runtime_known_object_has_property_check(right, left)? {
@@ -237,49 +476,32 @@ impl<'a> FunctionCompiler<'a> {
                                 &object_binding,
                                 &Expression::String(property_name.clone())
                             ) || self
-                                .resolve_object_binding_property_value_with_inherited(
+                                .resolve_object_binding_has_property_with_inherited(
                                     right,
                                     &object_binding,
                                     &Expression::String(property_name.clone()),
                                 )
-                                .is_some()
                     )
                 })
             {
+                self.emit_static_in_operand_effects(left, right)?;
                 self.push_i32_const(1);
                 return Ok(());
             }
             let materialized_left = self.materialize_static_expression(left);
+            self.emit_static_in_operand_effects(left, right)?;
             self.push_i32_const(
-                if self
-                    .resolve_object_binding_property_value_with_inherited(
-                        right,
-                        &object_binding,
-                        &materialized_left,
-                    )
-                    .is_some()
-                {
+                if self.resolve_object_binding_has_property_with_inherited(
+                    right,
+                    &object_binding,
+                    &materialized_left,
+                ) {
                     1
                 } else {
                     0
                 },
             );
             return Ok(());
-        }
-        if let Expression::Identifier(name) = right
-            && let Expression::String(property_name) = left
-        {
-            let has_property = match name.as_str() {
-                "Number" => matches!(
-                    property_name.as_str(),
-                    "MAX_VALUE" | "MIN_VALUE" | "NaN" | "POSITIVE_INFINITY" | "NEGATIVE_INFINITY"
-                ),
-                _ => false,
-            };
-            if has_property {
-                self.push_i32_const(1);
-                return Ok(());
-            }
         }
         self.emit_numeric_expression(left)?;
         self.state.emission.output.instructions.push(0x1a);

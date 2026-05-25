@@ -5,6 +5,7 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         program: &Program,
         preexisting_locals: &HashSet<String>,
+        configurable_global_bindings: bool,
     ) -> DirectResult<()> {
         let eval_var_names = collect_eval_var_names(program)
             .into_iter()
@@ -21,7 +22,7 @@ impl<'a> FunctionCompiler<'a> {
                     self.ensure_global_property_descriptor_value(
                         &name,
                         &Expression::Undefined,
-                        true,
+                        configurable_global_bindings,
                     );
                     self.push_global_get(binding.present_index);
                     self.state.emission.output.instructions.push(0x45);
@@ -41,7 +42,11 @@ impl<'a> FunctionCompiler<'a> {
                     continue;
                 }
                 let binding = self.ensure_implicit_global_binding(&name);
-                self.ensure_global_property_descriptor_value(&name, &Expression::Undefined, true);
+                self.ensure_global_property_descriptor_value(
+                    &name,
+                    &Expression::Undefined,
+                    configurable_global_bindings,
+                );
                 let value_local = self.allocate_temp_local();
                 self.push_i32_const(JS_UNDEFINED_TAG);
                 self.push_local_set(value_local);

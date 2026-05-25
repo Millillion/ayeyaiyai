@@ -1,6 +1,32 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn home_object_expression_for_user_function(
+        user_function: &UserFunction,
+    ) -> Option<Expression> {
+        let home_object = user_function.home_object_binding.as_ref()?;
+        if let Some(class_name) = home_object.strip_suffix(".prototype") {
+            return Some(Expression::Member {
+                object: Box::new(Expression::Identifier(class_name.to_string())),
+                property: Box::new(Expression::String("prototype".to_string())),
+            });
+        }
+        Some(Expression::Identifier(home_object.clone()))
+    }
+
+    fn resolve_member_call_capture_slots_for_user_function(
+        &self,
+        user_function: &UserFunction,
+        object: &Expression,
+        property: &Expression,
+    ) -> Option<BTreeMap<String, String>> {
+        self.resolve_member_function_capture_slots(object, property)
+            .or_else(|| {
+                let home_object = Self::home_object_expression_for_user_function(user_function)?;
+                self.resolve_member_function_capture_slots(&home_object, property)
+            })
+    }
+
     pub(in crate::backend::direct_wasm) fn private_member_call_requires_runtime_brand_check(
         &self,
         object: &Expression,
@@ -70,8 +96,12 @@ impl<'a> FunctionCompiler<'a> {
                             }
                         })
                         .collect::<Vec<_>>();
-                    if let Some(capture_slots) =
-                        self.resolve_member_function_capture_slots(object, property)
+                    if let Some(capture_slots) = self
+                        .resolve_member_call_capture_slots_for_user_function(
+                            &user_function,
+                            object,
+                            property,
+                        )
                     {
                         if runtime_fallback {
                             self.emit_user_function_call_with_new_target_and_this_expression_and_bound_captures_without_static_snapshot(
@@ -195,6 +225,69 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    pub(in crate::backend::direct_wasm) fn emit_returned_function_value_call_expression(
+        &mut self,
+        callee: &Expression,
+        arguments: &[CallArgument],
+    ) -> DirectResult<bool> {
+        let (returned_callee, returned_arguments) = match callee {
+            Expression::Call { callee, arguments } | Expression::New { callee, arguments } => {
+                (callee.as_ref(), arguments.as_slice())
+            }
+            _ => return Ok(false),
+        };
+        let Some(LocalFunctionBinding::User(function_name)) =
+            self.resolve_returned_function_binding_from_call(returned_callee, returned_arguments)
+        else {
+            return Ok(false);
+        };
+        let Some(user_function) = self.user_function(&function_name).cloned() else {
+            return Ok(false);
+        };
+
+        if !self.emit_returned_function_value_call_side_effects(callee)? {
+            self.emit_numeric_expression(callee)?;
+            self.state.emission.output.instructions.push(0x1a);
+        }
+        self.emit_user_function_call(&user_function, arguments)?;
+        Ok(true)
+    }
+
+    pub(in crate::backend::direct_wasm) fn emit_returned_function_value_call_side_effects(
+        &mut self,
+        call_expression: &Expression,
+    ) -> DirectResult<bool> {
+        let (callee, arguments) = match call_expression {
+            Expression::Call { callee, arguments } | Expression::New { callee, arguments } => {
+                (callee.as_ref(), arguments.as_slice())
+            }
+            _ => return Ok(false),
+        };
+
+        if !matches!(callee, Expression::Call { .. } | Expression::New { .. }) {
+            self.emit_numeric_expression(call_expression)?;
+            self.state.emission.output.instructions.push(0x1a);
+            return Ok(true);
+        }
+
+        let Some(LocalFunctionBinding::User(function_name)) =
+            self.resolve_returned_function_binding_from_call(callee, arguments)
+        else {
+            return Ok(false);
+        };
+        let Some(user_function) = self.user_function(&function_name).cloned() else {
+            return Ok(false);
+        };
+
+        if !self.emit_returned_function_value_call_side_effects(callee)? {
+            self.emit_numeric_expression(callee)?;
+            self.state.emission.output.instructions.push(0x1a);
+        }
+        self.emit_user_function_call(&user_function, arguments)?;
+        self.state.emission.output.instructions.push(0x1a);
+        Ok(true)
+    }
+
     pub(in crate::backend::direct_wasm) fn emit_member_function_binding_call_expression(
         &mut self,
         callee: &Expression,
@@ -228,8 +321,12 @@ impl<'a> FunctionCompiler<'a> {
                         }
                     })
                     .collect::<Vec<_>>();
-                if let Some(capture_slots) =
-                    self.resolve_member_function_capture_slots(object, property)
+                if let Some(capture_slots) = self
+                    .resolve_member_call_capture_slots_for_user_function(
+                        &user_function,
+                        object,
+                        property,
+                    )
                 {
                     if runtime_fallback {
                         self.emit_user_function_call_with_new_target_and_this_expression_and_bound_captures_without_static_snapshot(
@@ -309,6 +406,20 @@ impl<'a> FunctionCompiler<'a> {
                 Ok(true)
             }
             LocalFunctionBinding::Builtin(function_name) => {
+                if matches!(
+                    function_name.as_str(),
+                    "Object.prototype.hasOwnProperty" | "Object.prototype.propertyIsEnumerable"
+                ) {
+                    let mut bound_arguments = Vec::with_capacity(arguments.len().saturating_add(1));
+                    bound_arguments.push(CallArgument::Expression(object.clone()));
+                    bound_arguments.extend(arguments.iter().cloned());
+                    if self.emit_bound_function_prototype_call_builtin(
+                        &function_name,
+                        &bound_arguments,
+                    )? {
+                        return Ok(true);
+                    }
+                }
                 if self.emit_builtin_call_for_callee(callee, &function_name, arguments, false)? {
                     return Ok(true);
                 }

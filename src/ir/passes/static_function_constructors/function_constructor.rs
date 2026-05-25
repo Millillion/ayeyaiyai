@@ -18,7 +18,7 @@ impl StaticFunctionConstructorLowerer {
         };
 
         let Some((parameter_source, body_source)) =
-            function_constructor_literal_source_parts(constructor_arguments)
+            self.function_constructor_compile_time_source_parts(constructor_arguments)
         else {
             return Ok(None);
         };
@@ -29,13 +29,25 @@ impl StaticFunctionConstructorLowerer {
         let Ok(parsed) = crate::frontend::parse(&wrapper_source) else {
             return Ok(None);
         };
-        let Some(function) = parsed
-            .functions
-            .into_iter()
-            .find(|function| function.name == function_name)
+        let mut parsed_functions = parsed.functions;
+        let Some(function_index) = parsed_functions
+            .iter()
+            .position(|function| function.name == function_name)
         else {
             bail!("failed to lower static Function constructor `{function_name}`");
         };
+        let mut function = parsed_functions.remove(function_index);
+        function.synthetic_capture_bindings.clear();
+        function.private_brand_binding = None;
+        self.renumber_template_object_sites_in_function(&mut function);
+
+        for mut helper_function in parsed_functions {
+            self.renumber_template_object_sites_in_function(&mut helper_function);
+            self.existing_function_names
+                .insert(helper_function.name.clone());
+            let lowered_helper = self.lower_synthetic_function(helper_function)?;
+            self.synthetic_functions.push(lowered_helper);
+        }
 
         let lowered_function = self.lower_synthetic_function(function)?;
         self.synthetic_functions.push(lowered_function);
@@ -72,6 +84,12 @@ impl StaticFunctionConstructorLowerer {
                     if self.is_global_identifier(object, "globalThis")
                         && self.is_string_literal(property, "Function")
             )
+            || matches!(
+                callee,
+                Expression::Member { object, property }
+                    if self.is_test262_realm_global_value(object)
+                        && self.is_string_literal(property, "Function")
+            )
     }
 
     pub(super) fn is_function_constructor_call_callee(&self, callee: &Expression) -> bool {
@@ -81,5 +99,26 @@ impl StaticFunctionConstructorLowerer {
                 if self.is_function_constructor_callee(object)
                     && self.is_string_literal(property, "call")
         )
+    }
+
+    fn function_constructor_compile_time_source_parts(
+        &self,
+        arguments: &[CallArgument],
+    ) -> Option<(String, String)> {
+        let parts = arguments
+            .iter()
+            .map(|argument| match argument {
+                CallArgument::Expression(expression) => {
+                    self.resolve_compile_time_string(expression)
+                }
+                _ => None,
+            })
+            .collect::<Option<Vec<_>>>()?;
+
+        let Some((body_source, parameter_sources)) = parts.split_last() else {
+            return Some((String::new(), String::new()));
+        };
+
+        Some((parameter_sources.join(","), body_source.clone()))
     }
 }

@@ -129,7 +129,9 @@ impl DirectWasmCompiler {
         }
         if is_internal_user_function_identifier(name) && self.contains_user_function(name) {
             Some(LocalFunctionBinding::User(name.clone()))
-        } else if builtin_identifier_kind(name) == Some(StaticValueKind::Function) {
+        } else if builtin_identifier_kind(name) == Some(StaticValueKind::Function)
+            || parse_test262_realm_eval_builtin(name).is_some()
+        {
             Some(LocalFunctionBinding::Builtin(name.clone()))
         } else {
             None
@@ -158,7 +160,9 @@ impl DirectWasmCompiler {
                 }
                 if is_internal_user_function_identifier(name) && self.contains_user_function(name) {
                     Some(LocalFunctionBinding::User(name.clone()))
-                } else if builtin_identifier_kind(name) == Some(StaticValueKind::Function) {
+                } else if builtin_identifier_kind(name) == Some(StaticValueKind::Function)
+                    || parse_test262_realm_eval_builtin(name).is_some()
+                {
                     Some(LocalFunctionBinding::Builtin(name.clone()))
                 } else {
                     None
@@ -166,6 +170,12 @@ impl DirectWasmCompiler {
             }
             Expression::Member { object, property } => {
                 let materialized_property = self.materialize_global_expression(property);
+                if let Some(key) =
+                    self.global_member_function_binding_key(object, &materialized_property)
+                    && let Some(binding) = self.global_member_function_binding(&key)
+                {
+                    return Some(binding.clone());
+                }
                 if let Some(array_binding) = self.infer_global_array_binding(object)
                     && let Some(index) = argument_index_from_expression(&materialized_property)
                     && let Some(Some(value)) = array_binding.values.get(index as usize)
@@ -269,13 +279,46 @@ impl DirectWasmCompiler {
         }
     }
 
+    pub(in crate::backend::direct_wasm) fn global_property_key_requires_runtime_coercion(
+        &self,
+        property: &Expression,
+    ) -> bool {
+        if static_property_name_from_expression(property).is_some()
+            || self.global_expression_is_static_symbol_property_key(property)
+        {
+            return false;
+        }
+
+        match property {
+            Expression::Identifier(name) => {
+                self.global_object_binding(name).is_some()
+                    || self.global_binding_kind(name) == Some(StaticValueKind::Object)
+            }
+            Expression::Array(_) | Expression::Object(_) => true,
+            _ => false,
+        }
+    }
+
     pub(in crate::backend::direct_wasm) fn global_member_function_binding_key(
         &self,
         object: &Expression,
         property: &Expression,
     ) -> Option<MemberFunctionBindingKey> {
         let target = match object {
-            Expression::Identifier(name) => MemberFunctionBindingTarget::Identifier(name.clone()),
+            Expression::Identifier(name) => {
+                let target_name = self
+                    .global_value_binding(name)
+                    .and_then(|value| match value {
+                        Expression::Identifier(value_name)
+                            if parse_test262_realm_global_identifier(value_name).is_some() =>
+                        {
+                            Some(value_name.clone())
+                        }
+                        _ => None,
+                    })
+                    .unwrap_or_else(|| name.clone());
+                MemberFunctionBindingTarget::Identifier(target_name)
+            }
             Expression::Member {
                 object,
                 property: target_property,
@@ -294,6 +337,9 @@ impl DirectWasmCompiler {
             }
             _ => return None,
         };
+        if self.global_property_key_requires_runtime_coercion(property) {
+            return None;
+        }
         let property = self.global_member_function_binding_property(property)?;
         Some(MemberFunctionBindingKey { target, property })
     }

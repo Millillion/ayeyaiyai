@@ -1,0 +1,1503 @@
+Program {
+    strict: false,
+    functions: [
+        FunctionDeclaration {
+            name: "Test262Error",
+            top_level_binding: None,
+            params: [
+                Parameter {
+                    name: "message",
+                    default: None,
+                    rest: false,
+                },
+            ],
+            body: [
+                AssignMember {
+                    object: This,
+                    property: String(
+                        "name",
+                    ),
+                    value: String(
+                        "Test262Error",
+                    ),
+                },
+                AssignMember {
+                    object: This,
+                    property: String(
+                        "message",
+                    ),
+                    value: Binary {
+                        op: NullishCoalescing,
+                        left: Identifier(
+                            "message",
+                        ),
+                        right: String(
+                            "",
+                        ),
+                    },
+                },
+            ],
+            register_global: true,
+            kind: Ordinary,
+            self_binding: Some(
+                "Test262Error",
+            ),
+            mapped_arguments: true,
+            strict: false,
+            lexical_this: false,
+            derived_constructor: false,
+            direct_eval_in_class_field_initializer: false,
+            length: 1,
+            synthetic_capture_bindings: [],
+            immutable_class_bindings: [],
+            private_brand_binding: None,
+        },
+        FunctionDeclaration {
+            name: "__formatIdentityFreeValue",
+            top_level_binding: None,
+            params: [
+                Parameter {
+                    name: "value",
+                    default: None,
+                    rest: false,
+                },
+            ],
+            body: [
+                Switch {
+                    labels: [],
+                    bindings: [],
+                    discriminant: Conditional {
+                        condition: Binary {
+                            op: Equal,
+                            left: Identifier(
+                                "value",
+                            ),
+                            right: Null,
+                        },
+                        then_expression: String(
+                            "null",
+                        ),
+                        else_expression: Unary {
+                            op: TypeOf,
+                            expression: Identifier(
+                                "value",
+                            ),
+                        },
+                    },
+                    cases: [
+                        SwitchCase {
+                            test: Some(
+                                String(
+                                    "string",
+                                ),
+                            ),
+                            body: [
+                                Return(
+                                    Conditional {
+                                        condition: Binary {
+                                            op: NotEqual,
+                                            left: Unary {
+                                                op: TypeOf,
+                                                expression: Identifier(
+                                                    "JSON",
+                                                ),
+                                            },
+                                            right: String(
+                                                "undefined",
+                                            ),
+                                        },
+                                        then_expression: Call {
+                                            callee: Member {
+                                                object: Identifier(
+                                                    "JSON",
+                                                ),
+                                                property: String(
+                                                    "stringify",
+                                                ),
+                                            },
+                                            arguments: [
+                                                Expression(
+                                                    Identifier(
+                                                        "value",
+                                                    ),
+                                                ),
+                                            ],
+                                        },
+                                        else_expression: Binary {
+                                            op: Add,
+                                            left: Binary {
+                                                op: Add,
+                                                left: String(
+                                                    "\"",
+                                                ),
+                                                right: Identifier(
+                                                    "value",
+                                                ),
+                                            },
+                                            right: String(
+                                                "\"",
+                                            ),
+                                        },
+                                    },
+                                ),
+                            ],
+                        },
+                        SwitchCase {
+                            test: Some(
+                                String(
+                                    "bigint",
+                                ),
+                            ),
+                            body: [
+                                Return(
+                                    Binary {
+                                        op: Add,
+                                        left: Call {
+                                            callee: Identifier(
+                                                "String",
+                                            ),
+                                            arguments: [
+                                                Expression(
+                                                    Identifier(
+                                                        "value",
+                                                    ),
+                                                ),
+                                            ],
+                                        },
+                                        right: String(
+                                            "n",
+                                        ),
+                                    },
+                                ),
+                            ],
+                        },
+                        SwitchCase {
+                            test: Some(
+                                String(
+                                    "number",
+                                ),
+                            ),
+                            body: [
+                                If {
+                                    condition: Binary {
+                                        op: LogicalAnd,
+                                        left: Binary {
+                                            op: Equal,
+                                            left: Identifier(
+                                                "value",
+                                            ),
+                                            right: Number(
+                                                0.0,
+                                            ),
+                                        },
+                                        right: Binary {
+                                            op: Equal,
+                                            left: Binary {
+                                                op: Divide,
+                                                left: Number(
+                                                    1.0,
+                                                ),
+                                                right: Identifier(
+                                                    "value",
+                                                ),
+                                            },
+                                            right: Unary {
+                                                op: Negate,
+                                                expression: Identifier(
+                                                    "Infinity",
+                                                ),
+                                            },
+                                        },
+                                    },
+                                    then_branch: [
+                                        Block {
+                                            body: [
+                                                Return(
+                                                    String(
+                                                        "-0",
+                                                    ),
+                                                ),
+                                            ],
+                                        },
+                                    ],
+                                    else_branch: [],
+                                },
+                                Return(
+                                    Call {
+                                        callee: Identifier(
+                                            "String",
+                                        ),
+                                        arguments: [
+                                            Expression(
+                                                Identifier(
+                                                    "value",
+                                                ),
+                                            ),
+                                        ],
+                                    },
+                                ),
+                            ],
+                        },
+                        SwitchCase {
+                            test: Some(
+                                String(
+                                    "boolean",
+                                ),
+                            ),
+                            body: [],
+                        },
+                        SwitchCase {
+                            test: Some(
+                                String(
+                                    "undefined",
+                                ),
+                            ),
+                            body: [],
+                        },
+                        SwitchCase {
+                            test: Some(
+                                String(
+                                    "null",
+                                ),
+                            ),
+                            body: [
+                                Return(
+                                    Call {
+                                        callee: Identifier(
+                                            "String",
+                                        ),
+                                        arguments: [
+                                            Expression(
+                                                Identifier(
+                                                    "value",
+                                                ),
+                                            ),
+                                        ],
+                                    },
+                                ),
+                            ],
+                        },
+                    ],
+                },
+            ],
+            register_global: true,
+            kind: Ordinary,
+            self_binding: Some(
+                "__formatIdentityFreeValue",
+            ),
+            mapped_arguments: true,
+            strict: false,
+            lexical_this: false,
+            derived_constructor: false,
+            direct_eval_in_class_field_initializer: false,
+            length: 1,
+            synthetic_capture_bindings: [],
+            immutable_class_bindings: [],
+            private_brand_binding: None,
+        },
+        FunctionDeclaration {
+            name: "__sameValue",
+            top_level_binding: None,
+            params: [
+                Parameter {
+                    name: "left",
+                    default: None,
+                    rest: false,
+                },
+                Parameter {
+                    name: "right",
+                    default: None,
+                    rest: false,
+                },
+            ],
+            body: [
+                If {
+                    condition: Binary {
+                        op: Equal,
+                        left: Identifier(
+                            "left",
+                        ),
+                        right: Identifier(
+                            "right",
+                        ),
+                    },
+                    then_branch: [
+                        Block {
+                            body: [
+                                Return(
+                                    Binary {
+                                        op: LogicalOr,
+                                        left: Binary {
+                                            op: NotEqual,
+                                            left: Identifier(
+                                                "left",
+                                            ),
+                                            right: Number(
+                                                0.0,
+                                            ),
+                                        },
+                                        right: Binary {
+                                            op: Equal,
+                                            left: Binary {
+                                                op: Divide,
+                                                left: Number(
+                                                    1.0,
+                                                ),
+                                                right: Identifier(
+                                                    "left",
+                                                ),
+                                            },
+                                            right: Binary {
+                                                op: Divide,
+                                                left: Number(
+                                                    1.0,
+                                                ),
+                                                right: Identifier(
+                                                    "right",
+                                                ),
+                                            },
+                                        },
+                                    },
+                                ),
+                            ],
+                        },
+                    ],
+                    else_branch: [],
+                },
+                Return(
+                    Binary {
+                        op: LogicalAnd,
+                        left: Binary {
+                            op: NotEqual,
+                            left: Identifier(
+                                "left",
+                            ),
+                            right: Identifier(
+                                "left",
+                            ),
+                        },
+                        right: Binary {
+                            op: NotEqual,
+                            left: Identifier(
+                                "right",
+                            ),
+                            right: Identifier(
+                                "right",
+                            ),
+                        },
+                    },
+                ),
+            ],
+            register_global: true,
+            kind: Ordinary,
+            self_binding: Some(
+                "__sameValue",
+            ),
+            mapped_arguments: true,
+            strict: false,
+            lexical_this: false,
+            derived_constructor: false,
+            direct_eval_in_class_field_initializer: false,
+            length: 2,
+            synthetic_capture_bindings: [],
+            immutable_class_bindings: [],
+            private_brand_binding: None,
+        },
+        FunctionDeclaration {
+            name: "__assertToString",
+            top_level_binding: None,
+            params: [
+                Parameter {
+                    name: "value",
+                    default: None,
+                    rest: false,
+                },
+            ],
+            body: [
+                Var {
+                    name: "basic",
+                    value: Call {
+                        callee: Identifier(
+                            "__formatIdentityFreeValue",
+                        ),
+                        arguments: [
+                            Expression(
+                                Identifier(
+                                    "value",
+                                ),
+                            ),
+                        ],
+                    },
+                },
+                If {
+                    condition: Identifier(
+                        "basic",
+                    ),
+                    then_branch: [
+                        Block {
+                            body: [
+                                Return(
+                                    Identifier(
+                                        "basic",
+                                    ),
+                                ),
+                            ],
+                        },
+                    ],
+                    else_branch: [],
+                },
+                Try {
+                    body: [
+                        Return(
+                            Call {
+                                callee: Identifier(
+                                    "String",
+                                ),
+                                arguments: [
+                                    Expression(
+                                        Identifier(
+                                            "value",
+                                        ),
+                                    ),
+                                ],
+                            },
+                        ),
+                    ],
+                    catch_binding: Some(
+                        "__ayy_local$error$5",
+                    ),
+                    catch_setup: [],
+                    catch_body: [
+                        If {
+                            condition: Binary {
+                                op: LogicalAnd,
+                                left: Identifier(
+                                    "__ayy_local$error$5",
+                                ),
+                                right: Binary {
+                                    op: Equal,
+                                    left: Member {
+                                        object: Identifier(
+                                            "__ayy_local$error$5",
+                                        ),
+                                        property: String(
+                                            "name",
+                                        ),
+                                    },
+                                    right: String(
+                                        "TypeError",
+                                    ),
+                                },
+                            },
+                            then_branch: [
+                                Block {
+                                    body: [
+                                        Return(
+                                            Call {
+                                                callee: Member {
+                                                    object: Member {
+                                                        object: Member {
+                                                            object: Identifier(
+                                                                "Object",
+                                                            ),
+                                                            property: String(
+                                                                "prototype",
+                                                            ),
+                                                        },
+                                                        property: String(
+                                                            "toString",
+                                                        ),
+                                                    },
+                                                    property: String(
+                                                        "call",
+                                                    ),
+                                                },
+                                                arguments: [
+                                                    Expression(
+                                                        Identifier(
+                                                            "value",
+                                                        ),
+                                                    ),
+                                                ],
+                                            },
+                                        ),
+                                    ],
+                                },
+                            ],
+                            else_branch: [],
+                        },
+                        Throw(
+                            Identifier(
+                                "__ayy_local$error$5",
+                            ),
+                        ),
+                    ],
+                },
+            ],
+            register_global: true,
+            kind: Ordinary,
+            self_binding: Some(
+                "__assertToString",
+            ),
+            mapped_arguments: true,
+            strict: false,
+            lexical_this: false,
+            derived_constructor: false,
+            direct_eval_in_class_field_initializer: false,
+            length: 1,
+            synthetic_capture_bindings: [],
+            immutable_class_bindings: [],
+            private_brand_binding: None,
+        },
+        FunctionDeclaration {
+            name: "assert",
+            top_level_binding: None,
+            params: [
+                Parameter {
+                    name: "mustBeTrue",
+                    default: None,
+                    rest: false,
+                },
+                Parameter {
+                    name: "message",
+                    default: None,
+                    rest: false,
+                },
+            ],
+            body: [
+                If {
+                    condition: Binary {
+                        op: Equal,
+                        left: Identifier(
+                            "mustBeTrue",
+                        ),
+                        right: Bool(
+                            true,
+                        ),
+                    },
+                    then_branch: [
+                        Block {
+                            body: [
+                                Return(
+                                    Undefined,
+                                ),
+                            ],
+                        },
+                    ],
+                    else_branch: [],
+                },
+                If {
+                    condition: Binary {
+                        op: Equal,
+                        left: Identifier(
+                            "message",
+                        ),
+                        right: Identifier(
+                            "undefined",
+                        ),
+                    },
+                    then_branch: [
+                        Block {
+                            body: [
+                                Assign {
+                                    name: "message",
+                                    value: Binary {
+                                        op: Add,
+                                        left: String(
+                                            "Expected true but got ",
+                                        ),
+                                        right: Call {
+                                            callee: Identifier(
+                                                "__assertToString",
+                                            ),
+                                            arguments: [
+                                                Expression(
+                                                    Identifier(
+                                                        "mustBeTrue",
+                                                    ),
+                                                ),
+                                            ],
+                                        },
+                                    },
+                                },
+                            ],
+                        },
+                    ],
+                    else_branch: [],
+                },
+                Throw(
+                    New {
+                        callee: Identifier(
+                            "Test262Error",
+                        ),
+                        arguments: [
+                            Expression(
+                                Identifier(
+                                    "message",
+                                ),
+                            ),
+                        ],
+                    },
+                ),
+            ],
+            register_global: true,
+            kind: Ordinary,
+            self_binding: Some(
+                "assert",
+            ),
+            mapped_arguments: true,
+            strict: false,
+            lexical_this: false,
+            derived_constructor: false,
+            direct_eval_in_class_field_initializer: false,
+            length: 2,
+            synthetic_capture_bindings: [],
+            immutable_class_bindings: [],
+            private_brand_binding: None,
+        },
+        FunctionDeclaration {
+            name: "__assert",
+            top_level_binding: None,
+            params: [
+                Parameter {
+                    name: "condition",
+                    default: None,
+                    rest: false,
+                },
+                Parameter {
+                    name: "message",
+                    default: None,
+                    rest: false,
+                },
+            ],
+            body: [
+                Expression(
+                    Call {
+                        callee: Identifier(
+                            "assert",
+                        ),
+                        arguments: [
+                            Expression(
+                                Identifier(
+                                    "condition",
+                                ),
+                            ),
+                            Expression(
+                                Identifier(
+                                    "message",
+                                ),
+                            ),
+                        ],
+                    },
+                ),
+            ],
+            register_global: true,
+            kind: Ordinary,
+            self_binding: Some(
+                "__assert",
+            ),
+            mapped_arguments: true,
+            strict: false,
+            lexical_this: false,
+            derived_constructor: false,
+            direct_eval_in_class_field_initializer: false,
+            length: 2,
+            synthetic_capture_bindings: [],
+            immutable_class_bindings: [],
+            private_brand_binding: None,
+        },
+        FunctionDeclaration {
+            name: "__assertSameValue",
+            top_level_binding: None,
+            params: [
+                Parameter {
+                    name: "actual",
+                    default: None,
+                    rest: false,
+                },
+                Parameter {
+                    name: "expected",
+                    default: None,
+                    rest: false,
+                },
+                Parameter {
+                    name: "message",
+                    default: None,
+                    rest: false,
+                },
+            ],
+            body: [
+                Try {
+                    body: [
+                        If {
+                            condition: Call {
+                                callee: Identifier(
+                                    "__sameValue",
+                                ),
+                                arguments: [
+                                    Expression(
+                                        Identifier(
+                                            "actual",
+                                        ),
+                                    ),
+                                    Expression(
+                                        Identifier(
+                                            "expected",
+                                        ),
+                                    ),
+                                ],
+                            },
+                            then_branch: [
+                                Block {
+                                    body: [
+                                        Return(
+                                            Undefined,
+                                        ),
+                                    ],
+                                },
+                            ],
+                            else_branch: [],
+                        },
+                    ],
+                    catch_binding: Some(
+                        "__ayy_local$error$9",
+                    ),
+                    catch_setup: [],
+                    catch_body: [
+                        Throw(
+                            New {
+                                callee: Identifier(
+                                    "Test262Error",
+                                ),
+                                arguments: [
+                                    Expression(
+                                        Binary {
+                                            op: Add,
+                                            left: Binary {
+                                                op: Add,
+                                                left: Binary {
+                                                    op: NullishCoalescing,
+                                                    left: Identifier(
+                                                        "message",
+                                                    ),
+                                                    right: String(
+                                                        "",
+                                                    ),
+                                                },
+                                                right: String(
+                                                    " (_isSameValue operation threw) ",
+                                                ),
+                                            },
+                                            right: Identifier(
+                                                "__ayy_local$error$9",
+                                            ),
+                                        },
+                                    ),
+                                ],
+                            },
+                        ),
+                    ],
+                },
+                If {
+                    condition: Binary {
+                        op: Equal,
+                        left: Identifier(
+                            "message",
+                        ),
+                        right: Identifier(
+                            "undefined",
+                        ),
+                    },
+                    then_branch: [
+                        Block {
+                            body: [
+                                Assign {
+                                    name: "message",
+                                    value: String(
+                                        "",
+                                    ),
+                                },
+                            ],
+                        },
+                    ],
+                    else_branch: [
+                        Block {
+                            body: [
+                                Assign {
+                                    name: "message",
+                                    value: Binary {
+                                        op: Add,
+                                        left: Identifier(
+                                            "message",
+                                        ),
+                                        right: String(
+                                            " ",
+                                        ),
+                                    },
+                                },
+                            ],
+                        },
+                    ],
+                },
+                Assign {
+                    name: "message",
+                    value: Binary {
+                        op: Add,
+                        left: Identifier(
+                            "message",
+                        ),
+                        right: Binary {
+                            op: Add,
+                            left: Binary {
+                                op: Add,
+                                left: Binary {
+                                    op: Add,
+                                    left: Binary {
+                                        op: Add,
+                                        left: String(
+                                            "Expected SameValue(«",
+                                        ),
+                                        right: Call {
+                                            callee: Identifier(
+                                                "__assertToString",
+                                            ),
+                                            arguments: [
+                                                Expression(
+                                                    Identifier(
+                                                        "actual",
+                                                    ),
+                                                ),
+                                            ],
+                                        },
+                                    },
+                                    right: String(
+                                        "», «",
+                                    ),
+                                },
+                                right: Call {
+                                    callee: Identifier(
+                                        "__assertToString",
+                                    ),
+                                    arguments: [
+                                        Expression(
+                                            Identifier(
+                                                "expected",
+                                            ),
+                                        ),
+                                    ],
+                                },
+                            },
+                            right: String(
+                                "») to be true",
+                            ),
+                        },
+                    },
+                },
+                Throw(
+                    New {
+                        callee: Identifier(
+                            "Test262Error",
+                        ),
+                        arguments: [
+                            Expression(
+                                Identifier(
+                                    "message",
+                                ),
+                            ),
+                        ],
+                    },
+                ),
+            ],
+            register_global: true,
+            kind: Ordinary,
+            self_binding: Some(
+                "__assertSameValue",
+            ),
+            mapped_arguments: true,
+            strict: false,
+            lexical_this: false,
+            derived_constructor: false,
+            direct_eval_in_class_field_initializer: false,
+            length: 3,
+            synthetic_capture_bindings: [],
+            immutable_class_bindings: [],
+            private_brand_binding: None,
+        },
+        FunctionDeclaration {
+            name: "__assertNotSameValue",
+            top_level_binding: None,
+            params: [
+                Parameter {
+                    name: "actual",
+                    default: None,
+                    rest: false,
+                },
+                Parameter {
+                    name: "expected",
+                    default: None,
+                    rest: false,
+                },
+                Parameter {
+                    name: "message",
+                    default: None,
+                    rest: false,
+                },
+            ],
+            body: [
+                If {
+                    condition: Unary {
+                        op: Not,
+                        expression: Call {
+                            callee: Identifier(
+                                "__sameValue",
+                            ),
+                            arguments: [
+                                Expression(
+                                    Identifier(
+                                        "actual",
+                                    ),
+                                ),
+                                Expression(
+                                    Identifier(
+                                        "expected",
+                                    ),
+                                ),
+                            ],
+                        },
+                    },
+                    then_branch: [
+                        Block {
+                            body: [
+                                Return(
+                                    Undefined,
+                                ),
+                            ],
+                        },
+                    ],
+                    else_branch: [],
+                },
+                If {
+                    condition: Binary {
+                        op: Equal,
+                        left: Identifier(
+                            "message",
+                        ),
+                        right: Identifier(
+                            "undefined",
+                        ),
+                    },
+                    then_branch: [
+                        Block {
+                            body: [
+                                Assign {
+                                    name: "message",
+                                    value: String(
+                                        "",
+                                    ),
+                                },
+                            ],
+                        },
+                    ],
+                    else_branch: [
+                        Block {
+                            body: [
+                                Assign {
+                                    name: "message",
+                                    value: Binary {
+                                        op: Add,
+                                        left: Identifier(
+                                            "message",
+                                        ),
+                                        right: String(
+                                            " ",
+                                        ),
+                                    },
+                                },
+                            ],
+                        },
+                    ],
+                },
+                Assign {
+                    name: "message",
+                    value: Binary {
+                        op: Add,
+                        left: Identifier(
+                            "message",
+                        ),
+                        right: Binary {
+                            op: Add,
+                            left: Binary {
+                                op: Add,
+                                left: Binary {
+                                    op: Add,
+                                    left: Binary {
+                                        op: Add,
+                                        left: String(
+                                            "Expected SameValue(«",
+                                        ),
+                                        right: Call {
+                                            callee: Identifier(
+                                                "__assertToString",
+                                            ),
+                                            arguments: [
+                                                Expression(
+                                                    Identifier(
+                                                        "actual",
+                                                    ),
+                                                ),
+                                            ],
+                                        },
+                                    },
+                                    right: String(
+                                        "», «",
+                                    ),
+                                },
+                                right: Call {
+                                    callee: Identifier(
+                                        "__assertToString",
+                                    ),
+                                    arguments: [
+                                        Expression(
+                                            Identifier(
+                                                "expected",
+                                            ),
+                                        ),
+                                    ],
+                                },
+                            },
+                            right: String(
+                                "») to be false",
+                            ),
+                        },
+                    },
+                },
+                Throw(
+                    New {
+                        callee: Identifier(
+                            "Test262Error",
+                        ),
+                        arguments: [
+                            Expression(
+                                Identifier(
+                                    "message",
+                                ),
+                            ),
+                        ],
+                    },
+                ),
+            ],
+            register_global: true,
+            kind: Ordinary,
+            self_binding: Some(
+                "__assertNotSameValue",
+            ),
+            mapped_arguments: true,
+            strict: false,
+            lexical_this: false,
+            derived_constructor: false,
+            direct_eval_in_class_field_initializer: false,
+            length: 3,
+            synthetic_capture_bindings: [],
+            immutable_class_bindings: [],
+            private_brand_binding: None,
+        },
+        FunctionDeclaration {
+            name: "__ayyAssertThrows",
+            top_level_binding: None,
+            params: [
+                Parameter {
+                    name: "expectedErrorConstructor",
+                    default: None,
+                    rest: false,
+                },
+                Parameter {
+                    name: "func",
+                    default: None,
+                    rest: false,
+                },
+                Parameter {
+                    name: "message",
+                    default: None,
+                    rest: false,
+                },
+            ],
+            body: [
+                Return(
+                    Undefined,
+                ),
+            ],
+            register_global: true,
+            kind: Ordinary,
+            self_binding: Some(
+                "__ayyAssertThrows",
+            ),
+            mapped_arguments: true,
+            strict: false,
+            lexical_this: false,
+            derived_constructor: false,
+            direct_eval_in_class_field_initializer: false,
+            length: 3,
+            synthetic_capture_bindings: [],
+            immutable_class_bindings: [],
+            private_brand_binding: None,
+        },
+        FunctionDeclaration {
+            name: "compareArray",
+            top_level_binding: None,
+            params: [
+                Parameter {
+                    name: "actual",
+                    default: None,
+                    rest: false,
+                },
+                Parameter {
+                    name: "expected",
+                    default: None,
+                    rest: false,
+                },
+            ],
+            body: [
+                If {
+                    condition: Binary {
+                        op: NotEqual,
+                        left: Member {
+                            object: Identifier(
+                                "actual",
+                            ),
+                            property: String(
+                                "length",
+                            ),
+                        },
+                        right: Member {
+                            object: Identifier(
+                                "expected",
+                            ),
+                            property: String(
+                                "length",
+                            ),
+                        },
+                    },
+                    then_branch: [
+                        Block {
+                            body: [
+                                Return(
+                                    Bool(
+                                        false,
+                                    ),
+                                ),
+                            ],
+                        },
+                    ],
+                    else_branch: [],
+                },
+                For {
+                    labels: [],
+                    init: [
+                        Var {
+                            name: "i",
+                            value: Number(
+                                0.0,
+                            ),
+                        },
+                    ],
+                    per_iteration_bindings: [],
+                    condition: Some(
+                        Binary {
+                            op: LessThan,
+                            left: Identifier(
+                                "i",
+                            ),
+                            right: Member {
+                                object: Identifier(
+                                    "actual",
+                                ),
+                                property: String(
+                                    "length",
+                                ),
+                            },
+                        },
+                    ),
+                    update: Some(
+                        Assign {
+                            name: "i",
+                            value: Binary {
+                                op: Add,
+                                left: Identifier(
+                                    "i",
+                                ),
+                                right: Number(
+                                    1.0,
+                                ),
+                            },
+                        },
+                    ),
+                    break_hook: None,
+                    body: [
+                        Block {
+                            body: [
+                                If {
+                                    condition: Unary {
+                                        op: Not,
+                                        expression: Call {
+                                            callee: Identifier(
+                                                "__sameValue",
+                                            ),
+                                            arguments: [
+                                                Expression(
+                                                    Member {
+                                                        object: Identifier(
+                                                            "actual",
+                                                        ),
+                                                        property: Identifier(
+                                                            "i",
+                                                        ),
+                                                    },
+                                                ),
+                                                Expression(
+                                                    Member {
+                                                        object: Identifier(
+                                                            "expected",
+                                                        ),
+                                                        property: Identifier(
+                                                            "i",
+                                                        ),
+                                                    },
+                                                ),
+                                            ],
+                                        },
+                                    },
+                                    then_branch: [
+                                        Block {
+                                            body: [
+                                                Return(
+                                                    Bool(
+                                                        false,
+                                                    ),
+                                                ),
+                                            ],
+                                        },
+                                    ],
+                                    else_branch: [],
+                                },
+                            ],
+                        },
+                    ],
+                },
+                Return(
+                    Bool(
+                        true,
+                    ),
+                ),
+            ],
+            register_global: true,
+            kind: Ordinary,
+            self_binding: Some(
+                "compareArray",
+            ),
+            mapped_arguments: true,
+            strict: false,
+            lexical_this: false,
+            derived_constructor: false,
+            direct_eval_in_class_field_initializer: false,
+            length: 2,
+            synthetic_capture_bindings: [],
+            immutable_class_bindings: [],
+            private_brand_binding: None,
+        },
+        FunctionDeclaration {
+            name: "__ayy_fnexpr_1__name_",
+            top_level_binding: None,
+            params: [
+                Parameter {
+                    name: "arrayLike",
+                    default: None,
+                    rest: false,
+                },
+            ],
+            body: [
+                Return(
+                    Binary {
+                        op: Add,
+                        left: String(
+                            "",
+                        ),
+                        right: Identifier(
+                            "arrayLike",
+                        ),
+                    },
+                ),
+            ],
+            register_global: false,
+            kind: Ordinary,
+            self_binding: None,
+            mapped_arguments: true,
+            strict: false,
+            lexical_this: false,
+            derived_constructor: false,
+            direct_eval_in_class_field_initializer: false,
+            length: 1,
+            synthetic_capture_bindings: [],
+            immutable_class_bindings: [],
+            private_brand_binding: None,
+        },
+        FunctionDeclaration {
+            name: "__ayyAssertCompareArray",
+            top_level_binding: None,
+            params: [],
+            body: [],
+            register_global: true,
+            kind: Ordinary,
+            self_binding: Some(
+                "__ayyAssertCompareArray",
+            ),
+            mapped_arguments: true,
+            strict: false,
+            lexical_this: false,
+            derived_constructor: false,
+            direct_eval_in_class_field_initializer: false,
+            length: 0,
+            synthetic_capture_bindings: [],
+            immutable_class_bindings: [],
+            private_brand_binding: None,
+        },
+        FunctionDeclaration {
+            name: "__ayy_fnexpr_2",
+            top_level_binding: None,
+            params: [],
+            body: [],
+            register_global: false,
+            kind: Async,
+            self_binding: None,
+            mapped_arguments: true,
+            strict: false,
+            lexical_this: false,
+            derived_constructor: false,
+            direct_eval_in_class_field_initializer: false,
+            length: 0,
+            synthetic_capture_bindings: [],
+            immutable_class_bindings: [],
+            private_brand_binding: None,
+        },
+    ],
+    statements: [
+        AssignMember {
+            object: Identifier(
+                "globalThis",
+            ),
+            property: String(
+                "assert",
+            ),
+            value: Identifier(
+                "assert",
+            ),
+        },
+        AssignMember {
+            object: Identifier(
+                "assert",
+            ),
+            property: String(
+                "_isSameValue",
+            ),
+            value: Identifier(
+                "__sameValue",
+            ),
+        },
+        AssignMember {
+            object: Identifier(
+                "assert",
+            ),
+            property: String(
+                "_toString",
+            ),
+            value: Identifier(
+                "__assertToString",
+            ),
+        },
+        AssignMember {
+            object: Identifier(
+                "assert",
+            ),
+            property: String(
+                "sameValue",
+            ),
+            value: Identifier(
+                "__assertSameValue",
+            ),
+        },
+        AssignMember {
+            object: Identifier(
+                "assert",
+            ),
+            property: String(
+                "notSameValue",
+            ),
+            value: Identifier(
+                "__assertNotSameValue",
+            ),
+        },
+        AssignMember {
+            object: Identifier(
+                "assert",
+            ),
+            property: String(
+                "throws",
+            ),
+            value: Identifier(
+                "__ayyAssertThrows",
+            ),
+        },
+        AssignMember {
+            object: Identifier(
+                "compareArray",
+            ),
+            property: String(
+                "format",
+            ),
+            value: Identifier(
+                "__ayy_fnexpr_1__name_",
+            ),
+        },
+        AssignMember {
+            object: Identifier(
+                "assert",
+            ),
+            property: String(
+                "compareArray",
+            ),
+            value: Identifier(
+                "__ayyAssertCompareArray",
+            ),
+        },
+        Var {
+            name: "AsyncFunction",
+            value: Member {
+                object: Identifier(
+                    "__ayy_fnexpr_2",
+                ),
+                property: String(
+                    "constructor",
+                ),
+            },
+        },
+        Expression(
+            Identifier(
+                "SyntaxError",
+            ),
+        ),
+        Expression(
+            String(
+                "import.meta in AsyncFunctionBody",
+            ),
+        ),
+        Expression(
+            Identifier(
+                "SyntaxError",
+            ),
+        ),
+        Expression(
+            String(
+                "import.meta in FormalParameters",
+            ),
+        ),
+    ],
+}

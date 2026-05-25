@@ -19,17 +19,23 @@ impl<'a> FunctionCompiler<'a> {
                 CallArgument::Spread(_) => None,
             })
             .collect::<Option<Vec<_>>>()?;
-        self.resolve_function_binding_static_return_object_binding(&binding, &argument_expressions)
-            .or_else(|| {
-                match self.resolve_terminal_function_outcome_from_binding(
-                    &binding,
-                    &argument_expressions,
-                )? {
-                    StaticEvalOutcome::Value(expression) => {
-                        self.resolve_object_binding_from_expression(&expression)
-                    }
-                    StaticEvalOutcome::Throw(_) => None,
-                }
-            })
+        if let Some(object_binding) = self
+            .resolve_function_binding_static_return_object_binding(&binding, &argument_expressions)
+        {
+            return Some(object_binding);
+        }
+
+        if matches!(binding, LocalFunctionBinding::User(_)) {
+            return None;
+        }
+
+        match self
+            .resolve_terminal_function_outcome_from_binding(&binding, &argument_expressions)?
+        {
+            StaticEvalOutcome::Value(expression) => {
+                self.resolve_object_binding_from_expression(&expression)
+            }
+            StaticEvalOutcome::Throw(_) => None,
+        }
     }
 }

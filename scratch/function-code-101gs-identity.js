@@ -1,0 +1,1 @@
+var x = 3; function f(){ x = this; return "a"; } (function(){ "use strict"; return "ab".replace("b", f); }()); console.log(this === this, x === globalThis, this === globalThis, x === Object("marker"));

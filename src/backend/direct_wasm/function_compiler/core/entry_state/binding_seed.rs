@@ -277,7 +277,10 @@ impl<'a> FunctionCompiler<'a> {
                 .collect::<Vec<_>>();
             scope_bindings.sort();
             for binding in scope_bindings {
-                if binding == "arguments" || bindings.locals.contains_key(&binding) {
+                if bindings.locals.contains_key(&binding) {
+                    continue;
+                }
+                if binding == "arguments" && !user_function.body_declares_arguments_binding {
                     continue;
                 }
                 bindings.locals.insert(binding.clone(), *next_local_index);

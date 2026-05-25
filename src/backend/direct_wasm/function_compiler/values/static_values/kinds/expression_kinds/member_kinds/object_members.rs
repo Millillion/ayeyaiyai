@@ -6,6 +6,19 @@ impl<'a> FunctionCompiler<'a> {
         object: &Expression,
         property: &Expression,
     ) -> Option<StaticValueKind> {
+        let materialized_property = self.materialize_static_expression(property);
+        if self.runtime_object_property_shadow_deletion_is_statically_present(
+            object,
+            &materialized_property,
+        ) {
+            return Some(StaticValueKind::Undefined);
+        }
+        if self.runtime_object_property_shadow_deletion_may_affect_property(
+            object,
+            &materialized_property,
+        ) {
+            return Some(StaticValueKind::Unknown);
+        }
         if let Some(array_binding) = self.resolve_array_binding_from_expression(object) {
             if matches!(property, Expression::String(name) if name == "length") {
                 return Some(StaticValueKind::Number);
@@ -40,7 +53,6 @@ impl<'a> FunctionCompiler<'a> {
             }
         }
         if let Some(object_binding) = self.resolve_object_binding_from_expression(object) {
-            let materialized_property = self.materialize_static_expression(property);
             return object_binding_lookup_value(&object_binding, &materialized_property)
                 .and_then(|value| self.infer_value_kind(value))
                 .or(Some(StaticValueKind::Undefined));

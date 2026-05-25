@@ -1,4 +1,5 @@
 use super::*;
+use crate::frontend::parse::parse_script_program_source;
 
 pub(super) fn collect_literal_dynamic_import_specifiers(module: &Module) -> Vec<String> {
     let mut specifiers = Vec::new();
@@ -22,6 +23,101 @@ pub(super) fn collect_literal_dynamic_import_specifiers_in_statements(
     }
 
     specifiers
+}
+
+pub(super) fn collect_literal_dynamic_import_specifiers_in_source_comments(
+    source: &str,
+) -> Vec<String> {
+    let mut specifiers = Vec::new();
+    let mut seen = HashSet::new();
+    let bytes = source.as_bytes();
+    let mut index = 0;
+
+    while index + 1 < bytes.len() {
+        if bytes[index] == b'/' && bytes[index + 1] == b'/' {
+            let start = index + 2;
+            let end = bytes[start..]
+                .iter()
+                .position(|byte| *byte == b'\n' || *byte == b'\r')
+                .map(|offset| start + offset)
+                .unwrap_or(bytes.len());
+            collect_dynamic_imports_from_comment(&source[start..end], &mut specifiers, &mut seen);
+            index = end.saturating_add(1);
+            continue;
+        }
+        if bytes[index] == b'/' && bytes[index + 1] == b'*' {
+            let start = index + 2;
+            let end = source[start..]
+                .find("*/")
+                .map(|offset| start + offset)
+                .unwrap_or(bytes.len());
+            collect_dynamic_imports_from_comment(&source[start..end], &mut specifiers, &mut seen);
+            index = end.saturating_add(2);
+            continue;
+        }
+        index += 1;
+    }
+
+    specifiers
+}
+
+fn collect_dynamic_imports_from_comment(
+    comment: &str,
+    specifiers: &mut Vec<String>,
+    seen: &mut HashSet<String>,
+) {
+    let bytes = comment.as_bytes();
+    let mut index = 0;
+    while let Some(offset) = comment[index..].find("import") {
+        index += offset + "import".len();
+        let Some(open_paren) = skip_ascii_whitespace(bytes, index) else {
+            break;
+        };
+        if bytes.get(open_paren) != Some(&b'(') {
+            continue;
+        }
+        let Some(argument_start) = skip_ascii_whitespace(bytes, open_paren + 1) else {
+            break;
+        };
+        let Some((specifier, end)) = parse_comment_string_literal(bytes, argument_start) else {
+            continue;
+        };
+        if seen.insert(specifier.clone()) {
+            specifiers.push(specifier);
+        }
+        index = end;
+    }
+}
+
+fn skip_ascii_whitespace(bytes: &[u8], mut index: usize) -> Option<usize> {
+    while matches!(bytes.get(index), Some(b' ' | b'\t' | b'\n' | b'\r')) {
+        index += 1;
+    }
+    (index < bytes.len()).then_some(index)
+}
+
+fn parse_comment_string_literal(bytes: &[u8], mut index: usize) -> Option<(String, usize)> {
+    let quote = *bytes.get(index)?;
+    if quote != b'\'' && quote != b'"' {
+        return None;
+    }
+    index += 1;
+    let mut value = String::new();
+    while let Some(byte) = bytes.get(index).copied() {
+        if byte == quote {
+            return Some((value, index + 1));
+        }
+        if byte == b'\\' {
+            index += 1;
+            let escaped = *bytes.get(index)?;
+            value.push(escaped as char);
+            index += 1;
+            continue;
+        }
+        value.push(byte as char);
+        index += 1;
+    }
+    None
 }
 
 fn collect_dynamic_imports_from_module_item(
@@ -344,7 +440,7 @@ fn collect_dynamic_imports_from_expression(
     match expression {
         Expr::Call(call) => {
             if matches!(call.callee, Callee::Import(_))
-                && call.args.len() == 1
+                && matches!(call.args.len(), 1 | 2)
                 && call.args[0].spread.is_none()
                 && let Expr::Lit(Lit::Str(string)) = &*call.args[0].expr
             {
@@ -352,6 +448,8 @@ fn collect_dynamic_imports_from_expression(
                 if seen.insert(source.clone()) {
                     specifiers.push(source);
                 }
+            } else if let Some(eval_source) = static_direct_eval_source(call) {
+                collect_dynamic_imports_from_static_eval_source(&eval_source, specifiers, seen);
             } else if let Callee::Expr(callee) = &call.callee {
                 collect_dynamic_imports_from_expression(callee, specifiers, seen);
             }
@@ -525,5 +623,39 @@ fn collect_dynamic_imports_from_expression(
             }
         }
         _ => {}
+    }
+}
+
+fn static_direct_eval_source(call: &CallExpr) -> Option<String> {
+    if call.args.len() != 1 || call.args[0].spread.is_some() {
+        return None;
+    }
+    let Callee::Expr(callee) = &call.callee else {
+        return None;
+    };
+    let Expr::Ident(identifier) = &**callee else {
+        return None;
+    };
+    if identifier.sym.as_ref() != "eval" {
+        return None;
+    }
+    let Expr::Lit(Lit::Str(source)) = &*call.args[0].expr else {
+        return None;
+    };
+
+    Some(source.value.to_string_lossy().to_string())
+}
+
+fn collect_dynamic_imports_from_static_eval_source(
+    source: &str,
+    specifiers: &mut Vec<String>,
+    seen: &mut HashSet<String>,
+) {
+    let Ok(swc_ecma_ast::Program::Script(script)) = parse_script_program_source(source) else {
+        return;
+    };
+
+    for statement in &script.body {
+        collect_dynamic_imports_from_statement(statement, specifiers, seen);
     }
 }

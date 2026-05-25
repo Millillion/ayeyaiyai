@@ -39,6 +39,9 @@ impl<'a> ProgramCompilationSession<'a> {
                 program.strict,
                 global_binding_environment,
             )?,
+            initial_named_error: self
+                .compiler
+                .global_declaration_instantiation_named_error(program),
         })
     }
 

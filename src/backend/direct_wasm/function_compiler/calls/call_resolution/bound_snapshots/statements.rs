@@ -223,17 +223,45 @@ impl<'a> FunctionCompiler<'a> {
                     };
                     return Some(BoundSnapshotControlFlow::Throw(throw_value));
                 }
-                Statement::Var { name, value }
-                | Statement::Let { name, value, .. }
-                | Statement::Assign { name, value } => {
+                Statement::Var { name, value } => {
                     let resolved_name = self
                         .resolve_bound_snapshot_binding_name(name, bindings)
                         .to_string();
-                    let value = self.evaluate_bound_snapshot_expression(
+                    if matches!(value, Expression::Undefined)
+                        && bindings.contains_key(&resolved_name)
+                    {
+                        continue;
+                    }
+                    let evaluated_value = self.evaluate_bound_snapshot_expression(
                         value,
                         bindings,
                         current_function_name,
                     )?;
+                    bindings.insert(resolved_name, evaluated_value);
+                }
+                Statement::Let { name, value, .. } | Statement::Assign { name, value } => {
+                    let resolved_name = self
+                        .resolve_bound_snapshot_binding_name(name, bindings)
+                        .to_string();
+                    let evaluated_value = self.evaluate_bound_snapshot_expression(
+                        value,
+                        bindings,
+                        current_function_name,
+                    )?;
+                    let value = if let Expression::Identifier(value_name) = value
+                        && matches!(
+                            evaluated_value,
+                            Expression::Array(_)
+                                | Expression::Object(_)
+                                | Expression::Identifier(_)
+                        ) {
+                        Expression::Identifier(
+                            self.resolve_bound_snapshot_binding_name(value_name, bindings)
+                                .to_string(),
+                        )
+                    } else {
+                        evaluated_value
+                    };
                     bindings.insert(resolved_name, value);
                 }
                 Statement::AssignMember {

@@ -27,7 +27,8 @@ impl<'a> FunctionCompiler<'a> {
                 .function_registry
                 .analysis
                 .user_function_capture_bindings
-                .contains_key(&user_function.name);
+                .get(&user_function.name)
+                .is_some_and(|bindings| !bindings.is_empty());
         let runtime_only_parameter_iterator_call = user_function.has_lowered_pattern_parameters()
             || !self
                 .user_function_parameter_iterator_consumption_indices(user_function)
@@ -88,54 +89,37 @@ impl<'a> FunctionCompiler<'a> {
                 existing_snapshot
             };
 
-        let assigned_nonlocal_bindings = if runtime_only_parameter_iterator_call {
-            HashSet::new()
-        } else {
-            self.collect_user_function_assigned_nonlocal_bindings(user_function)
-        };
-        let mut call_effect_nonlocal_bindings = if runtime_only_parameter_iterator_call {
-            HashSet::new()
-        } else {
-            self.collect_user_function_call_effect_nonlocal_bindings(user_function)
-        };
-        if !runtime_only_parameter_iterator_call {
-            call_effect_nonlocal_bindings.extend(
-                self.collect_user_function_argument_call_effect_nonlocal_bindings(
-                    user_function,
-                    &expanded_arguments,
-                ),
-            );
-        }
+        let assigned_nonlocal_bindings =
+            self.collect_user_function_assigned_nonlocal_bindings(user_function);
+        let mut call_effect_nonlocal_bindings =
+            self.collect_user_function_call_effect_nonlocal_bindings(user_function);
+        call_effect_nonlocal_bindings.extend(
+            self.collect_user_function_argument_call_effect_nonlocal_bindings(
+                user_function,
+                &expanded_arguments,
+            ),
+        );
         let assigned_nonlocal_binding_results = if runtime_only_parameter_iterator_call {
             None
         } else {
             self.assigned_nonlocal_binding_results(&user_function.name)
                 .cloned()
         };
-        let additional_call_effect_nonlocal_bindings = if runtime_only_parameter_iterator_call {
-            HashSet::new()
-        } else {
-            let mut names = call_effect_nonlocal_bindings
-                .iter()
-                .filter(|name| {
-                    !synced_capture_source_bindings.contains(*name)
-                        || !updated_bindings
-                            .as_ref()
-                            .is_some_and(|bindings| bindings.contains_key(*name))
-                })
-                .cloned()
-                .collect::<HashSet<_>>();
-            names.extend(self.collect_snapshot_updated_nonlocal_bindings(
+        let mut additional_call_effect_nonlocal_bindings = call_effect_nonlocal_bindings
+            .iter()
+            .filter(|name| !synced_capture_source_bindings.contains(*name))
+            .cloned()
+            .collect::<HashSet<_>>();
+        additional_call_effect_nonlocal_bindings.extend(
+            self.collect_snapshot_updated_nonlocal_bindings(
                 user_function,
                 updated_bindings.as_ref(),
-            ));
-            names
-        };
-        let updated_nonlocal_bindings = if runtime_only_parameter_iterator_call {
-            HashSet::new()
-        } else {
-            self.collect_user_function_updated_nonlocal_bindings(user_function)
-        };
+            ),
+        );
+        additional_call_effect_nonlocal_bindings
+            .retain(|name| !synced_capture_source_bindings.contains(name));
+        let updated_nonlocal_bindings =
+            self.collect_user_function_updated_nonlocal_bindings(user_function);
         if std::env::var_os("AYY_TRACE_CONSTRUCT_CALLS").is_some() {
             eprintln!(
                 "call_plan:function={} new_target={} assigned={assigned_nonlocal_bindings:?} call_effect={call_effect_nonlocal_bindings:?} updated={updated_nonlocal_bindings:?} additional={additional_call_effect_nonlocal_bindings:?} static_snapshot={enable_static_snapshot}",

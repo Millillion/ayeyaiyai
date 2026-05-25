@@ -238,6 +238,8 @@ impl<'a> FunctionCompiler<'a> {
             function_registry,
             global_semantics,
             test262,
+            template_object_array_bindings,
+            template_object_raw_array_bindings,
         } = &mut module.state;
         let mut global_static_semantics =
             program_context.required_global_static_semantics().clone();
@@ -263,6 +265,8 @@ impl<'a> FunctionCompiler<'a> {
                 function_registry,
                 global_semantics,
                 test262,
+                template_object_array_bindings,
+                template_object_raw_array_bindings,
                 global_static_semantics,
             ),
             prepared_program: program_context,

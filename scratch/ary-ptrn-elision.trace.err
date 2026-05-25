@@ -1,0 +1,203 @@
+call_dispatch:start function=None expr=Call { callee: Identifier("f"), arguments: [Expression(Call { callee: Identifier("g"), arguments: [] })] }
+call_dispatch:before_static_number function=None reads_descriptor_member=false try_depth=0 private_brand=false
+call_static_requires:start expr=Call { callee: Identifier("f"), arguments: [Expression(Call { callee: Identifier("g"), arguments: [] })] }
+call_static_requires:after_match callee=Identifier("f")
+call_static_requires:start expr=Call { callee: Identifier("f"), arguments: [Expression(Call { callee: Identifier("g"), arguments: [] })] }
+call_static_requires:after_match callee=Identifier("f")
+call_dispatch:after_static_number function=None expr=Call { callee: Identifier("f"), arguments: [Expression(Call { callee: Identifier("g"), arguments: [] })] }
+call_dispatch:after_known_iterator function=None
+call_dispatch:after_fresh_next function=None
+call_dispatch:before_captured_iterator function=None
+call_dispatch:after_captured_iterator function=None
+call_dispatch:after_promise_chain function=None
+call_dispatch:before_cached_iterator function=None
+call_dispatch:before_getter_returned function=None
+call_dispatch:before_specialized function=None
+call_dispatch:before_weakref function=None
+call_dispatch:before_bind function=None
+call_dispatch:before_push_pop function=None
+call_dispatch:before_early_member function=None
+call_dispatch:after_early_member function=None
+call_dispatch:before_static_constructed_result function=None
+call_dispatch:after_static_constructed_result function=None
+call_dispatch:identifier function=None name=f
+identifier_call:resolution name=f resolved_local=None eval_hidden=None lexical_global=false local_value=None local_function=Some(User("__ayy_fnexpr_2__name_f")) global_value=Some(Identifier("__ayy_fnexpr_2__name_f")) global_function=Some(User("__ayy_fnexpr_2__name_f"))
+identifier_call:global-function name=f value=Some(Identifier("__ayy_fnexpr_2__name_f")) function=User("__ayy_fnexpr_2__name_f")
+user_call_entry:start current_fn=None target=__ayy_fnexpr_2__name_f args=[Expression(Call { callee: Identifier("g"), arguments: [] })]
+user_call_entry:expanded target=__ayy_fnexpr_2__name_f descriptor_args=false expanded=[Call { callee: Identifier("g"), arguments: [] }]
+user_call_entry:materialized target=__ayy_fnexpr_2__name_f count=1
+user_call_entry:before_deferred target=__ayy_fnexpr_2__name_f
+user_call_entry:after_deferred target=__ayy_fnexpr_2__name_f
+lowered_pattern_inline:check target=__ayy_fnexpr_2__name_f lowered=true consumes_iterator=true args=[Call { callee: Identifier("g"), arguments: [] }]
+lowered_pattern_inline:reject target=__ayy_fnexpr_2__name_f async=false generator=false defaults=false private=true eval=false identifier_callee=false restricted=false captures=false captured_ref=false extra_args=false this_safe=true args_safe=true this_shadow=false args_shadow=false args_nonlocal=true
+user_call_entry:prepared_captures target=__ayy_fnexpr_2__name_f count=0
+prepared_user_call:start current_fn=None target=__ayy_fnexpr_2__name_f enable_static_snapshot=true args=[Call { callee: Identifier("g"), arguments: [] }]
+prepared_user_call:after_runtime_only target=__ayy_fnexpr_2__name_f runtime_only=true
+prepared_user_call:after_allow_static target=__ayy_fnexpr_2__name_f allow_static=false
+prepared_user_call:after_synced_captures target=__ayy_fnexpr_2__name_f count=0
+prepared_user_call:after_capture_snapshot target=__ayy_fnexpr_2__name_f count=0
+prepared_user_call:after_static_this target=__ayy_fnexpr_2__name_f this=This
+prepared_user_call:after_static_result target=__ayy_fnexpr_2__name_f has_static=false
+prepared_user_call:after_assigned target=__ayy_fnexpr_2__name_f count=0
+prepared_user_call:after_call_effect target=__ayy_fnexpr_2__name_f count=0
+prepared_user_call:after_arg_call_effect target=__ayy_fnexpr_2__name_f count=0
+prepared_user_call:after_updated target=__ayy_fnexpr_2__name_f count=0
+prepared_user_call:after_prepare_captures target=__ayy_fnexpr_2__name_f
+runtime_call:start current_fn=None target=__ayy_fnexpr_2__name_f args=[Call { callee: Identifier("g"), arguments: [] }]
+runtime_call:after_shadow_setup target=__ayy_fnexpr_2__name_f writebacks=0
+runtime_call:emit_arg_start target=__ayy_fnexpr_2__name_f index=0 local=22 arg=Call { callee: Identifier("g"), arguments: [] }
+call_dispatch:start function=None expr=Call { callee: Identifier("g"), arguments: [] }
+call_dispatch:before_static_number function=None reads_descriptor_member=false try_depth=0 private_brand=false
+call_static_requires:start expr=Call { callee: Identifier("g"), arguments: [] }
+call_static_requires:after_match callee=Identifier("g")
+call_static_requires:after_side_effect callee=Identifier("g")
+call_static_requires:before_user_resolution callee=Identifier("g")
+call_static_requires:user callee=Identifier("g") user=g
+call_static_requires:start expr=Call { callee: Identifier("g"), arguments: [] }
+call_static_requires:after_match callee=Identifier("g")
+call_static_requires:after_side_effect callee=Identifier("g")
+call_static_requires:before_user_resolution callee=Identifier("g")
+call_static_requires:user callee=Identifier("g") user=g
+call_dispatch:after_static_number function=None expr=Call { callee: Identifier("g"), arguments: [] }
+call_dispatch:after_known_iterator function=None
+call_dispatch:after_fresh_next function=None
+call_dispatch:before_captured_iterator function=None
+call_dispatch:after_captured_iterator function=None
+call_dispatch:after_promise_chain function=None
+call_dispatch:before_cached_iterator function=None
+call_dispatch:before_getter_returned function=None
+call_dispatch:before_specialized function=None
+call_dispatch:before_weakref function=None
+call_dispatch:before_bind function=None
+call_dispatch:before_push_pop function=None
+call_dispatch:before_early_member function=None
+call_dispatch:after_early_member function=None
+call_dispatch:before_static_constructed_result function=None
+call_dispatch:after_static_constructed_result function=None
+call_dispatch:identifier function=None name=g
+identifier_call:resolution name=g resolved_local=None eval_hidden=None lexical_global=false local_value=None local_function=Some(User("g")) global_value=Some(Identifier("g")) global_function=Some(User("g"))
+identifier_call:global-function name=g value=Some(Identifier("g")) function=User("g")
+user_call_entry:start current_fn=None target=g args=[]
+user_call_entry:expanded target=g descriptor_args=false expanded=[]
+user_call_entry:materialized target=g count=0
+user_call_entry:before_deferred target=g
+runtime_call:emit_arg_done target=__ayy_fnexpr_2__name_f index=0
+runtime_call:after_emit_args target=__ayy_fnexpr_2__name_f
+runtime_call:after_call target=__ayy_fnexpr_2__name_f return_local=23
+prepared_user_call:after_runtime_call target=__ayy_fnexpr_2__name_f return_local=23
+call_dispatch:start function=None expr=Call { callee: Identifier("__assertSameValue"), arguments: [Expression(Identifier("callCount")), Expression(Number(1.0)), Expression(String("function invoked exactly once"))] }
+call_dispatch:before_static_number function=None reads_descriptor_member=false try_depth=0 private_brand=false
+call_static_requires:start expr=Call { callee: Identifier("__assertSameValue"), arguments: [Expression(Identifier("callCount")), Expression(Number(1.0)), Expression(String("function invoked exactly once"))] }
+call_static_requires:after_match callee=Identifier("__assertSameValue")
+call_static_requires:after_side_effect callee=Identifier("__assertSameValue")
+call_static_requires:before_user_resolution callee=Identifier("__assertSameValue")
+call_static_requires:user callee=Identifier("__assertSameValue") user=__assertSameValue
+call_static_requires:start expr=Call { callee: Identifier("__assertSameValue"), arguments: [Expression(Identifier("callCount")), Expression(Number(1.0)), Expression(String("function invoked exactly once"))] }
+call_static_requires:after_match callee=Identifier("__assertSameValue")
+call_static_requires:after_side_effect callee=Identifier("__assertSameValue")
+call_static_requires:before_user_resolution callee=Identifier("__assertSameValue")
+call_static_requires:user callee=Identifier("__assertSameValue") user=__assertSameValue
+call_dispatch:after_static_number function=None expr=Call { callee: Identifier("__assertSameValue"), arguments: [Expression(Identifier("callCount")), Expression(Number(1.0)), Expression(String("function invoked exactly once"))] }
+call_dispatch:after_known_iterator function=None
+call_dispatch:after_fresh_next function=None
+call_dispatch:before_captured_iterator function=None
+call_dispatch:after_captured_iterator function=None
+call_dispatch:after_promise_chain function=None
+call_dispatch:before_cached_iterator function=None
+call_dispatch:before_getter_returned function=None
+call_dispatch:before_specialized function=None
+call_dispatch:before_weakref function=None
+call_dispatch:before_bind function=None
+call_dispatch:before_push_pop function=None
+call_dispatch:before_early_member function=None
+call_dispatch:after_early_member function=None
+call_dispatch:before_static_constructed_result function=None
+call_dispatch:after_static_constructed_result function=None
+call_dispatch:identifier function=None name=__assertSameValue
+identifier_call:resolution name=__assertSameValue resolved_local=None eval_hidden=None lexical_global=false local_value=None local_function=Some(User("__assertSameValue")) global_value=Some(Identifier("__assertSameValue")) global_function=Some(User("__assertSameValue"))
+call_dispatch:start function=Some("__ayy_fnexpr_2__name_f") expr=Call { callee: Member { object: Identifier("__ayy_array_iter_16"), property: String("next") }, arguments: [] }
+call_dispatch:before_static_number function=Some("__ayy_fnexpr_2__name_f") reads_descriptor_member=false try_depth=0 private_brand=false
+call_static_requires:start expr=Call { callee: Member { object: Identifier("__ayy_array_iter_16"), property: String("next") }, arguments: [] }
+call_static_requires:after_match callee=Member { object: Identifier("__ayy_array_iter_16"), property: String("next") }
+call_static_requires:after_side_effect callee=Member { object: Identifier("__ayy_array_iter_16"), property: String("next") }
+call_static_requires:start expr=Call { callee: Member { object: Identifier("__ayy_array_iter_16"), property: String("next") }, arguments: [] }
+call_static_requires:after_match callee=Member { object: Identifier("__ayy_array_iter_16"), property: String("next") }
+call_static_requires:after_side_effect callee=Member { object: Identifier("__ayy_array_iter_16"), property: String("next") }
+call_dispatch:after_static_number function=Some("__ayy_fnexpr_2__name_f") expr=Call { callee: Member { object: Identifier("__ayy_array_iter_16"), property: String("next") }, arguments: [] }
+call_dispatch:after_known_iterator function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:after_fresh_next function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:before_captured_iterator function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:after_captured_iterator function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:after_promise_chain function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:before_cached_iterator function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:before_getter_returned function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:before_specialized function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:before_weakref function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:before_bind function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:before_push_pop function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:before_early_member function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:after_early_member function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:before_static_constructed_result function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:after_static_constructed_result function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:after_resolved_binding function=Some("__ayy_fnexpr_2__name_f")
+simple_generator_static_get_iterator_value source=Identifier("__ayy_array_iter_value_15") target=Identifier("__ayy_array_iter_value_15") property=Member { object: Identifier("Symbol"), property: String("iterator") } function_binding=None getter_binding=None object_binding=false
+call_dispatch:start function=Some("__ayy_fnexpr_2__name_f") expr=Call { callee: Identifier("__assertSameValue"), arguments: [Expression(Identifier("first")), Expression(Number(1.0))] }
+call_dispatch:before_static_number function=Some("__ayy_fnexpr_2__name_f") reads_descriptor_member=false try_depth=0 private_brand=false
+call_static_requires:start expr=Call { callee: Identifier("__assertSameValue"), arguments: [Expression(Identifier("first")), Expression(Number(1.0))] }
+call_static_requires:after_match callee=Identifier("__assertSameValue")
+call_static_requires:after_side_effect callee=Identifier("__assertSameValue")
+call_static_requires:before_user_resolution callee=Identifier("__assertSameValue")
+call_static_requires:user callee=Identifier("__assertSameValue") user=__assertSameValue
+call_static_requires:start expr=Call { callee: Identifier("__assertSameValue"), arguments: [Expression(Identifier("first")), Expression(Number(1.0))] }
+call_static_requires:after_match callee=Identifier("__assertSameValue")
+call_static_requires:after_side_effect callee=Identifier("__assertSameValue")
+call_static_requires:before_user_resolution callee=Identifier("__assertSameValue")
+call_static_requires:user callee=Identifier("__assertSameValue") user=__assertSameValue
+call_dispatch:after_static_number function=Some("__ayy_fnexpr_2__name_f") expr=Call { callee: Identifier("__assertSameValue"), arguments: [Expression(Identifier("first")), Expression(Number(1.0))] }
+call_dispatch:after_known_iterator function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:after_fresh_next function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:before_captured_iterator function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:after_captured_iterator function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:after_promise_chain function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:before_cached_iterator function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:before_getter_returned function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:before_specialized function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:before_weakref function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:before_bind function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:before_push_pop function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:before_early_member function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:after_early_member function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:before_static_constructed_result function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:after_static_constructed_result function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:identifier function=Some("__ayy_fnexpr_2__name_f") name=__assertSameValue
+identifier_call:resolution name=__assertSameValue resolved_local=None eval_hidden=None lexical_global=false local_value=None local_function=None global_value=Some(Identifier("__assertSameValue")) global_function=Some(User("__assertSameValue"))
+call_dispatch:start function=Some("__ayy_fnexpr_2__name_f") expr=Call { callee: Identifier("__assertSameValue"), arguments: [Expression(Identifier("second")), Expression(Number(0.0))] }
+call_dispatch:before_static_number function=Some("__ayy_fnexpr_2__name_f") reads_descriptor_member=false try_depth=0 private_brand=false
+call_static_requires:start expr=Call { callee: Identifier("__assertSameValue"), arguments: [Expression(Identifier("second")), Expression(Number(0.0))] }
+call_static_requires:after_match callee=Identifier("__assertSameValue")
+call_static_requires:after_side_effect callee=Identifier("__assertSameValue")
+call_static_requires:before_user_resolution callee=Identifier("__assertSameValue")
+call_static_requires:user callee=Identifier("__assertSameValue") user=__assertSameValue
+call_static_requires:start expr=Call { callee: Identifier("__assertSameValue"), arguments: [Expression(Identifier("second")), Expression(Number(0.0))] }
+call_static_requires:after_match callee=Identifier("__assertSameValue")
+call_static_requires:after_side_effect callee=Identifier("__assertSameValue")
+call_static_requires:before_user_resolution callee=Identifier("__assertSameValue")
+call_static_requires:user callee=Identifier("__assertSameValue") user=__assertSameValue
+call_dispatch:after_static_number function=Some("__ayy_fnexpr_2__name_f") expr=Call { callee: Identifier("__assertSameValue"), arguments: [Expression(Identifier("second")), Expression(Number(0.0))] }
+call_dispatch:after_known_iterator function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:after_fresh_next function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:before_captured_iterator function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:after_captured_iterator function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:after_promise_chain function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:before_cached_iterator function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:before_getter_returned function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:before_specialized function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:before_weakref function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:before_bind function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:before_push_pop function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:before_early_member function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:after_early_member function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:before_static_constructed_result function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:after_static_constructed_result function=Some("__ayy_fnexpr_2__name_f")
+call_dispatch:identifier function=Some("__ayy_fnexpr_2__name_f") name=__assertSameValue
+identifier_call:resolution name=__assertSameValue resolved_local=None eval_hidden=None lexical_global=false local_value=None local_function=None global_value=Some(Identifier("__assertSameValue")) global_function=Some(User("__assertSameValue"))

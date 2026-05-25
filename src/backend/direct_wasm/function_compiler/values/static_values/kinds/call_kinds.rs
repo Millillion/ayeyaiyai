@@ -32,7 +32,9 @@ impl<'a> FunctionCompiler<'a> {
     ) -> Option<StaticValueKind> {
         if let Some(target_name) = parse_bound_function_prototype_call_builtin_name(name) {
             return match target_name {
-                "Array.prototype.join" => Some(StaticValueKind::String),
+                "Array.prototype.join" | "Array.prototype.toString" => {
+                    Some(StaticValueKind::String)
+                }
                 "Array.prototype.push" => Some(StaticValueKind::Number),
                 "Object.prototype.hasOwnProperty" | "Object.prototype.propertyIsEnumerable" => {
                     Some(StaticValueKind::Bool)
@@ -43,15 +45,16 @@ impl<'a> FunctionCompiler<'a> {
         match name {
             "Number" => Some(StaticValueKind::Number),
             "String" => Some(StaticValueKind::String),
+            "Date" => Some(StaticValueKind::String),
             "Boolean" => Some(StaticValueKind::Bool),
             "isNaN" => Some(StaticValueKind::Bool),
             "Reflect.has" => Some(StaticValueKind::Bool),
-            "Object" | "Array" | "ArrayBuffer" | "SharedArrayBuffer" | "DataView" | "Date"
-            | "RegExp" | "Map" | "Set" | "Error" | "EvalError" | "RangeError"
-            | "ReferenceError" | "SyntaxError" | "TypeError" | "URIError" | "AggregateError"
-            | "SuppressedError" | "Promise" | "WeakMap" | "WeakRef" | "WeakSet" => {
-                Some(StaticValueKind::Object)
-            }
+            "Proxy.revocable" => Some(StaticValueKind::Object),
+            "Object" | "Array" | "ArrayBuffer" | "SharedArrayBuffer" | "DataView" | "RegExp"
+            | "Map" | "Set" | "Error" | "EvalError" | "RangeError" | "ReferenceError"
+            | "SyntaxError" | "TypeError" | "URIError" | "AggregateError" | "SuppressedError"
+            | "Promise" | "__ayyDynamicImport" | "__ayyImportMeta" | "WeakMap" | "WeakRef"
+            | "WeakSet" => Some(StaticValueKind::Object),
             "Uint8Array" | "Int8Array" | "Uint16Array" | "Int16Array" | "Uint32Array"
             | "Int32Array" | "Float32Array" | "Float64Array" | "Uint8ClampedArray"
             | "BigInt64Array" | "BigUint64Array" => Some(StaticValueKind::Object),

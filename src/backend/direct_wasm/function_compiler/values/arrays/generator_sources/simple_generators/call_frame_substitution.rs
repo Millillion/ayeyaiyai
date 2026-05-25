@@ -538,7 +538,7 @@ impl<'a> FunctionCompiler<'a> {
         Some(transformed)
     }
 
-    pub(super) fn split_simple_generator_completion(
+    pub(in crate::backend::direct_wasm) fn split_simple_generator_completion(
         &self,
         mut statements: Vec<Statement>,
     ) -> Option<(Vec<Statement>, Expression)> {

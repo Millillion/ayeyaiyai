@@ -7,6 +7,7 @@ pub fn validate(program: &Program) -> Result<()> {
 }
 
 pub fn prepare(program: Program) -> Result<Program> {
+    let program = passes::static_function_constructors::lower(program)?;
     validate(&program)?;
-    passes::static_function_constructors::lower(program)
+    Ok(program)
 }

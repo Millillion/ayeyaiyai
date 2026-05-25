@@ -183,7 +183,9 @@ impl<'a> FunctionCompiler<'a> {
         let mut bindings = HashMap::new();
 
         for capture_name in captured {
-            let bound_expression = if let Some(scope_expression) =
+            let bound_expression = if capture_name == "this" && inner_user_function.lexical_this {
+                self.returned_call_this_binding_expression(callee, outer_user_function)
+            } else if let Some(scope_expression) =
                 with_scope_objects.iter().rev().find_map(|scope_object| {
                     let aliased_scope_object = resolve_returned_member_local_alias_expression(
                         scope_object,
@@ -196,7 +198,8 @@ impl<'a> FunctionCompiler<'a> {
                     );
                     self.scope_object_has_binding_property(&substituted_scope_object, &capture_name)
                         .then_some(substituted_scope_object)
-                }) {
+                })
+            {
                 self.materialize_static_expression(&Expression::Member {
                     object: Box::new(scope_expression),
                     property: Box::new(Expression::String(capture_name.clone())),
@@ -238,6 +241,26 @@ impl<'a> FunctionCompiler<'a> {
             binding: LocalFunctionBinding::User(returned_function_name),
             summary,
         })
+    }
+
+    fn returned_call_this_binding_expression(
+        &self,
+        callee: &Expression,
+        outer_user_function: &UserFunction,
+    ) -> Expression {
+        if outer_user_function.lexical_this {
+            return Expression::This;
+        }
+        let receiver = match callee {
+            Expression::Member { object, .. } => self.materialize_static_expression(object),
+            Expression::SuperMember { .. } => Expression::This,
+            _ => Expression::Undefined,
+        };
+        if self.should_box_sloppy_function_this(outer_user_function, &receiver) {
+            Expression::This
+        } else {
+            receiver
+        }
     }
 
     fn static_returned_function_call_inline_effects(

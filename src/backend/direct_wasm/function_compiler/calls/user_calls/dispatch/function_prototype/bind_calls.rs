@@ -77,7 +77,7 @@ impl<'a> FunctionCompiler<'a> {
 
         let Expression::Call {
             callee: bind_callee,
-            arguments: bind_arguments,
+            arguments: _bind_arguments,
         } = callee
         else {
             return Ok(false);
@@ -92,6 +92,33 @@ impl<'a> FunctionCompiler<'a> {
         let Some(function_binding) = self.resolve_function_binding_from_expression(object) else {
             return Ok(false);
         };
+        self.emit_function_prototype_bind_call_with_resolved_binding(
+            callee,
+            arguments,
+            function_binding,
+        )
+    }
+
+    pub(in crate::backend::direct_wasm) fn emit_function_prototype_bind_call_with_resolved_binding(
+        &mut self,
+        callee: &Expression,
+        arguments: &[CallArgument],
+        function_binding: LocalFunctionBinding,
+    ) -> DirectResult<bool> {
+        let Expression::Call {
+            callee: bind_callee,
+            arguments: bind_arguments,
+        } = callee
+        else {
+            return Ok(false);
+        };
+        let Expression::Member { object, property } = bind_callee.as_ref() else {
+            return Ok(false);
+        };
+        if !matches!(property.as_ref(), Expression::String(name) if name == "bind") {
+            return Ok(false);
+        }
+
         if let LocalFunctionBinding::Builtin(function_name) = &function_binding {
             if function_name == "Function.prototype.call"
                 && let [
@@ -156,7 +183,6 @@ impl<'a> FunctionCompiler<'a> {
             .chain(expanded_call_arguments)
             .map(CallArgument::Expression)
             .collect::<Vec<_>>();
-        let materialized_this_expression = self.materialize_static_expression(&raw_this_expression);
         let materialized_call_arguments = bound_call_arguments
             .iter()
             .map(|argument| match argument {
@@ -176,6 +202,35 @@ impl<'a> FunctionCompiler<'a> {
 
         self.emit_numeric_expression(object)?;
         self.state.emission.output.instructions.push(0x1a);
+
+        let this_expression = if matches!(raw_this_expression, Expression::This) {
+            let this_hidden_name = self.allocate_named_hidden_local(
+                "bind_this",
+                self.infer_value_kind(&raw_this_expression)
+                    .unwrap_or(StaticValueKind::Unknown),
+            );
+            let this_hidden_local = self
+                .state
+                .runtime
+                .locals
+                .get(&this_hidden_name)
+                .copied()
+                .expect("fresh bind hidden this local must exist");
+            self.emit_numeric_expression(&raw_this_expression)?;
+            self.push_local_set(this_hidden_local);
+            self.update_capture_slot_binding_from_expression(
+                &this_hidden_name,
+                &raw_this_expression,
+            )?;
+            self.sync_capture_slot_runtime_object_shadows_from_expression(
+                &this_hidden_name,
+                &raw_this_expression,
+            )?;
+            Expression::Identifier(this_hidden_name)
+        } else {
+            raw_this_expression.clone()
+        };
+        let materialized_this_expression = self.materialize_static_expression(&this_expression);
 
         if capture_slots.is_none()
             && (user_function.strict || user_function.lexical_this)
@@ -200,7 +255,7 @@ impl<'a> FunctionCompiler<'a> {
         self.emit_user_function_call_with_function_this_binding(
             &user_function,
             &bound_call_arguments,
-            &raw_this_expression,
+            &this_expression,
             capture_slots.as_ref(),
         )?;
         Ok(true)

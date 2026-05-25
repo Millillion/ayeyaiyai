@@ -6,6 +6,24 @@ fn is_internal_declaration_array_binding_name(name: &str) -> bool {
 }
 
 impl<'a> FunctionCompiler<'a> {
+    fn internal_iterator_value_source_cache_key(&self, expression: &Expression) -> Option<String> {
+        let Expression::Identifier(name) = expression else {
+            return None;
+        };
+        if !(name.starts_with("__ayy_array_iter_value_")
+            || name.starts_with("__ayy_for_of_iter_value_"))
+        {
+            return None;
+        }
+        let value_binding = self
+            .state
+            .speculation
+            .static_semantics
+            .local_value_binding(name)
+            .or_else(|| self.global_value_binding(name));
+        Some(format!("{name}|{value_binding:?}"))
+    }
+
     fn resolve_single_iterator_step_value_source_kind(
         &self,
         expression: &Expression,
@@ -252,6 +270,14 @@ impl<'a> FunctionCompiler<'a> {
                 if name.starts_with("__ayy_array_iter_value_")
                     || name.starts_with("__ayy_for_of_iter_value_")
         );
+        let internal_iterator_value_cache_key =
+            self.internal_iterator_value_source_cache_key(expression);
+        if let Some(cache_key) = internal_iterator_value_cache_key.as_ref()
+            && let Some(cached) = INTERNAL_ITERATOR_VALUE_SOURCE_CACHE
+                .with(|cache| cache.borrow().get(cache_key).cloned())
+        {
+            return cached;
+        }
         trace_probe!("direct-arguments:start");
         if self.is_direct_arguments_object(expression) {
             trace_source!("direct-arguments");
@@ -265,6 +291,13 @@ impl<'a> FunctionCompiler<'a> {
                 self.resolve_static_await_resolution_outcome(expression)
         {
             return self.resolve_iterator_source_kind(&awaited_value);
+        }
+        trace_probe!("sequence:start");
+        if let Expression::Sequence(expressions) = expression
+            && let Some(last) = expressions.last()
+            && !static_expression_matches(last, expression)
+        {
+            return self.resolve_iterator_source_kind(last);
         }
         trace_probe!("typed-array-local:start");
         if let Expression::Identifier(name) = expression
@@ -313,8 +346,35 @@ impl<'a> FunctionCompiler<'a> {
             && !static_expression_matches(value, expression)
         {
             if let Some(source) = self.resolve_iterator_source_kind(value) {
+                if let Some(cache_key) = internal_iterator_value_cache_key.as_ref() {
+                    INTERNAL_ITERATOR_VALUE_SOURCE_CACHE.with(|cache| {
+                        cache
+                            .borrow_mut()
+                            .insert(cache_key.clone(), Some(source.clone()));
+                    });
+                }
                 trace_source!("internal-iterator-value-binding");
                 return Some(source);
+            }
+            let materialized_value = self.materialize_static_expression(value);
+            if !static_expression_matches(&materialized_value, value)
+                && !static_expression_matches(&materialized_value, expression)
+                && let Some(source) = self.resolve_iterator_source_kind(&materialized_value)
+            {
+                if let Some(cache_key) = internal_iterator_value_cache_key.as_ref() {
+                    INTERNAL_ITERATOR_VALUE_SOURCE_CACHE.with(|cache| {
+                        cache
+                            .borrow_mut()
+                            .insert(cache_key.clone(), Some(source.clone()));
+                    });
+                }
+                trace_source!("internal-iterator-materialized-value-binding");
+                return Some(source);
+            }
+            if let Some(cache_key) = internal_iterator_value_cache_key.as_ref() {
+                INTERNAL_ITERATOR_VALUE_SOURCE_CACHE.with(|cache| {
+                    cache.borrow_mut().insert(cache_key.clone(), None);
+                });
             }
             return None;
         }
@@ -366,6 +426,19 @@ impl<'a> FunctionCompiler<'a> {
                 keys_only: false,
                 length_local: None,
                 runtime_name: None,
+            });
+        }
+        trace_probe!("identifier-static-iterator-object-simple-generator:start");
+        if matches!(expression, Expression::Identifier(_))
+            && let Some((steps, completion_effects, completion_value)) =
+                self.resolve_static_iterator_object_simple_generator_source(expression)
+        {
+            trace_source!("identifier-static-iterator-object-simple-generator");
+            return Some(IteratorSourceKind::SimpleGenerator {
+                is_async: false,
+                steps,
+                completion_effects,
+                completion_value,
             });
         }
         trace_probe!("identifier-binding:start");
@@ -427,6 +500,18 @@ impl<'a> FunctionCompiler<'a> {
         {
             trace_source!("effectful-call");
             return self.resolve_iterator_source_kind(&returned_expression);
+        }
+        trace_probe!("static-iterator-object-simple-generator:start");
+        if let Some((steps, completion_effects, completion_value)) =
+            self.resolve_static_iterator_object_simple_generator_source(expression)
+        {
+            trace_source!("static-iterator-object-simple-generator");
+            return Some(IteratorSourceKind::SimpleGenerator {
+                is_async: false,
+                steps,
+                completion_effects,
+                completion_value,
+            });
         }
         trace_probe!("static-iterable-simple-generator:start");
         if let Some((steps, completion_effects, completion_value)) =

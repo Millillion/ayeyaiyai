@@ -1,6 +1,29 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn collect_member_getter_assigned_binding_names(
+        &self,
+        object: &Expression,
+        property: &Expression,
+        names: &mut HashSet<String>,
+    ) {
+        let Some(LocalFunctionBinding::User(function_name)) =
+            self.resolve_member_getter_binding(object, property)
+        else {
+            return;
+        };
+        let Some(function) = self
+            .resolve_registered_function_declaration(&function_name)
+            .cloned()
+        else {
+            return;
+        };
+        for statement in &function.body {
+            collect_assigned_binding_names_from_statement(statement, names);
+            self.collect_effectful_iterator_assigned_binding_names_from_statement(statement, names);
+        }
+    }
+
     fn collect_effectful_iterator_assigned_binding_names_from_statement(
         &self,
         statement: &Statement,
@@ -209,6 +232,7 @@ impl<'a> FunctionCompiler<'a> {
                 }
             }
             Expression::Member { object, property } => {
+                self.collect_member_getter_assigned_binding_names(object, property, names);
                 self.collect_effectful_iterator_assigned_binding_names_from_expression(
                     object, names,
                 );
@@ -271,10 +295,16 @@ impl<'a> FunctionCompiler<'a> {
                 );
             }
             Expression::Sequence(expressions) => {
+                let mut bindings = HashMap::new();
                 for expression in expressions {
+                    let expression = self.substitute_expression_bindings(expression, &bindings);
                     self.collect_effectful_iterator_assigned_binding_names_from_expression(
-                        expression, names,
+                        &expression,
+                        names,
                     );
+                    if let Expression::Assign { name, value } = expression {
+                        bindings.insert(name, *value);
+                    }
                 }
             }
             Expression::New { callee, arguments } | Expression::SuperCall { callee, arguments } => {

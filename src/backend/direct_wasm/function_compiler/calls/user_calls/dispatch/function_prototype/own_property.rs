@@ -1,6 +1,40 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn has_own_call_receiver_is_dynamic_import_promise(&self, receiver: &Expression) -> bool {
+        if matches!(
+            receiver,
+            Expression::Call { callee, .. }
+                if matches!(callee.as_ref(), Expression::Identifier(name) if name == "__ayyDynamicImport")
+        ) {
+            return true;
+        }
+        if let Some(resolved) = self
+            .resolve_bound_alias_expression(receiver)
+            .filter(|resolved| !static_expression_matches(resolved, receiver))
+            && self.has_own_call_receiver_is_dynamic_import_promise(&resolved)
+        {
+            return true;
+        }
+        let materialized = self.materialize_static_expression(receiver);
+        !static_expression_matches(&materialized, receiver)
+            && self.has_own_call_receiver_is_dynamic_import_promise(&materialized)
+    }
+
+    fn dynamic_import_promise_has_inherited_method_property(
+        &self,
+        receiver: &Expression,
+        property: &Expression,
+    ) -> bool {
+        (self.has_own_call_receiver_is_dynamic_import_promise(receiver)
+            || self.expression_is_known_promise_instance_for_instanceof(receiver))
+            && matches!(
+                property,
+                Expression::String(property_name)
+                    if matches!(property_name.as_str(), "then" | "catch" | "finally")
+            )
+    }
+
     pub(in crate::backend::direct_wasm) fn emit_has_own_property_call(
         &mut self,
         object: &Expression,
@@ -130,8 +164,15 @@ impl<'a> FunctionCompiler<'a> {
             self.resolve_static_object_has_own_property_result(receiver, argument_property)
                 .flatten()
         };
+        let dynamic_import_inherited_method_property = result == Some(false)
+            && self.dynamic_import_promise_has_inherited_method_property(
+                receiver,
+                &canonical_argument_property,
+            );
         if std::env::var_os("AYY_TRACE_HAS_OWN").is_some() {
-            eprintln!("has_own:result={result:?}");
+            eprintln!(
+                "has_own:result={result:?} dynamic_import_inherited_method={dynamic_import_inherited_method_property}"
+            );
         }
         if result.is_none()
             && matches!(
@@ -308,10 +349,12 @@ impl<'a> FunctionCompiler<'a> {
                 }
             }
         }
-        if self.runtime_object_property_shadow_deletion_may_affect_property(
-            receiver,
-            &canonical_argument_property,
-        ) {
+        if !dynamic_import_inherited_method_property
+            && self.runtime_object_property_shadow_deletion_may_affect_property(
+                receiver,
+                &canonical_argument_property,
+            )
+        {
             self.emit_object_get_own_property_descriptor_result(
                 receiver,
                 &canonical_argument_property,
@@ -321,6 +364,7 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(true);
         }
         if !has_property
+            && !dynamic_import_inherited_method_property
             && self.emit_runtime_known_object_has_property_check(receiver, argument_property)?
         {
             return Ok(true);

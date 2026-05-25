@@ -6,6 +6,232 @@ thread_local! {
 }
 
 impl<'a> FunctionCompiler<'a> {
+    fn test262_realm_constructor_prototype_expression(
+        realm_id: u32,
+        constructor_name: &str,
+    ) -> Expression {
+        Expression::Member {
+            object: Box::new(Expression::Member {
+                object: Box::new(Expression::Identifier(test262_realm_global_identifier(
+                    realm_id,
+                ))),
+                property: Box::new(Expression::String(constructor_name.to_string())),
+            }),
+            property: Box::new(Expression::String("prototype".to_string())),
+        }
+    }
+
+    fn test262_realm_object_prototype_expression(realm_id: u32) -> Expression {
+        Self::test262_realm_constructor_prototype_expression(realm_id, "Object")
+    }
+
+    fn test262_realm_id_from_function_constructor_callee(
+        &self,
+        callee: &Expression,
+    ) -> Option<u32> {
+        let Expression::Member { object, property } = callee else {
+            return None;
+        };
+        let Expression::String(constructor_name) = property.as_ref() else {
+            return None;
+        };
+        if !matches!(
+            constructor_name.as_str(),
+            "Function" | "GeneratorFunction" | "AsyncFunction" | "AsyncGeneratorFunction"
+        ) {
+            return None;
+        }
+        self.resolve_test262_realm_global_id_from_expression(object)
+    }
+
+    fn constructed_function_source_for_expression(
+        &self,
+        expression: &Expression,
+    ) -> Option<Expression> {
+        let trace = std::env::var_os("AYY_TRACE_REFLECT_CONSTRUCT_PROTOTYPE").is_some();
+        if trace {
+            eprintln!("reflect_construct_proto:source_probe expression={expression:?}");
+        }
+        if let Expression::Identifier(name) = expression
+            && let Some(value) = self
+                .state
+                .speculation
+                .static_semantics
+                .local_value_binding(name)
+                .or_else(|| self.global_value_binding(name))
+                .filter(|value| !static_expression_matches(value, expression))
+            && let Some(source) = self.constructed_function_source_for_expression(value)
+        {
+            if trace {
+                eprintln!(
+                    "reflect_construct_proto:source_from_value expression={expression:?} value={value:?} source={source:?}"
+                );
+            }
+            return Some(source);
+        }
+        if let Some(source) = self.resolve_static_constructed_function_source_expression(expression)
+        {
+            if trace {
+                eprintln!(
+                    "reflect_construct_proto:source_direct expression={expression:?} source={source:?}"
+                );
+            }
+            return Some(source);
+        }
+        let materialized = self.materialize_static_expression(expression);
+        if !static_expression_matches(&materialized, expression)
+            && let Some(source) =
+                self.resolve_static_constructed_function_source_expression(&materialized)
+        {
+            if trace {
+                eprintln!(
+                    "reflect_construct_proto:source_materialized expression={expression:?} materialized={materialized:?} source={source:?}"
+                );
+            }
+            return Some(source);
+        }
+        let object_binding = self.resolve_object_binding_from_expression(expression)?;
+        let source = object_binding_lookup_value(
+            &object_binding,
+            &function_constructor_source_property_expression(),
+        )
+        .cloned();
+        if trace {
+            eprintln!(
+                "reflect_construct_proto:source_from_object expression={expression:?} source={source:?}"
+            );
+        }
+        source
+    }
+
+    fn test262_realm_object_prototype_for_new_target(
+        &self,
+        new_target: &Expression,
+    ) -> Option<Expression> {
+        if let Some(object_binding) = self.resolve_object_binding_from_expression(new_target)
+            && let Some(Expression::Number(realm_id)) = object_binding_lookup_value(
+                &object_binding,
+                &function_constructor_realm_id_property_expression(),
+            )
+            && realm_id.is_finite()
+            && *realm_id >= 0.0
+            && realm_id.fract() == 0.0
+        {
+            return Some(Self::test262_realm_object_prototype_expression(
+                *realm_id as u32,
+            ));
+        }
+        if let Some(object_binding) = self.resolve_object_binding_from_expression(new_target)
+            && let Some(prototype) = object_binding_lookup_value(
+                &object_binding,
+                &function_constructor_realm_object_prototype_property_expression(),
+            )
+            && !Self::expression_is_static_nullish_member_access(prototype)
+        {
+            return Some(prototype.clone());
+        }
+        let source = self.constructed_function_source_for_expression(new_target)?;
+        let Expression::New { callee, .. } = source else {
+            return None;
+        };
+        self.test262_realm_id_from_function_constructor_callee(&callee)
+            .map(Self::test262_realm_object_prototype_expression)
+    }
+
+    fn static_object_property_value_for_expression(
+        &self,
+        object: &Expression,
+        property_name: &str,
+    ) -> Option<Expression> {
+        let property = Expression::String(property_name.to_string());
+        if let Expression::Identifier(name) = object
+            && let Some(value) = self.static_object_binding_property_value(name, &property)
+        {
+            return Some(value.clone());
+        }
+        self.resolve_object_binding_from_expression(object)
+            .and_then(|binding| object_binding_lookup_value(&binding, &property).cloned())
+    }
+
+    fn expression_is_static_nullish_member_access(expression: &Expression) -> bool {
+        matches!(
+            expression,
+            Expression::Member { object, .. }
+                if matches!(object.as_ref(), Expression::Null | Expression::Undefined)
+        )
+    }
+
+    fn resolve_static_reflect_construct_prototype_expression(
+        &self,
+        arguments: &[CallArgument],
+    ) -> Option<Expression> {
+        let trace = std::env::var_os("AYY_TRACE_REFLECT_CONSTRUCT_PROTOTYPE").is_some();
+        let target = arguments.first()?.expression();
+        let new_target = arguments
+            .get(2)
+            .map(CallArgument::expression)
+            .unwrap_or(target);
+        let default_prototype = || {
+            let prototype = self
+                .test262_realm_object_prototype_for_new_target(new_target)
+                .unwrap_or_else(|| Self::prototype_member_expression("Object"));
+            if trace {
+                eprintln!(
+                    "reflect_construct_proto:default new_target={new_target:?} prototype={prototype:?}"
+                );
+            }
+            prototype
+        };
+
+        if let Some(prototype_value) =
+            self.static_object_property_value_for_expression(new_target, "prototype")
+        {
+            let materialized = self.materialize_static_expression(&prototype_value);
+            if trace {
+                eprintln!(
+                    "reflect_construct_proto:prototype_value new_target={new_target:?} value={prototype_value:?} materialized={materialized:?}"
+                );
+            }
+            if Self::expression_is_static_nullish_member_access(&materialized) {
+                return Some(default_prototype());
+            }
+            if self
+                .resolve_static_primitive_expression_with_context(
+                    &materialized,
+                    self.current_function_name(),
+                )
+                .is_some()
+            {
+                return Some(default_prototype());
+            }
+            if self
+                .resolve_static_object_identity_expression(&materialized)
+                .is_some()
+            {
+                if trace {
+                    eprintln!(
+                        "reflect_construct_proto:prototype_identity materialized={materialized:?}"
+                    );
+                }
+                return Some(Self::normalize_static_object_prototype_target_expression(
+                    &materialized,
+                ));
+            }
+        }
+
+        let prototype = self
+            .resolve_function_binding_from_expression(new_target)
+            .and_then(|binding| self.function_prototype_binding_owner_name(&binding))
+            .map(|owner| Self::prototype_member_expression(&owner))
+            .or_else(|| self.test262_realm_object_prototype_for_new_target(new_target));
+        if trace {
+            eprintln!(
+                "reflect_construct_proto:tail new_target={new_target:?} prototype={prototype:?}"
+            );
+        }
+        prototype
+    }
+
     fn simple_generator_prefix_assigned_prototype_expression(
         &self,
         expression: &Expression,
@@ -320,6 +546,19 @@ impl<'a> FunctionCompiler<'a> {
         else {
             return None;
         };
+        if arguments.is_empty()
+            && let Some(result) = self
+                .resolve_static_direct_eval_construct_return_expression_from_user_function(
+                    &function_name,
+                )
+        {
+            return Some(
+                self.resolve_static_function_binding_store_expression_with_context(
+                    &result,
+                    Some(function_name.as_str()),
+                ),
+            );
+        }
         let capture_source_bindings =
             self.resolve_function_expression_capture_slots(callee)
                 .map(|capture_slots| {
@@ -333,11 +572,121 @@ impl<'a> FunctionCompiler<'a> {
                         })
                         .collect::<HashMap<_, _>>()
                 });
-        self.resolve_static_return_expression_from_user_function_call(
+        let result = self.resolve_static_return_expression_from_user_function_call(
             &function_name,
             arguments,
             capture_source_bindings.as_ref(),
+        )?;
+        let result =
+            self.resolve_static_direct_eval_construct_return_expression(&result, &function_name);
+        Some(
+            self.resolve_static_function_binding_store_expression_with_context(
+                &result,
+                Some(function_name.as_str()),
+            ),
         )
+    }
+
+    pub(in crate::backend::direct_wasm) fn resolve_static_direct_eval_construct_return_expression_from_user_function(
+        &self,
+        function_name: &str,
+    ) -> Option<Expression> {
+        let function = self.resolve_registered_function_declaration(function_name)?;
+        let [Statement::Return(returned)] = function.body.as_slice() else {
+            return None;
+        };
+        let Expression::New { callee, arguments } = returned else {
+            return None;
+        };
+        let Expression::Call {
+            callee: eval_callee,
+            arguments: eval_arguments,
+        } = callee.as_ref()
+        else {
+            return None;
+        };
+        let constructor_expression = self.resolve_static_eval_construct_completion_expression(
+            eval_callee,
+            eval_arguments,
+            Some(function_name),
+        )?;
+        Some(Expression::New {
+            callee: Box::new(constructor_expression),
+            arguments: arguments.clone(),
+        })
+    }
+
+    pub(in crate::backend::direct_wasm) fn resolve_static_direct_eval_construct_return_expression(
+        &self,
+        expression: &Expression,
+        eval_function_name: &str,
+    ) -> Expression {
+        let Expression::New { callee, arguments } = expression else {
+            return expression.clone();
+        };
+        let Expression::Call {
+            callee: eval_callee,
+            arguments: eval_arguments,
+        } = callee.as_ref()
+        else {
+            return expression.clone();
+        };
+        let Some(constructor_expression) = self
+            .resolve_static_eval_construct_completion_expression(
+                eval_callee,
+                eval_arguments,
+                Some(eval_function_name),
+            )
+        else {
+            return expression.clone();
+        };
+        Expression::New {
+            callee: Box::new(constructor_expression),
+            arguments: arguments.clone(),
+        }
+    }
+
+    fn resolve_static_eval_construct_completion_expression(
+        &self,
+        eval_callee: &Expression,
+        eval_arguments: &[CallArgument],
+        eval_function_name: Option<&str>,
+    ) -> Option<Expression> {
+        if matches!(eval_callee, Expression::Identifier(name) if name == "eval") {
+            let Some(StaticEvalOutcome::Value(constructor_expression)) = self
+                .resolve_static_direct_eval_completion_outcome_with_context(
+                    eval_arguments,
+                    eval_function_name,
+                )
+            else {
+                return None;
+            };
+            return Some(constructor_expression);
+        }
+
+        let LocalFunctionBinding::Builtin(function_name) = self
+            .resolve_function_binding_from_expression_with_context(eval_callee, eval_function_name)
+            .or_else(|| self.resolve_function_binding_from_expression(eval_callee))?
+        else {
+            return None;
+        };
+
+        let eval_namespace = if parse_test262_realm_eval_builtin(&function_name).is_some() {
+            Some(function_name.as_str())
+        } else if function_name == "eval" {
+            eval_function_name
+        } else {
+            return None;
+        };
+        let Some(StaticEvalOutcome::Value(constructor_expression)) = self
+            .resolve_static_indirect_eval_completion_outcome_with_context(
+                eval_arguments,
+                eval_namespace,
+            )
+        else {
+            return None;
+        };
+        Some(constructor_expression)
     }
 
     fn resolve_static_call_callee_user_function(
@@ -388,7 +737,78 @@ impl<'a> FunctionCompiler<'a> {
         expression: &Expression,
     ) -> Option<Expression> {
         self.with_static_object_prototype_resolution_guard(expression, |this| {
+            if let Expression::Unary { op, .. } = expression {
+                return match op {
+                    UnaryOp::Plus
+                    | UnaryOp::Negate
+                    | UnaryOp::BitwiseNot => Some(Self::prototype_member_expression("Number")),
+                    UnaryOp::Not | UnaryOp::Delete => Some(Self::prototype_member_expression("Boolean")),
+                    UnaryOp::TypeOf => Some(Self::prototype_member_expression("String")),
+                    UnaryOp::Void => None,
+                };
+            }
+            match expression {
+                Expression::Number(_) => return Some(Self::prototype_member_expression("Number")),
+                Expression::String(_) => return Some(Self::prototype_member_expression("String")),
+                Expression::Bool(_) => return Some(Self::prototype_member_expression("Boolean")),
+                Expression::BigInt(_) => return Some(Self::prototype_member_expression("BigInt")),
+                Expression::Identifier(name)
+                    if this.lookup_identifier_kind(name) == Some(StaticValueKind::Symbol) =>
+                {
+                    return Some(Self::prototype_member_expression("Symbol"));
+                }
+                Expression::Call { callee, arguments }
+                    if arguments.is_empty()
+                        && matches!(callee.as_ref(), Expression::Identifier(name) if name == "Symbol") =>
+                {
+                    return Some(Self::prototype_member_expression("Symbol"));
+                }
+                _ => {}
+            }
+            if let Expression::Object(entries) = expression {
+                if entries.iter().any(|entry| {
+                    matches!(
+                        entry,
+                        ObjectEntry::Data {
+                            key: Expression::String(name),
+                            value: Expression::Bool(true),
+                        } if name == "__ayy$module$namespace"
+                    )
+                }) {
+                    return Some(Expression::Null);
+                }
+                return Some(
+                    object_literal_prototype_expression(expression)
+                        .unwrap_or_else(|| Self::prototype_member_expression("Object")),
+                );
+            }
+            if this.is_direct_arguments_object(expression)
+                || this.resolve_arguments_binding_from_expression(expression).is_some()
+            {
+                return Some(Self::prototype_member_expression("Object"));
+            }
+            if this.expression_is_known_array_value(expression) {
+                return Some(Self::prototype_member_expression("Array"));
+            }
             if let Expression::New { callee, .. } = expression {
+                if let Expression::Call {
+                    callee: class_init_callee,
+                    arguments,
+                } = callee.as_ref()
+                    && arguments.is_empty()
+                    && let Expression::Identifier(function_name) = class_init_callee.as_ref()
+                {
+                    if let Some(constructor_name) =
+                        this.resolve_static_class_init_call_constructor_alias(function_name)
+                    {
+                        return Some(Self::prototype_member_expression(&constructor_name));
+                    }
+                    if let Some(Expression::Identifier(constructor_name)) =
+                        this.infer_static_class_init_call_result_expression(function_name)
+                    {
+                        return Some(Self::prototype_member_expression(&constructor_name));
+                    }
+                }
                 if let Some(binding) = this.resolve_function_binding_from_expression(callee) {
                     let prototype_owner = this.function_prototype_binding_owner_name(&binding)?;
                     return Some(Self::prototype_member_expression(&prototype_owner));
@@ -406,6 +826,13 @@ impl<'a> FunctionCompiler<'a> {
                     })
             {
                 return Some(Self::prototype_member_expression("Promise"));
+            }
+            if this
+                .resolve_object_binding_from_expression(expression)
+                .as_ref()
+                .is_some_and(Self::object_binding_has_module_namespace_marker)
+            {
+                return Some(Expression::Null);
             }
             if let Expression::Call { callee, .. } = expression
                 && let Some(user_function) =
@@ -504,11 +931,28 @@ impl<'a> FunctionCompiler<'a> {
             {
                 return Some(prototype);
             }
-            if this.expression_is_known_array_value(expression) {
-                return Some(Self::prototype_member_expression("Array"));
-            }
             if this.expression_is_known_promise_instance_for_instanceof(expression) {
                 return Some(Self::prototype_member_expression("Promise"));
+            }
+            if !matches!(
+                expression,
+                Expression::Member { property, .. }
+                    if matches!(property.as_ref(), Expression::String(name) if name == "prototype")
+            ) && let Some(binding) = this.resolve_function_binding_from_expression(expression)
+            {
+                let prototype_owner = match &binding {
+                    LocalFunctionBinding::User(function_name) => this
+                        .user_function(function_name)
+                        .map(|user_function| match user_function.kind {
+                            FunctionKind::Generator => "GeneratorFunction",
+                            FunctionKind::Async => "AsyncFunction",
+                            FunctionKind::AsyncGenerator => "AsyncGeneratorFunction",
+                            FunctionKind::Ordinary => "Function",
+                        })
+                        .unwrap_or("Function"),
+                    LocalFunctionBinding::Builtin(_) => "Function",
+                };
+                return Some(Self::prototype_member_expression(prototype_owner));
             }
             let preserve_tracked_expression = match expression {
                 Expression::Identifier(name) => {
@@ -590,14 +1034,29 @@ impl<'a> FunctionCompiler<'a> {
                         return Some(Self::prototype_member_expression(prototype_owner));
                     }
                 }
-                Expression::Object(_) => {
-                    return Some(
-                        object_literal_prototype_expression(expression)
-                            .unwrap_or_else(|| Self::prototype_member_expression("Object")),
-                    );
-                }
+                Expression::Object(_) => unreachable!("handled before object binding resolution"),
                 Expression::Member { object, property } if matches!(property.as_ref(), Expression::String(name) if name == "prototype") =>
                 {
+                    if let Expression::Member {
+                        object: realm_global,
+                        property: constructor_property,
+                    } = object.as_ref()
+                        && let Expression::String(constructor_name) =
+                            constructor_property.as_ref()
+                        && let Some(realm_id) =
+                            this.resolve_test262_realm_global_id_from_expression(realm_global)
+                    {
+                        let realm_prototype_key = format!(
+                            "{}.{}.prototype",
+                            test262_realm_global_identifier(realm_id),
+                            constructor_name
+                        );
+                        if let Some(prototype) =
+                            this.global_object_prototype_expression(&realm_prototype_key)
+                        {
+                            return Some(prototype.clone());
+                        }
+                    }
                     let Expression::Identifier(name) = object.as_ref() else {
                         return None;
                     };
@@ -626,6 +1085,11 @@ impl<'a> FunctionCompiler<'a> {
                     {
                         prototype_owner_names.push(resolved_name);
                     }
+                    if let Some(resolved_name) =
+                        this.resolve_static_class_init_class_binding_for_constructor_alias(name)
+                    {
+                        prototype_owner_names.push(resolved_name);
+                    }
                     if let Some(Expression::Identifier(resolved_name)) =
                         this.resolve_static_class_init_local_alias_expression(name)
                     {
@@ -639,6 +1103,13 @@ impl<'a> FunctionCompiler<'a> {
                             this.global_object_prototype_expression(&prototype_key)
                         {
                             return Some(prototype.clone());
+                        }
+                        if let Some(prototype) = this
+                            .resolve_static_class_init_prototype_parent_expression(
+                                prototype_owner_name,
+                            )
+                        {
+                            return Some(prototype);
                         }
                     }
                     if let Some(Expression::Identifier(resolved_name)) =
@@ -687,11 +1158,40 @@ impl<'a> FunctionCompiler<'a> {
                     {
                         return Some(Self::prototype_member_expression("Object"));
                     }
+                    if this
+                        .state
+                        .speculation
+                        .static_semantics
+                        .objects
+                        .local_prototype_object_bindings
+                        .contains_key(name)
+                        || this.global_prototype_object_binding(name).is_some()
+                    {
+                        return Some(Self::prototype_member_expression("Object"));
+                    }
                 }
                 Expression::Call { callee, .. } => {
                     let Expression::Call { arguments, .. } = expression else {
                         unreachable!("matched call expression above");
                     };
+                    if matches!(
+                        arguments.as_slice(),
+                        []
+                            | [CallArgument::Expression(Expression::Number(_))]
+                            | [CallArgument::Spread(Expression::Number(_))]
+                    )
+                        && matches!(callee.as_ref(), Expression::Identifier(name) if name == "__ayyImportMeta")
+                    {
+                        return Some(Expression::Null);
+                    }
+                    if let Expression::Member { object, property } = callee.as_ref()
+                        && matches!(object.as_ref(), Expression::Identifier(name) if name == "Reflect")
+                        && matches!(property.as_ref(), Expression::String(name) if name == "construct")
+                        && let Some(prototype) =
+                            this.resolve_static_reflect_construct_prototype_expression(arguments)
+                    {
+                        return Some(prototype);
+                    }
                     if let Expression::Member { object, property } = callee.as_ref()
                         && matches!(object.as_ref(), Expression::Identifier(name) if name == "Object")
                         && matches!(property.as_ref(), Expression::String(name) if name == "getPrototypeOf")

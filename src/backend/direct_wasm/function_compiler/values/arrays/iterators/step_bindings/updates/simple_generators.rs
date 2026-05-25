@@ -27,6 +27,10 @@ impl<'a> FunctionCompiler<'a> {
                     )),
                 ),
             ),
+            Some(SimpleGeneratorStepOutcome::YieldResult(result)) => (
+                Some(false),
+                Some(self.simple_generator_yield_result_value(result, sent_value)),
+            ),
             Some(SimpleGeneratorStepOutcome::Throw(_)) => (None, None),
             None if index == steps.len() => (
                 Some(true),
@@ -46,6 +50,16 @@ impl<'a> FunctionCompiler<'a> {
                 self.push_local_set(done_local);
                 self.emit_numeric_expression(&Self::substitute_sent_expression(value, sent_value))
                     .expect("simple generator yields should be compilable");
+                self.push_local_set(value_local);
+                self.push_i32_const((index + 1) as i32);
+                self.push_local_set(iterator_binding.index_local);
+            }
+            Some(SimpleGeneratorStepOutcome::YieldResult(result)) => {
+                self.push_i32_const(0);
+                self.push_local_set(done_local);
+                let value = self.simple_generator_yield_result_value(result, sent_value);
+                self.emit_numeric_expression(&value)
+                    .expect("simple generator result yields should be compilable");
                 self.push_local_set(value_local);
                 self.push_i32_const((index + 1) as i32);
                 self.push_local_set(iterator_binding.index_local);

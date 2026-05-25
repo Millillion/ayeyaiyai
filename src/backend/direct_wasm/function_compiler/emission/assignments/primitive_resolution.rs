@@ -8,6 +8,9 @@ impl<'a> FunctionCompiler<'a> {
     ) -> Option<Expression> {
         let materialized = self.materialize_static_expression(expression);
         if !static_expression_matches(&materialized, expression) {
+            if self.expression_is_static_boxed_primitive_object(&materialized) {
+                return None;
+            }
             return self.resolve_static_primitive_expression_with_context(
                 &materialized,
                 current_function_name,
@@ -42,6 +45,9 @@ impl<'a> FunctionCompiler<'a> {
                 };
                 self.resolve_static_primitive_expression_with_context(branch, current_function_name)
             }
+            Expression::Sequence(expressions) => expressions.last().and_then(|last| {
+                self.resolve_static_primitive_expression_with_context(last, current_function_name)
+            }),
             Expression::Assign { value, .. }
             | Expression::AssignMember { value, .. }
             | Expression::AssignSuperMember { value, .. } => {
@@ -50,6 +56,9 @@ impl<'a> FunctionCompiler<'a> {
             Expression::Await(value) => {
                 self.resolve_static_primitive_expression_with_context(value, current_function_name)
             }
+            Expression::Unary {
+                op: UnaryOp::Void, ..
+            } => Some(Expression::Undefined),
             Expression::Identifier(name)
                 if name == "undefined" && self.is_unshadowed_builtin_identifier(name) =>
             {
@@ -65,6 +74,21 @@ impl<'a> FunctionCompiler<'a> {
             {
                 Some(Expression::Number(f64::INFINITY))
             }
+            Expression::Unary {
+                op: UnaryOp::Plus,
+                expression,
+            } if matches!(expression.as_ref(), Expression::Identifier(name) if name == "Infinity" && self.is_unshadowed_builtin_identifier(name)) => {
+                Some(Expression::Number(f64::INFINITY))
+            }
+            Expression::Unary {
+                op: UnaryOp::Negate,
+                expression,
+            } if matches!(expression.as_ref(), Expression::Identifier(name) if name == "Infinity" && self.is_unshadowed_builtin_identifier(name)) => {
+                Some(Expression::Number(f64::NEG_INFINITY))
+            }
+            Expression::Identifier(_) => self
+                .resolve_static_string_value_with_context(expression, current_function_name)
+                .map(Expression::String),
             Expression::Member { object, property } => {
                 if std::env::var_os("AYY_TRACE_THIS_FLOW").is_some()
                     && matches!(object.as_ref(), Expression::This)
@@ -106,6 +130,18 @@ impl<'a> FunctionCompiler<'a> {
                     return None;
                 }
                 let materialized_property = self.materialize_static_expression(property);
+                if self.runtime_object_property_shadow_deletion_is_statically_present(
+                    object,
+                    &materialized_property,
+                ) {
+                    return Some(Expression::Undefined);
+                }
+                if self.runtime_object_property_shadow_deletion_may_affect_property(
+                    object,
+                    &materialized_property,
+                ) {
+                    return None;
+                }
                 if matches!(&materialized_property, Expression::String(name) if name == "prototype")
                     && self
                         .resolve_function_binding_from_expression(object)
@@ -121,6 +157,17 @@ impl<'a> FunctionCompiler<'a> {
                         .runtime_array_length_local_for_expression(object)
                         .is_some()
                 {
+                    return None;
+                }
+                let reads_runtime_array_member = matches!(&materialized_property, Expression::String(name) if name == "length")
+                    && self
+                        .runtime_array_binding_name_for_expression(object)
+                        .is_some()
+                    || argument_index_from_expression(&materialized_property).is_some()
+                        && self
+                            .runtime_array_binding_name_for_expression(object)
+                            .is_some();
+                if reads_runtime_array_member {
                     return None;
                 }
                 if let Some(function_name) = self.resolve_function_name_value(object, property) {
@@ -144,6 +191,9 @@ impl<'a> FunctionCompiler<'a> {
                             "runtime_shadow_primitive_member_getter object={object:?} property={property:?} value={value:?}"
                         );
                     }
+                    if self.expression_is_static_boxed_primitive_object(&value) {
+                        return None;
+                    }
                     return self.resolve_static_primitive_expression_with_context(
                         &value,
                         current_function_name,
@@ -160,6 +210,14 @@ impl<'a> FunctionCompiler<'a> {
                     return Some(Expression::Number(number));
                 }
                 let materialized_object = self.materialize_static_expression(object);
+                if let Some(value) =
+                    self.resolve_primitive_prototype_property_value(object, &materialized_property)
+                {
+                    return self.resolve_static_primitive_expression_with_context(
+                        &value,
+                        current_function_name,
+                    );
+                }
                 let object_binding =
                     self.resolve_object_binding_from_expression(object)
                         .or_else(|| {
@@ -235,56 +293,46 @@ impl<'a> FunctionCompiler<'a> {
             ),
             Expression::Binary {
                 op:
-                    op @ (BinaryOp::BitwiseAnd
+                    op @ (BinaryOp::Subtract
+                    | BinaryOp::Multiply
+                    | BinaryOp::Divide
+                    | BinaryOp::Modulo
+                    | BinaryOp::Exponentiate),
+                left,
+                right,
+            } => match self.resolve_static_numeric_binary_outcome_with_context(
+                *op,
+                left,
+                right,
+                current_function_name,
+            )? {
+                StaticEvalOutcome::Value(value) => Some(value),
+                StaticEvalOutcome::Throw(_) => None,
+            },
+            Expression::Binary {
+                op:
+                    BinaryOp::Add
+                    | BinaryOp::BitwiseAnd
                     | BinaryOp::BitwiseOr
                     | BinaryOp::BitwiseXor
                     | BinaryOp::LeftShift
-                    | BinaryOp::RightShift),
+                    | BinaryOp::RightShift,
                 left,
                 right,
             } if self.infer_value_kind(left) == Some(StaticValueKind::BigInt)
                 && self.infer_value_kind(right) == Some(StaticValueKind::BigInt) =>
             {
-                let left_value = self.resolve_static_bigint_value(left)?;
-                let right_value = self.resolve_static_bigint_value(right)?;
                 Some(Expression::BigInt(
-                    match op {
-                        BinaryOp::BitwiseAnd => left_value & right_value,
-                        BinaryOp::BitwiseOr => left_value | right_value,
-                        BinaryOp::BitwiseXor => left_value ^ right_value,
-                        BinaryOp::LeftShift => {
-                            let shift = i64::try_from(right_value).ok()?;
-                            if shift >= 0 {
-                                left_value << usize::try_from(shift).ok()?
-                            } else {
-                                left_value >> usize::try_from(-shift).ok()?
-                            }
-                        }
-                        BinaryOp::RightShift => {
-                            let shift = i64::try_from(right_value).ok()?;
-                            if shift >= 0 {
-                                left_value >> usize::try_from(shift).ok()?
-                            } else {
-                                left_value << usize::try_from(-shift).ok()?
-                            }
-                        }
-                        _ => unreachable!("filtered above"),
-                    }
-                    .to_string(),
+                    self.resolve_static_bigint_value(expression)?.to_string(),
                 ))
             }
             Expression::Unary {
-                op: UnaryOp::Plus | UnaryOp::Negate,
+                op: UnaryOp::Plus | UnaryOp::Negate | UnaryOp::BitwiseNot,
                 ..
             }
             | Expression::Binary {
                 op:
-                    BinaryOp::Subtract
-                    | BinaryOp::Multiply
-                    | BinaryOp::Divide
-                    | BinaryOp::Modulo
-                    | BinaryOp::Exponentiate
-                    | BinaryOp::BitwiseAnd
+                    BinaryOp::BitwiseAnd
                     | BinaryOp::BitwiseOr
                     | BinaryOp::BitwiseXor
                     | BinaryOp::LeftShift
@@ -344,6 +392,10 @@ impl<'a> FunctionCompiler<'a> {
                     .map(Expression::Bool)
                     .or_else(|| {
                         self.resolve_static_is_nan_call_result(expression)
+                            .map(Expression::Bool)
+                    })
+                    .or_else(|| {
+                        self.resolve_static_private_in_predicate_call_result(expression)
                             .map(Expression::Bool)
                     })
                     .or_else(|| {

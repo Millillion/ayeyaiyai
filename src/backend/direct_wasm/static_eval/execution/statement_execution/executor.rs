@@ -16,6 +16,15 @@ pub(in crate::backend::direct_wasm) trait StaticStatementExecutor {
         environment: &mut Self::Environment,
     ) -> Option<()>;
 
+    fn declare_var_binding(
+        &self,
+        name: &str,
+        value: &Expression,
+        environment: &mut Self::Environment,
+    ) -> Option<()> {
+        self.initialize_binding(name, value, environment)
+    }
+
     fn assign_binding(
         &self,
         name: &str,
@@ -97,6 +106,18 @@ where
             .evaluate_expression(value, environment)
             .or_else(|| self.materialize_expression(value, environment))?;
         self.initialize_binding_value(name, value, environment)
+    }
+
+    fn declare_var_binding(
+        &self,
+        name: &str,
+        value: &Expression,
+        environment: &mut Self::Environment,
+    ) -> Option<()> {
+        if matches!(value, Expression::Undefined) && environment.local_binding(name).is_some() {
+            return Some(());
+        }
+        self.initialize_binding(name, value, environment)
     }
 
     fn assign_binding(

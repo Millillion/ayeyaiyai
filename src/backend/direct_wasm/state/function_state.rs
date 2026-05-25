@@ -44,6 +44,9 @@ impl FunctionParameterState {
     }
 
     pub(in crate::backend::direct_wasm) fn clear_isolated_indirect_eval_state(&mut self) {
+        self.in_parameter_default_initialization = false;
+        self.actual_argument_count_local = None;
+        self.arguments_slots.clear();
         self.local_arguments_bindings.clear();
         self.direct_arguments_aliases.clear();
     }

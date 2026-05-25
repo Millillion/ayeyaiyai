@@ -1,6 +1,51 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn static_regexp_receiver_expression_is_side_effect_free(object: &Expression) -> bool {
+        let (Expression::Call { callee, arguments } | Expression::New { callee, arguments }) =
+            object
+        else {
+            return false;
+        };
+        matches!(callee.as_ref(), Expression::Identifier(name) if name == "RegExp")
+            && arguments
+                .iter()
+                .all(|argument| inline_summary_side_effect_free_expression(argument.expression()))
+    }
+
+    pub(in crate::backend::direct_wasm) fn static_regexp_receiver_is_side_effect_free(
+        &self,
+        object: &Expression,
+    ) -> bool {
+        if Self::static_regexp_receiver_expression_is_side_effect_free(object) {
+            return true;
+        }
+
+        if let Some(resolved) = self
+            .resolve_bound_alias_expression(object)
+            .filter(|resolved| !static_expression_matches(resolved, object))
+            && Self::static_regexp_receiver_expression_is_side_effect_free(&resolved)
+        {
+            return true;
+        }
+
+        let materialized = self.materialize_static_expression(object);
+        !static_expression_matches(&materialized, object)
+            && Self::static_regexp_receiver_expression_is_side_effect_free(&materialized)
+    }
+
+    fn static_boxed_primitive_receiver_is_side_effect_free(&self, object: &Expression) -> bool {
+        let Expression::New { arguments, .. } = object else {
+            return false;
+        };
+        arguments
+            .iter()
+            .all(|argument| inline_summary_side_effect_free_expression(argument.expression()))
+            && self
+                .resolve_static_constructed_boxed_primitive_value(object)
+                .is_some()
+    }
+
     pub(in crate::backend::direct_wasm) fn emit_early_member_call_shortcuts(
         &mut self,
         object: &Expression,
@@ -43,6 +88,9 @@ impl<'a> FunctionCompiler<'a> {
         if self.emit_object_get_prototype_of_call(object, property, arguments)? {
             return Ok(true);
         }
+        if self.emit_object_freeze_call(object, property, arguments)? {
+            return Ok(true);
+        }
         if self.emit_object_is_extensible_call(object, property, arguments)? {
             return Ok(true);
         }
@@ -52,10 +100,47 @@ impl<'a> FunctionCompiler<'a> {
         if self.emit_object_set_prototype_of_call(object, property, arguments)? {
             return Ok(true);
         }
+        if matches!(object, Expression::Identifier(name) if name == "Proxy")
+            && matches!(property, Expression::String(name) if name == "revocable")
+            && self.is_unshadowed_builtin_identifier("Proxy")
+        {
+            self.emit_ignored_call_arguments(arguments)?;
+            self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
+            return Ok(true);
+        }
+        if matches!(property, Expression::String(name) if name == "revoke")
+            && self
+                .proxy_revocable_result_target_expression(object)
+                .is_some()
+        {
+            if !inline_summary_side_effect_free_expression(object) {
+                self.emit_numeric_expression(object)?;
+                self.state.emission.output.instructions.push(0x1a);
+            }
+            self.emit_ignored_call_arguments(arguments)?;
+            self.push_i32_const(JS_UNDEFINED_TAG);
+            return Ok(true);
+        }
         if self.emit_static_map_set_call(object, property, arguments)? {
             return Ok(true);
         }
         if self.emit_static_weak_collection_mutation_call(object, property, arguments)? {
+            return Ok(true);
+        }
+        if matches!(object, Expression::Identifier(name) if name == "Object")
+            && matches!(property, Expression::String(property_name) if property_name == "defineProperty")
+            && let [
+                CallArgument::Expression(target),
+                CallArgument::Expression(property_name_expression),
+                CallArgument::Expression(descriptor),
+                ..,
+            ] = arguments
+            && self.is_direct_arguments_object(target)
+            && let Some(index) = argument_index_from_expression(property_name_expression)
+            && let Some(descriptor) = resolve_property_descriptor_definition(descriptor)
+            && self.apply_direct_arguments_define_property(index, &descriptor)?
+        {
+            self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
             return Ok(true);
         }
         if self.emit_static_member_builtin_call_result(object, property, arguments)? {
@@ -104,8 +189,7 @@ impl<'a> FunctionCompiler<'a> {
         property: &Expression,
         arguments: &[CallArgument],
     ) -> DirectResult<bool> {
-        if !inline_summary_side_effect_free_expression(object)
-            || !inline_summary_side_effect_free_expression(property)
+        if !inline_summary_side_effect_free_expression(property)
             || arguments
                 .iter()
                 .any(|argument| !inline_summary_side_effect_free_expression(argument.expression()))
@@ -118,6 +202,52 @@ impl<'a> FunctionCompiler<'a> {
                 .resolve_local_array_iterator_binding_name(iterator_name)
                 .is_some()
         {
+            return Ok(false);
+        }
+        let Expression::String(property_name) = property else {
+            return Ok(false);
+        };
+        let static_receiver_is_safe = (matches!(property_name.as_str(), "exec" | "test")
+            && self.static_regexp_receiver_is_side_effect_free(object))
+            || (matches!(
+                property_name.as_str(),
+                "charAt" | "toFixed" | "toExponential" | "toString" | "trim" | "valueOf"
+            ) && self.static_boxed_primitive_receiver_is_side_effect_free(object));
+        if !inline_summary_side_effect_free_expression(object) && !static_receiver_is_safe {
+            return Ok(false);
+        }
+        let supported_static_builtin_member = matches!(
+            property_name.as_str(),
+            "charAt"
+                | "replace"
+                | "toFixed"
+                | "toExponential"
+                | "trim"
+                | "get"
+                | "has"
+                | "exec"
+                | "test"
+        ) || matches!(
+            (object, property_name.as_str()),
+            (
+                Expression::Identifier(object_name),
+                "revocable"
+            ) if object_name == "Proxy"
+        ) || matches!(
+            (object, property_name.as_str()),
+            (
+                Expression::Identifier(object_name),
+                "freeze" | "getPrototypeOf" | "isExtensible" | "isFrozen" | "isSealed"
+                    | "preventExtensions" | "seal"
+            ) if object_name == "Object"
+        ) || matches!(
+            (object, property_name.as_str()),
+            (
+                Expression::Identifier(object_name),
+                "has" | "preventExtensions"
+            ) if object_name == "Reflect"
+        );
+        if !supported_static_builtin_member {
             return Ok(false);
         }
         let callee = Expression::Member {

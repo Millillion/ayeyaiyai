@@ -27,12 +27,13 @@ impl<'a> FunctionCompiler<'a> {
             .resolve_array_binding_from_expression(argument)
             .is_some();
         let runtime_array = self.runtime_array_binding_name_for_expression(argument);
+        let template_raw_array = self.expression_is_template_object_raw_array_candidate(argument);
         if std::env::var_os("AYY_TRACE_ARRAY_IS_ARRAY").is_some() {
             eprintln!(
-                "array_is_array:static expression={argument:?} typed_array={typed_array} static_array={static_array} runtime_array={runtime_array:?}"
+                "array_is_array:static expression={argument:?} typed_array={typed_array} static_array={static_array} runtime_array={runtime_array:?} template_raw_array={template_raw_array}"
             );
         }
-        Some(!typed_array && (static_array || runtime_array.is_some()))
+        Some(!typed_array && (static_array || runtime_array.is_some() || template_raw_array))
     }
 
     pub(in crate::backend::direct_wasm) fn resolve_static_is_nan_call_result(

@@ -42,8 +42,9 @@ fn simple_generator_source_cache_key(
     kind: &str,
     function: &FunctionDeclaration,
     expression: &Expression,
+    environment_key: &str,
 ) -> String {
-    format!("{kind}:{expression:?}:{function:?}")
+    format!("{kind}:{expression:?}:{function:?}:env:{environment_key}")
 }
 
 fn lookup_simple_generator_source_cache(key: &str) -> Option<Option<SimpleGeneratorSourceParts>> {
@@ -54,4 +55,9 @@ fn store_simple_generator_source_cache(key: String, value: Option<SimpleGenerato
     SIMPLE_GENERATOR_SOURCE_CACHE.with(|cache| {
         cache.borrow_mut().insert(key, value);
     });
+}
+
+pub(super) fn reset_simple_generator_source_caches() {
+    ACTIVE_SIMPLE_GENERATOR_SOURCE_SHAPES.with(|active| active.borrow_mut().clear());
+    SIMPLE_GENERATOR_SOURCE_CACHE.with(|cache| cache.borrow_mut().clear());
 }

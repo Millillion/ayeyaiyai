@@ -1,1 +1,0 @@
-dynamic_call_no_match callee=Member { object: Identifier("C"), property: String("_") } object

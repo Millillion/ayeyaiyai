@@ -1,1 +1,0 @@
-emit_dynamic_user_function_call:no-match-fallback callee=Member { object: Identifier("C"), property: String("_") } instruction=23737

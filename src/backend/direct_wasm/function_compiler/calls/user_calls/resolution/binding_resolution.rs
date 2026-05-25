@@ -239,6 +239,10 @@ impl<'a> FunctionCompiler<'a> {
         )
     }
 
+    pub(in crate::backend::direct_wasm) fn function_binding_resolution_is_active(&self) -> bool {
+        super::guard::function_binding_resolution_is_active()
+    }
+
     pub(in crate::backend::direct_wasm) fn is_restricted_function_property(
         &self,
         object: &Expression,
@@ -270,9 +274,40 @@ impl<'a> FunctionCompiler<'a> {
         expression: &Expression,
         current_function_name: Option<&str>,
     ) -> Option<LocalFunctionBinding> {
-        let _guard = FunctionBindingResolutionGuard::enter(expression, current_function_name);
+        let _guard = FunctionBindingResolutionGuard::enter(expression, current_function_name)?;
         let _shape_guard =
             FunctionBindingResolutionShapeGuard::enter(expression, current_function_name)?;
+        if let Expression::Identifier(name) = expression {
+            if let Some((resolved_name, _)) = self.resolve_current_local_binding(name) {
+                if let Some(function_binding) = self
+                    .state
+                    .speculation
+                    .static_semantics
+                    .local_function_binding(&resolved_name)
+                    .cloned()
+                {
+                    return Some(function_binding);
+                }
+                if resolved_name.as_str() != name.as_str()
+                    && let Some(function_binding) = self
+                        .state
+                        .speculation
+                        .static_semantics
+                        .local_function_binding(name)
+                        .cloned()
+                {
+                    return Some(function_binding);
+                }
+            } else if let Some(function_binding) = self
+                .state
+                .speculation
+                .static_semantics
+                .local_function_binding(name)
+                .cloned()
+            {
+                return Some(function_binding);
+            }
+        }
         if let Some(resolved) = self
             .resolve_bound_alias_expression(expression)
             .filter(|resolved| !static_expression_matches(resolved, expression))
@@ -324,6 +359,14 @@ impl<'a> FunctionCompiler<'a> {
                                 })
                                 .flatten()
                         })
+                } else if let Some(function_binding) = self
+                    .state
+                    .speculation
+                    .static_semantics
+                    .local_function_binding(name)
+                    .cloned()
+                {
+                    Some(function_binding)
                 } else if self.resolve_eval_local_function_hidden_name(name).is_some() {
                     self.state
                         .speculation

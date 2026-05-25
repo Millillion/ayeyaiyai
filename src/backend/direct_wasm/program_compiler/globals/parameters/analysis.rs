@@ -94,34 +94,49 @@ impl DirectWasmCompiler {
         &self,
         program: &Program,
     ) -> HashMap<String, HashMap<String, Option<Expression>>> {
-        let mut bindings = HashMap::new();
+        let mut previous = HashMap::new();
         for function in &program.functions {
-            bindings.insert(function.name.clone(), HashMap::new());
+            previous.insert(function.name.clone(), HashMap::new());
         }
 
-        let mut top_level_aliases = HashMap::new();
-        for statement in &program.statements {
-            self.collect_parameter_value_bindings_from_statement(
-                statement,
-                &mut top_level_aliases,
-                &mut bindings,
-            );
-        }
-
-        for function in &program.functions {
-            let mut aliases = top_level_aliases.clone();
-            for parameter in &function.params {
-                aliases.entry(parameter.name.clone()).or_insert(None);
+        for _ in 0..8 {
+            let mut bindings = HashMap::new();
+            for function in &program.functions {
+                bindings.insert(function.name.clone(), HashMap::new());
             }
-            self.collect_parameter_value_bindings_from_statements_in_function(
-                &function.body,
-                &mut aliases,
-                &mut bindings,
-                Some(&function.name),
-            );
+
+            let mut top_level_aliases = HashMap::new();
+            for statement in &program.statements {
+                self.collect_parameter_value_bindings_from_statement_in_function(
+                    statement,
+                    &mut top_level_aliases,
+                    &mut bindings,
+                    &previous,
+                    None,
+                );
+            }
+
+            for function in &program.functions {
+                let mut aliases = top_level_aliases.clone();
+                for parameter in &function.params {
+                    aliases.entry(parameter.name.clone()).or_insert(None);
+                }
+                self.collect_parameter_value_bindings_from_statements_in_function(
+                    &function.body,
+                    &mut aliases,
+                    &mut bindings,
+                    &previous,
+                    Some(&function.name),
+                );
+            }
+
+            if bindings == previous {
+                return bindings;
+            }
+            previous = bindings;
         }
 
-        bindings
+        previous
     }
 
     fn seed_proxy_define_property_handler_parameter_bindings(

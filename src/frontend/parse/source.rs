@@ -19,7 +19,7 @@ pub(super) fn parse_program_source(source: &str) -> Result<SwcProgram> {
     })
 }
 
-pub(super) fn parse_script_program_source(source: &str) -> Result<SwcProgram> {
+pub(crate) fn parse_script_program_source(source: &str) -> Result<SwcProgram> {
     let file = source_file(FileName::Custom("input.js".into()), source);
     parse_script(&file)
 }
@@ -87,7 +87,8 @@ fn normalize_parser_source(source: &str) -> Cow<'_, str> {
     let normalized = normalize_escaped_object_property_names(normalized);
     let normalized = normalize_escaped_member_property_names(normalized);
     let normalized = normalize_static_constructor_methods(normalized);
-    normalize_for_statement_using_declarations(normalized)
+    let normalized = normalize_for_statement_using_declarations(normalized);
+    normalize_decorator_member_expressions(normalized)
 }
 
 fn normalize_leading_hashbang_comment(source: &str) -> Cow<'_, str> {
@@ -100,6 +101,120 @@ fn normalize_leading_hashbang_comment(source: &str) -> Cow<'_, str> {
     }
 
     Cow::Borrowed(source)
+}
+
+fn normalize_decorator_member_expressions(source: Cow<'_, str>) -> Cow<'_, str> {
+    if !source.contains('@') {
+        return source;
+    }
+
+    let bytes = source.as_bytes();
+    let mut output = String::new();
+    let mut last_copied = 0;
+    let mut index = 0;
+
+    while index < bytes.len() {
+        match bytes[index] {
+            b'\'' | b'"' => {
+                index = skip_quoted_string(bytes, index);
+            }
+            b'`' => {
+                index = skip_template_literal(bytes, index);
+            }
+            b'/' if index + 1 < bytes.len() && bytes[index + 1] == b'/' => {
+                index = skip_line_comment(bytes, index);
+            }
+            b'/' if index + 1 < bytes.len() && bytes[index + 1] == b'*' => {
+                index = skip_block_comment(bytes, index);
+            }
+            b'@' => {
+                let decorator_start = index;
+                let Some(expression_start) = skip_whitespace_and_comments(bytes, index + 1) else {
+                    index += 1;
+                    continue;
+                };
+                if !is_identifier_byte(bytes[expression_start])
+                    && !starts_unicode_escape(bytes, expression_start)
+                {
+                    index += 1;
+                    continue;
+                }
+                let Some((mut expression_end, _, _)) =
+                    scan_identifier_name_with_unicode_escapes(&source, expression_start)
+                else {
+                    index += 1;
+                    continue;
+                };
+
+                let mut saw_member_access = false;
+                loop {
+                    let Some(member_index) = skip_whitespace_and_comments(bytes, expression_end)
+                    else {
+                        break;
+                    };
+                    if bytes.get(member_index) == Some(&b'[') {
+                        let Some(member_end) =
+                            find_matching_delimiter(bytes, member_index, b'[', b']')
+                        else {
+                            break;
+                        };
+                        expression_end = member_end + 1;
+                        saw_member_access = true;
+                        continue;
+                    }
+
+                    if bytes.get(member_index) != Some(&b'.') {
+                        break;
+                    }
+                    let Some(member_start) = skip_whitespace_and_comments(bytes, member_index + 1)
+                    else {
+                        break;
+                    };
+                    let member_name_start = if bytes.get(member_start) == Some(&b'#') {
+                        member_start + 1
+                    } else {
+                        member_start
+                    };
+                    if member_name_start >= bytes.len()
+                        || (!is_identifier_byte(bytes[member_name_start])
+                            && !starts_unicode_escape(bytes, member_name_start))
+                    {
+                        break;
+                    }
+                    let Some((member_end, _, _)) =
+                        scan_identifier_name_with_unicode_escapes(&source, member_name_start)
+                    else {
+                        break;
+                    };
+                    expression_end = member_end;
+                    saw_member_access = true;
+                }
+
+                if saw_member_access {
+                    let next = skip_whitespace_and_comments(bytes, expression_end);
+                    if !matches!(next.and_then(|next| bytes.get(next)), Some(b'(')) {
+                        output.push_str(&source[last_copied..decorator_start]);
+                        output.push('@');
+                        output.push('(');
+                        output.push_str(&source[expression_start..expression_end]);
+                        output.push(')');
+                        last_copied = expression_end;
+                    }
+                }
+                index = expression_end.max(expression_start + 1);
+            }
+            _ => {
+                index += 1;
+            }
+        }
+    }
+
+    if last_copied == 0 {
+        return source;
+    }
+
+    output.push_str(&source[last_copied..]);
+    Cow::Owned(output)
 }
 
 fn normalize_escaped_let_statement_starts(source: Cow<'_, str>) -> Cow<'_, str> {
@@ -178,6 +293,15 @@ fn normalize_escaped_let_statement_starts(source: Cow<'_, str>) -> Cow<'_, str> 
 enum ClassSignificantToken {
     Punct(u8),
     Word(String),
+}
+
+fn remember_significant_token(
+    previous: &mut Option<ClassSignificantToken>,
+    current: &mut Option<ClassSignificantToken>,
+    token: ClassSignificantToken,
+) {
+    *previous = current.take();
+    *current = Some(token);
 }
 
 fn normalize_escaped_class_method_names(source: Cow<'_, str>) -> Cow<'_, str> {
@@ -357,10 +481,10 @@ fn normalize_escaped_object_property_names(source: Cow<'_, str>) -> Cow<'_, str>
                     continue;
                 };
                 let next = skip_whitespace_and_comments(bytes, end);
-                if saw_escape
+                let escaped_property_name_needs_literal = saw_escape
                     && object_context_stack.last().copied().unwrap_or(false)
-                    && next.and_then(|next| bytes.get(next)) == Some(&b':')
-                {
+                    && matches!(next.and_then(|next| bytes.get(next)), Some(b':' | b'('));
+                if escaped_property_name_needs_literal {
                     output.push_str(&source[last_copied..index]);
                     push_string_literal(&mut output, &decoded);
                     last_copied = end;
@@ -395,14 +519,26 @@ fn normalize_escaped_member_property_names(source: Cow<'_, str>) -> Cow<'_, str>
     let mut output = String::new();
     let mut last_copied = 0;
     let mut index = 0;
+    let mut previous_token: Option<ClassSignificantToken> = None;
+    let mut last_token: Option<ClassSignificantToken> = None;
 
     while index < bytes.len() {
         match bytes[index] {
             b'\'' | b'"' => {
                 index = skip_quoted_string(bytes, index);
+                remember_significant_token(
+                    &mut previous_token,
+                    &mut last_token,
+                    ClassSignificantToken::Punct(b'"'),
+                );
             }
             b'`' => {
                 index = skip_template_literal(bytes, index);
+                remember_significant_token(
+                    &mut previous_token,
+                    &mut last_token,
+                    ClassSignificantToken::Punct(b'`'),
+                );
             }
             b'/' if index + 1 < bytes.len() && bytes[index + 1] == b'/' => {
                 index = skip_line_comment(bytes, index);
@@ -411,18 +547,45 @@ fn normalize_escaped_member_property_names(source: Cow<'_, str>) -> Cow<'_, str>
                 index = skip_block_comment(bytes, index);
             }
             b'.' => {
+                let follows_new_keyword =
+                    matches!(
+                        &last_token,
+                        Some(ClassSignificantToken::Word(word)) if word == "new"
+                    ) && !matches!(previous_token, Some(ClassSignificantToken::Punct(b'.')));
                 let Some(property_start) = skip_whitespace_and_comments(bytes, index + 1) else {
                     index += 1;
+                    remember_significant_token(
+                        &mut previous_token,
+                        &mut last_token,
+                        ClassSignificantToken::Punct(b'.'),
+                    );
                     continue;
                 };
                 let Some((property_end, decoded, saw_escape)) =
                     scan_identifier_name_with_unicode_escapes(&source, property_start)
                 else {
                     index += 1;
+                    remember_significant_token(
+                        &mut previous_token,
+                        &mut last_token,
+                        ClassSignificantToken::Punct(b'.'),
+                    );
                     continue;
                 };
 
-                if saw_escape {
+                if saw_escape && follows_new_keyword && decoded == "target" {
+                    output.push_str(&source[last_copied..property_start]);
+                    output.push('"');
+                    output.push_str(&decoded);
+                    output.push('"');
+                    last_copied = property_end;
+                    index = property_end;
+                    remember_significant_token(
+                        &mut previous_token,
+                        &mut last_token,
+                        ClassSignificantToken::Word(decoded),
+                    );
+                } else if saw_escape {
                     let optional_start = index
                         .checked_sub(1)
                         .filter(|previous| bytes.get(*previous) == Some(&b'?'));
@@ -437,11 +600,42 @@ fn normalize_escaped_member_property_names(source: Cow<'_, str>) -> Cow<'_, str>
                     output.push(']');
                     last_copied = property_end;
                     index = property_end;
+                    remember_significant_token(
+                        &mut previous_token,
+                        &mut last_token,
+                        ClassSignificantToken::Punct(b']'),
+                    );
                 } else {
                     index = property_end;
+                    remember_significant_token(
+                        &mut previous_token,
+                        &mut last_token,
+                        ClassSignificantToken::Word(decoded),
+                    );
                 }
             }
-            _ => {
+            byte if is_identifier_byte(byte) || starts_unicode_escape(bytes, index) => {
+                let Some((end, decoded, _)) =
+                    scan_identifier_name_with_unicode_escapes(&source, index)
+                else {
+                    index += 1;
+                    continue;
+                };
+                remember_significant_token(
+                    &mut previous_token,
+                    &mut last_token,
+                    ClassSignificantToken::Word(decoded),
+                );
+                index = end;
+            }
+            byte => {
+                if !byte.is_ascii_whitespace() {
+                    remember_significant_token(
+                        &mut previous_token,
+                        &mut last_token,
+                        ClassSignificantToken::Punct(byte),
+                    );
+                }
                 index += 1;
             }
         }

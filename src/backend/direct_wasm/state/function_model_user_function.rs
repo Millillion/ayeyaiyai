@@ -22,6 +22,7 @@ pub(in crate::backend::direct_wasm) struct UserFunction {
     pub(in crate::backend::direct_wasm) private_brand_binding: Option<String>,
     pub(in crate::backend::direct_wasm) strict: bool,
     pub(in crate::backend::direct_wasm) lexical_this: bool,
+    pub(in crate::backend::direct_wasm) constructible: bool,
     pub(in crate::backend::direct_wasm) function_index: u32,
     pub(in crate::backend::direct_wasm) type_index: u32,
 }
@@ -40,7 +41,7 @@ impl UserFunction {
     }
 
     pub(in crate::backend::direct_wasm) fn is_constructible(&self) -> bool {
-        matches!(self.kind, FunctionKind::Ordinary) && !self.lexical_this
+        self.constructible && matches!(self.kind, FunctionKind::Ordinary) && !self.lexical_this
     }
 
     pub(in crate::backend::direct_wasm) fn visible_param_count(&self) -> u32 {

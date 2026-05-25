@@ -1,6 +1,32 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn private_brand_marker_value_from_object_binding(
+        object_binding: &ObjectValueBinding,
+    ) -> Option<Expression> {
+        ordered_object_property_names(object_binding)
+            .into_iter()
+            .find(|property_name| is_private_brand_marker_property_name(property_name))
+            .and_then(|property_name| {
+                object_binding_lookup_value(object_binding, &Expression::String(property_name))
+                    .cloned()
+            })
+            .or_else(|| {
+                ordered_object_property_names(object_binding)
+                    .into_iter()
+                    .filter(|property_name| {
+                        property_name.starts_with("__ayy$private$")
+                            && !is_private_brand_marker_property_name(property_name)
+                    })
+                    .find_map(|property_name| {
+                        let marker_property = private_brand_marker_property_expression(
+                            &Expression::String(property_name),
+                        )?;
+                        object_binding_lookup_value(object_binding, &marker_property).cloned()
+                    })
+            })
+    }
+
     pub(in crate::backend::direct_wasm) fn capture_slot_member_source_key(
         object: &Expression,
         property: &Expression,
@@ -20,6 +46,21 @@ impl<'a> FunctionCompiler<'a> {
         let rest = source_key.strip_prefix("__ayy_member_source:")?;
         let (object_name, property_name) = rest.split_once(':')?;
         Some((object_name.to_string(), property_name.to_string()))
+    }
+
+    pub(in crate::backend::direct_wasm) fn capture_slot_live_source_binding_name(
+        &self,
+        source_name: &str,
+    ) -> String {
+        if source_name == "this"
+            || source_name == "new.target"
+            || Self::capture_slot_member_source_key_parts(source_name).is_some()
+        {
+            return source_name.to_string();
+        }
+        self.resolve_current_local_binding(source_name)
+            .map(|(resolved_name, _)| resolved_name)
+            .unwrap_or_else(|| source_name.to_string())
     }
 
     pub(in crate::backend::direct_wasm) fn capture_slot_member_source_deleted_binding_name(
@@ -52,6 +93,16 @@ impl<'a> FunctionCompiler<'a> {
                     return Ok(());
                 }
             }
+            if is_active_with_scope_member {
+                return self.with_suspended_with_scopes(|compiler| {
+                    compiler.emit_numeric_expression(source_expression)
+                });
+            }
+        }
+        if self.expression_is_active_with_scope_object(source_expression) {
+            return self.with_suspended_with_scopes(|compiler| {
+                compiler.emit_numeric_expression(source_expression)
+            });
         }
         self.emit_numeric_expression(source_expression)
     }
@@ -468,21 +519,9 @@ impl<'a> FunctionCompiler<'a> {
                     } else if member_private_brand_binding
                         .as_ref()
                         .is_some_and(|brand_binding| brand_binding == capture_name)
-                        && let Some(brand_value) =
-                            returned_object_binding.as_ref().and_then(|object_binding| {
-                                ordered_object_property_names(object_binding)
-                                    .into_iter()
-                                    .find(|property_name| {
-                                        property_name.starts_with("__ayy$private$")
-                                    })
-                                    .and_then(|property_name| {
-                                        object_binding_lookup_value(
-                                            object_binding,
-                                            &Expression::String(property_name),
-                                        )
-                                        .cloned()
-                                    })
-                            })
+                        && let Some(brand_value) = returned_object_binding
+                            .as_ref()
+                            .and_then(Self::private_brand_marker_value_from_object_binding)
                     {
                         (brand_value, false)
                     } else {
@@ -494,13 +533,39 @@ impl<'a> FunctionCompiler<'a> {
                             binding.property, capture_name
                         );
                     }
+                    let capture_slot_tracks_live_source =
+                        !capture_name.starts_with("__ayy_class_field_name_");
+                    let capture_slot_metadata_expression = if capture_slot_tracks_live_source {
+                        source_expression.clone()
+                    } else {
+                        self.materialize_static_expression(&source_expression)
+                    };
                     let hidden_kind = self
-                        .infer_value_kind(&source_expression)
+                        .infer_value_kind(&capture_slot_metadata_expression)
                         .unwrap_or(StaticValueKind::Unknown);
+                    let source_identifier_not_materialized =
+                        if let Expression::Identifier(source_name) = &source_expression {
+                            self.resolve_current_local_binding(source_name).is_none()
+                                && !self.global_has_binding(source_name)
+                                && !self.backend.global_has_lexical_binding(source_name)
+                                && self.backend.global_function_binding(source_name).is_none()
+                                && !self.global_has_implicit_binding(source_name)
+                        } else {
+                            false
+                        };
                     let use_global_capture_slot = self.binding_name_is_global(name)
                         || self.global_has_binding(name)
                         || self.backend.global_has_lexical_binding(name)
                         || self.global_has_implicit_binding(name);
+                    if source_identifier_not_materialized
+                        && !Self::should_emit_fresh_private_brand_capture_slot_value(
+                            member_private_brand_binding.as_ref(),
+                            capture_name,
+                            &source_expression,
+                        )
+                    {
+                        continue;
+                    }
                     let hidden_name = if use_global_capture_slot {
                         let hidden_name = format!("__ayy_closure_slot_{}_{}", name, capture_name);
                         let hidden_binding = self.ensure_implicit_global_binding(&hidden_name);
@@ -512,6 +577,8 @@ impl<'a> FunctionCompiler<'a> {
                             &source_expression,
                         ) {
                             self.emit_fresh_private_brand_capture_slot_value()?;
+                        } else if source_identifier_not_materialized {
+                            self.push_i32_const(JS_UNDEFINED_TAG);
                         } else {
                             self.emit_numeric_expression(&source_expression)?;
                         }
@@ -521,12 +588,12 @@ impl<'a> FunctionCompiler<'a> {
                         if !capture_name.starts_with("__ayy_class_brand_") {
                             self.update_static_global_assignment_metadata(
                                 &hidden_name,
-                                &source_expression,
+                                &capture_slot_metadata_expression,
                             );
                         }
                         self.sync_capture_slot_runtime_object_shadows_from_expression(
                             &hidden_name,
-                            &source_expression,
+                            &capture_slot_metadata_expression,
                         )?;
                         hidden_name
                     } else {
@@ -549,21 +616,24 @@ impl<'a> FunctionCompiler<'a> {
                             &source_expression,
                         ) {
                             self.emit_fresh_private_brand_capture_slot_value()?;
+                        } else if source_identifier_not_materialized {
+                            self.push_i32_const(JS_UNDEFINED_TAG);
                         } else {
                             self.emit_numeric_expression(&source_expression)?;
                         }
                         self.push_local_set(hidden_local);
                         self.update_capture_slot_binding_from_expression(
                             &hidden_name,
-                            &source_expression,
+                            &capture_slot_metadata_expression,
                         )?;
                         self.sync_capture_slot_runtime_object_shadows_from_expression(
                             &hidden_name,
-                            &source_expression,
+                            &capture_slot_metadata_expression,
                         )?;
                         hidden_name
                     };
-                    if let Expression::Identifier(source_binding_name) = &source_expression
+                    if capture_slot_tracks_live_source
+                        && let Expression::Identifier(source_binding_name) = &source_expression
                         && (!function_local_bindings.contains(capture_name)
                             || source_binding_name == capture_name)
                     {
@@ -571,9 +641,14 @@ impl<'a> FunctionCompiler<'a> {
                             .speculation
                             .static_semantics
                             .capture_slot_source_bindings
-                            .insert(hidden_name.clone(), source_binding_name.clone());
+                            .insert(
+                                hidden_name.clone(),
+                                self.capture_slot_live_source_binding_name(source_binding_name),
+                            );
                     }
-                    if let Expression::Identifier(source_binding_name) = &source_expression {
+                    if capture_slot_tracks_live_source
+                        && let Expression::Identifier(source_binding_name) = &source_expression
+                    {
                         self.state
                             .speculation
                             .static_semantics
@@ -655,19 +730,9 @@ impl<'a> FunctionCompiler<'a> {
                 } else if member_private_brand_binding
                     .as_ref()
                     .is_some_and(|brand_binding| brand_binding == capture_name)
-                    && let Some(brand_value) =
-                        returned_object_binding.as_ref().and_then(|object_binding| {
-                            ordered_object_property_names(object_binding)
-                                .into_iter()
-                                .find(|property_name| property_name.starts_with("__ayy$private$"))
-                                .and_then(|property_name| {
-                                    object_binding_lookup_value(
-                                        object_binding,
-                                        &Expression::String(property_name),
-                                    )
-                                    .cloned()
-                                })
-                        })
+                    && let Some(brand_value) = returned_object_binding
+                        .as_ref()
+                        .and_then(Self::private_brand_marker_value_from_object_binding)
                 {
                     brand_value
                 } else {

@@ -29,6 +29,7 @@ impl<'a> FunctionCompiler<'a> {
             saved_this_shadow_owner,
         )?;
         self.restore_user_function_capture_bindings(prepared_capture_bindings);
+        self.invalidate_raw_assigned_global_metadata_after_user_call(user_function);
         let additional_call_effect_nonlocal_bindings = self
             .sync_snapshot_user_function_call_effect_bindings(
                 &additional_call_effect_nonlocal_bindings,
@@ -37,18 +38,12 @@ impl<'a> FunctionCompiler<'a> {
                     .map(|_| assigned_nonlocal_binding_results.as_ref())
                     .flatten(),
             )?;
+        self.sync_current_function_capture_runtime_values_for_call_effects(
+            call_effect_nonlocal_bindings,
+        )?;
         if !additional_call_effect_nonlocal_bindings.is_empty() {
-            let preserved_kinds = additional_call_effect_nonlocal_bindings
-                .iter()
-                .filter(|name| !assigned_nonlocal_bindings.contains(*name))
-                .filter_map(|name| {
-                    self.lookup_identifier_kind(name)
-                        .map(|kind| (name.clone(), kind))
-                })
-                .collect::<HashMap<_, _>>();
-            self.invalidate_static_binding_metadata_for_names_with_preserved_kinds(
+            self.invalidate_static_binding_metadata_for_names(
                 &additional_call_effect_nonlocal_bindings,
-                &preserved_kinds,
             );
         }
         self.sync_static_with_scope_member_assignment_effects(user_function);
@@ -74,6 +69,7 @@ impl<'a> FunctionCompiler<'a> {
                 allow_static_this_shadow_commit,
                 receiver_updated_via_parameter_writeback,
                 receiver_may_require_invalidation,
+                argument_expressions,
             )?;
         }
         if let Some(saved_new_target_local) = saved_new_target_local {

@@ -32,11 +32,24 @@ impl<'a> FunctionCompiler<'a> {
         callee_property: &Expression,
         arguments: &[CallArgument],
     ) -> DirectResult<bool> {
-        if !matches!(callee_object, Expression::Identifier(name) if name == "Object") {
-            return Ok(false);
-        }
-        if !matches!(callee_property, Expression::String(name) if name == "keys" || name == "getOwnPropertyNames" || name == "getOwnPropertySymbols")
-        {
+        let supported = matches!(
+            (callee_object, callee_property),
+            (
+                Expression::Identifier(object_name),
+                Expression::String(property_name),
+            ) if object_name == "Object"
+                && matches!(
+                    property_name.as_str(),
+                    "keys" | "getOwnPropertyNames" | "getOwnPropertySymbols"
+                )
+        ) || matches!(
+            (callee_object, callee_property),
+            (
+                Expression::Identifier(object_name),
+                Expression::String(property_name),
+            ) if object_name == "Reflect" && property_name == "ownKeys"
+        );
+        if !supported {
             return Ok(false);
         }
         for argument in arguments {

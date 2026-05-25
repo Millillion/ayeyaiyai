@@ -276,6 +276,7 @@ impl<'a> FunctionCompiler<'a> {
 
     fn resolve_array_binding_from_derived_array_constructor_new(
         &self,
+        constructed_callee: &Expression,
         user_function: &UserFunction,
         arguments: &[CallArgument],
         depth: usize,
@@ -310,8 +311,17 @@ impl<'a> FunctionCompiler<'a> {
             &this_binding,
             &arguments_binding,
         );
-        let resolved_callee = self
-            .resolve_bound_alias_expression(&substituted_callee)
+        let capture_resolved_callee = match &substituted_callee {
+            Expression::Identifier(name) => self
+                .resolve_constructor_capture_source_bindings_from_expression(constructed_callee)
+                .and_then(|bindings| bindings.get(name).cloned()),
+            _ => None,
+        };
+        let resolved_callee = capture_resolved_callee
+            .or_else(|| {
+                self.resolve_bound_alias_expression(&substituted_callee)
+                    .filter(|resolved| !static_expression_matches(resolved, &substituted_callee))
+            })
             .or_else(|| match &substituted_callee {
                 Expression::Identifier(name) => self
                     .state
@@ -363,6 +373,7 @@ impl<'a> FunctionCompiler<'a> {
             LocalFunctionBinding::User(function_name) => {
                 let super_function = self.user_function(&function_name)?;
                 self.resolve_array_binding_from_derived_array_constructor_new(
+                    &resolved_callee,
                     super_function,
                     &substituted_arguments,
                     depth + 1,
@@ -370,6 +381,114 @@ impl<'a> FunctionCompiler<'a> {
             }
             _ => None,
         }
+    }
+
+    fn push_static_array_constructor_callee_candidate(
+        candidates: &mut Vec<Expression>,
+        candidate: Expression,
+    ) {
+        if candidates
+            .iter()
+            .any(|existing| static_expression_matches(existing, &candidate))
+        {
+            return;
+        }
+        candidates.push(candidate);
+    }
+
+    fn static_array_constructor_callee_candidates(&self, callee: &Expression) -> Vec<Expression> {
+        let mut candidates = vec![callee.clone()];
+        if let Some(resolved) = self
+            .resolve_bound_alias_expression(callee)
+            .filter(|resolved| !static_expression_matches(resolved, callee))
+        {
+            Self::push_static_array_constructor_callee_candidate(&mut candidates, resolved);
+        }
+        let materialized_callee = self.materialize_static_expression(callee);
+        if !static_expression_matches(&materialized_callee, callee) {
+            Self::push_static_array_constructor_callee_candidate(
+                &mut candidates,
+                materialized_callee,
+            );
+        }
+        if let Expression::Identifier(name) = callee
+            && let Some(value) = self
+                .state
+                .speculation
+                .static_semantics
+                .local_value_binding(name)
+                .or_else(|| self.global_value_binding(name))
+            && !static_expression_matches(value, callee)
+        {
+            Self::push_static_array_constructor_callee_candidate(&mut candidates, value.clone());
+        }
+        if let Expression::Identifier(name) = callee {
+            if let Some(alias) = self.resolve_static_class_init_constructor_alias(name) {
+                Self::push_static_array_constructor_callee_candidate(
+                    &mut candidates,
+                    Expression::Identifier(alias),
+                );
+            }
+            if let Some(alias) = self.resolve_static_class_init_local_alias_expression(name) {
+                Self::push_static_array_constructor_callee_candidate(&mut candidates, alias);
+            }
+        }
+        candidates
+    }
+
+    fn static_array_constructor_candidate_is_builtin_array(&self, candidate: &Expression) -> bool {
+        if matches!(candidate, Expression::Identifier(name) if name == "Array" && self.is_unshadowed_builtin_identifier(name))
+        {
+            return true;
+        }
+        self.resolve_function_binding_from_expression(candidate)
+            .is_some_and(
+                |binding| matches!(binding, LocalFunctionBinding::Builtin(name) if name == "Array"),
+            )
+    }
+
+    fn user_function_from_static_array_constructor_candidate(
+        &self,
+        candidate: &Expression,
+    ) -> Option<&UserFunction> {
+        let candidate_function_name = match candidate {
+            Expression::Call { callee, arguments } if arguments.is_empty() => {
+                let Expression::Identifier(function_name) = callee.as_ref() else {
+                    return None;
+                };
+                self.resolve_static_class_init_call_constructor_alias(function_name)
+            }
+            _ => self
+                .resolve_function_binding_from_expression(candidate)
+                .and_then(|binding| match binding {
+                    LocalFunctionBinding::User(function_name) => Some(function_name),
+                    LocalFunctionBinding::Builtin(_) => None,
+                }),
+        }
+        .or_else(|| match candidate {
+            Expression::Identifier(name)
+                if self.user_function(name).is_some()
+                    || self
+                        .backend
+                        .function_registry
+                        .catalog
+                        .user_function(name)
+                        .is_some() =>
+            {
+                Some(name.clone())
+            }
+            Expression::Identifier(name) => self
+                .resolve_user_function_by_binding_name(name)
+                .map(|function| function.name.clone()),
+            _ => None,
+        })?;
+
+        self.user_function(&candidate_function_name).or_else(|| {
+            self.backend
+                .function_registry
+                .catalog
+                .user_function(&candidate_function_name)
+        })
     }
 
     pub(in crate::backend::direct_wasm) fn resolve_array_slice_binding(
@@ -573,6 +692,12 @@ impl<'a> FunctionCompiler<'a> {
                 self.resolve_array_binding_from_expression(&value)
             }
             Expression::Call { callee, arguments } => {
+                if matches!(callee.as_ref(), Expression::Identifier(name) if name == "__ayyTemplateObject")
+                    && let Some(CallArgument::Expression(cooked) | CallArgument::Spread(cooked)) =
+                        arguments.get(1)
+                {
+                    return self.resolve_array_binding_from_expression(cooked);
+                }
                 if let Some(binding) =
                     self.static_builtin_object_array_call_binding(callee, arguments)
                 {
@@ -605,32 +730,40 @@ impl<'a> FunctionCompiler<'a> {
                 self.static_enumerated_keys_binding(argument)
             }
             Expression::New { callee, arguments } => {
-                if matches!(callee.as_ref(), Expression::Identifier(name) if name == "Array" && self.is_unshadowed_builtin_identifier(name))
-                {
-                    return Some(self.array_constructor_binding_from_arguments(
-                        self.expand_call_arguments(arguments),
-                    ));
+                for candidate in self.static_array_constructor_callee_candidates(callee) {
+                    if self.static_array_constructor_candidate_is_builtin_array(&candidate) {
+                        return Some(self.array_constructor_binding_from_arguments(
+                            self.expand_call_arguments(arguments),
+                        ));
+                    }
+                    let Some(user_function) =
+                        self.user_function_from_static_array_constructor_candidate(&candidate)
+                    else {
+                        continue;
+                    };
+                    if let Some(binding) = self
+                        .resolve_array_binding_from_derived_array_constructor_new(
+                            &candidate,
+                            user_function,
+                            arguments,
+                            0,
+                        )
+                    {
+                        return Some(binding);
+                    }
+                    let Some(param_index) = user_function.enumerated_keys_param_index else {
+                        continue;
+                    };
+                    let argument = match arguments.get(param_index) {
+                        Some(CallArgument::Expression(expression))
+                        | Some(CallArgument::Spread(expression)) => expression,
+                        None => return Some(ArrayValueBinding { values: Vec::new() }),
+                    };
+                    if let Some(binding) = self.static_enumerated_keys_binding(argument) {
+                        return Some(binding);
+                    }
                 }
-                let Expression::Identifier(name) = callee.as_ref() else {
-                    return None;
-                };
-                let user_function = self.resolve_user_function_from_callee_name(name)?;
-                if let Some(binding) = self
-                    .resolve_array_binding_from_derived_array_constructor_new(
-                        user_function,
-                        arguments,
-                        0,
-                    )
-                {
-                    return Some(binding);
-                }
-                let param_index = user_function.enumerated_keys_param_index?;
-                let argument = match arguments.get(param_index) {
-                    Some(CallArgument::Expression(expression))
-                    | Some(CallArgument::Spread(expression)) => expression,
-                    None => return Some(ArrayValueBinding { values: Vec::new() }),
-                };
-                self.static_enumerated_keys_binding(argument)
+                None
             }
             Expression::Array(elements) => {
                 let mut values = Vec::new();

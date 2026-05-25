@@ -1,6 +1,75 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn iterator_close_callee_local_binding_sources(
+        &self,
+        binding: &LocalFunctionBinding,
+    ) -> HashSet<String> {
+        let LocalFunctionBinding::User(function_name) = binding else {
+            return HashSet::new();
+        };
+        self.resolve_registered_function_declaration(function_name)
+            .map(collect_function_constructor_local_bindings)
+            .unwrap_or_default()
+            .into_iter()
+            .map(|name| {
+                scoped_binding_source_name(&name)
+                    .unwrap_or(&name)
+                    .to_string()
+            })
+            .collect()
+    }
+
+    fn iterator_close_updated_binding_is_callee_local(
+        name: &str,
+        callee_local_sources: &HashSet<String>,
+    ) -> bool {
+        let source_name = scoped_binding_source_name(name).unwrap_or(name);
+        callee_local_sources.contains(source_name)
+    }
+
+    fn iterator_close_return_result_is_definitely_non_object(
+        &self,
+        binding: &LocalFunctionBinding,
+    ) -> bool {
+        let outcome = self
+            .resolve_terminal_function_outcome_from_binding(binding, &[])
+            .or_else(|| {
+                self.resolve_function_binding_static_return_expression(binding, &[])
+                    .map(StaticEvalOutcome::Value)
+            });
+        let value = outcome.as_ref().and_then(|outcome| match outcome {
+            StaticEvalOutcome::Value(value) => Some(self.materialize_static_expression(&value)),
+            StaticEvalOutcome::Throw(_) => None,
+        });
+        let kind = value
+            .as_ref()
+            .and_then(|return_value| self.infer_value_kind(return_value));
+        let result = kind.is_some_and(|kind| {
+            matches!(
+                kind,
+                StaticValueKind::Undefined
+                    | StaticValueKind::Null
+                    | StaticValueKind::Bool
+                    | StaticValueKind::Number
+                    | StaticValueKind::String
+                    | StaticValueKind::BigInt
+                    | StaticValueKind::Symbol
+            )
+        });
+        if std::env::var_os("AYY_TRACE_ITERATOR_CLOSE").is_some() {
+            let outcome_kind = match &outcome {
+                Some(StaticEvalOutcome::Value(_)) => "value",
+                Some(StaticEvalOutcome::Throw(_)) => "throw",
+                None => "none",
+            };
+            eprintln!(
+                "iterator_close:return_result_kind binding={binding:?} outcome={outcome_kind} materialized={value:?} kind={kind:?} non_object={result}"
+            );
+        }
+        result
+    }
+
     pub(in crate::backend::direct_wasm) fn array_prototype_symbol_iterator_deleted_binding_name()
     -> &'static str {
         "__ayy_builtin_deleted__Array_prototype_Symbol_iterator"
@@ -273,9 +342,12 @@ impl<'a> FunctionCompiler<'a> {
             .iterator_close_target_expression(expression)
             .unwrap_or_else(|| expression.clone());
         let Some(binding) = self.resolve_member_function_binding(expression, property) else {
-            let Some(LocalFunctionBinding::User(function_name)) =
+            let Some(getter_binding) =
                 self.iterator_close_source_return_getter_binding(expression, property)
             else {
+                return None;
+            };
+            let LocalFunctionBinding::User(function_name) = &getter_binding else {
                 return None;
             };
             let function = self.resolve_registered_function_declaration(&function_name)?;
@@ -286,29 +358,67 @@ impl<'a> FunctionCompiler<'a> {
             if assigned_names.is_empty() {
                 return None;
             }
+            let callee_local_sources =
+                self.iterator_close_callee_local_binding_sources(&getter_binding);
+            let mut snapshot_names =
+                collect_referenced_binding_names_from_statements(&function.body);
+            snapshot_names.extend(assigned_names);
+            let snapshot_bindings = snapshot_names
+                .into_iter()
+                .filter(|name| {
+                    !Self::iterator_close_updated_binding_is_callee_local(
+                        name,
+                        &callee_local_sources,
+                    ) && self.should_sync_async_delegate_snapshot_binding(name)
+                })
+                .map(|name| {
+                    let value =
+                        self.materialize_static_expression(&Expression::Identifier(name.clone()));
+                    (name, value)
+                })
+                .collect::<HashMap<_, _>>();
             if trace_iterator_close {
                 eprintln!(
-                    "iterator_close:getter_updated_bindings function={function_name} names={assigned_names:?}"
+                    "iterator_close:getter_snapshot_seed function={function_name} keys={:?}",
+                    snapshot_bindings.keys().collect::<Vec<_>>()
                 );
             }
-            return Some(
-                assigned_names
-                    .into_iter()
-                    .map(|name| {
-                        let value = self
-                            .materialize_static_expression(&Expression::Identifier(name.clone()));
-                        (name, value)
-                    })
-                    .collect(),
+            let result = self.resolve_bound_snapshot_function_result_with_arguments_and_this(
+                &getter_binding,
+                &snapshot_bindings,
+                &[],
+                &this_expression,
             );
+            if trace_iterator_close {
+                eprintln!(
+                    "iterator_close:getter_snapshot_result result_present={} updated={:?}",
+                    result.is_some(),
+                    result.as_ref().map(|(_, updated)| updated)
+                );
+            }
+            return result.map(|(_, mut updated_bindings)| {
+                updated_bindings.retain(|name, _| {
+                    !Self::iterator_close_updated_binding_is_callee_local(
+                        name,
+                        &callee_local_sources,
+                    )
+                });
+                updated_bindings
+            });
         };
+        let callee_local_sources = self.iterator_close_callee_local_binding_sources(&binding);
         let mut snapshot_bindings = match &binding {
             LocalFunctionBinding::User(function_name) => self
                 .resolve_registered_function_declaration(function_name)
                 .map(|function| {
                     collect_referenced_binding_names_from_statements(&function.body)
                         .into_iter()
-                        .filter(|name| self.should_sync_async_delegate_snapshot_binding(name))
+                        .filter(|name| {
+                            !Self::iterator_close_updated_binding_is_callee_local(
+                                name,
+                                &callee_local_sources,
+                            ) && self.should_sync_async_delegate_snapshot_binding(name)
+                        })
                         .map(|name| {
                             let identifier = Expression::Identifier(name.clone());
                             (name, self.materialize_static_expression(&identifier))
@@ -352,7 +462,12 @@ impl<'a> FunctionCompiler<'a> {
                 result.as_ref().map(|(_, updated)| updated)
             );
         }
-        result.map(|(_, updated_bindings)| updated_bindings)
+        result.map(|(_, mut updated_bindings)| {
+            updated_bindings.retain(|name, _| {
+                !Self::iterator_close_updated_binding_is_callee_local(name, &callee_local_sources)
+            });
+            updated_bindings
+        })
     }
 
     fn sync_iterator_close_call_snapshot_bindings(
@@ -791,13 +906,36 @@ impl<'a> FunctionCompiler<'a> {
                             expression,
                         )
                         .or_else(|| self.user_getter_terminal_return_value(binding))
+                        .or_else(|| {
+                            self.function_binding_defaults_to_undefined(binding)
+                                .then_some(Expression::Undefined)
+                        })
                     })
                 });
             if matches!(
                 getter_return_value,
                 Some(Expression::Undefined | Expression::Null)
             ) {
-                self.emit_numeric_expression(&return_member)?;
+                let getter_updated_bindings =
+                    self.resolve_iterator_close_updated_bindings(expression, &return_property);
+                if let Some(LocalFunctionBinding::User(function_name)) = getter_binding.as_ref() {
+                    let capture_slots = self
+                        .resolve_member_function_capture_slots(&call_target, &return_property)
+                        .or_else(|| {
+                            self.resolve_member_function_capture_slots(expression, &return_property)
+                        });
+                    self.emit_member_getter_call_with_bound_this(
+                        function_name,
+                        &call_target,
+                        capture_slots.as_ref(),
+                    )?;
+                } else {
+                    self.emit_numeric_expression(&return_member)?;
+                }
+                self.sync_iterator_close_call_snapshot_bindings(
+                    getter_updated_bindings,
+                    &return_member,
+                )?;
                 self.state.emission.output.instructions.push(0x1a);
                 self.push_i32_const(JS_UNDEFINED_TAG);
                 return Ok(());
@@ -827,15 +965,9 @@ impl<'a> FunctionCompiler<'a> {
                 self.push_i32_const(JS_UNDEFINED_TAG);
                 return Ok(());
             }
-            let return_result_is_non_object = return_binding
-                .as_ref()
-                .and_then(|binding| {
-                    self.resolve_function_binding_static_return_expression(binding, &[])
-                })
-                .and_then(|return_value| self.infer_value_kind(&return_value))
-                .is_some_and(|kind| {
-                    !matches!(kind, StaticValueKind::Object | StaticValueKind::Function)
-                });
+            let return_result_is_non_object = return_binding.as_ref().is_some_and(|binding| {
+                self.iterator_close_return_result_is_definitely_non_object(binding)
+            });
             let static_updated_bindings =
                 self.resolve_iterator_close_updated_bindings(expression, &return_property);
             let return_callee = return_member;

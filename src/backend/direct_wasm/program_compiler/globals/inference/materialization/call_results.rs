@@ -1,5 +1,239 @@
 use super::*;
 
+fn class_init_descriptor_data_value(expression: &Expression) -> Option<&Expression> {
+    let Expression::Object(entries) = expression else {
+        return None;
+    };
+
+    entries.iter().find_map(|entry| match entry {
+        ObjectEntry::Data { key, value }
+            if matches!(key, Expression::String(name) if name == "value") =>
+        {
+            Some(value)
+        }
+        _ => None,
+    })
+}
+
+fn class_init_define_property_data_value(expression: &Expression) -> Option<&Expression> {
+    let Expression::Call { callee, arguments } = expression else {
+        return None;
+    };
+    let Expression::Member { object, property } = callee.as_ref() else {
+        return None;
+    };
+    if !matches!(
+        object.as_ref(),
+        Expression::Identifier(name) if name == "Object" || name == "Reflect"
+    ) || !matches!(property.as_ref(), Expression::String(name) if name == "defineProperty")
+    {
+        return None;
+    }
+    let Some(CallArgument::Expression(descriptor)) = arguments.get(2) else {
+        return None;
+    };
+    class_init_descriptor_data_value(descriptor)
+}
+
+fn class_init_expression_has_external_side_effects(expression: &Expression) -> bool {
+    if let Some(value) = class_init_define_property_data_value(expression) {
+        if !inline_summary_side_effect_free_expression(value) {
+            return true;
+        }
+    }
+
+    match expression {
+        Expression::Array(elements) => elements.iter().any(|element| match element {
+            ArrayElement::Expression(expression) | ArrayElement::Spread(expression) => {
+                class_init_expression_has_external_side_effects(expression)
+            }
+        }),
+        Expression::Object(entries) => entries.iter().any(|entry| match entry {
+            ObjectEntry::Data { key, value } => {
+                class_init_expression_has_external_side_effects(key)
+                    || class_init_expression_has_external_side_effects(value)
+            }
+            ObjectEntry::Getter { key, getter } => {
+                class_init_expression_has_external_side_effects(key)
+                    || class_init_expression_has_external_side_effects(getter)
+            }
+            ObjectEntry::Setter { key, setter } => {
+                class_init_expression_has_external_side_effects(key)
+                    || class_init_expression_has_external_side_effects(setter)
+            }
+            ObjectEntry::Spread(expression) => {
+                class_init_expression_has_external_side_effects(expression)
+            }
+        }),
+        Expression::Member { object, property } => {
+            class_init_expression_has_external_side_effects(object)
+                || class_init_expression_has_external_side_effects(property)
+        }
+        Expression::SuperMember { property } => {
+            class_init_expression_has_external_side_effects(property)
+        }
+        Expression::Assign { value, .. }
+        | Expression::AssignMember { value, .. }
+        | Expression::AssignSuperMember { value, .. }
+        | Expression::Await(value)
+        | Expression::EnumerateKeys(value)
+        | Expression::GetIterator(value)
+        | Expression::IteratorClose(value)
+        | Expression::Unary {
+            expression: value, ..
+        } => class_init_expression_has_external_side_effects(value),
+        Expression::Binary { left, right, .. } => {
+            class_init_expression_has_external_side_effects(left)
+                || class_init_expression_has_external_side_effects(right)
+        }
+        Expression::Conditional {
+            condition,
+            then_expression,
+            else_expression,
+        } => {
+            class_init_expression_has_external_side_effects(condition)
+                || class_init_expression_has_external_side_effects(then_expression)
+                || class_init_expression_has_external_side_effects(else_expression)
+        }
+        Expression::Sequence(expressions) => expressions
+            .iter()
+            .any(class_init_expression_has_external_side_effects),
+        Expression::Call { callee, arguments }
+        | Expression::SuperCall { callee, arguments }
+        | Expression::New { callee, arguments } => {
+            class_init_expression_has_external_side_effects(callee)
+                || arguments.iter().any(|argument| {
+                    class_init_expression_has_external_side_effects(argument.expression())
+                })
+        }
+        Expression::Number(_)
+        | Expression::BigInt(_)
+        | Expression::String(_)
+        | Expression::Bool(_)
+        | Expression::Null
+        | Expression::Undefined
+        | Expression::NewTarget
+        | Expression::Identifier(_)
+        | Expression::This
+        | Expression::Sent
+        | Expression::Update { .. } => false,
+    }
+}
+
+fn class_init_statement_has_external_side_effects(statement: &Statement) -> bool {
+    match statement {
+        Statement::Declaration { body }
+        | Statement::Block { body }
+        | Statement::Labeled { body, .. }
+        | Statement::With { body, .. } => body
+            .iter()
+            .any(class_init_statement_has_external_side_effects),
+        Statement::Var { value, .. }
+        | Statement::Let { value, .. }
+        | Statement::Assign { value, .. }
+        | Statement::Throw(value)
+        | Statement::Return(value)
+        | Statement::Yield { value }
+        | Statement::YieldDelegate { value }
+        | Statement::Expression(value) => class_init_expression_has_external_side_effects(value),
+        Statement::AssignMember {
+            object,
+            property,
+            value,
+        } => {
+            class_init_expression_has_external_side_effects(object)
+                || class_init_expression_has_external_side_effects(property)
+                || class_init_expression_has_external_side_effects(value)
+        }
+        Statement::Print { values } => values
+            .iter()
+            .any(class_init_expression_has_external_side_effects),
+        Statement::If {
+            condition,
+            then_branch,
+            else_branch,
+        } => {
+            class_init_expression_has_external_side_effects(condition)
+                || then_branch
+                    .iter()
+                    .any(class_init_statement_has_external_side_effects)
+                || else_branch
+                    .iter()
+                    .any(class_init_statement_has_external_side_effects)
+        }
+        Statement::Try {
+            body,
+            catch_setup,
+            catch_body,
+            ..
+        } => body
+            .iter()
+            .chain(catch_setup)
+            .chain(catch_body)
+            .any(class_init_statement_has_external_side_effects),
+        Statement::Switch {
+            discriminant,
+            cases,
+            ..
+        } => {
+            class_init_expression_has_external_side_effects(discriminant)
+                || cases.iter().any(|case| {
+                    case.test
+                        .as_ref()
+                        .is_some_and(class_init_expression_has_external_side_effects)
+                        || case
+                            .body
+                            .iter()
+                            .any(class_init_statement_has_external_side_effects)
+                })
+        }
+        Statement::For {
+            init,
+            condition,
+            update,
+            break_hook,
+            body,
+            ..
+        } => {
+            init.iter()
+                .any(class_init_statement_has_external_side_effects)
+                || condition
+                    .as_ref()
+                    .is_some_and(class_init_expression_has_external_side_effects)
+                || update
+                    .as_ref()
+                    .is_some_and(class_init_expression_has_external_side_effects)
+                || break_hook
+                    .as_ref()
+                    .is_some_and(class_init_expression_has_external_side_effects)
+                || body
+                    .iter()
+                    .any(class_init_statement_has_external_side_effects)
+        }
+        Statement::While {
+            condition,
+            break_hook,
+            body,
+            ..
+        }
+        | Statement::DoWhile {
+            condition,
+            break_hook,
+            body,
+            ..
+        } => {
+            class_init_expression_has_external_side_effects(condition)
+                || break_hook
+                    .as_ref()
+                    .is_some_and(class_init_expression_has_external_side_effects)
+                || body
+                    .iter()
+                    .any(class_init_statement_has_external_side_effects)
+        }
+        Statement::Break { .. } | Statement::Continue { .. } => false,
+    }
+}
+
 impl DirectWasmCompiler {
     fn resolve_static_class_init_local_identifier(
         &self,
@@ -198,14 +432,20 @@ impl DirectWasmCompiler {
         }
     }
 
-    pub(in crate::backend::direct_wasm) fn infer_static_class_init_call_result_expression(
+    pub(in crate::backend::direct_wasm) fn infer_static_class_init_function_result_expression(
         &self,
-        function_name: &str,
+        function: &FunctionDeclaration,
     ) -> Option<Expression> {
-        if !function_name.starts_with("__ayy_class_init_") {
+        if !function.name.starts_with("__ayy_class_init_") {
             return None;
         }
-        let function = self.registered_function(function_name)?;
+        if function
+            .body
+            .iter()
+            .any(class_init_statement_has_external_side_effects)
+        {
+            return None;
+        }
         let mut local_bindings = HashMap::new();
 
         for statement in &function.body {
@@ -232,6 +472,14 @@ impl DirectWasmCompiler {
         }
 
         None
+    }
+
+    pub(in crate::backend::direct_wasm) fn infer_static_class_init_call_result_expression(
+        &self,
+        function_name: &str,
+    ) -> Option<Expression> {
+        let function = self.registered_function(function_name)?;
+        self.infer_static_class_init_function_result_expression(function)
     }
 
     pub(in crate::backend::direct_wasm) fn resolve_static_class_init_local_alias_expression(

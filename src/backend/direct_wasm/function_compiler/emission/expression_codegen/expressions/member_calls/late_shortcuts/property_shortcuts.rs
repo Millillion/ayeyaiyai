@@ -1,31 +1,80 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
-    fn expression_static_prototype_chain_contains_object(
+    fn static_object_reference_matches(
+        &self,
+        candidate: &Expression,
+        target: &Expression,
+        target_materialized: &Expression,
+        target_binding: Option<&LocalFunctionBinding>,
+        target_identity: Option<&Expression>,
+    ) -> bool {
+        if static_expression_matches(candidate, target)
+            || static_expression_matches(candidate, target_materialized)
+            || target_binding.is_some_and(|target_binding| {
+                self.resolve_function_binding_from_expression(candidate)
+                    .as_ref()
+                    == Some(target_binding)
+            })
+        {
+            return true;
+        }
+
+        let candidate_materialized = self.materialize_static_expression(candidate);
+        if !static_expression_matches(&candidate_materialized, candidate)
+            && (static_expression_matches(&candidate_materialized, target)
+                || static_expression_matches(&candidate_materialized, target_materialized))
+        {
+            return true;
+        }
+
+        if let Some(target_identity) = target_identity
+            && let Some(candidate_identity) = self
+                .resolve_static_object_identity_expression(candidate)
+                .or_else(|| self.resolve_static_object_identity_expression(&candidate_materialized))
+        {
+            return static_expression_matches(&candidate_identity, target_identity);
+        }
+
+        false
+    }
+
+    fn expression_static_prototype_chain_contains_object_result(
         &self,
         expression: &Expression,
         target: &Expression,
-    ) -> bool {
+    ) -> Option<bool> {
         let Some(mut prototype) = self.resolve_static_object_prototype_expression(expression)
         else {
-            return false;
+            return None;
         };
         let target_materialized = self.materialize_static_expression(target);
         let target_binding = self.resolve_function_binding_from_expression(target);
+        let target_identity = self
+            .resolve_static_object_identity_expression(target)
+            .or_else(|| self.resolve_static_object_identity_expression(&target_materialized));
+        if target_identity.is_none()
+            && target_binding.is_none()
+            && !matches!(
+                target_materialized,
+                Expression::Object(_) | Expression::Array(_)
+            )
+        {
+            return None;
+        }
         let mut visited = Vec::new();
 
         for _ in 0..32 {
             let materialized_prototype = self.materialize_static_expression(&prototype);
             for candidate in [&prototype, &materialized_prototype] {
-                if static_expression_matches(candidate, target)
-                    || static_expression_matches(candidate, &target_materialized)
-                    || target_binding.as_ref().is_some_and(|target_binding| {
-                        self.resolve_function_binding_from_expression(candidate)
-                            .as_ref()
-                            == Some(target_binding)
-                    })
-                {
-                    return true;
+                if self.static_object_reference_matches(
+                    candidate,
+                    target,
+                    &target_materialized,
+                    target_binding.as_ref(),
+                    target_identity.as_ref(),
+                ) {
+                    return Some(true);
                 }
             }
             if matches!(materialized_prototype, Expression::Null)
@@ -34,7 +83,7 @@ impl<'a> FunctionCompiler<'a> {
                         || static_expression_matches(visited, &materialized_prototype)
                 })
             {
-                return false;
+                return Some(false);
             }
             visited.push(prototype.clone());
 
@@ -42,17 +91,17 @@ impl<'a> FunctionCompiler<'a> {
                 .resolve_static_object_prototype_expression(&materialized_prototype)
                 .or_else(|| self.resolve_static_object_prototype_expression(&prototype))
             else {
-                return false;
+                return None;
             };
             if static_expression_matches(&next_prototype, &prototype)
                 || static_expression_matches(&next_prototype, &materialized_prototype)
             {
-                return false;
+                return Some(false);
             }
             prototype = next_prototype;
         }
 
-        false
+        None
     }
 
     pub(super) fn emit_property_member_call_shortcuts(
@@ -62,22 +111,92 @@ impl<'a> FunctionCompiler<'a> {
         property: &Expression,
         arguments: &[CallArgument],
     ) -> DirectResult<bool> {
+        if matches!(
+            property,
+            Expression::String(property_name)
+                if property_name == "__lookupGetter__" || property_name == "__lookupSetter__"
+        ) && let [CallArgument::Expression(argument_property)] = arguments
+        {
+            self.emit_numeric_expression(object)?;
+            self.state.emission.output.instructions.push(0x1a);
+            self.emit_numeric_expression(argument_property)?;
+            self.state.emission.output.instructions.push(0x1a);
+            let accessor = if matches!(property, Expression::String(property_name) if property_name == "__lookupGetter__")
+            {
+                self.resolve_member_getter_binding(object, argument_property)
+            } else {
+                self.resolve_member_setter_binding(object, argument_property)
+            };
+            match accessor {
+                Some(LocalFunctionBinding::User(function_name)) => {
+                    if let Some(runtime_value) = self.user_function_runtime_value(&function_name) {
+                        self.push_i32_const(runtime_value);
+                    } else {
+                        self.push_i32_const(JS_UNDEFINED_TAG);
+                    }
+                }
+                Some(LocalFunctionBinding::Builtin(function_name)) => {
+                    if let Some(runtime_value) = builtin_function_runtime_value(&function_name) {
+                        self.push_i32_const(runtime_value);
+                    } else {
+                        self.push_i32_const(JS_UNDEFINED_TAG);
+                    }
+                }
+                None => self.push_i32_const(JS_UNDEFINED_TAG),
+            }
+            return Ok(true);
+        }
+
         if matches!(property, Expression::String(property_name) if property_name == "isPrototypeOf")
             && let [CallArgument::Expression(candidate)] = arguments
-            && (self.expression_inherits_from_prototype_for_instanceof(candidate, object)
-                || self.expression_static_prototype_chain_contains_object(candidate, object))
+            && let Some(result) = self
+                .expression_static_prototype_chain_contains_object_result(candidate, object)
+                .or_else(|| {
+                    self.expression_inherits_from_prototype_for_instanceof(candidate, object)
+                        .then_some(true)
+                })
         {
             self.emit_numeric_expression(object)?;
             self.state.emission.output.instructions.push(0x1a);
             self.emit_numeric_expression(candidate)?;
             self.state.emission.output.instructions.push(0x1a);
-            self.push_i32_const(1);
+            self.push_i32_const(if result { 1 } else { 0 });
             return Ok(true);
         }
 
         if matches!(property, Expression::String(property_name) if property_name == "hasOwnProperty")
             && let [CallArgument::Expression(argument_property)] = arguments
         {
+            let trace_has_own_shortcut = std::env::var_os("AYY_TRACE_HAS_OWN_SHORTCUT").is_some();
+            if trace_has_own_shortcut {
+                eprintln!(
+                    "has_own_shortcut:start fn={:?} object={object:?} property={argument_property:?} object_binding={} runtime_owner={:?} function_binding={}",
+                    self.current_function_name(),
+                    self.resolve_object_binding_from_expression(object)
+                        .is_some(),
+                    match object {
+                        Expression::Identifier(name) => {
+                            self.runtime_object_property_shadow_owner_name_for_identifier(name)
+                        }
+                        Expression::This => {
+                            self.runtime_object_property_shadow_owner_name_for_identifier("this")
+                        }
+                        _ => None,
+                    },
+                    self.resolve_function_binding_from_expression(object)
+                        .is_some()
+                );
+            }
+            if let Some(has_property) = self
+                .resolve_top_level_global_object_has_own_property_result(object, argument_property)
+            {
+                self.emit_numeric_expression(object)?;
+                self.state.emission.output.instructions.push(0x1a);
+                self.emit_numeric_expression(argument_property)?;
+                self.state.emission.output.instructions.push(0x1a);
+                self.push_i32_const(if has_property { 1 } else { 0 });
+                return Ok(true);
+            }
             if let Some(array_binding) = self.resolve_array_binding_from_expression(object) {
                 let has_property = matches!(argument_property, Expression::String(property_name) if property_name == "length")
                     || argument_index_from_expression(argument_property).is_some_and(|index| {
@@ -210,6 +329,29 @@ impl<'a> FunctionCompiler<'a> {
                 return Ok(true);
             }
 
+            if let Some(accepted_without_mutation) = self
+                .static_define_property_accepts_without_mutation(
+                    target,
+                    property_name_expression,
+                    descriptor,
+                )
+            {
+                if accepted_without_mutation {
+                    self.emit_define_property_target_result_with_argument_effects(
+                        target,
+                        property_name_expression,
+                        descriptor,
+                    )?;
+                    return Ok(true);
+                }
+                self.emit_define_property_argument_effects(
+                    target,
+                    property_name_expression,
+                    descriptor,
+                )?;
+                return self.emit_named_error_throw("TypeError").map(|_| true);
+            }
+
             let resolved_property_name = self
                 .resolve_property_key_expression(property_name_expression)
                 .unwrap_or_else(|| self.materialize_static_expression(property_name_expression));
@@ -303,6 +445,11 @@ impl<'a> FunctionCompiler<'a> {
                 eprintln!("object_define_property_shortcut:fallback target={target:?}");
             }
 
+            self.sync_static_define_property_descriptor_metadata_from_expression(
+                target,
+                property_name_expression,
+                descriptor,
+            );
             self.emit_numeric_expression(target)?;
             self.state.emission.output.instructions.push(0x1a);
             self.emit_property_key_expression_effects(property_name_expression)?;

@@ -22,4 +22,26 @@ impl<'a> FunctionCompiler<'a> {
         self.state.runtime.locals.next_local_index += 1;
         name
     }
+
+    pub(in crate::backend::direct_wasm) fn ensure_named_internal_local(
+        &mut self,
+        name: &str,
+        kind: StaticValueKind,
+    ) -> u32 {
+        if let Some(local_index) = self.state.runtime.locals.get(name).copied() {
+            return local_index;
+        }
+
+        let local_index = self.state.runtime.locals.next_local_index;
+        self.state
+            .runtime
+            .locals
+            .insert(name.to_string(), local_index);
+        self.state
+            .speculation
+            .static_semantics
+            .set_local_kind(name, kind);
+        self.state.runtime.locals.next_local_index += 1;
+        local_index
+    }
 }

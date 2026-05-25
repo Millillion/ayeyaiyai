@@ -32,28 +32,50 @@ impl<'a> GlobalIdentifierValueQueryAccess for FunctionCompilerBackend<'a> {
         self.global_semantics
             .values
             .find_home_object_binding_name(function_name)
+            .or_else(|| {
+                self.shared_global_semantics
+                    .values
+                    .find_home_object_binding_name(function_name)
+            })
     }
 }
 
 impl<'a> GlobalValueBindingQueryAccess for FunctionCompilerBackend<'a> {
     fn global_value_binding(&self, name: &str) -> Option<&Expression> {
-        self.global_semantics.values.value_binding(name)
+        self.global_semantics
+            .values
+            .value_binding(name)
+            .or_else(|| self.shared_global_semantics.values.value_binding(name))
     }
 }
 
 impl<'a> GlobalObjectValueQueryAccess for FunctionCompilerBackend<'a> {
     fn global_object_binding(&self, name: &str) -> Option<&ObjectValueBinding> {
-        self.global_semantics.values.object_binding(name)
+        self.global_semantics
+            .values
+            .object_binding(name)
+            .or_else(|| self.shared_global_semantics.values.object_binding(name))
     }
 
     fn global_prototype_object_binding(&self, name: &str) -> Option<&ObjectValueBinding> {
-        self.global_semantics.values.prototype_object_binding(name)
+        self.global_semantics
+            .values
+            .prototype_object_binding(name)
+            .or_else(|| {
+                self.shared_global_semantics
+                    .values
+                    .prototype_object_binding(name)
+            })
     }
 
     fn global_has_prototype_object_binding(&self, name: &str) -> bool {
         self.global_semantics
             .values
             .has_prototype_object_binding(name)
+            || self
+                .shared_global_semantics
+                .values
+                .has_prototype_object_binding(name)
     }
 
     fn global_proxy_binding(&self, name: &str) -> Option<&ProxyValueBinding> {
@@ -64,6 +86,11 @@ impl<'a> GlobalObjectValueQueryAccess for FunctionCompilerBackend<'a> {
         self.global_semantics
             .values
             .object_prototype_expression(name)
+            .or_else(|| {
+                self.shared_global_semantics
+                    .values
+                    .object_prototype_expression(name)
+            })
     }
 }
 
@@ -94,6 +121,13 @@ impl<'a> GlobalArgumentsValueQueryAccess for FunctionCompilerBackend<'a> {
 
 impl<'a> GlobalPropertyDescriptorQueryAccess for FunctionCompilerBackend<'a> {
     fn global_property_descriptor(&self, name: &str) -> Option<&GlobalPropertyDescriptorState> {
-        self.global_semantics.values.property_descriptor(name)
+        self.global_semantics
+            .values
+            .property_descriptor(name)
+            .or_else(|| {
+                self.shared_global_semantics
+                    .values
+                    .property_descriptor(name)
+            })
     }
 }

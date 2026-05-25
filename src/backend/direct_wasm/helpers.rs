@@ -13,7 +13,9 @@ pub(in crate::backend::direct_wasm) use self::{
     eval_rewrite::namespace_eval_program_internal_function_names,
     object_values::{
         boxed_primitive_value_property_expression, date_value_property_expression,
-        empty_object_value_binding, function_constructor_source_property_expression,
+        empty_object_value_binding, function_constructor_realm_id_property_expression,
+        function_constructor_realm_object_prototype_property_expression,
+        function_constructor_source_property_expression,
         map_collection_entries_property_expression, map_collection_kind_property_expression,
         map_collection_marker_property_expression, map_collection_size_property_expression,
         typed_array_length_property_expression, typed_array_name_property_expression,

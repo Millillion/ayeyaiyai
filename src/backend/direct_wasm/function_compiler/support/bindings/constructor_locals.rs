@@ -4,6 +4,7 @@ pub(in crate::backend::direct_wasm) fn collect_function_constructor_local_bindin
     function: &FunctionDeclaration,
 ) -> HashSet<String> {
     let mut bindings = collect_declared_bindings_from_statements_recursive(&function.body);
+    bindings.extend(collect_compiler_generated_local_bindings(function));
     bindings.extend(collect_static_direct_eval_var_bindings(function));
     bindings.extend(
         function
@@ -25,6 +26,29 @@ pub(in crate::backend::direct_wasm) fn collect_function_constructor_local_bindin
     }
     bindings.insert("arguments".to_string());
     bindings
+}
+
+fn is_compiler_generated_local_binding(name: &str) -> bool {
+    name.starts_with("__ayy_optional_base_")
+        || name.starts_with("__ayy_target_object_")
+        || name.starts_with("__ayy_target_property_")
+        || name.starts_with("__ayy_postfix_previous_")
+}
+
+fn collect_compiler_generated_local_bindings(function: &FunctionDeclaration) -> HashSet<String> {
+    let mut assigned = HashSet::new();
+    for statement in &function.body {
+        collect_assigned_binding_names_from_statement(statement, &mut assigned);
+    }
+    for parameter in &function.params {
+        if let Some(default) = &parameter.default {
+            collect_assigned_binding_names_from_expression(default, &mut assigned);
+        }
+    }
+    assigned
+        .into_iter()
+        .filter(|name| is_compiler_generated_local_binding(name))
+        .collect()
 }
 
 pub(in crate::backend::direct_wasm) fn collect_static_direct_eval_var_bindings(

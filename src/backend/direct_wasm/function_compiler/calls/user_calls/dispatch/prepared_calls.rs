@@ -248,12 +248,15 @@ impl<'a> FunctionCompiler<'a> {
                 user_function.name
             );
         }
-        let (return_value_local, parameter_object_shadow_writebacks) = self
-            .emit_user_function_runtime_call_from_expanded_arguments(
-                user_function,
-                expanded_arguments,
-                updated_bindings.as_ref(),
-            )?;
+        let (
+            return_value_local,
+            parameter_object_shadow_writebacks,
+            static_argument_member_writebacks,
+        ) = self.emit_user_function_runtime_call_from_expanded_arguments(
+            user_function,
+            expanded_arguments,
+            updated_bindings.as_ref(),
+        )?;
         if trace_user_calls {
             eprintln!(
                 "prepared_user_call:after_runtime_call target={} return_local={}",
@@ -281,6 +284,10 @@ impl<'a> FunctionCompiler<'a> {
             saved_this_shadow_owner.as_deref(),
             return_value_local,
             expanded_arguments,
-        )
+        )?;
+        self.sync_static_argument_object_member_writeback_values(
+            &static_argument_member_writebacks,
+        );
+        Ok(())
     }
 }

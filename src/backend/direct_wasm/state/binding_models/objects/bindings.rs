@@ -21,4 +21,5 @@ pub(in crate::backend::direct_wasm) struct ProxyValueBinding {
     pub(in crate::backend::direct_wasm) get_own_property_descriptor_binding:
         Option<LocalFunctionBinding>,
     pub(in crate::backend::direct_wasm) define_property_binding: Option<LocalFunctionBinding>,
+    pub(in crate::backend::direct_wasm) own_keys_binding: Option<LocalFunctionBinding>,
 }

@@ -6,11 +6,15 @@ impl<'a> FunctionCompiler<'a> {
         object: &Expression,
         property: &Expression,
     ) -> DirectResult<bool> {
-        if !matches!(property, Expression::String(name) if name == "name")
+        if !matches!(property, Expression::String(name) if name == "name" || name == "constructor")
             || !inline_summary_side_effect_free_expression(object)
         {
             return Ok(false);
         }
+        let property_name = match property {
+            Expression::String(name) => name.as_str(),
+            _ => return Ok(false),
+        };
 
         let mut open_frames = 0;
         for name in NATIVE_ERROR_NAMES {
@@ -23,7 +27,13 @@ impl<'a> FunctionCompiler<'a> {
             self.state.emission.output.instructions.push(0x04);
             self.state.emission.output.instructions.push(I32_TYPE);
             self.push_control_frame();
-            self.emit_static_string_literal(name)?;
+            match property_name {
+                "name" => self.emit_static_string_literal(name)?,
+                "constructor" => self.push_i32_const(
+                    builtin_function_runtime_value(name).unwrap_or(JS_TYPEOF_FUNCTION_TAG),
+                ),
+                _ => unreachable!("native error member read prefilter limits properties"),
+            }
             self.state.emission.output.instructions.push(0x05);
             open_frames += 1;
         }
@@ -33,7 +43,12 @@ impl<'a> FunctionCompiler<'a> {
         }
 
         if !self.emit_runtime_user_function_property_read(object, property)? {
-            self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
+            let fallback = if property_name == "constructor" {
+                JS_TYPEOF_FUNCTION_TAG
+            } else {
+                JS_TYPEOF_OBJECT_TAG
+            };
+            self.push_i32_const(fallback);
         }
         for _ in 0..open_frames {
             self.state.emission.output.instructions.push(0x0b);
@@ -47,7 +62,11 @@ impl<'a> FunctionCompiler<'a> {
         object: &Expression,
         property: &Expression,
     ) -> DirectResult<bool> {
-        let Expression::String(text) = object else {
+        let resolved_text = match object {
+            Expression::String(text) => Some(text.clone()),
+            _ => self.resolve_static_string_value(object),
+        };
+        let Some(text) = resolved_text else {
             return Ok(false);
         };
         if let Some(index) = argument_index_from_expression(property) {
@@ -59,7 +78,7 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(true);
         }
         if matches!(property, Expression::String(name) if name == "length") {
-            self.push_i32_const(text.chars().count() as i32);
+            self.push_i32_const(text.encode_utf16().count() as i32);
             return Ok(true);
         }
         Ok(false)

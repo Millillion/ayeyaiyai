@@ -1,0 +1,378 @@
+Program {
+    strict: false,
+    functions: [
+        FunctionDeclaration {
+            name: "__ayy_fnexpr_1",
+            top_level_binding: None,
+            params: [],
+            body: [],
+            register_global: false,
+            kind: Ordinary,
+            self_binding: None,
+            mapped_arguments: true,
+            strict: false,
+            lexical_this: false,
+            derived_constructor: false,
+            direct_eval_in_class_field_initializer: false,
+            length: 0,
+            synthetic_capture_bindings: [],
+            immutable_class_bindings: [],
+            private_brand_binding: None,
+        },
+        FunctionDeclaration {
+            name: "__ayy_fnexpr_2__name_id",
+            top_level_binding: None,
+            params: [],
+            body: [],
+            register_global: false,
+            kind: Ordinary,
+            self_binding: None,
+            mapped_arguments: true,
+            strict: false,
+            lexical_this: false,
+            derived_constructor: false,
+            direct_eval_in_class_field_initializer: false,
+            length: 0,
+            synthetic_capture_bindings: [],
+            immutable_class_bindings: [],
+            private_brand_binding: None,
+        },
+        FunctionDeclaration {
+            name: "__ayy_fnexpr_3",
+            top_level_binding: None,
+            params: [],
+            body: [],
+            register_global: false,
+            kind: Ordinary,
+            self_binding: None,
+            mapped_arguments: true,
+            strict: false,
+            lexical_this: false,
+            derived_constructor: false,
+            direct_eval_in_class_field_initializer: false,
+            length: 0,
+            synthetic_capture_bindings: [],
+            immutable_class_bindings: [],
+            private_brand_binding: None,
+        },
+        FunctionDeclaration {
+            name: "__ayy_fnexpr_4",
+            top_level_binding: None,
+            params: [],
+            body: [],
+            register_global: false,
+            kind: Ordinary,
+            self_binding: None,
+            mapped_arguments: true,
+            strict: false,
+            lexical_this: false,
+            derived_constructor: false,
+            direct_eval_in_class_field_initializer: false,
+            length: 0,
+            synthetic_capture_bindings: [],
+            immutable_class_bindings: [],
+            private_brand_binding: None,
+        },
+    ],
+    statements: [
+        Var {
+            name: "namedSym",
+            value: Call {
+                callee: Identifier(
+                    "Symbol",
+                ),
+                arguments: [
+                    Expression(
+                        String(
+                            "test262",
+                        ),
+                    ),
+                ],
+            },
+        },
+        Var {
+            name: "anonSym",
+            value: Call {
+                callee: Identifier(
+                    "Symbol",
+                ),
+                arguments: [],
+            },
+        },
+        Var {
+            name: "o",
+            value: Undefined,
+        },
+        Assign {
+            name: "o",
+            value: Object(
+                [
+                    Data {
+                        key: String(
+                            "xId",
+                        ),
+                        value: Sequence(
+                            [
+                                Number(
+                                    0.0,
+                                ),
+                                Identifier(
+                                    "__ayy_fnexpr_1",
+                                ),
+                            ],
+                        ),
+                    },
+                    Data {
+                        key: String(
+                            "id",
+                        ),
+                        value: Identifier(
+                            "__ayy_fnexpr_2__name_id",
+                        ),
+                    },
+                    Data {
+                        key: Sequence(
+                            [
+                                Identifier(
+                                    "anonSym",
+                                ),
+                            ],
+                        ),
+                        value: Identifier(
+                            "__ayy_fnexpr_3",
+                        ),
+                    },
+                    Data {
+                        key: Sequence(
+                            [
+                                Identifier(
+                                    "namedSym",
+                                ),
+                            ],
+                        ),
+                        value: Identifier(
+                            "__ayy_fnexpr_4",
+                        ),
+                    },
+                ],
+            ),
+        },
+        Expression(
+            Call {
+                callee: Identifier(
+                    "assert",
+                ),
+                arguments: [
+                    Expression(
+                        Binary {
+                            op: NotEqual,
+                            left: Member {
+                                object: Member {
+                                    object: Identifier(
+                                        "o",
+                                    ),
+                                    property: String(
+                                        "xId",
+                                    ),
+                                },
+                                property: String(
+                                    "name",
+                                ),
+                            },
+                            right: String(
+                                "xId",
+                            ),
+                        },
+                    ),
+                ],
+            },
+        ),
+        Expression(
+            Call {
+                callee: Identifier(
+                    "verifyProperty",
+                ),
+                arguments: [
+                    Expression(
+                        Member {
+                            object: Identifier(
+                                "o",
+                            ),
+                            property: String(
+                                "id",
+                            ),
+                        },
+                    ),
+                    Expression(
+                        String(
+                            "name",
+                        ),
+                    ),
+                    Expression(
+                        Object(
+                            [
+                                Data {
+                                    key: String(
+                                        "value",
+                                    ),
+                                    value: String(
+                                        "id",
+                                    ),
+                                },
+                                Data {
+                                    key: String(
+                                        "writable",
+                                    ),
+                                    value: Bool(
+                                        false,
+                                    ),
+                                },
+                                Data {
+                                    key: String(
+                                        "enumerable",
+                                    ),
+                                    value: Bool(
+                                        false,
+                                    ),
+                                },
+                                Data {
+                                    key: String(
+                                        "configurable",
+                                    ),
+                                    value: Bool(
+                                        true,
+                                    ),
+                                },
+                            ],
+                        ),
+                    ),
+                ],
+            },
+        ),
+        Expression(
+            Call {
+                callee: Identifier(
+                    "verifyProperty",
+                ),
+                arguments: [
+                    Expression(
+                        Member {
+                            object: Identifier(
+                                "o",
+                            ),
+                            property: Identifier(
+                                "anonSym",
+                            ),
+                        },
+                    ),
+                    Expression(
+                        String(
+                            "name",
+                        ),
+                    ),
+                    Expression(
+                        Object(
+                            [
+                                Data {
+                                    key: String(
+                                        "value",
+                                    ),
+                                    value: String(
+                                        "",
+                                    ),
+                                },
+                                Data {
+                                    key: String(
+                                        "writable",
+                                    ),
+                                    value: Bool(
+                                        false,
+                                    ),
+                                },
+                                Data {
+                                    key: String(
+                                        "enumerable",
+                                    ),
+                                    value: Bool(
+                                        false,
+                                    ),
+                                },
+                                Data {
+                                    key: String(
+                                        "configurable",
+                                    ),
+                                    value: Bool(
+                                        true,
+                                    ),
+                                },
+                            ],
+                        ),
+                    ),
+                ],
+            },
+        ),
+        Expression(
+            Call {
+                callee: Identifier(
+                    "verifyProperty",
+                ),
+                arguments: [
+                    Expression(
+                        Member {
+                            object: Identifier(
+                                "o",
+                            ),
+                            property: Identifier(
+                                "namedSym",
+                            ),
+                        },
+                    ),
+                    Expression(
+                        String(
+                            "name",
+                        ),
+                    ),
+                    Expression(
+                        Object(
+                            [
+                                Data {
+                                    key: String(
+                                        "value",
+                                    ),
+                                    value: String(
+                                        "[test262]",
+                                    ),
+                                },
+                                Data {
+                                    key: String(
+                                        "writable",
+                                    ),
+                                    value: Bool(
+                                        false,
+                                    ),
+                                },
+                                Data {
+                                    key: String(
+                                        "enumerable",
+                                    ),
+                                    value: Bool(
+                                        false,
+                                    ),
+                                },
+                                Data {
+                                    key: String(
+                                        "configurable",
+                                    ),
+                                    value: Bool(
+                                        true,
+                                    ),
+                                },
+                            ],
+                        ),
+                    ),
+                ],
+            },
+        ),
+    ],
+}
+ok

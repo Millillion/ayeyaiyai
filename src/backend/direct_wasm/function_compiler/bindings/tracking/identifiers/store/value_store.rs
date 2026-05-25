@@ -10,6 +10,7 @@ struct PreparedIdentifierValueStore {
     function_binding_expression: Expression,
     function_binding: Option<LocalFunctionBinding>,
     object_binding_expression: Expression,
+    object_binding: Option<ObjectValueBinding>,
     kind: Option<StaticValueKind>,
     static_string_value: Option<String>,
     exact_static_number: Option<f64>,
@@ -34,13 +35,26 @@ impl<'a> FunctionCompiler<'a> {
             self.emit_named_error_throw("TypeError")?;
             return Ok(());
         }
+        if self.assignment_targets_immutable_function_self_binding(name) {
+            if self.state.speculation.execution_context.strict_mode {
+                self.emit_named_error_throw("TypeError")?;
+            }
+            return Ok(());
+        }
         self.state
             .runtime
             .locals
             .deleted_builtin_identifiers
             .remove(name);
         let prepared = self.prepare_identifier_value_store(name, value_expression);
-        self.store_prepared_identifier_value_local(name, value_local, prepared)
+        let result = self.store_prepared_identifier_value_local(name, value_local, prepared);
+        if result.is_ok() {
+            self.state
+                .emission
+                .emitted_value_bindings
+                .insert(name.to_string());
+        }
+        result
     }
 
     pub(in crate::backend::direct_wasm) fn emit_initialize_identifier_value_local(
@@ -55,6 +69,17 @@ impl<'a> FunctionCompiler<'a> {
             .deleted_builtin_identifiers
             .remove(name);
         let prepared = self.prepare_identifier_value_store(name, value_expression);
-        self.store_prepared_identifier_value_local_for_initialization(name, value_local, prepared)
+        let result = self.store_prepared_identifier_value_local_for_initialization(
+            name,
+            value_local,
+            prepared,
+        );
+        if result.is_ok() {
+            self.state
+                .emission
+                .emitted_value_bindings
+                .insert(name.to_string());
+        }
+        result
     }
 }

@@ -93,6 +93,217 @@ fn binary_expression_references_internal_iterator_step(expression: &Expression) 
 }
 
 impl<'a> FunctionCompiler<'a> {
+    fn strict_equality_type_mismatch_result(
+        left_kind: StaticValueKind,
+        right_kind: StaticValueKind,
+        op: BinaryOp,
+    ) -> Option<bool> {
+        if !matches!(op, BinaryOp::Equal | BinaryOp::NotEqual) {
+            return None;
+        }
+
+        let js_type_class = |kind: StaticValueKind| match kind {
+            StaticValueKind::Number => Some(0),
+            StaticValueKind::Bool => Some(1),
+            StaticValueKind::String => Some(2),
+            StaticValueKind::BigInt => Some(3),
+            StaticValueKind::Symbol => Some(4),
+            StaticValueKind::Null => Some(5),
+            StaticValueKind::Undefined => Some(6),
+            StaticValueKind::Object | StaticValueKind::Function => Some(7),
+            StaticValueKind::Unknown => None,
+        };
+
+        let left_type = js_type_class(left_kind)?;
+        let right_type = js_type_class(right_kind)?;
+        if left_type == right_type {
+            return None;
+        }
+
+        Some(matches!(op, BinaryOp::NotEqual))
+    }
+
+    fn emit_static_strict_type_mismatch_comparison(
+        &mut self,
+        op: BinaryOp,
+        left: &Expression,
+        right: &Expression,
+    ) -> DirectResult<bool> {
+        if self.expression_has_dynamic_member_property_access(left)
+            || self.expression_has_dynamic_member_property_access(right)
+        {
+            return Ok(false);
+        }
+        let Some(result) = self
+            .infer_value_kind(left)
+            .zip(self.infer_value_kind(right))
+            .and_then(|(left_kind, right_kind)| {
+                Self::strict_equality_type_mismatch_result(left_kind, right_kind, op)
+            })
+        else {
+            return Ok(false);
+        };
+
+        if !inline_summary_side_effect_free_expression(left) {
+            self.emit_numeric_expression(left)?;
+            self.state.emission.output.instructions.push(0x1a);
+        }
+        if !inline_summary_side_effect_free_expression(right) {
+            self.emit_numeric_expression(right)?;
+            self.state.emission.output.instructions.push(0x1a);
+        }
+        self.push_i32_const(i32::from(result));
+        Ok(true)
+    }
+
+    pub(in crate::backend::direct_wasm) fn binary_expression_calls_user_function(
+        &self,
+        expression: &Expression,
+    ) -> bool {
+        match expression {
+            Expression::Call { callee, arguments }
+            | Expression::SuperCall { callee, arguments }
+            | Expression::New { callee, arguments } => {
+                matches!(callee.as_ref(), Expression::Identifier(name) if self.contains_user_function(name))
+                    || matches!(
+                        self.resolve_function_binding_from_expression(callee),
+                        Some(LocalFunctionBinding::User(_))
+                    )
+                    || self.binary_expression_calls_user_function(callee)
+                    || arguments.iter().any(|argument| match argument {
+                        CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                            self.binary_expression_calls_user_function(expression)
+                        }
+                    })
+            }
+            Expression::Unary { expression, .. }
+            | Expression::Await(expression)
+            | Expression::EnumerateKeys(expression)
+            | Expression::GetIterator(expression)
+            | Expression::IteratorClose(expression)
+            | Expression::Assign {
+                value: expression, ..
+            } => self.binary_expression_calls_user_function(expression),
+            Expression::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                self.binary_expression_calls_user_function(object)
+                    || self.binary_expression_calls_user_function(property)
+                    || self.binary_expression_calls_user_function(value)
+            }
+            Expression::AssignSuperMember { property, value } => {
+                self.binary_expression_calls_user_function(property)
+                    || self.binary_expression_calls_user_function(value)
+            }
+            Expression::Binary { left, right, .. } => {
+                self.binary_expression_calls_user_function(left)
+                    || self.binary_expression_calls_user_function(right)
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                self.binary_expression_calls_user_function(condition)
+                    || self.binary_expression_calls_user_function(then_expression)
+                    || self.binary_expression_calls_user_function(else_expression)
+            }
+            Expression::Sequence(expressions) => expressions
+                .iter()
+                .any(|expression| self.binary_expression_calls_user_function(expression)),
+            Expression::Array(elements) => elements.iter().any(|element| match element {
+                ArrayElement::Expression(expression) | ArrayElement::Spread(expression) => {
+                    self.binary_expression_calls_user_function(expression)
+                }
+            }),
+            Expression::Object(entries) => entries.iter().any(|entry| match entry {
+                ObjectEntry::Data { key, value } => {
+                    self.binary_expression_calls_user_function(key)
+                        || self.binary_expression_calls_user_function(value)
+                }
+                ObjectEntry::Getter { key, getter } => {
+                    self.binary_expression_calls_user_function(key)
+                        || self.binary_expression_calls_user_function(getter)
+                }
+                ObjectEntry::Setter { key, setter } => {
+                    self.binary_expression_calls_user_function(key)
+                        || self.binary_expression_calls_user_function(setter)
+                }
+                ObjectEntry::Spread(expression) => {
+                    self.binary_expression_calls_user_function(expression)
+                }
+            }),
+            Expression::Member { object, property } => {
+                self.binary_expression_calls_user_function(object)
+                    || self.binary_expression_calls_user_function(property)
+            }
+            Expression::SuperMember { property } => {
+                self.binary_expression_calls_user_function(property)
+            }
+            Expression::Identifier(_)
+            | Expression::Update { .. }
+            | Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined
+            | Expression::NewTarget
+            | Expression::This
+            | Expression::Sent => false,
+        }
+    }
+
+    fn static_boxed_primitive_constructor_call_is_side_effect_free(
+        &self,
+        expression: &Expression,
+    ) -> bool {
+        if self
+            .resolve_static_boxed_primitive_value(expression)
+            .is_none()
+        {
+            return false;
+        }
+        let (callee, arguments) = match expression {
+            Expression::Call { callee, arguments } | Expression::New { callee, arguments } => {
+                (callee.as_ref(), arguments.as_slice())
+            }
+            Expression::Sequence(expressions) => {
+                let Some((last, prefix)) = expressions.split_last() else {
+                    return false;
+                };
+                return prefix
+                    .iter()
+                    .all(inline_summary_side_effect_free_expression)
+                    && self.static_boxed_primitive_constructor_call_is_side_effect_free(last);
+            }
+            Expression::Identifier(_) => return true,
+            _ => return false,
+        };
+        if !matches!(
+            callee,
+            Expression::Identifier(name)
+                if matches!(name.as_str(), "Boolean" | "Number" | "String" | "Object")
+                    && self.is_unshadowed_builtin_identifier(name)
+        ) {
+            return false;
+        }
+        arguments.iter().all(|argument| match argument {
+            CallArgument::Expression(value) => inline_summary_side_effect_free_expression(value),
+            CallArgument::Spread(_) => false,
+        })
+    }
+
+    fn numeric_static_outcome_operand_is_side_effect_free(&self, expression: &Expression) -> bool {
+        if self.binary_expression_calls_user_function(expression) {
+            return false;
+        }
+        inline_summary_side_effect_free_expression(expression)
+            || self.static_boxed_primitive_constructor_call_is_side_effect_free(expression)
+    }
+
     fn binary_expression_reads_runtime_nonlocal_binding(&self, expression: &Expression) -> bool {
         if self.current_function_name().is_none() {
             return false;
@@ -111,11 +322,17 @@ impl<'a> FunctionCompiler<'a> {
         })
     }
 
-    fn push_unique_runtime_string_candidate(candidates: &mut Vec<String>, text: String) -> bool {
-        if candidates.iter().any(|candidate| candidate == &text) {
+    fn push_unique_runtime_string_value_candidate(
+        candidates: &mut Vec<(Expression, String)>,
+        value: Expression,
+        text: String,
+    ) -> bool {
+        if candidates.iter().any(|(candidate_value, candidate_text)| {
+            static_expression_matches(candidate_value, &value) && candidate_text == &text
+        }) {
             return false;
         }
-        candidates.push(text);
+        candidates.push((value, text));
         true
     }
 
@@ -128,6 +345,32 @@ impl<'a> FunctionCompiler<'a> {
             return None;
         };
         (value.is_finite() && value.fract() == 0.0).then_some(*value as i64)
+    }
+
+    fn active_loop_static_array_length_member(&self, expression: &Expression) -> Option<i64> {
+        let Expression::Member { object, property } = expression else {
+            return None;
+        };
+        if !matches!(property.as_ref(), Expression::String(name) if name == "length") {
+            return None;
+        }
+        i64::try_from(
+            self.resolve_array_binding_from_expression(object)?
+                .values
+                .len(),
+        )
+        .ok()
+    }
+
+    fn expression_is_active_loop_indexed_static_array_member(
+        &self,
+        expression: &Expression,
+    ) -> bool {
+        let Expression::Member { object, property } = expression else {
+            return false;
+        };
+        self.resolve_array_binding_from_expression(object).is_some()
+            && self.expression_depends_on_active_loop_assignment(property)
     }
 
     pub(in crate::backend::direct_wasm) fn expression_contains_assignment_or_update(
@@ -214,6 +457,228 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    pub(in crate::backend::direct_wasm) fn expression_references_internal_assignment_temp(
+        expression: &Expression,
+    ) -> bool {
+        match expression {
+            Expression::Identifier(name) => {
+                name.starts_with("__ayy_optional_base_")
+                    || name.starts_with("__ayy_target_object_")
+                    || name.starts_with("__ayy_target_property_")
+                    || name.starts_with("__ayy_postfix_previous_")
+            }
+            Expression::Unary { expression, .. }
+            | Expression::Await(expression)
+            | Expression::EnumerateKeys(expression)
+            | Expression::GetIterator(expression)
+            | Expression::IteratorClose(expression) => {
+                Self::expression_references_internal_assignment_temp(expression)
+            }
+            Expression::Binary { left, right, .. } => {
+                Self::expression_references_internal_assignment_temp(left)
+                    || Self::expression_references_internal_assignment_temp(right)
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                Self::expression_references_internal_assignment_temp(condition)
+                    || Self::expression_references_internal_assignment_temp(then_expression)
+                    || Self::expression_references_internal_assignment_temp(else_expression)
+            }
+            Expression::Sequence(expressions) => expressions
+                .iter()
+                .any(Self::expression_references_internal_assignment_temp),
+            Expression::Array(elements) => elements.iter().any(|element| match element {
+                crate::ir::hir::ArrayElement::Expression(expression)
+                | crate::ir::hir::ArrayElement::Spread(expression) => {
+                    Self::expression_references_internal_assignment_temp(expression)
+                }
+            }),
+            Expression::Object(entries) => entries.iter().any(|entry| match entry {
+                crate::ir::hir::ObjectEntry::Data { key, value } => {
+                    Self::expression_references_internal_assignment_temp(key)
+                        || Self::expression_references_internal_assignment_temp(value)
+                }
+                crate::ir::hir::ObjectEntry::Getter { key, getter } => {
+                    Self::expression_references_internal_assignment_temp(key)
+                        || Self::expression_references_internal_assignment_temp(getter)
+                }
+                crate::ir::hir::ObjectEntry::Setter { key, setter } => {
+                    Self::expression_references_internal_assignment_temp(key)
+                        || Self::expression_references_internal_assignment_temp(setter)
+                }
+                crate::ir::hir::ObjectEntry::Spread(expression) => {
+                    Self::expression_references_internal_assignment_temp(expression)
+                }
+            }),
+            Expression::Member { object, property } => {
+                Self::expression_references_internal_assignment_temp(object)
+                    || Self::expression_references_internal_assignment_temp(property)
+            }
+            Expression::SuperMember { property } => {
+                Self::expression_references_internal_assignment_temp(property)
+            }
+            Expression::Assign { value, .. } => {
+                Self::expression_references_internal_assignment_temp(value)
+            }
+            Expression::Update { name, .. } => {
+                name.starts_with("__ayy_optional_base_")
+                    || name.starts_with("__ayy_target_object_")
+                    || name.starts_with("__ayy_target_property_")
+                    || name.starts_with("__ayy_postfix_previous_")
+            }
+            Expression::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                Self::expression_references_internal_assignment_temp(object)
+                    || Self::expression_references_internal_assignment_temp(property)
+                    || Self::expression_references_internal_assignment_temp(value)
+            }
+            Expression::AssignSuperMember { property, value } => {
+                Self::expression_references_internal_assignment_temp(property)
+                    || Self::expression_references_internal_assignment_temp(value)
+            }
+            Expression::Call { callee, arguments }
+            | Expression::SuperCall { callee, arguments }
+            | Expression::New { callee, arguments } => {
+                Self::expression_references_internal_assignment_temp(callee)
+                    || arguments.iter().any(|argument| match argument {
+                        CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                            Self::expression_references_internal_assignment_temp(expression)
+                        }
+                    })
+            }
+            Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined
+            | Expression::This
+            | Expression::NewTarget
+            | Expression::Sent => false,
+        }
+    }
+
+    fn expression_is_relational_binary(expression: &Expression) -> bool {
+        matches!(
+            expression,
+            Expression::Binary {
+                op: BinaryOp::LessThan
+                    | BinaryOp::LessThanOrEqual
+                    | BinaryOp::GreaterThan
+                    | BinaryOp::GreaterThanOrEqual,
+                ..
+            }
+        )
+    }
+
+    fn flatten_addition_parts<'expr>(
+        expression: &'expr Expression,
+        parts: &mut Vec<&'expr Expression>,
+    ) {
+        if let Expression::Binary {
+            op: BinaryOp::Add,
+            left,
+            right,
+        } = expression
+        {
+            Self::flatten_addition_parts(left, parts);
+            Self::flatten_addition_parts(right, parts);
+        } else {
+            parts.push(expression);
+        }
+    }
+
+    fn static_template_number_to_string(value: f64) -> String {
+        if value.is_nan() {
+            "NaN".to_string()
+        } else if value == f64::INFINITY {
+            "Infinity".to_string()
+        } else if value == f64::NEG_INFINITY {
+            "-Infinity".to_string()
+        } else if value == 0.0 {
+            "0".to_string()
+        } else if value.is_finite() && value.fract() == 0.0 {
+            (value as i64).to_string()
+        } else {
+            value.to_string()
+        }
+    }
+
+    fn emit_static_template_update_addition(
+        &mut self,
+        expression: &Expression,
+    ) -> DirectResult<bool> {
+        let mut parts = Vec::new();
+        Self::flatten_addition_parts(expression, &mut parts);
+        if parts.len() < 3 {
+            return Ok(false);
+        }
+
+        let mut saw_string = false;
+        let mut saw_update = false;
+        let mut simulated_numbers = HashMap::new();
+        let mut updates = Vec::new();
+        let mut text = String::new();
+
+        for part in parts {
+            match part {
+                Expression::String(fragment) => {
+                    saw_string = true;
+                    text.push_str(fragment);
+                }
+                Expression::Update { name, op, prefix } => {
+                    saw_update = true;
+                    let previous_number = if let Some(value) = simulated_numbers.get(name).copied()
+                    {
+                        value
+                    } else {
+                        let target = Expression::Identifier(name.clone());
+                        let Some(value) = self.resolve_static_number_value(&target) else {
+                            return Ok(false);
+                        };
+                        simulated_numbers.insert(name.clone(), value);
+                        value
+                    };
+                    let increment = match op {
+                        UpdateOp::Increment => 1.0,
+                        UpdateOp::Decrement => -1.0,
+                    };
+                    let next_number = previous_number + increment;
+                    let yielded_number = if *prefix {
+                        next_number
+                    } else {
+                        previous_number
+                    };
+                    text.push_str(&Self::static_template_number_to_string(yielded_number));
+                    simulated_numbers.insert(name.clone(), next_number);
+                    updates.push((name.clone(), next_number));
+                }
+                _ => return Ok(false),
+            }
+        }
+
+        if !saw_string || !saw_update {
+            return Ok(false);
+        }
+
+        for (name, next_number) in updates {
+            let next_expression = Expression::Number(next_number);
+            let next_local = self.allocate_temp_local();
+            self.emit_numeric_expression(&next_expression)?;
+            self.push_local_set(next_local);
+            self.emit_store_identifier_value_local(&name, &next_expression, next_local)?;
+            self.note_identifier_numeric_kind(&name);
+        }
+        self.emit_static_string_literal(&text)?;
+        Ok(true)
+    }
+
     pub(in crate::backend::direct_wasm) fn active_loop_integer_value(
         &mut self,
         expression: &Expression,
@@ -265,6 +730,7 @@ impl<'a> FunctionCompiler<'a> {
                 self.active_loop_integer_value(left, environment)?
                     - self.active_loop_integer_value(right, environment)?,
             ),
+            Expression::Member { .. } => self.active_loop_static_array_length_member(expression),
             _ => None,
         }
     }
@@ -343,6 +809,23 @@ impl<'a> FunctionCompiler<'a> {
                 .map(|value| value.to_string())
                 .or_else(|| self.resolve_static_string_value(expression))
                 .or_else(|| {
+                    let value = self
+                        .state
+                        .speculation
+                        .static_semantics
+                        .local_value_binding(name)
+                        .cloned()?;
+                    (!static_expression_matches(&value, expression))
+                        .then(|| self.active_loop_stringified_expression_value(&value, environment))
+                        .flatten()
+                })
+                .or_else(|| {
+                    let value = self.global_value_binding(name).cloned()?;
+                    (!static_expression_matches(&value, expression))
+                        .then(|| self.active_loop_stringified_expression_value(&value, environment))
+                        .flatten()
+                })
+                .or_else(|| {
                     self.global_value_binding(name)
                         .and_then(Self::active_loop_integer_literal)
                         .map(|value| value.to_string())
@@ -374,11 +857,46 @@ impl<'a> FunctionCompiler<'a> {
                 self.active_loop_stringified_expression_value(left, environment)?,
                 self.active_loop_stringified_expression_value(right, environment)?
             )),
+            Expression::Member { object, property } => {
+                let value = self.active_loop_indexed_static_array_member_value(
+                    object,
+                    property,
+                    environment,
+                )?;
+                self.active_loop_stringified_expression_value(&value, environment)
+                    .or_else(|| {
+                        self.resolve_static_string_concat_value(
+                            &value,
+                            self.current_function_name(),
+                        )
+                    })
+            }
             _ if !self.expression_depends_on_active_loop_assignment(expression) => {
                 self.resolve_static_string_concat_value(expression, self.current_function_name())
             }
             _ => None,
         }
+    }
+
+    fn active_loop_indexed_static_array_member_value(
+        &mut self,
+        object: &Expression,
+        property: &Expression,
+        environment: &HashMap<String, i64>,
+    ) -> Option<Expression> {
+        let index = self.active_loop_integer_value(property, environment)?;
+        if index < 0 {
+            return None;
+        }
+        let array_binding = self.resolve_array_binding_from_expression(object)?;
+        Some(
+            array_binding
+                .values
+                .get(index as usize)
+                .cloned()
+                .flatten()
+                .unwrap_or(Expression::Undefined),
+        )
     }
 
     fn active_loop_candidate_value_expression(
@@ -406,7 +924,9 @@ impl<'a> FunctionCompiler<'a> {
         expression: &Expression,
         require_string_kind: bool,
     ) -> Option<Vec<(HashMap<String, i64>, Expression, String)>> {
-        if self.expression_has_dynamic_member_property_access(expression) {
+        if self.expression_has_dynamic_member_property_access(expression)
+            && !self.expression_is_active_loop_indexed_static_array_member(expression)
+        {
             return None;
         }
         if !self.expression_depends_on_active_loop_assignment(expression) {
@@ -699,7 +1219,9 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         expression: &Expression,
     ) -> Vec<(Expression, String)> {
-        if self.expression_has_dynamic_member_property_access(expression) {
+        if self.expression_has_dynamic_member_property_access(expression)
+            && !self.expression_is_active_loop_indexed_static_array_member(expression)
+        {
             return Vec::new();
         }
         let mut candidates = Vec::new();
@@ -905,37 +1427,131 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         left: &Expression,
         right_candidates: &[(Expression, String)],
-    ) -> Vec<String> {
+    ) -> Vec<(Expression, String)> {
         let mut candidates = Vec::new();
-        if let Some(text) = self.resolve_static_string_value(left) {
-            Self::push_unique_runtime_string_candidate(&mut candidates, text);
+        let left_kind = self.infer_value_kind(left);
+        let left_is_definitely_string = left_kind == Some(StaticValueKind::String);
+        if left_is_definitely_string && let Some(text) = self.resolve_static_string_value(left) {
+            Self::push_unique_runtime_string_value_candidate(
+                &mut candidates,
+                Expression::String(text.clone()),
+                text,
+            );
         }
-        if self.expression_depends_on_active_loop_assignment(left)
-            && self.infer_value_kind(left) == Some(StaticValueKind::String)
+        if left_is_definitely_string
+            && inline_summary_side_effect_free_expression(left)
+            && let Some(text) =
+                self.resolve_static_string_concat_value(left, self.current_function_name())
         {
-            Self::push_unique_runtime_string_candidate(&mut candidates, String::new());
+            let value = self.materialize_static_expression(left);
+            if !static_expression_matches(&value, left) {
+                Self::push_unique_runtime_string_value_candidate(&mut candidates, value, text);
+            }
+        }
+        match left_kind {
+            Some(StaticValueKind::Undefined) | Some(StaticValueKind::Unknown) | None => {
+                Self::push_unique_runtime_string_value_candidate(
+                    &mut candidates,
+                    Expression::Undefined,
+                    "undefined".to_string(),
+                );
+            }
+            _ => {}
+        }
+        match left_kind {
+            Some(StaticValueKind::Null) | Some(StaticValueKind::Unknown) | None => {
+                Self::push_unique_runtime_string_value_candidate(
+                    &mut candidates,
+                    Expression::Null,
+                    "null".to_string(),
+                );
+            }
+            _ => {}
+        }
+        if left_kind == Some(StaticValueKind::Bool) {
+            Self::push_unique_runtime_string_value_candidate(
+                &mut candidates,
+                Expression::Bool(false),
+                "false".to_string(),
+            );
+            Self::push_unique_runtime_string_value_candidate(
+                &mut candidates,
+                Expression::Bool(true),
+                "true".to_string(),
+            );
+        }
+        if self.expression_depends_on_active_loop_assignment(left) && left_is_definitely_string {
+            Self::push_unique_runtime_string_value_candidate(
+                &mut candidates,
+                Expression::String(String::new()),
+                String::new(),
+            );
         }
         if self.expression_depends_on_active_loop_assignment(left) {
             for (_, text) in self.runtime_string_addition_right_candidates(left) {
-                Self::push_unique_runtime_string_candidate(&mut candidates, text);
+                Self::push_unique_runtime_string_value_candidate(
+                    &mut candidates,
+                    Expression::String(text.clone()),
+                    text,
+                );
                 if candidates.len() >= 256 {
                     break;
                 }
             }
         }
-        {
+        if left_is_definitely_string {
+            let string_data = self.backend.module_artifacts.string_data.clone();
+            let mut fragments = Vec::new();
+            for (_, bytes) in string_data {
+                let Ok(text) = String::from_utf8(bytes) else {
+                    continue;
+                };
+                if text.len() == 1
+                    && text
+                        .as_bytes()
+                        .first()
+                        .is_some_and(|byte| byte.is_ascii_alphanumeric())
+                    && !fragments.iter().any(|existing| existing == &text)
+                {
+                    fragments.push(text);
+                }
+                if fragments.len() >= 8 {
+                    break;
+                }
+            }
+            let mut prefix = String::new();
+            for fragment in &fragments {
+                prefix.push_str(fragment);
+                Self::push_unique_runtime_string_value_candidate(
+                    &mut candidates,
+                    Expression::String(prefix.clone()),
+                    prefix.clone(),
+                );
+                if candidates.len() >= 256 {
+                    break;
+                }
+            }
+        }
+        if left_is_definitely_string {
             let string_data = self.backend.module_artifacts.string_data.clone();
             for (_, bytes) in string_data {
                 let Ok(text) = String::from_utf8(bytes) else {
                     continue;
                 };
-                Self::push_unique_runtime_string_candidate(&mut candidates, text);
+                Self::push_unique_runtime_string_value_candidate(
+                    &mut candidates,
+                    Expression::String(text.clone()),
+                    text,
+                );
                 if candidates.len() >= 256 {
                     break;
                 }
             }
         }
-        let mut frontier = candidates.clone();
+        let mut frontier = candidates
+            .iter()
+            .map(|(_, text)| text.clone())
+            .collect::<Vec<_>>();
         let depth = right_candidates.len().clamp(1, 6);
         for _ in 0..depth {
             if candidates.len() >= 256 || frontier.is_empty() {
@@ -945,8 +1561,11 @@ impl<'a> FunctionCompiler<'a> {
             for prefix in frontier {
                 for (_, suffix) in right_candidates {
                     let combined = format!("{prefix}{suffix}");
-                    if Self::push_unique_runtime_string_candidate(&mut candidates, combined.clone())
-                    {
+                    if Self::push_unique_runtime_string_value_candidate(
+                        &mut candidates,
+                        Expression::String(combined.clone()),
+                        combined.clone(),
+                    ) {
                         next_frontier.push(combined);
                         if candidates.len() >= 256 {
                             break;
@@ -960,7 +1579,7 @@ impl<'a> FunctionCompiler<'a> {
             frontier = next_frontier;
         }
 
-        for text in &candidates {
+        for (_, text) in &candidates {
             self.intern_runtime_string_candidate_text(text);
         }
         candidates
@@ -1087,8 +1706,10 @@ impl<'a> FunctionCompiler<'a> {
         left: &Expression,
         right: &Expression,
     ) -> DirectResult<bool> {
-        if self.expression_has_dynamic_member_property_access(left)
-            || self.expression_has_dynamic_member_property_access(right)
+        if (self.expression_has_dynamic_member_property_access(left)
+            && !self.expression_is_active_loop_indexed_static_array_member(left))
+            || (self.expression_has_dynamic_member_property_access(right)
+                && !self.expression_is_active_loop_indexed_static_array_member(right))
         {
             return Ok(false);
         }
@@ -1124,10 +1745,10 @@ impl<'a> FunctionCompiler<'a> {
         self.push_binary_op(BinaryOp::Add)?;
         self.push_local_set(result_local);
 
-        for left_text in left_candidates {
+        for (left_value, left_text) in left_candidates {
             for (right_value, right_text) in &right_candidates {
                 self.push_local_get(left_local);
-                self.emit_numeric_expression(&Expression::String(left_text.clone()))?;
+                self.emit_runtime_string_candidate_value(&left_value)?;
                 self.push_binary_op(BinaryOp::Equal)?;
 
                 self.push_local_get(right_local);
@@ -1226,8 +1847,15 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(false);
         };
 
+        let dividend_local = self.allocate_temp_local();
+        let divisor_local = self.allocate_temp_local();
         self.emit_numeric_expression(dividend)?;
-        self.emit_numeric_expression(divisor)?;
+        self.push_local_set(dividend_local);
+        self.emit_check_global_throw_for_user_call()?;
+        self.emit_conditionally_reachable_numeric_expression_to_local(divisor, divisor_local)?;
+        self.emit_check_global_throw_for_user_call()?;
+        self.push_local_get(dividend_local);
+        self.push_local_get(divisor_local);
         self.push_binary_op(BinaryOp::Modulo)?;
         self.push_i32_const(0);
         self.push_binary_op(BinaryOp::NotEqual)?;
@@ -1244,8 +1872,9 @@ impl<'a> FunctionCompiler<'a> {
         let right_local = self.allocate_temp_local();
         self.emit_numeric_expression(left)?;
         self.push_local_set(left_local);
-        self.emit_numeric_expression(right)?;
-        self.push_local_set(right_local);
+        self.emit_check_global_throw_for_user_call()?;
+        self.emit_conditionally_reachable_numeric_expression_to_local(right, right_local)?;
+        self.emit_check_global_throw_for_user_call()?;
 
         self.push_local_get(right_local);
         self.state.emission.output.instructions.push(0x45);
@@ -1345,6 +1974,534 @@ impl<'a> FunctionCompiler<'a> {
         Ok(false)
     }
 
+    fn emit_static_relational_operand_effects(
+        &mut self,
+        expression: &Expression,
+    ) -> DirectResult<bool> {
+        if self
+            .resolve_static_primitive_expression_with_context(
+                expression,
+                self.current_function_name(),
+            )
+            .is_some()
+            || self
+                .resolve_static_boxed_primitive_value(expression)
+                .is_some()
+        {
+            return Ok(true);
+        }
+        if let Some(plan) = self.resolve_ordinary_to_primitive_plan(expression) {
+            let result_local = self.allocate_temp_local();
+            match self.emit_ordinary_to_primitive_effects_from_plan(
+                expression,
+                &plan,
+                result_local,
+            )? {
+                SymbolToPrimitiveHandling::Handled => return Ok(true),
+                SymbolToPrimitiveHandling::AlwaysThrows => return Ok(false),
+                SymbolToPrimitiveHandling::NotHandled => {
+                    if !inline_summary_side_effect_free_expression(expression) {
+                        self.emit_numeric_expression(expression)?;
+                        self.state.emission.output.instructions.push(0x1a);
+                    }
+                    return Ok(true);
+                }
+            }
+        }
+
+        if !inline_summary_side_effect_free_expression(expression) {
+            self.emit_numeric_expression(expression)?;
+            self.state.emission.output.instructions.push(0x1a);
+        }
+
+        Ok(true)
+    }
+
+    fn emit_ordinary_to_primitive_effects_from_plan(
+        &mut self,
+        expression: &Expression,
+        plan: &OrdinaryToPrimitivePlan,
+        result_local: u32,
+    ) -> DirectResult<SymbolToPrimitiveHandling> {
+        for step in &plan.steps {
+            if matches!(step.binding, LocalFunctionBinding::Builtin(_)) {
+                match &step.outcome {
+                    StaticEvalOutcome::Throw(_) => {
+                        self.emit_static_eval_outcome(&step.outcome)?;
+                        return Ok(SymbolToPrimitiveHandling::AlwaysThrows);
+                    }
+                    StaticEvalOutcome::Value(value) => {
+                        match self.static_expression_is_non_object_primitive(value) {
+                            Some(true) => return Ok(SymbolToPrimitiveHandling::Handled),
+                            Some(false) => continue,
+                            None => return Ok(SymbolToPrimitiveHandling::NotHandled),
+                        }
+                    }
+                }
+            }
+
+            if !self.emit_binding_call_result_to_local_with_explicit_this(
+                &step.binding,
+                &[],
+                expression,
+                JS_TYPEOF_OBJECT_TAG,
+                result_local,
+            )? {
+                return Ok(SymbolToPrimitiveHandling::NotHandled);
+            }
+            match &step.outcome {
+                StaticEvalOutcome::Throw(_) => {
+                    self.emit_check_global_throw_for_user_call()?;
+                    return Ok(SymbolToPrimitiveHandling::AlwaysThrows);
+                }
+                StaticEvalOutcome::Value(value) => {
+                    match self.static_expression_is_non_object_primitive(value) {
+                        Some(true) => return Ok(SymbolToPrimitiveHandling::Handled),
+                        Some(false) => continue,
+                        None => return Ok(SymbolToPrimitiveHandling::NotHandled),
+                    }
+                }
+            }
+        }
+        self.emit_named_error_throw("TypeError")?;
+        Ok(SymbolToPrimitiveHandling::AlwaysThrows)
+    }
+
+    fn emit_static_relational_outcome(
+        &mut self,
+        left: &Expression,
+        right: &Expression,
+        outcome: &StaticEvalOutcome,
+    ) -> DirectResult<()> {
+        if matches!(outcome, StaticEvalOutcome::Value(_)) {
+            if !self.emit_static_relational_operand_effects(left)?
+                || !self.emit_static_relational_operand_effects(right)?
+            {
+                return Ok(());
+            }
+        }
+        self.emit_static_eval_outcome(outcome)
+    }
+
+    fn resolve_static_relational_primitive_after_effects(
+        &self,
+        expression: &Expression,
+    ) -> Option<(Option<OrdinaryToPrimitivePlan>, Expression)> {
+        let current_function_name = self.current_function_name();
+        if let Some(primitive) =
+            self.resolve_static_primitive_expression_with_context(expression, current_function_name)
+        {
+            return Some((None, primitive));
+        }
+        if let Some(primitive) = self.resolve_static_boxed_primitive_value(expression) {
+            return Some((None, primitive));
+        }
+
+        let plan = self.resolve_ordinary_to_primitive_plan(expression)?;
+        for step in &plan.steps {
+            match &step.outcome {
+                StaticEvalOutcome::Throw(_) => return None,
+                StaticEvalOutcome::Value(value) => {
+                    if let Some(primitive) = self.resolve_static_primitive_expression_with_context(
+                        value,
+                        current_function_name,
+                    ) {
+                        return Some((Some(plan), primitive));
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    fn emit_static_relational_operand_plan_effects(
+        &mut self,
+        expression: &Expression,
+        plan: Option<&OrdinaryToPrimitivePlan>,
+    ) -> DirectResult<bool> {
+        let Some(plan) = plan else {
+            return Ok(true);
+        };
+
+        let result_local = self.allocate_temp_local();
+        match self.emit_ordinary_to_primitive_effects_from_plan(expression, plan, result_local)? {
+            SymbolToPrimitiveHandling::Handled => Ok(true),
+            SymbolToPrimitiveHandling::AlwaysThrows | SymbolToPrimitiveHandling::NotHandled => {
+                Ok(false)
+            }
+        }
+    }
+
+    fn emit_effectful_static_relational_comparison(
+        &mut self,
+        op: BinaryOp,
+        left: &Expression,
+        right: &Expression,
+    ) -> DirectResult<bool> {
+        if !matches!(
+            op,
+            BinaryOp::LessThan
+                | BinaryOp::LessThanOrEqual
+                | BinaryOp::GreaterThan
+                | BinaryOp::GreaterThanOrEqual
+        ) || Self::expression_contains_assignment_or_update(left)
+            || Self::expression_contains_assignment_or_update(right)
+        {
+            return Ok(false);
+        }
+
+        let Some((left_plan, left_value)) =
+            self.resolve_static_relational_primitive_after_effects(left)
+        else {
+            return Ok(false);
+        };
+        let Some((right_plan, right_value)) =
+            self.resolve_static_relational_primitive_after_effects(right)
+        else {
+            return Ok(false);
+        };
+        let Some(outcome) = self.resolve_static_relational_outcome_with_context(
+            op,
+            &left_value,
+            &right_value,
+            self.current_function_name(),
+        ) else {
+            return Ok(false);
+        };
+        if !matches!(outcome, StaticEvalOutcome::Value(_)) {
+            return Ok(false);
+        }
+
+        if !self.emit_static_relational_operand_plan_effects(left, left_plan.as_ref())?
+            || !self.emit_static_relational_operand_plan_effects(right, right_plan.as_ref())?
+        {
+            return Ok(false);
+        }
+        self.emit_static_eval_outcome(&outcome)?;
+        Ok(true)
+    }
+
+    fn emit_effectful_static_numeric_binary_outcome(
+        &mut self,
+        op: BinaryOp,
+        left: &Expression,
+        right: &Expression,
+    ) -> DirectResult<bool> {
+        if !matches!(
+            op,
+            BinaryOp::Subtract
+                | BinaryOp::Multiply
+                | BinaryOp::Divide
+                | BinaryOp::Modulo
+                | BinaryOp::BitwiseAnd
+                | BinaryOp::BitwiseOr
+                | BinaryOp::BitwiseXor
+                | BinaryOp::LeftShift
+                | BinaryOp::RightShift
+                | BinaryOp::UnsignedRightShift
+        ) || Self::expression_contains_assignment_or_update(left)
+            || Self::expression_contains_assignment_or_update(right)
+            || self.expression_depends_on_active_loop_assignment(left)
+            || self.expression_depends_on_active_loop_assignment(right)
+        {
+            return Ok(false);
+        }
+
+        let current_function_name = self.current_function_name();
+        let left_plan = if self
+            .symbol_to_primitive_preempts_ordinary_to_primitive(left, current_function_name)
+        {
+            None
+        } else {
+            self.resolve_ordinary_to_primitive_plan(left)
+        };
+        let right_plan = if self
+            .symbol_to_primitive_preempts_ordinary_to_primitive(right, current_function_name)
+        {
+            None
+        } else {
+            self.resolve_ordinary_to_primitive_plan(right)
+        };
+        if left_plan.is_none() && right_plan.is_none() {
+            return Ok(false);
+        }
+
+        let Some(outcome) = self.resolve_static_numeric_binary_outcome_with_context(
+            op,
+            left,
+            right,
+            current_function_name,
+        ) else {
+            return Ok(false);
+        };
+
+        let left_local = self.allocate_temp_local();
+        self.emit_numeric_expression(left)?;
+        self.push_local_set(left_local);
+        self.emit_check_global_throw_for_user_call()?;
+        let right_local = self.allocate_temp_local();
+        self.emit_conditionally_reachable_numeric_expression_to_local(right, right_local)?;
+        self.emit_check_global_throw_for_user_call()?;
+
+        if let Some(plan) = left_plan.as_ref() {
+            match self.emit_ordinary_to_primitive_from_plan(left, plan, left_local)? {
+                SymbolToPrimitiveHandling::AlwaysThrows => {
+                    self.push_i32_const(JS_UNDEFINED_TAG);
+                    return Ok(true);
+                }
+                SymbolToPrimitiveHandling::Handled => {}
+                SymbolToPrimitiveHandling::NotHandled => return Ok(false),
+            }
+        }
+
+        if let Some(plan) = right_plan.as_ref() {
+            match self.emit_ordinary_to_primitive_from_plan(right, plan, right_local)? {
+                SymbolToPrimitiveHandling::AlwaysThrows => {
+                    self.push_i32_const(JS_UNDEFINED_TAG);
+                    return Ok(true);
+                }
+                SymbolToPrimitiveHandling::Handled => {}
+                SymbolToPrimitiveHandling::NotHandled => return Ok(false),
+            }
+        }
+
+        self.emit_static_eval_outcome(&outcome)?;
+        Ok(true)
+    }
+
+    fn emit_throw_aware_numeric_binary_op(
+        &mut self,
+        op: BinaryOp,
+        left: &Expression,
+        right: &Expression,
+    ) -> DirectResult<()> {
+        let left_local = self.allocate_temp_local();
+        let right_local = self.allocate_temp_local();
+        self.emit_numeric_expression(left)?;
+        self.push_local_set(left_local);
+        self.emit_check_global_throw_for_user_call()?;
+        self.emit_conditionally_reachable_numeric_expression_to_local(right, right_local)?;
+        self.emit_check_global_throw_for_user_call()?;
+        if matches!(op, BinaryOp::Add | BinaryOp::Subtract) {
+            return self.emit_nan_tag_aware_numeric_binary_op(op, left_local, right_local);
+        }
+        self.push_local_get(left_local);
+        self.push_local_get(right_local);
+        self.push_binary_op(op)
+    }
+
+    fn emit_nan_tag_aware_numeric_binary_op(
+        &mut self,
+        op: BinaryOp,
+        left_local: u32,
+        right_local: u32,
+    ) -> DirectResult<()> {
+        self.push_local_get(left_local);
+        self.push_i32_const(JS_NAN_TAG);
+        self.push_binary_op(BinaryOp::Equal)?;
+        self.state.emission.output.instructions.push(0x04);
+        self.state.emission.output.instructions.push(I32_TYPE);
+        self.push_control_frame();
+        self.push_i32_const(JS_NAN_TAG);
+        self.state.emission.output.instructions.push(0x05);
+        self.push_local_get(right_local);
+        self.push_i32_const(JS_NAN_TAG);
+        self.push_binary_op(BinaryOp::Equal)?;
+        self.state.emission.output.instructions.push(0x04);
+        self.state.emission.output.instructions.push(I32_TYPE);
+        self.push_control_frame();
+        self.push_i32_const(JS_NAN_TAG);
+        self.state.emission.output.instructions.push(0x05);
+        self.push_local_get(left_local);
+        self.push_local_get(right_local);
+        self.push_binary_op(op)?;
+        self.state.emission.output.instructions.push(0x0b);
+        self.pop_control_frame();
+        self.state.emission.output.instructions.push(0x0b);
+        self.pop_control_frame();
+        Ok(())
+    }
+
+    fn conditional_operand_effect_bindings(&self, expression: &Expression) -> HashSet<String> {
+        let mut names = HashSet::new();
+        collect_assigned_binding_names_from_expression(expression, &mut names);
+        let mut visited = HashSet::new();
+        self.collect_expression_call_effect_nonlocal_bindings(
+            expression,
+            self.current_function_name(),
+            &mut names,
+            &mut visited,
+        );
+        self.collect_direct_user_function_call_effect_bindings(
+            expression,
+            &mut names,
+            &mut visited,
+        );
+        names
+    }
+
+    fn collect_direct_user_function_call_effect_bindings(
+        &self,
+        expression: &Expression,
+        names: &mut HashSet<String>,
+        visited: &mut HashSet<String>,
+    ) {
+        match expression {
+            Expression::Call { callee, arguments }
+            | Expression::New { callee, arguments }
+            | Expression::SuperCall { callee, arguments } => {
+                if let Expression::Identifier(function_name) = callee.as_ref()
+                    && self.user_function(function_name).is_some()
+                {
+                    names.extend(
+                        self.collect_user_function_call_effect_nonlocal_bindings_for_name(
+                            function_name,
+                            visited,
+                        ),
+                    );
+                }
+                self.collect_direct_user_function_call_effect_bindings(callee, names, visited);
+                for argument in arguments {
+                    match argument {
+                        CallArgument::Expression(argument) | CallArgument::Spread(argument) => self
+                            .collect_direct_user_function_call_effect_bindings(
+                                argument, names, visited,
+                            ),
+                    }
+                }
+            }
+            Expression::Binary { left, right, .. } => {
+                self.collect_direct_user_function_call_effect_bindings(left, names, visited);
+                self.collect_direct_user_function_call_effect_bindings(right, names, visited);
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                self.collect_direct_user_function_call_effect_bindings(condition, names, visited);
+                self.collect_direct_user_function_call_effect_bindings(
+                    then_expression,
+                    names,
+                    visited,
+                );
+                self.collect_direct_user_function_call_effect_bindings(
+                    else_expression,
+                    names,
+                    visited,
+                );
+            }
+            Expression::Sequence(expressions) => {
+                for expression in expressions {
+                    self.collect_direct_user_function_call_effect_bindings(
+                        expression, names, visited,
+                    );
+                }
+            }
+            Expression::Assign { value, .. }
+            | Expression::Await(value)
+            | Expression::EnumerateKeys(value)
+            | Expression::GetIterator(value)
+            | Expression::IteratorClose(value)
+            | Expression::Unary {
+                expression: value, ..
+            } => self.collect_direct_user_function_call_effect_bindings(value, names, visited),
+            Expression::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                self.collect_direct_user_function_call_effect_bindings(object, names, visited);
+                self.collect_direct_user_function_call_effect_bindings(property, names, visited);
+                self.collect_direct_user_function_call_effect_bindings(value, names, visited);
+            }
+            Expression::AssignSuperMember { property, value } => {
+                self.collect_direct_user_function_call_effect_bindings(property, names, visited);
+                self.collect_direct_user_function_call_effect_bindings(value, names, visited);
+            }
+            Expression::Member { object, property } => {
+                self.collect_direct_user_function_call_effect_bindings(object, names, visited);
+                self.collect_direct_user_function_call_effect_bindings(property, names, visited);
+            }
+            Expression::SuperMember { property } => {
+                self.collect_direct_user_function_call_effect_bindings(property, names, visited);
+            }
+            Expression::Array(elements) => {
+                for element in elements {
+                    match element {
+                        ArrayElement::Expression(element) | ArrayElement::Spread(element) => self
+                            .collect_direct_user_function_call_effect_bindings(
+                                element, names, visited,
+                            ),
+                    }
+                }
+            }
+            Expression::Object(entries) => {
+                for entry in entries {
+                    match entry {
+                        ObjectEntry::Data { key, value } => {
+                            self.collect_direct_user_function_call_effect_bindings(
+                                key, names, visited,
+                            );
+                            self.collect_direct_user_function_call_effect_bindings(
+                                value, names, visited,
+                            );
+                        }
+                        ObjectEntry::Getter { key, getter } => {
+                            self.collect_direct_user_function_call_effect_bindings(
+                                key, names, visited,
+                            );
+                            self.collect_direct_user_function_call_effect_bindings(
+                                getter, names, visited,
+                            );
+                        }
+                        ObjectEntry::Setter { key, setter } => {
+                            self.collect_direct_user_function_call_effect_bindings(
+                                key, names, visited,
+                            );
+                            self.collect_direct_user_function_call_effect_bindings(
+                                setter, names, visited,
+                            );
+                        }
+                        ObjectEntry::Spread(value) => {
+                            self.collect_direct_user_function_call_effect_bindings(
+                                value, names, visited,
+                            );
+                        }
+                    }
+                }
+            }
+            Expression::Identifier(_)
+            | Expression::Update { .. }
+            | Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined
+            | Expression::NewTarget
+            | Expression::Sent
+            | Expression::This => {}
+        }
+    }
+
+    pub(in crate::backend::direct_wasm) fn emit_conditionally_reachable_numeric_expression_to_local(
+        &mut self,
+        expression: &Expression,
+        target_local: u32,
+    ) -> DirectResult<()> {
+        let invalidated_bindings = self.conditional_operand_effect_bindings(expression);
+        self.with_restored_static_binding_metadata(|compiler| {
+            compiler.emit_numeric_expression(expression)?;
+            compiler.push_local_set(target_local);
+            Ok(())
+        })?;
+        if !invalidated_bindings.is_empty() {
+            self.invalidate_static_binding_metadata_for_names(&invalidated_bindings);
+        }
+        Ok(())
+    }
+
     pub(in crate::backend::direct_wasm) fn emit_binary_expression_value(
         &mut self,
         expression: &Expression,
@@ -1355,7 +2512,35 @@ impl<'a> FunctionCompiler<'a> {
         let arithmetic_requires_runtime_value = self.has_current_user_function()
             && (self.addition_operand_requires_runtime_value(left)
                 || self.addition_operand_requires_runtime_value(right));
-        if !arithmetic_requires_runtime_value
+        let numeric_static_outcome_operands_are_side_effect_free = self
+            .numeric_static_outcome_operand_is_side_effect_free(left)
+            && self.numeric_static_outcome_operand_is_side_effect_free(right);
+        if self.emit_effectful_static_numeric_binary_outcome(op, left, right)? {
+            return Ok(());
+        }
+        if matches!(
+            op,
+            BinaryOp::Subtract
+                | BinaryOp::Multiply
+                | BinaryOp::Divide
+                | BinaryOp::Modulo
+                | BinaryOp::Exponentiate
+                | BinaryOp::BitwiseAnd
+                | BinaryOp::BitwiseOr
+                | BinaryOp::BitwiseXor
+                | BinaryOp::LeftShift
+                | BinaryOp::RightShift
+                | BinaryOp::UnsignedRightShift
+        ) && self.emit_effectful_ordinary_to_primitive_numeric(left, right)?
+        {
+            return Ok(());
+        }
+        if (!arithmetic_requires_runtime_value
+            || numeric_static_outcome_operands_are_side_effect_free)
+            && !Self::expression_contains_assignment_or_update(left)
+            && !Self::expression_contains_assignment_or_update(right)
+            && !self.binary_expression_calls_user_function(left)
+            && !self.binary_expression_calls_user_function(right)
             && matches!(
                 op,
                 BinaryOp::Subtract
@@ -1363,6 +2548,39 @@ impl<'a> FunctionCompiler<'a> {
                     | BinaryOp::Divide
                     | BinaryOp::Modulo
                     | BinaryOp::Exponentiate
+                    | BinaryOp::BitwiseAnd
+                    | BinaryOp::BitwiseOr
+                    | BinaryOp::BitwiseXor
+                    | BinaryOp::LeftShift
+                    | BinaryOp::RightShift
+                    | BinaryOp::UnsignedRightShift
+            )
+            && let Some(outcome) = self.resolve_static_numeric_binary_outcome_with_context(
+                op,
+                left,
+                right,
+                self.current_function_name(),
+            )
+        {
+            return self.emit_static_eval_outcome(&outcome);
+        }
+        if !arithmetic_requires_runtime_value
+            && !Self::expression_contains_assignment_or_update(left)
+            && !Self::expression_contains_assignment_or_update(right)
+            && !self.binary_expression_calls_user_function(expression)
+            && matches!(
+                op,
+                BinaryOp::Subtract
+                    | BinaryOp::Multiply
+                    | BinaryOp::Divide
+                    | BinaryOp::Modulo
+                    | BinaryOp::Exponentiate
+                    | BinaryOp::BitwiseAnd
+                    | BinaryOp::BitwiseOr
+                    | BinaryOp::BitwiseXor
+                    | BinaryOp::LeftShift
+                    | BinaryOp::RightShift
+                    | BinaryOp::UnsignedRightShift
             )
             && let Some(number) = self.resolve_static_number_value(expression)
         {
@@ -1381,16 +2599,26 @@ impl<'a> FunctionCompiler<'a> {
         if equality_references_internal_iterator_step
             && matches!(op, BinaryOp::Equal | BinaryOp::NotEqual)
         {
-            self.emit_numeric_expression(left)?;
-            self.emit_numeric_expression(right)?;
-            return self.push_binary_op(op);
+            return self.emit_throw_aware_numeric_binary_op(op, left, right);
+        }
+        if matches!(op, BinaryOp::Equal | BinaryOp::NotEqual)
+            && (Self::expression_references_internal_assignment_temp(left)
+                || Self::expression_references_internal_assignment_temp(right))
+        {
+            return self.emit_throw_aware_numeric_binary_op(op, left, right);
         }
         if !equality_depends_on_active_loop_assignment
             && !equality_references_internal_iterator_step
             && !equality_reads_runtime_nonlocal_binding
+            && !Self::expression_references_internal_assignment_temp(left)
+            && !Self::expression_references_internal_assignment_temp(right)
             && !Self::expression_contains_assignment_or_update(left)
             && !Self::expression_contains_assignment_or_update(right)
+            && !self.binary_expression_calls_user_function(left)
+            && !self.binary_expression_calls_user_function(right)
             && matches!(op, BinaryOp::Equal | BinaryOp::NotEqual)
+            && !Self::expression_is_relational_binary(left)
+            && !Self::expression_is_relational_binary(right)
             && !self.expression_has_dynamic_member_property_access(left)
             && !self.expression_has_dynamic_member_property_access(right)
             && let Some(value) = self.resolve_static_binary_boolean_result(&op, left, right)
@@ -1405,10 +2633,40 @@ impl<'a> FunctionCompiler<'a> {
             }
             return self.emit_literal_expression(&Expression::Bool(value));
         }
+        if self.emit_static_strict_type_mismatch_comparison(op, left, right)? {
+            return Ok(());
+        }
         if self.emit_stringified_division_split_length_comparison(op, left, right)? {
             return Ok(());
         }
+        if matches!(
+            op,
+            BinaryOp::LessThan
+                | BinaryOp::LessThanOrEqual
+                | BinaryOp::GreaterThan
+                | BinaryOp::GreaterThanOrEqual
+        ) && !Self::expression_contains_assignment_or_update(left)
+            && !Self::expression_contains_assignment_or_update(right)
+            && !self.binary_expression_calls_user_function(left)
+            && !self.binary_expression_calls_user_function(right)
+            && let Some(outcome) = self.resolve_static_relational_outcome_with_context(
+                op,
+                left,
+                right,
+                self.current_function_name(),
+            )
+        {
+            return self.emit_static_relational_outcome(left, right, &outcome);
+        }
+        if self.emit_effectful_static_relational_comparison(op, left, right)? {
+            return Ok(());
+        }
         if self.emit_fractional_static_relational_comparison(op, left, right)? {
+            return Ok(());
+        }
+        if matches!(op, BinaryOp::LooseEqual | BinaryOp::LooseNotEqual)
+            && self.emit_effectful_ordinary_to_primitive_numeric(left, right)?
+        {
             return Ok(());
         }
         if matches!(op, BinaryOp::Divide | BinaryOp::Modulo) {
@@ -1416,21 +2674,31 @@ impl<'a> FunctionCompiler<'a> {
         }
         match op {
             BinaryOp::Add => {
+                if self.emit_static_template_update_addition(expression)? {
+                    return Ok(());
+                }
                 let addition_depends_on_active_loop_assignment = self
                     .expression_depends_on_active_loop_assignment(left)
                     || self.expression_depends_on_active_loop_assignment(right);
                 let addition_contains_assignment_or_update =
                     Self::expression_contains_assignment_or_update(left)
                         || Self::expression_contains_assignment_or_update(right);
-                let addition_operands_side_effect_free =
-                    inline_summary_side_effect_free_expression(left)
-                        && inline_summary_side_effect_free_expression(right);
+                let addition_calls_user_function = self.binary_expression_calls_user_function(left)
+                    || self.binary_expression_calls_user_function(right);
+                let addition_operand_side_effect_free = |operand: &Expression| {
+                    !self.binary_expression_calls_user_function(operand)
+                        && (inline_summary_side_effect_free_expression(operand)
+                            || self.resolve_static_boxed_primitive_value(operand).is_some())
+                };
+                let addition_operands_side_effect_free = addition_operand_side_effect_free(left)
+                    && addition_operand_side_effect_free(right);
                 let addition_requires_runtime_value = self.has_current_user_function()
                     && (self.addition_operand_requires_runtime_value(left)
                         || self.addition_operand_requires_runtime_value(right));
                 let allow_static_addition = !addition_requires_runtime_value
                     && !addition_depends_on_active_loop_assignment
                     && !addition_contains_assignment_or_update
+                    && !addition_calls_user_function
                     && addition_operands_side_effect_free;
                 if allow_static_addition
                     && let Some(outcome) = self.resolve_static_addition_outcome_with_context(
@@ -1443,6 +2711,7 @@ impl<'a> FunctionCompiler<'a> {
                 }
                 if !addition_depends_on_active_loop_assignment
                     && !addition_contains_assignment_or_update
+                    && !addition_calls_user_function
                     && addition_operands_side_effect_free
                     && !addition_requires_runtime_value
                     && let Some(text) = self.resolve_static_string_addition_value_with_context(
@@ -1471,9 +2740,7 @@ impl<'a> FunctionCompiler<'a> {
                 {
                     return Ok(());
                 }
-                self.emit_numeric_expression(left)?;
-                self.emit_numeric_expression(right)?;
-                self.push_binary_op(op)
+                self.emit_throw_aware_numeric_binary_op(op, left, right)
             }
             BinaryOp::LogicalAnd => self.emit_logical_and(left, right),
             BinaryOp::LogicalOr => self.emit_logical_or(left, right),
@@ -1483,9 +2750,7 @@ impl<'a> FunctionCompiler<'a> {
                 if self.expression_has_dynamic_member_property_access(left)
                     || self.expression_has_dynamic_member_property_access(right) =>
             {
-                self.emit_numeric_expression(left)?;
-                self.emit_numeric_expression(right)?;
-                self.push_binary_op(op)
+                self.emit_throw_aware_numeric_binary_op(op, left, right)
             }
             BinaryOp::Equal | BinaryOp::NotEqual
                 if self.emit_static_string_equality_comparison(left, right, op)? =>
@@ -1534,6 +2799,16 @@ impl<'a> FunctionCompiler<'a> {
             }
             BinaryOp::LooseEqual | BinaryOp::LooseNotEqual
                 if self.emit_hex_quad_string_comparison(left, right, op)? =>
+            {
+                Ok(())
+            }
+            BinaryOp::LooseEqual | BinaryOp::LooseNotEqual
+                if self.emit_static_bigint_non_finite_loose_equality(op, left, right)? =>
+            {
+                Ok(())
+            }
+            BinaryOp::LooseEqual | BinaryOp::LooseNotEqual
+                if self.emit_effectful_symbol_to_primitive_loose_equality(op, left, right)? =>
             {
                 Ok(())
             }
@@ -1555,11 +2830,7 @@ impl<'a> FunctionCompiler<'a> {
                 self.emit_instanceof_expression(left, right)?;
                 Ok(())
             }
-            _ => {
-                self.emit_numeric_expression(left)?;
-                self.emit_numeric_expression(right)?;
-                self.push_binary_op(op)
-            }
+            _ => self.emit_throw_aware_numeric_binary_op(op, left, right),
         }
     }
 

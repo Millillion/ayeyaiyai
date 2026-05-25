@@ -56,9 +56,9 @@ pub fn compile_source_with_goal(
 
 pub fn compile_source_with_reason(source: &str) -> std::result::Result<(), String> {
     let program = frontend::parse(source).map_err(|_| "source failed to parse".to_string())?;
-    ir::pipeline::validate(&program).map_err(|_| "refined aot validation failed".to_string())?;
     let program = ir::passes::static_function_constructors::lower(program)
         .map_err(|_| "static function constructor lowering failed".to_string())?;
+    ir::pipeline::validate(&program).map_err(|_| "refined aot validation failed".to_string())?;
     match backend::emit_wasm_with_reason(&program) {
         Ok(_) => Ok(()),
         Err(message) => Err(message.to_string()),

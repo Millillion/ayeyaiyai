@@ -33,15 +33,8 @@ impl<'a> FunctionCompiler<'a> {
             this_expression,
         )?;
 
-        let capture_snapshot = capture_slots
-            .iter()
-            .map(|(capture_name, slot_name)| {
-                (
-                    capture_name.clone(),
-                    self.snapshot_bound_capture_slot_expression(slot_name),
-                )
-            })
-            .collect::<HashMap<_, _>>();
+        let capture_snapshot =
+            self.snapshot_prepared_bound_user_function_capture_bindings(&prepared_capture_bindings);
         let bound_argument_expressions = argument_locals
             .iter()
             .take(argument_count)
@@ -139,16 +132,26 @@ impl<'a> FunctionCompiler<'a> {
             self.assigned_nonlocal_binding_results(&user_function.name)
                 .cloned()
         };
+        let closure_slot_capture_names = prepared_capture_bindings
+            .iter()
+            .filter_map(|binding| {
+                binding
+                    .source_binding_name
+                    .as_ref()
+                    .is_some_and(|source_name| source_name.starts_with("__ayy_closure_slot_"))
+                    .then(|| binding.capture_name.clone())
+            })
+            .collect::<HashSet<_>>();
         let additional_call_effect_nonlocal_bindings = if runtime_only_parameter_iterator_call {
             HashSet::new()
         } else {
             let mut names = call_effect_nonlocal_bindings
                 .iter()
                 .filter(|name| {
+                    if closure_slot_capture_names.contains(*name) {
+                        return false;
+                    }
                     !synced_capture_source_bindings.contains(*name)
-                        || !reliable_updated_bindings
-                            .as_ref()
-                            .is_some_and(|bindings| bindings.contains_key(*name))
                 })
                 .cloned()
                 .collect::<HashSet<_>>();
@@ -160,10 +163,19 @@ impl<'a> FunctionCompiler<'a> {
                         .map(|(_, updated_bindings)| updated_bindings),
                 ),
             );
+            names.retain(|name| !synced_capture_source_bindings.contains(name));
             names
         };
 
         self.emit_prepare_bound_user_function_capture_globals(&prepared_capture_bindings)?;
+        let static_argument_member_writebacks = self
+            .user_function_static_argument_object_member_writeback_values(
+                user_function,
+                &bound_argument_expressions,
+            );
+        self.predeclare_static_argument_object_member_writeback_properties(
+            &static_argument_member_writebacks,
+        );
         let parameter_object_shadow_writebacks = self
             .emit_user_function_parameter_object_shadow_setup(
                 user_function,
@@ -171,12 +183,8 @@ impl<'a> FunctionCompiler<'a> {
             )?;
 
         let visible_param_count = user_function.visible_param_count() as usize;
-        let rest_parameter_index = self.user_function_rest_parameter_index(user_function);
-
         for argument_index in 0..visible_param_count {
-            if Some(argument_index) == rest_parameter_index {
-                self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
-            } else if let Some(argument_local) = argument_locals.get(argument_index).copied() {
+            if let Some(argument_local) = argument_locals.get(argument_index).copied() {
                 self.push_local_get(argument_local);
             } else {
                 self.push_i32_const(JS_UNDEFINED_TAG);
@@ -208,6 +216,9 @@ impl<'a> FunctionCompiler<'a> {
             &parameter_object_shadow_writebacks,
             updated_bindings.as_ref(),
         );
+        self.sync_static_argument_object_member_writeback_values(
+            &static_argument_member_writebacks,
+        );
 
         self.finalize_bound_user_function_call(
             user_function,
@@ -222,6 +233,10 @@ impl<'a> FunctionCompiler<'a> {
             saved_this_shadow_owner.as_deref(),
             return_value_local,
             &bound_argument_expressions,
-        )
+        )?;
+        self.sync_static_argument_object_member_writeback_values(
+            &static_argument_member_writebacks,
+        );
+        Ok(())
     }
 }

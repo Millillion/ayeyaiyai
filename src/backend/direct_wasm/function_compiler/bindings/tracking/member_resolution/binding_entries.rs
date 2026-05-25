@@ -1,7 +1,7 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
-    pub(super) fn member_function_binding_entry(
+    pub(in crate::backend::direct_wasm) fn member_function_binding_entry(
         &self,
         key: &MemberFunctionBindingKey,
     ) -> Option<LocalFunctionBinding> {

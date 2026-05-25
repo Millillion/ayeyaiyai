@@ -26,6 +26,12 @@ pub(in crate::backend::direct_wasm) const JS_NATIVE_ERROR_VALUE_BASE: i32 = -107
 pub(in crate::backend::direct_wasm) const JS_NATIVE_ERROR_VALUE_LIMIT: i32 = 9;
 pub(in crate::backend::direct_wasm) const JS_USER_FUNCTION_VALUE_BASE: i32 = -1073640000;
 pub(in crate::backend::direct_wasm) const JS_USER_FUNCTION_VALUE_LIMIT: i32 = 100000;
+pub(in crate::backend::direct_wasm) const JS_TEMPLATE_OBJECT_VALUE_BASE: i32 = -1073800000;
+pub(in crate::backend::direct_wasm) const JS_EVAL_TEMPLATE_OBJECT_VALUE_STRIDE: i32 = 100000;
+pub(in crate::backend::direct_wasm) const EVAL_TEMPLATE_CURRENT_EPOCH_GLOBAL: &str =
+    "__ayy_eval_template_current_epoch";
+pub(in crate::backend::direct_wasm) const EVAL_TEMPLATE_NEXT_EPOCH_GLOBAL: &str =
+    "__ayy_eval_template_next_epoch";
 pub(in crate::backend::direct_wasm) const FUNCTION_CONSTRUCTOR_FAMILY_BUILTIN: &str =
     "__ayyFunctionConstructorFamily";
 pub(in crate::backend::direct_wasm) const TEST262_CREATE_REALM_BUILTIN: &str =

@@ -22,9 +22,15 @@ impl<'a> FunctionCompiler<'a> {
         > = HashMap::new();
 
         for entry in entries {
+            if object_entry_is_literal_proto_setter(entry) {
+                continue;
+            }
             let (key, binding, slot) = match entry {
                 crate::ir::hir::ObjectEntry::Data { key, value } => {
-                    (key, self.resolve_function_binding_from_expression(value), 0)
+                    let binding = (!matches!(value, Expression::Sequence(_)))
+                        .then(|| self.resolve_function_binding_from_expression(value))
+                        .flatten();
+                    (key, binding, 0)
                 }
                 crate::ir::hir::ObjectEntry::Getter { key, getter } => (
                     key,

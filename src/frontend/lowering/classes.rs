@@ -24,6 +24,22 @@ impl Lowerer {
         )?;
         self.pop_binding_scope();
         if !self.class_has_explicit_static_name_property(&class_declaration.class) {
+            let insert_index =
+                Self::class_name_property_definition_insert_index(&body, &inner_name)
+                    .unwrap_or(body.len());
+            body.insert(
+                insert_index,
+                define_property_statement(
+                    Expression::Identifier(inner_name.clone()),
+                    Expression::String("name".to_string()),
+                    data_property_descriptor(
+                        Expression::String(source_name.clone()),
+                        false,
+                        false,
+                        true,
+                    ),
+                ),
+            );
             body.push(define_property_statement(
                 Expression::Identifier(inner_name.clone()),
                 Expression::String("name".to_string()),
@@ -63,6 +79,22 @@ impl Lowerer {
         )?;
         self.pop_binding_scope();
         if !self.class_has_explicit_static_name_property(&class_declaration.class) {
+            let insert_index =
+                Self::class_name_property_definition_insert_index(&body, &inner_name)
+                    .unwrap_or(body.len());
+            body.insert(
+                insert_index,
+                define_property_statement(
+                    Expression::Identifier(inner_name.clone()),
+                    Expression::String("name".to_string()),
+                    data_property_descriptor(
+                        Expression::String(source_name.clone()),
+                        false,
+                        false,
+                        true,
+                    ),
+                ),
+            );
             body.push(define_property_statement(
                 Expression::Identifier(inner_name.clone()),
                 Expression::String("name".to_string()),
@@ -117,12 +149,34 @@ impl Lowerer {
         }
         let mut init_body = init_body_result?;
         if !self.class_has_explicit_static_name_property(&class_expression.class) {
+            if !display_name.is_empty() {
+                let insert_index =
+                    Self::class_name_property_definition_insert_index(&init_body, &class_name)
+                        .unwrap_or(init_body.len());
+                init_body.insert(
+                    insert_index,
+                    define_property_statement(
+                        Expression::Identifier(class_name.clone()),
+                        Expression::String("name".to_string()),
+                        data_property_descriptor(
+                            Expression::String(display_name.clone()),
+                            false,
+                            false,
+                            true,
+                        ),
+                    ),
+                );
+            }
             init_body.push(define_property_statement(
                 Expression::Identifier(class_name.clone()),
                 Expression::String("name".to_string()),
                 data_property_descriptor(Expression::String(display_name), false, false, true),
             ));
         }
+        let init_immutable_class_bindings = pushed_scope
+            .then(|| class_name.clone())
+            .into_iter()
+            .collect();
         init_body.push(Statement::Return(Expression::Identifier(class_name)));
 
         self.functions.push(FunctionDeclaration {
@@ -136,11 +190,12 @@ impl Lowerer {
             mapped_arguments: false,
             strict: true,
             lexical_this: false,
+            constructible: true,
             derived_constructor: false,
             direct_eval_in_class_field_initializer: self.class_field_initializer_depth > 0,
             length: 0,
             synthetic_capture_bindings: Vec::new(),
-            immutable_class_bindings: Vec::new(),
+            immutable_class_bindings: init_immutable_class_bindings,
             private_brand_binding: None,
         });
 
@@ -185,6 +240,24 @@ impl Lowerer {
         }
         let mut statements = statements_result?;
         if !self.class_has_explicit_static_name_property(&class_expression.class) {
+            if !display_name.is_empty() {
+                let insert_index =
+                    Self::class_name_property_definition_insert_index(&statements, &class_name)
+                        .unwrap_or(statements.len());
+                statements.insert(
+                    insert_index,
+                    define_property_statement(
+                        Expression::Identifier(class_name.clone()),
+                        Expression::String("name".to_string()),
+                        data_property_descriptor(
+                            Expression::String(display_name.clone()),
+                            false,
+                            false,
+                            true,
+                        ),
+                    ),
+                );
+            }
             statements.push(define_property_statement(
                 Expression::Identifier(class_name.clone()),
                 Expression::String("name".to_string()),
@@ -213,6 +286,41 @@ impl Lowerer {
         })
     }
 
+    fn class_name_property_definition_insert_index(
+        statements: &[Statement],
+        class_name: &str,
+    ) -> Option<usize> {
+        statements
+            .iter()
+            .position(|statement| {
+                let Statement::Expression(Expression::Call { callee, arguments }) = statement
+                else {
+                    return false;
+                };
+                let Expression::Member { object, property } = callee.as_ref() else {
+                    return false;
+                };
+                if !matches!(
+                    (object.as_ref(), property.as_ref()),
+                    (
+                        Expression::Identifier(object_name),
+                        Expression::String(property_name)
+                    ) if object_name == "Object" && property_name == "defineProperty"
+                ) {
+                    return false;
+                }
+                matches!(
+                    arguments.as_slice(),
+                    [
+                        CallArgument::Expression(Expression::Identifier(target_name)),
+                        CallArgument::Expression(Expression::String(property_name)),
+                        _
+                    ] if target_name == class_name && property_name == "name"
+                )
+            })
+            .map(|index| index + 1)
+    }
+
     fn class_prop_name_is_name(&self, property: &PropName) -> bool {
         match property {
             PropName::Ident(identifier) => identifier.sym == *"name",
@@ -224,13 +332,10 @@ impl Lowerer {
         }
     }
 
-    fn class_has_instance_private_members(&self, class: &Class) -> bool {
+    fn class_has_private_members(&self, class: &Class) -> bool {
         class.body.iter().any(|member| match member {
-            ClassMember::PrivateProp(property) => !property.is_static,
-            ClassMember::PrivateMethod(method) => !method.is_static,
-            ClassMember::AutoAccessor(accessor) => {
-                !accessor.is_static && matches!(accessor.key, Key::Private(_))
-            }
+            ClassMember::PrivateProp(_) | ClassMember::PrivateMethod(_) => true,
+            ClassMember::AutoAccessor(accessor) => matches!(accessor.key, Key::Private(_)),
             _ => false,
         })
     }
@@ -255,8 +360,22 @@ impl Lowerer {
         binding_name: String,
         generator_body: bool,
     ) -> Result<Vec<Statement>> {
+        self.immutable_class_binding_stack
+            .push(binding_name.clone());
+        let result =
+            self.lower_class_definition_with_mode_inner(class, binding_name, generator_body);
+        self.immutable_class_binding_stack.pop();
+        result
+    }
+
+    fn lower_class_definition_with_mode_inner(
+        &mut self,
+        class: &Class,
+        binding_name: String,
+        generator_body: bool,
+    ) -> Result<Vec<Statement>> {
         let instance_private_brand_binding = self
-            .class_has_instance_private_members(class)
+            .class_has_private_members(class)
             .then(|| self.fresh_temporary_name("class_brand"));
         self.private_name_scopes
             .push(self.class_private_name_map(class, &binding_name));
@@ -297,6 +416,15 @@ impl Lowerer {
 
         let mut statements = Vec::new();
         let mut instance_field_initializers = Vec::new();
+        let mut instance_field_capture_bindings = Vec::new();
+        let mut instance_private_accessor_markers = HashSet::new();
+        let mut static_private_accessor_pairs = HashSet::new();
+        let mut static_field_initializers = Vec::new();
+        statements.push(Statement::Let {
+            name: binding_name.clone(),
+            mutable: Self::scoped_class_expression_source_name(&binding_name).is_none(),
+            value: Expression::Identifier(constructor_name.clone()),
+        });
         if let (Some(super_expression), Some(super_name)) =
             (&class.super_class, super_name.as_ref())
         {
@@ -318,11 +446,6 @@ impl Lowerer {
         }
 
         statements.extend([
-            Statement::Let {
-                name: binding_name.clone(),
-                mutable: Self::scoped_class_expression_source_name(&binding_name).is_none(),
-                value: Expression::Identifier(constructor_name.clone()),
-            },
             define_property_statement(
                 class_identifier.clone(),
                 Expression::String("name".to_string()),
@@ -376,6 +499,9 @@ impl Lowerer {
                                 mutable: false,
                                 value: lowered_property_name,
                             });
+                            if !property.is_static {
+                                instance_field_capture_bindings.push(computed_name.clone());
+                            }
                             Expression::Identifier(computed_name)
                         }
                         _ => lowered_property_name,
@@ -393,7 +519,7 @@ impl Lowerer {
                         .transpose()?
                         .unwrap_or(Expression::Undefined);
                     if property.is_static {
-                        statements.push(define_property_statement(
+                        static_field_initializers.push(define_property_statement(
                             class_identifier.clone(),
                             property_name,
                             data_property_descriptor(value, true, true, true),
@@ -407,7 +533,7 @@ impl Lowerer {
                     }
                 }
                 ClassMember::PrivateProp(property) => {
-                    let name_hint = format!("#{}", property.key.name);
+                    let name_hint = format!("#{}", self.private_name_key(&property.key));
                     let value = property
                         .value
                         .as_ref()
@@ -427,11 +553,12 @@ impl Lowerer {
                     };
                     let initializer = Statement::AssignMember {
                         object: target,
-                        property: self.lower_private_name(&property.key)?,
+                        property: self.lower_private_name_without_capture(&property.key)?,
                         value,
                     };
                     if property.is_static {
-                        statements.push(Self::instance_field_initializer_block(vec![initializer]));
+                        static_field_initializers
+                            .push(Self::instance_field_initializer_block(vec![initializer]));
                     } else {
                         instance_field_initializers.push(initializer);
                     }
@@ -450,6 +577,9 @@ impl Lowerer {
                                     mutable: false,
                                     value: lowered_property_name,
                                 });
+                                if !accessor.is_static {
+                                    instance_field_capture_bindings.push(computed_name.clone());
+                                }
                                 Expression::Identifier(computed_name)
                             }
                             _ => lowered_property_name,
@@ -467,7 +597,7 @@ impl Lowerer {
                             .transpose()?
                             .unwrap_or(Expression::Undefined);
                         if accessor.is_static {
-                            statements.push(define_property_statement(
+                            static_field_initializers.push(define_property_statement(
                                 class_identifier.clone(),
                                 property_name,
                                 data_property_descriptor(value, true, true, true),
@@ -481,7 +611,7 @@ impl Lowerer {
                         }
                     }
                     Key::Private(private_name) => {
-                        let name_hint = format!("#{}", private_name.name);
+                        let name_hint = format!("#{}", self.private_name_key(private_name));
                         let value = accessor
                             .value
                             .as_ref()
@@ -501,11 +631,11 @@ impl Lowerer {
                         };
                         let initializer = Statement::AssignMember {
                             object: target,
-                            property: self.lower_private_name(private_name)?,
+                            property: self.lower_private_name_without_capture(private_name)?,
                             value,
                         };
                         if accessor.is_static {
-                            statements
+                            static_field_initializers
                                 .push(Self::instance_field_initializer_block(vec![initializer]));
                         } else {
                             instance_field_initializers.push(initializer);
@@ -513,11 +643,108 @@ impl Lowerer {
                     }
                 },
                 ClassMember::PrivateMethod(method) => {
-                    let property = self.lower_private_name(&method.key)?;
+                    let property = self.lower_private_name_without_capture(&method.key)?;
                     let display_name = self.private_method_display_name(&method.key, method.kind);
-                    let private_brand_binding = (!method.is_static)
-                        .then_some(instance_private_brand_binding.as_deref())
-                        .flatten();
+                    let static_private_accessor_key = (method.is_static
+                        && matches!(method.kind, MethodKind::Getter | MethodKind::Setter))
+                    .then(|| self.private_name_key(&method.key));
+                    if let Some(accessor_key) = static_private_accessor_key.as_ref() {
+                        if static_private_accessor_pairs.contains(accessor_key) {
+                            continue;
+                        }
+                        let mut getter_function = None;
+                        let mut setter_function = None;
+                        let mut getter_count = 0;
+                        let mut setter_count = 0;
+                        for candidate in &class.body {
+                            let ClassMember::PrivateMethod(candidate) = candidate else {
+                                continue;
+                            };
+                            if !candidate.is_static
+                                || self.private_name_key(&candidate.key) != *accessor_key
+                            {
+                                continue;
+                            }
+                            match candidate.kind {
+                                MethodKind::Getter => {
+                                    getter_count += 1;
+                                    getter_function = Some(candidate.function.clone());
+                                }
+                                MethodKind::Setter => {
+                                    setter_count += 1;
+                                    setter_function = Some(candidate.function.clone());
+                                }
+                                MethodKind::Method => {}
+                            }
+                        }
+                        if getter_count == 1 && setter_count == 1 {
+                            static_private_accessor_pairs.insert(accessor_key.clone());
+                            let getter_name =
+                                self.lower_class_method_function(
+                                    getter_function
+                                        .as_ref()
+                                        .context("static private getter should be present")?,
+                                    Some(&self.private_method_display_name(
+                                        &method.key,
+                                        MethodKind::Getter,
+                                    )),
+                                    &binding_name,
+                                    instance_private_brand_binding.as_deref(),
+                                )?;
+                            let setter_name =
+                                self.lower_class_method_function(
+                                    setter_function
+                                        .as_ref()
+                                        .context("static private setter should be present")?,
+                                    Some(&self.private_method_display_name(
+                                        &method.key,
+                                        MethodKind::Setter,
+                                    )),
+                                    &binding_name,
+                                    instance_private_brand_binding.as_deref(),
+                                )?;
+                            let descriptor = Expression::Object(vec![
+                                ObjectEntry::Data {
+                                    key: Expression::String("get".to_string()),
+                                    value: Expression::Identifier(getter_name.clone()),
+                                },
+                                ObjectEntry::Data {
+                                    key: Expression::String("set".to_string()),
+                                    value: Expression::Identifier(setter_name),
+                                },
+                                ObjectEntry::Data {
+                                    key: Expression::String("enumerable".to_string()),
+                                    value: Expression::Bool(false),
+                                },
+                                ObjectEntry::Data {
+                                    key: Expression::String("configurable".to_string()),
+                                    value: Expression::Bool(true),
+                                },
+                            ]);
+                            let mut accessor_initializers = vec![define_property_statement(
+                                class_identifier.clone(),
+                                property.clone(),
+                                data_property_descriptor(
+                                    Expression::Identifier(getter_name),
+                                    true,
+                                    false,
+                                    true,
+                                ),
+                            )];
+                            accessor_initializers.extend(
+                                self.lower_static_class_method_definition(
+                                    class_identifier.clone(),
+                                    property,
+                                    descriptor,
+                                ),
+                            );
+                            statements.push(Self::instance_field_initializer_block(
+                                accessor_initializers,
+                            ));
+                            continue;
+                        }
+                    }
+                    let private_brand_binding = instance_private_brand_binding.as_deref();
                     let lowered_method_name = self.lower_class_method_function(
                         &method.function,
                         Some(&display_name),
@@ -563,23 +790,23 @@ impl Lowerer {
                         ));
                     }
                     if let Some(private_brand_binding) = private_brand_binding {
+                        let is_private_accessor =
+                            matches!(method.kind, MethodKind::Getter | MethodKind::Setter);
+                        if is_private_accessor
+                            && !instance_private_accessor_markers
+                                .insert(self.private_name_key(&method.key))
+                        {
+                            continue;
+                        }
                         let marker = if method.kind == MethodKind::Method {
                             Expression::Identifier(lowered_method_name)
                         } else {
                             Expression::Identifier(private_brand_binding.to_string())
                         };
-                        let marker_initializer = if method.kind == MethodKind::Method {
-                            Statement::AssignMember {
-                                object: Expression::This,
-                                property,
-                                value: marker,
-                            }
-                        } else {
-                            define_property_statement(
-                                Expression::This,
-                                property,
-                                data_property_descriptor(marker, true, false, true),
-                            )
+                        let marker_initializer = Statement::AssignMember {
+                            object: Expression::This,
+                            property,
+                            value: marker,
                         };
                         instance_field_initializers.push(marker_initializer);
                     }
@@ -598,6 +825,8 @@ impl Lowerer {
             }
         }
 
+        statements.extend(static_field_initializers);
+
         if !instance_field_initializers.is_empty() {
             let constructor = self
                 .functions
@@ -606,6 +835,11 @@ impl Lowerer {
                 .context(
                     "lowered class constructor should exist for public field initialization",
                 )?;
+            for binding in instance_field_capture_bindings {
+                if !constructor.synthetic_capture_bindings.contains(&binding) {
+                    constructor.synthetic_capture_bindings.push(binding);
+                }
+            }
             Self::insert_instance_field_initializers(
                 constructor,
                 instance_field_initializers,
@@ -693,6 +927,7 @@ impl Lowerer {
             mapped_arguments: false,
             strict: true,
             lexical_this: false,
+            constructible: true,
             derived_constructor: super_name.is_some() || extends_null,
             direct_eval_in_class_field_initializer: self.class_field_initializer_depth > 0,
             length,
@@ -701,7 +936,7 @@ impl Lowerer {
                 .chain(super_name)
                 .map(str::to_string)
                 .collect(),
-            immutable_class_bindings: vec![binding_name.to_string()],
+            immutable_class_bindings: self.current_immutable_class_bindings_with(binding_name),
             private_brand_binding: private_brand_binding.map(str::to_string),
         });
 
@@ -854,20 +1089,16 @@ impl Lowerer {
                         return Ok(prefix);
                     }
                 }
-                prefix.extend(
-                    self.lower_defined_class_method(
-                        class_name,
-                        prototype_target,
-                        method.is_static,
-                        method.kind,
-                        property,
-                        None,
-                        (!method.is_static)
-                            .then_some(instance_private_brand_binding)
-                            .flatten(),
-                        &method.function,
-                    )?,
-                );
+                prefix.extend(self.lower_defined_class_method(
+                    class_name,
+                    prototype_target,
+                    method.is_static,
+                    method.kind,
+                    property,
+                    None,
+                    instance_private_brand_binding,
+                    &method.function,
+                )?);
                 Ok(prefix)
             }
             other => bail!("unsupported class member: {other:?}"),
@@ -892,6 +1123,7 @@ impl Lowerer {
                 Expression::String(string.value.to_string_lossy().into_owned()),
             ),
             PropName::Num(number) => (Vec::new(), Expression::Number(number.value)),
+            PropName::BigInt(bigint) => (Vec::new(), Expression::String(bigint.value.to_string())),
             PropName::Computed(computed) => {
                 if let Some((prefix, value)) =
                     self.lower_generator_assignment_value(&computed.expr)?
@@ -901,7 +1133,6 @@ impl Lowerer {
                     (Vec::new(), self.lower_expression(&computed.expr)?)
                 }
             }
-            _ => bail!("unsupported object property key"),
         })
     }
 
@@ -910,6 +1141,7 @@ impl Lowerer {
             PropName::Ident(identifier) => Some(identifier.sym.to_string()),
             PropName::Str(string) => Some(string.value.to_string_lossy().into_owned()),
             PropName::Num(number) => Some(number.value.to_string()),
+            PropName::BigInt(bigint) => Some(bigint.value.to_string()),
             PropName::Computed(computed) => match computed.expr.as_ref() {
                 Expr::Lit(Lit::Str(string)) => Some(string.value.to_string_lossy().into_owned()),
                 Expr::Lit(Lit::Num(number)) => Some(number.value.to_string()),
@@ -918,7 +1150,6 @@ impl Lowerer {
                 Expr::Lit(Lit::Null(_)) => Some("null".to_string()),
                 _ => None,
             },
-            _ => None,
         }
     }
 
@@ -928,13 +1159,14 @@ impl Lowerer {
         is_static: bool,
         private_name: &swc_ecma_ast::PrivateName,
     ) -> bool {
+        let private_name_key = self.private_name_key(private_name);
         class.body.iter().any(|member| {
             matches!(
                 member,
                 ClassMember::PrivateMethod(method)
                     if method.is_static == is_static
                         && method.kind == MethodKind::Method
-                        && method.key.name == private_name.name
+                        && self.private_name_key(&method.key) == private_name_key
             )
         })
     }
@@ -971,7 +1203,7 @@ impl Lowerer {
         }
         Ok(Some(Expression::Member {
             object: Box::new(target.clone()),
-            property: Box::new(self.lower_private_name(private_name)?),
+            property: Box::new(self.lower_private_name_without_capture(private_name)?),
         }))
     }
 
@@ -1088,7 +1320,7 @@ impl Lowerer {
         private_name: &swc_ecma_ast::PrivateName,
         kind: MethodKind,
     ) -> String {
-        let base_name = format!("#{}", private_name.name);
+        let base_name = format!("#{}", self.private_name_key(private_name));
         match kind {
             MethodKind::Method => base_name,
             MethodKind::Getter => format!("get {base_name}"),
@@ -1142,11 +1374,13 @@ impl Lowerer {
             mapped_arguments: false,
             strict: true,
             lexical_this: false,
+            constructible: false,
             derived_constructor: false,
             direct_eval_in_class_field_initializer: self.class_field_initializer_depth > 0,
             length: expected_argument_count(function.params.iter().map(|parameter| &parameter.pat)),
             synthetic_capture_bindings,
-            immutable_class_bindings: vec![class_binding_name.to_string()],
+            immutable_class_bindings: self
+                .current_immutable_class_bindings_with(class_binding_name),
             private_brand_binding: private_brand_binding.map(str::to_string),
         });
 

@@ -211,8 +211,305 @@ impl<'a> FunctionCompiler<'a> {
                         &call_arguments,
                     ),
                 )
+                .map(|throw_value| StaticEvalOutcome::Throw(StaticThrowValue::Value(throw_value)))
+                .or_else(|| {
+                    self.resolve_terminal_user_function_outcome_with_static_execution(
+                        user_function,
+                        arguments,
+                    )
+                }),
+            _ => self.resolve_terminal_user_function_outcome_with_static_execution(
+                user_function,
+                arguments,
+            ),
+        }
+    }
+
+    fn resolve_terminal_user_function_outcome_with_static_execution(
+        &self,
+        user_function: &UserFunction,
+        arguments: &[Expression],
+    ) -> Option<StaticEvalOutcome> {
+        let call_arguments = arguments
+            .iter()
+            .cloned()
+            .map(CallArgument::Expression)
+            .collect::<Vec<_>>();
+        let this_binding =
+            if self.should_box_sloppy_function_this(user_function, &Expression::Undefined) {
+                Expression::This
+            } else {
+                Expression::Undefined
+            };
+        let mut execution = self.prepare_static_user_function_execution(
+            &user_function.name,
+            user_function,
+            &call_arguments,
+            &this_binding,
+            None,
+            HashMap::new(),
+            |statement| statement,
+        )?;
+        let (terminal_statement, prefix) = execution.substituted_body.split_last()?;
+        let prefix_result =
+            self.execute_static_statements_with_state(prefix, &mut execution.environment);
+        if let Some(return_value) = prefix_result? {
+            return Some(StaticEvalOutcome::Value(return_value));
+        }
+
+        match terminal_statement {
+            Statement::Return(expression) => Some(StaticEvalOutcome::Value(
+                self.resolve_static_expression_value_with_state(
+                    expression,
+                    &mut execution.environment,
+                ),
+            )),
+            Statement::Throw(expression) => Some(StaticEvalOutcome::Throw(
+                StaticThrowValue::Value(self.resolve_static_expression_value_with_state(
+                    expression,
+                    &mut execution.environment,
+                )),
+            )),
+            Statement::Expression(expression) => self
+                .resolve_terminal_expression_throw_value_with_state(
+                    expression,
+                    &mut execution.environment,
+                )
+                .map(|throw_value| StaticEvalOutcome::Throw(StaticThrowValue::Value(throw_value))),
+            Statement::AssignMember {
+                object,
+                property,
+                value,
+            } => self
+                .resolve_terminal_expression_throw_value_with_state(
+                    object,
+                    &mut execution.environment,
+                )
+                .or_else(|| {
+                    self.resolve_terminal_expression_throw_value_with_state(
+                        property,
+                        &mut execution.environment,
+                    )
+                })
+                .or_else(|| {
+                    self.resolve_terminal_expression_throw_value_with_state(
+                        value,
+                        &mut execution.environment,
+                    )
+                })
                 .map(|throw_value| StaticEvalOutcome::Throw(StaticThrowValue::Value(throw_value))),
             _ => None,
+        }
+    }
+
+    pub(in crate::backend::direct_wasm) fn resolve_static_expression_value_with_state(
+        &self,
+        expression: &Expression,
+        environment: &mut StaticResolutionEnvironment,
+    ) -> Expression {
+        self.evaluate_static_expression_with_state(expression, environment)
+            .or_else(|| self.materialize_static_expression_with_state(expression, environment))
+            .unwrap_or_else(|| expression.clone())
+    }
+
+    fn resolve_static_binary_throw_value(
+        &self,
+        op: BinaryOp,
+        left: &Expression,
+        right: &Expression,
+    ) -> Option<Expression> {
+        let current_function_name = self.current_function_name();
+        let outcome = match op {
+            BinaryOp::Add => self.resolve_static_addition_outcome_with_context(
+                left,
+                right,
+                current_function_name,
+            ),
+            BinaryOp::Subtract
+            | BinaryOp::Multiply
+            | BinaryOp::Divide
+            | BinaryOp::Modulo
+            | BinaryOp::Exponentiate
+            | BinaryOp::BitwiseAnd
+            | BinaryOp::BitwiseOr
+            | BinaryOp::BitwiseXor
+            | BinaryOp::LeftShift
+            | BinaryOp::RightShift
+            | BinaryOp::UnsignedRightShift => self
+                .resolve_static_numeric_binary_outcome_with_context(
+                    op,
+                    left,
+                    right,
+                    current_function_name,
+                ),
+            BinaryOp::LessThan
+            | BinaryOp::LessThanOrEqual
+            | BinaryOp::GreaterThan
+            | BinaryOp::GreaterThanOrEqual => self.resolve_static_relational_outcome_with_context(
+                op,
+                left,
+                right,
+                current_function_name,
+            ),
+            _ => None,
+        }?;
+        match outcome {
+            StaticEvalOutcome::Throw(throw_value) => {
+                self.resolve_static_throw_value_expression(&throw_value)
+            }
+            StaticEvalOutcome::Value(_) => None,
+        }
+    }
+
+    pub(in crate::backend::direct_wasm) fn resolve_terminal_expression_throw_value_with_state(
+        &self,
+        expression: &Expression,
+        environment: &mut StaticResolutionEnvironment,
+    ) -> Option<Expression> {
+        match expression {
+            Expression::Call { callee, arguments } => {
+                let callee = match callee.as_ref() {
+                    Expression::Identifier(name) => {
+                        environment.binding(name).cloned().unwrap_or_else(|| {
+                            self.materialize_static_expression_with_state(callee, environment)
+                                .unwrap_or_else(|| {
+                                    self.resolve_static_expression_value_with_state(
+                                        callee,
+                                        environment,
+                                    )
+                                })
+                        })
+                    }
+                    _ => self
+                        .materialize_static_expression_with_state(callee, environment)
+                        .unwrap_or_else(|| {
+                            self.resolve_static_expression_value_with_state(callee, environment)
+                        }),
+                };
+                let argument_values = arguments
+                    .iter()
+                    .map(|argument| match argument {
+                        CallArgument::Expression(expression) => {
+                            Some(self.resolve_static_expression_value_with_state(
+                                expression,
+                                environment,
+                            ))
+                        }
+                        CallArgument::Spread(_) => None,
+                    })
+                    .collect::<Option<Vec<_>>>()?;
+                let binding = self.resolve_function_binding_from_expression(&callee)?;
+                match self
+                    .resolve_terminal_function_outcome_from_binding(&binding, &argument_values)?
+                {
+                    StaticEvalOutcome::Throw(throw_value) => {
+                        self.resolve_static_throw_value_expression(&throw_value)
+                    }
+                    _ => None,
+                }
+            }
+            Expression::AssignMember {
+                object,
+                property,
+                value,
+            } => self
+                .resolve_terminal_expression_throw_value_with_state(object, environment)
+                .or_else(|| {
+                    self.resolve_terminal_expression_throw_value_with_state(property, environment)
+                })
+                .or_else(|| {
+                    self.resolve_terminal_expression_throw_value_with_state(value, environment)
+                }),
+            Expression::AssignSuperMember { property, value } => self
+                .resolve_terminal_expression_throw_value_with_state(property, environment)
+                .or_else(|| {
+                    self.resolve_terminal_expression_throw_value_with_state(value, environment)
+                }),
+            Expression::Assign { value, .. } => {
+                self.resolve_terminal_expression_throw_value_with_state(value, environment)
+            }
+            Expression::Member { object, property } => self
+                .resolve_terminal_expression_throw_value_with_state(object, environment)
+                .or_else(|| {
+                    self.resolve_terminal_expression_throw_value_with_state(property, environment)
+                }),
+            Expression::SuperMember { property } => {
+                self.resolve_terminal_expression_throw_value_with_state(property, environment)
+            }
+            Expression::Binary { op, left, right } => self
+                .resolve_terminal_expression_throw_value_with_state(left, environment)
+                .or_else(|| {
+                    self.resolve_terminal_expression_throw_value_with_state(right, environment)
+                })
+                .or_else(|| {
+                    let left_value =
+                        self.resolve_static_expression_value_with_state(left, environment);
+                    let right_value =
+                        self.resolve_static_expression_value_with_state(right, environment);
+                    self.resolve_static_binary_throw_value(*op, &left_value, &right_value)
+                }),
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => self
+                .resolve_terminal_expression_throw_value_with_state(condition, environment)
+                .or_else(|| {
+                    self.resolve_terminal_expression_throw_value_with_state(
+                        then_expression,
+                        environment,
+                    )
+                })
+                .or_else(|| {
+                    self.resolve_terminal_expression_throw_value_with_state(
+                        else_expression,
+                        environment,
+                    )
+                }),
+            Expression::Sequence(expressions) => {
+                for expression in expressions {
+                    if let Some(throw_value) = self
+                        .resolve_terminal_expression_throw_value_with_state(expression, environment)
+                    {
+                        return Some(throw_value);
+                    }
+                }
+                None
+            }
+            Expression::Unary {
+                op: UnaryOp::Plus | UnaryOp::Negate,
+                expression,
+            } => self
+                .resolve_terminal_expression_throw_value_with_state(expression, environment)
+                .or_else(|| {
+                    let value =
+                        self.resolve_static_expression_value_with_state(expression, environment);
+                    self.resolve_terminal_expression_throw_value(&value)
+                        .or_else(|| {
+                            let plan = self
+                                .resolve_ordinary_to_primitive_plan_with_state(
+                                    expression,
+                                    environment,
+                                )
+                                .or_else(|| self.resolve_ordinary_to_primitive_plan(&value))?;
+                            plan.steps.iter().find_map(|step| match &step.outcome {
+                                StaticEvalOutcome::Throw(throw_value) => {
+                                    self.resolve_static_throw_value_expression(throw_value)
+                                }
+                                StaticEvalOutcome::Value(_) => None,
+                            })
+                        })
+                }),
+            Expression::Await(expression)
+            | Expression::EnumerateKeys(expression)
+            | Expression::GetIterator(expression)
+            | Expression::IteratorClose(expression)
+            | Expression::Unary { expression, .. } => {
+                self.resolve_terminal_expression_throw_value_with_state(expression, environment)
+            }
+            _ => self.resolve_terminal_expression_throw_value(
+                &self.resolve_static_expression_value_with_state(expression, environment),
+            ),
         }
     }
 
@@ -240,6 +537,10 @@ impl<'a> FunctionCompiler<'a> {
             Expression::AssignSuperMember { property, value } => self
                 .resolve_terminal_expression_throw_value(property)
                 .or_else(|| self.resolve_terminal_expression_throw_value(value)),
+            Expression::Binary { op, left, right } => self
+                .resolve_terminal_expression_throw_value(left)
+                .or_else(|| self.resolve_terminal_expression_throw_value(right))
+                .or_else(|| self.resolve_static_binary_throw_value(*op, left, right)),
             Expression::Sequence(expressions) => {
                 for expression in expressions {
                     if let Some(throw_value) =
@@ -250,6 +551,20 @@ impl<'a> FunctionCompiler<'a> {
                 }
                 None
             }
+            Expression::Unary {
+                op: UnaryOp::Plus | UnaryOp::Negate,
+                expression,
+            } => self
+                .resolve_terminal_expression_throw_value(expression)
+                .or_else(|| {
+                    let plan = self.resolve_ordinary_to_primitive_plan(expression)?;
+                    plan.steps.iter().find_map(|step| match &step.outcome {
+                        StaticEvalOutcome::Throw(throw_value) => {
+                            self.resolve_static_throw_value_expression(throw_value)
+                        }
+                        StaticEvalOutcome::Value(_) => None,
+                    })
+                }),
             Expression::Await(expression)
             | Expression::EnumerateKeys(expression)
             | Expression::GetIterator(expression)
@@ -281,6 +596,36 @@ impl<'a> FunctionCompiler<'a> {
         let Expression::Call { callee, arguments } = expression else {
             return None;
         };
+        if matches!(
+            callee.as_ref(),
+            Expression::Member { property, .. }
+                if matches!(property.as_ref(), Expression::String(name) if name == "call" || name == "apply")
+        ) {
+            return None;
+        }
+        if let Expression::Member { object, property } = callee.as_ref()
+            && matches!(property.as_ref(), Expression::String(name) if name == "then" || name == "catch")
+        {
+            let object_is_async_user_call = if let Expression::Call {
+                callee: object_callee,
+                ..
+            } = object.as_ref()
+            {
+                self.resolve_function_binding_from_expression(object_callee)
+                    .is_some_and(|binding| {
+                        let LocalFunctionBinding::User(function_name) = binding else {
+                            return false;
+                        };
+                        self.user_function(&function_name)
+                            .is_some_and(|function| function.is_async())
+                    })
+            } else {
+                false
+            };
+            if Self::call_is_promise_like_chain(object) || object_is_async_user_call {
+                return None;
+            }
+        }
         if matches!(
             callee.as_ref(),
             Expression::Identifier(name) if name == "eval"

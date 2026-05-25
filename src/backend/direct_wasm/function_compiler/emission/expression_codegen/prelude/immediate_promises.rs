@@ -334,6 +334,778 @@ impl<'a> FunctionCompiler<'a> {
         let function = self.resolve_registered_function_declaration(&function_name)?;
         self.lowered_for_await_throw_completion_outcome(&function.body)
             .or_else(|| self.lowered_for_await_break_close_outcome(&function.body))
+            .or_else(|| self.direct_async_function_terminal_return_outcome(function, arguments))
+    }
+
+    fn direct_async_function_terminal_return_outcome(
+        &self,
+        function: &FunctionDeclaration,
+        arguments: &[CallArgument],
+    ) -> Option<StaticEvalOutcome> {
+        if !arguments.is_empty() || !function.params.is_empty() {
+            return None;
+        }
+        let [Statement::Return(return_value)] = function.body.as_slice() else {
+            return None;
+        };
+        self.resolve_static_await_resolution_outcome(return_value)
+    }
+
+    fn emit_direct_async_function_call_await_effects(
+        &mut self,
+        expression: &Expression,
+    ) -> DirectResult<()> {
+        let Expression::Call { callee, arguments } = expression else {
+            return Ok(());
+        };
+        if !arguments.is_empty() {
+            return Ok(());
+        }
+        let Some(LocalFunctionBinding::User(function_name)) = self
+            .resolve_function_binding_from_expression_with_context(
+                callee,
+                self.current_function_name(),
+            )
+        else {
+            return Ok(());
+        };
+        let Some(user_function) = self.user_function(&function_name) else {
+            return Ok(());
+        };
+        if !user_function.is_async() {
+            return Ok(());
+        }
+        let Some(function) = self.resolve_registered_function_declaration(&function_name) else {
+            return Ok(());
+        };
+        if !function.params.is_empty() {
+            return Ok(());
+        }
+        let [Statement::Return(return_value)] = function.body.as_slice() else {
+            return Ok(());
+        };
+        let return_value = return_value.clone();
+        self.emit_static_await_resolution_effects(&return_value)
+    }
+
+    pub(in crate::backend::direct_wasm) fn emit_static_await_resolution_effects(
+        &mut self,
+        expression: &Expression,
+    ) -> DirectResult<()> {
+        match expression {
+            Expression::Await(value) => self.emit_static_await_resolution_effects(value),
+            Expression::Call { callee, arguments } if matches!(callee.as_ref(), Expression::Identifier(name) if name == "__ayyDynamicImport") =>
+            {
+                self.emit_static_dynamic_import_options_effects(arguments)?;
+                self.emit_static_dynamic_import_module_init_effects(arguments)
+            }
+            _ => Ok(()),
+        }
+    }
+
+    fn install_immediate_promise_returned_function_capture_slots(
+        &mut self,
+        result: &Expression,
+        updated_bindings: &HashMap<String, Expression>,
+    ) -> DirectResult<()> {
+        let Some(LocalFunctionBinding::User(returned_function_name)) =
+            self.resolve_function_binding_from_expression(result)
+        else {
+            return Ok(());
+        };
+        let mut capture_bindings = self
+            .user_function_capture_bindings(&returned_function_name)
+            .unwrap_or_default();
+        if !capture_bindings.contains_key("arguments")
+            && updated_bindings.contains_key("arguments")
+            && self
+                .user_function(&returned_function_name)
+                .is_some_and(|function| function.lexical_this)
+        {
+            capture_bindings.insert(
+                "arguments".to_string(),
+                format!("__ayy_capture_binding__{returned_function_name}__arguments"),
+            );
+            self.backend
+                .function_registry
+                .analysis
+                .set_user_function_capture_bindings(
+                    &returned_function_name,
+                    capture_bindings.clone(),
+                );
+        }
+        if capture_bindings.is_empty() {
+            return Ok(());
+        }
+        let mut capture_slots = BTreeMap::new();
+        let mut capture_names = capture_bindings.keys().cloned().collect::<Vec<_>>();
+        capture_names.sort_by(|left, right| match (left.as_str(), right.as_str()) {
+            ("arguments", "arguments") => std::cmp::Ordering::Equal,
+            ("arguments", _) => std::cmp::Ordering::Less,
+            (_, "arguments") => std::cmp::Ordering::Greater,
+            _ => left.cmp(right),
+        });
+        for capture_name in capture_names {
+            let source_expression = updated_bindings
+                .get(&capture_name)
+                .or_else(|| {
+                    scoped_binding_source_name(&capture_name)
+                        .and_then(|source_name| updated_bindings.get(source_name))
+                })
+                .or_else(|| {
+                    updated_bindings.iter().find_map(|(binding_name, value)| {
+                        scoped_binding_source_name(binding_name)
+                            .is_some_and(|source_name| source_name == capture_name)
+                            .then_some(value)
+                    })
+                })
+                .cloned()
+                .unwrap_or_else(|| Expression::Identifier(capture_name.clone()));
+            let source_expression = if matches!(
+                &source_expression,
+                Expression::Identifier(name) if name == "new.target"
+            ) {
+                Expression::Undefined
+            } else {
+                source_expression
+            };
+            if let Expression::Identifier(source_name) = &source_expression
+                && let Some(existing_hidden_name) = capture_slots.get(source_name).cloned()
+            {
+                if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+                    eprintln!(
+                        "immediate_await_captures:reuse-capture function={returned_function_name} capture={capture_name} source={source_name} hidden={existing_hidden_name}"
+                    );
+                }
+                capture_slots.insert(capture_name.clone(), existing_hidden_name);
+                continue;
+            }
+            let source_expression = if let Expression::Identifier(source_name) = &source_expression
+                && let Some(resolved_source) = updated_bindings.get(source_name)
+            {
+                resolved_source.clone()
+            } else {
+                source_expression
+            };
+            let hidden_name = self.allocate_named_hidden_local(
+                &format!("closure_slot_{}_{}", returned_function_name, capture_name),
+                self.infer_value_kind(&source_expression)
+                    .unwrap_or(StaticValueKind::Unknown),
+            );
+            if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+                eprintln!(
+                    "immediate_await_captures:install-capture function={returned_function_name} capture={capture_name} source={source_expression:?} hidden={hidden_name}"
+                );
+            }
+            let hidden_local = self
+                .state
+                .runtime
+                .locals
+                .get(&hidden_name)
+                .copied()
+                .expect("fresh immediate promise closure capture local must exist");
+            self.emit_numeric_expression(&source_expression)?;
+            self.push_local_set(hidden_local);
+            self.update_capture_slot_binding_from_expression(&hidden_name, &source_expression)?;
+            self.sync_capture_slot_runtime_object_shadows_from_expression(
+                &hidden_name,
+                &source_expression,
+            )?;
+            if let Expression::Identifier(source_name) = &source_expression {
+                self.state
+                    .speculation
+                    .static_semantics
+                    .capture_slot_source_bindings
+                    .insert(hidden_name.clone(), source_name.clone());
+            }
+            capture_slots.insert(capture_name.clone(), hidden_name);
+        }
+        if capture_slots.is_empty() {
+            return Ok(());
+        }
+        let target_name = match result {
+            Expression::Identifier(name) => name.clone(),
+            _ => returned_function_name,
+        };
+        let key = Self::identifier_function_value_capture_slots_key(&target_name);
+        self.state
+            .speculation
+            .static_semantics
+            .objects
+            .member_function_capture_slots
+            .insert(key.clone(), capture_slots.clone());
+        if self.binding_key_is_global(&key) {
+            self.backend
+                .set_global_member_function_capture_slots(key, capture_slots);
+        }
+        Ok(())
+    }
+
+    fn user_function_call_await_resolution_outcome_with_captures(
+        &mut self,
+        binding: &LocalFunctionBinding,
+        call_arguments: &[Expression],
+        this_binding: &Expression,
+        capture_source_bindings: Option<&HashMap<String, Expression>>,
+    ) -> DirectResult<Option<StaticEvalOutcome>> {
+        let LocalFunctionBinding::User(function_name) = binding else {
+            return Ok(None);
+        };
+        if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+            eprintln!(
+                "immediate_await_captures:user-start function={function_name} this={this_binding:?} args={call_arguments:?}"
+            );
+        }
+        if self
+            .user_function(function_name)
+            .is_some_and(|user_function| {
+                !self.user_function_mentions_private_member_access(user_function)
+            })
+            && {
+                if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+                    eprintln!("immediate_await_captures:snapshot-attempt function={function_name}");
+                }
+                true
+            }
+            && let Some((result, updated_bindings)) = self
+                .resolve_bound_snapshot_user_function_result_with_arguments_and_this(
+                    function_name,
+                    &capture_source_bindings.cloned().unwrap_or_else(|| {
+                        self.user_function_capture_bindings(function_name)
+                            .unwrap_or_default()
+                            .keys()
+                            .map(|capture_name| {
+                                (
+                                    capture_name.clone(),
+                                    Expression::Identifier(capture_name.clone()),
+                                )
+                            })
+                            .collect::<HashMap<_, _>>()
+                    }),
+                    call_arguments,
+                    this_binding,
+                )
+        {
+            if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+                eprintln!(
+                    "immediate_await_captures:snapshot-result function={function_name} result={result:?} updated_keys={:?}",
+                    updated_bindings.keys().collect::<Vec<_>>()
+                );
+            }
+            self.install_immediate_promise_returned_function_capture_slots(
+                &result,
+                &updated_bindings,
+            )?;
+            if self
+                .user_function(function_name)
+                .is_some_and(|function| function.is_async())
+                && let Some(outcome) =
+                    self.immediate_await_resolution_outcome_with_captures(&result)?
+            {
+                return Ok(Some(outcome));
+            }
+            return Ok(Some(StaticEvalOutcome::Value(result)));
+        }
+        let value = self
+            .immediate_user_function_terminal_return_expression_with_call_frame(
+                function_name,
+                call_arguments,
+                this_binding,
+            )
+            .or_else(|| {
+                self.resolve_function_binding_static_return_expression_with_call_frame(
+                    binding,
+                    call_arguments,
+                    this_binding,
+                )
+            });
+        if let Some(mut value) = value {
+            if let Some(capture_source_bindings) = capture_source_bindings {
+                value = Self::substitute_immediate_promise_capture_source_bindings(
+                    &value,
+                    capture_source_bindings,
+                );
+                value = Self::fold_immediate_promise_capture_identity_expression(value);
+            }
+            if self
+                .user_function(function_name)
+                .is_some_and(|function| !function.lexical_this)
+            {
+                value = Self::substitute_immediate_promise_bare_new_target(value);
+            }
+            if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+                eprintln!(
+                    "immediate_await_captures:return-expression function={function_name} value={value:?}"
+                );
+            }
+            if let Some(outcome) = self.immediate_await_resolution_outcome_with_captures(&value)? {
+                return Ok(Some(outcome));
+            }
+            return Ok(self
+                .resolve_static_await_resolution_outcome(&value)
+                .or(Some(StaticEvalOutcome::Value(value))));
+        }
+        Ok(None)
+    }
+
+    fn fold_immediate_promise_capture_identity_expression(expression: Expression) -> Expression {
+        match expression {
+            Expression::Binary { op, left, right }
+                if matches!(
+                    op,
+                    BinaryOp::Equal
+                        | BinaryOp::LooseEqual
+                        | BinaryOp::NotEqual
+                        | BinaryOp::LooseNotEqual
+                ) =>
+            {
+                let equal = if Self::immediate_promise_fresh_reference_expression(&left)
+                    || Self::immediate_promise_fresh_reference_expression(&right)
+                {
+                    false
+                } else if static_expression_matches(&left, &right) {
+                    true
+                } else {
+                    return Expression::Binary { op, left, right };
+                };
+                Expression::Bool(match op {
+                    BinaryOp::Equal | BinaryOp::LooseEqual => equal,
+                    BinaryOp::NotEqual | BinaryOp::LooseNotEqual => !equal,
+                    _ => unreachable!("filtered above"),
+                })
+            }
+            _ => expression,
+        }
+    }
+
+    fn immediate_promise_fresh_reference_expression(expression: &Expression) -> bool {
+        matches!(expression, Expression::Array(_) | Expression::Object(_))
+    }
+
+    fn substitute_immediate_promise_bare_new_target(expression: Expression) -> Expression {
+        let bindings = HashMap::new();
+        Self::substitute_immediate_promise_capture_source_bindings(&expression, &bindings)
+    }
+
+    fn immediate_promise_capture_source_binding<'b>(
+        name: &str,
+        bindings: &'b HashMap<String, Expression>,
+    ) -> Option<&'b Expression> {
+        bindings.get(name).or_else(|| {
+            scoped_binding_source_name(name).and_then(|source_name| bindings.get(source_name))
+        })
+    }
+
+    fn substitute_immediate_promise_capture_source_bindings(
+        expression: &Expression,
+        bindings: &HashMap<String, Expression>,
+    ) -> Expression {
+        match expression {
+            Expression::Identifier(name) => {
+                Self::immediate_promise_capture_source_binding(name, bindings)
+                    .cloned()
+                    .unwrap_or_else(|| expression.clone())
+            }
+            Expression::This => bindings
+                .get("this")
+                .cloned()
+                .unwrap_or_else(|| expression.clone()),
+            Expression::NewTarget => bindings
+                .get("new.target")
+                .filter(
+                    |value| !matches!(value, Expression::Identifier(name) if name == "new.target"),
+                )
+                .cloned()
+                .unwrap_or(Expression::Undefined),
+            Expression::Array(elements) => Expression::Array(
+                elements
+                    .iter()
+                    .map(|element| match element {
+                        ArrayElement::Expression(element) => ArrayElement::Expression(
+                            Self::substitute_immediate_promise_capture_source_bindings(
+                                element, bindings,
+                            ),
+                        ),
+                        ArrayElement::Spread(element) => ArrayElement::Spread(
+                            Self::substitute_immediate_promise_capture_source_bindings(
+                                element, bindings,
+                            ),
+                        ),
+                    })
+                    .collect(),
+            ),
+            Expression::Object(entries) => Expression::Object(
+                entries
+                    .iter()
+                    .map(|entry| match entry {
+                        ObjectEntry::Data { key, value } => ObjectEntry::Data {
+                            key: Self::substitute_immediate_promise_capture_source_bindings(
+                                key, bindings,
+                            ),
+                            value: Self::substitute_immediate_promise_capture_source_bindings(
+                                value, bindings,
+                            ),
+                        },
+                        ObjectEntry::Getter { key, getter } => ObjectEntry::Getter {
+                            key: Self::substitute_immediate_promise_capture_source_bindings(
+                                key, bindings,
+                            ),
+                            getter: Self::substitute_immediate_promise_capture_source_bindings(
+                                getter, bindings,
+                            ),
+                        },
+                        ObjectEntry::Setter { key, setter } => ObjectEntry::Setter {
+                            key: Self::substitute_immediate_promise_capture_source_bindings(
+                                key, bindings,
+                            ),
+                            setter: Self::substitute_immediate_promise_capture_source_bindings(
+                                setter, bindings,
+                            ),
+                        },
+                        ObjectEntry::Spread(value) => ObjectEntry::Spread(
+                            Self::substitute_immediate_promise_capture_source_bindings(
+                                value, bindings,
+                            ),
+                        ),
+                    })
+                    .collect(),
+            ),
+            Expression::Member { object, property } => Expression::Member {
+                object: Box::new(Self::substitute_immediate_promise_capture_source_bindings(
+                    object, bindings,
+                )),
+                property: Box::new(Self::substitute_immediate_promise_capture_source_bindings(
+                    property, bindings,
+                )),
+            },
+            Expression::SuperMember { property } => Expression::SuperMember {
+                property: Box::new(Self::substitute_immediate_promise_capture_source_bindings(
+                    property, bindings,
+                )),
+            },
+            Expression::Assign { name, value } => Expression::Assign {
+                name: name.clone(),
+                value: Box::new(Self::substitute_immediate_promise_capture_source_bindings(
+                    value, bindings,
+                )),
+            },
+            Expression::AssignMember {
+                object,
+                property,
+                value,
+            } => Expression::AssignMember {
+                object: Box::new(Self::substitute_immediate_promise_capture_source_bindings(
+                    object, bindings,
+                )),
+                property: Box::new(Self::substitute_immediate_promise_capture_source_bindings(
+                    property, bindings,
+                )),
+                value: Box::new(Self::substitute_immediate_promise_capture_source_bindings(
+                    value, bindings,
+                )),
+            },
+            Expression::AssignSuperMember { property, value } => Expression::AssignSuperMember {
+                property: Box::new(Self::substitute_immediate_promise_capture_source_bindings(
+                    property, bindings,
+                )),
+                value: Box::new(Self::substitute_immediate_promise_capture_source_bindings(
+                    value, bindings,
+                )),
+            },
+            Expression::Await(value) => Expression::Await(Box::new(
+                Self::substitute_immediate_promise_capture_source_bindings(value, bindings),
+            )),
+            Expression::EnumerateKeys(value) => Expression::EnumerateKeys(Box::new(
+                Self::substitute_immediate_promise_capture_source_bindings(value, bindings),
+            )),
+            Expression::GetIterator(value) => Expression::GetIterator(Box::new(
+                Self::substitute_immediate_promise_capture_source_bindings(value, bindings),
+            )),
+            Expression::IteratorClose(value) => Expression::IteratorClose(Box::new(
+                Self::substitute_immediate_promise_capture_source_bindings(value, bindings),
+            )),
+            Expression::Unary { op, expression } => Expression::Unary {
+                op: *op,
+                expression: Box::new(Self::substitute_immediate_promise_capture_source_bindings(
+                    expression, bindings,
+                )),
+            },
+            Expression::Binary { op, left, right } => Expression::Binary {
+                op: *op,
+                left: Box::new(Self::substitute_immediate_promise_capture_source_bindings(
+                    left, bindings,
+                )),
+                right: Box::new(Self::substitute_immediate_promise_capture_source_bindings(
+                    right, bindings,
+                )),
+            },
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => Expression::Conditional {
+                condition: Box::new(Self::substitute_immediate_promise_capture_source_bindings(
+                    condition, bindings,
+                )),
+                then_expression: Box::new(
+                    Self::substitute_immediate_promise_capture_source_bindings(
+                        then_expression,
+                        bindings,
+                    ),
+                ),
+                else_expression: Box::new(
+                    Self::substitute_immediate_promise_capture_source_bindings(
+                        else_expression,
+                        bindings,
+                    ),
+                ),
+            },
+            Expression::Sequence(expressions) => Expression::Sequence(
+                expressions
+                    .iter()
+                    .map(|expression| {
+                        Self::substitute_immediate_promise_capture_source_bindings(
+                            expression, bindings,
+                        )
+                    })
+                    .collect(),
+            ),
+            Expression::Call { callee, arguments } => Expression::Call {
+                callee: Box::new(Self::substitute_immediate_promise_capture_source_bindings(
+                    callee, bindings,
+                )),
+                arguments: arguments
+                    .iter()
+                    .map(|argument| match argument {
+                        CallArgument::Expression(argument) => CallArgument::Expression(
+                            Self::substitute_immediate_promise_capture_source_bindings(
+                                argument, bindings,
+                            ),
+                        ),
+                        CallArgument::Spread(argument) => CallArgument::Spread(
+                            Self::substitute_immediate_promise_capture_source_bindings(
+                                argument, bindings,
+                            ),
+                        ),
+                    })
+                    .collect(),
+            },
+            Expression::SuperCall { callee, arguments } => Expression::SuperCall {
+                callee: Box::new(Self::substitute_immediate_promise_capture_source_bindings(
+                    callee, bindings,
+                )),
+                arguments: arguments
+                    .iter()
+                    .map(|argument| match argument {
+                        CallArgument::Expression(argument) => CallArgument::Expression(
+                            Self::substitute_immediate_promise_capture_source_bindings(
+                                argument, bindings,
+                            ),
+                        ),
+                        CallArgument::Spread(argument) => CallArgument::Spread(
+                            Self::substitute_immediate_promise_capture_source_bindings(
+                                argument, bindings,
+                            ),
+                        ),
+                    })
+                    .collect(),
+            },
+            Expression::New { callee, arguments } => Expression::New {
+                callee: Box::new(Self::substitute_immediate_promise_capture_source_bindings(
+                    callee, bindings,
+                )),
+                arguments: arguments
+                    .iter()
+                    .map(|argument| match argument {
+                        CallArgument::Expression(argument) => CallArgument::Expression(
+                            Self::substitute_immediate_promise_capture_source_bindings(
+                                argument, bindings,
+                            ),
+                        ),
+                        CallArgument::Spread(argument) => CallArgument::Spread(
+                            Self::substitute_immediate_promise_capture_source_bindings(
+                                argument, bindings,
+                            ),
+                        ),
+                    })
+                    .collect(),
+            },
+            Expression::Update { name, op, prefix } => Expression::Update {
+                name: name.clone(),
+                op: *op,
+                prefix: *prefix,
+            },
+            Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined
+            | Expression::Sent => expression.clone(),
+        }
+    }
+
+    fn immediate_user_function_terminal_return_expression_with_call_frame(
+        &self,
+        function_name: &str,
+        arguments: &[Expression],
+        this_binding: &Expression,
+    ) -> Option<Expression> {
+        let user_function = self.user_function(function_name)?;
+        let function = self.resolve_registered_function_declaration(function_name)?;
+        let (terminal_statement, effect_statements) = function.body.split_last()?;
+        if !effect_statements
+            .iter()
+            .all(|statement| matches!(statement, Statement::Block { body } if body.is_empty()))
+        {
+            return None;
+        }
+        let Statement::Return(return_value) = terminal_statement else {
+            return None;
+        };
+        let call_arguments = arguments
+            .iter()
+            .cloned()
+            .map(CallArgument::Expression)
+            .collect::<Vec<_>>();
+        let arguments_binding = if user_function.lexical_this {
+            Expression::Identifier("arguments".to_string())
+        } else {
+            Expression::Array(
+                arguments
+                    .iter()
+                    .cloned()
+                    .map(ArrayElement::Expression)
+                    .collect(),
+            )
+        };
+        Some(self.substitute_user_function_call_frame_bindings(
+            return_value,
+            user_function,
+            &call_arguments,
+            this_binding,
+            &arguments_binding,
+        ))
+    }
+
+    fn immediate_await_resolution_outcome_with_captures(
+        &mut self,
+        resolution: &Expression,
+    ) -> DirectResult<Option<StaticEvalOutcome>> {
+        if let Expression::Await(value) = resolution {
+            if let Some(outcome) = self.immediate_await_resolution_outcome_with_captures(value)? {
+                return Ok(Some(outcome));
+            }
+            return Ok(self.resolve_static_await_resolution_outcome(resolution));
+        }
+        let Expression::Call { callee, arguments } = resolution else {
+            return Ok(self.resolve_static_await_resolution_outcome(resolution));
+        };
+        if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+            eprintln!("immediate_await_captures:resolution-call {resolution:?}");
+        }
+        if matches!(
+            callee.as_ref(),
+            Expression::Member { property, .. }
+                if matches!(property.as_ref(), Expression::String(name) if name == "then" || name == "catch")
+        ) {
+            if let Some(outcome) =
+                self.consume_immediate_promise_outcome_unmaterialized(resolution)?
+            {
+                return Ok(Some(outcome));
+            }
+            return Ok(self.resolve_static_await_resolution_outcome(resolution));
+        }
+        let Some(binding) = self.resolve_function_binding_from_expression_with_context(
+            callee,
+            self.current_function_name(),
+        ) else {
+            return Ok(self.resolve_static_await_resolution_outcome(resolution));
+        };
+        let call_arguments = self.expand_call_arguments(arguments);
+        let this_binding = match callee.as_ref() {
+            Expression::Member { object, .. } => self.materialize_static_expression(object),
+            Expression::SuperMember { .. } => Expression::This,
+            _ => Expression::Undefined,
+        };
+        let capture_source_bindings =
+            self.resolve_function_expression_capture_slots(callee)
+                .map(|capture_slots| {
+                    capture_slots
+                        .into_iter()
+                        .map(|(capture_name, slot_name)| {
+                            (
+                                capture_name,
+                                self.snapshot_bound_capture_slot_expression(&slot_name),
+                            )
+                        })
+                        .collect::<HashMap<_, _>>()
+                });
+        if let Some(outcome) = self.user_function_call_await_resolution_outcome_with_captures(
+            &binding,
+            &call_arguments,
+            &this_binding,
+            capture_source_bindings.as_ref(),
+        )? {
+            return Ok(Some(outcome));
+        }
+        Ok(self.resolve_static_await_resolution_outcome(resolution))
+    }
+
+    fn bound_function_call_await_resolution_outcome(
+        &mut self,
+        callee: &Expression,
+        arguments: &[CallArgument],
+    ) -> DirectResult<Option<StaticEvalOutcome>> {
+        let resolved_callee = self
+            .resolve_bound_alias_expression(callee)
+            .filter(|resolved| !static_expression_matches(resolved, callee))
+            .unwrap_or_else(|| callee.clone());
+        let Expression::Call {
+            callee: bind_callee,
+            arguments: bind_arguments,
+        } = resolved_callee
+        else {
+            return Ok(None);
+        };
+        let Expression::Member { object, property } = bind_callee.as_ref() else {
+            return Ok(None);
+        };
+        if !matches!(property.as_ref(), Expression::String(name) if name == "bind") {
+            return Ok(None);
+        }
+        let binding = self.resolve_function_binding_from_expression_with_context(
+            object,
+            self.current_function_name(),
+        );
+        let Some(binding) = binding else {
+            return Ok(None);
+        };
+        if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+            eprintln!(
+                "immediate_await_captures:bound-call object={object:?} this_args={bind_arguments:?} call_args={arguments:?} binding={binding:?}"
+            );
+        }
+        let bound_arguments = self.expand_call_arguments(&bind_arguments);
+        let this_binding = bound_arguments
+            .first()
+            .cloned()
+            .unwrap_or(Expression::Undefined);
+        let call_arguments = bound_arguments
+            .iter()
+            .skip(1)
+            .cloned()
+            .chain(self.expand_call_arguments(arguments))
+            .collect::<Vec<_>>();
+        if let Some(outcome) = self.user_function_call_await_resolution_outcome_with_captures(
+            &binding,
+            &call_arguments,
+            &this_binding,
+            None,
+        )? {
+            return Ok(Some(outcome));
+        }
+        Ok(None)
     }
 
     pub(in crate::backend::direct_wasm) fn current_async_function_static_promise_outcome(
@@ -746,9 +1518,45 @@ impl<'a> FunctionCompiler<'a> {
         } else {
             callback.clone()
         };
+        let callback_is_done_binding = matches!(&effective_callback, Expression::Identifier(name) if Self::is_done_callback_binding_name(name))
+            || self
+                .resolve_user_function_from_expression(&effective_callback)
+                .is_some_and(|user_function| {
+                    Self::is_done_callback_binding_name(&user_function.name)
+                });
+        if callback_is_done_binding {
+            if matches!(argument, Expression::Undefined) {
+                self.push_i32_const(JS_UNDEFINED_TAG);
+                self.state.emission.output.instructions.push(0x1a);
+                return Ok(());
+            }
+            if let Some(outcome) = self.consume_immediate_promise_outcome(argument)? {
+                match outcome {
+                    StaticEvalOutcome::Value(Expression::Undefined) => {
+                        self.push_i32_const(JS_UNDEFINED_TAG);
+                        self.state.emission.output.instructions.push(0x1a);
+                        return Ok(());
+                    }
+                    StaticEvalOutcome::Value(value) => {
+                        self.emit_numeric_expression(&Expression::Call {
+                            callee: Box::new(effective_callback.clone()),
+                            arguments: vec![CallArgument::Expression(value)],
+                        })?;
+                        self.state.emission.output.instructions.push(0x1a);
+                        return Ok(());
+                    }
+                    StaticEvalOutcome::Throw(throw_value) => {
+                        self.emit_static_throw_value(&throw_value)?;
+                        self.push_i32_const(JS_UNDEFINED_TAG);
+                        self.state.emission.output.instructions.push(0x1a);
+                        return Ok(());
+                    }
+                }
+            }
+        }
         let materialized_argument = self.materialize_static_expression(argument);
         let materialized_argument =
-            match self.resolve_static_await_resolution_outcome(&materialized_argument) {
+            match self.immediate_await_resolution_outcome_with_captures(&materialized_argument)? {
                 Some(StaticEvalOutcome::Value(value)) => value,
                 Some(StaticEvalOutcome::Throw(throw_value)) => {
                     self.emit_static_throw_value(&throw_value)?;
@@ -881,13 +1689,11 @@ impl<'a> FunctionCompiler<'a> {
                         return Ok(());
                     }
                 }
-                if self
-                    .can_inline_immediate_promise_callback_body_with_explicit_call_frame(
-                        &user_function,
-                        std::slice::from_ref(&effective_argument),
-                        &Expression::Undefined,
-                    )
-                {
+                if self.can_inline_immediate_promise_callback_body_with_explicit_call_frame(
+                    &user_function,
+                    std::slice::from_ref(&effective_argument),
+                    &Expression::Undefined,
+                ) {
                     let result_local = self.allocate_temp_local();
                     if self.emit_inline_user_function_summary_with_explicit_call_frame(
                         &user_function,
@@ -1032,6 +1838,7 @@ impl<'a> FunctionCompiler<'a> {
                 && !static_expression_matches(&bound_value, expression)
             {
                 if let Some(outcome) = self.direct_async_function_call_outcome(&bound_value) {
+                    self.emit_direct_async_function_call_await_effects(&bound_value)?;
                     return Ok(Some(outcome));
                 }
                 if let Some(outcome) = self.resolve_static_await_resolution_outcome(&bound_value) {
@@ -1085,6 +1892,15 @@ impl<'a> FunctionCompiler<'a> {
                     .unwrap_or(StaticEvalOutcome::Value(snapshot_result.clone())),
             ));
         }
+        if let Expression::Call { callee, arguments } = expression
+            && matches!(callee.as_ref(), Expression::Identifier(name) if name == "__ayyDynamicImport")
+        {
+            self.emit_static_dynamic_import_options_effects(arguments)?;
+            self.emit_static_dynamic_import_module_init_effects(arguments)?;
+            if let Some(outcome) = self.resolve_static_dynamic_import_outcome(callee, arguments) {
+                return Ok(Some(outcome));
+            }
+        }
         let is_then_or_catch_chain = matches!(
             expression,
             Expression::Call { callee, .. }
@@ -1097,6 +1913,16 @@ impl<'a> FunctionCompiler<'a> {
         if !is_then_or_catch_chain
             && let Some(outcome) = self.direct_async_function_call_outcome(expression)
         {
+            self.emit_direct_async_function_call_await_effects(expression)?;
+            return Ok(Some(outcome));
+        }
+        if let Expression::Call { callee, arguments } = expression
+            && let Some(outcome) =
+                self.bound_function_call_await_resolution_outcome(callee, arguments)?
+        {
+            return Ok(Some(outcome));
+        }
+        if let Some(outcome) = self.direct_function_call_returned_promise_outcome(expression)? {
             return Ok(Some(outcome));
         }
         if let Some(outcome) = self.consume_immediate_promise_outcome_unmaterialized(expression)? {
@@ -1175,6 +2001,330 @@ impl<'a> FunctionCompiler<'a> {
             .is_some_and(|user_function| user_function.is_async())
     }
 
+    fn expression_is_dynamic_import_call(expression: &Expression) -> bool {
+        matches!(
+            expression,
+            Expression::Call { callee, .. }
+                if matches!(callee.as_ref(), Expression::Identifier(name) if name == "__ayyDynamicImport")
+        )
+    }
+
+    fn expression_is_async_function_prototype_call(&self, expression: &Expression) -> bool {
+        let Expression::Call { callee, .. } = expression else {
+            return false;
+        };
+        let Expression::Member { object, property } = callee.as_ref() else {
+            return false;
+        };
+        if !matches!(property.as_ref(), Expression::String(name) if name == "call" || name == "apply")
+        {
+            return false;
+        }
+        let Some(LocalFunctionBinding::User(function_name)) = self
+            .resolve_function_binding_from_expression_with_context(
+                object,
+                self.current_function_name(),
+            )
+        else {
+            return false;
+        };
+        self.user_function(&function_name)
+            .is_some_and(|user_function| user_function.is_async())
+    }
+
+    fn direct_function_call_returned_promise_outcome(
+        &mut self,
+        expression: &Expression,
+    ) -> DirectResult<Option<StaticEvalOutcome>> {
+        let Expression::Call { callee, arguments } = expression else {
+            return Ok(None);
+        };
+        if matches!(
+            callee.as_ref(),
+            Expression::Member { property, .. }
+                if matches!(
+                    property.as_ref(),
+                    Expression::String(name)
+                        if matches!(
+                            name.as_str(),
+                            "then" | "catch" | "next" | "return" | "throw" | "all"
+                        )
+                )
+        ) {
+            return Ok(None);
+        }
+        let Some(binding) = self.resolve_function_binding_from_expression_with_context(
+            callee,
+            self.current_function_name(),
+        ) else {
+            return Ok(None);
+        };
+        let LocalFunctionBinding::User(function_name) = &binding else {
+            return Ok(None);
+        };
+        let Some(user_function) = self.user_function(function_name).cloned() else {
+            return Ok(None);
+        };
+        let call_arguments = self.expand_call_arguments(arguments);
+        let this_binding = match callee.as_ref() {
+            Expression::Member { object, .. } => self.materialize_static_expression(object),
+            Expression::SuperMember { .. } => Expression::This,
+            _ => Expression::Undefined,
+        };
+        let capture_source_bindings =
+            self.resolve_function_expression_capture_slots(callee)
+                .map(|capture_slots| {
+                    capture_slots
+                        .into_iter()
+                        .map(|(capture_name, slot_name)| {
+                            (
+                                capture_name,
+                                self.snapshot_bound_capture_slot_expression(&slot_name),
+                            )
+                        })
+                        .collect::<HashMap<_, _>>()
+                });
+        if user_function.is_async() {
+            return self.user_function_call_await_resolution_outcome_with_captures(
+                &binding,
+                &call_arguments,
+                &this_binding,
+                capture_source_bindings.as_ref(),
+            );
+        }
+        let returned_value = self
+            .immediate_user_function_terminal_return_expression_with_call_frame(
+                function_name,
+                &call_arguments,
+                &this_binding,
+            )
+            .or_else(|| {
+                self.resolve_function_binding_static_return_expression_with_call_frame(
+                    &binding,
+                    &call_arguments,
+                    &this_binding,
+                )
+            });
+        let Some(returned_value) = returned_value else {
+            return Ok(None);
+        };
+        if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+            eprintln!(
+                "direct_function_returned_promise function={function_name} value={returned_value:?}"
+            );
+        }
+        if self.expression_is_direct_async_function_call(&returned_value)
+            || Self::call_is_promise_like_chain(&returned_value)
+            || self
+                .direct_async_function_call_outcome(&returned_value)
+                .is_some()
+        {
+            return self.immediate_await_resolution_outcome_with_captures(&returned_value);
+        }
+        Ok(None)
+    }
+
+    fn expression_has_undefined_call_base(expression: &Expression) -> bool {
+        match expression {
+            Expression::Call { callee, .. } if matches!(callee.as_ref(), Expression::Undefined) => {
+                true
+            }
+            Expression::Call { callee, .. } => Self::expression_has_undefined_call_base(callee),
+            Expression::Member { object, .. } => Self::expression_has_undefined_call_base(object),
+            _ => false,
+        }
+    }
+
+    fn promise_outcome_has_unresolved_dynamic_chain(outcome: &StaticEvalOutcome) -> bool {
+        matches!(
+            outcome,
+            StaticEvalOutcome::Value(value)
+                if Self::call_is_promise_like_chain(value)
+                    && Self::expression_has_undefined_call_base(value)
+        )
+    }
+
+    fn immediate_promise_callback_return_outcome(
+        &mut self,
+        callback: &Expression,
+        argument: &Expression,
+    ) -> DirectResult<Option<StaticEvalOutcome>> {
+        let Some(LocalFunctionBinding::User(function_name)) =
+            self.resolve_function_binding_from_expression(callback)
+        else {
+            return Ok(None);
+        };
+        let Some(user_function) = self.user_function(&function_name).cloned() else {
+            return Ok(None);
+        };
+        let Some(function) = self
+            .resolve_registered_function_declaration(&function_name)
+            .cloned()
+        else {
+            return Ok(None);
+        };
+        let Some(return_index) = function.body.iter().rposition(
+            |statement| !matches!(statement, Statement::Block { body } if body.is_empty()),
+        ) else {
+            return Ok(None);
+        };
+        let Statement::Return(return_value) = &function.body[return_index] else {
+            return Ok(None);
+        };
+        let call_arguments = vec![CallArgument::Expression(argument.clone())];
+        let arguments_binding = Expression::Array(vec![ArrayElement::Expression(argument.clone())]);
+        let effect_statements = function.body[..return_index].to_vec();
+        self.with_restored_function_static_binding_metadata(|compiler| {
+            for effect in &effect_statements {
+                compiler.apply_immediate_promise_callback_static_effect(
+                    effect,
+                    &user_function,
+                    &call_arguments,
+                    &arguments_binding,
+                );
+            }
+            let return_expression = compiler.substitute_user_function_call_frame_bindings(
+                return_value,
+                &user_function,
+                &call_arguments,
+                &Expression::Undefined,
+                &arguments_binding,
+            );
+            if compiler
+                .immediate_promise_return_is_already_emitted_local_function_call(&return_expression)
+            {
+                return Ok(Some(StaticEvalOutcome::Value(Expression::Undefined)));
+            }
+            if let Some(outcome) =
+                compiler.immediate_await_resolution_outcome_with_captures(&return_expression)?
+            {
+                if Self::promise_outcome_has_unresolved_dynamic_chain(&outcome) {
+                    return Ok(None);
+                }
+                return Ok(Some(outcome));
+            }
+            if compiler.expression_is_direct_async_function_call(&return_expression)
+                || Self::call_is_promise_like_chain(&return_expression)
+                || compiler
+                    .direct_async_function_call_outcome(&return_expression)
+                    .is_some()
+            {
+                return Ok(None);
+            }
+            Ok(compiler
+                .resolve_static_await_resolution_outcome(&return_expression)
+                .or(Some(StaticEvalOutcome::Value(return_expression))))
+        })
+    }
+
+    fn immediate_promise_return_is_already_emitted_local_function_call(
+        &self,
+        return_expression: &Expression,
+    ) -> bool {
+        let Expression::Call { callee, arguments } = return_expression else {
+            return false;
+        };
+        if !matches!(
+            callee.as_ref(),
+            Expression::Member { object, property }
+                if matches!(object.as_ref(), Expression::Identifier(name) if name == "Promise")
+                    && matches!(property.as_ref(), Expression::String(name) if name == "resolve")
+        ) {
+            return false;
+        }
+        let Some(CallArgument::Expression(argument) | CallArgument::Spread(argument)) =
+            arguments.first()
+        else {
+            return false;
+        };
+        let Expression::Call {
+            callee: inner_callee,
+            arguments: inner_arguments,
+        } = argument
+        else {
+            return false;
+        };
+        if !inner_arguments.is_empty() {
+            return false;
+        }
+        let Expression::Identifier(name) = inner_callee.as_ref() else {
+            return false;
+        };
+        let Some(source_name) = scoped_binding_source_name(name) else {
+            return false;
+        };
+        self.state
+            .speculation
+            .static_semantics
+            .local_function_binding(name)
+            .is_some()
+            || self
+                .state
+                .speculation
+                .static_semantics
+                .local_function_binding(source_name)
+                .is_some()
+    }
+
+    fn apply_immediate_promise_callback_static_effect(
+        &mut self,
+        statement: &Statement,
+        user_function: &UserFunction,
+        call_arguments: &[CallArgument],
+        arguments_binding: &Expression,
+    ) {
+        let substituted = self.substitute_statement_call_frame_bindings(
+            statement,
+            user_function,
+            call_arguments,
+            &Expression::Undefined,
+            arguments_binding,
+        );
+        match substituted {
+            Statement::Block { body } if body.is_empty() => {}
+            Statement::Var { name, value }
+            | Statement::Let { name, value, .. }
+            | Statement::Assign { name, value } => {
+                let materialized = self.materialize_static_expression(&value);
+                let tracked_value = if static_expression_matches(&materialized, &value) {
+                    value
+                } else {
+                    materialized
+                };
+                let array_binding = self.resolve_array_binding_from_expression(&tracked_value);
+                let object_binding = self.resolve_object_binding_from_expression(&tracked_value);
+                let kind = self.infer_value_kind(&tracked_value);
+                self.state.set_local_static_binding(
+                    &name,
+                    tracked_value.clone(),
+                    array_binding,
+                    object_binding,
+                    kind,
+                );
+                self.update_local_function_binding(&name, &tracked_value);
+                if let Some(source) = self.resolve_local_array_iterator_source(&tracked_value) {
+                    let index_local = self.allocate_temp_local();
+                    self.state
+                        .speculation
+                        .static_semantics
+                        .set_local_array_iterator_binding(
+                            &name,
+                            ArrayIteratorBinding {
+                                source,
+                                index_local,
+                                static_index: Some(0),
+                            },
+                        );
+                    self.state
+                        .speculation
+                        .static_semantics
+                        .set_local_kind(&name, StaticValueKind::Object);
+                }
+            }
+            _ => {}
+        }
+    }
+
     fn consume_immediate_promise_outcome_unmaterialized(
         &mut self,
         expression: &Expression,
@@ -1203,6 +2353,14 @@ impl<'a> FunctionCompiler<'a> {
             );
         }
         match property_name.as_str() {
+            "call" => {
+                let Some(then_call) =
+                    self.promise_prototype_then_call_expression(object, arguments)
+                else {
+                    return Ok(None);
+                };
+                self.consume_immediate_promise_outcome(&then_call)
+            }
             "next" | "return" | "throw" => self
                 .consume_async_yield_delegate_generator_promise_outcome(
                     object,
@@ -1351,15 +2509,42 @@ impl<'a> FunctionCompiler<'a> {
                     return Ok(Some(returned_rejection));
                 }
                 self.emit_immediate_promise_callback(&handler, handler_argument, true)?;
+                let returned_outcome =
+                    self.immediate_promise_callback_return_outcome(&handler, handler_argument)?;
                 if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
                     eprintln!(
                         "consume_immediate_promise_outcome:value-handler-emitted property={property_name}"
                     );
                 }
-                Ok(Some(StaticEvalOutcome::Value(Expression::Undefined)))
+                Ok(Some(returned_outcome.unwrap_or(StaticEvalOutcome::Value(
+                    Expression::Undefined,
+                ))))
             }
             _ => Ok(None),
         }
+    }
+
+    pub(in crate::backend::direct_wasm) fn promise_prototype_then_call_expression(
+        &self,
+        object: &Expression,
+        arguments: &[CallArgument],
+    ) -> Option<Expression> {
+        let LocalFunctionBinding::Builtin(function_name) =
+            self.resolve_function_binding_from_expression(object)?
+        else {
+            return None;
+        };
+        if function_name != "Promise.prototype.then" {
+            return None;
+        }
+        let receiver = arguments.first()?.expression().clone();
+        Some(Expression::Call {
+            callee: Box::new(Expression::Member {
+                object: Box::new(receiver),
+                property: Box::new(Expression::String("then".to_string())),
+            }),
+            arguments: arguments.iter().skip(1).cloned().collect(),
+        })
     }
 
     pub(in crate::backend::direct_wasm) fn emit_immediate_promise_member_call(
@@ -1403,6 +2588,8 @@ impl<'a> FunctionCompiler<'a> {
             }
             if Self::call_is_promise_like_chain(object)
                 || self.expression_is_direct_async_function_call(object)
+                || Self::expression_is_dynamic_import_call(object)
+                || self.expression_is_async_function_prototype_call(object)
             {
                 if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
                     eprintln!(

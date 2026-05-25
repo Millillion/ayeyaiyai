@@ -12,6 +12,7 @@ pub struct FunctionDeclaration {
     pub mapped_arguments: bool,
     pub strict: bool,
     pub lexical_this: bool,
+    pub constructible: bool,
     pub derived_constructor: bool,
     pub direct_eval_in_class_field_initializer: bool,
     pub length: usize,

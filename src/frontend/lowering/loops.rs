@@ -70,7 +70,11 @@ impl Lowerer {
         allow_return: bool,
         generator_body: bool,
     ) -> Result<Vec<Statement>> {
-        let iterator_name = self.fresh_temporary_name("for_of_iter");
+        let iterator_name = self.fresh_temporary_name(if for_of_statement.is_await {
+            "for_await_iter"
+        } else {
+            "for_of_iter"
+        });
         let step_name = self.fresh_temporary_name("for_of_step");
         let value_name = self.fresh_temporary_name("for_of_value");
         let done_name = self.fresh_temporary_name("for_of_done");

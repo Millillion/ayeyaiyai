@@ -77,7 +77,191 @@ impl<'a> FunctionCompiler<'a> {
         };
         static_expression_matches(actual, expected)
             || static_expression_matches(&self.materialize_static_expression(actual), expected)
+            || self
+                .resolve_static_reference_identity_key(actual)
+                .zip(self.resolve_static_reference_identity_key(expected))
+                .is_some_and(|(actual_key, expected_key)| actual_key == expected_key)
             || self.runtime_shadow_member_matches_expected_value(actual, expected)
+    }
+
+    fn template_object_verify_target<'b>(
+        object_expression: &'b Expression,
+    ) -> Option<(&'b Expression, bool)> {
+        if let Expression::Member { object, property } = object_expression
+            && matches!(property.as_ref(), Expression::String(name) if name == "raw")
+        {
+            return Some((object.as_ref(), true));
+        }
+        Some((object_expression, false))
+    }
+
+    fn template_object_property_descriptor_matches(
+        &self,
+        raw_array: bool,
+        binding: &ArrayValueBinding,
+        property_name: &str,
+        descriptor: &PropertyDescriptorDefinition,
+        expected_value: Option<&Expression>,
+    ) -> bool {
+        if descriptor.is_accessor() {
+            return false;
+        }
+
+        let matches_expected_value = |actual: &Expression| {
+            expected_value.is_none_or(|expected| {
+                self.descriptor_value_matches_expected(actual, Some(expected))
+            })
+        };
+        let matches_bool =
+            |actual: bool, expected: Option<bool>| expected.is_none_or(|value| value == actual);
+
+        if !raw_array && property_name == "raw" {
+            return expected_value.is_none()
+                && matches_bool(false, descriptor.writable)
+                && matches_bool(false, descriptor.enumerable)
+                && matches_bool(false, descriptor.configurable);
+        }
+
+        if property_name == "length" {
+            return matches_expected_value(&Expression::Number(binding.values.len() as f64))
+                && matches_bool(false, descriptor.writable)
+                && matches_bool(false, descriptor.enumerable)
+                && matches_bool(false, descriptor.configurable);
+        }
+
+        let Some(index) = canonical_array_index_from_property_name(property_name) else {
+            return false;
+        };
+        let Some(value) = binding.values.get(index as usize) else {
+            return false;
+        };
+        let actual = value.as_ref().unwrap_or(&Expression::Undefined);
+        matches_expected_value(actual)
+            && matches_bool(false, descriptor.writable)
+            && matches_bool(true, descriptor.enumerable)
+            && matches_bool(false, descriptor.configurable)
+    }
+
+    fn emit_template_object_verify_property_call(
+        &mut self,
+        object_expression: &Expression,
+        property_name: &str,
+        property_expression: &Expression,
+        descriptor: &PropertyDescriptorDefinition,
+        expected_value: Option<&Expression>,
+        arguments: &[CallArgument],
+    ) -> DirectResult<bool> {
+        let Some((comparison_expression, raw_array)) =
+            Self::template_object_verify_target(object_expression)
+        else {
+            return Ok(false);
+        };
+        if !inline_summary_side_effect_free_expression(comparison_expression)
+            || !inline_summary_side_effect_free_expression(property_expression)
+        {
+            return Ok(false);
+        }
+
+        let mut templates = if raw_array {
+            self.backend
+                .template_object_raw_array_bindings
+                .iter()
+                .map(|(runtime_value, binding)| (*runtime_value, binding.clone()))
+                .collect::<Vec<_>>()
+        } else {
+            self.backend
+                .template_object_array_bindings
+                .iter()
+                .map(|(runtime_value, binding)| (*runtime_value, binding.clone()))
+                .collect::<Vec<_>>()
+        };
+        if templates.is_empty() {
+            return Ok(false);
+        }
+        templates.sort_by_key(|(runtime_value, _)| *runtime_value);
+        if !templates.iter().any(|(_, binding)| {
+            self.template_object_property_descriptor_matches(
+                raw_array,
+                binding,
+                property_name,
+                descriptor,
+                expected_value,
+            )
+        }) {
+            return Ok(false);
+        }
+
+        let comparison_local = self.allocate_temp_local();
+        self.emit_numeric_expression(comparison_expression)?;
+        self.push_local_set(comparison_local);
+
+        fn emit_branch<'a>(
+            compiler: &mut FunctionCompiler<'a>,
+            comparison_local: u32,
+            raw_array: bool,
+            property_name: &str,
+            descriptor: &PropertyDescriptorDefinition,
+            expected_value: Option<&Expression>,
+            templates: &[(i32, ArrayValueBinding)],
+            index: usize,
+        ) -> DirectResult<()> {
+            let Some((runtime_value, binding)) = templates.get(index) else {
+                return compiler.emit_error_throw();
+            };
+
+            compiler.push_local_get(comparison_local);
+            compiler.push_i32_const(*runtime_value);
+            compiler.push_binary_op(BinaryOp::Equal)?;
+            compiler.state.emission.output.instructions.push(0x04);
+            compiler.state.emission.output.instructions.push(I32_TYPE);
+            compiler.push_control_frame();
+            if compiler.template_object_property_descriptor_matches(
+                raw_array,
+                binding,
+                property_name,
+                descriptor,
+                expected_value,
+            ) {
+                compiler.push_i32_const(JS_UNDEFINED_TAG);
+            } else {
+                compiler.emit_error_throw()?;
+            }
+            compiler.state.emission.output.instructions.push(0x05);
+            emit_branch(
+                compiler,
+                comparison_local,
+                raw_array,
+                property_name,
+                descriptor,
+                expected_value,
+                templates,
+                index.saturating_add(1),
+            )?;
+            compiler.state.emission.output.instructions.push(0x0b);
+            compiler.pop_control_frame();
+            Ok(())
+        }
+
+        emit_branch(
+            self,
+            comparison_local,
+            raw_array,
+            property_name,
+            descriptor,
+            expected_value,
+            &templates,
+            0,
+        )?;
+
+        for argument in arguments.iter().skip(3) {
+            match argument {
+                CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                    self.emit_numeric_expression(expression)?;
+                    self.state.emission.output.instructions.push(0x1a);
+                }
+            }
+        }
+        Ok(true)
     }
 
     pub(in crate::backend::direct_wasm) fn emit_verify_property_call(
@@ -114,11 +298,6 @@ impl<'a> FunctionCompiler<'a> {
         let expected_writable = descriptor.writable;
         let expected_enumerable = descriptor.enumerable;
         let expected_configurable = descriptor.configurable;
-        let matches_value = |actual: &Expression| {
-            expected_value
-                .as_ref()
-                .is_none_or(|expected| expected == actual)
-        };
         let matches_bool =
             |actual: bool, expected: Option<bool>| expected.is_none_or(|value| value == actual);
         let matches_missing_bool = |expected: Option<bool>| expected.is_none();
@@ -174,6 +353,24 @@ impl<'a> FunctionCompiler<'a> {
         }
 
         let property_name = static_property_name_from_expression(&resolved_property);
+        if object_binding.is_none()
+            && let Some(property_name) = property_name.as_deref()
+            && self.emit_template_object_verify_property_call(
+                object_expression,
+                property_name,
+                property_expression,
+                &descriptor,
+                expected_value.as_ref(),
+                arguments,
+            )?
+        {
+            return Ok(true);
+        }
+        let matches_value = |actual: &Expression| {
+            expected_value.as_ref().is_none_or(|expected| {
+                self.descriptor_value_matches_expected(actual, Some(expected))
+            })
+        };
         let global_property_descriptor =
             (self.state.speculation.execution_context.top_level_function
                 && matches!(object_expression, Expression::This))
@@ -353,9 +550,13 @@ impl<'a> FunctionCompiler<'a> {
             object_binding
                 .as_ref()
                 .and_then(|object_binding| {
-                    object_binding_lookup_value(object_binding, symbol_property)
+                    self.resolve_object_binding_property_value_for_object(
+                        object_expression,
+                        object_binding,
+                        symbol_property,
+                    )
                 })
-                .is_some_and(matches_value)
+                .is_some_and(|actual| matches_value(&actual))
                 && matches_bool(true, expected_writable)
                 && matches_bool(true, expected_enumerable)
                 && matches_bool(true, expected_configurable)
@@ -578,12 +779,13 @@ impl<'a> FunctionCompiler<'a> {
                 (
                     ordered_object_property_names(binding),
                     binding.string_properties.clone(),
+                    binding.symbol_properties.clone(),
                     binding.non_enumerable_string_properties.clone(),
                     descriptors,
                 )
             });
             eprintln!(
-                "verify_property: object={object_expression:?} property={property_expression:?} resolved_property={resolved_property:?} expected_value={expected_value:?} expected_writable={expected_writable:?} expected_enumerable={expected_enumerable:?} expected_configurable={expected_configurable:?} object_binding={object_binding_summary:?} matches={matches_property}"
+                "verify_property: object={object_expression:?} property={property_expression:?} resolved_property={resolved_property:?} symbol_property={symbol_property:?} expected_value={expected_value:?} expected_writable={expected_writable:?} expected_enumerable={expected_enumerable:?} expected_configurable={expected_configurable:?} object_binding={object_binding_summary:?} matches={matches_property}"
             );
         }
 

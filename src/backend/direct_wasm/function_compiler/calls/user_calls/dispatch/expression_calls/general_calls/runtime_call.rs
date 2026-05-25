@@ -1,22 +1,16 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
-    pub(in crate::backend::direct_wasm) fn user_function_rest_parameter_index(
-        &self,
-        user_function: &UserFunction,
-    ) -> Option<usize> {
-        self.resolve_registered_function_declaration(&user_function.name)?
-            .params
-            .iter()
-            .position(|parameter| parameter.rest)
-    }
-
     pub(in crate::backend::direct_wasm) fn emit_user_function_runtime_call_from_expanded_arguments(
         &mut self,
         user_function: &UserFunction,
         expanded_arguments: &[Expression],
         updated_bindings: Option<&HashMap<String, Expression>>,
-    ) -> DirectResult<(u32, Vec<(String, String, Option<ObjectValueBinding>)>)> {
+    ) -> DirectResult<(
+        u32,
+        Vec<(String, String, Option<ObjectValueBinding>)>,
+        Vec<(String, String, BTreeMap<String, Expression>)>,
+    )> {
         let trace_user_calls = std::env::var_os("AYY_TRACE_USER_CALLS").is_some();
         if trace_user_calls {
             eprintln!(
@@ -25,6 +19,15 @@ impl<'a> FunctionCompiler<'a> {
                 user_function.name
             );
         }
+        let static_argument_member_writebacks = self
+            .user_function_static_argument_object_member_writeback_values(
+                user_function,
+                expanded_arguments,
+            );
+        self.predeclare_static_argument_object_member_writeback_properties(
+            &static_argument_member_writebacks,
+        );
+
         let parameter_object_shadow_writebacks = self
             .emit_user_function_parameter_object_shadow_setup(user_function, expanded_arguments)?;
         if trace_user_calls {
@@ -35,7 +38,6 @@ impl<'a> FunctionCompiler<'a> {
             );
         }
         let visible_param_count = user_function.visible_param_count() as usize;
-        let rest_parameter_index = self.user_function_rest_parameter_index(user_function);
         let tracked_extra_indices = user_function
             .extra_argument_indices
             .iter()
@@ -85,9 +87,7 @@ impl<'a> FunctionCompiler<'a> {
         }
 
         for argument_index in 0..visible_param_count {
-            if Some(argument_index) == rest_parameter_index {
-                self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
-            } else if let Some(argument_local) = argument_locals.get(&argument_index).copied() {
+            if let Some(argument_local) = argument_locals.get(&argument_index).copied() {
                 self.push_local_get(argument_local);
             } else {
                 self.push_i32_const(JS_UNDEFINED_TAG);
@@ -119,6 +119,13 @@ impl<'a> FunctionCompiler<'a> {
             &parameter_object_shadow_writebacks,
             updated_bindings,
         );
-        Ok((return_value_local, parameter_object_shadow_writebacks))
+        self.sync_static_argument_object_member_writeback_values(
+            &static_argument_member_writebacks,
+        );
+        Ok((
+            return_value_local,
+            parameter_object_shadow_writebacks,
+            static_argument_member_writebacks,
+        ))
     }
 }

@@ -828,20 +828,14 @@ impl Lowerer {
                 let mut handled = false;
                 let mut entries = Vec::with_capacity(object.props.len());
                 for property in &object.props {
-                    match property {
-                        PropOrSpread::Spread(spread) => {
-                            let expression = if let Some((mut nested, expression)) =
-                                self.lower_generator_nested_yield_value(&spread.expr)?
-                            {
-                                handled = true;
-                                lowered.append(&mut nested);
-                                expression
-                            } else {
-                                self.lower_expression(&spread.expr)?
-                            };
-                            entries.push(ObjectEntry::Spread(expression));
-                        }
-                        _ => entries.push(self.lower_object_entry(property)?),
+                    if let Some((mut nested, entry)) =
+                        self.lower_generator_object_entry(property)?
+                    {
+                        handled = true;
+                        lowered.append(&mut nested);
+                        entries.push(entry);
+                    } else {
+                        entries.push(self.lower_object_entry(property)?);
                     }
                 }
                 Ok(handled.then_some((lowered, Expression::Object(entries))))
@@ -883,6 +877,50 @@ impl Lowerer {
                     },
                 )))
             }
+            Expr::Bin(binary) => {
+                let left_lowered = self.lower_generator_nested_yield_value(&binary.left)?;
+                let right_lowered = self.lower_generator_nested_yield_value(&binary.right)?;
+
+                if left_lowered.is_none() && right_lowered.is_none() {
+                    return Ok(None);
+                }
+
+                let mut lowered = Vec::new();
+                let mut left = match left_lowered {
+                    Some((mut nested, expression)) => {
+                        lowered.append(&mut nested);
+                        expression
+                    }
+                    None => self.lower_expression(&binary.left)?,
+                };
+
+                if right_lowered.is_some() {
+                    let temporary = self.fresh_temporary_name("generator_bin_left");
+                    lowered.push(Statement::Let {
+                        name: temporary.clone(),
+                        mutable: false,
+                        value: left,
+                    });
+                    left = Expression::Identifier(temporary);
+                }
+
+                let right = match right_lowered {
+                    Some((mut nested, expression)) => {
+                        lowered.append(&mut nested);
+                        expression
+                    }
+                    None => self.lower_expression(&binary.right)?,
+                };
+
+                Ok(Some((
+                    lowered,
+                    Expression::Binary {
+                        op: lower_binary_operator(binary.op)?,
+                        left: Box::new(left),
+                        right: Box::new(right),
+                    },
+                )))
+            }
             Expr::Call(call) => {
                 let mut lowered = Vec::new();
                 let mut handled = false;
@@ -921,7 +959,64 @@ impl Lowerer {
                                 .collect::<Result<Vec<_>>>()?,
                         }
                     }
-                    Callee::Super(_) | Callee::Import(_) => return Ok(None),
+                    Callee::Import(_) => {
+                        if !matches!(call.args.len(), 1 | 2)
+                            || call.args.iter().any(|argument| argument.spread.is_some())
+                        {
+                            return Ok(None);
+                        }
+                        let arguments = call
+                            .args
+                            .iter()
+                            .enumerate()
+                            .map(|(argument_index, call_argument)| {
+                                let expression = if argument_index == 0 {
+                                    if let Expr::Lit(Lit::Str(specifier)) = &*call_argument.expr {
+                                        self.current_module_path
+                                            .as_ref()
+                                            .and_then(|module_path| {
+                                                resolve_module_specifier(
+                                                    module_path,
+                                                    &specifier.value.to_string_lossy(),
+                                                )
+                                                .ok()
+                                            })
+                                            .and_then(|resolved| {
+                                                self.module_index_lookup.get(&resolved).copied()
+                                            })
+                                            .map(|module_index| {
+                                                Expression::Number(module_index as f64)
+                                            })
+                                            .unwrap_or(Expression::Number(-1.0))
+                                    } else if let Some((mut nested, expression)) = self
+                                        .lower_generator_nested_yield_value(&call_argument.expr)?
+                                    {
+                                        handled = true;
+                                        lowered.append(&mut nested);
+                                        expression
+                                    } else {
+                                        self.lower_expression(&call_argument.expr)?
+                                    }
+                                } else if let Some((mut nested, expression)) =
+                                    self.lower_generator_nested_yield_value(&call_argument.expr)?
+                                {
+                                    handled = true;
+                                    lowered.append(&mut nested);
+                                    expression
+                                } else {
+                                    self.lower_expression(&call_argument.expr)?
+                                };
+                                Ok(CallArgument::Expression(expression))
+                            })
+                            .collect::<Result<Vec<_>>>()?;
+                        Expression::Call {
+                            callee: Box::new(Expression::Identifier(
+                                "__ayyDynamicImport".to_string(),
+                            )),
+                            arguments,
+                        }
+                    }
+                    Callee::Super(_) => return Ok(None),
                 };
                 Ok(handled.then_some((lowered, callee)))
             }
@@ -988,6 +1083,97 @@ impl Lowerer {
             }
             _ => Ok(None),
         }
+    }
+
+    fn lower_generator_object_entry(
+        &mut self,
+        property: &PropOrSpread,
+    ) -> Result<Option<(Vec<Statement>, ObjectEntry)>> {
+        match property {
+            PropOrSpread::Spread(spread) => {
+                let Some((lowered, expression)) =
+                    self.lower_generator_nested_yield_value(&spread.expr)?
+                else {
+                    return Ok(None);
+                };
+                Ok(Some((lowered, ObjectEntry::Spread(expression))))
+            }
+            PropOrSpread::Prop(property) => match &**property {
+                Prop::Method(method) => {
+                    let Some((lowered, key)) =
+                        self.lower_generator_computed_object_prop_name(&method.key)?
+                    else {
+                        return Ok(None);
+                    };
+                    Ok(Some((
+                        lowered,
+                        self.lower_object_method_entry_with_key(method, key)?,
+                    )))
+                }
+                Prop::Getter(getter) => {
+                    let Some((lowered, key)) =
+                        self.lower_generator_computed_object_prop_name(&getter.key)?
+                    else {
+                        return Ok(None);
+                    };
+                    Ok(Some((
+                        lowered,
+                        self.lower_object_getter_entry_with_key(getter, key)?,
+                    )))
+                }
+                Prop::Setter(setter) => {
+                    let Some((lowered, key)) =
+                        self.lower_generator_computed_object_prop_name(&setter.key)?
+                    else {
+                        return Ok(None);
+                    };
+                    Ok(Some((
+                        lowered,
+                        self.lower_object_setter_entry_with_key(setter, key)?,
+                    )))
+                }
+                Prop::KeyValue(property) => {
+                    let mut lowered = Vec::new();
+                    let mut handled = false;
+                    let key = if let Some((mut nested, key)) =
+                        self.lower_generator_computed_object_prop_name(&property.key)?
+                    {
+                        handled = true;
+                        lowered.append(&mut nested);
+                        key
+                    } else {
+                        self.lower_prop_name(&property.key)?
+                    };
+                    let name_hint = self.object_prop_name_hint(&property.key);
+                    let value = if let Some((mut nested, value)) = self
+                        .lower_generator_assignment_value_with_name_hint(
+                            &property.value,
+                            name_hint.as_deref(),
+                        )? {
+                        handled = true;
+                        lowered.append(&mut nested);
+                        value
+                    } else {
+                        self.lower_expression_with_name_hint(&property.value, name_hint.as_deref())?
+                    };
+                    Ok(handled.then_some((lowered, ObjectEntry::Data { key, value })))
+                }
+                _ => Ok(None),
+            },
+        }
+    }
+
+    fn lower_generator_computed_object_prop_name(
+        &mut self,
+        name: &PropName,
+    ) -> Result<Option<(Vec<Statement>, Expression)>> {
+        let PropName::Computed(computed) = name else {
+            return Ok(None);
+        };
+        let Some((lowered, value)) = self.lower_generator_assignment_value(&computed.expr)? else {
+            return Ok(None);
+        };
+        Ok(Some((lowered, Expression::Sequence(vec![value]))))
     }
 
     fn lower_generator_assignment_target(

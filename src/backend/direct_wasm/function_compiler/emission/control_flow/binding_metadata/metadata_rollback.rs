@@ -228,6 +228,101 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    fn member_function_capture_slot_target_matches_name(
+        target: &MemberFunctionBindingTarget,
+        name: &str,
+    ) -> bool {
+        let MemberFunctionBindingTarget::Identifier(target_name) = target else {
+            return false;
+        };
+        target_name == name
+            || scoped_binding_source_name(name)
+                .is_some_and(|source_name| source_name == target_name)
+            || scoped_binding_source_name(target_name)
+                .is_some_and(|source_name| source_name == name)
+    }
+
+    fn seed_runtime_array_member_function_capture_slots_from_snapshot(
+        &mut self,
+        snapshot: &FunctionStaticBindingMetadataSnapshot,
+        name: &str,
+    ) {
+        let mut slot_names = HashSet::new();
+        for (key, capture_slots) in snapshot.objects.member_function_capture_slots.iter() {
+            if !Self::member_function_capture_slot_target_matches_name(&key.target, name) {
+                continue;
+            }
+            for slot_name in capture_slots.values() {
+                slot_names.insert(slot_name.clone());
+            }
+            self.state
+                .speculation
+                .static_semantics
+                .objects
+                .member_function_capture_slots
+                .insert(key.clone(), capture_slots.clone());
+        }
+        for slot_name in slot_names {
+            if let Some(source_name) = snapshot.capture_slot_source_bindings.get(&slot_name) {
+                self.state
+                    .speculation
+                    .static_semantics
+                    .capture_slot_source_bindings
+                    .insert(slot_name.clone(), source_name.clone());
+            }
+            if let Some(source_name) = snapshot
+                .capture_slot_initial_source_bindings
+                .get(&slot_name)
+            {
+                self.state
+                    .speculation
+                    .static_semantics
+                    .capture_slot_initial_source_bindings
+                    .insert(slot_name, source_name.clone());
+            }
+        }
+    }
+
+    fn snapshot_has_runtime_array_member_function_capture_slots(
+        snapshot: &FunctionStaticBindingMetadataSnapshot,
+        name: &str,
+    ) -> bool {
+        snapshot
+            .objects
+            .member_function_capture_slots
+            .keys()
+            .any(|key| Self::member_function_capture_slot_target_matches_name(&key.target, name))
+    }
+
+    fn clear_runtime_array_member_function_capture_slots_for_name(&mut self, name: &str) {
+        let mut removed_slot_names = HashSet::new();
+        self.state
+            .speculation
+            .static_semantics
+            .objects
+            .member_function_capture_slots
+            .retain(|key, capture_slots| {
+                if Self::member_function_capture_slot_target_matches_name(&key.target, name) {
+                    removed_slot_names.extend(capture_slots.values().cloned());
+                    false
+                } else {
+                    true
+                }
+            });
+        for slot_name in removed_slot_names {
+            self.state
+                .speculation
+                .static_semantics
+                .capture_slot_source_bindings
+                .remove(&slot_name);
+            self.state
+                .speculation
+                .static_semantics
+                .capture_slot_initial_source_bindings
+                .remove(&slot_name);
+        }
+    }
+
     pub(in crate::backend::direct_wasm) fn merge_dynamic_branch_static_binding_metadata(
         &mut self,
         invalidated_bindings: &HashSet<String>,
@@ -252,6 +347,11 @@ impl<'a> FunctionCompiler<'a> {
                         then_snapshot,
                         &HashSet::from([name.clone()]),
                     );
+                    self.clear_runtime_array_member_function_capture_slots_for_name(name);
+                    self.seed_runtime_array_member_function_capture_slots_from_snapshot(
+                        then_snapshot,
+                        name,
+                    );
                     let array_binding = Self::merge_branch_array_binding(then_array, else_array);
                     self.state
                         .speculation
@@ -264,6 +364,20 @@ impl<'a> FunctionCompiler<'a> {
                 }
                 _ => {
                     self.restore_runtime_array_metadata_for_name_from_snapshot(base_snapshot, name);
+                    self.clear_runtime_array_member_function_capture_slots_for_name(name);
+                    self.seed_runtime_array_member_function_capture_slots_from_snapshot(
+                        base_snapshot,
+                        name,
+                    );
+                    if Self::snapshot_has_runtime_array_member_function_capture_slots(
+                        then_snapshot,
+                        name,
+                    ) {
+                        self.seed_runtime_array_member_function_capture_slots_from_snapshot(
+                            then_snapshot,
+                            name,
+                        );
+                    }
                     if then_state.kind == else_state.kind
                         && let Some(kind) = then_state
                             .kind
@@ -502,6 +616,34 @@ impl<'a> FunctionCompiler<'a> {
         preserved_kinds: &HashMap<String, StaticValueKind>,
     ) {
         self.invalidate_static_binding_metadata_for_names(names);
+        for name in names {
+            if self.resolve_current_local_binding(name).is_none()
+                && !self.state.runtime.locals.bindings.contains_key(name)
+                && self.parameter_scope_arguments_local_for(name).is_none()
+                && (self.global_has_binding(name)
+                    || self.global_has_implicit_binding(name)
+                    || self.backend.global_has_lexical_binding(name)
+                    || self
+                        .backend
+                        .shared_global_semantics
+                        .global_names()
+                        .kind(name)
+                        .is_some()
+                    || self
+                        .backend
+                        .shared_global_semantics
+                        .values
+                        .value_binding(name)
+                        .is_some())
+            {
+                self.backend
+                    .shared_global_semantics
+                    .clear_global_binding_state(name);
+                self.backend
+                    .shared_global_semantics
+                    .clear_global_object_literal_member_bindings_for_name(name);
+            }
+        }
         for (name, kind) in preserved_kinds {
             if let Some((resolved_name, _)) = self.resolve_current_local_binding(name) {
                 self.state

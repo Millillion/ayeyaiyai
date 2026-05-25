@@ -63,6 +63,37 @@ impl<'a> FunctionCompiler<'a> {
             .as_ref()
     }
 
+    pub(in crate::backend::direct_wasm) fn current_rest_parameter_binding(
+        &self,
+    ) -> Option<(usize, String)> {
+        self.current_user_function_declaration()?
+            .params
+            .iter()
+            .enumerate()
+            .find_map(|(index, parameter)| parameter.rest.then(|| (index, parameter.name.clone())))
+    }
+
+    pub(in crate::backend::direct_wasm) fn is_current_rest_parameter_binding_name(
+        &self,
+        name: &str,
+    ) -> bool {
+        let source_name = scoped_binding_source_name(name).unwrap_or(name);
+        self.current_user_function_declaration()
+            .is_some_and(|declaration| {
+                declaration.params.iter().any(|parameter| {
+                    if !parameter.rest {
+                        return false;
+                    }
+                    let parameter_source_name =
+                        scoped_binding_source_name(&parameter.name).unwrap_or(&parameter.name);
+                    parameter.name == name
+                        || parameter.name == source_name
+                        || parameter_source_name == name
+                        || parameter_source_name == source_name
+                })
+            })
+    }
+
     pub(in crate::backend::direct_wasm) fn assignment_targets_immutable_class_binding(
         &self,
         name: &str,

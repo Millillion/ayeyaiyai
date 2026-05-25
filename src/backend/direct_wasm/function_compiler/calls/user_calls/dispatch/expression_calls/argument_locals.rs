@@ -158,6 +158,14 @@ impl<'a> FunctionCompiler<'a> {
             .user_function_call_allows_static_this_shadow_commit(user_function, this_expression);
 
         self.emit_prepare_user_function_capture_globals(&user_function.name)?;
+        let static_argument_member_writebacks = self
+            .user_function_static_argument_object_member_writeback_values(
+                user_function,
+                &bound_argument_expressions,
+            );
+        self.predeclare_static_argument_object_member_writeback_properties(
+            &static_argument_member_writebacks,
+        );
         let parameter_object_shadow_writebacks = self
             .emit_user_function_parameter_object_shadow_setup(
                 user_function,
@@ -165,12 +173,8 @@ impl<'a> FunctionCompiler<'a> {
             )?;
 
         let visible_param_count = user_function.visible_param_count() as usize;
-        let rest_parameter_index = self.user_function_rest_parameter_index(user_function);
-
         for argument_index in 0..visible_param_count {
-            if Some(argument_index) == rest_parameter_index {
-                self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
-            } else if let Some(argument_local) = argument_locals.get(argument_index).copied() {
+            if let Some(argument_local) = argument_locals.get(argument_index).copied() {
                 self.push_local_get(argument_local);
             } else {
                 self.push_i32_const(JS_UNDEFINED_TAG);
@@ -196,6 +200,9 @@ impl<'a> FunctionCompiler<'a> {
             &parameter_object_shadow_writebacks,
             updated_bindings.as_ref(),
         );
+        self.sync_static_argument_object_member_writeback_values(
+            &static_argument_member_writebacks,
+        );
         let receiver_updated_via_parameter_writeback = self
             .receiver_shadow_updated_via_parameter_writebacks(
                 this_expression,
@@ -210,6 +217,7 @@ impl<'a> FunctionCompiler<'a> {
             saved_this_shadow_owner.as_deref(),
         )?;
         self.restore_user_function_capture_bindings(&prepared_capture_bindings);
+        self.invalidate_raw_assigned_global_metadata_after_user_call(user_function);
         additional_call_effect_nonlocal_bindings = self
             .sync_snapshot_user_function_call_effect_bindings(
                 &additional_call_effect_nonlocal_bindings,
@@ -219,17 +227,12 @@ impl<'a> FunctionCompiler<'a> {
                     .map(|_| assigned_nonlocal_binding_results.as_ref())
                     .flatten(),
             )?;
+        self.sync_current_function_capture_runtime_values_for_call_effects(
+            &call_effect_nonlocal_bindings,
+        )?;
         if !additional_call_effect_nonlocal_bindings.is_empty() {
-            let preserved_kinds = additional_call_effect_nonlocal_bindings
-                .iter()
-                .filter_map(|name| {
-                    self.lookup_identifier_kind(name)
-                        .map(|kind| (name.clone(), kind))
-                })
-                .collect::<HashMap<_, _>>();
-            self.invalidate_static_binding_metadata_for_names_with_preserved_kinds(
+            self.invalidate_static_binding_metadata_for_names(
                 &additional_call_effect_nonlocal_bindings,
-                &preserved_kinds,
             );
         }
         self.sync_argument_iterator_bindings_for_user_call(
@@ -246,6 +249,7 @@ impl<'a> FunctionCompiler<'a> {
             allow_static_this_shadow_commit,
             receiver_updated_via_parameter_writeback,
             receiver_may_require_invalidation,
+            &bound_argument_expressions,
         )?;
         if let Some(saved_new_target_local) = saved_new_target_local {
             self.push_local_get(saved_new_target_local);

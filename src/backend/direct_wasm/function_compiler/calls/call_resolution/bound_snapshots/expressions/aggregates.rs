@@ -1,6 +1,16 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn preserve_bound_snapshot_reference_identity_expression(
+        &self,
+        expression: &Expression,
+    ) -> Option<Expression> {
+        matches!(expression, Expression::Identifier(_))
+            .then(|| self.resolve_static_reference_identity_key(expression))
+            .flatten()
+            .map(|_| expression.clone())
+    }
+
     pub(super) fn evaluate_bound_snapshot_array_literal(
         &self,
         elements: &[ArrayElement],
@@ -11,13 +21,16 @@ impl<'a> FunctionCompiler<'a> {
         for element in elements {
             match element {
                 ArrayElement::Expression(expression) => {
-                    evaluated_elements.push(ArrayElement::Expression(
-                        self.evaluate_bound_snapshot_expression(
-                            expression,
-                            bindings,
-                            current_function_name,
-                        )?,
-                    ));
+                    let value = self
+                        .preserve_bound_snapshot_reference_identity_expression(expression)
+                        .or_else(|| {
+                            self.evaluate_bound_snapshot_expression(
+                                expression,
+                                bindings,
+                                current_function_name,
+                            )
+                        })?;
+                    evaluated_elements.push(ArrayElement::Expression(value));
                 }
                 ArrayElement::Spread(expression) => {
                     let value = self.evaluate_bound_snapshot_expression(
@@ -30,6 +43,9 @@ impl<'a> FunctionCompiler<'a> {
                         let ArrayElement::Expression(value) = spread_element else {
                             return None;
                         };
+                        let value = self
+                            .preserve_bound_snapshot_reference_identity_expression(&value)
+                            .unwrap_or(value);
                         evaluated_elements.push(ArrayElement::Expression(value));
                     }
                 }
@@ -56,11 +72,15 @@ impl<'a> FunctionCompiler<'a> {
                                 current_function_name,
                             )
                         })?,
-                        value: self.evaluate_bound_snapshot_expression(
-                            value,
-                            bindings,
-                            current_function_name,
-                        )?,
+                        value: self
+                            .preserve_bound_snapshot_reference_identity_expression(value)
+                            .or_else(|| {
+                                self.evaluate_bound_snapshot_expression(
+                                    value,
+                                    bindings,
+                                    current_function_name,
+                                )
+                            })?,
                     }),
                     ObjectEntry::Getter { key, getter } => Some(ObjectEntry::Getter {
                         key: self.resolve_property_key_expression(key).or_else(|| {
@@ -70,11 +90,15 @@ impl<'a> FunctionCompiler<'a> {
                                 current_function_name,
                             )
                         })?,
-                        getter: self.evaluate_bound_snapshot_expression(
-                            getter,
-                            bindings,
-                            current_function_name,
-                        )?,
+                        getter: self
+                            .preserve_bound_snapshot_reference_identity_expression(getter)
+                            .or_else(|| {
+                                self.evaluate_bound_snapshot_expression(
+                                    getter,
+                                    bindings,
+                                    current_function_name,
+                                )
+                            })?,
                     }),
                     ObjectEntry::Setter { key, setter } => Some(ObjectEntry::Setter {
                         key: self.resolve_property_key_expression(key).or_else(|| {
@@ -84,11 +108,15 @@ impl<'a> FunctionCompiler<'a> {
                                 current_function_name,
                             )
                         })?,
-                        setter: self.evaluate_bound_snapshot_expression(
-                            setter,
-                            bindings,
-                            current_function_name,
-                        )?,
+                        setter: self
+                            .preserve_bound_snapshot_reference_identity_expression(setter)
+                            .or_else(|| {
+                                self.evaluate_bound_snapshot_expression(
+                                    setter,
+                                    bindings,
+                                    current_function_name,
+                                )
+                            })?,
                     }),
                     ObjectEntry::Spread(_) => None,
                 })

@@ -47,6 +47,26 @@ impl<'a> FunctionCompiler<'a> {
             self.push_i32_const(JS_TYPEOF_FUNCTION_TAG);
             return Ok(());
         }
+        if let Expression::Identifier(name) = expression
+            && self.emit_typeof_implicit_global_binding(name)?
+        {
+            return Ok(());
+        }
+        if let Expression::Identifier(name) = expression
+            && self
+                .backend
+                .global_property_descriptor(name)
+                .or_else(|| {
+                    self.backend
+                        .shared_global_semantics
+                        .values
+                        .property_descriptor(name)
+                })
+                .is_some_and(|state| state.has_get || state.getter.is_some())
+        {
+            self.emit_runtime_typeof_tag(expression)?;
+            return Ok(());
+        }
         if let Some(strict) = self.resolve_arguments_callee_strictness(expression) {
             if strict {
                 return self.emit_error_throw();

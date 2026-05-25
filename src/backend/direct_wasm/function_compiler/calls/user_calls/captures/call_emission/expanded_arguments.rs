@@ -262,15 +262,8 @@ impl<'a> FunctionCompiler<'a> {
         )?;
 
         let static_result = if !runtime_only_parameter_iterator_call && allow_static_snapshot {
-            let capture_snapshot = capture_slots
-                .iter()
-                .map(|(capture_name, slot_name)| {
-                    (
-                        capture_name.clone(),
-                        self.snapshot_bound_capture_slot_expression(slot_name),
-                    )
-                })
-                .collect::<HashMap<_, _>>();
+            let capture_snapshot = self
+                .snapshot_prepared_bound_user_function_capture_bindings(&prepared_capture_bindings);
             self.resolve_bound_snapshot_user_function_result_with_arguments_and_this(
                 &user_function.name,
                 &capture_snapshot,
@@ -336,19 +329,28 @@ impl<'a> FunctionCompiler<'a> {
                     })
             })
             .collect::<HashSet<_>>();
+        let closure_slot_capture_names = prepared_capture_bindings
+            .iter()
+            .filter_map(|binding| {
+                binding
+                    .source_binding_name
+                    .as_ref()
+                    .is_some_and(|source_name| source_name.starts_with("__ayy_closure_slot_"))
+                    .then(|| binding.capture_name.clone())
+            })
+            .collect::<HashSet<_>>();
         let additional_call_effect_nonlocal_bindings = if runtime_only_parameter_iterator_call {
             HashSet::new()
         } else {
             let mut names = call_effect_nonlocal_bindings
                 .iter()
                 .filter(|name| {
-                    if member_source_capture_names.contains(*name) {
+                    if member_source_capture_names.contains(*name)
+                        || closure_slot_capture_names.contains(*name)
+                    {
                         return false;
                     }
                     !synced_capture_source_bindings.contains(*name)
-                        || !reliable_updated_bindings
-                            .as_ref()
-                            .is_some_and(|bindings| bindings.contains_key(*name))
                 })
                 .cloned()
                 .collect::<HashSet<_>>();
@@ -361,15 +363,24 @@ impl<'a> FunctionCompiler<'a> {
                 ),
             );
             names.retain(|name| !member_source_capture_names.contains(name));
+            names.retain(|name| !closure_slot_capture_names.contains(name));
+            names.retain(|name| !synced_capture_source_bindings.contains(name));
             names
         };
 
         self.emit_prepare_bound_user_function_capture_globals(&prepared_capture_bindings)?;
+        let static_argument_member_writebacks = self
+            .user_function_static_argument_object_member_writeback_values(
+                user_function,
+                &expanded_arguments,
+            );
+        self.predeclare_static_argument_object_member_writeback_properties(
+            &static_argument_member_writebacks,
+        );
         let parameter_object_shadow_writebacks = self
             .emit_user_function_parameter_object_shadow_setup(user_function, &expanded_arguments)?;
 
         let visible_param_count = user_function.visible_param_count() as usize;
-        let rest_parameter_index = self.user_function_rest_parameter_index(user_function);
         let tracked_extra_indices = user_function
             .extra_argument_indices
             .iter()
@@ -392,9 +403,7 @@ impl<'a> FunctionCompiler<'a> {
         }
 
         for argument_index in 0..visible_param_count {
-            if Some(argument_index) == rest_parameter_index {
-                self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
-            } else if let Some(argument_local) = argument_locals.get(&argument_index).copied() {
+            if let Some(argument_local) = argument_locals.get(&argument_index).copied() {
                 self.push_local_get(argument_local);
             } else {
                 self.push_i32_const(JS_UNDEFINED_TAG);
@@ -426,6 +435,9 @@ impl<'a> FunctionCompiler<'a> {
             &parameter_object_shadow_writebacks,
             updated_bindings.as_ref(),
         );
+        self.sync_static_argument_object_member_writeback_values(
+            &static_argument_member_writebacks,
+        );
 
         self.finalize_bound_user_function_call(
             user_function,
@@ -440,6 +452,10 @@ impl<'a> FunctionCompiler<'a> {
             saved_this_shadow_owner.as_deref(),
             return_value_local,
             &expanded_arguments,
-        )
+        )?;
+        self.sync_static_argument_object_member_writeback_values(
+            &static_argument_member_writebacks,
+        );
+        Ok(())
     }
 }

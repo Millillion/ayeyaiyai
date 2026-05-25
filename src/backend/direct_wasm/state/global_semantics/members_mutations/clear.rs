@@ -1,5 +1,7 @@
 use super::super::super::*;
 
+const IDENTIFIER_FUNCTION_VALUE_CAPTURE_PROPERTY: &str = "__ayy[[FunctionValueCaptureSlots]]";
+
 impl GlobalMemberService {
     fn target_matches_name(
         target: &MemberFunctionBindingTarget,
@@ -27,7 +29,19 @@ impl GlobalMemberService {
         self.member_function_bindings
             .retain(|key, _| !Self::target_matches_name(&key.target, name, include_prototype));
         self.member_function_capture_slots
-            .retain(|key, _| !Self::target_matches_name(&key.target, name, include_prototype));
+            .retain(|key, _| {
+                if !include_prototype
+                    && matches!(&key.target, MemberFunctionBindingTarget::Identifier(target_name) if target_name == name)
+                    && matches!(
+                        &key.property,
+                        MemberFunctionBindingProperty::String(property)
+                            if property == IDENTIFIER_FUNCTION_VALUE_CAPTURE_PROPERTY
+                    )
+                {
+                    return true;
+                }
+                !Self::target_matches_name(&key.target, name, include_prototype)
+            });
         self.member_getter_bindings
             .retain(|key, _| !Self::target_matches_name(&key.target, name, include_prototype));
         self.member_setter_bindings

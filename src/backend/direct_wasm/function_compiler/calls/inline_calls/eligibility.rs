@@ -311,6 +311,9 @@ impl<'a> FunctionCompiler<'a> {
         if Self::expression_mentions_private_member_access(expression) {
             return true;
         }
+        if Self::expression_mentions_direct_eval(expression) {
+            return true;
+        }
 
         match expression {
             Expression::Call { callee, arguments }
@@ -602,6 +605,599 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    fn collect_local_function_aliases_from_expression(
+        &self,
+        expression: &Expression,
+        aliases: &mut HashMap<String, String>,
+    ) {
+        match expression {
+            Expression::Assign { name, value } => {
+                if let Expression::Identifier(function_name) = value.as_ref()
+                    && self
+                        .resolve_registered_function_declaration(function_name)
+                        .is_some()
+                {
+                    aliases.insert(name.clone(), function_name.clone());
+                }
+                self.collect_local_function_aliases_from_expression(value, aliases);
+            }
+            Expression::Member { object, property } => {
+                self.collect_local_function_aliases_from_expression(object, aliases);
+                self.collect_local_function_aliases_from_expression(property, aliases);
+            }
+            Expression::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                self.collect_local_function_aliases_from_expression(object, aliases);
+                self.collect_local_function_aliases_from_expression(property, aliases);
+                self.collect_local_function_aliases_from_expression(value, aliases);
+            }
+            Expression::AssignSuperMember { property, value } => {
+                self.collect_local_function_aliases_from_expression(property, aliases);
+                self.collect_local_function_aliases_from_expression(value, aliases);
+            }
+            Expression::Await(expression)
+            | Expression::EnumerateKeys(expression)
+            | Expression::GetIterator(expression)
+            | Expression::IteratorClose(expression)
+            | Expression::Unary { expression, .. } => {
+                self.collect_local_function_aliases_from_expression(expression, aliases);
+            }
+            Expression::Binary { left, right, .. } => {
+                self.collect_local_function_aliases_from_expression(left, aliases);
+                self.collect_local_function_aliases_from_expression(right, aliases);
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                self.collect_local_function_aliases_from_expression(condition, aliases);
+                self.collect_local_function_aliases_from_expression(then_expression, aliases);
+                self.collect_local_function_aliases_from_expression(else_expression, aliases);
+            }
+            Expression::Sequence(expressions) => {
+                for expression in expressions {
+                    self.collect_local_function_aliases_from_expression(expression, aliases);
+                }
+            }
+            Expression::Array(elements) => {
+                for element in elements {
+                    match element {
+                        ArrayElement::Expression(expression) | ArrayElement::Spread(expression) => {
+                            self.collect_local_function_aliases_from_expression(
+                                expression, aliases,
+                            );
+                        }
+                    }
+                }
+            }
+            Expression::Call { callee, arguments }
+            | Expression::SuperCall { callee, arguments }
+            | Expression::New { callee, arguments } => {
+                self.collect_local_function_aliases_from_expression(callee, aliases);
+                for argument in arguments {
+                    self.collect_local_function_aliases_from_expression(
+                        argument.expression(),
+                        aliases,
+                    );
+                }
+            }
+            Expression::Object(entries) => {
+                for entry in entries {
+                    match entry {
+                        ObjectEntry::Data { key, value } => {
+                            self.collect_local_function_aliases_from_expression(key, aliases);
+                            self.collect_local_function_aliases_from_expression(value, aliases);
+                        }
+                        ObjectEntry::Getter { key, getter } => {
+                            self.collect_local_function_aliases_from_expression(key, aliases);
+                            self.collect_local_function_aliases_from_expression(getter, aliases);
+                        }
+                        ObjectEntry::Setter { key, setter } => {
+                            self.collect_local_function_aliases_from_expression(key, aliases);
+                            self.collect_local_function_aliases_from_expression(setter, aliases);
+                        }
+                        ObjectEntry::Spread(expression) => {
+                            self.collect_local_function_aliases_from_expression(
+                                expression, aliases,
+                            );
+                        }
+                    }
+                }
+            }
+            Expression::Identifier(_)
+            | Expression::This
+            | Expression::SuperMember { .. }
+            | Expression::Update { .. }
+            | Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined
+            | Expression::NewTarget
+            | Expression::Sent => {}
+        }
+    }
+
+    fn collect_local_function_aliases_from_statement(
+        &self,
+        statement: &Statement,
+        aliases: &mut HashMap<String, String>,
+    ) {
+        match statement {
+            Statement::Var { name, value }
+            | Statement::Let { name, value, .. }
+            | Statement::Assign { name, value } => {
+                if let Expression::Identifier(function_name) = value
+                    && self
+                        .resolve_registered_function_declaration(function_name)
+                        .is_some()
+                {
+                    aliases.insert(name.clone(), function_name.clone());
+                }
+                self.collect_local_function_aliases_from_expression(value, aliases);
+            }
+            Statement::Declaration { body }
+            | Statement::Block { body }
+            | Statement::Labeled { body, .. }
+            | Statement::With { body, .. }
+            | Statement::While { body, .. }
+            | Statement::DoWhile { body, .. } => {
+                for statement in body {
+                    self.collect_local_function_aliases_from_statement(statement, aliases);
+                }
+            }
+            Statement::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                self.collect_local_function_aliases_from_expression(condition, aliases);
+                for statement in then_branch.iter().chain(else_branch.iter()) {
+                    self.collect_local_function_aliases_from_statement(statement, aliases);
+                }
+            }
+            Statement::Try {
+                body,
+                catch_setup,
+                catch_body,
+                ..
+            } => {
+                for statement in body
+                    .iter()
+                    .chain(catch_setup.iter())
+                    .chain(catch_body.iter())
+                {
+                    self.collect_local_function_aliases_from_statement(statement, aliases);
+                }
+            }
+            Statement::Switch {
+                discriminant,
+                cases,
+                ..
+            } => {
+                self.collect_local_function_aliases_from_expression(discriminant, aliases);
+                for case in cases {
+                    if let Some(test) = &case.test {
+                        self.collect_local_function_aliases_from_expression(test, aliases);
+                    }
+                    for statement in &case.body {
+                        self.collect_local_function_aliases_from_statement(statement, aliases);
+                    }
+                }
+            }
+            Statement::For {
+                init,
+                condition,
+                update,
+                body,
+                ..
+            } => {
+                for statement in init.iter().chain(body.iter()) {
+                    self.collect_local_function_aliases_from_statement(statement, aliases);
+                }
+                if let Some(condition) = condition {
+                    self.collect_local_function_aliases_from_expression(condition, aliases);
+                }
+                if let Some(update) = update {
+                    self.collect_local_function_aliases_from_expression(update, aliases);
+                }
+            }
+            Statement::Expression(value)
+            | Statement::Throw(value)
+            | Statement::Return(value)
+            | Statement::Yield { value }
+            | Statement::YieldDelegate { value } => {
+                self.collect_local_function_aliases_from_expression(value, aliases);
+            }
+            Statement::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                self.collect_local_function_aliases_from_expression(object, aliases);
+                self.collect_local_function_aliases_from_expression(property, aliases);
+                self.collect_local_function_aliases_from_expression(value, aliases);
+            }
+            Statement::Print { values } => {
+                for value in values {
+                    self.collect_local_function_aliases_from_expression(value, aliases);
+                }
+            }
+            Statement::Break { .. } | Statement::Continue { .. } => {}
+        }
+    }
+
+    fn expression_calls_private_reaching_local_function(
+        &self,
+        expression: &Expression,
+        local_function_aliases: &HashMap<String, String>,
+        visited_functions: &mut HashSet<String>,
+    ) -> bool {
+        match expression {
+            Expression::Call { callee, arguments }
+            | Expression::SuperCall { callee, arguments }
+            | Expression::New { callee, arguments } => {
+                if let Expression::Identifier(callee_name) = callee.as_ref() {
+                    let function_name = local_function_aliases
+                        .get(callee_name)
+                        .map(String::as_str)
+                        .unwrap_or(callee_name);
+                    if self
+                        .resolve_registered_function_declaration(function_name)
+                        .is_some()
+                        && self.user_function_name_reaches_private_member_access(
+                            function_name,
+                            visited_functions,
+                        )
+                    {
+                        return true;
+                    }
+                }
+                self.expression_calls_private_reaching_local_function(
+                    callee,
+                    local_function_aliases,
+                    visited_functions,
+                ) || arguments.iter().any(|argument| {
+                    self.expression_calls_private_reaching_local_function(
+                        argument.expression(),
+                        local_function_aliases,
+                        visited_functions,
+                    )
+                })
+            }
+            Expression::Member { object, property } => {
+                self.expression_calls_private_reaching_local_function(
+                    object,
+                    local_function_aliases,
+                    visited_functions,
+                ) || self.expression_calls_private_reaching_local_function(
+                    property,
+                    local_function_aliases,
+                    visited_functions,
+                )
+            }
+            Expression::Assign { value, .. }
+            | Expression::Await(value)
+            | Expression::EnumerateKeys(value)
+            | Expression::GetIterator(value)
+            | Expression::IteratorClose(value)
+            | Expression::Unary {
+                expression: value, ..
+            } => self.expression_calls_private_reaching_local_function(
+                value,
+                local_function_aliases,
+                visited_functions,
+            ),
+            Expression::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                self.expression_calls_private_reaching_local_function(
+                    object,
+                    local_function_aliases,
+                    visited_functions,
+                ) || self.expression_calls_private_reaching_local_function(
+                    property,
+                    local_function_aliases,
+                    visited_functions,
+                ) || self.expression_calls_private_reaching_local_function(
+                    value,
+                    local_function_aliases,
+                    visited_functions,
+                )
+            }
+            Expression::SuperMember { property } => self
+                .expression_calls_private_reaching_local_function(
+                    property,
+                    local_function_aliases,
+                    visited_functions,
+                ),
+            Expression::AssignSuperMember { property, value } => {
+                self.expression_calls_private_reaching_local_function(
+                    property,
+                    local_function_aliases,
+                    visited_functions,
+                ) || self.expression_calls_private_reaching_local_function(
+                    value,
+                    local_function_aliases,
+                    visited_functions,
+                )
+            }
+            Expression::Binary { left, right, .. } => {
+                self.expression_calls_private_reaching_local_function(
+                    left,
+                    local_function_aliases,
+                    visited_functions,
+                ) || self.expression_calls_private_reaching_local_function(
+                    right,
+                    local_function_aliases,
+                    visited_functions,
+                )
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                self.expression_calls_private_reaching_local_function(
+                    condition,
+                    local_function_aliases,
+                    visited_functions,
+                ) || self.expression_calls_private_reaching_local_function(
+                    then_expression,
+                    local_function_aliases,
+                    visited_functions,
+                ) || self.expression_calls_private_reaching_local_function(
+                    else_expression,
+                    local_function_aliases,
+                    visited_functions,
+                )
+            }
+            Expression::Sequence(expressions) => expressions.iter().any(|expression| {
+                self.expression_calls_private_reaching_local_function(
+                    expression,
+                    local_function_aliases,
+                    visited_functions,
+                )
+            }),
+            Expression::Array(elements) => elements.iter().any(|element| match element {
+                ArrayElement::Expression(expression) | ArrayElement::Spread(expression) => self
+                    .expression_calls_private_reaching_local_function(
+                        expression,
+                        local_function_aliases,
+                        visited_functions,
+                    ),
+            }),
+            Expression::Object(entries) => entries.iter().any(|entry| match entry {
+                ObjectEntry::Data { key, value } => {
+                    self.expression_calls_private_reaching_local_function(
+                        key,
+                        local_function_aliases,
+                        visited_functions,
+                    ) || self.expression_calls_private_reaching_local_function(
+                        value,
+                        local_function_aliases,
+                        visited_functions,
+                    )
+                }
+                ObjectEntry::Getter { key, getter } => {
+                    self.expression_calls_private_reaching_local_function(
+                        key,
+                        local_function_aliases,
+                        visited_functions,
+                    ) || self.expression_calls_private_reaching_local_function(
+                        getter,
+                        local_function_aliases,
+                        visited_functions,
+                    )
+                }
+                ObjectEntry::Setter { key, setter } => {
+                    self.expression_calls_private_reaching_local_function(
+                        key,
+                        local_function_aliases,
+                        visited_functions,
+                    ) || self.expression_calls_private_reaching_local_function(
+                        setter,
+                        local_function_aliases,
+                        visited_functions,
+                    )
+                }
+                ObjectEntry::Spread(expression) => self
+                    .expression_calls_private_reaching_local_function(
+                        expression,
+                        local_function_aliases,
+                        visited_functions,
+                    ),
+            }),
+            Expression::Identifier(_)
+            | Expression::This
+            | Expression::Update { .. }
+            | Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined
+            | Expression::NewTarget
+            | Expression::Sent => false,
+        }
+    }
+
+    fn statement_calls_private_reaching_local_function(
+        &self,
+        statement: &Statement,
+        local_function_aliases: &HashMap<String, String>,
+        visited_functions: &mut HashSet<String>,
+    ) -> bool {
+        match statement {
+            Statement::Declaration { body }
+            | Statement::Block { body }
+            | Statement::Labeled { body, .. }
+            | Statement::With { body, .. }
+            | Statement::While { body, .. }
+            | Statement::DoWhile { body, .. } => body.iter().any(|statement| {
+                self.statement_calls_private_reaching_local_function(
+                    statement,
+                    local_function_aliases,
+                    visited_functions,
+                )
+            }),
+            Statement::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                self.expression_calls_private_reaching_local_function(
+                    condition,
+                    local_function_aliases,
+                    visited_functions,
+                ) || then_branch.iter().any(|statement| {
+                    self.statement_calls_private_reaching_local_function(
+                        statement,
+                        local_function_aliases,
+                        visited_functions,
+                    )
+                }) || else_branch.iter().any(|statement| {
+                    self.statement_calls_private_reaching_local_function(
+                        statement,
+                        local_function_aliases,
+                        visited_functions,
+                    )
+                })
+            }
+            Statement::Switch {
+                discriminant,
+                cases,
+                ..
+            } => {
+                self.expression_calls_private_reaching_local_function(
+                    discriminant,
+                    local_function_aliases,
+                    visited_functions,
+                ) || cases.iter().any(|case| {
+                    case.test.as_ref().is_some_and(|test| {
+                        self.expression_calls_private_reaching_local_function(
+                            test,
+                            local_function_aliases,
+                            visited_functions,
+                        )
+                    }) || case.body.iter().any(|statement| {
+                        self.statement_calls_private_reaching_local_function(
+                            statement,
+                            local_function_aliases,
+                            visited_functions,
+                        )
+                    })
+                })
+            }
+            Statement::Try {
+                body,
+                catch_setup,
+                catch_body,
+                ..
+            } => {
+                body.iter().any(|statement| {
+                    self.statement_calls_private_reaching_local_function(
+                        statement,
+                        local_function_aliases,
+                        visited_functions,
+                    )
+                }) || catch_setup.iter().any(|statement| {
+                    self.statement_calls_private_reaching_local_function(
+                        statement,
+                        local_function_aliases,
+                        visited_functions,
+                    )
+                }) || catch_body.iter().any(|statement| {
+                    self.statement_calls_private_reaching_local_function(
+                        statement,
+                        local_function_aliases,
+                        visited_functions,
+                    )
+                })
+            }
+            Statement::For {
+                init,
+                condition,
+                update,
+                body,
+                ..
+            } => {
+                init.iter().any(|statement| {
+                    self.statement_calls_private_reaching_local_function(
+                        statement,
+                        local_function_aliases,
+                        visited_functions,
+                    )
+                }) || condition.as_ref().is_some_and(|condition| {
+                    self.expression_calls_private_reaching_local_function(
+                        condition,
+                        local_function_aliases,
+                        visited_functions,
+                    )
+                }) || update.as_ref().is_some_and(|update| {
+                    self.expression_calls_private_reaching_local_function(
+                        update,
+                        local_function_aliases,
+                        visited_functions,
+                    )
+                }) || body.iter().any(|statement| {
+                    self.statement_calls_private_reaching_local_function(
+                        statement,
+                        local_function_aliases,
+                        visited_functions,
+                    )
+                })
+            }
+            Statement::Var { value, .. }
+            | Statement::Let { value, .. }
+            | Statement::Assign { value, .. }
+            | Statement::Return(value)
+            | Statement::Throw(value)
+            | Statement::Expression(value)
+            | Statement::Yield { value }
+            | Statement::YieldDelegate { value } => self
+                .expression_calls_private_reaching_local_function(
+                    value,
+                    local_function_aliases,
+                    visited_functions,
+                ),
+            Statement::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                self.expression_calls_private_reaching_local_function(
+                    object,
+                    local_function_aliases,
+                    visited_functions,
+                ) || self.expression_calls_private_reaching_local_function(
+                    property,
+                    local_function_aliases,
+                    visited_functions,
+                ) || self.expression_calls_private_reaching_local_function(
+                    value,
+                    local_function_aliases,
+                    visited_functions,
+                )
+            }
+            Statement::Print { values } => values.iter().any(|value| {
+                self.expression_calls_private_reaching_local_function(
+                    value,
+                    local_function_aliases,
+                    visited_functions,
+                )
+            }),
+            Statement::Break { .. } | Statement::Continue { .. } => false,
+        }
+    }
+
     fn user_function_name_reaches_private_member_access(
         &self,
         function_name: &str,
@@ -613,8 +1209,20 @@ impl<'a> FunctionCompiler<'a> {
 
         self.resolve_registered_function_declaration(function_name)
             .is_some_and(|function| {
+                let mut local_function_aliases = HashMap::new();
+                for statement in &function.body {
+                    self.collect_local_function_aliases_from_statement(
+                        statement,
+                        &mut local_function_aliases,
+                    );
+                }
                 function.body.iter().any(|statement| {
                     self.statement_reaches_private_member_access(statement, visited_functions)
+                        || self.statement_calls_private_reaching_local_function(
+                            statement,
+                            &local_function_aliases,
+                            visited_functions,
+                        )
                 })
             })
     }
@@ -779,6 +1387,18 @@ impl<'a> FunctionCompiler<'a> {
         user_function: &UserFunction,
         arguments: &[Expression],
     ) -> bool {
+        if !user_function.lexical_this
+            && self
+                .resolve_registered_function_declaration(&user_function.name)
+                .is_some_and(|function| {
+                    function
+                        .body
+                        .iter()
+                        .any(Self::statement_mentions_call_frame_state)
+                })
+        {
+            return false;
+        }
         self.state.emission.control_flow.try_stack.is_empty()
             && !self.current_function_contains_try_statement()
             && arguments.iter().all(|argument| {
@@ -828,6 +1448,7 @@ impl<'a> FunctionCompiler<'a> {
     ) -> bool {
         self.state.emission.control_flow.try_stack.is_empty()
             && !self.current_function_contains_try_statement()
+            && (user_function.lexical_this || !matches!(this_expression, Expression::This))
             && !self.expression_reads_local_descriptor_binding_member(this_expression)
             && self.inline_safe_argument_expression(this_expression)
             && !self.inline_argument_mentions_shadowed_implicit_global(this_expression)
@@ -874,6 +1495,7 @@ impl<'a> FunctionCompiler<'a> {
         this_expression: &Expression,
     ) -> bool {
         !self.expression_reads_local_descriptor_binding_member(this_expression)
+            && (user_function.lexical_this || !matches!(this_expression, Expression::This))
             && self.inline_safe_argument_expression(this_expression)
             && !self.inline_argument_mentions_shadowed_implicit_global(this_expression)
             && arguments

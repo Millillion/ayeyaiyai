@@ -5,10 +5,22 @@ impl<'a> GlobalBindingIndexQueryAccess for FunctionCompilerBackend<'a> {
         self.global_semantics
             .global_names()
             .resolve_binding_index(name)
+            .or_else(|| {
+                self.shared_global_semantics
+                    .global_names()
+                    .resolve_binding_index(name)
+            })
     }
 
     fn global_binding_index(&self, name: &str) -> Option<u32> {
-        self.global_semantics.global_names().binding_index(name)
+        self.global_semantics
+            .global_names()
+            .binding_index(name)
+            .or_else(|| {
+                self.shared_global_semantics
+                    .global_names()
+                    .binding_index(name)
+            })
     }
 
     fn global_binding_count(&self) -> u32 {
@@ -19,12 +31,20 @@ impl<'a> GlobalBindingIndexQueryAccess for FunctionCompilerBackend<'a> {
 impl<'a> GlobalBindingPresenceQueryAccess for FunctionCompilerBackend<'a> {
     fn global_has_binding(&self, name: &str) -> bool {
         self.global_semantics.global_names().has_binding(name)
+            || self
+                .shared_global_semantics
+                .global_names()
+                .has_binding(name)
     }
 
     fn global_has_lexical_binding(&self, name: &str) -> bool {
         self.global_semantics
             .global_names()
             .has_lexical_binding(name)
+            || self
+                .shared_global_semantics
+                .global_names()
+                .has_lexical_binding(name)
     }
 
     fn global_has_implicit_binding(&self, name: &str) -> bool {
@@ -59,7 +79,14 @@ impl<'a> GlobalImplicitBindingQueryAccess for FunctionCompilerBackend<'a> {
 
 impl<'a> GlobalLexicalBindingQueryAccess for FunctionCompilerBackend<'a> {
     fn lexical_global_binding(&self, name: &str) -> Option<LexicalGlobalBinding> {
-        self.global_semantics.global_names().lexical_binding(name)
+        self.global_semantics
+            .global_names()
+            .lexical_binding(name)
+            .or_else(|| {
+                self.shared_global_semantics
+                    .global_names()
+                    .lexical_binding(name)
+            })
     }
 
     fn global_lexical_binding_count(&self) -> u32 {
@@ -71,7 +98,10 @@ impl<'a> GlobalLexicalBindingQueryAccess for FunctionCompilerBackend<'a> {
 
 impl<'a> GlobalBindingKindQueryAccess for FunctionCompilerBackend<'a> {
     fn global_binding_kind(&self, name: &str) -> Option<StaticValueKind> {
-        self.global_semantics.global_names().kind(name)
+        self.global_semantics
+            .global_names()
+            .kind(name)
+            .or_else(|| self.shared_global_semantics.global_names().kind(name))
     }
 }
 

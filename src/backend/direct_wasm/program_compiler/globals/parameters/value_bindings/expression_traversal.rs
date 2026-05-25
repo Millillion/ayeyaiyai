@@ -7,8 +7,13 @@ impl DirectWasmCompiler {
         aliases: &mut HashMap<String, Option<LocalFunctionBinding>>,
         bindings: &mut HashMap<String, HashMap<String, Option<Expression>>>,
     ) {
+        let source_bindings = bindings.clone();
         self.collect_parameter_value_bindings_from_expression_in_function(
-            expression, aliases, bindings, None,
+            expression,
+            aliases,
+            bindings,
+            &source_bindings,
+            None,
         );
     }
 
@@ -17,6 +22,7 @@ impl DirectWasmCompiler {
         expression: &Expression,
         aliases: &mut HashMap<String, Option<LocalFunctionBinding>>,
         bindings: &mut HashMap<String, HashMap<String, Option<Expression>>>,
+        source_bindings: &HashMap<String, HashMap<String, Option<Expression>>>,
         current_function_name: Option<&str>,
     ) {
         match expression {
@@ -25,6 +31,7 @@ impl DirectWasmCompiler {
                     callee,
                     aliases,
                     bindings,
+                    source_bindings,
                     current_function_name,
                 );
                 self.register_parameter_value_bindings_for_call(
@@ -32,6 +39,7 @@ impl DirectWasmCompiler {
                     arguments,
                     aliases,
                     bindings,
+                    source_bindings,
                     current_function_name,
                 );
                 for argument in arguments {
@@ -44,6 +52,7 @@ impl DirectWasmCompiler {
                         argument,
                         aliases,
                         bindings,
+                        source_bindings,
                         current_function_name,
                     );
                 }
@@ -53,6 +62,7 @@ impl DirectWasmCompiler {
                     value,
                     aliases,
                     bindings,
+                    source_bindings,
                     current_function_name,
                 );
                 aliases.insert(
@@ -65,12 +75,14 @@ impl DirectWasmCompiler {
                     object,
                     aliases,
                     bindings,
+                    source_bindings,
                     current_function_name,
                 );
                 self.collect_parameter_value_bindings_from_expression_in_function(
                     property,
                     aliases,
                     bindings,
+                    source_bindings,
                     current_function_name,
                 );
             }
@@ -79,6 +91,7 @@ impl DirectWasmCompiler {
                     property,
                     aliases,
                     bindings,
+                    source_bindings,
                     current_function_name,
                 );
             }
@@ -91,18 +104,21 @@ impl DirectWasmCompiler {
                     object,
                     aliases,
                     bindings,
+                    source_bindings,
                     current_function_name,
                 );
                 self.collect_parameter_value_bindings_from_expression_in_function(
                     property,
                     aliases,
                     bindings,
+                    source_bindings,
                     current_function_name,
                 );
                 self.collect_parameter_value_bindings_from_expression_in_function(
                     value,
                     aliases,
                     bindings,
+                    source_bindings,
                     current_function_name,
                 );
             }
@@ -111,12 +127,14 @@ impl DirectWasmCompiler {
                     property,
                     aliases,
                     bindings,
+                    source_bindings,
                     current_function_name,
                 );
                 self.collect_parameter_value_bindings_from_expression_in_function(
                     value,
                     aliases,
                     bindings,
+                    source_bindings,
                     current_function_name,
                 );
             }
@@ -129,6 +147,7 @@ impl DirectWasmCompiler {
                     expression,
                     aliases,
                     bindings,
+                    source_bindings,
                     current_function_name,
                 );
             }
@@ -143,6 +162,7 @@ impl DirectWasmCompiler {
                         expression,
                         aliases,
                         bindings,
+                        source_bindings,
                         current_function_name,
                     );
                 }
@@ -155,12 +175,14 @@ impl DirectWasmCompiler {
                                 key,
                                 aliases,
                                 bindings,
+                                source_bindings,
                                 current_function_name,
                             );
                             self.collect_parameter_value_bindings_from_expression_in_function(
                                 value,
                                 aliases,
                                 bindings,
+                                source_bindings,
                                 current_function_name,
                             );
                         }
@@ -169,12 +191,14 @@ impl DirectWasmCompiler {
                                 key,
                                 aliases,
                                 bindings,
+                                source_bindings,
                                 current_function_name,
                             );
                             self.collect_parameter_value_bindings_from_expression_in_function(
                                 getter,
                                 aliases,
                                 bindings,
+                                source_bindings,
                                 current_function_name,
                             );
                         }
@@ -183,12 +207,14 @@ impl DirectWasmCompiler {
                                 key,
                                 aliases,
                                 bindings,
+                                source_bindings,
                                 current_function_name,
                             );
                             self.collect_parameter_value_bindings_from_expression_in_function(
                                 setter,
                                 aliases,
                                 bindings,
+                                source_bindings,
                                 current_function_name,
                             );
                         }
@@ -197,6 +223,7 @@ impl DirectWasmCompiler {
                                 expression,
                                 aliases,
                                 bindings,
+                                source_bindings,
                                 current_function_name,
                             );
                         }
@@ -208,12 +235,14 @@ impl DirectWasmCompiler {
                     left,
                     aliases,
                     bindings,
+                    source_bindings,
                     current_function_name,
                 );
                 self.collect_parameter_value_bindings_from_expression_in_function(
                     right,
                     aliases,
                     bindings,
+                    source_bindings,
                     current_function_name,
                 );
             }
@@ -226,18 +255,21 @@ impl DirectWasmCompiler {
                     condition,
                     aliases,
                     bindings,
+                    source_bindings,
                     current_function_name,
                 );
                 self.collect_parameter_value_bindings_from_expression_in_function(
                     then_expression,
                     aliases,
                     bindings,
+                    source_bindings,
                     current_function_name,
                 );
                 self.collect_parameter_value_bindings_from_expression_in_function(
                     else_expression,
                     aliases,
                     bindings,
+                    source_bindings,
                     current_function_name,
                 );
             }
@@ -247,6 +279,7 @@ impl DirectWasmCompiler {
                         expression,
                         aliases,
                         bindings,
+                        source_bindings,
                         current_function_name,
                     );
                 }
@@ -256,6 +289,15 @@ impl DirectWasmCompiler {
                     callee,
                     aliases,
                     bindings,
+                    source_bindings,
+                    current_function_name,
+                );
+                self.register_constructor_parameter_value_bindings_for_call(
+                    callee,
+                    arguments,
+                    aliases,
+                    bindings,
+                    source_bindings,
                     current_function_name,
                 );
                 for argument in arguments {
@@ -268,6 +310,7 @@ impl DirectWasmCompiler {
                         argument,
                         aliases,
                         bindings,
+                        source_bindings,
                         current_function_name,
                     );
                 }

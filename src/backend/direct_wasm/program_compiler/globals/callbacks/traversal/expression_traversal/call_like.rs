@@ -65,6 +65,17 @@ impl DirectWasmCompiler {
                     object_state,
                     overwrite_existing,
                 );
+                self.register_constructor_bindings_for_call_with_state(
+                    callee,
+                    arguments,
+                    aliases,
+                    bindings,
+                    array_bindings,
+                    object_bindings,
+                    value_bindings,
+                    object_state,
+                    overwrite_existing,
+                );
                 for argument in arguments {
                     let argument = match argument {
                         CallArgument::Expression(argument) | CallArgument::Spread(argument) => {

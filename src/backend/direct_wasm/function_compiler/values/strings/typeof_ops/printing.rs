@@ -5,6 +5,16 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         expression: &Expression,
     ) -> DirectResult<()> {
+        if let Expression::Identifier(name) = expression
+            && self.backend.implicit_global_binding(name).is_some()
+            && self.resolve_current_local_binding(name).is_none()
+            && self.backend.global_binding_index(name).is_none()
+        {
+            let type_tag_local = self.allocate_temp_local();
+            self.emit_typeof_implicit_global_binding(name)?;
+            self.push_local_set(type_tag_local);
+            return self.emit_typeof_print_from_local(type_tag_local);
+        }
         let Some(text) = self
             .infer_typeof_operand_kind(expression)
             .and_then(|kind| kind.as_typeof_str())

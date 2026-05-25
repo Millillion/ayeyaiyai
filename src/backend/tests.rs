@@ -29,6 +29,22 @@ fn emits_direct_wasm_bytes_for_supported_top_level_programs() {
 }
 
 #[test]
+fn emits_direct_wasm_bytes_for_bound_function_prototype_call_assignment() {
+    let program = frontend::parse(
+        r#"
+        var __join = Function.prototype.call.bind(Array.prototype.join);
+        "#,
+    )
+    .unwrap();
+
+    let wasm = emit_wasm(&program)
+        .unwrap()
+        .expect("direct wasm backend should support binding Function.prototype.call to a builtin");
+
+    assert!(wasm.starts_with(b"\0asm\x01\0\0\0"));
+}
+
+#[test]
 fn emits_direct_wasm_bytes_for_numeric_functions_and_for_loops() {
     let program = frontend::parse(
         r#"

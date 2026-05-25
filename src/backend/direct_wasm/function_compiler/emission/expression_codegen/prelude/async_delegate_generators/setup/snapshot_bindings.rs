@@ -37,9 +37,12 @@ impl<'a> FunctionCompiler<'a> {
         if matches!(method_value, Expression::Undefined | Expression::Null) {
             return Ok(None);
         }
-        self.resolve_function_binding_from_expression_with_context(method_value, Some(function_name))
-            .map(Some)
-            .ok_or(StaticThrowValue::NamedError("TypeError"))
+        self.resolve_function_binding_from_expression_with_context(
+            method_value,
+            Some(function_name),
+        )
+        .map(Some)
+        .ok_or(StaticThrowValue::NamedError("TypeError"))
     }
 
     fn async_delegate_iterator_method_result_is_object(&self, value: &Expression) -> bool {
@@ -47,7 +50,10 @@ impl<'a> FunctionCompiler<'a> {
             || self.resolve_object_binding_from_expression(value).is_some()
             || self.resolve_array_binding_from_expression(value).is_some()
             || self
-                .resolve_function_binding_from_expression_with_context(value, self.current_function_name())
+                .resolve_function_binding_from_expression_with_context(
+                    value,
+                    self.current_function_name(),
+                )
                 .is_some()
             || matches!(
                 self.infer_value_kind(value),
@@ -78,11 +84,12 @@ impl<'a> FunctionCompiler<'a> {
                 );
             }
             if let Some(binding) = binding
-                && let Some(outcome) = self.resolve_static_function_outcome_from_binding_with_context(
-                    &binding,
-                    arguments,
-                    Some(function_name),
-                )
+                && let Some(outcome) = self
+                    .resolve_static_function_outcome_from_binding_with_context(
+                        &binding,
+                        arguments,
+                        Some(function_name),
+                    )
             {
                 return match outcome {
                     StaticEvalOutcome::Value(value) => Some(
@@ -136,6 +143,11 @@ impl<'a> FunctionCompiler<'a> {
                 expression,
             ) {
                 Some((StaticEvalOutcome::Value(method_value), updated_bindings)) => {
+                    let mut merged_bindings = bindings;
+                    Self::merge_bound_snapshot_updated_bindings(
+                        &mut merged_bindings,
+                        updated_bindings,
+                    );
                     if std::env::var_os("AYY_TRACE_ASYNC_DELEGATES").is_some() {
                         eprintln!(
                             "async_delegate_method_resolution getter_value method={method_value:?}"
@@ -147,24 +159,29 @@ impl<'a> FunctionCompiler<'a> {
                     ) {
                         Ok(Some(function_binding)) => DelegateMethodSnapshotResolution::Bound {
                             function_binding,
-                            bindings: updated_bindings,
+                            bindings: merged_bindings,
                         },
                         Ok(None) => DelegateMethodSnapshotResolution::Nullish {
-                            bindings: updated_bindings,
+                            bindings: merged_bindings,
                         },
                         Err(throw_value) => DelegateMethodSnapshotResolution::Throw {
                             throw_value,
-                            bindings: updated_bindings,
+                            bindings: merged_bindings,
                         },
                     }
                 }
                 Some((StaticEvalOutcome::Throw(throw_value), updated_bindings)) => {
+                    let mut merged_bindings = bindings;
+                    Self::merge_bound_snapshot_updated_bindings(
+                        &mut merged_bindings,
+                        updated_bindings,
+                    );
                     if std::env::var_os("AYY_TRACE_ASYNC_DELEGATES").is_some() {
                         eprintln!("async_delegate_method_resolution getter_throw");
                     }
                     DelegateMethodSnapshotResolution::Throw {
                         throw_value,
-                        bindings: updated_bindings,
+                        bindings: merged_bindings,
                     }
                 }
                 None => match self.resolve_static_function_outcome_from_binding_with_context(
@@ -322,22 +339,27 @@ impl<'a> FunctionCompiler<'a> {
                 ) {
                     Some((
                         StaticEvalOutcome::Value(static_delegate_iterator),
-                        mut updated_bindings,
+                        updated_bindings,
                     )) => {
+                        let mut merged_bindings = iterator_snapshot_bindings;
+                        Self::merge_bound_snapshot_updated_bindings(
+                            &mut merged_bindings,
+                            updated_bindings,
+                        );
                         if let Expression::Identifier(delegate_object_name) =
                             &plan.delegate_expression
                         {
-                            updated_bindings.remove(delegate_object_name);
+                            merged_bindings.remove(delegate_object_name);
                         }
                         if !compiler.async_delegate_iterator_method_result_is_object(
                             &static_delegate_iterator,
                         ) {
                             return Ok(Some(InitialDelegateSnapshotBindings::Throw {
                                 throw_value: StaticThrowValue::NamedError("TypeError"),
-                                bindings: updated_bindings,
+                                bindings: merged_bindings,
                             }));
                         }
-                        updated_bindings.insert(
+                        merged_bindings.insert(
                             delegate_iterator_name.to_string(),
                             static_delegate_iterator.clone(),
                         );
@@ -349,11 +371,11 @@ impl<'a> FunctionCompiler<'a> {
                                     )),
                                     property: Box::new(Expression::String("next".to_string())),
                                 },
-                                &mut updated_bindings,
+                                &mut merged_bindings,
                                 Some(&plan.function_name),
                             )
                         {
-                            updated_bindings
+                            merged_bindings
                                 .insert(delegate_next_name.to_string(), delegate_next_value.clone());
                             compiler.update_local_value_binding(
                                 delegate_next_name,
@@ -380,7 +402,7 @@ impl<'a> FunctionCompiler<'a> {
                                     }),
                                     result_expression: Some(static_delegate_iterator.clone()),
                                     prototype_source_expression: None,
-                                    updated_bindings: updated_bindings.clone(),
+                                    updated_bindings: merged_bindings.clone(),
                                 });
                         }
                         compiler.update_local_value_binding(
@@ -396,13 +418,18 @@ impl<'a> FunctionCompiler<'a> {
                             &static_delegate_iterator,
                         );
                         Ok(Some(InitialDelegateSnapshotBindings::Ready {
-                            bindings: updated_bindings,
+                            bindings: merged_bindings,
                         }))
                     }
                     Some((StaticEvalOutcome::Throw(throw_value), updated_bindings)) => {
+                        let mut merged_bindings = iterator_snapshot_bindings;
+                        Self::merge_bound_snapshot_updated_bindings(
+                            &mut merged_bindings,
+                            updated_bindings,
+                        );
                         Ok(Some(InitialDelegateSnapshotBindings::Throw {
                             throw_value,
-                            bindings: updated_bindings,
+                            bindings: merged_bindings,
                         }))
                     }
                     None => {

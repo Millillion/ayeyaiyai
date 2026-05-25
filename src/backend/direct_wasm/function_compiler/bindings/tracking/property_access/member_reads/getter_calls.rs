@@ -12,20 +12,18 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(());
         };
         if let Some(capture_slots) = capture_slots {
-            return self
-                .emit_user_function_call_with_new_target_and_this_expression_and_bound_captures(
-                    &user_function,
-                    &[],
-                    JS_UNDEFINED_TAG,
-                    this_expression,
-                    capture_slots,
-                );
+            return self.emit_user_function_call_with_function_this_binding(
+                &user_function,
+                &[],
+                this_expression,
+                Some(capture_slots),
+            );
         }
-        self.emit_user_function_call_with_new_target_and_this_expression(
+        self.emit_user_function_call_with_function_this_binding(
             &user_function,
             &[],
-            JS_UNDEFINED_TAG,
             this_expression,
+            None,
         )
     }
 
@@ -84,21 +82,27 @@ impl<'a> FunctionCompiler<'a> {
                     let static_this_expression =
                         self.resolve_static_snapshot_this_expression(object);
                     let static_getter_binding = LocalFunctionBinding::User(function_name.clone());
-                    let can_use_static_getter_return = self
-                        .user_function(&function_name)
-                        .and_then(|user_function| user_function.inline_summary.as_ref())
-                        .is_some_and(|summary| summary.effects.is_empty());
-                    if can_use_static_getter_return {
-                        if let Some(return_value) = self
-                            .resolve_function_binding_static_return_expression_with_call_frame(
-                                &static_getter_binding,
-                                &[],
-                                &static_this_expression,
-                            )
+                    if let Some(return_value) = self
+                        .resolve_static_getter_value_from_binding_with_context(
+                            &static_getter_binding,
+                            &static_this_expression,
+                            self.current_function_name(),
+                        )
+                    {
+                        let return_value = if self
+                            .resolve_static_boxed_primitive_value(&return_value)
+                            .is_some()
                         {
-                            self.emit_numeric_expression(&return_value)?;
-                            return Ok(true);
-                        }
+                            return_value
+                        } else {
+                            self.resolve_static_primitive_expression_with_context(
+                                &return_value,
+                                self.current_function_name(),
+                            )
+                            .unwrap_or(return_value)
+                        };
+                        self.emit_numeric_expression(&return_value)?;
+                        return Ok(true);
                     }
                     self.emit_member_getter_call_with_bound_this(
                         &function_name,

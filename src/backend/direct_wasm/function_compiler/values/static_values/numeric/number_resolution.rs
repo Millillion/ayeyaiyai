@@ -13,11 +13,108 @@ fn js_to_int32(value: f64) -> i32 {
     js_to_uint32(value) as i32
 }
 
+const STATIC_NUMBER_VALUE_RECURSION_LIMIT: usize = 128;
+
+thread_local! {
+    static STATIC_NUMBER_VALUE_DEPTH: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+struct StaticNumberValueDepthGuard;
+
+impl StaticNumberValueDepthGuard {
+    fn enter() -> Option<Self> {
+        STATIC_NUMBER_VALUE_DEPTH.with(|depth| {
+            let current = depth.get();
+            if current >= STATIC_NUMBER_VALUE_RECURSION_LIMIT {
+                return None;
+            }
+            depth.set(current + 1);
+            Some(Self)
+        })
+    }
+}
+
+impl Drop for StaticNumberValueDepthGuard {
+    fn drop(&mut self) {
+        STATIC_NUMBER_VALUE_DEPTH.with(|depth| depth.set(depth.get().saturating_sub(1)));
+    }
+}
+
+fn js_string_to_number(value: &str) -> f64 {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return 0.0;
+    }
+    match trimmed {
+        "Infinity" | "+Infinity" => return f64::INFINITY,
+        "-Infinity" => return f64::NEG_INFINITY,
+        _ => {}
+    }
+    if trimmed.eq_ignore_ascii_case("infinity")
+        || trimmed.eq_ignore_ascii_case("+infinity")
+        || trimmed.eq_ignore_ascii_case("-infinity")
+        || trimmed.eq_ignore_ascii_case("inf")
+        || trimmed.eq_ignore_ascii_case("+inf")
+        || trimmed.eq_ignore_ascii_case("-inf")
+    {
+        return f64::NAN;
+    }
+    if let Some(hex) = trimmed
+        .strip_prefix("0x")
+        .or_else(|| trimmed.strip_prefix("0X"))
+    {
+        return u64::from_str_radix(hex, 16)
+            .map(|value| value as f64)
+            .unwrap_or(f64::NAN);
+    }
+    if let Some(binary) = trimmed
+        .strip_prefix("0b")
+        .or_else(|| trimmed.strip_prefix("0B"))
+    {
+        return u64::from_str_radix(binary, 2)
+            .map(|value| value as f64)
+            .unwrap_or(f64::NAN);
+    }
+    if let Some(octal) = trimmed
+        .strip_prefix("0o")
+        .or_else(|| trimmed.strip_prefix("0O"))
+    {
+        return u64::from_str_radix(octal, 8)
+            .map(|value| value as f64)
+            .unwrap_or(f64::NAN);
+    }
+    trimmed.parse::<f64>().unwrap_or(f64::NAN)
+}
+
+fn expression_is_builtin_object_reference(expression: &Expression) -> bool {
+    match expression {
+        Expression::Identifier(name) => {
+            builtin_identifier_kind(name).is_some() || infer_call_result_kind(name).is_some()
+        }
+        Expression::Member { object, property } if matches!(property.as_ref(), Expression::String(name) if name == "prototype") =>
+        {
+            matches!(
+                object.as_ref(),
+                Expression::Identifier(name)
+                    if builtin_identifier_kind(name).is_some()
+                        || infer_call_result_kind(name).is_some()
+            )
+        }
+        _ => false,
+    }
+}
+
 impl<'a> FunctionCompiler<'a> {
     pub(in crate::backend::direct_wasm) fn resolve_static_number_value(
         &self,
         expression: &Expression,
     ) -> Option<f64> {
+        let Some(_depth_guard) = StaticNumberValueDepthGuard::enter() else {
+            return None;
+        };
+        if expression_is_builtin_object_reference(expression) {
+            return None;
+        }
         if self.expression_depends_on_active_loop_assignment(expression) {
             return None;
         }
@@ -53,11 +150,31 @@ impl<'a> FunctionCompiler<'a> {
             }
             return self.resolve_static_number_value(&resolved);
         }
-        if matches!(expression, Expression::Call { .. } | Expression::New { .. })
-            && let Some(Expression::Number(number)) =
-                self.resolve_static_boxed_primitive_value(expression)
+        if let Some(value) = self.resolve_static_boxed_primitive_value(expression)
+            && !static_expression_matches(&value, expression)
         {
-            return Some(number);
+            return self.resolve_static_number_value(&value);
+        }
+        if !matches!(
+            expression,
+            Expression::Number(_)
+                | Expression::BigInt(_)
+                | Expression::String(_)
+                | Expression::Bool(_)
+                | Expression::Null
+                | Expression::Undefined
+        ) && matches!(
+            self.infer_value_kind(expression),
+            Some(StaticValueKind::Object | StaticValueKind::Function)
+        ) && let Some(StaticEvalOutcome::Value(value)) = self
+            .resolve_static_to_primitive_outcome_with_context(
+                expression,
+                PrimitiveHint::Number,
+                self.current_function_name(),
+            )
+            && !static_expression_matches(&value, expression)
+        {
+            return self.resolve_static_number_value(&value);
         }
         if let Expression::Identifier(name) = expression
             && name == "Infinity"
@@ -74,7 +191,7 @@ impl<'a> FunctionCompiler<'a> {
                 "POSITIVE_INFINITY" => Some(f64::INFINITY),
                 "NEGATIVE_INFINITY" => Some(f64::NEG_INFINITY),
                 "MAX_VALUE" => Some(f64::MAX),
-                "MIN_VALUE" => Some(f64::MIN_POSITIVE),
+                "MIN_VALUE" => Some(f64::from_bits(1)),
                 _ => None,
             };
         }
@@ -84,6 +201,19 @@ impl<'a> FunctionCompiler<'a> {
                 && let Expression::String(property_name) =
                     self.materialize_static_expression(property)
                 && let Some(value) = builtin_member_number_value(&object_name, &property_name)
+            {
+                return Some(value);
+            }
+            if let Expression::Member {
+                object: prototype_owner,
+                property: prototype_property,
+            } = self.materialize_static_expression(object)
+                && matches!(prototype_property.as_ref(), Expression::String(name) if name == "prototype")
+                && let Expression::Identifier(object_name) = prototype_owner.as_ref()
+                && self.is_unshadowed_builtin_identifier(object_name)
+                && let Expression::String(property_name) =
+                    self.materialize_static_expression(property)
+                && let Some(value) = builtin_prototype_number_value(object_name, &property_name)
             {
                 return Some(value);
             }
@@ -99,6 +229,22 @@ impl<'a> FunctionCompiler<'a> {
                 self.resolve_typed_array_builtin_bytes_per_element(object, property)
             {
                 return Some(bytes_per_element as f64);
+            }
+            if matches!(property.as_ref(), Expression::String(property_name) if property_name == "length")
+                && let Some(array_binding) = self.resolve_array_binding_from_expression(object)
+            {
+                let has_runtime_array_state = self
+                    .runtime_array_length_local_for_expression(object)
+                    .is_some()
+                    || matches!(
+                        object.as_ref(),
+                        Expression::Identifier(name)
+                            if self.is_named_global_array_binding(name)
+                                && self.uses_global_runtime_array_state(name)
+                    );
+                if !has_runtime_array_state {
+                    return Some(array_binding.values.len() as f64);
+                }
             }
             if matches!(property.as_ref(), Expression::String(property_name) if property_name == "length")
                 && self
@@ -122,6 +268,7 @@ impl<'a> FunctionCompiler<'a> {
         match materialized {
             Expression::Number(value) => Some(value),
             Expression::Bool(value) => Some(if value { 1.0 } else { 0.0 }),
+            Expression::String(value) => Some(js_string_to_number(&value)),
             Expression::Null => Some(0.0),
             Expression::Undefined => Some(f64::NAN),
             Expression::Conditional {
@@ -155,6 +302,41 @@ impl<'a> FunctionCompiler<'a> {
                 op: UnaryOp::Plus,
                 expression,
             } => self.resolve_static_number_value(&expression),
+            Expression::Unary {
+                op: UnaryOp::Not,
+                expression,
+            } => Some(if self.resolve_static_boolean_expression(&expression)? {
+                0.0
+            } else {
+                1.0
+            }),
+            Expression::Unary {
+                op: UnaryOp::BitwiseNot,
+                expression,
+            } => Some((!js_to_int32(self.resolve_static_number_value(&expression)?)) as f64),
+            Expression::Unary {
+                op: UnaryOp::TypeOf,
+                expression,
+            } => Some(js_string_to_number(
+                self.infer_typeof_operand_kind(&expression)?
+                    .as_typeof_str()?,
+            )),
+            Expression::Unary {
+                op: UnaryOp::Void, ..
+            } => Some(f64::NAN),
+            Expression::Unary {
+                op: UnaryOp::Delete,
+                expression,
+            } => Some(
+                if self.resolve_static_boolean_expression(&Expression::Unary {
+                    op: UnaryOp::Delete,
+                    expression,
+                })? {
+                    1.0
+                } else {
+                    0.0
+                },
+            ),
             Expression::Unary {
                 op: UnaryOp::Negate,
                 expression,

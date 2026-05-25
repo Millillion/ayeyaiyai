@@ -3,6 +3,7 @@ use super::super::*;
 #[derive(Clone, Copy)]
 pub(in crate::backend::direct_wasm) enum PrimitiveHint {
     Default,
+    Number,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]

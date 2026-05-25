@@ -30,13 +30,53 @@ impl<'a> FunctionCompiler<'a> {
             && let Expression::Member { object, property } = callee.as_ref()
             && let Expression::String(property_name) = property.as_ref()
         {
+            let object_is_async_user_call = if let Expression::Call { callee, .. } = object.as_ref()
+            {
+                self.resolve_function_binding_from_expression_with_context(
+                    callee,
+                    current_function_name,
+                )
+                .is_some_and(|binding| {
+                    let LocalFunctionBinding::User(function_name) = binding else {
+                        return false;
+                    };
+                    self.user_function(&function_name)
+                        .is_some_and(|function| function.is_async())
+                })
+            } else {
+                false
+            };
             let is_promise_protocol_call = matches!(property_name.as_str(), "then" | "catch")
-                && Self::call_is_promise_like_chain(object);
+                && (Self::call_is_promise_like_chain(object) || object_is_async_user_call);
             let is_generator_protocol_call =
                 matches!(property_name.as_str(), "next" | "return" | "throw")
                     && (self.is_async_generator_iterator_expression(object)
                         || self.simple_generator_source_metadata(object).is_some());
-            if is_promise_protocol_call || is_generator_protocol_call {
+            let is_function_meta_call = matches!(property_name.as_str(), "call" | "apply");
+            let is_tracked_mutating_member_call = matches!(property_name.as_str(), "push");
+            if is_tracked_mutating_member_call {
+                self.collect_member_assignment_call_effect_target(object, names);
+            }
+            if property_name == "replace"
+                && let [
+                    CallArgument::Expression(_search_expression),
+                    CallArgument::Expression(replacement_expression),
+                    ..,
+                ] = arguments.as_slice()
+                && let Some(LocalFunctionBinding::User(function_name)) = self
+                    .resolve_function_binding_from_expression_with_context(
+                        replacement_expression,
+                        current_function_name,
+                    )
+            {
+                names.extend(
+                    self.collect_user_function_call_effect_nonlocal_bindings_for_name(
+                        &function_name,
+                        visited,
+                    ),
+                );
+            }
+            if is_promise_protocol_call || is_generator_protocol_call || is_function_meta_call {
                 self.collect_expression_call_effect_nonlocal_bindings(
                     object,
                     current_function_name,
@@ -62,6 +102,23 @@ impl<'a> FunctionCompiler<'a> {
             Expression::Call { callee, arguments }
             | Expression::SuperCall { callee, arguments }
             | Expression::New { callee, arguments } => {
+                if matches!(callee.as_ref(), Expression::Identifier(name) if name == "__ayyDynamicImport")
+                {
+                    for argument in arguments {
+                        match argument {
+                            CallArgument::Expression(expression)
+                            | CallArgument::Spread(expression) => {
+                                self.collect_expression_call_effect_nonlocal_bindings(
+                                    expression,
+                                    current_function_name,
+                                    names,
+                                    visited,
+                                );
+                            }
+                        }
+                    }
+                    return;
+                }
                 if let Some(LocalFunctionBinding::User(function_name)) = self
                     .resolve_function_binding_from_expression_with_context(
                         callee,

@@ -7,8 +7,8 @@ use anyhow::{Context, Result, bail, ensure};
 use swc_ecma_ast::*;
 
 use crate::ir::hir::{
-    CallArgument, Expression, FunctionDeclaration, FunctionKind, ObjectEntry, Parameter, Program,
-    Statement,
+    ArrayElement, CallArgument, Expression, FunctionDeclaration, FunctionKind, ObjectEntry,
+    Parameter, Program, Statement,
 };
 
 use super::{
@@ -34,10 +34,11 @@ pub(crate) mod resolution;
 use self::{
     dynamic_imports::{
         collect_literal_dynamic_import_specifiers,
+        collect_literal_dynamic_import_specifiers_in_source_comments,
         collect_literal_dynamic_import_specifiers_in_statements,
     },
     export_resolution::module_export_name_string,
-    import_rewriter::rewrite_import_bindings_in_function,
+    import_rewriter::rewrite_module_import_bindings_in_function,
     resolution::{normalize_module_path, resolve_module_specifier},
 };
 

@@ -36,6 +36,9 @@ impl DirectWasmCompiler {
         &self,
         property: &Expression,
     ) -> Option<MemberFunctionBindingProperty> {
+        if let Some(property_name) = static_property_name_from_expression(property) {
+            return Some(MemberFunctionBindingProperty::String(property_name));
+        }
         let resolved_property = self.materialize_global_expression(property);
         if let Some(property_name) = static_property_name_from_expression(&resolved_property) {
             return Some(MemberFunctionBindingProperty::String(property_name));

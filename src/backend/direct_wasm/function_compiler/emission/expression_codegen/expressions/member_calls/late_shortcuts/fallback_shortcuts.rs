@@ -23,6 +23,7 @@ impl<'a> FunctionCompiler<'a> {
                 Expression::Identifier(name)
                     if name.starts_with("__ayy_array_iter_")
                         || name.starts_with("__ayy_for_of_iter_")
+                        || name.starts_with("__ayy_for_await_iter_")
             )
         {
             self.emit_numeric_expression(object)?;

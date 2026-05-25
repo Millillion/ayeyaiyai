@@ -1,8 +1,0 @@
-Error
-Error: failed to run main module `tmp-debug/static-private-method-assert-throws-lowered-repro.trace.wasm`
-
-Caused by:
-    0: failed to invoke command default
-    1: error while executing at wasm backtrace:
-           0: 0x2dda - <unknown>!<wasm function 5>
-    2: wasm trap: wasm `unreachable` instruction executed

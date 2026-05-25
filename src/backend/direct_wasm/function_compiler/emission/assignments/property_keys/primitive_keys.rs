@@ -5,10 +5,6 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         expression: &Expression,
     ) -> Option<Expression> {
-        if matches!(expression, Expression::Identifier(name) if name.starts_with("__ayy_generator_sent_"))
-        {
-            return Some(Expression::String("undefined".to_string()));
-        }
         if let Some(property_name) = static_property_name_from_expression(expression) {
             return Some(Expression::String(property_name));
         }
@@ -146,6 +142,10 @@ impl<'a> FunctionCompiler<'a> {
         }
         if let Some(property_name) = static_property_name_from_expression(&materialized) {
             return Some(Expression::String(property_name));
+        }
+        if matches!(expression, Expression::Identifier(name) if name.starts_with("__ayy_generator_sent_"))
+        {
+            return Some(Expression::String("undefined".to_string()));
         }
         if self.well_known_symbol_name(&materialized).is_some() {
             return Some(materialized);

@@ -7,8 +7,13 @@ impl DirectWasmCompiler {
         aliases: &mut HashMap<String, Option<LocalFunctionBinding>>,
         bindings: &mut HashMap<String, HashMap<String, Option<Expression>>>,
     ) {
+        let source_bindings = bindings.clone();
         self.collect_parameter_value_bindings_from_statements_in_function(
-            statements, aliases, bindings, None,
+            statements,
+            aliases,
+            bindings,
+            &source_bindings,
+            None,
         );
     }
 
@@ -17,6 +22,7 @@ impl DirectWasmCompiler {
         statements: &[Statement],
         aliases: &mut HashMap<String, Option<LocalFunctionBinding>>,
         bindings: &mut HashMap<String, HashMap<String, Option<Expression>>>,
+        source_bindings: &HashMap<String, HashMap<String, Option<Expression>>>,
         current_function_name: Option<&str>,
     ) {
         for statement in statements {
@@ -24,6 +30,7 @@ impl DirectWasmCompiler {
                 statement,
                 aliases,
                 bindings,
+                source_bindings,
                 current_function_name,
             );
         }
@@ -35,8 +42,13 @@ impl DirectWasmCompiler {
         aliases: &mut HashMap<String, Option<LocalFunctionBinding>>,
         bindings: &mut HashMap<String, HashMap<String, Option<Expression>>>,
     ) {
+        let source_bindings = bindings.clone();
         self.collect_parameter_value_bindings_from_statement_in_function(
-            statement, aliases, bindings, None,
+            statement,
+            aliases,
+            bindings,
+            &source_bindings,
+            None,
         );
     }
 
@@ -45,6 +57,7 @@ impl DirectWasmCompiler {
         statement: &Statement,
         aliases: &mut HashMap<String, Option<LocalFunctionBinding>>,
         bindings: &mut HashMap<String, HashMap<String, Option<Expression>>>,
+        source_bindings: &HashMap<String, HashMap<String, Option<Expression>>>,
         current_function_name: Option<&str>,
     ) {
         match statement {
@@ -56,6 +69,7 @@ impl DirectWasmCompiler {
                     body,
                     aliases,
                     bindings,
+                    source_bindings,
                     current_function_name,
                 );
             }
@@ -64,6 +78,7 @@ impl DirectWasmCompiler {
                     value,
                     aliases,
                     bindings,
+                    source_bindings,
                     current_function_name,
                 );
                 aliases.insert(
@@ -76,6 +91,7 @@ impl DirectWasmCompiler {
                     value,
                     aliases,
                     bindings,
+                    source_bindings,
                     current_function_name,
                 );
                 aliases.insert(
@@ -92,18 +108,21 @@ impl DirectWasmCompiler {
                     object,
                     aliases,
                     bindings,
+                    source_bindings,
                     current_function_name,
                 );
                 self.collect_parameter_value_bindings_from_expression_in_function(
                     property,
                     aliases,
                     bindings,
+                    source_bindings,
                     current_function_name,
                 );
                 self.collect_parameter_value_bindings_from_expression_in_function(
                     value,
                     aliases,
                     bindings,
+                    source_bindings,
                     current_function_name,
                 );
             }
@@ -113,6 +132,7 @@ impl DirectWasmCompiler {
                         value,
                         aliases,
                         bindings,
+                        source_bindings,
                         current_function_name,
                     );
                 }
@@ -126,6 +146,7 @@ impl DirectWasmCompiler {
                     expression,
                     aliases,
                     bindings,
+                    source_bindings,
                     current_function_name,
                 );
             }
@@ -138,6 +159,7 @@ impl DirectWasmCompiler {
                     condition,
                     aliases,
                     bindings,
+                    source_bindings,
                     current_function_name,
                 );
                 let baseline_aliases = aliases.clone();
@@ -147,12 +169,14 @@ impl DirectWasmCompiler {
                     then_branch,
                     &mut then_aliases,
                     bindings,
+                    source_bindings,
                     current_function_name,
                 );
                 self.collect_parameter_value_bindings_from_statements_in_function(
                     else_branch,
                     &mut else_aliases,
                     bindings,
+                    source_bindings,
                     current_function_name,
                 );
                 *aliases = self
@@ -170,6 +194,7 @@ impl DirectWasmCompiler {
                     body,
                     &mut body_aliases,
                     bindings,
+                    source_bindings,
                     current_function_name,
                 );
 
@@ -181,12 +206,14 @@ impl DirectWasmCompiler {
                     catch_setup,
                     &mut catch_aliases,
                     bindings,
+                    source_bindings,
                     current_function_name,
                 );
                 self.collect_parameter_value_bindings_from_statements_in_function(
                     catch_body,
                     &mut catch_aliases,
                     bindings,
+                    source_bindings,
                     current_function_name,
                 );
                 *aliases = self.merge_aliases_for_branches(
@@ -203,6 +230,7 @@ impl DirectWasmCompiler {
                     discriminant,
                     aliases,
                     bindings,
+                    source_bindings,
                     current_function_name,
                 );
                 let baseline_aliases = aliases.clone();
@@ -214,6 +242,7 @@ impl DirectWasmCompiler {
                             test,
                             &mut case_aliases,
                             bindings,
+                            source_bindings,
                             current_function_name,
                         );
                     }
@@ -221,6 +250,7 @@ impl DirectWasmCompiler {
                         &case.body,
                         &mut case_aliases,
                         bindings,
+                        source_bindings,
                         current_function_name,
                     );
                     branch_aliases.push(case_aliases);
@@ -240,6 +270,7 @@ impl DirectWasmCompiler {
                     init,
                     aliases,
                     bindings,
+                    source_bindings,
                     current_function_name,
                 );
                 if let Some(condition) = condition {
@@ -247,6 +278,7 @@ impl DirectWasmCompiler {
                         condition,
                         aliases,
                         bindings,
+                        source_bindings,
                         current_function_name,
                     );
                 }
@@ -255,6 +287,7 @@ impl DirectWasmCompiler {
                         update,
                         aliases,
                         bindings,
+                        source_bindings,
                         current_function_name,
                     );
                 }
@@ -263,6 +296,7 @@ impl DirectWasmCompiler {
                         break_hook,
                         aliases,
                         bindings,
+                        source_bindings,
                         current_function_name,
                     );
                 }
@@ -272,6 +306,7 @@ impl DirectWasmCompiler {
                     body,
                     &mut body_aliases,
                     bindings,
+                    source_bindings,
                     current_function_name,
                 );
                 *aliases = self.merge_aliases_for_optional_body(&baseline_aliases, &body_aliases);
@@ -292,6 +327,7 @@ impl DirectWasmCompiler {
                     condition,
                     aliases,
                     bindings,
+                    source_bindings,
                     current_function_name,
                 );
                 if let Some(break_hook) = break_hook {
@@ -299,6 +335,7 @@ impl DirectWasmCompiler {
                         break_hook,
                         aliases,
                         bindings,
+                        source_bindings,
                         current_function_name,
                     );
                 }
@@ -308,6 +345,7 @@ impl DirectWasmCompiler {
                     body,
                     &mut body_aliases,
                     bindings,
+                    source_bindings,
                     current_function_name,
                 );
                 *aliases = self.merge_aliases_for_optional_body(&baseline_aliases, &body_aliases);

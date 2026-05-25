@@ -6,7 +6,7 @@ use super::{
     },
     directives::{
         function_has_use_strict_directive, is_strict_mode_reserved_identifier,
-        is_strict_mode_restricted_identifier,
+        is_strict_mode_restricted_identifier, script_has_use_strict_directive,
     },
     functions::{
         ensure_no_duplicate_parameter_names, validate_strict_mode_early_errors_in_class,
@@ -104,19 +104,28 @@ pub(super) fn validate_strict_mode_early_errors_in_expression(
                         Prop::Getter(property) => {
                             validate_property_name_strict_mode_early_errors(&property.key, strict)?;
                             if let Some(body) = &property.body {
+                                let getter_strict =
+                                    strict || script_has_use_strict_directive(&body.stmts);
                                 validate_strict_mode_early_errors_in_statements(
                                     &body.stmts,
-                                    strict,
+                                    getter_strict,
                                 )?;
                             }
                         }
                         Prop::Setter(property) => {
                             validate_property_name_strict_mode_early_errors(&property.key, strict)?;
-                            validate_strict_mode_early_errors_in_pattern(&property.param, strict)?;
+                            let setter_strict = strict
+                                || property.body.as_ref().is_some_and(|body| {
+                                    script_has_use_strict_directive(&body.stmts)
+                                });
+                            validate_strict_mode_early_errors_in_pattern(
+                                &property.param,
+                                setter_strict,
+                            )?;
                             if let Some(body) = &property.body {
                                 validate_strict_mode_early_errors_in_statements(
                                     &body.stmts,
-                                    strict,
+                                    setter_strict,
                                 )?;
                             }
                         }

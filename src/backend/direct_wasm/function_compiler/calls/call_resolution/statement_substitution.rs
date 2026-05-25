@@ -175,6 +175,141 @@ impl<'a> FunctionCompiler<'a> {
                     })
                     .collect(),
             },
+            Statement::For {
+                labels,
+                init,
+                per_iteration_bindings,
+                condition,
+                update,
+                break_hook,
+                body,
+            } => Statement::For {
+                labels: labels.clone(),
+                init: init
+                    .iter()
+                    .map(|statement| {
+                        self.substitute_statement_call_frame_bindings(
+                            statement,
+                            user_function,
+                            call_arguments,
+                            this_binding,
+                            arguments_binding,
+                        )
+                    })
+                    .collect(),
+                per_iteration_bindings: per_iteration_bindings.clone(),
+                condition: condition.as_ref().map(|condition| {
+                    self.substitute_user_function_call_frame_bindings(
+                        condition,
+                        user_function,
+                        call_arguments,
+                        this_binding,
+                        arguments_binding,
+                    )
+                }),
+                update: update.as_ref().map(|update| {
+                    self.substitute_user_function_call_frame_bindings(
+                        update,
+                        user_function,
+                        call_arguments,
+                        this_binding,
+                        arguments_binding,
+                    )
+                }),
+                break_hook: break_hook.as_ref().map(|break_hook| {
+                    self.substitute_user_function_call_frame_bindings(
+                        break_hook,
+                        user_function,
+                        call_arguments,
+                        this_binding,
+                        arguments_binding,
+                    )
+                }),
+                body: body
+                    .iter()
+                    .map(|statement| {
+                        self.substitute_statement_call_frame_bindings(
+                            statement,
+                            user_function,
+                            call_arguments,
+                            this_binding,
+                            arguments_binding,
+                        )
+                    })
+                    .collect(),
+            },
+            Statement::While {
+                labels,
+                condition,
+                break_hook,
+                body,
+            } => Statement::While {
+                labels: labels.clone(),
+                condition: self.substitute_user_function_call_frame_bindings(
+                    condition,
+                    user_function,
+                    call_arguments,
+                    this_binding,
+                    arguments_binding,
+                ),
+                break_hook: break_hook.as_ref().map(|break_hook| {
+                    self.substitute_user_function_call_frame_bindings(
+                        break_hook,
+                        user_function,
+                        call_arguments,
+                        this_binding,
+                        arguments_binding,
+                    )
+                }),
+                body: body
+                    .iter()
+                    .map(|statement| {
+                        self.substitute_statement_call_frame_bindings(
+                            statement,
+                            user_function,
+                            call_arguments,
+                            this_binding,
+                            arguments_binding,
+                        )
+                    })
+                    .collect(),
+            },
+            Statement::DoWhile {
+                labels,
+                condition,
+                break_hook,
+                body,
+            } => Statement::DoWhile {
+                labels: labels.clone(),
+                condition: self.substitute_user_function_call_frame_bindings(
+                    condition,
+                    user_function,
+                    call_arguments,
+                    this_binding,
+                    arguments_binding,
+                ),
+                break_hook: break_hook.as_ref().map(|break_hook| {
+                    self.substitute_user_function_call_frame_bindings(
+                        break_hook,
+                        user_function,
+                        call_arguments,
+                        this_binding,
+                        arguments_binding,
+                    )
+                }),
+                body: body
+                    .iter()
+                    .map(|statement| {
+                        self.substitute_statement_call_frame_bindings(
+                            statement,
+                            user_function,
+                            call_arguments,
+                            this_binding,
+                            arguments_binding,
+                        )
+                    })
+                    .collect(),
+            },
             _ => statement.clone(),
         }
     }

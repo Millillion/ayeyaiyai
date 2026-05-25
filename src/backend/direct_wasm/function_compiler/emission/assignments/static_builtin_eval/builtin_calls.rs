@@ -39,7 +39,18 @@ impl<'a> FunctionCompiler<'a> {
             return Some(StaticEvalOutcome::Value(value));
         }
 
+        if parse_test262_realm_eval_builtin(function_name).is_some() {
+            return self.resolve_static_indirect_eval_completion_outcome_with_context(
+                arguments,
+                Some(function_name),
+            );
+        }
+
         match function_name {
+            "eval" => self.resolve_static_direct_eval_completion_outcome_with_context(
+                arguments,
+                current_function_name,
+            ),
             "Object.getOwnPropertyDescriptor" => {
                 let receiver = match arguments.first()? {
                     CallArgument::Expression(receiver) | CallArgument::Spread(receiver) => receiver,
@@ -117,6 +128,13 @@ impl<'a> FunctionCompiler<'a> {
                     current_function_name,
                 )?
                 .atan(),
+            ))),
+            "Math.ceil" => Some(StaticEvalOutcome::Value(Expression::Number(
+                self.resolve_static_builtin_math_argument_number(
+                    arguments.first()?,
+                    current_function_name,
+                )?
+                .ceil(),
             ))),
             "Math.exp" => Some(StaticEvalOutcome::Value(Expression::Number(
                 self.resolve_static_builtin_math_argument_number(
@@ -296,6 +314,13 @@ impl<'a> FunctionCompiler<'a> {
                     current_function_name,
                 )?
                 .atan(),
+            )),
+            "Math.ceil" => Some(Expression::Number(
+                self.resolve_static_builtin_math_argument_number(
+                    arguments.first()?,
+                    current_function_name,
+                )?
+                .ceil(),
             )),
             "Math.exp" => Some(Expression::Number(
                 self.resolve_static_builtin_math_argument_number(

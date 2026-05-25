@@ -1,6 +1,65 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn class_member_binding_expression(binding: &LocalFunctionBinding) -> Option<Expression> {
+        match binding {
+            LocalFunctionBinding::User(function_name)
+                if function_name.starts_with("__ayy_class_method_") =>
+            {
+                Some(Expression::Identifier(function_name.clone()))
+            }
+            _ => None,
+        }
+    }
+
+    fn lowered_class_member_descriptor_binding(
+        &self,
+        target: &Expression,
+        property: &Expression,
+    ) -> Option<PropertyDescriptorBinding> {
+        if let Some(value) = self
+            .resolve_member_function_binding(target, property)
+            .as_ref()
+            .and_then(Self::class_member_binding_expression)
+        {
+            return Some(PropertyDescriptorBinding {
+                value: Some(value),
+                configurable: true,
+                enumerable: false,
+                writable: Some(true),
+                getter: None,
+                setter: None,
+                has_get: false,
+                has_set: false,
+            });
+        }
+
+        let getter = self
+            .resolve_member_getter_binding(target, property)
+            .as_ref()
+            .and_then(Self::class_member_binding_expression);
+        let setter = self
+            .resolve_member_setter_binding(target, property)
+            .as_ref()
+            .and_then(Self::class_member_binding_expression);
+        let has_get = getter.is_some();
+        let has_set = setter.is_some();
+        if !has_get && !has_set {
+            return None;
+        }
+
+        Some(PropertyDescriptorBinding {
+            value: None,
+            configurable: true,
+            enumerable: false,
+            writable: None,
+            getter,
+            setter,
+            has_get,
+            has_set,
+        })
+    }
+
     pub(in crate::backend::direct_wasm) fn resolve_inherited_object_property_descriptor_binding(
         &self,
         object: &Expression,
@@ -248,17 +307,9 @@ impl<'a> FunctionCompiler<'a> {
             .as_ref()
             .and_then(|binding| object_binding_lookup_descriptor(binding, property))
         {
-            let mut descriptor = descriptor.clone();
-            if descriptor.value.is_some() && !descriptor.has_get && !descriptor.has_set {
-                if let Some(runtime_value) = self.runtime_shadow_descriptor_value(
-                    target,
-                    resolved_target,
-                    materialized_target,
-                    property,
-                ) {
-                    descriptor.value = Some(runtime_value);
-                }
-            }
+            return Some(descriptor.clone());
+        }
+        if let Some(descriptor) = self.lowered_class_member_descriptor_binding(target, property) {
             return Some(descriptor);
         }
         let property_present_in_binding = object_binding.as_ref().is_some_and(|binding| {

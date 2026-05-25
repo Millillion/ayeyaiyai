@@ -1,6 +1,58 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    pub(in crate::backend::direct_wasm) fn resolve_instanceof_getter_static_prototype_expression(
+        &self,
+        binding: &LocalFunctionBinding,
+        right: &Expression,
+    ) -> Option<Expression> {
+        if let Some(value) = self.resolve_function_binding_static_return_expression_with_call_frame(
+            binding,
+            &[],
+            right,
+        ) {
+            return Some(value);
+        }
+
+        let LocalFunctionBinding::User(function_name) = binding else {
+            return None;
+        };
+        let user_function = self.user_function(function_name)?;
+        let trace_instanceof = std::env::var_os("AYY_TRACE_INSTANCEOF").is_some();
+        if self.user_function_mentions_direct_eval(user_function)
+            || self.user_function_deletes_call_frame_arguments_member(user_function)
+        {
+            if trace_instanceof {
+                eprintln!(
+                    "instanceof:getter_return_reject function={function_name} direct_eval={} deletes_arguments={}",
+                    self.user_function_mentions_direct_eval(user_function),
+                    self.user_function_deletes_call_frame_arguments_member(user_function)
+                );
+            }
+            return None;
+        }
+
+        let function = self.resolve_registered_function_declaration(function_name)?;
+        let Statement::Return(return_value) = function.body.last()? else {
+            if trace_instanceof {
+                eprintln!(
+                    "instanceof:getter_return_missing function={function_name} last={:?}",
+                    function.body.last()
+                );
+            }
+            return None;
+        };
+        let call_arguments = Vec::new();
+        let arguments_binding = Expression::Array(Vec::new());
+        Some(self.substitute_user_function_call_frame_bindings(
+            return_value,
+            user_function,
+            &call_arguments,
+            right,
+            &arguments_binding,
+        ))
+    }
+
     fn normalize_instanceof_prototype_expression(&self, expression: &Expression) -> Expression {
         let expression = self
             .resolve_bound_alias_expression(expression)
@@ -13,6 +65,14 @@ impl<'a> FunctionCompiler<'a> {
                 .resolve_bound_alias_expression(object)
                 .filter(|resolved| !static_expression_matches(resolved, object))
                 .unwrap_or_else(|| self.materialize_static_expression(object));
+            if let Some(binding) = self.resolve_function_binding_from_expression(&resolved_object)
+                && let Some(prototype_owner) = self.function_prototype_binding_owner_name(&binding)
+            {
+                return Expression::Member {
+                    object: Box::new(Expression::Identifier(prototype_owner)),
+                    property: property.clone(),
+                };
+            }
             if !static_expression_matches(&resolved_object, object) {
                 return Expression::Member {
                     object: Box::new(resolved_object),
@@ -114,11 +174,7 @@ impl<'a> FunctionCompiler<'a> {
     ) -> Option<Expression> {
         let prototype_property = Expression::String("prototype".to_string());
         if let Some(binding) = self.resolve_member_getter_binding(right, &prototype_property) {
-            return self.resolve_function_binding_static_return_expression_with_call_frame(
-                &binding,
-                &[],
-                right,
-            );
+            return self.resolve_instanceof_getter_static_prototype_expression(&binding, right);
         }
         if let Some(object_binding) = self.resolve_object_binding_from_expression(right)
             && let Some(value) =
@@ -130,10 +186,37 @@ impl<'a> FunctionCompiler<'a> {
         if !static_expression_matches(&materialized_right, right) {
             return self.resolve_instanceof_prototype_expression(&materialized_right);
         }
+        let prototype_member = Expression::Member {
+            object: Box::new(right.clone()),
+            property: Box::new(prototype_property.clone()),
+        };
+        let materialized_prototype_member = self.materialize_static_expression(&prototype_member);
+        if !static_expression_matches(&materialized_prototype_member, &prototype_member)
+            && (self.expression_is_known_non_object_value_for_instanceof(
+                &materialized_prototype_member,
+            ) || self.expression_is_known_object_like_value_for_instanceof(
+                &materialized_prototype_member,
+            ) || matches!(
+                &materialized_prototype_member,
+                Expression::Member { property, .. }
+                    if matches!(property.as_ref(), Expression::String(name) if name == "prototype")
+            ))
+        {
+            return Some(materialized_prototype_member);
+        }
+        if let Some(binding) = self.resolve_function_binding_from_expression(&materialized_right) {
+            let prototype_owner = self
+                .function_prototype_binding_owner_name(&binding)
+                .unwrap_or_else(|| match &materialized_right {
+                    Expression::Identifier(name) => name.clone(),
+                    _ => String::new(),
+                });
+            return Some(Expression::Member {
+                object: Box::new(Expression::Identifier(prototype_owner)),
+                property: Box::new(prototype_property),
+            });
+        }
         if matches!(
-            self.resolve_function_binding_from_expression(&materialized_right),
-            Some(_)
-        ) || matches!(
             &materialized_right,
             Expression::Identifier(name) if infer_call_result_kind(name).is_some()
         ) {

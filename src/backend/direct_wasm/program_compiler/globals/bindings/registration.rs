@@ -120,10 +120,7 @@ impl DirectWasmCompiler {
         let Some(property) = self.global_member_function_binding_property(property) else {
             return;
         };
-        let key = MemberFunctionBindingKey {
-            target,
-            property,
-        };
+        let key = MemberFunctionBindingKey { target, property };
 
         if let Some(binding) = descriptor
             .value
@@ -263,22 +260,50 @@ impl DirectWasmCompiler {
         }
 
         let (value_bindings, _) = self.snapshot_top_level_static_state();
-        for (name, value) in value_bindings {
+        for (name, value) in &value_bindings {
             if std::env::var_os("AYY_TRACE_MEMBER_BINDINGS").is_some() {
                 eprintln!("global_member:class_alias_candidate name={name} value={value:?}");
             }
             let source_name = match value {
-                Expression::Identifier(source_name) => Some(source_name),
-                Expression::Call { callee, arguments } if arguments.is_empty() => {
-                    if let Expression::Identifier(function_name) = callee.as_ref() {
+                Expression::Identifier(source_name) => Some(source_name.clone()),
+                Expression::Call { callee, arguments } => self
+                    .infer_static_call_result_expression(callee.as_ref(), &arguments)
+                    .and_then(|result| match result {
+                        Expression::Identifier(source_name) => Some(source_name),
+                        Expression::Call {
+                            callee,
+                            arguments: nested_arguments,
+                        } if nested_arguments.is_empty() => {
+                            let Expression::Identifier(function_name) = callee.as_ref() else {
+                                return None;
+                            };
+                            match self.infer_static_class_init_call_result_expression(function_name)
+                            {
+                                Some(Expression::Identifier(source_name)) => Some(source_name),
+                                _ => None,
+                            }
+                        }
+                        _ => None,
+                    })
+                    .or_else(|| {
+                        let Expression::Identifier(function_name) = callee.as_ref() else {
+                            return None;
+                        };
+                        self.resolve_direct_eval_wrapper_class_alias_source_name(
+                            function_name,
+                            arguments,
+                            &value_bindings,
+                        )
+                    })
+                    .or_else(|| {
+                        let Expression::Identifier(function_name) = callee.as_ref() else {
+                            return None;
+                        };
                         match self.infer_static_class_init_call_result_expression(function_name) {
                             Some(Expression::Identifier(source_name)) => Some(source_name),
                             _ => None,
                         }
-                    } else {
-                        None
-                    }
-                }
+                    }),
                 _ => None,
             };
             let Some(source_name) = source_name else {
@@ -286,17 +311,233 @@ impl DirectWasmCompiler {
             };
             let source_name = self.normalize_local_member_binding_identifier_target(&source_name);
             if std::env::var_os("AYY_TRACE_MEMBER_BINDINGS").is_some() {
-                eprintln!(
-                    "global_member:class_alias_resolved name={name} source={source_name}"
-                );
+                eprintln!("global_member:class_alias_resolved name={name} source={source_name}");
             }
-            if name == source_name || !source_name.starts_with("__ayy_class_expr_") {
+            if name == &source_name || !source_name.starts_with("__ayy_class_expr_") {
                 continue;
             }
             if self.has_global_member_bindings_for_name(&source_name) {
                 self.copy_global_member_bindings_for_alias(&name, &source_name);
             }
         }
+    }
+
+    fn static_member_alias_string_value(
+        &self,
+        expression: &Expression,
+        value_bindings: &HashMap<String, Expression>,
+    ) -> Option<String> {
+        match expression {
+            Expression::String(value) => Some(value.clone()),
+            Expression::Identifier(name) => value_bindings
+                .get(name)
+                .and_then(|value| self.static_member_alias_string_value(value, value_bindings))
+                .or_else(|| {
+                    self.global_value_binding(name).and_then(|value| {
+                        self.static_member_alias_string_value(value, value_bindings)
+                    })
+                }),
+            _ => None,
+        }
+    }
+
+    fn static_member_alias_realm_eval_builtin(
+        &self,
+        expression: &Expression,
+        value_bindings: &HashMap<String, Expression>,
+    ) -> Option<String> {
+        let mut seen_identifiers = HashSet::new();
+        self.static_member_alias_realm_eval_builtin_with_seen(
+            expression,
+            value_bindings,
+            &mut seen_identifiers,
+        )
+    }
+
+    fn static_member_alias_realm_eval_builtin_with_seen(
+        &self,
+        expression: &Expression,
+        value_bindings: &HashMap<String, Expression>,
+        seen_identifiers: &mut HashSet<String>,
+    ) -> Option<String> {
+        match expression {
+            Expression::Identifier(name) => {
+                if parse_test262_realm_eval_builtin(name).is_some() {
+                    return Some(name.clone());
+                }
+                if !seen_identifiers.insert(name.clone()) {
+                    return None;
+                }
+                value_bindings
+                    .get(name)
+                    .filter(|value| !static_expression_matches(value, expression))
+                    .and_then(|value| {
+                        self.static_member_alias_realm_eval_builtin_with_seen(
+                            value,
+                            value_bindings,
+                            seen_identifiers,
+                        )
+                    })
+                    .or_else(|| {
+                        self.global_value_binding(name)
+                            .filter(|value| !static_expression_matches(value, expression))
+                            .and_then(|value| {
+                                self.static_member_alias_realm_eval_builtin_with_seen(
+                                    value,
+                                    value_bindings,
+                                    seen_identifiers,
+                                )
+                            })
+                    })
+            }
+            Expression::Member { object, property } if matches!(property.as_ref(), Expression::String(name) if name == "eval") => {
+                match object.as_ref() {
+                    Expression::Identifier(global_name) => value_bindings
+                        .get(global_name)
+                        .or_else(|| self.global_value_binding(global_name))
+                        .and_then(|value| match value {
+                            Expression::Identifier(realm_global_name) => {
+                                parse_test262_realm_global_identifier(realm_global_name)
+                            }
+                            _ => None,
+                        })
+                        .or_else(|| parse_test262_realm_global_identifier(global_name))
+                        .map(test262_realm_eval_builtin_name),
+                    Expression::Member { object, property } if matches!(property.as_ref(), Expression::String(name) if name == "global") => {
+                        match self.static_member_alias_realm_global_id(object, value_bindings) {
+                            Some(realm_id) => Some(test262_realm_eval_builtin_name(realm_id)),
+                            None => None,
+                        }
+                    }
+                    _ => None,
+                }
+            }
+            _ => None,
+        }
+    }
+
+    fn static_member_alias_realm_global_id(
+        &self,
+        expression: &Expression,
+        value_bindings: &HashMap<String, Expression>,
+    ) -> Option<u32> {
+        match expression {
+            Expression::Identifier(name) => value_bindings
+                .get(name)
+                .or_else(|| self.global_value_binding(name))
+                .and_then(|value| self.static_member_alias_realm_global_id(value, value_bindings))
+                .or_else(|| parse_test262_realm_global_identifier(name)),
+            Expression::Call { callee, arguments }
+                if arguments.is_empty()
+                    && matches!(
+                        callee.as_ref(),
+                        Expression::Member { object, property }
+                            if matches!(object.as_ref(), Expression::Identifier(name) if name == "$262")
+                                && matches!(property.as_ref(), Expression::String(name) if name == "createRealm")
+                    ) =>
+            {
+                None
+            }
+            Expression::Member { object, property } if matches!(property.as_ref(), Expression::String(name) if name == "global") => {
+                self.static_member_alias_realm_global_id(object, value_bindings)
+            }
+            _ => None,
+        }
+    }
+
+    fn direct_eval_wrapper_static_source(
+        &self,
+        function_name: &str,
+        call_arguments: &[CallArgument],
+        value_bindings: &HashMap<String, Expression>,
+    ) -> Option<(String, bool, Option<String>)> {
+        let user_function = self.user_function(function_name)?;
+        let function = self.registered_function(function_name)?;
+        for statement in &function.body {
+            let (Statement::Return(Expression::Call {
+                callee,
+                arguments: eval_arguments,
+            })
+            | Statement::Expression(Expression::Call {
+                callee,
+                arguments: eval_arguments,
+            })) = statement
+            else {
+                continue;
+            };
+            let is_direct_eval_identifier =
+                matches!(callee.as_ref(), Expression::Identifier(name) if name == "eval");
+            let callee = self.substitute_global_user_function_argument_bindings(
+                callee,
+                user_function,
+                call_arguments,
+            );
+            if !matches!(&callee, Expression::Identifier(name) if name == "eval") {
+                let realm_eval_builtin =
+                    self.static_member_alias_realm_eval_builtin(&callee, value_bindings);
+                if realm_eval_builtin.is_none() {
+                    continue;
+                }
+                let Some(CallArgument::Expression(source) | CallArgument::Spread(source)) =
+                    eval_arguments.first()
+                else {
+                    continue;
+                };
+                let source = self.substitute_global_user_function_argument_bindings(
+                    source,
+                    user_function,
+                    call_arguments,
+                );
+                return self
+                    .static_member_alias_string_value(&source, value_bindings)
+                    .map(|source| (source, false, realm_eval_builtin));
+            }
+            let Some(CallArgument::Expression(source) | CallArgument::Spread(source)) =
+                eval_arguments.first()
+            else {
+                continue;
+            };
+            let source = self.substitute_global_user_function_argument_bindings(
+                source,
+                user_function,
+                call_arguments,
+            );
+            return self
+                .static_member_alias_string_value(&source, value_bindings)
+                .map(|source| (source, is_direct_eval_identifier, None));
+        }
+        None
+    }
+
+    fn resolve_direct_eval_wrapper_class_alias_source_name(
+        &self,
+        function_name: &str,
+        arguments: &[CallArgument],
+        value_bindings: &HashMap<String, Expression>,
+    ) -> Option<String> {
+        let (source, is_direct_eval, realm_eval_builtin) =
+            self.direct_eval_wrapper_static_source(function_name, arguments, value_bindings)?;
+        let mut eval_program = if is_direct_eval {
+            self.parse_static_eval_program_in_context(&source, Some(function_name))?
+        } else {
+            let program = frontend::parse_script_goal(&source).ok()?;
+            let original = program.clone();
+            crate::ir::passes::static_function_constructors::lower(program).unwrap_or(original)
+        };
+        namespace_eval_program_internal_function_names(
+            &mut eval_program,
+            realm_eval_builtin.as_deref().or(Some(function_name)),
+            &source,
+        );
+        eval_program.functions.iter().find_map(|function| {
+            if !function.name.starts_with("__ayy_class_init_") {
+                return None;
+            }
+            match self.infer_static_class_init_function_result_expression(function) {
+                Some(Expression::Identifier(source_name)) => Some(source_name),
+                _ => None,
+            }
+        })
     }
 
     fn function_references_nested_function(
@@ -349,7 +590,7 @@ impl DirectWasmCompiler {
         function: &FunctionDeclaration,
         source_name: &str,
     ) -> bool {
-        source_name == "arguments"
+        (!function.lexical_this && source_name == "arguments")
             || function.params.iter().any(|parameter| {
                 scoped_binding_source_name(&parameter.name).unwrap_or(&parameter.name)
                     == source_name
@@ -761,15 +1002,38 @@ impl DirectWasmCompiler {
         function_index: usize,
     ) -> Option<String> {
         let function = functions.get(function_index)?;
+        let can_resolve_later_enclosing_candidate =
+            is_internal_user_function_identifier(&function.name);
         functions
             .iter()
             .enumerate()
-            .take(function_index)
             .rev()
-            .find(|(_, candidate)| {
-                Self::function_references_nested_function(candidate, &function.name)
+            .find_map(|(candidate_index, candidate)| {
+                (candidate_index != function_index
+                    && (candidate_index < function_index || can_resolve_later_enclosing_candidate)
+                    && Self::function_references_nested_function(candidate, &function.name))
+                .then(|| candidate.name.clone())
             })
-            .map(|(_, candidate)| candidate.name.clone())
+    }
+
+    fn function_has_capture_enclosing_context(
+        functions: &[FunctionDeclaration],
+        function_index: usize,
+    ) -> bool {
+        let Some(function) = functions.get(function_index) else {
+            return false;
+        };
+        let can_capture_from_later_enclosing_candidate =
+            is_internal_user_function_identifier(&function.name);
+        functions
+            .iter()
+            .enumerate()
+            .any(|(candidate_index, candidate)| {
+                candidate_index != function_index
+                    && (candidate_index < function_index
+                        || can_capture_from_later_enclosing_candidate)
+                    && Self::function_references_nested_function(candidate, &function.name)
+            })
     }
 
     fn home_object_name_from_define_property_target(target: &Expression) -> Option<String> {
@@ -866,19 +1130,11 @@ impl DirectWasmCompiler {
                 | Statement::Labeled { body, .. } => {
                     self.register_global_bindings_in_statements(body, next_global_index);
                 }
-                Statement::Var { name, value } => {
+                Statement::Var { name, .. } => {
                     self.ensure_global_binding_index(name, next_global_index);
                     if self.global_binding_kind(name).is_none() {
-                        self.set_global_binding_kind(name, infer_global_expression_kind(value));
+                        self.set_global_binding_kind(name, StaticValueKind::Undefined);
                     }
-                    self.upsert_global_data_property_descriptor(
-                        name,
-                        self.materialize_global_expression(value),
-                        Some(true),
-                        true,
-                        false,
-                    );
-                    self.update_static_global_assignment_metadata(name, value);
                 }
                 Statement::Let {
                     name,
@@ -907,9 +1163,55 @@ impl DirectWasmCompiler {
                 Statement::Expression(expression) => {
                     self.update_global_expression_metadata(expression);
                 }
+                Statement::If {
+                    condition,
+                    then_branch,
+                    else_branch,
+                } => {
+                    let condition_value =
+                        self.resolve_static_global_property_key_condition(condition);
+                    if std::env::var_os("AYY_TRACE_GLOBAL_IF_METADATA").is_some() {
+                        eprintln!(
+                            "global_if_metadata condition={condition:?} value={condition_value:?}"
+                        );
+                    }
+                    if let Some(condition_value) = condition_value {
+                        let branch = if condition_value {
+                            then_branch
+                        } else {
+                            else_branch
+                        };
+                        self.register_global_bindings_in_statements(branch, next_global_index);
+                    }
+                }
                 _ => {}
             }
         }
+    }
+
+    fn resolve_static_global_condition_property_name(
+        &self,
+        expression: &Expression,
+    ) -> Option<String> {
+        let materialized = self.materialize_global_expression(expression);
+        static_property_name_from_expression(&materialized)
+            .or_else(|| static_property_name_from_expression(expression))
+    }
+
+    fn resolve_static_global_property_key_condition(&self, condition: &Expression) -> Option<bool> {
+        let Expression::Binary { op, left, right } = condition else {
+            return None;
+        };
+        if !matches!(
+            op,
+            BinaryOp::Equal | BinaryOp::LooseEqual | BinaryOp::NotEqual | BinaryOp::LooseNotEqual
+        ) {
+            return None;
+        }
+        let left = self.resolve_static_global_condition_property_name(left)?;
+        let right = self.resolve_static_global_condition_property_name(right)?;
+        let is_not_equal = matches!(op, BinaryOp::NotEqual | BinaryOp::LooseNotEqual);
+        Some((left == right) ^ is_not_equal)
     }
 
     fn register_hoisted_global_var_bindings_in_statements(
@@ -1751,10 +2053,25 @@ impl DirectWasmCompiler {
     ) {
         self.clear_user_function_capture_bindings();
         let trace_capture_bindings = std::env::var_os("AYY_TRACE_CAPTURE_BINDINGS").is_some();
+        let mut capture_functions = functions.to_vec();
+        let mut seen_capture_functions = capture_functions
+            .iter()
+            .map(|function| function.name.clone())
+            .collect::<HashSet<_>>();
+        for user_function in self.state.user_functions() {
+            if seen_capture_functions.contains(&user_function.name) {
+                continue;
+            }
+            if let Some(function) = self.registered_function(&user_function.name).cloned() {
+                seen_capture_functions.insert(function.name.clone());
+                capture_functions.push(function);
+            }
+        }
 
-        for (function_index, function) in functions.iter().enumerate() {
+        for (function_index, function) in capture_functions.iter().enumerate() {
             if function.lexical_this
-                && let Some(parent_name) = Self::enclosing_function_name(functions, function_index)
+                && let Some(parent_name) =
+                    Self::enclosing_function_name(&capture_functions, function_index)
                 && let Some(home_object_name) = self
                     .user_function_home_object_binding(&parent_name)
                     .or_else(|| self.find_global_home_object_binding_name(&parent_name))
@@ -1764,8 +2081,9 @@ impl DirectWasmCompiler {
             if self
                 .user_function_home_object_binding(&function.name)
                 .is_none()
-                && let Some(parent_name) = Self::enclosing_function_name(functions, function_index)
-                && let Some(parent_function) = functions
+                && let Some(parent_name) =
+                    Self::enclosing_function_name(&capture_functions, function_index)
+                && let Some(parent_function) = capture_functions
                     .iter()
                     .find(|candidate| candidate.name == parent_name)
                 && let Some(home_object_name) = self
@@ -1802,7 +2120,7 @@ impl DirectWasmCompiler {
             }
             if !references_lexical_this
                 && Self::referenced_enclosing_binding_captures_lexical_this(
-                    functions,
+                    &capture_functions,
                     function_index,
                     &referenced,
                 )
@@ -1818,6 +2136,8 @@ impl DirectWasmCompiler {
             }
             let function_mentions_direct_eval =
                 Self::capture_scan_function_mentions_direct_eval(function);
+            let has_enclosing_function =
+                Self::function_has_capture_enclosing_context(&capture_functions, function_index);
             let eval_local_function_bindings = self
                 .state
                 .function_registry
@@ -1847,20 +2167,20 @@ impl DirectWasmCompiler {
                     continue;
                 }
                 let capture_source_name = Self::enclosing_self_binding_capture_source_name(
-                    functions,
+                    &capture_functions,
                     function_index,
                     &source_name,
                 )
                 .unwrap_or_else(|| source_name.clone());
                 let captures_enclosing_body_local =
                     Self::nested_function_captures_enclosing_body_local(
-                        functions,
+                        &capture_functions,
                         function_index,
                         &source_name,
                     );
                 let captures_enclosing_parameter_local =
                     Self::nested_function_captures_enclosing_parameter_local(
-                        functions,
+                        &capture_functions,
                         function_index,
                         &source_name,
                     );
@@ -1881,8 +2201,9 @@ impl DirectWasmCompiler {
                     && !captures_enclosing_parameter_local
                     && (scope_bindings.contains(&source_name)
                         || (!is_scoped_binding && self.contains_user_function(&source_name))
-                        || self.global_has_binding(&source_name)
-                        || self.global_has_lexical_binding(&source_name)
+                        || (!has_enclosing_function
+                            && (self.global_has_binding(&source_name)
+                                || self.global_has_lexical_binding(&source_name)))
                         || self.global_function_binding(&source_name).is_some()
                         || self.global_has_implicit_binding(&source_name)
                         || is_builtin_like_capture_identifier(&source_name))
@@ -1950,9 +2271,16 @@ impl DirectWasmCompiler {
                 .global_member_function_capture_slots(&key)
                 .cloned()
                 .unwrap_or_default();
-            capture_slots
-                .entry("this".to_string())
-                .or_insert(home_object_name);
+            let static_field_this_slot = match &key.target {
+                MemberFunctionBindingTarget::Identifier(name) => name.clone(),
+                MemberFunctionBindingTarget::Prototype(_) => home_object_name.clone(),
+            };
+            if capture_slots
+                .get("this")
+                .is_none_or(|slot_name| slot_name == &home_object_name)
+            {
+                capture_slots.insert("this".to_string(), static_field_this_slot);
+            }
             self.set_global_member_function_capture_slots(key, capture_slots);
         }
     }
@@ -2019,9 +2347,19 @@ impl DirectWasmCompiler {
                 if capture_slots.contains_key(capture_name) {
                     continue;
                 }
-                let hidden_name = format!("__ayy_closure_slot_{name}_{capture_name}");
-                self.ensure_implicit_global_binding(&hidden_name);
-                capture_slots.insert(capture_name.clone(), hidden_name);
+                if !self.global_capture_slot_source_is_available(capture_name) {
+                    continue;
+                }
+                let slot_name = if let Some(source_name) =
+                    self.ordinary_global_capture_slot_source_name(capture_name)
+                {
+                    source_name
+                } else {
+                    let hidden_name = format!("__ayy_closure_slot_{name}_{capture_name}");
+                    self.ensure_implicit_global_binding(&hidden_name);
+                    hidden_name
+                };
+                capture_slots.insert(capture_name.clone(), slot_name);
             }
 
             if !capture_slots.is_empty() {
@@ -2061,6 +2399,31 @@ impl DirectWasmCompiler {
             };
             self.global_member_function_capture_slots(&key).cloned()
         })
+    }
+
+    fn global_capture_slot_source_is_available(&self, capture_name: &str) -> bool {
+        let source_name = scoped_binding_source_name(capture_name).unwrap_or(capture_name);
+        source_name == "this"
+            || source_name == "new.target"
+            || self.global_has_binding(source_name)
+            || self.global_has_lexical_binding(source_name)
+            || self.global_function_binding(source_name).is_some()
+            || is_builtin_like_capture_identifier(source_name)
+    }
+
+    fn ordinary_global_capture_slot_source_name(&self, capture_name: &str) -> Option<String> {
+        if capture_name.starts_with("__ayy_class_brand_")
+            || capture_name.starts_with("__ayy_class_super_")
+            || capture_name.starts_with("__ayy_class_field_name_")
+        {
+            return None;
+        }
+        let source_name = scoped_binding_source_name(capture_name).unwrap_or(capture_name);
+        (self.global_has_binding(source_name)
+            || self.global_has_lexical_binding(source_name)
+            || self.global_function_binding(source_name).is_some()
+            || self.global_has_implicit_binding(source_name))
+        .then(|| source_name.to_string())
     }
 
     fn reserve_global_returned_member_capture_slots_in_statements(

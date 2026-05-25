@@ -5,6 +5,286 @@ impl<'a> FunctionCompiler<'a> {
         name.starts_with("__ayy_")
     }
 
+    fn assert_throws_import_meta_identifier_module_index(name: &str) -> Option<&str> {
+        let suffix = name.strip_prefix("__ayy_import_meta_").or_else(|| {
+            name.rsplit_once("__ayy_import_meta_")
+                .map(|(_, suffix)| suffix)
+        })?;
+        let digit_count = suffix
+            .bytes()
+            .take_while(|byte| byte.is_ascii_digit())
+            .count();
+        (digit_count > 0 && digit_count == suffix.len()).then_some(suffix)
+    }
+
+    fn assert_throws_expression_is_import_meta_reference(expression: &Expression) -> bool {
+        matches!(
+            expression,
+            Expression::Identifier(name)
+                if Self::assert_throws_import_meta_identifier_module_index(name).is_some()
+        )
+    }
+
+    fn assert_throws_static_throw_is_type_error(throw_value: &StaticThrowValue) -> bool {
+        matches!(throw_value, StaticThrowValue::NamedError(name) if *name == "TypeError")
+    }
+
+    fn assert_throws_get_iterator_static_throw_value(
+        &self,
+        source: &Expression,
+    ) -> Option<StaticThrowValue> {
+        if let Some(throw_value) = self.resolve_static_get_iterator_throw_value(source, &[]) {
+            return Some(throw_value);
+        }
+
+        let Expression::Sequence(expressions) = source else {
+            return None;
+        };
+        let (target, prefix) = expressions.split_last()?;
+        let mut bindings = HashMap::new();
+        for expression in prefix {
+            let expression = self.substitute_expression_bindings(expression, &bindings);
+            let Expression::Assign { name, value } = expression else {
+                continue;
+            };
+            bindings.insert(name, *value);
+        }
+        let target = self.substitute_expression_bindings(target, &bindings);
+        self.resolve_static_get_iterator_throw_value(&target, &[])
+    }
+
+    fn assert_throws_expression_statically_throws_type_error(
+        &self,
+        expression: &Expression,
+    ) -> bool {
+        match expression {
+            Expression::Call { callee, arguments } | Expression::New { callee, arguments } => {
+                Self::assert_throws_expression_is_import_meta_reference(callee)
+                    || self.assert_throws_expression_statically_throws_type_error(callee)
+                    || arguments.iter().any(|argument| match argument {
+                        CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                            self.assert_throws_expression_statically_throws_type_error(expression)
+                        }
+                    })
+            }
+            Expression::GetIterator(source) => self
+                .assert_throws_get_iterator_static_throw_value(source)
+                .as_ref()
+                .is_some_and(Self::assert_throws_static_throw_is_type_error),
+            Expression::Member { object, property } => {
+                self.assert_throws_expression_statically_throws_type_error(object)
+                    || self.assert_throws_expression_statically_throws_type_error(property)
+            }
+            Expression::SuperMember { property } => {
+                self.assert_throws_expression_statically_throws_type_error(property)
+            }
+            Expression::Assign { value, .. }
+            | Expression::Await(value)
+            | Expression::EnumerateKeys(value)
+            | Expression::IteratorClose(value)
+            | Expression::Unary {
+                expression: value, ..
+            } => self.assert_throws_expression_statically_throws_type_error(value),
+            Expression::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                self.assert_throws_expression_statically_throws_type_error(object)
+                    || self.assert_throws_expression_statically_throws_type_error(property)
+                    || self.assert_throws_expression_statically_throws_type_error(value)
+            }
+            Expression::AssignSuperMember { property, value } => {
+                self.assert_throws_expression_statically_throws_type_error(property)
+                    || self.assert_throws_expression_statically_throws_type_error(value)
+            }
+            Expression::Binary { left, right, .. } => {
+                self.assert_throws_expression_statically_throws_type_error(left)
+                    || self.assert_throws_expression_statically_throws_type_error(right)
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                if self.assert_throws_expression_statically_throws_type_error(condition) {
+                    return true;
+                }
+                let Some(condition_value) = self.resolve_static_if_condition_value(condition)
+                else {
+                    return false;
+                };
+                self.assert_throws_expression_statically_throws_type_error(if condition_value {
+                    then_expression
+                } else {
+                    else_expression
+                })
+            }
+            Expression::Sequence(expressions) => expressions.iter().any(|expression| {
+                self.assert_throws_expression_statically_throws_type_error(expression)
+            }),
+            Expression::SuperCall { callee, arguments } => {
+                self.assert_throws_expression_statically_throws_type_error(callee)
+                    || arguments.iter().any(|argument| match argument {
+                        CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                            self.assert_throws_expression_statically_throws_type_error(expression)
+                        }
+                    })
+            }
+            Expression::Array(elements) => elements.iter().any(|element| match element {
+                ArrayElement::Expression(expression) | ArrayElement::Spread(expression) => {
+                    self.assert_throws_expression_statically_throws_type_error(expression)
+                }
+            }),
+            Expression::Object(entries) => entries.iter().any(|entry| match entry {
+                ObjectEntry::Data { key, value } => {
+                    self.assert_throws_expression_statically_throws_type_error(key)
+                        || self.assert_throws_expression_statically_throws_type_error(value)
+                }
+                ObjectEntry::Getter { key, getter } => {
+                    self.assert_throws_expression_statically_throws_type_error(key)
+                        || self.assert_throws_expression_statically_throws_type_error(getter)
+                }
+                ObjectEntry::Setter { key, setter } => {
+                    self.assert_throws_expression_statically_throws_type_error(key)
+                        || self.assert_throws_expression_statically_throws_type_error(setter)
+                }
+                ObjectEntry::Spread(expression) => {
+                    self.assert_throws_expression_statically_throws_type_error(expression)
+                }
+            }),
+            _ => false,
+        }
+    }
+
+    fn assert_throws_statement_statically_throws_type_error(&self, statement: &Statement) -> bool {
+        match statement {
+            Statement::Expression(expression)
+            | Statement::Return(expression)
+            | Statement::Throw(expression)
+            | Statement::Yield { value: expression }
+            | Statement::YieldDelegate { value: expression }
+            | Statement::Var {
+                value: expression, ..
+            }
+            | Statement::Let {
+                value: expression, ..
+            }
+            | Statement::Assign {
+                value: expression, ..
+            } => self.assert_throws_expression_statically_throws_type_error(expression),
+            Statement::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                self.assert_throws_expression_statically_throws_type_error(object)
+                    || self.assert_throws_expression_statically_throws_type_error(property)
+                    || self.assert_throws_expression_statically_throws_type_error(value)
+            }
+            Statement::Print { values } => values
+                .iter()
+                .any(|value| self.assert_throws_expression_statically_throws_type_error(value)),
+            Statement::Block { body } | Statement::Declaration { body } => {
+                body.iter().any(|statement| {
+                    self.assert_throws_statement_statically_throws_type_error(statement)
+                })
+            }
+            Statement::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                if self.assert_throws_expression_statically_throws_type_error(condition) {
+                    return true;
+                }
+                let Some(condition_value) = self.resolve_static_if_condition_value(condition)
+                else {
+                    return false;
+                };
+                let branch = if condition_value {
+                    then_branch
+                } else {
+                    else_branch
+                };
+                branch.iter().any(|statement| {
+                    self.assert_throws_statement_statically_throws_type_error(statement)
+                })
+            }
+            Statement::Try { .. } => false,
+            Statement::For {
+                init, condition, ..
+            } => {
+                init.iter().any(|statement| {
+                    self.assert_throws_statement_statically_throws_type_error(statement)
+                }) || condition.as_ref().is_some_and(|condition| {
+                    self.assert_throws_expression_statically_throws_type_error(condition)
+                })
+            }
+            Statement::While { condition, .. } => {
+                self.assert_throws_expression_statically_throws_type_error(condition)
+            }
+            Statement::DoWhile {
+                condition, body, ..
+            } => {
+                body.iter().any(|statement| {
+                    self.assert_throws_statement_statically_throws_type_error(statement)
+                }) || self.assert_throws_expression_statically_throws_type_error(condition)
+            }
+            Statement::Switch { discriminant, .. } => {
+                self.assert_throws_expression_statically_throws_type_error(discriminant)
+            }
+            Statement::With { .. }
+            | Statement::Labeled { .. }
+            | Statement::Break { .. }
+            | Statement::Continue { .. } => false,
+        }
+    }
+
+    fn assert_throws_expected_is_type_error(&self, expected_error: &Expression) -> bool {
+        matches!(
+            expected_error,
+            Expression::Identifier(name)
+                if name == "TypeError" && self.is_unshadowed_builtin_identifier(name)
+        )
+    }
+
+    fn assert_throws_callback_statically_throws_type_error(&self, callback: &Expression) -> bool {
+        let Some((body, _)) = self.assert_throws_inline_callback_body(callback) else {
+            return false;
+        };
+        body.iter()
+            .any(|statement| self.assert_throws_statement_statically_throws_type_error(statement))
+    }
+
+    fn emit_static_assert_throws_success(
+        &mut self,
+        expected_error: &Expression,
+        callback: &Expression,
+        rest: &[CallArgument],
+        emit_result: bool,
+    ) -> DirectResult<bool> {
+        if !self.assert_throws_expected_is_type_error(expected_error)
+            || !self.assert_throws_callback_statically_throws_type_error(callback)
+        {
+            return Ok(false);
+        }
+        self.emit_numeric_expression(expected_error)?;
+        self.state.emission.output.instructions.push(0x1a);
+        for argument in rest {
+            match argument {
+                CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                    self.emit_numeric_expression(expression)?;
+                    self.state.emission.output.instructions.push(0x1a);
+                }
+            }
+        }
+        if emit_result {
+            self.push_i32_const(JS_UNDEFINED_TAG);
+        }
+        Ok(true)
+    }
+
     fn assert_throws_inline_safe_statement(statement: &Statement) -> bool {
         match statement {
             Statement::Expression(_)
@@ -112,8 +392,34 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         body: &[Statement],
     ) {
+        if !self.assert_throws_sync_can_replay_body(body) {
+            self.sync_assert_throws_direct_call_iterator_bindings_for_body(body);
+            return;
+        }
         for statement in body {
             self.sync_assert_throws_iterator_bindings_for_statement(statement);
+        }
+    }
+
+    fn assert_throws_sync_can_replay_body(&self, body: &[Statement]) -> bool {
+        let [Statement::Expression(Expression::Call { callee, .. })] = body else {
+            return true;
+        };
+        let Some(LocalFunctionBinding::User(function_name)) =
+            self.resolve_function_binding_from_expression(callee)
+        else {
+            return true;
+        };
+        !self
+            .user_function(&function_name)
+            .is_some_and(|user_function| user_function.has_lowered_pattern_parameters())
+    }
+
+    fn sync_assert_throws_direct_call_iterator_bindings_for_body(&mut self, body: &[Statement]) {
+        for statement in body {
+            if let Statement::Expression(expression @ Expression::Call { .. }) = statement {
+                self.sync_assert_throws_iterator_bindings_for_expression(expression);
+            }
         }
     }
 
@@ -704,6 +1010,10 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(false);
         };
 
+        if self.emit_static_assert_throws_success(expected_error, callback, rest, true)? {
+            return Ok(true);
+        }
+
         self.emit_numeric_expression(expected_error)?;
         self.state.emission.output.instructions.push(0x1a);
         for argument in rest {
@@ -811,6 +1121,10 @@ impl<'a> FunctionCompiler<'a> {
         else {
             return Ok(false);
         };
+
+        if self.emit_static_assert_throws_success(expected_error, callback, rest, false)? {
+            return Ok(true);
+        }
 
         self.emit_numeric_expression(expected_error)?;
         self.state.emission.output.instructions.push(0x1a);

@@ -14,6 +14,7 @@ use super::{
     },
     statements::{validate_statement_syntax, validate_statement_syntax_with_restrictions},
 };
+use swc_common::Spanned;
 
 fn validate_digit_sequence(
     digits: &str,
@@ -137,6 +138,92 @@ pub(crate) fn validate_expression_syntax(
     validate_expression_syntax_with_restrictions(expression, file, BindingRestrictions::default())
 }
 
+fn static_object_literal_property_name(name: &PropName) -> Option<&str> {
+    match name {
+        PropName::Ident(identifier) => Some(identifier.sym.as_ref()),
+        PropName::Str(string) => string.value.as_str(),
+        _ => None,
+    }
+}
+
+fn validate_object_literal_duplicate_proto_setters(object: &ObjectLit) -> Result<()> {
+    let mut saw_proto_setter = false;
+    for property in &object.props {
+        let PropOrSpread::Prop(property) = property else {
+            continue;
+        };
+        let Prop::KeyValue(property) = &**property else {
+            continue;
+        };
+        if static_object_literal_property_name(&property.key) != Some("__proto__") {
+            continue;
+        }
+        ensure!(
+            !saw_proto_setter,
+            "duplicate __proto__ property in object literal"
+        );
+        saw_proto_setter = true;
+    }
+    Ok(())
+}
+
+fn validate_async_object_method_no_line_terminator(
+    method: &MethodProp,
+    file: &swc_common::SourceFile,
+) -> Result<()> {
+    if !method.function.is_async {
+        return Ok(());
+    }
+
+    let method_start = method.function.span.lo;
+    let key_start = method.key.span().lo();
+    if method_start >= key_start {
+        return Ok(());
+    }
+
+    let prefix = source_slice_for_span(file, swc_common::Span::new(method_start, key_start))?;
+    ensure!(
+        !prefix.contains(['\n', '\r', '\u{2028}', '\u{2029}']),
+        "async object methods cannot contain a line terminator between `async` and the property name"
+    );
+
+    Ok(())
+}
+
+fn validate_object_accessor_contextual_keyword(
+    accessor_start: swc_common::BytePos,
+    key_start: swc_common::BytePos,
+    keyword: &str,
+    file: &swc_common::SourceFile,
+) -> Result<()> {
+    if accessor_start >= key_start {
+        return Ok(());
+    }
+
+    let prefix = source_slice_for_span(file, swc_common::Span::new(accessor_start, key_start))?;
+    let token = prefix.trim_start();
+    ensure!(
+        token.starts_with(keyword),
+        "object accessor keyword `{keyword}` cannot contain escape sequences"
+    );
+
+    Ok(())
+}
+
+fn validate_object_getter_contextual_keyword(
+    getter: &GetterProp,
+    file: &swc_common::SourceFile,
+) -> Result<()> {
+    validate_object_accessor_contextual_keyword(getter.span.lo, getter.key.span().lo(), "get", file)
+}
+
+fn validate_object_setter_contextual_keyword(
+    setter: &SetterProp,
+    file: &swc_common::SourceFile,
+) -> Result<()> {
+    validate_object_accessor_contextual_keyword(setter.span.lo, setter.key.span().lo(), "set", file)
+}
+
 fn validate_assignment_identifier_reference_syntax(
     identifier: &Ident,
     file: &swc_common::SourceFile,
@@ -215,6 +302,76 @@ fn validate_assignment_pattern_syntax(
     }
 
     Ok(())
+}
+
+fn trim_js_whitespace_and_comments(mut source: &str) -> &str {
+    loop {
+        let trimmed = source.trim_start_matches(|character: char| character.is_whitespace());
+        if let Some(rest) = trimmed.strip_prefix("//") {
+            let Some(line_end) = rest.find(['\n', '\r']) else {
+                return "";
+            };
+            source = &rest[line_end..];
+            continue;
+        }
+        if let Some(rest) = trimmed.strip_prefix("/*") {
+            let Some(comment_end) = rest.find("*/") else {
+                return "";
+            };
+            source = &rest[comment_end + 2..];
+            continue;
+        }
+        return trimmed;
+    }
+}
+
+fn ascii_identifier_continue(byte: u8) -> bool {
+    byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'$')
+}
+
+fn strip_import_keyword(source: &str) -> Option<&str> {
+    let trimmed = trim_js_whitespace_and_comments(source);
+    let rest = trimmed.strip_prefix("import")?;
+    if rest
+        .as_bytes()
+        .first()
+        .is_some_and(|byte| ascii_identifier_continue(*byte))
+    {
+        return None;
+    }
+    Some(rest)
+}
+
+fn strip_import_phase<'a>(rest: &'a str, phase: &str) -> Option<&'a str> {
+    let rest = trim_js_whitespace_and_comments(rest).strip_prefix('.')?;
+    let rest = trim_js_whitespace_and_comments(rest);
+    let rest = rest.strip_prefix(phase)?;
+    if rest
+        .as_bytes()
+        .first()
+        .is_some_and(|byte| ascii_identifier_continue(*byte))
+    {
+        return None;
+    }
+    Some(rest)
+}
+
+fn new_expression_callee_is_import_call(
+    callee: &Expr,
+    file: &swc_common::SourceFile,
+) -> Result<bool> {
+    let raw_callee = source_slice_for_span(file, callee.span())?;
+    let Some(rest) = strip_import_keyword(raw_callee) else {
+        return Ok(false);
+    };
+    let rest = trim_js_whitespace_and_comments(rest);
+    if rest.starts_with('(') {
+        return Ok(true);
+    }
+    if strip_import_phase(rest, "defer").is_some() || strip_import_phase(rest, "source").is_some() {
+        return Ok(true);
+    }
+    Ok(false)
 }
 
 fn collect_direct_block_lexically_declared_names(statements: &[Stmt]) -> Result<Vec<String>> {
@@ -352,6 +509,10 @@ pub(super) fn validate_expression_syntax_with_restrictions(
             }
         }
         Expr::New(new_expression) => {
+            ensure!(
+                !new_expression_callee_is_import_call(&new_expression.callee, file)?,
+                "dynamic import calls cannot be used as constructors"
+            );
             validate_expression_syntax_with_restrictions(
                 &new_expression.callee,
                 file,
@@ -386,6 +547,7 @@ pub(super) fn validate_expression_syntax_with_restrictions(
             }
         }
         Expr::Object(object) => {
+            validate_object_literal_duplicate_proto_setters(object)?;
             for property in &object.props {
                 match property {
                     PropOrSpread::Spread(spread) => validate_expression_syntax_with_restrictions(
@@ -394,7 +556,18 @@ pub(super) fn validate_expression_syntax_with_restrictions(
                         restrictions,
                     )?,
                     PropOrSpread::Prop(property) => match &**property {
-                        Prop::Shorthand(_) => {}
+                        Prop::Shorthand(identifier) => {
+                            ensure!(
+                                !(restrictions.await_reserved
+                                    && is_await_like_identifier(identifier.sym.as_ref())),
+                                "`await` cannot be used as an identifier in an async function"
+                            );
+                            ensure!(
+                                !(restrictions.yield_reserved
+                                    && is_yield_like_identifier(identifier.sym.as_ref())),
+                                "`yield` cannot be used as an identifier in a generator function"
+                            );
+                        }
                         Prop::KeyValue(property) => {
                             validate_property_name_syntax(&property.key, file)?;
                             validate_expression_syntax_with_restrictions(
@@ -404,6 +577,7 @@ pub(super) fn validate_expression_syntax_with_restrictions(
                             )?;
                         }
                         Prop::Getter(property) => {
+                            validate_object_getter_contextual_keyword(property, file)?;
                             validate_property_name_syntax(&property.key, file)?;
                             if let Some(body) = &property.body {
                                 for statement in &body.stmts {
@@ -412,6 +586,7 @@ pub(super) fn validate_expression_syntax_with_restrictions(
                             }
                         }
                         Prop::Setter(property) => {
+                            validate_object_setter_contextual_keyword(property, file)?;
                             validate_property_name_syntax(&property.key, file)?;
                             validate_pattern_syntax(&property.param, file)?;
                             if let Some(body) = &property.body {
@@ -421,7 +596,21 @@ pub(super) fn validate_expression_syntax_with_restrictions(
                             }
                         }
                         Prop::Method(property) => {
+                            validate_async_object_method_no_line_terminator(property, file)?;
                             validate_property_name_syntax(&property.key, file)?;
+                            ensure_parameter_names_are_valid(
+                                property
+                                    .function
+                                    .params
+                                    .iter()
+                                    .map(|parameter| &parameter.pat),
+                                property
+                                    .function
+                                    .params
+                                    .iter()
+                                    .all(|parameter| matches!(parameter.pat, Pat::Ident(_))),
+                                true,
+                            )?;
                             validate_function_syntax(&property.function, file)?;
                         }
                         Prop::Assign(property) => validate_expression_syntax_with_restrictions(

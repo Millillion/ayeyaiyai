@@ -88,6 +88,8 @@ impl ModuleLinker {
         module_index: usize,
         exports_param: &str,
         export_expressions: &BTreeMap<String, Expression>,
+        namespace_export_module_indices: &BTreeMap<String, usize>,
+        reexport_sources: &BTreeMap<String, (usize, String)>,
         import_bindings: &HashMap<String, ImportBinding>,
     ) -> Result<Vec<Statement>> {
         let mut statements = Vec::new();
@@ -109,6 +111,7 @@ impl ModuleLinker {
                 mapped_arguments: false,
                 strict: true,
                 lexical_this: false,
+                constructible: false,
                 derived_constructor: false,
                 direct_eval_in_class_field_initializer: false,
                 length: 0,
@@ -116,26 +119,48 @@ impl ModuleLinker {
                 immutable_class_bindings: Vec::new(),
                 private_brand_binding: None,
             };
-            rewrite_import_bindings_in_function(&mut getter_function, import_bindings)?;
+            rewrite_module_import_bindings_in_function(
+                &mut getter_function,
+                import_bindings,
+                module_index,
+            )?;
             self.lowerer.functions.push(getter_function);
+
+            let mut descriptor_entries = vec![
+                ObjectEntry::Data {
+                    key: Expression::String("get".to_string()),
+                    value: Expression::Identifier(getter_name),
+                },
+                ObjectEntry::Data {
+                    key: Expression::String("enumerable".to_string()),
+                    value: Expression::Bool(true),
+                },
+                ObjectEntry::Data {
+                    key: Expression::String("configurable".to_string()),
+                    value: Expression::Bool(false),
+                },
+            ];
+            if let Some(namespace_module_index) = namespace_export_module_indices.get(export_name) {
+                descriptor_entries.push(ObjectEntry::Data {
+                    key: Expression::String("__ayy$module$namespace$moduleIndex".to_string()),
+                    value: Expression::Number(*namespace_module_index as f64),
+                });
+            }
+            if let Some((module_index, imported_name)) = reexport_sources.get(export_name) {
+                descriptor_entries.push(ObjectEntry::Data {
+                    key: Expression::String("__ayy$module$reexport$moduleIndex".to_string()),
+                    value: Expression::Number(*module_index as f64),
+                });
+                descriptor_entries.push(ObjectEntry::Data {
+                    key: Expression::String("__ayy$module$reexport$name".to_string()),
+                    value: Expression::String(imported_name.clone()),
+                });
+            }
 
             statements.push(define_property_statement(
                 Expression::Identifier(exports_param.to_string()),
                 Expression::String(export_name.clone()),
-                Expression::Object(vec![
-                    ObjectEntry::Data {
-                        key: Expression::String("get".to_string()),
-                        value: Expression::Identifier(getter_name),
-                    },
-                    ObjectEntry::Data {
-                        key: Expression::String("enumerable".to_string()),
-                        value: Expression::Bool(true),
-                    },
-                    ObjectEntry::Data {
-                        key: Expression::String("configurable".to_string()),
-                        value: Expression::Bool(false),
-                    },
-                ]),
+                Expression::Object(descriptor_entries),
             ));
         }
 
@@ -145,10 +170,21 @@ impl ModuleLinker {
     pub(super) fn module_registry_statements(&self) -> Vec<Statement> {
         let mut statements = Vec::new();
 
-        for module in &self.modules {
+        for (module_index, module) in self.modules.iter().enumerate() {
             statements.push(Statement::Let {
                 name: module.namespace_name.clone(),
                 mutable: false,
+                value: Expression::Call {
+                    callee: Box::new(Expression::Member {
+                        object: Box::new(Expression::Identifier("Object".to_string())),
+                        property: Box::new(Expression::String("create".to_string())),
+                    }),
+                    arguments: vec![CallArgument::Expression(Expression::Null)],
+                },
+            });
+            statements.push(Statement::Let {
+                name: format!("__ayy_import_meta_{module_index}"),
+                mutable: true,
                 value: Expression::Call {
                     callee: Box::new(Expression::Member {
                         object: Box::new(Expression::Identifier("Object".to_string())),
@@ -190,9 +226,11 @@ impl ModuleLinker {
             });
         }
 
-        statements.push(Statement::Expression(Expression::Await(Box::new(
-            Expression::Identifier(self.modules[entry_index].promise_name.clone()),
-        ))));
+        if self.modules[entry_index].init_async {
+            statements.push(Statement::Expression(Expression::Await(Box::new(
+                Expression::Identifier(self.modules[entry_index].promise_name.clone()),
+            ))));
+        }
 
         Ok(statements)
     }
@@ -203,6 +241,17 @@ impl ModuleLinker {
         import_bindings: &HashMap<String, ImportBinding>,
     ) -> Result<()> {
         let mut rewriter = import_rewriter::ImportBindingRewriter::new(import_bindings);
+        rewriter.rewrite_statement_list(statements)
+    }
+
+    pub(super) fn rewrite_module_import_bindings_in_statements(
+        &self,
+        module_index: usize,
+        statements: &mut [Statement],
+        import_bindings: &HashMap<String, ImportBinding>,
+    ) -> Result<()> {
+        let mut rewriter =
+            import_rewriter::ImportBindingRewriter::new_for_module(import_bindings, module_index);
         rewriter.rewrite_statement_list(statements)
     }
 }

@@ -123,6 +123,13 @@ impl<'a> FunctionCompiler<'a> {
         self.resolve_proxy_member_binding_from_handler(handler, "defineProperty")
     }
 
+    pub(in crate::backend::direct_wasm) fn resolve_proxy_own_keys_binding_from_handler(
+        &self,
+        handler: &Expression,
+    ) -> Option<LocalFunctionBinding> {
+        self.resolve_proxy_member_binding_from_handler(handler, "ownKeys")
+    }
+
     pub(in crate::backend::direct_wasm) fn resolve_proxy_binding_from_expression(
         &self,
         expression: &Expression,
@@ -191,6 +198,7 @@ impl<'a> FunctionCompiler<'a> {
                         .resolve_proxy_get_own_property_descriptor_binding_from_handler(handler),
                     define_property_binding: self
                         .resolve_proxy_define_property_binding_from_handler(handler),
+                    own_keys_binding: self.resolve_proxy_own_keys_binding_from_handler(handler),
                 })
             }
             Expression::New { callee, arguments } => {

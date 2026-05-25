@@ -81,7 +81,7 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
-    fn resolve_captured_alias_expression(
+    pub(in crate::backend::direct_wasm) fn resolve_captured_alias_expression(
         &self,
         function_name: &str,
         source_name: &str,
@@ -272,6 +272,15 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         expression: &Expression,
     ) -> Option<Expression> {
+        if let Expression::Call { callee, arguments } = expression
+            && arguments.is_empty()
+            && let Expression::Member { object, property } = callee.as_ref()
+            && matches!(property.as_ref(), Expression::String(name) if name == "valueOf")
+            && self.infer_value_kind(object) == Some(StaticValueKind::Symbol)
+        {
+            return self.resolve_symbol_identity_expression(object);
+        }
+
         let Expression::Identifier(name) = expression else {
             return None;
         };
@@ -354,7 +363,9 @@ impl<'a> FunctionCompiler<'a> {
         if self.with_scope_blocks_static_identifier_resolution(name) {
             return None;
         }
-        if self.resolve_current_local_binding(name).is_some() {
+        if self.resolve_current_local_binding(name).is_some()
+            && self.current_function_name().is_some()
+        {
             return None;
         }
         if !visited.insert(name.clone()) {

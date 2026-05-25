@@ -8,18 +8,28 @@ thread_local! {
 pub(super) struct FunctionBindingResolutionGuard;
 
 impl FunctionBindingResolutionGuard {
-    pub(super) fn enter(expression: &Expression, current_function_name: Option<&str>) -> Self {
+    pub(super) fn enter(
+        expression: &Expression,
+        current_function_name: Option<&str>,
+    ) -> Option<Self> {
         FUNCTION_BINDING_RESOLUTION_DEPTH.with(|depth| {
             let next = depth.get() + 1;
             if next > 256 {
-                panic!(
-                    "function binding resolution recursion overflow: current_function={current_function_name:?}, expression={expression:?}"
-                );
+                if std::env::var_os("AYY_TRACE_FUNCTION_BINDINGS").is_some() {
+                    eprintln!(
+                        "function_binding_resolution:depth_limit current_function={current_function_name:?} expression={expression:?}"
+                    );
+                }
+                return None;
             }
             depth.set(next);
-        });
-        Self
+            Some(Self)
+        })
     }
+}
+
+pub(super) fn function_binding_resolution_is_active() -> bool {
+    FUNCTION_BINDING_RESOLUTION_DEPTH.with(|depth| depth.get() > 0)
 }
 
 impl Drop for FunctionBindingResolutionGuard {

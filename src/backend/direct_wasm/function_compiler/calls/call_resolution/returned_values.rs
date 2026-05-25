@@ -591,6 +591,134 @@ impl<'a> FunctionCompiler<'a> {
         .unwrap_or_else(|| expression.clone())
     }
 
+    fn static_function_constructor_return_expression(
+        &self,
+        function_name: &str,
+    ) -> Option<Expression> {
+        if !function_name.starts_with("__ayy_function_ctor_") {
+            return None;
+        }
+        let function = self.resolve_registered_function_declaration(function_name)?;
+        let [Statement::Return(return_value)] = function.body.as_slice() else {
+            return None;
+        };
+        Some(return_value.clone())
+    }
+
+    fn normalize_static_function_constructor_alias_expression(
+        &self,
+        expression: &Expression,
+        aliases: &HashMap<String, Expression>,
+    ) -> Expression {
+        match expression {
+            Expression::Identifier(name) => aliases
+                .get(name)
+                .cloned()
+                .unwrap_or_else(|| expression.clone()),
+            Expression::Member { object, property } => Expression::Member {
+                object: Box::new(
+                    self.normalize_static_function_constructor_alias_expression(object, aliases),
+                ),
+                property: Box::new(
+                    self.normalize_static_function_constructor_alias_expression(property, aliases),
+                ),
+            },
+            Expression::Call { callee, arguments } => {
+                let callee =
+                    self.normalize_static_function_constructor_alias_expression(callee, aliases);
+                let arguments = arguments
+                    .iter()
+                    .map(|argument| match argument {
+                        CallArgument::Expression(expression) => CallArgument::Expression(
+                            self.normalize_static_function_constructor_alias_expression(
+                                expression, aliases,
+                            ),
+                        ),
+                        CallArgument::Spread(expression) => CallArgument::Spread(
+                            self.normalize_static_function_constructor_alias_expression(
+                                expression, aliases,
+                            ),
+                        ),
+                    })
+                    .collect::<Vec<_>>();
+                if arguments.is_empty()
+                    && let Expression::Identifier(function_name) = &callee
+                    && let Some(return_value) =
+                        self.static_function_constructor_return_expression(function_name)
+                {
+                    return self.normalize_static_function_constructor_alias_expression(
+                        &return_value,
+                        aliases,
+                    );
+                }
+                Expression::Call {
+                    callee: Box::new(callee),
+                    arguments,
+                }
+            }
+            Expression::New { callee, arguments } => Expression::New {
+                callee: Box::new(
+                    self.normalize_static_function_constructor_alias_expression(callee, aliases),
+                ),
+                arguments: arguments
+                    .iter()
+                    .map(|argument| match argument {
+                        CallArgument::Expression(expression) => CallArgument::Expression(
+                            self.normalize_static_function_constructor_alias_expression(
+                                expression, aliases,
+                            ),
+                        ),
+                        CallArgument::Spread(expression) => CallArgument::Spread(
+                            self.normalize_static_function_constructor_alias_expression(
+                                expression, aliases,
+                            ),
+                        ),
+                    })
+                    .collect(),
+            },
+            _ => materialize_recursive_expression(expression, true, true, &|nested| {
+                Some(self.normalize_static_function_constructor_alias_expression(nested, aliases))
+            })
+            .unwrap_or_else(|| expression.clone()),
+        }
+    }
+
+    fn static_function_constructor_construct_return_expression_from_body(
+        &self,
+        statements: &[Statement],
+    ) -> Option<Expression> {
+        let mut aliases = HashMap::new();
+        for statement in statements {
+            match statement {
+                Statement::Var { name, value }
+                | Statement::Let { name, value, .. }
+                | Statement::Assign { name, value } => {
+                    let normalized = self
+                        .normalize_static_function_constructor_alias_expression(value, &aliases);
+                    aliases.insert(name.clone(), normalized);
+                }
+                Statement::Declaration { body } | Statement::Block { body } => {
+                    if let Some(return_value) =
+                        self.static_function_constructor_construct_return_expression_from_body(body)
+                    {
+                        return Some(return_value);
+                    }
+                }
+                Statement::Return(return_value) => {
+                    let normalized = self.normalize_static_function_constructor_alias_expression(
+                        return_value,
+                        &aliases,
+                    );
+                    if matches!(normalized, Expression::New { .. }) {
+                        return Some(normalized);
+                    }
+                }
+                _ => {}
+            }
+        }
+        None
+    }
+
     fn collect_static_local_private_constructor_marker_bindings_from_define_property_call(
         &self,
         arguments: &[CallArgument],
@@ -780,6 +908,10 @@ impl<'a> FunctionCompiler<'a> {
             &execution.substituted_body,
             &mut execution.environment,
         ) {
+            let return_value = self.resolve_static_direct_eval_construct_return_expression(
+                &return_value,
+                function_name,
+            );
             return Some(self.normalize_static_class_constructor_alias_expression(
                 &self.normalize_static_local_alias_expression(
                     &self.materialize_static_return_object_binding_expression_with_state(
@@ -794,6 +926,10 @@ impl<'a> FunctionCompiler<'a> {
             Statement::Return(expression) => expression.clone(),
             _ => collect_returned_identifier_source_expression(&function.body)?,
         };
+        let returned_expression = self.resolve_static_direct_eval_construct_return_expression(
+            &returned_expression,
+            function_name,
+        );
         Some(self.normalize_static_class_constructor_alias_expression(
             &self.normalize_static_local_alias_expression(
                 &self.materialize_static_return_object_binding_expression_with_state(
@@ -1096,6 +1232,7 @@ impl<'a> FunctionCompiler<'a> {
             }
             _ => 0,
         };
+        let source_function_name = self.simple_generator_source_function_name(object);
         let sent_value = arguments
             .first()
             .map(|argument| match argument {
@@ -1107,13 +1244,20 @@ impl<'a> FunctionCompiler<'a> {
 
         if let Some(step) = steps.get(current_index) {
             return match &step.outcome {
-                SimpleGeneratorStepOutcome::Yield(value) => Some(iter_result_object(
-                    false,
+                SimpleGeneratorStepOutcome::Yield(value) => {
+                    let yielded_value = Self::substitute_sent_expression(value, &sent_value);
+                    let yielded_value = self.resolve_simple_generator_result_value_with_context(
+                        &yielded_value,
+                        source_function_name.as_deref(),
+                    );
+                    Some(iter_result_object(false, yielded_value))
+                }
+                SimpleGeneratorStepOutcome::YieldResult(result) => Some(
                     self.materialize_static_expression(&Self::substitute_sent_expression(
-                        value,
+                        result,
                         &sent_value,
                     )),
-                )),
+                ),
                 SimpleGeneratorStepOutcome::Throw(_) => None,
             };
         }
@@ -1121,7 +1265,10 @@ impl<'a> FunctionCompiler<'a> {
         if current_index == steps.len() {
             return Some(iter_result_object(
                 true,
-                self.materialize_static_expression(&completion_value),
+                self.resolve_simple_generator_result_value_with_context(
+                    &completion_value,
+                    source_function_name.as_deref(),
+                ),
             ));
         }
 
@@ -1503,6 +1650,35 @@ impl<'a> FunctionCompiler<'a> {
                 arguments.len(),
             );
         }
+        if arguments.is_empty()
+            && let Some(result_expression) = self
+                .resolve_static_direct_eval_construct_return_expression_from_user_function(
+                    function_name,
+                )
+            && let Some(object_binding) =
+                self.resolve_object_binding_from_expression(&result_expression)
+        {
+            if trace_inherited_bindings {
+                eprintln!(
+                    "resolve_static_returned_object_binding_from_user_function_call:direct_eval_construct result={result_expression:?}",
+                );
+            }
+            return Some(object_binding);
+        }
+        if arguments.is_empty()
+            && let Some(function) = self.resolve_registered_function_declaration(function_name)
+            && let Some(result_expression) = self
+                .static_function_constructor_construct_return_expression_from_body(&function.body)
+            && let Some(object_binding) =
+                self.resolve_object_binding_from_expression(&result_expression)
+        {
+            if trace_inherited_bindings {
+                eprintln!(
+                    "resolve_static_returned_object_binding_from_user_function_call:function_ctor_construct result={result_expression:?}",
+                );
+            }
+            return Some(object_binding);
+        }
         let user_function = self.user_function(function_name)?;
         let mut execution = self.prepare_static_user_function_execution(
             function_name,
@@ -1542,6 +1718,10 @@ impl<'a> FunctionCompiler<'a> {
             &execution.substituted_body,
             &mut execution.environment,
         ) {
+            let return_value = self.resolve_static_direct_eval_construct_return_expression(
+                &return_value,
+                function_name,
+            );
             if trace_inherited_bindings {
                 eprintln!(
                     "resolve_static_returned_object_binding_from_user_function_call:return function={function_name} value={return_value:?} local_C={:?} has_object_C={}",
@@ -1590,6 +1770,10 @@ impl<'a> FunctionCompiler<'a> {
                 Statement::Return(expression) => expression.clone(),
                 _ => collect_returned_identifier_source_expression(&function.body)?,
             };
+            let returned_expression = self.resolve_static_direct_eval_construct_return_expression(
+                &returned_expression,
+                function_name,
+            );
             self.merge_static_local_private_constructor_markers(
                 &mut object_binding,
                 &returned_expression,

@@ -69,7 +69,7 @@ impl<'a> FunctionCompiler<'a> {
                             &[],
                             &Expression::Object(entries.to_vec()),
                         )?;
-                    *bindings = updated_bindings;
+                    Self::merge_bound_snapshot_updated_bindings(bindings, updated_bindings);
                     return Some(outcome);
                 }
                 ObjectEntry::Setter { key, .. } => {

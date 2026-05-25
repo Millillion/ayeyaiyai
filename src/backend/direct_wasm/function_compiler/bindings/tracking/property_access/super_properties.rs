@@ -73,6 +73,7 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         current_function_name: Option<&str>,
     ) -> Option<Expression> {
+        let trace_super_resolution = std::env::var_os("AYY_TRACE_SUPER_RESOLUTION").is_some();
         let function_name = current_function_name?;
         if let Some(function) = self.resolve_registered_function_declaration(function_name)
             && function.derived_constructor
@@ -81,15 +82,34 @@ impl<'a> FunctionCompiler<'a> {
                 .global_object_prototype_expression(self_binding)
                 .cloned()
         {
-            let materialized_super_constructor =
-                self.materialize_static_expression(&super_constructor);
-            return match materialized_super_constructor {
+            let materialized_super_constructor = match &super_constructor {
+                Expression::Identifier(name) => self
+                    .resolve_static_class_init_local_alias_expression(name)
+                    .or_else(|| {
+                        self.global_value_binding(name)
+                            .filter(|resolved| {
+                                !static_expression_matches(resolved, &super_constructor)
+                            })
+                            .cloned()
+                    })
+                    .filter(|resolved| !static_expression_matches(resolved, &super_constructor))
+                    .map(|resolved| self.materialize_static_expression(&resolved))
+                    .unwrap_or_else(|| self.materialize_static_expression(&super_constructor)),
+                _ => self.materialize_static_expression(&super_constructor),
+            };
+            let resolved = match materialized_super_constructor {
                 Expression::Identifier(name) => Some(Self::prototype_member_expression(&name)),
                 _ => Some(Expression::Member {
                     object: Box::new(materialized_super_constructor),
                     property: Box::new(Expression::String("prototype".to_string())),
                 }),
             };
+            if trace_super_resolution {
+                eprintln!(
+                    "super_resolution:base current={current_function_name:?} constructor self={self_binding:?} resolved={resolved:?}"
+                );
+            }
+            return resolved;
         }
         let home_object_name = match self.resolve_home_object_name_for_function(function_name) {
             Some(home_object_name) => home_object_name,
@@ -100,8 +120,15 @@ impl<'a> FunctionCompiler<'a> {
                     .resolve_super_base_expression_with_context(Some(&enclosing_function_name));
             }
         };
-        self.global_object_prototype_expression(&home_object_name)
-            .cloned()
+        let resolved = self
+            .global_object_prototype_expression(&home_object_name)
+            .cloned();
+        if trace_super_resolution {
+            eprintln!(
+                "super_resolution:base current={current_function_name:?} home={home_object_name:?} resolved={resolved:?}"
+            );
+        }
+        resolved
     }
 
     pub(in crate::backend::direct_wasm) fn resolve_super_runtime_prototype_binding_with_context(
@@ -122,7 +149,7 @@ impl<'a> FunctionCompiler<'a> {
         property: &Expression,
     ) -> DirectResult<()> {
         let Some(base) = base else {
-            self.push_i32_const(JS_UNDEFINED_TAG);
+            self.emit_named_error_throw("TypeError")?;
             return Ok(());
         };
         if let Some(function_binding) = self.resolve_member_function_binding(base, property) {
@@ -140,10 +167,18 @@ impl<'a> FunctionCompiler<'a> {
             }
             return Ok(());
         }
-        if let Some(function_binding) = self.resolve_member_getter_binding(base, property) {
+        if let Some(function_binding) = self
+            .resolve_member_getter_binding_shallow(base, property)
+            .or_else(|| self.resolve_member_getter_binding(base, property))
+        {
             match function_binding {
                 LocalFunctionBinding::User(function_name) => {
-                    self.emit_member_getter_call_with_bound_this(&function_name, base, None)?;
+                    let capture_slots = self.resolve_member_function_capture_slots(base, property);
+                    self.emit_member_getter_call_with_bound_this(
+                        &function_name,
+                        &Expression::This,
+                        capture_slots.as_ref(),
+                    )?;
                 }
                 LocalFunctionBinding::Builtin(function_name) => {
                     let callee = Expression::Identifier(function_name);
@@ -156,8 +191,17 @@ impl<'a> FunctionCompiler<'a> {
         }
         let materialized_property = self.materialize_static_expression(property);
         if let Some(object_binding) = self.resolve_object_binding_from_expression(base)
-            && let Some(value) =
-                object_binding_lookup_value(&object_binding, &materialized_property).cloned()
+            && let Some(value) = self.resolve_object_binding_property_value_for_object(
+                base,
+                &object_binding,
+                &materialized_property,
+            )
+        {
+            self.emit_numeric_expression(&value)?;
+            return Ok(());
+        }
+        if let Some(value) =
+            self.resolve_inherited_object_property_value(base, &materialized_property)
         {
             self.emit_numeric_expression(&value)?;
             return Ok(());
@@ -245,19 +289,92 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         property: &Expression,
     ) -> Option<LocalFunctionBinding> {
-        let base = self.resolve_super_base_expression_with_context(self.current_function_name())?;
-        self.resolve_member_getter_binding(&base, property)
+        self.resolve_super_getter_binding_with_context(property, self.current_function_name())
+    }
+
+    pub(in crate::backend::direct_wasm) fn resolve_super_getter_binding_with_context(
+        &self,
+        property: &Expression,
+        current_function_name: Option<&str>,
+    ) -> Option<LocalFunctionBinding> {
+        let base = self.resolve_super_base_expression_with_context(current_function_name)?;
+        self.resolve_member_getter_binding_shallow(&base, property)
+            .or_else(|| self.resolve_member_getter_binding(&base, property))
     }
 
     pub(in crate::backend::direct_wasm) fn resolve_super_value_expression(
         &self,
         property: &Expression,
     ) -> Option<Expression> {
-        let base = self.resolve_super_base_expression_with_context(self.current_function_name())?;
+        self.resolve_super_value_expression_with_context(property, self.current_function_name())
+    }
+
+    pub(in crate::backend::direct_wasm) fn resolve_super_value_expression_with_context(
+        &self,
+        property: &Expression,
+        current_function_name: Option<&str>,
+    ) -> Option<Expression> {
+        let trace_super_resolution = std::env::var_os("AYY_TRACE_SUPER_RESOLUTION").is_some();
+        let base = self.resolve_super_base_expression_with_context(current_function_name)?;
         let materialized_property = self.materialize_static_expression(property);
-        self.resolve_object_binding_from_expression(&base)
+        let resolved = self
+            .resolve_object_binding_from_expression(&base)
             .and_then(|object_binding| {
-                object_binding_lookup_value(&object_binding, &materialized_property).cloned()
+                self.resolve_object_binding_property_value_for_object(
+                    &base,
+                    &object_binding,
+                    &materialized_property,
+                )
             })
+            .or_else(|| {
+                self.resolve_inherited_object_property_value(&base, &materialized_property)
+            });
+        if trace_super_resolution {
+            eprintln!(
+                "super_resolution:value current={current_function_name:?} base={base:?} property={materialized_property:?} resolved={resolved:?}"
+            );
+        }
+        resolved
+    }
+
+    pub(in crate::backend::direct_wasm) fn resolve_static_super_member_value_with_context(
+        &self,
+        property: &Expression,
+        current_function_name: Option<&str>,
+        receiver: &Expression,
+    ) -> Option<Expression> {
+        let materialized_property = self.materialize_static_expression(property);
+        let super_base = self.resolve_super_base_expression_with_context(current_function_name);
+        let super_function_binding = super_base.as_ref().and_then(|base| {
+            self.resolve_member_function_binding(base, &materialized_property)
+                .or_else(|| {
+                    self.resolve_object_binding_from_expression(base)
+                        .and_then(|object_binding| {
+                            object_binding_lookup_value(&object_binding, &materialized_property)
+                                .cloned()
+                        })
+                        .and_then(|value| self.resolve_function_binding_from_expression(&value))
+                })
+        });
+        if super_function_binding.is_some() {
+            return Some(Expression::Member {
+                object: Box::new(super_base?),
+                property: Box::new(materialized_property),
+            });
+        }
+        if let Some(getter_binding) = self.resolve_super_getter_binding_with_context(
+            &materialized_property,
+            current_function_name,
+        ) {
+            return self.resolve_static_getter_value_from_binding_with_context(
+                &getter_binding,
+                receiver,
+                current_function_name,
+            );
+        }
+        self.resolve_super_value_expression_with_context(
+            &materialized_property,
+            current_function_name,
+        )
     }
 }

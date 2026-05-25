@@ -31,11 +31,13 @@ where
         expression: &Expression,
         environment: &mut Self::Environment,
     ) -> Option<Expression> {
-        evaluate_shared_static_expression(self, expression, environment).or_else(|| {
-            inline_summary_side_effect_free_expression(expression)
-                .then(|| self.evaluate_fallback_expression(expression, environment))
-                .flatten()
-        })
+        evaluate_shared_static_expression(self, expression, environment)
+            .or_else(|| self.evaluate_special_expression(expression, environment))
+            .or_else(|| {
+                inline_summary_side_effect_free_expression(expression)
+                    .then(|| self.evaluate_fallback_expression(expression, environment))
+                    .flatten()
+            })
     }
 
     fn evaluate_fallback_expression(

@@ -120,11 +120,14 @@ impl<'a> FunctionCompiler<'a> {
         sorted_indices.sort_unstable();
         let mut open_frames = 0;
         let matched_local = self.allocate_temp_local();
+        let original_length_local = self.allocate_temp_local();
         self.push_i32_const(0);
         self.push_local_set(matched_local);
+        self.push_local_get(length_local);
+        self.push_local_set(original_length_local);
         for index in sorted_indices {
             self.ensure_runtime_array_slot_entry(name, index);
-            self.push_local_get(length_local);
+            self.push_local_get(original_length_local);
             self.push_i32_const(index as i32);
             self.push_binary_op(BinaryOp::Equal)?;
             self.state.emission.output.instructions.push(0x04);
@@ -203,12 +206,15 @@ impl<'a> FunctionCompiler<'a> {
         self.push_local_set(length_local);
 
         let matched_local = self.allocate_temp_local();
+        let original_length_local = self.allocate_temp_local();
         self.push_i32_const(0);
         self.push_local_set(matched_local);
+        self.push_local_get(length_local);
+        self.push_local_set(original_length_local);
 
         let mut open_frames = 0;
         for index in 0..TRACKED_ARRAY_SLOT_LIMIT {
-            self.push_local_get(length_local);
+            self.push_local_get(original_length_local);
             self.push_i32_const(index as i32);
             self.push_binary_op(BinaryOp::Equal)?;
             self.state.emission.output.instructions.push(0x04);

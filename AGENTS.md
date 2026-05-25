@@ -20,6 +20,7 @@ You will know that you have successfully finished creating the compiler when it 
 3. Always keep going in pursuit of the [Goal](#goal) - If you feel like stopping, instead consider three more unexplored avenues that you can go down in pursuit of the [Goal](#goal), and go down them
 4. Do not stop because you reached a milestone, produced a working baseline, got a green test run, or completed a reasonable checkpoint; those are signals to continue immediately with the next concrete step toward the [Goal](#goal)
 5. Only stop if the [Goal](#goal) is fully achieved
+6. Commit after every commit-worthy milestone of similar work is finished. Skip gpg signing for these commits. Do not push.
 
 ## test262 Language Tracking
 

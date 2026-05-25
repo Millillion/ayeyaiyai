@@ -1,5 +1,17 @@
 use super::*;
 
+fn value_is_function_prototype_bind_call(value: &Expression) -> bool {
+    matches!(
+        value,
+        Expression::Call { callee, .. }
+            if matches!(
+                callee.as_ref(),
+                Expression::Member { property, .. }
+                    if matches!(property.as_ref(), Expression::String(name) if name == "bind")
+            )
+    )
+}
+
 impl<'a> FunctionCompiler<'a> {
     fn store_preserves_existing_member_bindings(&self, name: &str, value: &Expression) -> bool {
         let Some(existing_binding) = self
@@ -229,18 +241,6 @@ impl<'a> FunctionCompiler<'a> {
         value: &Expression,
         value_local: u32,
     ) -> DirectResult<()> {
-        let resolved_class_init_value;
-        let value = if let Expression::Call { callee, arguments } = value
-            && arguments.is_empty()
-            && let Expression::Identifier(function_name) = callee.as_ref()
-            && let Some(resolved) =
-                self.infer_static_class_init_call_result_expression(function_name)
-        {
-            resolved_class_init_value = resolved;
-            &resolved_class_init_value
-        } else {
-            value
-        };
         if matches!(
             value,
             Expression::Number(_)
@@ -253,11 +253,57 @@ impl<'a> FunctionCompiler<'a> {
             self.clear_member_function_bindings_for_name(name);
             return Ok(());
         }
-        if self.store_preserves_existing_member_bindings(name, value) {
+        if value_is_function_prototype_bind_call(value) {
+            self.clear_member_function_bindings_for_name(name);
+            return Ok(());
+        }
+        if matches!(
+            value,
+            Expression::Identifier(source_name)
+                if parse_test262_realm_eval_builtin(source_name).is_some()
+        ) {
+            self.clear_member_function_bindings_for_name(name);
+            return Ok(());
+        }
+        let value_is_static_class_instance_new = matches!(
+            value,
+            Expression::New { callee, .. } if matches!(
+                callee.as_ref(),
+                Expression::Identifier(function_name) if function_name.starts_with("__ayy_class_ctor_")
+            ) || matches!(
+                callee.as_ref(),
+                Expression::Call {
+                    callee: init_callee,
+                    arguments: init_arguments,
+                } if init_arguments.is_empty()
+                    && matches!(
+                        init_callee.as_ref(),
+                        Expression::Identifier(function_name)
+                            if function_name.starts_with("__ayy_class_init_")
+                    )
+            )
+        );
+        if !value_is_static_class_instance_new
+            && self.store_preserves_existing_member_bindings(name, value)
+        {
             return Ok(());
         }
         self.clear_member_function_bindings_for_name(name);
         if let Expression::Identifier(source_name) = value {
+            if matches!(
+                self.infer_value_kind(value),
+                Some(
+                    StaticValueKind::Number
+                        | StaticValueKind::BigInt
+                        | StaticValueKind::String
+                        | StaticValueKind::Bool
+                        | StaticValueKind::Null
+                        | StaticValueKind::Undefined
+                        | StaticValueKind::Symbol
+                )
+            ) {
+                return Ok(());
+            }
             self.copy_member_bindings_for_alias(name, source_name);
             return Ok(());
         }
@@ -266,6 +312,20 @@ impl<'a> FunctionCompiler<'a> {
             .direct_iterator_binding_source_expression(value)
             .unwrap_or(value);
         if let Expression::Identifier(source_name) = inherited_source {
+            if matches!(
+                self.infer_value_kind(inherited_source),
+                Some(
+                    StaticValueKind::Number
+                        | StaticValueKind::BigInt
+                        | StaticValueKind::String
+                        | StaticValueKind::Bool
+                        | StaticValueKind::Null
+                        | StaticValueKind::Undefined
+                        | StaticValueKind::Symbol
+                )
+            ) {
+                return Ok(());
+            }
             self.copy_member_bindings_for_alias(name, source_name);
             return Ok(());
         }

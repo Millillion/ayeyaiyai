@@ -38,8 +38,11 @@ impl<'a> FunctionCompiler<'a> {
             {
                 value
             }
-            Expression::Call { .. } if self.resolve_simple_generator_source(value).is_some() => {
-                value
+            Expression::Call { .. } => {
+                if let Some(source) = self.resolve_simple_generator_iterator_source_kind(value) {
+                    return Some(source);
+                }
+                return None;
             }
             _ => return None,
         };
@@ -52,7 +55,7 @@ impl<'a> FunctionCompiler<'a> {
             return Some(source);
         }
         if let Expression::GetIterator(iterated) = value
-            && let Some((steps, completion_effects)) = self
+            && let Some((steps, completion_effects, _)) = self
                 .resolve_simple_yield_delegate_source(iterated, current_function_is_async_generator)
             && completion_effects.is_empty()
             && steps

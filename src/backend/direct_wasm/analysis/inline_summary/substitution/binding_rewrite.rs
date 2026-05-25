@@ -44,6 +44,14 @@ pub(in crate::backend::direct_wasm) fn substitute_inline_summary_bindings(
     bindings: &HashMap<String, Expression>,
 ) -> Expression {
     match expression {
+        Expression::This => bindings
+            .get("this")
+            .cloned()
+            .unwrap_or_else(|| expression.clone()),
+        Expression::NewTarget => bindings
+            .get("new.target")
+            .cloned()
+            .unwrap_or_else(|| expression.clone()),
         Expression::Identifier(name) => bindings
             .get(name)
             .cloned()

@@ -64,6 +64,12 @@ impl<'a> FunctionCompiler<'a> {
                     self.emit_numeric_expression(&value)?;
                     self.state.emission.output.instructions.push(0x1a);
                 }
+                SimpleGeneratorStepOutcome::YieldResult(result) => {
+                    let value =
+                        self.simple_generator_yield_result_value(&result, &Expression::Undefined);
+                    self.emit_numeric_expression(&value)?;
+                    self.state.emission.output.instructions.push(0x1a);
+                }
                 SimpleGeneratorStepOutcome::Throw(value) => {
                     self.emit_static_throw_value(&StaticThrowValue::Value(value))?;
                     return Ok(true);

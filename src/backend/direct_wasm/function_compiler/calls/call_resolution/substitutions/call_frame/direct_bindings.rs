@@ -19,7 +19,9 @@ impl<'a> FunctionCompiler<'a> {
             .and_then(|function| function.self_binding.as_deref());
 
         match expression {
-            Expression::This if !user_function.lexical_this => Some(this_binding.clone()),
+            Expression::This if !user_function.lexical_this || user_function.is_constructible() => {
+                Some(this_binding.clone())
+            }
             Expression::Identifier(name)
                 if (name == "arguments"
                     || scoped_binding_source_name(name)

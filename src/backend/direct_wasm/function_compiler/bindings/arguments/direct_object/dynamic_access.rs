@@ -184,9 +184,26 @@ impl<'a> FunctionCompiler<'a> {
         self.emit_numeric_expression(property)?;
         self.push_local_set(property_local);
 
+        let lowered_update_value_local = if let Some((op, previous_value)) = self
+            .lowered_member_update_operand(
+                &Expression::Identifier("arguments".to_string()),
+                property,
+                value,
+            ) {
+            let value_local = self.allocate_temp_local();
+            self.emit_numeric_expression(previous_value)?;
+            self.push_i32_const(1);
+            self.push_binary_op(op)?;
+            self.push_local_set(value_local);
+            Some(value_local)
+        } else {
+            None
+        };
+
         let specialized_rhs = match value {
             Expression::Binary { op, left, right }
-                if *op == BinaryOp::Multiply
+                if lowered_update_value_local.is_none()
+                    && *op == BinaryOp::Multiply
                     && matches!(
                         left.as_ref(),
                         Expression::Member {
@@ -205,7 +222,7 @@ impl<'a> FunctionCompiler<'a> {
         };
 
         let value_local = self.allocate_temp_local();
-        if specialized_rhs.is_none() {
+        if lowered_update_value_local.is_none() && specialized_rhs.is_none() {
             self.emit_numeric_expression(value)?;
             self.push_local_set(value_local);
         }
@@ -227,7 +244,9 @@ impl<'a> FunctionCompiler<'a> {
             self.state.emission.output.instructions.push(I32_TYPE);
             self.push_control_frame();
             open_frames += 1;
-            if let Some((BinaryOp::Multiply, rhs_local)) = specialized_rhs {
+            if let Some(update_value_local) = lowered_update_value_local {
+                self.emit_arguments_slot_write_from_local(index, update_value_local)?;
+            } else if let Some((BinaryOp::Multiply, rhs_local)) = specialized_rhs {
                 let result_local = self.allocate_temp_local();
                 let slot = self
                     .state
@@ -255,7 +274,9 @@ impl<'a> FunctionCompiler<'a> {
             self.state.emission.output.instructions.push(0x05);
         }
 
-        if specialized_rhs.is_some() {
+        if let Some(update_value_local) = lowered_update_value_local {
+            self.push_local_get(update_value_local);
+        } else if specialized_rhs.is_some() {
             self.push_i32_const(JS_NAN_TAG);
         } else {
             self.push_local_get(value_local);

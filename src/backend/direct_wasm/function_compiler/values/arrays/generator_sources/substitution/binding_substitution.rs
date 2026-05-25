@@ -17,7 +17,20 @@ impl<'a> FunctionCompiler<'a> {
         };
 
         match statement {
+            Statement::Declaration { body } => Statement::Declaration {
+                body: body
+                    .iter()
+                    .map(|statement| self.substitute_statement_bindings(statement, bindings))
+                    .collect(),
+            },
             Statement::Block { body } => Statement::Block {
+                body: body
+                    .iter()
+                    .map(|statement| self.substitute_statement_bindings(statement, bindings))
+                    .collect(),
+            },
+            Statement::Labeled { labels, body } => Statement::Labeled {
+                labels: labels.clone(),
                 body: body
                     .iter()
                     .map(|statement| self.substitute_statement_bindings(statement, bindings))
@@ -81,6 +94,120 @@ impl<'a> FunctionCompiler<'a> {
                     .map(|statement| self.substitute_statement_bindings(statement, bindings))
                     .collect(),
                 else_branch: else_branch
+                    .iter()
+                    .map(|statement| self.substitute_statement_bindings(statement, bindings))
+                    .collect(),
+            },
+            Statement::Try {
+                body,
+                catch_binding,
+                catch_setup,
+                catch_body,
+            } => Statement::Try {
+                body: body
+                    .iter()
+                    .map(|statement| self.substitute_statement_bindings(statement, bindings))
+                    .collect(),
+                catch_binding: catch_binding.clone(),
+                catch_setup: catch_setup
+                    .iter()
+                    .map(|statement| self.substitute_statement_bindings(statement, bindings))
+                    .collect(),
+                catch_body: catch_body
+                    .iter()
+                    .map(|statement| self.substitute_statement_bindings(statement, bindings))
+                    .collect(),
+            },
+            Statement::Switch {
+                labels,
+                bindings: switch_bindings,
+                discriminant,
+                cases,
+            } => Statement::Switch {
+                labels: labels.clone(),
+                bindings: switch_bindings.clone(),
+                discriminant: self.substitute_expression_bindings(discriminant, bindings),
+                cases: cases
+                    .iter()
+                    .map(|case| crate::ir::hir::SwitchCase {
+                        test: case
+                            .test
+                            .as_ref()
+                            .map(|test| self.substitute_expression_bindings(test, bindings)),
+                        body: case
+                            .body
+                            .iter()
+                            .map(|statement| {
+                                self.substitute_statement_bindings(statement, bindings)
+                            })
+                            .collect(),
+                    })
+                    .collect(),
+            },
+            Statement::For {
+                labels,
+                init,
+                per_iteration_bindings,
+                condition,
+                update,
+                break_hook,
+                body,
+            } => Statement::For {
+                labels: labels.clone(),
+                init: init
+                    .iter()
+                    .map(|statement| self.substitute_statement_bindings(statement, bindings))
+                    .collect(),
+                per_iteration_bindings: per_iteration_bindings.clone(),
+                condition: condition
+                    .as_ref()
+                    .map(|condition| self.substitute_expression_bindings(condition, bindings)),
+                update: update
+                    .as_ref()
+                    .map(|update| self.substitute_expression_bindings(update, bindings)),
+                break_hook: break_hook
+                    .as_ref()
+                    .map(|break_hook| self.substitute_expression_bindings(break_hook, bindings)),
+                body: body
+                    .iter()
+                    .map(|statement| self.substitute_statement_bindings(statement, bindings))
+                    .collect(),
+            },
+            Statement::While {
+                labels,
+                condition,
+                break_hook,
+                body,
+            } => Statement::While {
+                labels: labels.clone(),
+                condition: self.substitute_expression_bindings(condition, bindings),
+                break_hook: break_hook
+                    .as_ref()
+                    .map(|break_hook| self.substitute_expression_bindings(break_hook, bindings)),
+                body: body
+                    .iter()
+                    .map(|statement| self.substitute_statement_bindings(statement, bindings))
+                    .collect(),
+            },
+            Statement::DoWhile {
+                labels,
+                condition,
+                break_hook,
+                body,
+            } => Statement::DoWhile {
+                labels: labels.clone(),
+                condition: self.substitute_expression_bindings(condition, bindings),
+                break_hook: break_hook
+                    .as_ref()
+                    .map(|break_hook| self.substitute_expression_bindings(break_hook, bindings)),
+                body: body
+                    .iter()
+                    .map(|statement| self.substitute_statement_bindings(statement, bindings))
+                    .collect(),
+            },
+            Statement::With { object, body } => Statement::With {
+                object: self.substitute_expression_bindings(object, bindings),
+                body: body
                     .iter()
                     .map(|statement| self.substitute_statement_bindings(statement, bindings))
                     .collect(),

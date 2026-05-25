@@ -114,6 +114,19 @@ impl<'a> FunctionCompiler<'a> {
                 self.resolve_static_string_value_with_context(&resolved, current_function_name)
             }
             Expression::Member { object, property } => {
+                let materialized_property = self.materialize_static_expression(property);
+                if self.runtime_object_property_shadow_deletion_is_statically_present(
+                    object,
+                    &materialized_property,
+                ) {
+                    return Some("undefined".to_string());
+                }
+                if self.runtime_object_property_shadow_deletion_may_affect_property(
+                    object,
+                    &materialized_property,
+                ) {
+                    return None;
+                }
                 if std::env::var_os("AYY_TRACE_THIS_FLOW").is_some()
                     && matches!(object.as_ref(), Expression::This)
                 {
@@ -168,7 +181,19 @@ impl<'a> FunctionCompiler<'a> {
                     return self
                         .resolve_static_string_value_with_context(&value, current_function_name);
                 }
+                if let Some(value) =
+                    self.resolve_primitive_prototype_property_value(object, &materialized_property)
+                {
+                    return self
+                        .resolve_static_string_value_with_context(&value, current_function_name);
+                }
                 if let Some(array_binding) = self.resolve_array_binding_from_expression(object) {
+                    if let Some(runtime_name) =
+                        self.runtime_array_binding_name_for_expression(object)
+                        && self.runtime_array_binding_has_state(&runtime_name)
+                    {
+                        return None;
+                    }
                     let index = argument_index_from_expression(property)? as usize;
                     return array_binding
                         .values
@@ -211,7 +236,22 @@ impl<'a> FunctionCompiler<'a> {
                 }
                 None
             }
+            Expression::SuperMember { property } => self
+                .resolve_super_value_expression_with_context(property, current_function_name)
+                .and_then(|value| {
+                    self.resolve_static_string_value_with_context(&value, current_function_name)
+                }),
             Expression::Call { callee, arguments } => {
+                if matches!(callee.as_ref(), Expression::Identifier(name) if name == "eval")
+                    && let Some(StaticEvalOutcome::Value(value)) = self
+                        .resolve_static_direct_eval_completion_outcome_with_context(
+                            arguments,
+                            current_function_name,
+                        )
+                {
+                    return self
+                        .resolve_static_string_value_with_context(&value, current_function_name);
+                }
                 if arguments.is_empty()
                     && let Expression::Member { object, property } = callee.as_ref()
                     && let Expression::String(property_name) = property.as_ref()

@@ -283,6 +283,259 @@ fn rewrite_eval_program_internal_function_names_in_statement(
     }
 }
 
+fn mark_eval_template_object_site_key(site_key: &mut String) {
+    if let Some(site_id) = site_key.strip_prefix("template-site:") {
+        *site_key = format!("eval-template-site:{site_id}");
+    }
+}
+
+fn mark_eval_template_object_sites_in_expression(expression: &mut Expression) {
+    match expression {
+        Expression::Array(elements) => {
+            for element in elements {
+                match element {
+                    ArrayElement::Expression(expression) | ArrayElement::Spread(expression) => {
+                        mark_eval_template_object_sites_in_expression(expression);
+                    }
+                }
+            }
+        }
+        Expression::Object(entries) => {
+            for entry in entries {
+                match entry {
+                    ObjectEntry::Data { key, value } => {
+                        mark_eval_template_object_sites_in_expression(key);
+                        mark_eval_template_object_sites_in_expression(value);
+                    }
+                    ObjectEntry::Getter { key, getter } => {
+                        mark_eval_template_object_sites_in_expression(key);
+                        mark_eval_template_object_sites_in_expression(getter);
+                    }
+                    ObjectEntry::Setter { key, setter } => {
+                        mark_eval_template_object_sites_in_expression(key);
+                        mark_eval_template_object_sites_in_expression(setter);
+                    }
+                    ObjectEntry::Spread(expression) => {
+                        mark_eval_template_object_sites_in_expression(expression);
+                    }
+                }
+            }
+        }
+        Expression::Member { object, property } => {
+            mark_eval_template_object_sites_in_expression(object);
+            mark_eval_template_object_sites_in_expression(property);
+        }
+        Expression::SuperMember { property }
+        | Expression::Await(property)
+        | Expression::EnumerateKeys(property)
+        | Expression::GetIterator(property)
+        | Expression::IteratorClose(property)
+        | Expression::Unary {
+            expression: property,
+            ..
+        } => mark_eval_template_object_sites_in_expression(property),
+        Expression::Assign { value, .. } => {
+            mark_eval_template_object_sites_in_expression(value);
+        }
+        Expression::AssignMember {
+            object,
+            property,
+            value,
+        } => {
+            mark_eval_template_object_sites_in_expression(object);
+            mark_eval_template_object_sites_in_expression(property);
+            mark_eval_template_object_sites_in_expression(value);
+        }
+        Expression::AssignSuperMember { property, value } => {
+            mark_eval_template_object_sites_in_expression(property);
+            mark_eval_template_object_sites_in_expression(value);
+        }
+        Expression::Binary { left, right, .. } => {
+            mark_eval_template_object_sites_in_expression(left);
+            mark_eval_template_object_sites_in_expression(right);
+        }
+        Expression::Conditional {
+            condition,
+            then_expression,
+            else_expression,
+        } => {
+            mark_eval_template_object_sites_in_expression(condition);
+            mark_eval_template_object_sites_in_expression(then_expression);
+            mark_eval_template_object_sites_in_expression(else_expression);
+        }
+        Expression::Sequence(expressions) => {
+            for expression in expressions {
+                mark_eval_template_object_sites_in_expression(expression);
+            }
+        }
+        Expression::Call { callee, arguments }
+        | Expression::SuperCall { callee, arguments }
+        | Expression::New { callee, arguments } => {
+            let is_template_object_call = matches!(callee.as_ref(), Expression::Identifier(name) if name == "__ayyTemplateObject");
+            if is_template_object_call
+                && let Some(
+                    CallArgument::Expression(Expression::String(site_key))
+                    | CallArgument::Spread(Expression::String(site_key)),
+                ) = arguments.first_mut()
+            {
+                mark_eval_template_object_site_key(site_key);
+            }
+            mark_eval_template_object_sites_in_expression(callee);
+            for argument in arguments {
+                match argument {
+                    CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                        mark_eval_template_object_sites_in_expression(expression);
+                    }
+                }
+            }
+        }
+        Expression::Identifier(_)
+        | Expression::Update { .. }
+        | Expression::Number(_)
+        | Expression::BigInt(_)
+        | Expression::String(_)
+        | Expression::Bool(_)
+        | Expression::Null
+        | Expression::Undefined
+        | Expression::NewTarget
+        | Expression::This
+        | Expression::Sent => {}
+    }
+}
+
+fn mark_eval_template_object_sites_in_statement(statement: &mut Statement) {
+    match statement {
+        Statement::Declaration { body }
+        | Statement::Block { body }
+        | Statement::Labeled { body, .. } => {
+            for statement in body {
+                mark_eval_template_object_sites_in_statement(statement);
+            }
+        }
+        Statement::Var { value, .. }
+        | Statement::Let { value, .. }
+        | Statement::Assign { value, .. } => {
+            mark_eval_template_object_sites_in_expression(value);
+        }
+        Statement::AssignMember {
+            object,
+            property,
+            value,
+        } => {
+            mark_eval_template_object_sites_in_expression(object);
+            mark_eval_template_object_sites_in_expression(property);
+            mark_eval_template_object_sites_in_expression(value);
+        }
+        Statement::Print { values } => {
+            for value in values {
+                mark_eval_template_object_sites_in_expression(value);
+            }
+        }
+        Statement::Expression(expression)
+        | Statement::Throw(expression)
+        | Statement::Return(expression)
+        | Statement::Yield { value: expression }
+        | Statement::YieldDelegate { value: expression } => {
+            mark_eval_template_object_sites_in_expression(expression);
+        }
+        Statement::With { object, body } => {
+            mark_eval_template_object_sites_in_expression(object);
+            for statement in body {
+                mark_eval_template_object_sites_in_statement(statement);
+            }
+        }
+        Statement::If {
+            condition,
+            then_branch,
+            else_branch,
+        } => {
+            mark_eval_template_object_sites_in_expression(condition);
+            for statement in then_branch {
+                mark_eval_template_object_sites_in_statement(statement);
+            }
+            for statement in else_branch {
+                mark_eval_template_object_sites_in_statement(statement);
+            }
+        }
+        Statement::Try {
+            body,
+            catch_setup,
+            catch_body,
+            ..
+        } => {
+            for statement in body {
+                mark_eval_template_object_sites_in_statement(statement);
+            }
+            for statement in catch_setup {
+                mark_eval_template_object_sites_in_statement(statement);
+            }
+            for statement in catch_body {
+                mark_eval_template_object_sites_in_statement(statement);
+            }
+        }
+        Statement::Switch {
+            discriminant,
+            cases,
+            ..
+        } => {
+            mark_eval_template_object_sites_in_expression(discriminant);
+            for case in cases {
+                if let Some(test) = &mut case.test {
+                    mark_eval_template_object_sites_in_expression(test);
+                }
+                for statement in &mut case.body {
+                    mark_eval_template_object_sites_in_statement(statement);
+                }
+            }
+        }
+        Statement::For {
+            init,
+            condition,
+            update,
+            break_hook,
+            body,
+            ..
+        } => {
+            for statement in init {
+                mark_eval_template_object_sites_in_statement(statement);
+            }
+            if let Some(condition) = condition {
+                mark_eval_template_object_sites_in_expression(condition);
+            }
+            if let Some(update) = update {
+                mark_eval_template_object_sites_in_expression(update);
+            }
+            if let Some(break_hook) = break_hook {
+                mark_eval_template_object_sites_in_expression(break_hook);
+            }
+            for statement in body {
+                mark_eval_template_object_sites_in_statement(statement);
+            }
+        }
+        Statement::While {
+            condition,
+            break_hook,
+            body,
+            ..
+        }
+        | Statement::DoWhile {
+            condition,
+            break_hook,
+            body,
+            ..
+        } => {
+            mark_eval_template_object_sites_in_expression(condition);
+            if let Some(break_hook) = break_hook {
+                mark_eval_template_object_sites_in_expression(break_hook);
+            }
+            for statement in body {
+                mark_eval_template_object_sites_in_statement(statement);
+            }
+        }
+        Statement::Break { .. } | Statement::Continue { .. } => {}
+    }
+}
+
 pub(in crate::backend::direct_wasm) fn namespace_eval_program_internal_function_names(
     program: &mut Program,
     current_function_name: Option<&str>,
@@ -304,6 +557,21 @@ pub(in crate::backend::direct_wasm) fn namespace_eval_program_internal_function_
             )
         })
         .collect::<HashMap<_, _>>();
+
+    for statement in &mut program.statements {
+        mark_eval_template_object_sites_in_statement(statement);
+    }
+    for function in &mut program.functions {
+        for statement in &mut function.body {
+            mark_eval_template_object_sites_in_statement(statement);
+        }
+        for parameter in &mut function.params {
+            if let Some(default) = &mut parameter.default {
+                mark_eval_template_object_sites_in_expression(default);
+            }
+        }
+    }
+
     if rename_map.is_empty() {
         return;
     }

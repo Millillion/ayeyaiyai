@@ -58,6 +58,12 @@ impl<'a> FunctionCompiler<'a> {
         expression: &Expression,
         current_function_name: Option<&str>,
     ) -> bool {
+        if self
+            .resolve_static_boxed_primitive_value(expression)
+            .is_some()
+        {
+            return false;
+        }
         if matches!(expression, Expression::Call { .. } | Expression::New { .. })
             && self
                 .resolve_object_binding_from_expression(expression)

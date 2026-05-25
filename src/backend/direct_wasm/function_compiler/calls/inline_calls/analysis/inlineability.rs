@@ -226,7 +226,310 @@ impl<'a> FunctionCompiler<'a> {
             })
     }
 
-    fn statement_mentions_call_frame_state(statement: &Statement) -> bool {
+    fn user_function_shadows_arguments_binding(user_function: &UserFunction) -> bool {
+        user_function.body_declares_arguments_binding
+            || user_function.params.iter().any(|param| {
+                param == "arguments"
+                    || scoped_binding_source_name(param)
+                        .is_some_and(|source_name| source_name == "arguments")
+            })
+    }
+
+    fn expression_is_call_frame_arguments_reference(
+        expression: &Expression,
+        user_function: &UserFunction,
+    ) -> bool {
+        if user_function.lexical_this
+            || Self::user_function_shadows_arguments_binding(user_function)
+        {
+            return false;
+        }
+        matches!(
+            expression,
+            Expression::Identifier(name)
+                if name == "arguments"
+                    || scoped_binding_source_name(name)
+                        .is_some_and(|source_name| source_name == "arguments")
+        )
+    }
+
+    fn expression_is_call_frame_arguments_member(
+        expression: &Expression,
+        user_function: &UserFunction,
+    ) -> bool {
+        matches!(
+            expression,
+            Expression::Member { object, .. }
+                if Self::expression_is_call_frame_arguments_reference(object, user_function)
+        )
+    }
+
+    fn expression_deletes_call_frame_arguments_member(
+        expression: &Expression,
+        user_function: &UserFunction,
+    ) -> bool {
+        match expression {
+            Expression::Unary {
+                op: UnaryOp::Delete,
+                expression,
+            } if Self::expression_is_call_frame_arguments_member(expression, user_function) => true,
+            Expression::Member { object, property } => {
+                Self::expression_deletes_call_frame_arguments_member(object, user_function)
+                    || Self::expression_deletes_call_frame_arguments_member(property, user_function)
+            }
+            Expression::SuperMember { property } => {
+                Self::expression_deletes_call_frame_arguments_member(property, user_function)
+            }
+            Expression::Assign { value, .. }
+            | Expression::Await(value)
+            | Expression::EnumerateKeys(value)
+            | Expression::GetIterator(value)
+            | Expression::IteratorClose(value)
+            | Expression::Unary {
+                expression: value, ..
+            } => Self::expression_deletes_call_frame_arguments_member(value, user_function),
+            Expression::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                Self::expression_deletes_call_frame_arguments_member(object, user_function)
+                    || Self::expression_deletes_call_frame_arguments_member(property, user_function)
+                    || Self::expression_deletes_call_frame_arguments_member(value, user_function)
+            }
+            Expression::AssignSuperMember { property, value } => {
+                Self::expression_deletes_call_frame_arguments_member(property, user_function)
+                    || Self::expression_deletes_call_frame_arguments_member(value, user_function)
+            }
+            Expression::Binary { left, right, .. } => {
+                Self::expression_deletes_call_frame_arguments_member(left, user_function)
+                    || Self::expression_deletes_call_frame_arguments_member(right, user_function)
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                Self::expression_deletes_call_frame_arguments_member(condition, user_function)
+                    || Self::expression_deletes_call_frame_arguments_member(
+                        then_expression,
+                        user_function,
+                    )
+                    || Self::expression_deletes_call_frame_arguments_member(
+                        else_expression,
+                        user_function,
+                    )
+            }
+            Expression::Sequence(expressions) => expressions.iter().any(|expression| {
+                Self::expression_deletes_call_frame_arguments_member(expression, user_function)
+            }),
+            Expression::Call { callee, arguments }
+            | Expression::SuperCall { callee, arguments }
+            | Expression::New { callee, arguments } => {
+                Self::expression_deletes_call_frame_arguments_member(callee, user_function)
+                    || arguments.iter().any(|argument| {
+                        Self::expression_deletes_call_frame_arguments_member(
+                            argument.expression(),
+                            user_function,
+                        )
+                    })
+            }
+            Expression::Array(elements) => elements.iter().any(|element| match element {
+                ArrayElement::Expression(expression) | ArrayElement::Spread(expression) => {
+                    Self::expression_deletes_call_frame_arguments_member(expression, user_function)
+                }
+            }),
+            Expression::Object(entries) => entries.iter().any(|entry| match entry {
+                ObjectEntry::Data { key, value } => {
+                    Self::expression_deletes_call_frame_arguments_member(key, user_function)
+                        || Self::expression_deletes_call_frame_arguments_member(
+                            value,
+                            user_function,
+                        )
+                }
+                ObjectEntry::Getter { key, getter } => {
+                    Self::expression_deletes_call_frame_arguments_member(key, user_function)
+                        || Self::expression_deletes_call_frame_arguments_member(
+                            getter,
+                            user_function,
+                        )
+                }
+                ObjectEntry::Setter { key, setter } => {
+                    Self::expression_deletes_call_frame_arguments_member(key, user_function)
+                        || Self::expression_deletes_call_frame_arguments_member(
+                            setter,
+                            user_function,
+                        )
+                }
+                ObjectEntry::Spread(expression) => {
+                    Self::expression_deletes_call_frame_arguments_member(expression, user_function)
+                }
+            }),
+            Expression::Update { .. }
+            | Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined
+            | Expression::Identifier(_)
+            | Expression::This
+            | Expression::NewTarget
+            | Expression::Sent => false,
+        }
+    }
+
+    fn statement_deletes_call_frame_arguments_member(
+        statement: &Statement,
+        user_function: &UserFunction,
+    ) -> bool {
+        match statement {
+            Statement::Declaration { body }
+            | Statement::Block { body }
+            | Statement::Labeled { body, .. }
+            | Statement::With { body, .. } => body.iter().any(|statement| {
+                Self::statement_deletes_call_frame_arguments_member(statement, user_function)
+            }),
+            Statement::Var { value, .. }
+            | Statement::Let { value, .. }
+            | Statement::Assign { value, .. }
+            | Statement::Expression(value)
+            | Statement::Throw(value)
+            | Statement::Return(value)
+            | Statement::Yield { value }
+            | Statement::YieldDelegate { value } => {
+                Self::expression_deletes_call_frame_arguments_member(value, user_function)
+            }
+            Statement::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                Self::expression_deletes_call_frame_arguments_member(object, user_function)
+                    || Self::expression_deletes_call_frame_arguments_member(property, user_function)
+                    || Self::expression_deletes_call_frame_arguments_member(value, user_function)
+            }
+            Statement::Print { values } => values.iter().any(|value| {
+                Self::expression_deletes_call_frame_arguments_member(value, user_function)
+            }),
+            Statement::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                Self::expression_deletes_call_frame_arguments_member(condition, user_function)
+                    || then_branch.iter().any(|statement| {
+                        Self::statement_deletes_call_frame_arguments_member(
+                            statement,
+                            user_function,
+                        )
+                    })
+                    || else_branch.iter().any(|statement| {
+                        Self::statement_deletes_call_frame_arguments_member(
+                            statement,
+                            user_function,
+                        )
+                    })
+            }
+            Statement::Try {
+                body,
+                catch_setup,
+                catch_body,
+                ..
+            } => {
+                body.iter().any(|statement| {
+                    Self::statement_deletes_call_frame_arguments_member(statement, user_function)
+                }) || catch_setup.iter().any(|statement| {
+                    Self::statement_deletes_call_frame_arguments_member(statement, user_function)
+                }) || catch_body.iter().any(|statement| {
+                    Self::statement_deletes_call_frame_arguments_member(statement, user_function)
+                })
+            }
+            Statement::Switch {
+                discriminant,
+                cases,
+                ..
+            } => {
+                Self::expression_deletes_call_frame_arguments_member(discriminant, user_function)
+                    || cases.iter().any(|case| {
+                        case.test.as_ref().is_some_and(|test| {
+                            Self::expression_deletes_call_frame_arguments_member(
+                                test,
+                                user_function,
+                            )
+                        }) || case.body.iter().any(|statement| {
+                            Self::statement_deletes_call_frame_arguments_member(
+                                statement,
+                                user_function,
+                            )
+                        })
+                    })
+            }
+            Statement::For {
+                init,
+                condition,
+                update,
+                break_hook,
+                body,
+                ..
+            } => {
+                init.iter().any(|statement| {
+                    Self::statement_deletes_call_frame_arguments_member(statement, user_function)
+                }) || condition.as_ref().is_some_and(|condition| {
+                    Self::expression_deletes_call_frame_arguments_member(condition, user_function)
+                }) || update.as_ref().is_some_and(|update| {
+                    Self::expression_deletes_call_frame_arguments_member(update, user_function)
+                }) || break_hook.as_ref().is_some_and(|break_hook| {
+                    Self::expression_deletes_call_frame_arguments_member(break_hook, user_function)
+                }) || body.iter().any(|statement| {
+                    Self::statement_deletes_call_frame_arguments_member(statement, user_function)
+                })
+            }
+            Statement::While {
+                condition,
+                break_hook,
+                body,
+                ..
+            }
+            | Statement::DoWhile {
+                condition,
+                break_hook,
+                body,
+                ..
+            } => {
+                Self::expression_deletes_call_frame_arguments_member(condition, user_function)
+                    || break_hook.as_ref().is_some_and(|break_hook| {
+                        Self::expression_deletes_call_frame_arguments_member(
+                            break_hook,
+                            user_function,
+                        )
+                    })
+                    || body.iter().any(|statement| {
+                        Self::statement_deletes_call_frame_arguments_member(
+                            statement,
+                            user_function,
+                        )
+                    })
+            }
+            Statement::Break { .. } | Statement::Continue { .. } => false,
+        }
+    }
+
+    pub(in crate::backend::direct_wasm) fn user_function_deletes_call_frame_arguments_member(
+        &self,
+        user_function: &UserFunction,
+    ) -> bool {
+        self.resolve_registered_function_declaration(&user_function.name)
+            .is_some_and(|function| {
+                function.body.iter().any(|statement| {
+                    Self::statement_deletes_call_frame_arguments_member(statement, user_function)
+                })
+            })
+    }
+
+    pub(in crate::backend::direct_wasm) fn statement_mentions_call_frame_state(
+        statement: &Statement,
+    ) -> bool {
         match statement {
             Statement::Declaration { body }
             | Statement::Block { body }
@@ -368,6 +671,15 @@ impl<'a> FunctionCompiler<'a> {
             Statement::Assign { value, .. } => {
                 !expression_mentions_unsupported_explicit_call_frame_state(value)
             }
+            Statement::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                !expression_mentions_unsupported_explicit_call_frame_state(object)
+                    && !expression_mentions_unsupported_explicit_call_frame_state(property)
+                    && !expression_mentions_unsupported_explicit_call_frame_state(value)
+            }
             Statement::Expression(Expression::Update { .. }) => true,
             Statement::Print { values } => values
                 .iter()
@@ -449,6 +761,9 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         user_function: &UserFunction,
     ) -> bool {
+        if self.user_function_deletes_call_frame_arguments_member(user_function) {
+            return false;
+        }
         if !self
             .user_function_parameter_iterator_consumption_indices(user_function)
             .is_empty()
@@ -476,6 +791,15 @@ impl<'a> FunctionCompiler<'a> {
             }
             Statement::Assign { value, .. } => {
                 !expression_mentions_unsupported_explicit_call_frame_state(value)
+            }
+            Statement::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                !expression_mentions_unsupported_explicit_call_frame_state(object)
+                    && !expression_mentions_unsupported_explicit_call_frame_state(property)
+                    && !expression_mentions_unsupported_explicit_call_frame_state(value)
             }
             Statement::Expression(Expression::Update { .. }) => true,
             Statement::Print { values } => values

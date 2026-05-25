@@ -121,12 +121,30 @@ impl<'a> FunctionCompiler<'a> {
                 break_hook,
                 labels,
             } => {
+                let environment = self.snapshot_static_resolution_environment();
+                if Self::statement_allows_static_loop_elision(statement)
+                    && self.sync_static_executable_statement_tracking_effects_from_environment(
+                        statement,
+                        environment.clone(),
+                    )
+                {
+                    return Ok(());
+                }
                 if self
                     .try_emit_static_simple_generator_rest_collection_loop_statement(statement)?
                 {
+                    self.sync_static_executable_statement_tracking_effects_from_environment(
+                        statement,
+                        environment,
+                    );
                     Ok(())
                 } else {
-                    self.emit_while(condition, break_hook.as_ref(), labels, body)
+                    self.emit_while(condition, break_hook.as_ref(), labels, body)?;
+                    self.sync_static_executable_statement_tracking_effects_from_environment(
+                        statement,
+                        environment,
+                    );
+                    Ok(())
                 }
             }
             Statement::DoWhile {
@@ -134,7 +152,23 @@ impl<'a> FunctionCompiler<'a> {
                 body,
                 break_hook,
                 labels,
-            } => self.emit_do_while(condition, break_hook.as_ref(), labels, body),
+            } => {
+                let environment = self.snapshot_static_resolution_environment();
+                if Self::statement_allows_static_loop_elision(statement)
+                    && self.sync_static_executable_statement_tracking_effects_from_environment(
+                        statement,
+                        environment.clone(),
+                    )
+                {
+                    return Ok(());
+                }
+                self.emit_do_while(condition, break_hook.as_ref(), labels, body)?;
+                self.sync_static_executable_statement_tracking_effects_from_environment(
+                    statement,
+                    environment,
+                );
+                Ok(())
+            }
             Statement::For {
                 init,
                 condition,
@@ -143,21 +177,78 @@ impl<'a> FunctionCompiler<'a> {
                 labels,
                 body,
                 per_iteration_bindings,
-            } => self.emit_for(
-                labels,
-                init,
-                per_iteration_bindings,
-                condition.as_ref(),
-                update.as_ref(),
-                break_hook.as_ref(),
-                body,
-            ),
+            } => {
+                let environment = self.snapshot_static_resolution_environment();
+                if Self::statement_allows_static_loop_elision(statement)
+                    && self.sync_static_executable_statement_tracking_effects_from_environment(
+                        statement,
+                        environment.clone(),
+                    )
+                {
+                    return Ok(());
+                }
+                self.emit_for(
+                    labels,
+                    init,
+                    per_iteration_bindings,
+                    condition.as_ref(),
+                    update.as_ref(),
+                    break_hook.as_ref(),
+                    body,
+                )?;
+                self.sync_static_executable_statement_tracking_effects_from_environment(
+                    statement,
+                    environment,
+                );
+                Ok(())
+            }
             Statement::Break { .. }
             | Statement::Continue { .. }
             | Statement::Return(..)
             | Statement::Throw(..)
             | Statement::Yield { .. }
             | Statement::YieldDelegate { .. } => self.emit_control_transfer_statement(statement),
+        }
+    }
+
+    fn statement_allows_static_loop_elision(statement: &Statement) -> bool {
+        match statement {
+            Statement::Declaration { body } | Statement::Block { body } => {
+                body.iter().all(Self::statement_allows_static_loop_elision)
+            }
+            Statement::Labeled { body, .. } => {
+                body.iter().all(Self::statement_allows_static_loop_elision)
+            }
+            Statement::If {
+                then_branch,
+                else_branch,
+                ..
+            } => then_branch
+                .iter()
+                .chain(else_branch)
+                .all(Self::statement_allows_static_loop_elision),
+            Statement::For { init, body, .. } => init
+                .iter()
+                .chain(body)
+                .all(Self::statement_allows_static_loop_elision),
+            Statement::While { body, .. } | Statement::DoWhile { body, .. } => {
+                body.iter().all(Self::statement_allows_static_loop_elision)
+            }
+            Statement::Var { .. }
+            | Statement::Let { .. }
+            | Statement::Assign { .. }
+            | Statement::AssignMember { .. }
+            | Statement::Throw(..) => true,
+            Statement::Expression(..)
+            | Statement::Print { .. }
+            | Statement::With { .. }
+            | Statement::Try { .. }
+            | Statement::Switch { .. }
+            | Statement::Break { .. }
+            | Statement::Continue { .. }
+            | Statement::Return(..)
+            | Statement::Yield { .. }
+            | Statement::YieldDelegate { .. } => false,
         }
     }
 }

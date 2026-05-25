@@ -4,6 +4,7 @@ impl<'a> FunctionCompiler<'a> {
     pub(in crate::backend::direct_wasm) fn instantiate_eval_global_functions(
         &mut self,
         functions: &[FunctionDeclaration],
+        configurable: bool,
     ) -> DirectResult<()> {
         for function in functions {
             if !function.register_global {
@@ -12,7 +13,7 @@ impl<'a> FunctionCompiler<'a> {
             let value_expression = Expression::Identifier(function.name.clone());
             self.backend
                 .set_global_user_function_reference(&function.name);
-            self.instantiate_eval_global_function_property_descriptor(&function.name);
+            self.instantiate_eval_global_function_property_descriptor(&function.name, configurable);
             let value_local = self.allocate_temp_local();
             let Some(user_function) = self.user_function(&function.name) else {
                 return Err(Unsupported("eval global function runtime value"));

@@ -4,6 +4,12 @@ fn is_using_completion_binding(name: &str) -> bool {
     name.starts_with("__ayy_using_error_")
 }
 
+enum StaticCatchScanOutcome {
+    CatchValue(Expression),
+    Continue,
+    Unsupported,
+}
+
 impl<'a> FunctionCompiler<'a> {
     fn merge_possible_throw_kind(
         current: &mut Option<StaticValueKind>,
@@ -229,6 +235,13 @@ impl<'a> FunctionCompiler<'a> {
                             visited_functions,
                         ),
                     );
+                }
+                if matches!(
+                    callee.as_ref(),
+                    Expression::Member { property, .. }
+                        if matches!(property.as_ref(), Expression::String(name) if name == "call" || name == "apply")
+                ) {
+                    return kind;
                 }
                 if let Some(LocalFunctionBinding::User(function_name)) =
                     self.resolve_function_binding_from_expression(callee)
@@ -456,6 +469,275 @@ impl<'a> FunctionCompiler<'a> {
             return None;
         }
         self.resolve_terminal_throw_value_from_statement(last)
+    }
+
+    fn new_expression_produces_default_constructor_instance(
+        &self,
+        callee: &Expression,
+        arguments: &[CallArgument],
+    ) -> bool {
+        let Some(LocalFunctionBinding::User(function_name)) =
+            self.resolve_function_binding_from_expression(callee)
+        else {
+            return false;
+        };
+        let Some(user_function) = self.user_function(&function_name) else {
+            return false;
+        };
+        if self.user_function_is_derived_constructor(user_function) {
+            return false;
+        }
+
+        let capture_source_bindings =
+            self.resolve_constructor_capture_source_bindings_from_expression(callee);
+        if let Some(return_expression) = self
+            .resolve_user_constructor_explicit_return_expression_for_function(
+                user_function,
+                arguments,
+                capture_source_bindings.as_ref(),
+            )
+        {
+            return matches!(
+                self.infer_value_kind(&return_expression),
+                Some(
+                    StaticValueKind::Number
+                        | StaticValueKind::Bool
+                        | StaticValueKind::String
+                        | StaticValueKind::BigInt
+                        | StaticValueKind::Null
+                        | StaticValueKind::Undefined
+                        | StaticValueKind::Symbol
+                )
+            );
+        }
+
+        self.resolve_user_constructor_object_binding_from_new(callee, arguments)
+            .is_some()
+    }
+
+    fn thrown_expression_can_bind_static_catch_value(&self, expression: &Expression) -> bool {
+        if inline_summary_side_effect_free_expression(expression) {
+            return true;
+        }
+        match expression {
+            Expression::New { callee, arguments } => {
+                self.new_expression_produces_default_constructor_instance(callee, arguments)
+            }
+            _ => false,
+        }
+    }
+
+    fn resolve_static_binary_outcome_for_catch_scan_with_state(
+        &self,
+        op: BinaryOp,
+        left: &Expression,
+        right: &Expression,
+        environment: &mut StaticResolutionEnvironment,
+    ) -> Option<StaticEvalOutcome> {
+        let left_value = self.resolve_static_expression_value_with_state(left, environment);
+        let right_value = self.resolve_static_expression_value_with_state(right, environment);
+        let current_function_name = self.current_function_name();
+        match op {
+            BinaryOp::Add => self.resolve_static_addition_outcome_with_context(
+                &left_value,
+                &right_value,
+                current_function_name,
+            ),
+            BinaryOp::Subtract
+            | BinaryOp::Multiply
+            | BinaryOp::Divide
+            | BinaryOp::Modulo
+            | BinaryOp::Exponentiate
+            | BinaryOp::BitwiseAnd
+            | BinaryOp::BitwiseOr
+            | BinaryOp::BitwiseXor
+            | BinaryOp::LeftShift
+            | BinaryOp::RightShift
+            | BinaryOp::UnsignedRightShift => self
+                .resolve_static_numeric_binary_outcome_with_context(
+                    op,
+                    &left_value,
+                    &right_value,
+                    current_function_name,
+                ),
+            BinaryOp::LessThan
+            | BinaryOp::LessThanOrEqual
+            | BinaryOp::GreaterThan
+            | BinaryOp::GreaterThanOrEqual => self.resolve_static_relational_outcome_with_context(
+                op,
+                &left_value,
+                &right_value,
+                current_function_name,
+            ),
+            _ => None,
+        }
+    }
+
+    fn expression_statement_is_safe_for_static_catch_scan_with_state(
+        &self,
+        expression: &Expression,
+        environment: &mut StaticResolutionEnvironment,
+    ) -> bool {
+        if !inline_summary_side_effect_free_expression(expression) {
+            return false;
+        }
+        match expression {
+            Expression::Binary { op, left, right }
+                if matches!(
+                    op,
+                    BinaryOp::Add
+                        | BinaryOp::Subtract
+                        | BinaryOp::Multiply
+                        | BinaryOp::Divide
+                        | BinaryOp::Modulo
+                        | BinaryOp::Exponentiate
+                        | BinaryOp::BitwiseAnd
+                        | BinaryOp::BitwiseOr
+                        | BinaryOp::BitwiseXor
+                        | BinaryOp::LeftShift
+                        | BinaryOp::RightShift
+                        | BinaryOp::UnsignedRightShift
+                        | BinaryOp::LessThan
+                        | BinaryOp::LessThanOrEqual
+                        | BinaryOp::GreaterThan
+                        | BinaryOp::GreaterThanOrEqual
+                ) =>
+            {
+                let mut referenced_names = HashSet::new();
+                collect_referenced_binding_names_from_expression(left, &mut referenced_names);
+                collect_referenced_binding_names_from_expression(right, &mut referenced_names);
+                if referenced_names.iter().any(|name| {
+                    let source_name = scoped_binding_source_name(name).unwrap_or(name);
+                    environment.contains_object_binding(name)
+                        || environment.contains_object_binding(source_name)
+                }) {
+                    return false;
+                }
+                matches!(
+                    self.resolve_static_binary_outcome_for_catch_scan_with_state(
+                        *op,
+                        left,
+                        right,
+                        environment,
+                    ),
+                    Some(StaticEvalOutcome::Value(_))
+                )
+            }
+            _ => true,
+        }
+    }
+
+    pub(in crate::backend::direct_wasm) fn resolve_static_catch_value_from_try_body(
+        &self,
+        body: &[Statement],
+    ) -> Option<Expression> {
+        let mut environment = self.snapshot_static_resolution_environment();
+        for statement in body {
+            match self
+                .resolve_static_catch_value_from_statement_with_state(statement, &mut environment)
+            {
+                StaticCatchScanOutcome::CatchValue(value) => return Some(value),
+                StaticCatchScanOutcome::Continue => {}
+                StaticCatchScanOutcome::Unsupported => return None,
+            }
+        }
+        None
+    }
+
+    fn resolve_static_catch_value_from_statement_with_state(
+        &self,
+        statement: &Statement,
+        environment: &mut StaticResolutionEnvironment,
+    ) -> StaticCatchScanOutcome {
+        match statement {
+            Statement::Declaration { body }
+            | Statement::Block { body }
+            | Statement::Labeled { body, .. } => {
+                self.resolve_static_catch_value_from_statements_with_state(body, environment)
+            }
+            Statement::With { object, body }
+                if inline_summary_side_effect_free_expression(object) =>
+            {
+                if self
+                    .resolve_terminal_expression_throw_value_with_state(object, environment)
+                    .is_some()
+                {
+                    return StaticCatchScanOutcome::Unsupported;
+                }
+                self.resolve_static_catch_value_from_statements_with_state(body, environment)
+            }
+            Statement::Var { name, value }
+            | Statement::Let { name, value, .. }
+            | Statement::Assign { name, value } => {
+                if let Some(throw_value) =
+                    self.resolve_terminal_expression_throw_value_with_state(value, environment)
+                {
+                    return StaticCatchScanOutcome::CatchValue(throw_value);
+                }
+                if !inline_summary_side_effect_free_expression(value) {
+                    return StaticCatchScanOutcome::Unsupported;
+                }
+                let value = self.resolve_static_expression_value_with_state(value, environment);
+                environment.assign_binding_value(name.clone(), value.clone());
+                let object_binding =
+                    self.resolve_object_binding_from_expression_with_state(&value, environment);
+                environment.sync_object_binding(name, object_binding);
+                StaticCatchScanOutcome::Continue
+            }
+            Statement::Expression(expression) => self
+                .resolve_terminal_expression_throw_value_with_state(expression, environment)
+                .map(StaticCatchScanOutcome::CatchValue)
+                .unwrap_or_else(|| {
+                    if self.expression_statement_is_safe_for_static_catch_scan_with_state(
+                        expression,
+                        environment,
+                    ) {
+                        StaticCatchScanOutcome::Continue
+                    } else {
+                        StaticCatchScanOutcome::Unsupported
+                    }
+                }),
+            Statement::Throw(expression)
+                if self.thrown_expression_can_bind_static_catch_value(expression) =>
+            {
+                StaticCatchScanOutcome::CatchValue(
+                    self.resolve_static_expression_value_with_state(expression, environment),
+                )
+            }
+            Statement::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => match self.resolve_static_expression_value_with_state(condition, environment) {
+                Expression::Bool(true) => self
+                    .resolve_static_catch_value_from_statements_with_state(
+                        then_branch,
+                        environment,
+                    ),
+                Expression::Bool(false) => self
+                    .resolve_static_catch_value_from_statements_with_state(
+                        else_branch,
+                        environment,
+                    ),
+                _ => StaticCatchScanOutcome::Unsupported,
+            },
+            _ => StaticCatchScanOutcome::Unsupported,
+        }
+    }
+
+    fn resolve_static_catch_value_from_statements_with_state(
+        &self,
+        body: &[Statement],
+        environment: &mut StaticResolutionEnvironment,
+    ) -> StaticCatchScanOutcome {
+        for statement in body {
+            match self.resolve_static_catch_value_from_statement_with_state(statement, environment)
+            {
+                StaticCatchScanOutcome::Continue => {}
+                outcome => return outcome,
+            }
+        }
+        StaticCatchScanOutcome::Continue
     }
 
     fn substitute_expression_identifier(

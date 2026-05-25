@@ -11,13 +11,14 @@ use swc_ecma_ast::{
     ContinueStmt, Decl, DefaultDecl, ExportDefaultDecl, Expr, ExprStmt, FnDecl, FnExpr, ForHead,
     ForInStmt, ForOfStmt, Function, Key, LabeledStmt, Lit, MemberProp, MetaPropKind, MethodKind,
     ModuleDecl, ModuleItem, ObjectPatProp, ParamOrTsParamProp, Pat, Program as SwcProgram, Prop,
-    PropName, PropOrSpread, SimpleAssignTarget, Stmt, SuperProp, SuperPropExpr, SwitchStmt,
+    PropName, PropOrSpread, SimpleAssignTarget, Stmt, Str, SuperProp, SuperPropExpr, SwitchStmt,
     UnaryOp as SwcUnaryOp, UpdateOp as SwcUpdateOp, VarDeclKind, VarDeclOrExpr, WithStmt,
 };
 
 use crate::ir::hir::{
     ArrayElement, BinaryOp, CallArgument, Expression, FunctionDeclaration, FunctionKind,
     ObjectEntry, Parameter, Program, Statement, SwitchCase, UnaryOp, UpdateOp,
+    js_surrogate_code_unit_to_sentinel,
 };
 
 use super::{
@@ -26,6 +27,7 @@ use super::{
         script_has_use_strict_directive,
     },
     modules::resolution::resolve_module_specifier,
+    parse::parse_script_program_source,
 };
 
 mod classes;
@@ -52,6 +54,7 @@ use self::support::{
     lower_binary_operator, lower_constructor_parameters, lower_function_kind, lower_parameter,
     lower_parameter_patterns, lower_parameters, lower_unary_operator, lower_update_operator,
     parse_bigint_literal, pattern_name_hint, static_member_property_name, template_quasi_text,
+    template_raw_text,
 };
 pub(crate) use self::support::{
     asyncify_statements, collect_direct_statement_lexical_bindings, data_property_descriptor,

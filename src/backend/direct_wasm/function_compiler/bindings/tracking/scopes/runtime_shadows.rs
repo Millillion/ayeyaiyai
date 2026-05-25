@@ -26,6 +26,49 @@ impl Drop for RuntimeShadowFallbackGuard {
     }
 }
 
+fn expression_may_evaluate_to_runtime_shadow_owner(expression: &Expression) -> bool {
+    match expression {
+        Expression::Array(_)
+        | Expression::Object(_)
+        | Expression::Identifier(_)
+        | Expression::This
+        | Expression::Member { .. }
+        | Expression::SuperMember { .. }
+        | Expression::Call { .. }
+        | Expression::SuperCall { .. }
+        | Expression::New { .. }
+        | Expression::Await(_)
+        | Expression::EnumerateKeys(_)
+        | Expression::GetIterator(_)
+        | Expression::IteratorClose(_) => true,
+        Expression::Assign { value, .. }
+        | Expression::AssignMember { value, .. }
+        | Expression::AssignSuperMember { value, .. } => {
+            expression_may_evaluate_to_runtime_shadow_owner(value)
+        }
+        Expression::Binary {
+            op: BinaryOp::LogicalAnd | BinaryOp::LogicalOr | BinaryOp::NullishCoalescing,
+            left,
+            right,
+        } => {
+            expression_may_evaluate_to_runtime_shadow_owner(left)
+                || expression_may_evaluate_to_runtime_shadow_owner(right)
+        }
+        Expression::Conditional {
+            then_expression,
+            else_expression,
+            ..
+        } => {
+            expression_may_evaluate_to_runtime_shadow_owner(then_expression)
+                || expression_may_evaluate_to_runtime_shadow_owner(else_expression)
+        }
+        Expression::Sequence(expressions) => expressions
+            .last()
+            .is_some_and(expression_may_evaluate_to_runtime_shadow_owner),
+        _ => false,
+    }
+}
+
 impl<'a> FunctionCompiler<'a> {
     pub(in crate::backend::direct_wasm) fn reference_preserving_static_value_expression(
         &self,
@@ -41,7 +84,9 @@ impl<'a> FunctionCompiler<'a> {
                     || self
                         .resolve_function_binding_from_expression(value)
                         .is_some());
-        if preserve_reference_alias {
+        let preserve_private_brand =
+            matches!(value, Expression::Identifier(name) if name.contains("__ayy_class_brand_"));
+        if preserve_reference_alias || preserve_private_brand {
             value.clone()
         } else {
             self.materialize_static_expression(value)
@@ -94,7 +139,9 @@ impl<'a> FunctionCompiler<'a> {
             .collect()
     }
 
-    fn runtime_object_property_shadow_key(property: &Expression) -> String {
+    pub(in crate::backend::direct_wasm) fn runtime_object_property_shadow_key(
+        property: &Expression,
+    ) -> String {
         if let Some(property_name) = static_property_name_from_expression(property) {
             return format!(
                 "str__{}",
@@ -108,6 +155,14 @@ impl<'a> FunctionCompiler<'a> {
         )
     }
 
+    fn runtime_object_member_shadow_owner_name(owner_name: &str, property: &Expression) -> String {
+        format!(
+            "__ayy_member_object__{}__{}",
+            Self::runtime_object_property_shadow_fragment(owner_name),
+            Self::runtime_object_property_shadow_key(property)
+        )
+    }
+
     fn runtime_object_property_deleted_shadow_name(
         owner_name: &str,
         property: &Expression,
@@ -116,6 +171,14 @@ impl<'a> FunctionCompiler<'a> {
             "__ayy_object_property_deleted__{owner_name}__{}",
             Self::runtime_object_property_shadow_key(property)
         )
+    }
+
+    fn runtime_object_dynamic_property_key_shadow_name(owner_name: &str) -> String {
+        format!("__ayy_object_dynamic_property_key__{owner_name}")
+    }
+
+    fn runtime_object_dynamic_property_value_shadow_name(owner_name: &str) -> String {
+        format!("__ayy_object_dynamic_property_value__{owner_name}")
     }
 
     fn runtime_object_property_shadow_owner_has_bindings(&self, owner_name: &str) -> bool {
@@ -339,19 +402,14 @@ impl<'a> FunctionCompiler<'a> {
         properties.into_iter().collect()
     }
 
-    fn predeclare_runtime_shadow_property(&mut self, owner_name: &str, property_name: &str) {
+    pub(in crate::backend::direct_wasm) fn predeclare_runtime_shadow_property(
+        &mut self,
+        owner_name: &str,
+        property_name: &str,
+    ) {
         let property = Expression::String(property_name.to_string());
         self.runtime_object_property_shadow_binding_by_property(owner_name, &property);
         self.runtime_object_property_shadow_deleted_binding_by_property(owner_name, &property);
-        let mut object_binding = self
-            .global_object_binding(owner_name)
-            .cloned()
-            .unwrap_or_else(empty_object_value_binding);
-        object_binding_set_property(&mut object_binding, property, Expression::Undefined);
-        self.sync_runtime_object_shadow_owner_static_metadata_from_binding(
-            owner_name,
-            &object_binding,
-        );
     }
 
     fn runtime_object_property_name_from_shadow_suffix(suffix: &str) -> Option<String> {
@@ -373,12 +431,16 @@ impl<'a> FunctionCompiler<'a> {
         let mut entries = ordered_object_property_names(object_binding)
             .into_iter()
             .filter_map(|property_name| {
-                object_binding_lookup_value(
-                    object_binding,
-                    &Expression::String(property_name.clone()),
-                )
-                .cloned()
-                .map(|value| (Expression::String(property_name), value))
+                let property = Expression::String(property_name.clone());
+                let descriptor = object_binding_lookup_descriptor(object_binding, &property);
+                let value = if descriptor.is_some_and(Self::property_descriptor_is_accessor) {
+                    Some(Expression::Undefined)
+                } else {
+                    descriptor
+                        .and_then(|descriptor| descriptor.value.clone())
+                        .or_else(|| object_binding_lookup_value(object_binding, &property).cloned())
+                };
+                value.map(|value| (Expression::String(property_name), value))
             })
             .collect::<Vec<_>>();
         entries.extend(
@@ -390,6 +452,26 @@ impl<'a> FunctionCompiler<'a> {
         entries
     }
 
+    fn property_descriptor_is_accessor(descriptor: &PropertyDescriptorBinding) -> bool {
+        descriptor.has_get
+            || descriptor.has_set
+            || descriptor.getter.is_some()
+            || descriptor.setter.is_some()
+    }
+
+    fn runtime_shadow_class_entry_should_defer(
+        target_owner: &str,
+        fallback_value: &Expression,
+    ) -> bool {
+        if !Self::runtime_shadow_owner_is_class_object(target_owner) {
+            return false;
+        }
+
+        let mut referenced_names = HashSet::new();
+        collect_referenced_binding_names_from_expression(fallback_value, &mut referenced_names);
+        referenced_names.contains(target_owner)
+    }
+
     fn runtime_shadow_property_is_private(property: &Expression) -> bool {
         matches!(
             property,
@@ -397,6 +479,10 @@ impl<'a> FunctionCompiler<'a> {
                 if property_name.starts_with("__ayy$private$")
                     || property_name.starts_with("__ayy$private_brand$")
         )
+    }
+
+    fn runtime_shadow_owner_is_class_object(owner_name: &str) -> bool {
+        owner_name.starts_with("__ayy_class_expr_") || owner_name.starts_with("__ayy_class_ctor_")
     }
 
     fn runtime_shadow_owner_resolves_to_proxy(&self, owner_name: &str) -> bool {
@@ -478,6 +564,204 @@ impl<'a> FunctionCompiler<'a> {
             .collect()
     }
 
+    fn class_init_private_runtime_shadow_entries_for_owner(
+        &self,
+        source_owner: &str,
+    ) -> Vec<(Expression, Expression)> {
+        if !source_owner.starts_with("__ayy_class_expr_")
+            && !source_owner.starts_with("__ayy_class_ctor_")
+        {
+            return Vec::new();
+        }
+
+        let mut entries = Vec::new();
+        let mut seen = HashSet::new();
+        for function in &self
+            .backend
+            .function_registry
+            .catalog
+            .registered_function_declarations
+        {
+            if !function.name.starts_with("__ayy_class_init_")
+                || !function.body.iter().any(|statement| {
+                    matches!(
+                        statement,
+                        Statement::Return(Expression::Identifier(name)) if name == source_owner
+                    )
+                })
+            {
+                continue;
+            }
+            Self::collect_class_init_private_runtime_shadow_entries(
+                source_owner,
+                &function.body,
+                &mut seen,
+                &mut entries,
+            );
+        }
+
+        entries
+    }
+
+    fn collect_class_init_private_runtime_shadow_entries(
+        source_owner: &str,
+        statements: &[Statement],
+        seen: &mut HashSet<String>,
+        entries: &mut Vec<(Expression, Expression)>,
+    ) {
+        for statement in statements {
+            match statement {
+                Statement::Expression(Expression::Call { callee, arguments }) => {
+                    Self::collect_class_init_private_define_property_entry(
+                        source_owner,
+                        callee,
+                        arguments,
+                        seen,
+                        entries,
+                    );
+                }
+                Statement::Expression(Expression::AssignMember {
+                    object,
+                    property,
+                    value,
+                }) => {
+                    Self::collect_class_init_private_assignment_entry(
+                        source_owner,
+                        object,
+                        property,
+                        value,
+                        seen,
+                        entries,
+                    );
+                }
+                Statement::AssignMember {
+                    object,
+                    property,
+                    value,
+                } => {
+                    Self::collect_class_init_private_assignment_entry(
+                        source_owner,
+                        object,
+                        property,
+                        value,
+                        seen,
+                        entries,
+                    );
+                }
+                Statement::Labeled { body, .. }
+                | Statement::Block { body }
+                | Statement::Declaration { body } => {
+                    Self::collect_class_init_private_runtime_shadow_entries(
+                        source_owner,
+                        body,
+                        seen,
+                        entries,
+                    );
+                }
+                Statement::If {
+                    then_branch,
+                    else_branch,
+                    ..
+                } => {
+                    Self::collect_class_init_private_runtime_shadow_entries(
+                        source_owner,
+                        then_branch,
+                        seen,
+                        entries,
+                    );
+                    Self::collect_class_init_private_runtime_shadow_entries(
+                        source_owner,
+                        else_branch,
+                        seen,
+                        entries,
+                    );
+                }
+                _ => {}
+            }
+        }
+    }
+
+    fn collect_class_init_private_assignment_entry(
+        source_owner: &str,
+        object: &Expression,
+        property: &Expression,
+        value: &Expression,
+        seen: &mut HashSet<String>,
+        entries: &mut Vec<(Expression, Expression)>,
+    ) {
+        if !matches!(object, Expression::Identifier(target) if target == source_owner) {
+            return;
+        }
+        let Expression::String(property_name) = property else {
+            return;
+        };
+        if !property_name.starts_with("__ayy$private$") {
+            return;
+        }
+        if seen.insert(property_name.clone()) {
+            entries.push((property.clone(), value.clone()));
+        }
+        if let Some(marker_property) = private_brand_marker_property_expression(property)
+            && let Expression::String(marker_name) = &marker_property
+            && seen.insert(marker_name.clone())
+        {
+            entries.push((marker_property, Expression::Bool(true)));
+        }
+    }
+
+    fn collect_class_init_private_define_property_entry(
+        source_owner: &str,
+        callee: &Expression,
+        arguments: &[CallArgument],
+        seen: &mut HashSet<String>,
+        entries: &mut Vec<(Expression, Expression)>,
+    ) {
+        let Expression::Member { object, property } = callee else {
+            return;
+        };
+        if !matches!(object.as_ref(), Expression::Identifier(name) if name == "Object")
+            || !matches!(property.as_ref(), Expression::String(name) if name == "defineProperty")
+        {
+            return;
+        }
+        let [
+            CallArgument::Expression(Expression::Identifier(target)),
+            CallArgument::Expression(property),
+            CallArgument::Expression(descriptor_expression),
+            ..,
+        ] = arguments
+        else {
+            return;
+        };
+        if target != source_owner {
+            return;
+        }
+        let Expression::String(property_name) = property else {
+            return;
+        };
+        if !property_name.starts_with("__ayy$private$") {
+            return;
+        }
+        let Some(descriptor) = resolve_property_descriptor_definition(descriptor_expression) else {
+            return;
+        };
+        let fallback_value = descriptor
+            .value
+            .or(descriptor.getter)
+            .or(descriptor.setter)
+            .unwrap_or(Expression::Undefined);
+        let property = Expression::String(property_name.clone());
+        if seen.insert(property_name.clone()) {
+            entries.push((property.clone(), fallback_value));
+        }
+        if let Some(marker_property) = private_brand_marker_property_expression(&property)
+            && let Expression::String(marker_name) = &marker_property
+            && seen.insert(marker_name.clone())
+        {
+            entries.push((marker_property, Expression::Bool(true)));
+        }
+    }
+
     fn private_runtime_shadow_marker_fallback(
         &self,
         source_owner: &str,
@@ -507,7 +791,102 @@ impl<'a> FunctionCompiler<'a> {
             .unwrap_or(fallback_value)
     }
 
-    fn runtime_object_property_shadow_copy_entries(
+    fn private_brand_marker_capture_slot_for_owner(&self, owner: &str) -> Option<String> {
+        let local_capture_slots = self
+            .state
+            .speculation
+            .static_semantics
+            .objects
+            .member_function_capture_slots
+            .iter()
+            .map(|(key, slots)| (key.clone(), slots.clone()));
+        let global_capture_slots = self.backend.global_member_function_capture_slot_entries();
+        let mut slots = BTreeSet::new();
+        for (key, capture_slots) in local_capture_slots.chain(global_capture_slots) {
+            if !matches!(
+                &key.target,
+                MemberFunctionBindingTarget::Identifier(target) if target == owner
+            ) {
+                continue;
+            }
+            for (capture_name, slot_name) in capture_slots {
+                if capture_name.starts_with("__ayy_class_brand_") {
+                    slots.insert(slot_name);
+                }
+            }
+        }
+        if slots.len() == 1 {
+            slots.into_iter().next()
+        } else {
+            None
+        }
+    }
+
+    fn private_brand_marker_copy_fallback_for_target(
+        &self,
+        target_owner: &str,
+        property: &Expression,
+        fallback_value: &Expression,
+    ) -> Option<Expression> {
+        if !matches!(fallback_value, Expression::Bool(true)) {
+            return None;
+        }
+        let Expression::String(property_name) = property else {
+            return None;
+        };
+        if !property_name.starts_with("__ayy$private_brand$") {
+            return None;
+        }
+        self.private_brand_marker_capture_slot_for_owner(target_owner)
+            .map(Expression::Identifier)
+    }
+
+    fn append_static_private_marker_shadow_entries(
+        source_owner: &str,
+        entries: &mut Vec<(Expression, Option<Expression>)>,
+        known_private_properties: &mut HashSet<String>,
+    ) {
+        if source_owner == "this" {
+            return;
+        }
+        let mut marker_entries = Vec::new();
+        for (property, _) in entries.iter() {
+            let Expression::String(property_name) = property else {
+                continue;
+            };
+            if !property_name.starts_with("__ayy$private$")
+                || (!property_name.contains("__ayy_class_expr_")
+                    && !property_name.contains("__ayy_class_ctor_"))
+            {
+                continue;
+            }
+            let Some(marker_property) = private_brand_marker_property_expression(property) else {
+                continue;
+            };
+            let Expression::String(marker_name) = &marker_property else {
+                continue;
+            };
+            if known_private_properties.insert(marker_name.clone()) {
+                marker_entries.push((marker_property, Some(Expression::Bool(true))));
+            }
+        }
+        entries.extend(marker_entries);
+    }
+
+    fn class_init_defines_static_private_marker(
+        &self,
+        source_owner: &str,
+        marker_property: &Expression,
+    ) -> bool {
+        self.class_init_private_runtime_shadow_entries_for_owner(source_owner)
+            .into_iter()
+            .any(|(property, value)| {
+                static_expression_matches(&property, marker_property)
+                    && matches!(value, Expression::Bool(true))
+            })
+    }
+
+    pub(in crate::backend::direct_wasm) fn runtime_object_property_shadow_copy_entries(
         &self,
         source_owner: &str,
     ) -> Vec<(Expression, Option<Expression>)> {
@@ -528,6 +907,60 @@ impl<'a> FunctionCompiler<'a> {
                 (property, Some(fallback_value))
             })
             .collect::<Vec<_>>();
+
+        let mut known_property_keys = entries
+            .iter()
+            .map(|(property, _)| Self::runtime_object_property_shadow_key(property))
+            .collect::<HashSet<_>>();
+        let property_prefix = format!("__ayy_object_property__{source_owner}__");
+        let predeclared_shadow_names = self
+            .backend
+            .global_semantics
+            .global_names()
+            .implicit_bindings
+            .keys()
+            .chain(
+                self.backend
+                    .shared_global_semantics
+                    .global_names()
+                    .implicit_bindings
+                    .keys(),
+            )
+            .filter(|name| name.starts_with(&property_prefix))
+            .cloned()
+            .collect::<Vec<_>>();
+        for name in predeclared_shadow_names {
+            let Some(property_name) = Self::runtime_object_property_name_from_shadow_suffix(
+                &name[property_prefix.len()..],
+            ) else {
+                continue;
+            };
+            let property = Expression::String(property_name);
+            if known_property_keys.insert(Self::runtime_object_property_shadow_key(&property)) {
+                entries.push((property, None));
+            }
+        }
+        if let Some(source_binding) = self.resolve_runtime_shadow_object_binding(source_owner) {
+            let mut shadow_entries =
+                self.object_runtime_shadow_entries_from_binding(&source_binding);
+            self.filter_proxy_private_runtime_shadow_entries(source_owner, &mut shadow_entries);
+            for (property, fallback_value) in shadow_entries {
+                if suppress_private_fallbacks && Self::runtime_shadow_property_is_private(&property)
+                {
+                    continue;
+                }
+                if !known_property_keys.insert(Self::runtime_object_property_shadow_key(&property))
+                {
+                    continue;
+                }
+                let fallback_value = self.private_runtime_shadow_marker_fallback(
+                    source_owner,
+                    &property,
+                    fallback_value,
+                );
+                entries.push((property, Some(fallback_value)));
+            }
+        }
 
         let mut known_private_properties = entries
             .iter()
@@ -551,6 +984,21 @@ impl<'a> FunctionCompiler<'a> {
                 entries.push((property, Some(fallback_value)));
             }
         }
+        for (property, fallback_value) in
+            self.class_init_private_runtime_shadow_entries_for_owner(source_owner)
+        {
+            let Expression::String(property_name) = &property else {
+                continue;
+            };
+            if known_private_properties.insert(property_name.clone()) {
+                entries.push((property, Some(fallback_value)));
+            }
+        }
+        Self::append_static_private_marker_shadow_entries(
+            source_owner,
+            &mut entries,
+            &mut known_private_properties,
+        );
 
         entries
     }
@@ -712,24 +1160,54 @@ impl<'a> FunctionCompiler<'a> {
                 continue;
             }
             self.clear_runtime_object_property_shadow_prefix(param_name);
+            self.state.clear_member_bindings_for_name(param_name, true);
+            if self.binding_name_is_global(param_name) {
+                self.backend
+                    .clear_global_member_bindings_for_name(param_name);
+            }
             if let Some(source_owner) = source_owner.as_ref() {
                 let source_owner_has_bindings =
                     self.runtime_object_property_shadow_owner_has_bindings(source_owner);
                 self.emit_runtime_object_property_shadow_copy(source_owner, param_name)?;
-                if !source_owner_has_bindings
-                    && let Some(argument_object_binding) = argument_object_binding
-                        .as_ref()
-                        .or(parameter_object_binding)
+                if let Some(argument_object_binding) = argument_object_binding
+                    .as_ref()
+                    .or(parameter_object_binding)
                 {
-                    self.emit_runtime_object_property_shadow_seed_from_binding(
-                        param_name,
-                        argument_object_binding,
-                    )?;
+                    if let Some((resolved_param_name, _)) =
+                        self.resolve_current_local_binding(param_name)
+                    {
+                        if resolved_param_name != *param_name {
+                            self.state
+                                .speculation
+                                .static_semantics
+                                .set_local_object_binding(
+                                    &resolved_param_name,
+                                    argument_object_binding.clone(),
+                                );
+                        }
+                    }
+                    self.state
+                        .speculation
+                        .static_semantics
+                        .set_local_object_binding(param_name, argument_object_binding.clone());
+                    if !source_owner_has_bindings {
+                        let getter_this_expression = if source_owner == "this" {
+                            Expression::This
+                        } else {
+                            Expression::Identifier(source_owner.clone())
+                        };
+                        self.emit_runtime_object_property_shadow_seed_from_binding_with_receiver(
+                            param_name,
+                            argument_object_binding,
+                            &getter_this_expression,
+                        )?;
+                    }
                     self.sync_runtime_object_property_shadow_static_metadata_from_binding(
                         param_name,
                         argument_object_binding,
                     );
                 }
+                self.copy_member_bindings_for_alias(param_name, source_owner);
                 writebacks.push((
                     param_name.clone(),
                     source_owner.clone(),
@@ -742,9 +1220,27 @@ impl<'a> FunctionCompiler<'a> {
                 .as_ref()
                 .or(parameter_object_binding)
             {
-                self.emit_runtime_object_property_shadow_seed_from_binding(
+                if let Some((resolved_param_name, _)) =
+                    self.resolve_current_local_binding(param_name)
+                {
+                    if resolved_param_name != *param_name {
+                        self.state
+                            .speculation
+                            .static_semantics
+                            .set_local_object_binding(
+                                &resolved_param_name,
+                                argument_object_binding.clone(),
+                            );
+                    }
+                }
+                self.state
+                    .speculation
+                    .static_semantics
+                    .set_local_object_binding(param_name, argument_object_binding.clone());
+                self.emit_runtime_object_property_shadow_seed_from_binding_with_receiver(
                     param_name,
                     argument_object_binding,
+                    argument_expression,
                 )?;
                 self.sync_runtime_object_property_shadow_static_metadata_from_binding(
                     param_name,
@@ -799,6 +1295,11 @@ impl<'a> FunctionCompiler<'a> {
                 continue;
             }
             self.clear_runtime_object_property_shadow_prefix(&owner_name);
+            self.state.clear_member_bindings_for_name(&owner_name, true);
+            if self.binding_name_is_global(&owner_name) {
+                self.backend
+                    .clear_global_member_bindings_for_name(&owner_name);
+            }
             for property_name in
                 Self::direct_arguments_slot_assignment_properties(user_function, *index)
             {
@@ -808,18 +1309,25 @@ impl<'a> FunctionCompiler<'a> {
                 let source_owner_has_bindings =
                     self.runtime_object_property_shadow_owner_has_bindings(source_owner);
                 self.emit_runtime_object_property_shadow_copy(source_owner, &owner_name)?;
-                if !source_owner_has_bindings
-                    && let Some(argument_object_binding) = argument_object_binding.as_ref()
-                {
-                    self.emit_runtime_object_property_shadow_seed_from_binding(
-                        &owner_name,
-                        argument_object_binding,
-                    )?;
+                if let Some(argument_object_binding) = argument_object_binding.as_ref() {
+                    if !source_owner_has_bindings {
+                        let getter_this_expression = if source_owner == "this" {
+                            Expression::This
+                        } else {
+                            Expression::Identifier(source_owner.clone())
+                        };
+                        self.emit_runtime_object_property_shadow_seed_from_binding_with_receiver(
+                            &owner_name,
+                            argument_object_binding,
+                            &getter_this_expression,
+                        )?;
+                    }
                     self.sync_runtime_object_property_shadow_static_metadata_from_binding(
                         &owner_name,
                         argument_object_binding,
                     );
                 }
+                self.copy_member_bindings_for_alias(&owner_name, source_owner);
                 writebacks.push((
                     owner_name,
                     source_owner.clone(),
@@ -829,9 +1337,10 @@ impl<'a> FunctionCompiler<'a> {
             }
 
             if let Some(argument_object_binding) = argument_object_binding.as_ref() {
-                self.emit_runtime_object_property_shadow_seed_from_binding(
+                self.emit_runtime_object_property_shadow_seed_from_binding_with_receiver(
                     &owner_name,
                     argument_object_binding,
+                    argument_expression,
                 )?;
                 self.sync_runtime_object_property_shadow_static_metadata_from_binding(
                     &owner_name,
@@ -1209,6 +1718,17 @@ impl<'a> FunctionCompiler<'a> {
     ) -> Option<String> {
         let identifier_expression = Expression::Identifier(name.to_string());
         let trace_runtime_shadows = std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some();
+        if name.starts_with("__ayy_target_object_")
+            && let Some(source) = self
+                .state
+                .speculation
+                .static_semantics
+                .local_value_binding(name)
+                .or_else(|| self.global_value_binding(name))
+            && let Some(owner) = self.runtime_assignment_target_object_shadow_owner(source)
+        {
+            return Some(owner);
+        }
         if name == "this" {
             if self
                 .current_user_function()
@@ -1218,6 +1738,14 @@ impl<'a> FunctionCompiler<'a> {
                 return Some(hidden_name);
             }
             return Some("this".to_string());
+        }
+        if self.is_unshadowed_builtin_identifier(name)
+            && matches!(
+                builtin_identifier_kind(name),
+                Some(StaticValueKind::Object | StaticValueKind::Function)
+            )
+        {
+            return Some(name.to_string());
         }
         if let Some(source_name) = scoped_binding_source_name(name)
             && (self.runtime_object_property_shadow_owner_has_bindings(source_name)
@@ -1328,12 +1856,13 @@ impl<'a> FunctionCompiler<'a> {
                 .and_then(|resolved| {
                     self.runtime_object_property_shadow_owner_name_for_expression(&resolved)
                         .or_else(|| {
-                            (matches!(
-                                self.infer_value_kind(&resolved),
-                                Some(StaticValueKind::Object | StaticValueKind::Function)
-                            ) || self
-                                .resolve_object_binding_from_expression(&resolved)
-                                .is_some())
+                            (expression_may_evaluate_to_runtime_shadow_owner(&resolved)
+                                && (matches!(
+                                    self.infer_value_kind(&resolved),
+                                    Some(StaticValueKind::Object | StaticValueKind::Function)
+                                ) || self
+                                    .resolve_object_binding_from_expression(&resolved)
+                                    .is_some()))
                             .then(|| name.to_string())
                         })
                 })
@@ -1363,6 +1892,93 @@ impl<'a> FunctionCompiler<'a> {
         resolved_owner
     }
 
+    pub(in crate::backend::direct_wasm) fn runtime_object_reference_alias_owner_names(
+        &self,
+        owner_name: &str,
+    ) -> Vec<String> {
+        let Some(owner_key) = self.reference_identity_key_for_identifier(owner_name) else {
+            return Vec::new();
+        };
+
+        let mut candidates = self
+            .state
+            .speculation
+            .static_semantics
+            .values
+            .local_value_bindings
+            .keys()
+            .cloned()
+            .collect::<Vec<_>>();
+        candidates.extend(
+            self.backend
+                .global_semantics
+                .values
+                .value_bindings
+                .keys()
+                .cloned(),
+        );
+        candidates.extend(
+            self.backend
+                .shared_global_semantics
+                .values
+                .value_bindings
+                .keys()
+                .cloned(),
+        );
+
+        let mut aliases = Vec::new();
+        for candidate in candidates {
+            if candidate == owner_name || aliases.iter().any(|alias| alias == &candidate) {
+                continue;
+            }
+            if self
+                .reference_identity_key_for_identifier(&candidate)
+                .is_some_and(|candidate_key| candidate_key == owner_key)
+            {
+                aliases.push(candidate);
+            }
+        }
+        aliases
+    }
+
+    fn runtime_assignment_target_object_shadow_owner(
+        &self,
+        expression: &Expression,
+    ) -> Option<String> {
+        match expression {
+            Expression::Identifier(name) => {
+                self.runtime_object_property_shadow_owner_name_for_identifier(name)
+            }
+            Expression::This => {
+                self.runtime_object_property_shadow_owner_name_for_identifier("this")
+            }
+            Expression::Member { object, property } => {
+                let property = self
+                    .resolve_property_key_expression(property)
+                    .unwrap_or_else(|| self.materialize_static_expression(property));
+                let object_owner = self
+                    .runtime_assignment_target_object_shadow_owner(object)
+                    .or_else(|| {
+                        self.runtime_object_property_shadow_owner_name_for_expression(object)
+                    })?;
+                let materialized = self.materialize_static_expression(expression);
+                let materialized_is_object = matches!(
+                    self.infer_value_kind(&materialized),
+                    Some(StaticValueKind::Object | StaticValueKind::Function)
+                ) || self
+                    .resolve_object_binding_from_expression(&materialized)
+                    .is_some()
+                    || self
+                        .resolve_array_binding_from_expression(&materialized)
+                        .is_some();
+                materialized_is_object.then(|| {
+                    Self::runtime_object_member_shadow_owner_name(&object_owner, &property)
+                })
+            }
+            _ => None,
+        }
+    }
+
     fn runtime_object_property_shadow_owner_name_for_expression(
         &self,
         expression: &Expression,
@@ -1390,8 +2006,210 @@ impl<'a> FunctionCompiler<'a> {
                     index,
                 ))
             }
+            Expression::Member { object, property } => {
+                let property = self
+                    .resolve_property_key_expression(property)
+                    .unwrap_or_else(|| self.materialize_static_expression(property));
+                let direct_object_owner = match object.as_ref() {
+                    Expression::Identifier(name) => Some(name.as_str()),
+                    Expression::This => Some("this"),
+                    _ => None,
+                };
+                if let Some(object_owner) = direct_object_owner {
+                    let member_owner =
+                        Self::runtime_object_member_shadow_owner_name(object_owner, &property);
+                    if self.runtime_object_property_shadow_owner_has_bindings(&member_owner) {
+                        return Some(member_owner);
+                    }
+                }
+                if let Some(object_owner) =
+                    self.runtime_object_property_shadow_owner_name_for_expression(object)
+                {
+                    let member_owner =
+                        Self::runtime_object_member_shadow_owner_name(&object_owner, &property);
+                    if self.runtime_object_property_shadow_owner_has_bindings(&member_owner) {
+                        return Some(member_owner);
+                    }
+                }
+                let mut values = Vec::new();
+                if let Some(value) = self
+                    .resolve_object_binding_from_expression(object)
+                    .and_then(|object_binding| {
+                        self.resolve_object_binding_property_value(&object_binding, &property)
+                    })
+                {
+                    values.push(value);
+                }
+                if let Some(shadow_binding_name) = self
+                    .runtime_object_property_shadow_binding_name_for_expression(object, &property)
+                    && let Some(value) = self
+                        .global_value_binding(&shadow_binding_name)
+                        .cloned()
+                        .or_else(|| {
+                            self.backend
+                                .shared_global_semantics
+                                .values
+                                .value_bindings
+                                .get(&shadow_binding_name)
+                                .cloned()
+                        })
+                {
+                    values.push(value);
+                }
+                values.into_iter().find_map(|value| {
+                    self.runtime_object_property_shadow_owner_name_for_expression(&value)
+                        .or_else(|| {
+                            let materialized = self.materialize_static_expression(&value);
+                            (!static_expression_matches(&materialized, &value))
+                                .then(|| {
+                                    self.runtime_object_property_shadow_owner_name_for_expression(
+                                        &materialized,
+                                    )
+                                })
+                                .flatten()
+                        })
+                })
+            }
             _ => None,
         }
+    }
+
+    fn runtime_member_value_shadow_source_owners(
+        &self,
+        source_owner: &str,
+        property: &Expression,
+        fallback_value: Option<&Expression>,
+    ) -> Vec<String> {
+        let mut owners = Vec::new();
+        let source_member_owner =
+            Self::runtime_object_member_shadow_owner_name(source_owner, property);
+        if self.runtime_object_property_shadow_owner_has_bindings(&source_member_owner) {
+            owners.push(source_member_owner);
+        }
+        if let Some(fallback_value) = fallback_value {
+            if let Some(owner) =
+                self.runtime_object_property_shadow_owner_name_for_expression(fallback_value)
+            {
+                if !owners.iter().any(|existing| existing == &owner) {
+                    owners.push(owner);
+                }
+            }
+            let materialized = self.materialize_static_expression(fallback_value);
+            if !static_expression_matches(&materialized, fallback_value)
+                && let Some(owner) =
+                    self.runtime_object_property_shadow_owner_name_for_expression(&materialized)
+                && !owners.iter().any(|existing| existing == &owner)
+            {
+                owners.push(owner);
+            }
+        }
+        owners
+    }
+
+    fn predeclare_runtime_object_property_shadow_copy_target_bindings(
+        &mut self,
+        source_owner: &str,
+        target_owner: &str,
+    ) {
+        let mut entries = self.runtime_object_property_shadow_copy_entries(source_owner);
+        self.append_target_private_runtime_shadow_copy_entries(
+            source_owner,
+            target_owner,
+            &mut entries,
+        );
+        for (property, _) in entries {
+            self.runtime_object_property_shadow_binding_by_property(target_owner, &property);
+            self.runtime_object_property_shadow_deleted_binding_by_property(
+                target_owner,
+                &property,
+            );
+        }
+
+        let source_prefix = format!("__ayy_object_property__{source_owner}__");
+        let source_deleted_prefix = format!("__ayy_object_property_deleted__{source_owner}__");
+        let suffixes = self
+            .backend
+            .global_semantics
+            .global_names()
+            .implicit_bindings
+            .keys()
+            .filter_map(|name| {
+                name.strip_prefix(&source_prefix)
+                    .or_else(|| name.strip_prefix(&source_deleted_prefix))
+                    .map(str::to_string)
+            })
+            .collect::<HashSet<_>>();
+        for suffix in suffixes {
+            self.ensure_implicit_global_binding(&format!(
+                "__ayy_object_property__{target_owner}__{suffix}"
+            ));
+            self.ensure_implicit_global_binding(&format!(
+                "__ayy_object_property_deleted__{target_owner}__{suffix}"
+            ));
+        }
+    }
+
+    fn predeclare_runtime_member_value_shadow_targets(
+        &mut self,
+        source_owner: &str,
+        target_owner: &str,
+        property: &Expression,
+        fallback_value: Option<&Expression>,
+    ) -> String {
+        let member_owner = Self::runtime_object_member_shadow_owner_name(target_owner, property);
+        let source_owners =
+            self.runtime_member_value_shadow_source_owners(source_owner, property, fallback_value);
+        for source_owner in source_owners {
+            self.predeclare_runtime_object_property_shadow_copy_target_bindings(
+                &source_owner,
+                &member_owner,
+            );
+        }
+        member_owner
+    }
+
+    fn emit_clear_runtime_member_value_shadow(
+        &mut self,
+        source_owner: &str,
+        target_owner: &str,
+        property: &Expression,
+        fallback_value: Option<&Expression>,
+    ) {
+        if Self::runtime_shadow_property_is_private(property) {
+            return;
+        }
+        let member_owner = self.predeclare_runtime_member_value_shadow_targets(
+            source_owner,
+            target_owner,
+            property,
+            fallback_value,
+        );
+        self.clear_runtime_object_property_shadow_prefix(&member_owner);
+    }
+
+    fn emit_refresh_runtime_member_value_shadow(
+        &mut self,
+        source_owner: &str,
+        target_owner: &str,
+        property: &Expression,
+        fallback_value: Option<&Expression>,
+    ) -> DirectResult<()> {
+        if Self::runtime_shadow_property_is_private(property) {
+            return Ok(());
+        }
+        let member_owner = self.predeclare_runtime_member_value_shadow_targets(
+            source_owner,
+            target_owner,
+            property,
+            fallback_value,
+        );
+        let source_owners =
+            self.runtime_member_value_shadow_source_owners(source_owner, property, fallback_value);
+        self.clear_runtime_object_property_shadow_prefix(&member_owner);
+        for source_owner in source_owners {
+            self.emit_runtime_object_property_shadow_copy(&source_owner, &member_owner)?;
+        }
+        Ok(())
     }
 
     pub(in crate::backend::direct_wasm) fn runtime_object_property_shadow_binding_name_for_expression(
@@ -1591,6 +2409,51 @@ impl<'a> FunctionCompiler<'a> {
         ))
     }
 
+    pub(in crate::backend::direct_wasm) fn runtime_object_dynamic_property_shadow_has_binding(
+        &self,
+        owner_name: &str,
+    ) -> bool {
+        self.global_has_implicit_binding(&Self::runtime_object_dynamic_property_key_shadow_name(
+            owner_name,
+        ))
+    }
+
+    pub(in crate::backend::direct_wasm) fn runtime_object_dynamic_property_key_shadow_binding(
+        &mut self,
+        owner_name: &str,
+    ) -> ImplicitGlobalBinding {
+        self.ensure_implicit_global_binding(&Self::runtime_object_dynamic_property_key_shadow_name(
+            owner_name,
+        ))
+    }
+
+    pub(in crate::backend::direct_wasm) fn runtime_object_dynamic_property_value_shadow_binding(
+        &mut self,
+        owner_name: &str,
+    ) -> ImplicitGlobalBinding {
+        self.ensure_implicit_global_binding(
+            &Self::runtime_object_dynamic_property_value_shadow_name(owner_name),
+        )
+    }
+
+    pub(in crate::backend::direct_wasm) fn emit_runtime_object_dynamic_property_shadow_store_from_locals(
+        &mut self,
+        owner_name: &str,
+        property_local: u32,
+        value_local: u32,
+    ) {
+        let key_binding = self.runtime_object_dynamic_property_key_shadow_binding(owner_name);
+        let value_binding = self.runtime_object_dynamic_property_value_shadow_binding(owner_name);
+        self.push_local_get(property_local);
+        self.push_global_set(key_binding.value_index);
+        self.push_i32_const(1);
+        self.push_global_set(key_binding.present_index);
+        self.push_local_get(value_local);
+        self.push_global_set(value_binding.value_index);
+        self.push_i32_const(1);
+        self.push_global_set(value_binding.present_index);
+    }
+
     pub(in crate::backend::direct_wasm) fn object_runtime_shadow_properties(
         &self,
         owner_name: &str,
@@ -1611,55 +2474,108 @@ impl<'a> FunctionCompiler<'a> {
     ) -> Option<ObjectValueBinding> {
         let prefix = format!("__ayy_object_property__{owner_name}__");
         let deleted_prefix = format!("__ayy_object_property_deleted__{owner_name}__");
-        let static_object_binding = self.resolve_object_binding_from_expression(
-            &Expression::Identifier(owner_name.to_string()),
-        );
+        let resolved_owner_name = self
+            .resolve_current_local_binding(owner_name)
+            .map(|(resolved_name, _)| resolved_name)
+            .unwrap_or_else(|| owner_name.to_string());
+        let static_object_binding = self
+            .state
+            .speculation
+            .static_semantics
+            .local_object_binding(&resolved_owner_name)
+            .or_else(|| {
+                self.state
+                    .speculation
+                    .static_semantics
+                    .local_object_binding(owner_name)
+            })
+            .cloned()
+            .or_else(|| self.global_object_binding(owner_name).cloned())
+            .or_else(|| self.global_prototype_object_binding(owner_name).cloned())
+            .or_else(|| {
+                self.resolve_user_function_capture_hidden_name(owner_name)
+                    .and_then(|hidden_name| self.global_object_binding(&hidden_name).cloned())
+            })
+            .or_else(|| {
+                self.resolve_object_binding_from_expression(&Expression::Identifier(
+                    owner_name.to_string(),
+                ))
+            });
         let had_static_object_binding = static_object_binding.is_some();
         let mut object_binding = static_object_binding.unwrap_or_else(empty_object_value_binding);
         self.filter_proxy_private_object_binding_entries(owner_name, &mut object_binding);
         let mut found_shadow_entry = false;
-        for name in self
+        let mut shadow_names = self
             .backend
             .global_semantics
             .global_names()
             .implicit_bindings
-            .keys()
-            .filter(|name| name.starts_with(&prefix))
-        {
+            .iter()
+            .filter_map(|(name, binding)| {
+                name.starts_with(&prefix)
+                    .then(|| (binding.value_index, name.clone()))
+            })
+            .collect::<Vec<_>>();
+        shadow_names.extend(
+            self.backend
+                .shared_global_semantics
+                .global_names()
+                .implicit_bindings
+                .iter()
+                .filter_map(|(name, binding)| {
+                    name.starts_with(&prefix)
+                        .then(|| (binding.value_index, name.clone()))
+                }),
+        );
+        shadow_names.sort_by(|(left_index, left_name), (right_index, right_name)| {
+            left_index
+                .cmp(right_index)
+                .then_with(|| left_name.cmp(right_name))
+        });
+        let mut processed_shadow_names = Vec::new();
+        for (_, name) in shadow_names {
+            if processed_shadow_names.iter().any(|seen| seen == &name) {
+                continue;
+            }
+            processed_shadow_names.push(name.clone());
             let Some(property_name) =
                 Self::runtime_object_property_name_from_shadow_suffix(&name[prefix.len()..])
             else {
                 continue;
             };
-            let Some(value) = self.global_value_binding(name).cloned().or_else(|| {
+            let Some(value) = self.global_value_binding(&name).cloned().or_else(|| {
                 self.backend
                     .shared_global_semantics
                     .values
                     .value_bindings
-                    .get(name)
+                    .get(&name)
                     .cloned()
             }) else {
                 continue;
             };
             let property = Expression::String(property_name);
-            if let Some(descriptor) = self.backend.global_property_descriptor(name).or_else(|| {
+            if let Some(descriptor) = self.backend.global_property_descriptor(&name).or_else(|| {
                 self.backend
                     .shared_global_semantics
                     .values
-                    .property_descriptor(name)
+                    .property_descriptor(&name)
             }) {
+                let is_accessor = descriptor.has_get
+                    || descriptor.has_set
+                    || descriptor.getter.is_some()
+                    || descriptor.setter.is_some();
                 object_binding_define_property_descriptor(
                     &mut object_binding,
                     property,
                     PropertyDescriptorBinding {
-                        value: Some(descriptor.value.clone()),
+                        value: (!is_accessor).then(|| descriptor.value.clone()),
                         configurable: descriptor.configurable,
                         enumerable: descriptor.enumerable,
                         writable: descriptor.writable,
-                        getter: None,
-                        setter: None,
-                        has_get: false,
-                        has_set: false,
+                        getter: descriptor.getter.clone(),
+                        setter: descriptor.setter.clone(),
+                        has_get: descriptor.has_get,
+                        has_set: descriptor.has_set,
                     },
                 );
             } else {
@@ -1667,23 +2583,42 @@ impl<'a> FunctionCompiler<'a> {
             }
             found_shadow_entry = true;
         }
-        let deleted_shadow_names = self
+        let mut deleted_shadow_names = self
             .backend
             .global_semantics
             .global_names()
             .implicit_bindings
-            .keys()
-            .chain(
-                self.backend
-                    .shared_global_semantics
-                    .global_names()
-                    .implicit_bindings
-                    .keys(),
-            )
-            .filter(|name| name.starts_with(&deleted_prefix))
-            .cloned()
+            .iter()
+            .filter_map(|(name, binding)| {
+                name.starts_with(&deleted_prefix)
+                    .then(|| (binding.value_index, name.clone()))
+            })
             .collect::<Vec<_>>();
-        for name in deleted_shadow_names {
+        deleted_shadow_names.extend(
+            self.backend
+                .shared_global_semantics
+                .global_names()
+                .implicit_bindings
+                .iter()
+                .filter_map(|(name, binding)| {
+                    name.starts_with(&deleted_prefix)
+                        .then(|| (binding.value_index, name.clone()))
+                }),
+        );
+        deleted_shadow_names.sort_by(|(left_index, left_name), (right_index, right_name)| {
+            left_index
+                .cmp(right_index)
+                .then_with(|| left_name.cmp(right_name))
+        });
+        let mut processed_deleted_shadow_names = Vec::new();
+        for (_, name) in deleted_shadow_names {
+            if processed_deleted_shadow_names
+                .iter()
+                .any(|seen| seen == &name)
+            {
+                continue;
+            }
+            processed_deleted_shadow_names.push(name.clone());
             let Some(property_name) = Self::runtime_object_property_name_from_shadow_suffix(
                 &name[deleted_prefix.len()..],
             ) else {
@@ -1881,8 +2816,34 @@ impl<'a> FunctionCompiler<'a> {
         for (property, fallback_value) in
             self.object_runtime_shadow_entries_from_binding(object_binding)
         {
+            let descriptor = object_binding_lookup_descriptor(object_binding, &property);
+            let getter_return_value =
+                if descriptor.is_some_and(Self::property_descriptor_is_accessor) {
+                    None
+                } else {
+                    descriptor
+                        .and_then(|descriptor| descriptor.getter.as_ref())
+                        .and_then(|getter| match getter {
+                            Expression::Identifier(function_name) => self
+                                .resolve_static_return_expression_from_user_function_call(
+                                    function_name,
+                                    &[],
+                                    None,
+                                ),
+                            _ => None,
+                        })
+                };
+            let fallback_value = getter_return_value.as_ref().unwrap_or(&fallback_value);
             let fallback_value =
-                self.rewrite_static_new_this_expression_for_owner(&fallback_value, target_owner);
+                self.rewrite_static_new_this_expression_for_owner(fallback_value, target_owner);
+            if Self::runtime_shadow_class_entry_should_defer(target_owner, &fallback_value) {
+                if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+                    eprintln!(
+                        "runtime_shadow_static_sync_defer_class target={target_owner} property={property:?} fallback={fallback_value:?}"
+                    );
+                }
+                continue;
+            }
             let shadow_binding_name = format!(
                 "__ayy_object_property__{target_owner}__{}",
                 Self::runtime_object_property_shadow_key(&property)
@@ -1902,16 +2863,82 @@ impl<'a> FunctionCompiler<'a> {
                 &shadow_binding_name,
                 &materialized_value,
             );
-            if let Some(descriptor) = object_binding_lookup_descriptor(object_binding, &property) {
+            if let Some(binding_property) = self.member_function_binding_property(&property) {
+                let key = MemberFunctionBindingKey {
+                    target: MemberFunctionBindingTarget::Identifier(target_owner.to_string()),
+                    property: binding_property,
+                };
+                if let Some(binding) =
+                    self.resolve_function_binding_from_expression(&materialized_value)
+                {
+                    self.backend
+                        .set_global_member_function_binding(key.clone(), binding);
+                } else {
+                    self.backend.clear_global_member_function_binding(&key);
+                }
+                if let Some(descriptor) = descriptor {
+                    if let Some(binding) = descriptor
+                        .getter
+                        .as_ref()
+                        .and_then(|getter| self.resolve_function_binding_from_expression(getter))
+                    {
+                        self.backend
+                            .set_global_member_getter_binding(key.clone(), binding);
+                    } else if descriptor.has_get || descriptor.getter.is_some() {
+                        self.backend.clear_global_member_getter_binding(&key);
+                    }
+                    if let Some(binding) = descriptor
+                        .setter
+                        .as_ref()
+                        .and_then(|setter| self.resolve_function_binding_from_expression(setter))
+                    {
+                        self.backend
+                            .set_global_member_setter_binding(key.clone(), binding);
+                    } else if descriptor.has_set || descriptor.setter.is_some() {
+                        self.backend.clear_global_member_setter_binding(&key);
+                    }
+                }
+            }
+            if let Some(descriptor) = descriptor {
                 let descriptor_state = GlobalPropertyDescriptorState {
                     value: descriptor
                         .value
                         .as_ref()
                         .map(|value| self.materialize_static_expression(value))
+                        .or_else(|| getter_return_value.clone())
                         .unwrap_or(Expression::Undefined),
                     writable: descriptor.writable,
                     enumerable: descriptor.enumerable,
                     configurable: descriptor.configurable,
+                    getter: descriptor.getter.clone(),
+                    setter: descriptor.setter.clone(),
+                    has_get: descriptor.has_get,
+                    has_set: descriptor.has_set,
+                };
+                self.backend.upsert_global_property_descriptor(
+                    shadow_binding_name.clone(),
+                    descriptor_state.clone(),
+                );
+                self.backend
+                    .shared_global_semantics
+                    .values
+                    .property_descriptors
+                    .insert(shadow_binding_name.clone(), descriptor_state);
+            } else if let Expression::String(property_name) = &property
+                && object_binding
+                    .non_enumerable_string_properties
+                    .iter()
+                    .any(|hidden_name| hidden_name == property_name)
+            {
+                let descriptor_state = GlobalPropertyDescriptorState {
+                    value: materialized_value.clone(),
+                    writable: Some(true),
+                    enumerable: false,
+                    configurable: true,
+                    getter: None,
+                    setter: None,
+                    has_get: false,
+                    has_set: false,
                 };
                 self.backend.upsert_global_property_descriptor(
                     shadow_binding_name.clone(),
@@ -1941,11 +2968,61 @@ impl<'a> FunctionCompiler<'a> {
         object_binding: &ObjectValueBinding,
     ) -> DirectResult<()> {
         let target_expression = Expression::Identifier(target_owner.to_string());
-        for (property, fallback_value) in
-            self.object_runtime_shadow_entries_from_binding(object_binding)
-        {
+        self.emit_runtime_object_property_shadow_seed_from_binding_with_receiver(
+            target_owner,
+            object_binding,
+            &target_expression,
+        )
+    }
+
+    pub(in crate::backend::direct_wasm) fn emit_runtime_object_property_shadow_seed_from_binding_with_receiver(
+        &mut self,
+        target_owner: &str,
+        object_binding: &ObjectValueBinding,
+        _getter_this_expression: &Expression,
+    ) -> DirectResult<()> {
+        let target_expression = Expression::Identifier(target_owner.to_string());
+        let mut properties = ordered_object_property_names(object_binding)
+            .into_iter()
+            .map(Expression::String)
+            .collect::<Vec<_>>();
+        properties.extend(
+            object_binding
+                .symbol_properties
+                .iter()
+                .map(|(property, _)| property.clone()),
+        );
+        for property in properties {
+            if Self::runtime_shadow_owner_is_class_object(target_owner)
+                && Self::runtime_shadow_property_is_private(&property)
+            {
+                let is_static_private_marker = matches!(
+                    &property,
+                    Expression::String(property_name)
+                        if property_name.starts_with("__ayy$private_brand$")
+                ) && matches!(
+                    object_binding_lookup_value(object_binding, &property),
+                    Some(Expression::Bool(true))
+                ) && self
+                    .class_init_defines_static_private_marker(target_owner, &property);
+                if !is_static_private_marker {
+                    continue;
+                }
+            }
+            let descriptor = object_binding_lookup_descriptor(object_binding, &property);
+            let fallback_value = object_binding_lookup_value(object_binding, &property)
+                .cloned()
+                .unwrap_or(Expression::Undefined);
             let fallback_value =
                 self.rewrite_static_new_this_expression_for_owner(&fallback_value, target_owner);
+            if Self::runtime_shadow_class_entry_should_defer(target_owner, &fallback_value) {
+                if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+                    eprintln!(
+                        "runtime_shadow_seed_defer_class target={target_owner} property={property:?} fallback={fallback_value:?}"
+                    );
+                }
+                continue;
+            }
             let target_binding =
                 self.runtime_object_property_shadow_binding_by_property(target_owner, &property);
             let target_deleted = self.runtime_object_property_shadow_deleted_binding_by_property(
@@ -1956,7 +3033,15 @@ impl<'a> FunctionCompiler<'a> {
             self.push_global_set(target_deleted.value_index);
             self.push_i32_const(0);
             self.push_global_set(target_deleted.present_index);
-            if !self.emit_private_brand_marker_runtime_value(
+            let seed_accessor_placeholder = descriptor
+                .is_some_and(|descriptor| descriptor.has_get || descriptor.getter.is_some());
+            if seed_accessor_placeholder {
+                // Accessor properties must not execute while seeding shadow slots. The
+                // member-read shadow fallback resolves descriptor getters when no
+                // runtime data shadow is present, so the slot stays absent until a
+                // write actually creates a shadow value.
+                self.push_i32_const(JS_UNDEFINED_TAG);
+            } else if !self.emit_private_brand_marker_runtime_value(
                 &target_expression,
                 &property,
                 &fallback_value,
@@ -1964,7 +3049,7 @@ impl<'a> FunctionCompiler<'a> {
                 self.emit_runtime_shadow_fallback_value(&fallback_value)?;
             }
             self.push_global_set(target_binding.value_index);
-            self.push_i32_const(1);
+            self.push_i32_const(if seed_accessor_placeholder { 0 } else { 1 });
             self.push_global_set(target_binding.present_index);
         }
         Ok(())
@@ -1976,7 +3061,7 @@ impl<'a> FunctionCompiler<'a> {
         target_owner: &str,
     ) -> DirectResult<()> {
         let handled_suffixes = self
-            .object_runtime_shadow_properties(source_owner)
+            .runtime_object_property_shadow_copy_entries(source_owner)
             .into_iter()
             .map(|(property, _)| Self::runtime_object_property_shadow_key(&property))
             .collect::<HashSet<_>>();
@@ -2160,6 +3245,9 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         owner_name: &str,
     ) {
+        if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+            eprintln!("runtime_shadow_clear_prefix {owner_name}");
+        }
         let property_prefix = format!("__ayy_object_property__{owner_name}__");
         let deleted_prefix = format!("__ayy_object_property_deleted__{owner_name}__");
         let implicit_bindings = self
@@ -2181,6 +3269,46 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    pub(in crate::backend::direct_wasm) fn clear_runtime_object_property_non_private_shadow_prefix(
+        &mut self,
+        owner_name: &str,
+    ) {
+        if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+            eprintln!("runtime_shadow_clear_non_private_prefix {owner_name}");
+        }
+        let property_prefix = format!("__ayy_object_property__{owner_name}__");
+        let deleted_prefix = format!("__ayy_object_property_deleted__{owner_name}__");
+        let implicit_bindings = self
+            .backend
+            .global_semantics
+            .global_names()
+            .implicit_bindings
+            .iter()
+            .map(|(name, binding)| (name.clone(), *binding))
+            .collect::<Vec<_>>();
+
+        for (name, binding) in implicit_bindings {
+            let suffix = name
+                .strip_prefix(&property_prefix)
+                .or_else(|| name.strip_prefix(&deleted_prefix));
+            let Some(suffix) = suffix else {
+                continue;
+            };
+            if Self::runtime_object_property_name_from_shadow_suffix(suffix).is_some_and(
+                |property_name| {
+                    property_name.starts_with("__ayy$private$")
+                        || property_name.starts_with("__ayy$private_brand$")
+                },
+            ) {
+                continue;
+            }
+            self.push_i32_const(JS_UNDEFINED_TAG);
+            self.push_global_set(binding.value_index);
+            self.push_i32_const(0);
+            self.push_global_set(binding.present_index);
+        }
+    }
+
     pub(in crate::backend::direct_wasm) fn clear_runtime_object_property_shadow_static_metadata_prefix(
         &mut self,
         owner_name: &str,
@@ -2193,12 +3321,24 @@ impl<'a> FunctionCompiler<'a> {
             .global_names()
             .implicit_bindings
             .keys()
+            .chain(
+                self.backend
+                    .shared_global_semantics
+                    .global_names()
+                    .implicit_bindings
+                    .keys(),
+            )
             .filter(|name| name.starts_with(&property_prefix) || name.starts_with(&deleted_prefix))
             .cloned()
-            .collect::<Vec<_>>();
+            .collect::<HashSet<_>>();
 
         for name in names {
-            self.clear_global_binding_state(&name);
+            self.backend
+                .global_semantics
+                .clear_global_binding_state(&name);
+            self.backend
+                .shared_global_semantics
+                .clear_global_binding_state(&name);
         }
     }
 
@@ -2230,11 +3370,12 @@ impl<'a> FunctionCompiler<'a> {
         self.update_local_object_binding(owner_name, &updated_expression);
     }
 
-    fn sync_runtime_object_shadow_owner_static_metadata_from_binding(
+    pub(in crate::backend::direct_wasm) fn sync_runtime_object_shadow_owner_static_metadata_from_binding(
         &mut self,
         owner_name: &str,
         updated_object_binding: &ObjectValueBinding,
     ) {
+        let updated_expression = object_binding_to_expression(updated_object_binding);
         self.clear_runtime_object_property_shadow_static_metadata_prefix(owner_name);
         self.sync_runtime_object_property_shadow_static_metadata_from_binding(
             owner_name,
@@ -2250,6 +3391,7 @@ impl<'a> FunctionCompiler<'a> {
                 .speculation
                 .static_semantics
                 .set_local_object_binding(resolved_name, updated_object_binding.clone());
+            self.update_local_value_binding(resolved_name, &updated_expression);
             self.state
                 .speculation
                 .static_semantics
@@ -2259,6 +3401,7 @@ impl<'a> FunctionCompiler<'a> {
             .speculation
             .static_semantics
             .set_local_object_binding(owner_name, updated_object_binding.clone());
+        self.update_local_value_binding(owner_name, &updated_expression);
         self.state
             .speculation
             .static_semantics
@@ -2268,10 +3411,7 @@ impl<'a> FunctionCompiler<'a> {
             || self.backend.global_has_lexical_binding(owner_name)
             || self.global_has_implicit_binding(owner_name)
         {
-            self.backend
-                .sync_global_object_binding(owner_name, Some(updated_object_binding.clone()));
-            self.backend
-                .set_global_binding_kind(owner_name, StaticValueKind::Object);
+            self.update_static_global_assignment_metadata(owner_name, &updated_expression);
         }
     }
 
@@ -2366,7 +3506,16 @@ impl<'a> FunctionCompiler<'a> {
             target_owner,
             &mut copy_entries,
         );
-        for (property, fallback_value) in copy_entries {
+        for (property, mut fallback_value) in copy_entries {
+            if Self::runtime_shadow_owner_is_class_object(target_owner)
+                && matches!(
+                    &property,
+                    Expression::String(property_name)
+                        if property_name.starts_with("__ayy$private$")
+                )
+            {
+                continue;
+            }
             let is_private_property = matches!(
                 &property,
                 Expression::String(property_name) if property_name.starts_with("__ayy$private$")
@@ -2394,6 +3543,58 @@ impl<'a> FunctionCompiler<'a> {
                 target_owner,
                 &property,
             );
+            let shadow_key = Self::runtime_object_property_shadow_key(&property);
+            let source_shadow_name = format!("__ayy_object_property__{source_owner}__{shadow_key}");
+            let target_shadow_name = format!("__ayy_object_property__{target_owner}__{shadow_key}");
+            if let Some(descriptor_state) = self
+                .backend
+                .global_property_descriptor(&source_shadow_name)
+                .cloned()
+                .or_else(|| {
+                    self.backend
+                        .shared_global_semantics
+                        .values
+                        .property_descriptor(&source_shadow_name)
+                        .cloned()
+                })
+            {
+                if descriptor_state.has_get
+                    || descriptor_state.has_set
+                    || descriptor_state.getter.is_some()
+                    || descriptor_state.setter.is_some()
+                {
+                    fallback_value = None;
+                }
+                self.backend.upsert_global_property_descriptor(
+                    target_shadow_name.clone(),
+                    descriptor_state.clone(),
+                );
+                self.backend
+                    .shared_global_semantics
+                    .values
+                    .upsert_property_descriptor(target_shadow_name, descriptor_state);
+            }
+            if let Some(targets) = std::env::var_os("AYY_TRACE_GLOBAL_SET") {
+                let targets = targets.to_string_lossy();
+                let matches_target = targets
+                    .split(',')
+                    .filter_map(|target| target.trim().parse::<u32>().ok())
+                    .any(|target| {
+                        target == target_binding.value_index
+                            || target == target_binding.present_index
+                            || target == target_deleted.value_index
+                            || target == target_deleted.present_index
+                    });
+                if matches_target {
+                    eprintln!(
+                        "runtime_shadow_copy_target_trace {source_owner}->{target_owner} property={property:?} fallback={fallback_value:?} target_binding=({}, {}) target_deleted=({}, {})",
+                        target_binding.value_index,
+                        target_binding.present_index,
+                        target_deleted.value_index,
+                        target_deleted.present_index,
+                    );
+                }
+            }
             self.push_global_get(source_deleted.present_index);
             self.state.emission.output.instructions.push(0x04);
             self.state
@@ -2410,6 +3611,12 @@ impl<'a> FunctionCompiler<'a> {
             self.push_global_set(target_deleted.value_index);
             self.push_i32_const(1);
             self.push_global_set(target_deleted.present_index);
+            self.emit_clear_runtime_member_value_shadow(
+                source_owner,
+                target_owner,
+                &property,
+                fallback_value.as_ref(),
+            );
             self.state.emission.output.instructions.push(0x05);
             self.push_global_get(source_binding.present_index);
             self.state.emission.output.instructions.push(0x04);
@@ -2444,6 +3651,12 @@ impl<'a> FunctionCompiler<'a> {
             self.push_global_set(target_binding.value_index);
             self.push_i32_const(1);
             self.push_global_set(target_binding.present_index);
+            self.emit_refresh_runtime_member_value_shadow(
+                source_owner,
+                target_owner,
+                &property,
+                fallback_value.as_ref(),
+            )?;
             self.state.emission.output.instructions.push(0x05);
             self.push_i32_const(JS_UNDEFINED_TAG);
             self.push_global_set(target_deleted.value_index);
@@ -2452,7 +3665,13 @@ impl<'a> FunctionCompiler<'a> {
             self.push_i32_const(JS_UNDEFINED_TAG);
             self.push_global_set(target_binding.value_index);
             if let Some(fallback_value) = fallback_value.as_ref() {
-                if is_private_property
+                if let Some(marker_fallback) = self.private_brand_marker_copy_fallback_for_target(
+                    target_owner,
+                    &property,
+                    fallback_value,
+                ) {
+                    self.emit_runtime_shadow_fallback_value(&marker_fallback)?;
+                } else if is_private_property
                     && !self.emit_private_brand_marker_runtime_value(
                         &Expression::Identifier(target_owner.to_string()),
                         &property,
@@ -2481,9 +3700,30 @@ impl<'a> FunctionCompiler<'a> {
                 self.push_global_set(target_binding.value_index);
                 self.push_i32_const(1);
                 self.push_global_set(target_binding.present_index);
+                self.emit_refresh_runtime_member_value_shadow(
+                    source_owner,
+                    target_owner,
+                    &property,
+                    Some(fallback_value),
+                )?;
             } else {
+                if std::env::var_os("AYY_TRACE_PRIVATE_MEMBER_VALUES").is_some()
+                    && is_private_shadow_property
+                {
+                    self.emit_print(&[Expression::String(format!(
+                        "private_shadow_absent {source_owner}->{target_owner} {}",
+                        static_property_name_from_expression(&property)
+                            .unwrap_or_else(|| format!("{property:?}"))
+                    ))])?;
+                }
                 self.push_i32_const(0);
                 self.push_global_set(target_binding.present_index);
+                self.emit_clear_runtime_member_value_shadow(
+                    source_owner,
+                    target_owner,
+                    &property,
+                    None,
+                );
             }
             self.state.emission.output.instructions.push(0x0b);
             self.pop_control_frame();

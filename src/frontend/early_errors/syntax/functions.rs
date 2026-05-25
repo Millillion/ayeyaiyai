@@ -713,9 +713,7 @@ fn collect_direct_function_body_lexically_declared_names(
             Stmt::Decl(Decl::Using(using_declaration)) => {
                 names.extend(collect_using_decl_bound_names(using_declaration)?);
             }
-            Stmt::Decl(Decl::Fn(function_declaration)) => {
-                names.push(function_declaration.ident.sym.to_string());
-            }
+            Stmt::Decl(Decl::Fn(_)) => {}
             Stmt::Decl(Decl::Class(class_declaration)) => {
                 names.push(class_declaration.ident.sym.to_string());
             }

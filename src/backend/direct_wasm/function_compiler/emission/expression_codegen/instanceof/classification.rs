@@ -121,6 +121,14 @@ impl<'a> FunctionCompiler<'a> {
         {
             return true;
         }
+        if matches!(
+            expression,
+            Expression::Member { object, property }
+                if matches!(object.as_ref(), Expression::Identifier(name) if name == "Function")
+                    && matches!(property.as_ref(), Expression::String(name) if name == "prototype")
+        ) {
+            return true;
+        }
         if let Some(resolved) = self
             .resolve_bound_alias_expression(expression)
             .filter(|resolved| !static_expression_matches(resolved, expression))
@@ -233,7 +241,11 @@ impl<'a> FunctionCompiler<'a> {
                 return matches!(callee.as_ref(), Expression::Identifier(name) if name == "Promise");
             }
             Expression::Call { callee, .. } => {
-                if matches!(callee.as_ref(), Expression::Identifier(name) if name == "Promise") {
+                if matches!(
+                    callee.as_ref(),
+                    Expression::Identifier(name)
+                        if matches!(name.as_str(), "Promise" | "__ayyDynamicImport")
+                ) {
                     return true;
                 }
                 if matches!(
@@ -262,7 +274,11 @@ impl<'a> FunctionCompiler<'a> {
                 matches!(callee.as_ref(), Expression::Identifier(name) if name == "Promise")
             }
             Expression::Call { callee, .. } => {
-                if matches!(callee.as_ref(), Expression::Identifier(name) if name == "Promise") {
+                if matches!(
+                    callee.as_ref(),
+                    Expression::Identifier(name)
+                        if matches!(name.as_str(), "Promise" | "__ayyDynamicImport")
+                ) {
                     return true;
                 }
                 if matches!(
@@ -370,6 +386,12 @@ impl<'a> FunctionCompiler<'a> {
                 object_binding.is_some(),
                 self.infer_value_kind(&materialized)
             );
+        }
+        if object_binding
+            .as_ref()
+            .is_some_and(Self::object_binding_has_module_namespace_marker)
+        {
+            return false;
         }
         if object_binding.is_some() {
             return true;

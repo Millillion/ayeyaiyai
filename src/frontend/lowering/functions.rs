@@ -59,6 +59,7 @@ impl Lowerer {
             mapped_arguments: self.function_has_mapped_arguments(&function_expression.function),
             strict: self.function_strict_mode(&function_expression.function),
             lexical_this: false,
+            constructible: true,
             derived_constructor: false,
             direct_eval_in_class_field_initializer: self.class_field_initializer_depth > 0,
             length: expected_argument_count(
@@ -71,7 +72,7 @@ impl Lowerer {
             synthetic_capture_bindings: captured_private_brand_bindings
                 .into_iter()
                 .collect::<Vec<_>>(),
-            immutable_class_bindings: Vec::new(),
+            immutable_class_bindings: self.current_immutable_class_bindings(),
             private_brand_binding: None,
         });
 
@@ -106,6 +107,7 @@ impl Lowerer {
                     .function_has_mapped_arguments(&function_declaration.function),
                 strict: self.function_strict_mode(&function_declaration.function),
                 lexical_this: false,
+                constructible: true,
                 derived_constructor: false,
                 direct_eval_in_class_field_initializer: self.class_field_initializer_depth > 0,
                 length: expected_argument_count(
@@ -116,7 +118,7 @@ impl Lowerer {
                         .map(|parameter| &parameter.pat),
                 ),
                 synthetic_capture_bindings: Vec::new(),
-                immutable_class_bindings: Vec::new(),
+                immutable_class_bindings: self.current_immutable_class_bindings(),
                 private_brand_binding: None,
             });
         }
@@ -139,6 +141,7 @@ impl Lowerer {
             mapped_arguments: self.function_has_mapped_arguments(&function_declaration.function),
             strict: self.function_strict_mode(&function_declaration.function),
             lexical_this: false,
+            constructible: true,
             derived_constructor: false,
             direct_eval_in_class_field_initializer: self.class_field_initializer_depth > 0,
             length: expected_argument_count(
@@ -151,7 +154,7 @@ impl Lowerer {
             synthetic_capture_bindings: captured_private_brand_bindings
                 .into_iter()
                 .collect::<Vec<_>>(),
-            immutable_class_bindings: Vec::new(),
+            immutable_class_bindings: self.current_immutable_class_bindings(),
             private_brand_binding: None,
         })
     }
@@ -204,6 +207,7 @@ impl Lowerer {
             mapped_arguments: self.function_has_mapped_arguments(&function_expression.function),
             strict: self.function_strict_mode(&function_expression.function),
             lexical_this: false,
+            constructible: true,
             derived_constructor: false,
             direct_eval_in_class_field_initializer: self.class_field_initializer_depth > 0,
             length: expected_argument_count(
@@ -216,7 +220,7 @@ impl Lowerer {
             synthetic_capture_bindings: captured_private_brand_bindings
                 .into_iter()
                 .collect::<Vec<_>>(),
-            immutable_class_bindings: Vec::new(),
+            immutable_class_bindings: self.current_immutable_class_bindings(),
             private_brand_binding: None,
         });
 
@@ -265,13 +269,14 @@ impl Lowerer {
             mapped_arguments: false,
             strict: self.arrow_strict_mode(arrow_expression),
             lexical_this: true,
+            constructible: false,
             derived_constructor: false,
             direct_eval_in_class_field_initializer: self.class_field_initializer_depth > 0,
             length: expected_argument_count(arrow_expression.params.iter()),
             synthetic_capture_bindings: captured_private_brand_bindings
                 .into_iter()
                 .collect::<Vec<_>>(),
-            immutable_class_bindings: Vec::new(),
+            immutable_class_bindings: self.current_immutable_class_bindings(),
             private_brand_binding: None,
         });
 

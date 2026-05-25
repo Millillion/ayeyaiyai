@@ -22,6 +22,18 @@ impl<'a> FunctionCompiler<'a> {
         {
             return Some(StaticValueKind::Number);
         }
+        if let Expression::Member {
+            object: prototype_owner,
+            property: prototype_property,
+        } = self.materialize_static_expression(object)
+            && matches!(prototype_property.as_ref(), Expression::String(name) if name == "prototype")
+            && let Expression::Identifier(object_name) = prototype_owner.as_ref()
+            && self.is_unshadowed_builtin_identifier(object_name)
+            && let Expression::String(property_name) = self.materialize_static_expression(property)
+            && builtin_prototype_number_value(object_name, &property_name).is_some()
+        {
+            return Some(StaticValueKind::Number);
+        }
         if self
             .resolve_user_function_length(object, property)
             .is_some()
@@ -35,6 +47,12 @@ impl<'a> FunctionCompiler<'a> {
             return Some(StaticValueKind::Number);
         }
         if matches!(property, Expression::String(property_name) if property_name == "prototype") {
+            if let Expression::Identifier(object_name) = self.materialize_static_expression(object)
+                && self.is_unshadowed_builtin_identifier(&object_name)
+                && let Some(kind) = builtin_constructor_prototype_kind(&object_name)
+            {
+                return Some(kind);
+            }
             let resolved_object = self
                 .resolve_bound_alias_expression(object)
                 .filter(|resolved| !static_expression_matches(resolved, object));

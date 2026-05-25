@@ -56,6 +56,14 @@ impl<'a> FunctionCompiler<'a> {
                     bindings,
                     current_function_name,
                 ),
+            Expression::SuperMember { property } => {
+                let receiver = bindings.get("this").cloned().unwrap_or(Expression::This);
+                self.resolve_static_super_member_value_with_context(
+                    property,
+                    current_function_name,
+                    &receiver,
+                )
+            }
             Expression::Assign { name, value } => self.evaluate_bound_snapshot_assign_expression(
                 name,
                 value,

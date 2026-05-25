@@ -11,67 +11,133 @@ impl DirectWasmCompiler {
         object_bindings: &mut HashMap<String, HashMap<String, Option<ObjectValueBinding>>>,
         current_function_name: Option<&str>,
     ) {
-        let (called_function_name, call_arguments) = match callee {
-            Expression::Member { object, property } if matches!(property.as_ref(), Expression::String(name) if name == "call") =>
-            {
-                let Some(LocalFunctionBinding::User(called_function_name)) =
-                    self.resolve_function_binding_from_expression_with_aliases(object, aliases)
-                else {
-                    return;
-                };
-                (
-                    called_function_name,
-                    self.expanded_global_static_call_arguments(arguments)
-                        .into_iter()
-                        .skip(1)
-                        .collect::<Vec<_>>(),
-                )
-            }
-            Expression::Member { object, property } if matches!(property.as_ref(), Expression::String(name) if name == "apply") =>
-            {
-                let Some(LocalFunctionBinding::User(called_function_name)) =
-                    self.resolve_function_binding_from_expression_with_aliases(object, aliases)
-                else {
-                    return;
-                };
-                let expanded_arguments = self.expanded_global_static_call_arguments(arguments);
-                let apply_expression = expanded_arguments
-                    .get(1)
-                    .cloned()
-                    .unwrap_or(Expression::Undefined);
-                let Some(call_arguments) =
-                    self.expand_apply_parameter_call_arguments_from_expression(&apply_expression)
-                else {
-                    return;
-                };
-                (called_function_name, call_arguments)
-            }
-            _ => {
-                let Some(LocalFunctionBinding::User(called_function_name)) =
-                    self.resolve_function_binding_from_expression_with_aliases(callee, aliases)
-                else {
-                    return;
-                };
-                (
-                    called_function_name,
-                    self.expanded_global_static_call_arguments(arguments),
-                )
+        let dynamic_import_callback =
+            self.dynamic_import_then_callback_namespace_argument(callee, arguments, aliases);
+        let (called_function_name, call_arguments) = if let Some((
+            called_function_name,
+            namespace_argument,
+        )) = dynamic_import_callback
+        {
+            (called_function_name, vec![namespace_argument])
+        } else {
+            match callee {
+                Expression::Member { object, property } if matches!(property.as_ref(), Expression::String(name) if name == "call") =>
+                {
+                    let Some(LocalFunctionBinding::User(called_function_name)) =
+                        self.resolve_function_binding_from_expression_with_aliases(object, aliases)
+                    else {
+                        return;
+                    };
+                    (
+                        called_function_name,
+                        self.expanded_global_static_call_arguments(arguments)
+                            .into_iter()
+                            .skip(1)
+                            .collect::<Vec<_>>(),
+                    )
+                }
+                Expression::Member { object, property } if matches!(property.as_ref(), Expression::String(name) if name == "apply") =>
+                {
+                    let Some(LocalFunctionBinding::User(called_function_name)) =
+                        self.resolve_function_binding_from_expression_with_aliases(object, aliases)
+                    else {
+                        return;
+                    };
+                    let expanded_arguments = self.expanded_global_static_call_arguments(arguments);
+                    let apply_expression = expanded_arguments
+                        .get(1)
+                        .cloned()
+                        .unwrap_or(Expression::Undefined);
+                    let Some(call_arguments) = self
+                        .expand_apply_parameter_call_arguments_from_expression(&apply_expression)
+                    else {
+                        return;
+                    };
+                    (called_function_name, call_arguments)
+                }
+                _ => {
+                    let Some(LocalFunctionBinding::User(called_function_name)) =
+                        self.resolve_function_binding_from_expression_with_aliases(callee, aliases)
+                    else {
+                        return;
+                    };
+                    (
+                        called_function_name,
+                        self.expanded_global_static_call_arguments(arguments),
+                    )
+                }
             }
         };
-        let Some(user_function) = self.user_function(&called_function_name) else {
+        self.register_plain_parameter_binding_candidates(
+            &called_function_name,
+            &call_arguments,
+            aliases,
+            bindings,
+            array_bindings,
+            object_bindings,
+            current_function_name,
+        );
+    }
+
+    pub(in crate::backend::direct_wasm) fn register_constructor_bindings_for_call(
+        &self,
+        callee: &Expression,
+        arguments: &[CallArgument],
+        aliases: &HashMap<String, Option<LocalFunctionBinding>>,
+        bindings: &mut HashMap<String, HashMap<String, Option<LocalFunctionBinding>>>,
+        array_bindings: &mut HashMap<String, HashMap<String, Option<ArrayValueBinding>>>,
+        object_bindings: &mut HashMap<String, HashMap<String, Option<ObjectValueBinding>>>,
+        current_function_name: Option<&str>,
+    ) {
+        let constructor_binding = self
+            .resolve_function_binding_from_expression_with_aliases(callee, aliases)
+            .or_else(|| {
+                let Expression::Identifier(name) = callee else {
+                    return None;
+                };
+                let resolved = self.resolve_static_class_init_local_alias_expression(name)?;
+                self.resolve_function_binding_from_expression_with_aliases(&resolved, aliases)
+            });
+        let Some(LocalFunctionBinding::User(called_function_name)) = constructor_binding else {
+            return;
+        };
+        let call_arguments = self.expanded_global_static_call_arguments(arguments);
+
+        self.register_plain_parameter_binding_candidates(
+            &called_function_name,
+            &call_arguments,
+            aliases,
+            bindings,
+            array_bindings,
+            object_bindings,
+            current_function_name,
+        );
+    }
+
+    fn register_plain_parameter_binding_candidates(
+        &self,
+        called_function_name: &str,
+        call_arguments: &[Expression],
+        aliases: &HashMap<String, Option<LocalFunctionBinding>>,
+        bindings: &mut HashMap<String, HashMap<String, Option<LocalFunctionBinding>>>,
+        array_bindings: &mut HashMap<String, HashMap<String, Option<ArrayValueBinding>>>,
+        object_bindings: &mut HashMap<String, HashMap<String, Option<ObjectValueBinding>>>,
+        current_function_name: Option<&str>,
+    ) {
+        let Some(user_function) = self.user_function(called_function_name) else {
             return;
         };
         let current_parameter_object_bindings = current_function_name
             .and_then(|name| object_bindings.get(name))
             .cloned()
             .unwrap_or_default();
-        let Some(parameter_bindings) = bindings.get_mut(&called_function_name) else {
+        let Some(parameter_bindings) = bindings.get_mut(called_function_name) else {
             return;
         };
-        let Some(parameter_array_bindings) = array_bindings.get_mut(&called_function_name) else {
+        let Some(parameter_array_bindings) = array_bindings.get_mut(called_function_name) else {
             return;
         };
-        let Some(parameter_object_bindings) = object_bindings.get_mut(&called_function_name) else {
+        let Some(parameter_object_bindings) = object_bindings.get_mut(called_function_name) else {
             return;
         };
 
@@ -129,10 +195,9 @@ impl DirectWasmCompiler {
                 break;
             }
             let param_name = &user_function.params[index];
-            register_candidate(
-                param_name,
-                self.resolve_function_binding_from_expression_with_aliases(argument, aliases),
-            );
+            let candidate =
+                self.resolve_function_binding_from_expression_with_aliases(argument, aliases);
+            register_candidate(param_name, candidate);
             let global_bindings = self.snapshot_global_binding_environment();
             let materialized_argument = self
                 .materialize_global_expression_with_state(
@@ -159,7 +224,7 @@ impl DirectWasmCompiler {
                     if matches!(property.as_ref(), Expression::String(name) if name == "prototype")
             ) {
                 None
-            } else if !stable_argument {
+            } else if !stable_argument && !matches!(argument, Expression::Object(_)) {
                 None
             } else if matches!(
                 materialized_argument,

@@ -25,6 +25,10 @@ impl CompilerState {
                 writable,
                 enumerable,
                 configurable,
+                getter: None,
+                setter: None,
+                has_get: false,
+                has_set: false,
             },
         );
         descriptor.value = value;

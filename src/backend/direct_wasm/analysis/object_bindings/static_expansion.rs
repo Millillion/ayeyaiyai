@@ -29,10 +29,42 @@ pub(in crate::backend::direct_wasm) fn object_literal_prototype_expression(
         crate::ir::hir::ObjectEntry::Data { key, value }
             if matches!(key, Expression::String(name) if name == "__proto__") =>
         {
-            Some(value.clone())
+            (!object_literal_proto_setter_value_is_statically_ignored(value)).then(|| value.clone())
         }
         _ => None,
     })
+}
+
+fn object_literal_proto_setter_value_is_statically_ignored(value: &Expression) -> bool {
+    matches!(
+        value,
+        Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Undefined
+    ) || matches!(value, Expression::Identifier(name) if name == "undefined")
+        || matches!(
+                value,
+                Expression::Call { callee, .. }
+                    if matches!(callee.as_ref(), Expression::Identifier(name) if name == "Symbol")
+        )
+        || matches!(
+            value,
+            Expression::Await(inner) if object_literal_proto_setter_value_is_statically_ignored(inner)
+        )
+}
+
+pub(in crate::backend::direct_wasm) fn object_entry_is_literal_proto_setter(
+    entry: &crate::ir::hir::ObjectEntry,
+) -> bool {
+    matches!(
+        entry,
+        crate::ir::hir::ObjectEntry::Data {
+            key: Expression::String(name),
+            ..
+        } if name == "__proto__"
+    )
 }
 
 pub(in crate::backend::direct_wasm) fn resolve_property_descriptor_definition(
@@ -46,7 +78,7 @@ pub(in crate::backend::direct_wasm) fn resolve_property_descriptor_definition(
     for entry in entries {
         match entry {
             crate::ir::hir::ObjectEntry::Data { key, value } => {
-                let Expression::String(key_name) = key else {
+                let Some(key_name) = static_property_name_from_expression(key) else {
                     return None;
                 };
                 match key_name.as_str() {
@@ -71,6 +103,7 @@ pub(in crate::backend::direct_wasm) fn resolve_property_descriptor_definition(
                     }
                     "get" => descriptor.getter = Some(value.clone()),
                     "set" => descriptor.setter = Some(value.clone()),
+                    key if key.starts_with("__ayy$") => {}
                     _ => return None,
                 }
             }
@@ -225,10 +258,17 @@ pub(in crate::backend::direct_wasm) fn builtin_identifier_kind(
         | "BigInt64Array"
         | "BigUint64Array"
         | "Promise"
+        | "__ayyDynamicImport"
+        | "__ayyImportMeta"
         | "WeakMap"
+        | "Proxy"
         | "WeakRef"
         | "WeakSet"
-        | "eval" => Some(StaticValueKind::Function),
+        | "eval"
+        | "isFinite"
+        | "isNaN"
+        | "parseFloat"
+        | "parseInt" => Some(StaticValueKind::Function),
         "Math" | "JSON" | "Reflect" | "globalThis" => Some(StaticValueKind::Object),
         "Infinity" | "NaN" | "undefined" => Some(StaticValueKind::Undefined),
         _ => None,

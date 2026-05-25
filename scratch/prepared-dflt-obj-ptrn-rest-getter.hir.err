@@ -1,0 +1,2 @@
+phase=parse
+phase=lower_static_function_constructors

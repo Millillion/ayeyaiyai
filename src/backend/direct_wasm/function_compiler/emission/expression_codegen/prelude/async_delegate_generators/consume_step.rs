@@ -80,8 +80,26 @@ impl<'a> FunctionCompiler<'a> {
         let mut delegate_step_method_missing = false;
         let mut delegate_step_method_non_callable = false;
         let mut delegate_step_method_throw = None;
+        let delegate_step_getter_resolution =
+            if matches!(property_name.as_str(), "return" | "throw") {
+                self.resolve_member_getter_binding(
+                    &delegate_iterator_expression,
+                    &delegate_property_expression,
+                )
+                .map(|binding| (binding, delegate_iterator_expression.clone()))
+                .or_else(|| {
+                    self.resolve_member_getter_binding(
+                        &plan.delegate_expression,
+                        &delegate_property_expression,
+                    )
+                    .map(|binding| (binding, plan.delegate_expression.clone()))
+                })
+            } else {
+                None
+            };
         if matches!(property_name.as_str(), "return" | "throw")
-            && snapshot_delegate_step_binding.is_none()
+            && (snapshot_delegate_step_binding.is_none()
+                || delegate_step_getter_resolution.is_some())
             && let Some(snapshot_bindings) = delegate_snapshot_bindings.as_mut()
         {
             let delegate_step_member = Expression::Member {
@@ -100,20 +118,8 @@ impl<'a> FunctionCompiler<'a> {
                 );
             }
             let mut resolved_method_value = None;
-            let getter_resolution = self
-                .resolve_member_getter_binding(
-                    &delegate_iterator_expression,
-                    &delegate_property_expression,
-                )
-                .map(|binding| (binding, delegate_iterator_expression.clone()))
-                .or_else(|| {
-                    self.resolve_member_getter_binding(
-                        &plan.delegate_expression,
-                        &delegate_property_expression,
-                    )
-                    .map(|binding| (binding, plan.delegate_expression.clone()))
-                });
-            if let Some((getter_binding, getter_this_expression)) = getter_resolution {
+            if let Some((getter_binding, getter_this_expression)) = delegate_step_getter_resolution
+            {
                 match self.resolve_bound_snapshot_function_outcome_with_arguments_and_this(
                     &getter_binding,
                     snapshot_bindings,
@@ -121,11 +127,17 @@ impl<'a> FunctionCompiler<'a> {
                     &getter_this_expression,
                 ) {
                     Some((StaticEvalOutcome::Value(method_value), updated_bindings)) => {
-                        *snapshot_bindings = updated_bindings;
+                        Self::merge_bound_snapshot_updated_bindings(
+                            snapshot_bindings,
+                            updated_bindings,
+                        );
                         resolved_method_value = Some(method_value);
                     }
                     Some((StaticEvalOutcome::Throw(throw_value), updated_bindings)) => {
-                        *snapshot_bindings = updated_bindings;
+                        Self::merge_bound_snapshot_updated_bindings(
+                            snapshot_bindings,
+                            updated_bindings,
+                        );
                         delegate_step_method_throw = Some(throw_value);
                     }
                     None => {}
@@ -175,8 +187,10 @@ impl<'a> FunctionCompiler<'a> {
         if delegate_step_method_missing && property_name == "return" {
             if let Some(snapshot_bindings) = delegate_snapshot_bindings.as_mut() {
                 snapshot_bindings.insert(promise_done_name.clone(), Expression::Bool(true));
-                snapshot_bindings
-                    .insert(promise_value_name.clone(), snapshot_current_argument.clone());
+                snapshot_bindings.insert(
+                    promise_value_name.clone(),
+                    snapshot_current_argument.clone(),
+                );
                 self.update_local_value_binding(&promise_done_name, &Expression::Bool(true));
                 self.update_local_value_binding(&promise_value_name, &snapshot_current_argument);
             }
@@ -202,21 +216,27 @@ impl<'a> FunctionCompiler<'a> {
                     .resolve_member_getter_binding(&delegate_iterator_expression, &return_property)
                     .map(|binding| (binding, delegate_iterator_expression.clone()))
                     .or_else(|| {
-                        self.resolve_member_getter_binding(&plan.delegate_expression, &return_property)
-                            .map(|binding| (binding, plan.delegate_expression.clone()))
+                        self.resolve_member_getter_binding(
+                            &plan.delegate_expression,
+                            &return_property,
+                        )
+                        .map(|binding| (binding, plan.delegate_expression.clone()))
                     });
                 if let Some((return_getter_binding, return_getter_this_expression)) =
                     return_getter_resolution
                 {
-                    if let Some((_, updated_bindings)) =
-                        self.resolve_bound_snapshot_function_outcome_with_arguments_and_this(
+                    if let Some((_, updated_bindings)) = self
+                        .resolve_bound_snapshot_function_outcome_with_arguments_and_this(
                             &return_getter_binding,
                             snapshot_bindings,
                             &[],
                             &return_getter_this_expression,
                         )
                     {
-                        *snapshot_bindings = updated_bindings;
+                        Self::merge_bound_snapshot_updated_bindings(
+                            snapshot_bindings,
+                            updated_bindings,
+                        );
                     }
                 } else {
                     let return_member = Expression::Member {
@@ -237,9 +257,9 @@ impl<'a> FunctionCompiler<'a> {
             );
             self.sync_persisted_async_yield_delegate_generator_snapshot_state(&binding_name)?;
             self.pop_async_delegate_snapshot_scope_bindings(&scoped_snapshot_names);
-            return Ok(Some(StaticEvalOutcome::Throw(StaticThrowValue::NamedError(
-                "TypeError",
-            ))));
+            return Ok(Some(StaticEvalOutcome::Throw(
+                StaticThrowValue::NamedError("TypeError"),
+            )));
         }
 
         if delegate_step_method_non_callable {
@@ -250,9 +270,9 @@ impl<'a> FunctionCompiler<'a> {
             );
             self.sync_persisted_async_yield_delegate_generator_snapshot_state(&binding_name)?;
             self.pop_async_delegate_snapshot_scope_bindings(&scoped_snapshot_names);
-            return Ok(Some(StaticEvalOutcome::Throw(StaticThrowValue::NamedError(
-                "TypeError",
-            ))));
+            return Ok(Some(StaticEvalOutcome::Throw(
+                StaticThrowValue::NamedError("TypeError"),
+            )));
         }
 
         let (
@@ -260,25 +280,26 @@ impl<'a> FunctionCompiler<'a> {
             static_step_result_has_accessor_properties,
             needs_runtime_step_result_call,
         ) = if let Some(snapshot_bindings) = delegate_snapshot_bindings.as_mut() {
-            let resolved_delegate_step_binding = snapshot_delegate_step_binding.clone().or_else(|| {
-                matches!(property_name.as_str(), "return" | "throw")
-                    .then(|| {
-                        self.evaluate_bound_snapshot_expression(
-                            &Expression::Member {
-                                object: Box::new(Expression::Identifier(
-                                    delegate_iterator_name.clone(),
-                                )),
-                                property: Box::new(delegate_property_expression.clone()),
-                            },
-                            snapshot_bindings,
-                            Some(&plan.function_name),
-                        )
-                    })
-                    .flatten()
-                    .and_then(|delegate_step_expression| {
-                        self.resolve_function_binding_from_expression(&delegate_step_expression)
-                    })
-            });
+            let resolved_delegate_step_binding =
+                snapshot_delegate_step_binding.clone().or_else(|| {
+                    matches!(property_name.as_str(), "return" | "throw")
+                        .then(|| {
+                            self.evaluate_bound_snapshot_expression(
+                                &Expression::Member {
+                                    object: Box::new(Expression::Identifier(
+                                        delegate_iterator_name.clone(),
+                                    )),
+                                    property: Box::new(delegate_property_expression.clone()),
+                                },
+                                snapshot_bindings,
+                                Some(&plan.function_name),
+                            )
+                        })
+                        .flatten()
+                        .and_then(|delegate_step_expression| {
+                            self.resolve_function_binding_from_expression(&delegate_step_expression)
+                        })
+                });
             let static_call_outcome =
                 if let Some(function_binding) = resolved_delegate_step_binding.as_ref() {
                     self.resolve_bound_snapshot_function_outcome_with_arguments_and_this(
@@ -291,7 +312,7 @@ impl<'a> FunctionCompiler<'a> {
                     None
                 };
             if let Some((static_call_outcome, updated_bindings)) = static_call_outcome {
-                *snapshot_bindings = updated_bindings;
+                Self::merge_bound_snapshot_updated_bindings(snapshot_bindings, updated_bindings);
                 match static_call_outcome {
                     StaticEvalOutcome::Value(mut static_result) => {
                         match self.resolve_bound_snapshot_await_resolution_outcome(

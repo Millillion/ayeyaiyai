@@ -48,12 +48,22 @@ impl DirectWasmCompiler {
         &self,
         property: &Expression,
     ) -> Expression {
+        if let Expression::Sequence(expressions) = property {
+            return expressions
+                .last()
+                .map(|expression| self.canonical_global_object_property_expression(expression))
+                .unwrap_or(Expression::Undefined);
+        }
+
         let resolved = match property {
             Expression::Identifier(name) => self
                 .resolve_static_class_init_local_alias_expression(name)
                 .unwrap_or_else(|| property.clone()),
             _ => property.clone(),
         };
+        if self.global_property_key_requires_runtime_coercion(&resolved) {
+            return resolved;
+        }
         let evaluated = self
             .evaluate_static_expression(&resolved)
             .unwrap_or_else(|| self.materialize_global_expression(&resolved));
@@ -140,6 +150,9 @@ impl DirectWasmCompiler {
                 expression.clone()
             }
             Expression::Member { object, property } => {
+                if self.global_property_key_requires_runtime_coercion(property) {
+                    return expression.clone();
+                }
                 if self
                     .global_member_function_binding_key(object, property)
                     .is_some_and(|key| self.has_global_member_function_capture_slots(&key))
@@ -159,6 +172,9 @@ impl DirectWasmCompiler {
                     if let Some(value) =
                         object_binding_lookup_value(&object_binding, &materialized_property)
                     {
+                        if static_expression_matches(value, expression) {
+                            return expression.clone();
+                        }
                         return self.materialize_global_expression(value);
                     }
                     if static_property_name_from_expression(&materialized_property).is_some()
@@ -201,6 +217,27 @@ impl DirectWasmCompiler {
                 .unwrap_or(materialized)
             }
             Expression::Call { callee, arguments } => {
+                if let Expression::Member { object, property } = callee.as_ref()
+                    && matches!(property.as_ref(), Expression::String(name) if name == "bind")
+                {
+                    return Expression::Call {
+                        callee: Box::new(Expression::Member {
+                            object: object.clone(),
+                            property: property.clone(),
+                        }),
+                        arguments: arguments
+                            .iter()
+                            .map(|argument| match argument {
+                                CallArgument::Expression(expression) => CallArgument::Expression(
+                                    self.materialize_global_expression(expression),
+                                ),
+                                CallArgument::Spread(expression) => CallArgument::Spread(
+                                    self.materialize_global_expression(expression),
+                                ),
+                            })
+                            .collect(),
+                    };
+                }
                 if let Some(value) = self.infer_static_call_result_expression(callee, arguments) {
                     return self.materialize_global_expression(&value);
                 }

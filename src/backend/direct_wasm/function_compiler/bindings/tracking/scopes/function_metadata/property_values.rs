@@ -1,6 +1,39 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn user_function_is_generated_class_expression_constructor(&self, function_name: &str) -> bool {
+        self.resolve_registered_function_declaration(function_name)
+            .is_some_and(|function| {
+                function.name.starts_with("__ayy_class_ctor_")
+                    && function
+                        .self_binding
+                        .as_deref()
+                        .is_some_and(|self_binding| self_binding.starts_with("__ayy_class_expr_"))
+            })
+    }
+
+    fn generated_class_expression_empty_name_property(
+        &self,
+        function_name: &str,
+        object: &Expression,
+        property: &Expression,
+    ) -> bool {
+        if !self.user_function_is_generated_class_expression_constructor(function_name)
+            || !matches!(property, Expression::String(name) if name == "name")
+        {
+            return false;
+        }
+
+        self.explicit_function_self_binding_property_value(function_name, property)
+            .is_some_and(|value| matches!(value, Expression::String(name) if name.is_empty()))
+            || self
+                .resolve_object_binding_from_expression(object)
+                .and_then(|object_binding| {
+                    self.resolve_object_binding_property_value(&object_binding, property)
+                })
+                .is_some_and(|value| matches!(value, Expression::String(name) if name.is_empty()))
+    }
+
     pub(in crate::backend::direct_wasm) fn resolve_user_function_length(
         &self,
         object: &Expression,
@@ -182,6 +215,11 @@ impl<'a> FunctionCompiler<'a> {
                 {
                     continue;
                 }
+                if let Some(display_name) =
+                    self.object_literal_member_function_display_name(object_candidate, 0)
+                {
+                    return Some(display_name);
+                }
                 let Some(function_binding) =
                     self.resolve_function_binding_from_expression(object_candidate)
                 else {
@@ -194,24 +232,48 @@ impl<'a> FunctionCompiler<'a> {
                     )
                 {
                     match value {
-                        Expression::String(name) => return Some(name),
+                        Expression::String(name)
+                            if !(name.is_empty()
+                                && self
+                                    .user_function_is_generated_class_expression_constructor(
+                                        function_name,
+                                    )) =>
+                        {
+                            return Some(name);
+                        }
+                        Expression::String(_) => {}
                         _ => continue,
                     }
                 }
+                let generated_class_empty_name_property = match &function_binding {
+                    LocalFunctionBinding::User(function_name) => self
+                        .generated_class_expression_empty_name_property(
+                            function_name,
+                            object_candidate,
+                            property_candidate,
+                        ),
+                    LocalFunctionBinding::Builtin(_) => false,
+                };
                 if self
                     .function_object_has_explicit_own_property(object_candidate, property_candidate)
+                    && !generated_class_empty_name_property
                 {
                     continue;
                 }
                 match function_binding {
                     LocalFunctionBinding::User(function_name) => {
-                        return Some(
-                            self.resolve_user_function_display_name(&function_name)
-                                .unwrap_or_default(),
-                        );
+                        let display_name = self
+                            .resolve_user_function_display_name(&function_name)
+                            .unwrap_or_default();
+                        if display_name.is_empty() {
+                            continue;
+                        }
+                        return Some(display_name);
                     }
                     LocalFunctionBinding::Builtin(function_name) => {
-                        return Some(builtin_function_display_name(&function_name).to_string());
+                        let display_name =
+                            builtin_function_display_name(&function_name).to_string();
+                        return Some(display_name);
                     }
                 }
             }

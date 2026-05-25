@@ -196,6 +196,29 @@ impl<'a> FunctionCompiler<'a> {
         property: &Expression,
         arguments: &[CallArgument],
     ) -> DirectResult<bool> {
+        if matches!(property, Expression::String(property_name) if property_name == "indexOf")
+            && let [CallArgument::Expression(search_expression)] = arguments
+            && let Some(array_binding) = self.resolve_array_binding_from_expression(object)
+        {
+            self.emit_numeric_expression(object)?;
+            self.state.emission.output.instructions.push(0x1a);
+            self.emit_numeric_expression(search_expression)?;
+            self.state.emission.output.instructions.push(0x1a);
+
+            let search_value = self.materialize_static_expression(search_expression);
+            let found_index = array_binding
+                .values
+                .iter()
+                .enumerate()
+                .find_map(|(index, value)| {
+                    let value = value.as_ref()?;
+                    let value = self.materialize_static_expression(value);
+                    static_expression_matches(&value, &search_value).then_some(index as i32)
+                })
+                .unwrap_or(-1);
+            self.push_i32_const(found_index);
+            return Ok(true);
+        }
         if matches!(property, Expression::String(property_name) if property_name == "push")
             && self.emit_tracked_array_push_call(object, arguments)?
         {

@@ -16,6 +16,17 @@ impl<'a> FunctionCompiler<'a> {
             })
     }
 
+    pub(in crate::backend::direct_wasm) fn object_binding_has_module_namespace_marker(
+        object_binding: &ObjectValueBinding,
+    ) -> bool {
+        object_binding
+            .string_properties
+            .iter()
+            .any(|(property_name, value)| {
+                property_name == "__ayy$module$namespace" && matches!(value, Expression::Bool(true))
+            })
+    }
+
     fn object_binding_descriptor_position(
         &self,
         object_binding: &ObjectValueBinding,
@@ -180,7 +191,16 @@ impl<'a> FunctionCompiler<'a> {
             .speculation
             .static_semantics
             .local_object_binding(&resolved_name)
+            .or_else(|| {
+                self.state
+                    .speculation
+                    .static_semantics
+                    .local_object_binding(name)
+            })
             .cloned();
+        if Self::expression_references_internal_assignment_temp(expression) {
+            return local_object_binding;
+        }
         let local_value_object_binding = self
             .state
             .speculation
@@ -199,6 +219,51 @@ impl<'a> FunctionCompiler<'a> {
             .global_value_binding(name)
             .filter(|value| !static_expression_matches(value, expression))
             .and_then(|value| self.resolve_object_binding_from_expression(value));
+        let local_object_binding = local_object_binding.map(|mut binding| {
+            self.merge_runtime_shadow_static_symbol_metadata(
+                &mut binding,
+                local_value_object_binding.as_ref(),
+            );
+            binding
+        });
+        let hidden_object_binding = hidden_object_binding.map(|mut binding| {
+            self.merge_runtime_shadow_static_symbol_metadata(
+                &mut binding,
+                local_value_object_binding.as_ref(),
+            );
+            self.merge_runtime_shadow_static_symbol_metadata(
+                &mut binding,
+                global_value_object_binding.as_ref(),
+            );
+            binding
+        });
+        let global_object_binding = global_object_binding.map(|mut binding| {
+            self.merge_runtime_shadow_static_symbol_metadata(
+                &mut binding,
+                global_value_object_binding.as_ref(),
+            );
+            binding
+        });
+        if name.starts_with("__ayy_local$")
+            && let Some(global_object_binding) = global_object_binding.clone()
+        {
+            return Some(global_object_binding);
+        }
+        let local_object_binding = local_object_binding.map(|mut binding| {
+            self.merge_runtime_shadow_static_symbol_metadata(
+                &mut binding,
+                hidden_object_binding.as_ref(),
+            );
+            self.merge_runtime_shadow_static_symbol_metadata(
+                &mut binding,
+                global_object_binding.as_ref(),
+            );
+            self.merge_runtime_shadow_static_symbol_metadata(
+                &mut binding,
+                global_value_object_binding.as_ref(),
+            );
+            binding
+        });
         let function_object_binding = self
             .identifier_resolves_to_function_object(&resolved_name, name)
             .then(empty_object_value_binding);
@@ -225,6 +290,12 @@ impl<'a> FunctionCompiler<'a> {
         if local_object_binding
             .as_ref()
             .is_some_and(Self::object_binding_has_private_capture_marker)
+        {
+            return local_object_binding;
+        }
+        if local_object_binding
+            .as_ref()
+            .is_some_and(Self::object_binding_has_module_namespace_marker)
         {
             return local_object_binding;
         }

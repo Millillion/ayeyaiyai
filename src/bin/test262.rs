@@ -171,6 +171,60 @@ function __ayyAssertCompareArray() {}
 assert.compareArray = __ayyAssertCompareArray;
 "#;
 
+const PROPERTY_HELPER_PRELUDE: &str = r#"
+function __propertyHelperHasOwn(obj, name) {
+  return Object.getOwnPropertyDescriptor(obj, name) !== undefined;
+}
+
+function __propertyHelperUnsupported(name) {
+  throw new Test262Error("unsupported propertyHelper fallback: " + name);
+}
+
+function verifyProperty(obj, name, desc, options) {
+  return __propertyHelperUnsupported("verifyProperty");
+}
+
+function verifyEqualTo(obj, name, value) {
+  return __propertyHelperUnsupported("verifyEqualTo");
+}
+
+function verifyWritable(obj, name, verifyProp, value) {
+  return __propertyHelperUnsupported("verifyWritable");
+}
+
+function verifyNotWritable(obj, name, verifyProp, value) {
+  return __propertyHelperUnsupported("verifyNotWritable");
+}
+
+function verifyEnumerable(obj, name) {
+  return __propertyHelperUnsupported("verifyEnumerable");
+}
+
+function verifyNotEnumerable(obj, name) {
+  return __propertyHelperUnsupported("verifyNotEnumerable");
+}
+
+function verifyConfigurable(obj, name) {
+  return __propertyHelperUnsupported("verifyConfigurable");
+}
+
+function verifyNotConfigurable(obj, name) {
+  return __propertyHelperUnsupported("verifyNotConfigurable");
+}
+
+function verifyCallableProperty(obj, name, functionName, length, desc) {
+  return __propertyHelperUnsupported("verifyCallableProperty");
+}
+
+function verifyPrimordialProperty(obj, name, desc) {
+  return __propertyHelperUnsupported("verifyPrimordialProperty");
+}
+
+function verifyPrimordialCallableProperty(obj, name, functionName, length, desc) {
+  return __propertyHelperUnsupported("verifyPrimordialCallableProperty");
+}
+"#;
+
 const TEST262_ERROR_PRELUDE: &str = r#"
 function Test262Error(message) {
   this.name = "Test262Error";
@@ -420,27 +474,36 @@ fn run() -> Result<()> {
     let cli = Cli::parse();
     let mut summary = Summary::default();
     let exact_tests = normalize_requested_tests(&cli.test262_dir, &cli.tests)?;
+    let candidate_paths: Box<dyn Iterator<Item = PathBuf>> = if exact_tests.is_empty() {
+        Box::new(
+            WalkDir::new(cli.test262_dir.join("test"))
+                .into_iter()
+                .filter_map(Result::ok)
+                .filter(|entry| entry.file_type().is_file())
+                .filter(|entry| entry.path().extension() == Some(OsStr::new("js")))
+                .map(|entry| entry.into_path()),
+        )
+    } else {
+        Box::new(
+            exact_tests
+                .iter()
+                .map(|relative| cli.test262_dir.join(relative))
+                .collect::<Vec<_>>()
+                .into_iter(),
+        )
+    };
 
-    for entry in WalkDir::new(cli.test262_dir.join("test"))
-        .into_iter()
-        .filter_map(Result::ok)
-        .filter(|entry| entry.file_type().is_file())
-        .filter(|entry| entry.path().extension() == Some(OsStr::new("js")))
-    {
+    for path in candidate_paths {
         if cli.limit.is_some_and(|limit| summary.attempted >= limit) {
             break;
         }
 
-        let path = entry.path();
+        let path = path.as_path();
         let display = path.display().to_string();
         let relative_display = path
             .strip_prefix(&cli.test262_dir)
             .map(normalize_path_display)
             .unwrap_or_else(|_| normalize_path_display(path));
-
-        if !exact_tests.is_empty() && !exact_tests.contains(&relative_display) {
-            continue;
-        }
 
         if !cli.contains.is_empty()
             && !cli
@@ -466,10 +529,17 @@ fn run() -> Result<()> {
             continue;
         }
 
+        let trace_timing = std::env::var_os("AYY_TRACE_TEST262_TIMING").is_some();
+        if trace_timing {
+            eprintln!("test262 timing prepare_start {relative_display}");
+        }
         let Some(rewritten) = prepare_test_source(&metadata, &body, &cli.test262_dir) else {
             summary.skipped_content += 1;
             continue;
         };
+        if trace_timing {
+            eprintln!("test262 timing prepare_done {relative_display}");
+        }
 
         if std::env::var_os("AYY_DUMP_PREPARED_SOURCE").is_some() {
             println!("{rewritten}");
@@ -587,6 +657,11 @@ fn run_single_test(
     module: bool,
 ) -> Result<(), TestFailure> {
     let tempdir = tempdir().map_err(|error| TestFailure::Compile(error.to_string()))?;
+    let trace_timing = std::env::var_os("AYY_TRACE_TEST262_TIMING").is_some();
+    let run_started = Instant::now();
+    if trace_timing {
+        eprintln!("test262 timing run_start {}", source_path.display());
+    }
     let source_root = tempdir.path().join("source");
     fs::create_dir_all(&source_root).map_err(|error| TestFailure::Compile(error.to_string()))?;
     let entry_name = source_path
@@ -613,6 +688,13 @@ fn run_single_test(
     };
 
     compile_result.map_err(|error| TestFailure::Compile(format!("{error:#}")))?;
+    if trace_timing {
+        eprintln!(
+            "test262 timing compile_done {} elapsed_ms={}",
+            source_path.display(),
+            run_started.elapsed().as_millis()
+        );
+    }
 
     if std::env::var_os("AYY_COMPILE_ONLY").is_some() {
         return Ok(());
@@ -659,7 +741,7 @@ fn run_single_test(
         .wait_with_output()
         .map_err(|error| TestFailure::Runtime(error.to_string()))?;
 
-    if output.status.success() {
+    let result = if output.status.success() {
         Ok(())
     } else {
         Err(TestFailure::Runtime(format!(
@@ -667,7 +749,12 @@ fn run_single_test(
             String::from_utf8_lossy(&output.stdout),
             String::from_utf8_lossy(&output.stderr),
         )))
+    };
+    if std::env::var_os("AYY_KEEP_TEST262_TEMP").is_some() {
+        eprintln!("kept test262 tempdir: {}", tempdir.path().display());
+        std::mem::forget(tempdir);
     }
+    result
 }
 
 fn stage_module_siblings(source_path: &Path, target_dir: &Path) -> Result<()> {
@@ -678,7 +765,10 @@ fn stage_module_siblings(source_path: &Path, target_dir: &Path) -> Result<()> {
     for entry in fs::read_dir(parent)? {
         let entry = entry?;
         let path = entry.path();
-        if path == source_path || path.extension() != Some(OsStr::new("js")) {
+        let extension = path.extension();
+        if path == source_path
+            || (extension != Some(OsStr::new("js")) && extension != Some(OsStr::new("json")))
+        {
             continue;
         }
 
@@ -856,6 +946,7 @@ fn include_prelude(include: &str, harness_dir: &Path) -> Option<String> {
     match include {
         "assert.js" | "sta.js" => Some(String::new()),
         "compareArray.js" => Some(String::new()),
+        "propertyHelper.js" => Some(PROPERTY_HELPER_PRELUDE.to_string()),
         "fnGlobalObject.js" => Some(FN_GLOBAL_OBJECT_PRELUDE.to_string()),
         "wellKnownIntrinsicObjects.js" => Some(WELL_KNOWN_INTRINSIC_OBJECTS_PRELUDE.to_string()),
         "asyncHelpers.js" => Some(ASYNC_HELPERS_PRELUDE.to_string()),

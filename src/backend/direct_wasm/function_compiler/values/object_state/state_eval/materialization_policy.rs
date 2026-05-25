@@ -34,6 +34,58 @@ impl StaticMaterializationPolicySource for FunctionStaticEvalContext<'_, '_> {
                 }
             }
         }
+
+        for candidate_object in [object, &resolved_object] {
+            if let Expression::Identifier(object_name) = candidate_object
+                && let Some(object_binding) = environment.object_binding(object_name)
+                && let Some(length) = array_length_from_object_binding(object_binding)
+            {
+                if matches!(&resolved_property, Expression::String(name) if name == "length") {
+                    return Some(Expression::Number(length as f64));
+                }
+                if let Some(index) = argument_index_from_expression(&resolved_property) {
+                    let property = Expression::String(index.to_string());
+                    let Some(value) =
+                        object_binding_lookup_value(object_binding, &property).cloned()
+                    else {
+                        return Some(Expression::Undefined);
+                    };
+                    return self
+                        .evaluate_expression_with_state(&value, environment)
+                        .or_else(|| self.materialize_expression_with_state(&value, environment))
+                        .or(Some(value));
+                }
+            }
+
+            if let Some(array_binding) =
+                self.resolve_array_binding_with_state(candidate_object, environment)
+            {
+                if matches!(&resolved_property, Expression::String(name) if name == "length") {
+                    return Some(Expression::Number(array_binding.values.len() as f64));
+                }
+                if let Some(index) = argument_index_from_expression(&resolved_property) {
+                    let Some(Some(value)) = array_binding.values.get(index as usize) else {
+                        return Some(Expression::Undefined);
+                    };
+                    return self
+                        .evaluate_expression_with_state(value, environment)
+                        .or_else(|| self.materialize_expression_with_state(value, environment))
+                        .or_else(|| Some(value.clone()));
+                }
+            }
+
+            if let Some(object_binding) =
+                self.resolve_object_binding_with_state(candidate_object, environment)
+                && let Some(value) =
+                    object_binding_lookup_value(&object_binding, &resolved_property)
+            {
+                return self
+                    .evaluate_expression_with_state(value, environment)
+                    .or_else(|| self.materialize_expression_with_state(value, environment))
+                    .or_else(|| Some(value.clone()));
+            }
+        }
+
         if !self.is_private_member_read_property(&resolved_property) {
             return None;
         }

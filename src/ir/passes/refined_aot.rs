@@ -355,13 +355,6 @@ impl<'a> RefinedAotValidator<'a> {
                 {
                     bail!("refined AOT goal forbids runtime source evaluation via `Realm.eval`");
                 }
-                if self.is_global_identifier(object, "$262")
-                    && self.is_string_literal(property, "evalScript")
-                {
-                    bail!(
-                        "refined AOT goal forbids runtime source evaluation via `$262.evalScript`"
-                    );
-                }
                 if self.is_global_identifier(object, "globalThis")
                     && self.is_string_literal(property, "eval")
                 {
@@ -419,8 +412,20 @@ impl<'a> RefinedAotValidator<'a> {
                     || self.is_direct_compile_time_string_eval_call(callee, arguments)
                     || self.is_direct_comment_eval_call(callee, arguments)
                     || self.is_direct_non_string_eval_call(callee, arguments)
+                    || self.is_test262_compile_time_eval_script_call(callee, arguments)
                 {
                     return Ok(());
+                }
+
+                if matches!(
+                    callee.as_ref(),
+                    Expression::Member { object, property }
+                        if self.is_global_identifier(object, "$262")
+                            && self.is_string_literal(property, "evalScript")
+                ) {
+                    bail!(
+                        "refined AOT goal forbids runtime source evaluation via `$262.evalScript`"
+                    );
                 }
 
                 if self.is_global_identifier(callee, "eval") {

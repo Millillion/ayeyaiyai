@@ -17,6 +17,21 @@ impl<'a> FunctionCompiler<'a> {
         let Some(descriptor) = resolve_property_descriptor_definition(descriptor_expression) else {
             return;
         };
+        if let Some(accepted_without_mutation) = self
+            .static_define_property_accepts_without_mutation(
+                target,
+                property,
+                descriptor_expression,
+            )
+        {
+            if accepted_without_mutation
+                && matches!(target, Expression::This)
+                && self.current_function_name().is_none()
+            {
+                self.update_global_property_descriptor(property, &descriptor);
+            }
+            return;
+        }
 
         match target {
             Expression::This => {
@@ -51,6 +66,83 @@ impl<'a> FunctionCompiler<'a> {
                 );
             }
             _ => {}
+        }
+    }
+
+    pub(in crate::backend::direct_wasm) fn apply_object_define_properties_update(
+        &mut self,
+        arguments: &[CallArgument],
+    ) {
+        let [
+            CallArgument::Expression(target),
+            CallArgument::Expression(properties),
+            ..,
+        ] = arguments
+        else {
+            return;
+        };
+        let Expression::Object(entries) = properties else {
+            return;
+        };
+
+        for entry in entries {
+            let crate::ir::hir::ObjectEntry::Data {
+                key,
+                value: descriptor_expression,
+            } = entry
+            else {
+                continue;
+            };
+            let Some(descriptor) = resolve_property_descriptor_definition(descriptor_expression)
+            else {
+                continue;
+            };
+            if let Some(accepted_without_mutation) = self
+                .static_define_property_accepts_without_mutation(target, key, descriptor_expression)
+            {
+                if accepted_without_mutation
+                    && matches!(target, Expression::This)
+                    && self.current_function_name().is_none()
+                {
+                    self.update_global_property_descriptor(key, &descriptor);
+                }
+                continue;
+            }
+
+            match target {
+                Expression::This => {
+                    if self.current_function_name().is_some() {
+                        self.define_object_property_from_descriptor("this", key, &descriptor);
+                    } else {
+                        self.update_global_property_descriptor(key, &descriptor);
+                    }
+                }
+                Expression::Identifier(name) => {
+                    self.define_object_property_from_descriptor(name, key, &descriptor);
+                }
+                Expression::Member {
+                    object,
+                    property: target_property,
+                } if matches!(target_property.as_ref(), Expression::String(name) if name == "prototype") =>
+                {
+                    let Expression::Identifier(name) = object.as_ref() else {
+                        continue;
+                    };
+                    self.define_prototype_object_property_from_descriptor(name, key, &descriptor);
+                }
+                Expression::Member {
+                    object,
+                    property: target_property,
+                } => {
+                    self.define_nested_object_property_from_descriptor(
+                        object,
+                        target_property,
+                        key,
+                        &descriptor,
+                    );
+                }
+                _ => {}
+            }
         }
     }
 
@@ -149,6 +241,10 @@ impl<'a> FunctionCompiler<'a> {
                 writable,
                 enumerable,
                 configurable,
+                getter: descriptor.getter.clone(),
+                setter: descriptor.setter.clone(),
+                has_get: descriptor.getter.is_some(),
+                has_set: descriptor.setter.is_some(),
             },
         );
     }
@@ -230,7 +326,9 @@ impl<'a> FunctionCompiler<'a> {
                 descriptor
                     .getter
                     .as_ref()
-                    .map(|expression| self.materialize_define_property_value_expression(expression))
+                    .map(|expression| {
+                        self.materialize_emitted_define_property_value_expression(expression)
+                    })
                     .or_else(|| {
                         existing_descriptor
                             .as_ref()
@@ -239,7 +337,9 @@ impl<'a> FunctionCompiler<'a> {
                 descriptor
                     .setter
                     .as_ref()
-                    .map(|expression| self.materialize_define_property_value_expression(expression))
+                    .map(|expression| {
+                        self.materialize_emitted_define_property_value_expression(expression)
+                    })
                     .or_else(|| {
                         existing_descriptor
                             .as_ref()
@@ -258,7 +358,9 @@ impl<'a> FunctionCompiler<'a> {
             let value = descriptor
                 .value
                 .as_ref()
-                .map(|expression| self.materialize_define_property_value_expression(expression))
+                .map(|expression| {
+                    self.materialize_emitted_define_property_value_expression(expression)
+                })
                 .or_else(|| {
                     existing_value
                         .as_ref()
@@ -424,7 +526,9 @@ impl<'a> FunctionCompiler<'a> {
                 descriptor
                     .getter
                     .as_ref()
-                    .map(|expression| self.materialize_define_property_value_expression(expression))
+                    .map(|expression| {
+                        self.materialize_emitted_define_property_value_expression(expression)
+                    })
                     .or_else(|| {
                         existing_descriptor
                             .as_ref()
@@ -433,7 +537,9 @@ impl<'a> FunctionCompiler<'a> {
                 descriptor
                     .setter
                     .as_ref()
-                    .map(|expression| self.materialize_define_property_value_expression(expression))
+                    .map(|expression| {
+                        self.materialize_emitted_define_property_value_expression(expression)
+                    })
                     .or_else(|| {
                         existing_descriptor
                             .as_ref()
@@ -465,7 +571,7 @@ impl<'a> FunctionCompiler<'a> {
                                 Expression::Identifier(name.to_string())
                             }
                         });
-                    self.materialize_define_property_value_expression_with_this_binding(
+                    self.materialize_emitted_define_property_value_expression_with_this_binding(
                         expression,
                         this_binding.as_ref(),
                     )
@@ -601,6 +707,11 @@ impl<'a> FunctionCompiler<'a> {
         descriptor: &PropertyDescriptorDefinition,
     ) {
         let property = self.canonical_object_property_expression(property);
+        if std::env::var_os("AYY_TRACE_DEFINE_PROPERTY_UPDATE").is_some() {
+            eprintln!(
+                "define_property_update prototype target={name} canonical_property={property:?}"
+            );
+        }
         let property_name = static_property_name_from_expression(&property);
         let existing_binding = self
             .state
@@ -664,7 +775,9 @@ impl<'a> FunctionCompiler<'a> {
                 descriptor
                     .getter
                     .as_ref()
-                    .map(|expression| self.materialize_define_property_value_expression(expression))
+                    .map(|expression| {
+                        self.materialize_emitted_define_property_value_expression(expression)
+                    })
                     .or_else(|| {
                         existing_descriptor
                             .as_ref()
@@ -673,7 +786,9 @@ impl<'a> FunctionCompiler<'a> {
                 descriptor
                     .setter
                     .as_ref()
-                    .map(|expression| self.materialize_define_property_value_expression(expression))
+                    .map(|expression| {
+                        self.materialize_emitted_define_property_value_expression(expression)
+                    })
                     .or_else(|| {
                         existing_descriptor
                             .as_ref()
@@ -692,7 +807,9 @@ impl<'a> FunctionCompiler<'a> {
             let value = descriptor
                 .value
                 .as_ref()
-                .map(|expression| self.materialize_define_property_value_expression(expression))
+                .map(|expression| {
+                    self.materialize_emitted_define_property_value_expression(expression)
+                })
                 .or_else(|| {
                     existing_value
                         .as_ref()
@@ -756,6 +873,16 @@ impl<'a> FunctionCompiler<'a> {
                 property,
                 descriptor_binding,
             );
+            if std::env::var_os("AYY_TRACE_DEFINE_PROPERTY_UPDATE").is_some() {
+                eprintln!(
+                    "define_property_update prototype_sync target={name} symbols={:?}",
+                    object_binding
+                        .symbol_properties
+                        .iter()
+                        .map(|(key, _)| key)
+                        .collect::<Vec<_>>()
+                );
+            }
             self.backend
                 .sync_global_prototype_object_binding(name, Some(object_binding));
         } else if !updated_existing_local_binding {
@@ -768,6 +895,16 @@ impl<'a> FunctionCompiler<'a> {
                 .entry(name.to_string())
                 .or_insert_with(empty_object_value_binding);
             object_binding_define_property_descriptor(object_binding, property, descriptor_binding);
+            if std::env::var_os("AYY_TRACE_DEFINE_PROPERTY_UPDATE").is_some() {
+                eprintln!(
+                    "define_property_update local_prototype target={name} symbols={:?}",
+                    object_binding
+                        .symbol_properties
+                        .iter()
+                        .map(|(key, _)| key)
+                        .collect::<Vec<_>>()
+                );
+            }
         }
     }
 
@@ -793,6 +930,11 @@ impl<'a> FunctionCompiler<'a> {
             this_binding,
             direct_eval_in_class_field_initializer,
         );
+        if !inline_summary_side_effect_free_expression(&rewritten)
+            && !Self::define_property_expression_mentions_direct_eval(&rewritten)
+        {
+            return rewritten;
+        }
         let mut environment = self.snapshot_static_resolution_environment_without_locals();
         self.resolve_static_define_property_value_expression_with_eval_environment(
             &rewritten,
@@ -815,6 +957,139 @@ impl<'a> FunctionCompiler<'a> {
         .or_else(|| self.evaluate_static_expression_with_state(&rewritten, &mut environment))
         .or_else(|| self.materialize_static_expression_with_state(&rewritten, &environment))
         .unwrap_or_else(|| self.materialize_static_expression(&rewritten))
+    }
+
+    fn materialize_emitted_define_property_value_expression(
+        &self,
+        expression: &Expression,
+    ) -> Expression {
+        self.materialize_emitted_define_property_value_expression_with_this_binding(
+            expression, None,
+        )
+    }
+
+    fn materialize_emitted_define_property_value_expression_with_this_binding(
+        &self,
+        expression: &Expression,
+        this_binding: Option<&Expression>,
+    ) -> Expression {
+        if let Expression::Update {
+            name,
+            op,
+            prefix: false,
+        } = expression
+            && let Expression::Number(current) =
+                self.materialize_static_expression(&Expression::Identifier(name.clone()))
+        {
+            return Expression::Number(match op {
+                UpdateOp::Increment => current - 1.0,
+                UpdateOp::Decrement => current + 1.0,
+            });
+        }
+
+        self.materialize_define_property_value_expression_with_this_binding(
+            expression,
+            this_binding,
+        )
+    }
+
+    fn define_property_expression_mentions_direct_eval(expression: &Expression) -> bool {
+        match expression {
+            Expression::Call { callee, arguments } => {
+                matches!(callee.as_ref(), Expression::Identifier(name) if name == "eval")
+                    || Self::define_property_expression_mentions_direct_eval(callee)
+                    || arguments.iter().any(|argument| match argument {
+                        CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                            Self::define_property_expression_mentions_direct_eval(expression)
+                        }
+                    })
+            }
+            Expression::SuperCall { callee, arguments } | Expression::New { callee, arguments } => {
+                Self::define_property_expression_mentions_direct_eval(callee)
+                    || arguments.iter().any(|argument| match argument {
+                        CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                            Self::define_property_expression_mentions_direct_eval(expression)
+                        }
+                    })
+            }
+            Expression::Array(elements) => elements.iter().any(|element| match element {
+                ArrayElement::Expression(expression) | ArrayElement::Spread(expression) => {
+                    Self::define_property_expression_mentions_direct_eval(expression)
+                }
+            }),
+            Expression::Object(entries) => entries.iter().any(|entry| match entry {
+                ObjectEntry::Data { key, value } => {
+                    Self::define_property_expression_mentions_direct_eval(key)
+                        || Self::define_property_expression_mentions_direct_eval(value)
+                }
+                ObjectEntry::Getter { key, getter } => {
+                    Self::define_property_expression_mentions_direct_eval(key)
+                        || Self::define_property_expression_mentions_direct_eval(getter)
+                }
+                ObjectEntry::Setter { key, setter } => {
+                    Self::define_property_expression_mentions_direct_eval(key)
+                        || Self::define_property_expression_mentions_direct_eval(setter)
+                }
+                ObjectEntry::Spread(expression) => {
+                    Self::define_property_expression_mentions_direct_eval(expression)
+                }
+            }),
+            Expression::Member { object, property } => {
+                Self::define_property_expression_mentions_direct_eval(object)
+                    || Self::define_property_expression_mentions_direct_eval(property)
+            }
+            Expression::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                Self::define_property_expression_mentions_direct_eval(object)
+                    || Self::define_property_expression_mentions_direct_eval(property)
+                    || Self::define_property_expression_mentions_direct_eval(value)
+            }
+            Expression::Assign { value, .. }
+            | Expression::Await(value)
+            | Expression::EnumerateKeys(value)
+            | Expression::GetIterator(value)
+            | Expression::IteratorClose(value)
+            | Expression::Unary {
+                expression: value, ..
+            } => Self::define_property_expression_mentions_direct_eval(value),
+            Expression::AssignSuperMember { property, value } => {
+                Self::define_property_expression_mentions_direct_eval(property)
+                    || Self::define_property_expression_mentions_direct_eval(value)
+            }
+            Expression::SuperMember { property } => {
+                Self::define_property_expression_mentions_direct_eval(property)
+            }
+            Expression::Binary { left, right, .. } => {
+                Self::define_property_expression_mentions_direct_eval(left)
+                    || Self::define_property_expression_mentions_direct_eval(right)
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                Self::define_property_expression_mentions_direct_eval(condition)
+                    || Self::define_property_expression_mentions_direct_eval(then_expression)
+                    || Self::define_property_expression_mentions_direct_eval(else_expression)
+            }
+            Expression::Sequence(expressions) => expressions
+                .iter()
+                .any(Self::define_property_expression_mentions_direct_eval),
+            Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined
+            | Expression::Identifier(_)
+            | Expression::This
+            | Expression::NewTarget
+            | Expression::Sent
+            | Expression::Update { .. } => false,
+        }
     }
 
     fn resolve_static_define_property_nested_eval_expression(
@@ -1050,6 +1325,7 @@ impl<'a> FunctionCompiler<'a> {
             || self.eval_program_declares_var_collision_with_global_lexical(&program)
             || self.eval_program_declares_var_collision_with_active_lexical(&program)
             || self.eval_program_declares_non_definable_global_function(&program)
+            || self.eval_program_declares_non_declarable_global_var(&program, false)
         {
             return None;
         }

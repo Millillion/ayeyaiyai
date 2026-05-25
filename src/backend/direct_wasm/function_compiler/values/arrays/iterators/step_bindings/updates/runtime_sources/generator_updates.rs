@@ -80,6 +80,16 @@ impl<'a> FunctionCompiler<'a> {
                     self.push_i32_const((index + 1) as i32);
                     self.push_local_set(iterator_binding.index_local);
                 }
+                SimpleGeneratorStepOutcome::YieldResult(result) => {
+                    self.push_i32_const(0);
+                    self.push_local_set(done_local);
+                    let value = self.simple_generator_yield_result_value(result, sent_value);
+                    self.emit_numeric_expression(&value)
+                        .expect("simple generator result yields should be compilable");
+                    self.push_local_set(value_local);
+                    self.push_i32_const((index + 1) as i32);
+                    self.push_local_set(iterator_binding.index_local);
+                }
                 SimpleGeneratorStepOutcome::Throw(value) => {
                     self.push_i32_const(1);
                     self.push_local_set(done_local);

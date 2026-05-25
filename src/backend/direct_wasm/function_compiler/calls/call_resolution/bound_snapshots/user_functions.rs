@@ -209,6 +209,752 @@ fn statement_calls_user_function(statement: &Statement, names: &HashSet<String>)
 }
 
 impl<'a> FunctionCompiler<'a> {
+    pub(in crate::backend::direct_wasm) fn merge_bound_snapshot_updated_bindings(
+        bindings: &mut HashMap<String, Expression>,
+        updated_bindings: HashMap<String, Expression>,
+    ) {
+        for (name, value) in updated_bindings {
+            bindings.insert(name, value);
+        }
+    }
+
+    fn collect_bound_snapshot_returned_capture_names_from_function_expression(
+        &self,
+        expression: &Expression,
+        current_function_name: Option<&str>,
+        names: &mut HashSet<String>,
+    ) {
+        let Some(LocalFunctionBinding::User(function_name)) = self
+            .resolve_function_binding_from_expression_with_context(
+                expression,
+                current_function_name,
+            )
+        else {
+            return;
+        };
+        if let Some(captures) = self
+            .backend
+            .function_registry
+            .analysis
+            .user_function_capture_bindings
+            .get(&function_name)
+        {
+            names.extend(captures.keys().cloned());
+        }
+        let mut visited_functions = HashSet::new();
+        self.collect_bound_snapshot_returned_capture_names_from_function_returns(
+            &function_name,
+            names,
+            &mut visited_functions,
+        );
+    }
+
+    fn collect_bound_snapshot_returned_capture_names_from_function_returns(
+        &self,
+        function_name: &str,
+        names: &mut HashSet<String>,
+        visited_functions: &mut HashSet<String>,
+    ) {
+        if !visited_functions.insert(function_name.to_string()) {
+            return;
+        }
+        let Some(function) = self.resolve_registered_function_declaration(function_name) else {
+            return;
+        };
+        for statement in &function.body {
+            self.collect_bound_snapshot_returned_capture_names_from_statement_returns(
+                statement,
+                Some(function_name),
+                names,
+                visited_functions,
+            );
+        }
+    }
+
+    fn collect_bound_snapshot_returned_capture_names_from_statement_returns(
+        &self,
+        statement: &Statement,
+        current_function_name: Option<&str>,
+        names: &mut HashSet<String>,
+        visited_functions: &mut HashSet<String>,
+    ) {
+        match statement {
+            Statement::Return(expression) | Statement::Throw(expression) => self
+                .collect_bound_snapshot_returned_capture_names_from_return_expression(
+                    expression,
+                    current_function_name,
+                    names,
+                    visited_functions,
+                ),
+            Statement::Declaration { body }
+            | Statement::Block { body }
+            | Statement::Labeled { body, .. }
+            | Statement::With { body, .. } => {
+                for statement in body {
+                    self.collect_bound_snapshot_returned_capture_names_from_statement_returns(
+                        statement,
+                        current_function_name,
+                        names,
+                        visited_functions,
+                    );
+                }
+            }
+            Statement::If {
+                then_branch,
+                else_branch,
+                ..
+            } => {
+                for statement in then_branch {
+                    self.collect_bound_snapshot_returned_capture_names_from_statement_returns(
+                        statement,
+                        current_function_name,
+                        names,
+                        visited_functions,
+                    );
+                }
+                for statement in else_branch {
+                    self.collect_bound_snapshot_returned_capture_names_from_statement_returns(
+                        statement,
+                        current_function_name,
+                        names,
+                        visited_functions,
+                    );
+                }
+            }
+            Statement::Try {
+                body, catch_body, ..
+            } => {
+                for statement in body {
+                    self.collect_bound_snapshot_returned_capture_names_from_statement_returns(
+                        statement,
+                        current_function_name,
+                        names,
+                        visited_functions,
+                    );
+                }
+                for statement in catch_body {
+                    self.collect_bound_snapshot_returned_capture_names_from_statement_returns(
+                        statement,
+                        current_function_name,
+                        names,
+                        visited_functions,
+                    );
+                }
+            }
+            Statement::Switch { cases, .. } => {
+                for case in cases {
+                    for statement in &case.body {
+                        self.collect_bound_snapshot_returned_capture_names_from_statement_returns(
+                            statement,
+                            current_function_name,
+                            names,
+                            visited_functions,
+                        );
+                    }
+                }
+            }
+            Statement::For { init, body, .. } => {
+                for statement in init {
+                    self.collect_bound_snapshot_returned_capture_names_from_statement_returns(
+                        statement,
+                        current_function_name,
+                        names,
+                        visited_functions,
+                    );
+                }
+                for statement in body {
+                    self.collect_bound_snapshot_returned_capture_names_from_statement_returns(
+                        statement,
+                        current_function_name,
+                        names,
+                        visited_functions,
+                    );
+                }
+            }
+            Statement::While { body, .. } | Statement::DoWhile { body, .. } => {
+                for statement in body {
+                    self.collect_bound_snapshot_returned_capture_names_from_statement_returns(
+                        statement,
+                        current_function_name,
+                        names,
+                        visited_functions,
+                    );
+                }
+            }
+            Statement::Expression(_)
+            | Statement::Var { .. }
+            | Statement::Let { .. }
+            | Statement::Assign { .. }
+            | Statement::AssignMember { .. }
+            | Statement::Print { .. }
+            | Statement::Yield { .. }
+            | Statement::YieldDelegate { .. }
+            | Statement::Break { .. }
+            | Statement::Continue { .. } => {}
+        }
+    }
+
+    fn collect_bound_snapshot_returned_capture_names_from_return_expression(
+        &self,
+        expression: &Expression,
+        current_function_name: Option<&str>,
+        names: &mut HashSet<String>,
+        visited_functions: &mut HashSet<String>,
+    ) {
+        if let Some(LocalFunctionBinding::User(function_name)) = self
+            .resolve_function_binding_from_expression_with_context(
+                expression,
+                current_function_name,
+            )
+        {
+            if let Some(captures) = self
+                .backend
+                .function_registry
+                .analysis
+                .user_function_capture_bindings
+                .get(&function_name)
+            {
+                names.extend(captures.keys().cloned());
+            }
+            self.collect_bound_snapshot_returned_capture_names_from_function_returns(
+                &function_name,
+                names,
+                visited_functions,
+            );
+        }
+        match expression {
+            Expression::Array(elements) => {
+                for element in elements {
+                    match element {
+                        ArrayElement::Expression(expression)
+                        | ArrayElement::Spread(expression) => self
+                            .collect_bound_snapshot_returned_capture_names_from_return_expression(
+                                expression,
+                                current_function_name,
+                                names,
+                                visited_functions,
+                            ),
+                    }
+                }
+            }
+            Expression::Object(entries) => {
+                for entry in entries {
+                    match entry {
+                        ObjectEntry::Data { key, value } => {
+                            self.collect_bound_snapshot_returned_capture_names_from_return_expression(
+                                key,
+                                current_function_name,
+                                names,
+                                visited_functions,
+                            );
+                            self.collect_bound_snapshot_returned_capture_names_from_return_expression(
+                                value,
+                                current_function_name,
+                                names,
+                                visited_functions,
+                            );
+                        }
+                        ObjectEntry::Getter { key, getter } => {
+                            self.collect_bound_snapshot_returned_capture_names_from_return_expression(
+                                key,
+                                current_function_name,
+                                names,
+                                visited_functions,
+                            );
+                            self.collect_bound_snapshot_returned_capture_names_from_return_expression(
+                                getter,
+                                current_function_name,
+                                names,
+                                visited_functions,
+                            );
+                        }
+                        ObjectEntry::Setter { key, setter } => {
+                            self.collect_bound_snapshot_returned_capture_names_from_return_expression(
+                                key,
+                                current_function_name,
+                                names,
+                                visited_functions,
+                            );
+                            self.collect_bound_snapshot_returned_capture_names_from_return_expression(
+                                setter,
+                                current_function_name,
+                                names,
+                                visited_functions,
+                            );
+                        }
+                        ObjectEntry::Spread(expression) => self
+                            .collect_bound_snapshot_returned_capture_names_from_return_expression(
+                                expression,
+                                current_function_name,
+                                names,
+                                visited_functions,
+                            ),
+                    }
+                }
+            }
+            Expression::Call { callee, arguments }
+            | Expression::SuperCall { callee, arguments }
+            | Expression::New { callee, arguments } => {
+                self.collect_bound_snapshot_returned_capture_names_from_return_expression(
+                    callee,
+                    current_function_name,
+                    names,
+                    visited_functions,
+                );
+                for argument in arguments {
+                    match argument {
+                        CallArgument::Expression(expression)
+                        | CallArgument::Spread(expression) => self
+                            .collect_bound_snapshot_returned_capture_names_from_return_expression(
+                                expression,
+                                current_function_name,
+                                names,
+                                visited_functions,
+                            ),
+                    }
+                }
+            }
+            Expression::Member { object, property } => {
+                self.collect_bound_snapshot_returned_capture_names_from_return_expression(
+                    object,
+                    current_function_name,
+                    names,
+                    visited_functions,
+                );
+                self.collect_bound_snapshot_returned_capture_names_from_return_expression(
+                    property,
+                    current_function_name,
+                    names,
+                    visited_functions,
+                );
+            }
+            Expression::SuperMember { property } => {
+                self.collect_bound_snapshot_returned_capture_names_from_return_expression(
+                    property,
+                    current_function_name,
+                    names,
+                    visited_functions,
+                );
+            }
+            Expression::Assign { value, .. }
+            | Expression::Await(value)
+            | Expression::EnumerateKeys(value)
+            | Expression::GetIterator(value)
+            | Expression::IteratorClose(value)
+            | Expression::Unary {
+                expression: value, ..
+            } => self.collect_bound_snapshot_returned_capture_names_from_return_expression(
+                value,
+                current_function_name,
+                names,
+                visited_functions,
+            ),
+            Expression::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                self.collect_bound_snapshot_returned_capture_names_from_return_expression(
+                    object,
+                    current_function_name,
+                    names,
+                    visited_functions,
+                );
+                self.collect_bound_snapshot_returned_capture_names_from_return_expression(
+                    property,
+                    current_function_name,
+                    names,
+                    visited_functions,
+                );
+                self.collect_bound_snapshot_returned_capture_names_from_return_expression(
+                    value,
+                    current_function_name,
+                    names,
+                    visited_functions,
+                );
+            }
+            Expression::AssignSuperMember { property, value } => {
+                self.collect_bound_snapshot_returned_capture_names_from_return_expression(
+                    property,
+                    current_function_name,
+                    names,
+                    visited_functions,
+                );
+                self.collect_bound_snapshot_returned_capture_names_from_return_expression(
+                    value,
+                    current_function_name,
+                    names,
+                    visited_functions,
+                );
+            }
+            Expression::Binary { left, right, .. } => {
+                self.collect_bound_snapshot_returned_capture_names_from_return_expression(
+                    left,
+                    current_function_name,
+                    names,
+                    visited_functions,
+                );
+                self.collect_bound_snapshot_returned_capture_names_from_return_expression(
+                    right,
+                    current_function_name,
+                    names,
+                    visited_functions,
+                );
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                self.collect_bound_snapshot_returned_capture_names_from_return_expression(
+                    condition,
+                    current_function_name,
+                    names,
+                    visited_functions,
+                );
+                self.collect_bound_snapshot_returned_capture_names_from_return_expression(
+                    then_expression,
+                    current_function_name,
+                    names,
+                    visited_functions,
+                );
+                self.collect_bound_snapshot_returned_capture_names_from_return_expression(
+                    else_expression,
+                    current_function_name,
+                    names,
+                    visited_functions,
+                );
+            }
+            Expression::Sequence(expressions) => {
+                for expression in expressions {
+                    self.collect_bound_snapshot_returned_capture_names_from_return_expression(
+                        expression,
+                        current_function_name,
+                        names,
+                        visited_functions,
+                    );
+                }
+            }
+            Expression::Update { .. }
+            | Expression::Identifier(_)
+            | Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined
+            | Expression::NewTarget
+            | Expression::Sent
+            | Expression::This => {}
+        }
+    }
+
+    fn collect_bound_snapshot_returned_capture_names_from_call_arguments(
+        &self,
+        arguments: &[CallArgument],
+        current_function_name: Option<&str>,
+        names: &mut HashSet<String>,
+    ) {
+        for argument in arguments {
+            match argument {
+                CallArgument::Expression(expression) | CallArgument::Spread(expression) => self
+                    .collect_bound_snapshot_returned_capture_names_from_expression(
+                        expression,
+                        current_function_name,
+                        names,
+                    ),
+            }
+        }
+    }
+
+    fn collect_bound_snapshot_returned_capture_names_from_expression(
+        &self,
+        expression: &Expression,
+        current_function_name: Option<&str>,
+        names: &mut HashSet<String>,
+    ) {
+        self.collect_bound_snapshot_returned_capture_names_from_function_expression(
+            expression,
+            current_function_name,
+            names,
+        );
+        match expression {
+            Expression::Array(elements) => {
+                for element in elements {
+                    match element {
+                        ArrayElement::Expression(expression) | ArrayElement::Spread(expression) => {
+                            self.collect_bound_snapshot_returned_capture_names_from_expression(
+                                expression,
+                                current_function_name,
+                                names,
+                            )
+                        }
+                    }
+                }
+            }
+            Expression::Object(entries) => {
+                for entry in entries {
+                    match entry {
+                        ObjectEntry::Data { key, value } => {
+                            self.collect_bound_snapshot_returned_capture_names_from_expression(
+                                key,
+                                current_function_name,
+                                names,
+                            );
+                            self.collect_bound_snapshot_returned_capture_names_from_expression(
+                                value,
+                                current_function_name,
+                                names,
+                            );
+                        }
+                        ObjectEntry::Getter { key, getter } => {
+                            self.collect_bound_snapshot_returned_capture_names_from_expression(
+                                key,
+                                current_function_name,
+                                names,
+                            );
+                            self.collect_bound_snapshot_returned_capture_names_from_expression(
+                                getter,
+                                current_function_name,
+                                names,
+                            );
+                        }
+                        ObjectEntry::Setter { key, setter } => {
+                            self.collect_bound_snapshot_returned_capture_names_from_expression(
+                                key,
+                                current_function_name,
+                                names,
+                            );
+                            self.collect_bound_snapshot_returned_capture_names_from_expression(
+                                setter,
+                                current_function_name,
+                                names,
+                            );
+                        }
+                        ObjectEntry::Spread(expression) => self
+                            .collect_bound_snapshot_returned_capture_names_from_expression(
+                                expression,
+                                current_function_name,
+                                names,
+                            ),
+                    }
+                }
+            }
+            Expression::Member { object, property } => {
+                self.collect_bound_snapshot_returned_capture_names_from_expression(
+                    object,
+                    current_function_name,
+                    names,
+                );
+                self.collect_bound_snapshot_returned_capture_names_from_expression(
+                    property,
+                    current_function_name,
+                    names,
+                );
+            }
+            Expression::SuperMember { property } => {
+                self.collect_bound_snapshot_returned_capture_names_from_expression(
+                    property,
+                    current_function_name,
+                    names,
+                );
+            }
+            Expression::Assign { value, .. }
+            | Expression::Await(value)
+            | Expression::EnumerateKeys(value)
+            | Expression::GetIterator(value)
+            | Expression::IteratorClose(value)
+            | Expression::Unary {
+                expression: value, ..
+            } => self.collect_bound_snapshot_returned_capture_names_from_expression(
+                value,
+                current_function_name,
+                names,
+            ),
+            Expression::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                self.collect_bound_snapshot_returned_capture_names_from_expression(
+                    object,
+                    current_function_name,
+                    names,
+                );
+                self.collect_bound_snapshot_returned_capture_names_from_expression(
+                    property,
+                    current_function_name,
+                    names,
+                );
+                self.collect_bound_snapshot_returned_capture_names_from_expression(
+                    value,
+                    current_function_name,
+                    names,
+                );
+            }
+            Expression::AssignSuperMember { property, value } => {
+                self.collect_bound_snapshot_returned_capture_names_from_expression(
+                    property,
+                    current_function_name,
+                    names,
+                );
+                self.collect_bound_snapshot_returned_capture_names_from_expression(
+                    value,
+                    current_function_name,
+                    names,
+                );
+            }
+            Expression::Binary { left, right, .. } => {
+                self.collect_bound_snapshot_returned_capture_names_from_expression(
+                    left,
+                    current_function_name,
+                    names,
+                );
+                self.collect_bound_snapshot_returned_capture_names_from_expression(
+                    right,
+                    current_function_name,
+                    names,
+                );
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                self.collect_bound_snapshot_returned_capture_names_from_expression(
+                    condition,
+                    current_function_name,
+                    names,
+                );
+                self.collect_bound_snapshot_returned_capture_names_from_expression(
+                    then_expression,
+                    current_function_name,
+                    names,
+                );
+                self.collect_bound_snapshot_returned_capture_names_from_expression(
+                    else_expression,
+                    current_function_name,
+                    names,
+                );
+            }
+            Expression::Sequence(expressions) => {
+                for expression in expressions {
+                    self.collect_bound_snapshot_returned_capture_names_from_expression(
+                        expression,
+                        current_function_name,
+                        names,
+                    );
+                }
+            }
+            Expression::Call { callee, arguments }
+            | Expression::SuperCall { callee, arguments }
+            | Expression::New { callee, arguments } => {
+                self.collect_bound_snapshot_returned_capture_names_from_expression(
+                    callee,
+                    current_function_name,
+                    names,
+                );
+                self.collect_bound_snapshot_returned_capture_names_from_call_arguments(
+                    arguments,
+                    current_function_name,
+                    names,
+                );
+            }
+            Expression::Update { .. }
+            | Expression::Identifier(_)
+            | Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined
+            | Expression::NewTarget
+            | Expression::Sent
+            | Expression::This => {}
+        }
+    }
+
+    fn bound_snapshot_binding_value_for_capture_name(
+        name: &str,
+        bindings: &HashMap<String, Expression>,
+    ) -> Option<Expression> {
+        bindings
+            .iter()
+            .find(|(binding_name, _)| {
+                scoped_binding_source_name(binding_name).is_some_and(|source| source == name)
+            })
+            .map(|(_, value)| value.clone())
+            .or_else(|| bindings.get(name).cloned())
+    }
+
+    fn bound_snapshot_capture_alias_is_retained(
+        alias: &str,
+        capture_name: &str,
+        capture_names: &HashSet<String>,
+    ) -> bool {
+        let alias_source = scoped_binding_source_name(alias).unwrap_or(alias);
+        alias_source != capture_name && capture_names.contains(alias_source)
+    }
+
+    fn preserve_bound_snapshot_returned_capture_bindings(
+        &self,
+        outcome: &BoundSnapshotControlFlow,
+        local_bindings: &HashMap<String, Expression>,
+        materialized_bindings: &mut HashMap<String, Expression>,
+        retained_names: &mut HashSet<String>,
+        current_function_name: Option<&str>,
+    ) {
+        let value = match outcome {
+            BoundSnapshotControlFlow::Return(value) | BoundSnapshotControlFlow::Throw(value) => {
+                value
+            }
+            BoundSnapshotControlFlow::None | BoundSnapshotControlFlow::Break(_) => return,
+        };
+        let mut capture_names = HashSet::new();
+        self.collect_bound_snapshot_returned_capture_names_from_expression(
+            value,
+            current_function_name,
+            &mut capture_names,
+        );
+        for capture_name in &capture_names {
+            if capture_name == "this" || capture_name == "arguments" {
+                retained_names.insert(capture_name.clone());
+                continue;
+            }
+            retained_names.insert(capture_name.clone());
+            if let Some(value) =
+                Self::bound_snapshot_binding_value_for_capture_name(capture_name, local_bindings)
+            {
+                if let Expression::Identifier(alias) = &value
+                    && Self::bound_snapshot_capture_alias_is_retained(
+                        alias,
+                        capture_name,
+                        &capture_names,
+                    )
+                {
+                    materialized_bindings.insert(capture_name.clone(), value);
+                    continue;
+                }
+            }
+            if materialized_bindings.contains_key(capture_name) {
+                continue;
+            }
+            let Some(value) =
+                Self::bound_snapshot_binding_value_for_capture_name(&capture_name, local_bindings)
+            else {
+                continue;
+            };
+            let materialized = self
+                .evaluate_bound_snapshot_expression(
+                    &value,
+                    &mut materialized_bindings.clone(),
+                    current_function_name,
+                )
+                .unwrap_or(value);
+            materialized_bindings.insert(capture_name.clone(), materialized);
+        }
+    }
+
     fn user_function_calls_captured_user_function(&self, user_function: &UserFunction) -> bool {
         if self
             .backend
@@ -253,6 +999,21 @@ impl<'a> FunctionCompiler<'a> {
             {
                 continue;
             }
+            if let Expression::Identifier(value_name) = &current_value
+                && let Some(target_value) = materialized.get(value_name)
+                && value_name != "arguments"
+                && !matches!(
+                    target_value,
+                    Expression::Number(_)
+                        | Expression::BigInt(_)
+                        | Expression::String(_)
+                        | Expression::Bool(_)
+                        | Expression::Null
+                        | Expression::Undefined
+                )
+            {
+                continue;
+            }
             let resolved = self
                 .evaluate_bound_snapshot_expression(
                     &current_value,
@@ -267,7 +1028,7 @@ impl<'a> FunctionCompiler<'a> {
         materialized
     }
 
-    fn should_preserve_bound_snapshot_throw_identity(
+    fn should_preserve_bound_snapshot_control_value_identity(
         &self,
         value: &Expression,
         current_function_name: Option<&str>,
@@ -341,32 +1102,92 @@ impl<'a> FunctionCompiler<'a> {
         arguments: &[Expression],
         this_binding: &Expression,
     ) -> Option<(StaticEvalOutcome, HashMap<String, Expression>)> {
+        let trace = std::env::var_os("AYY_TRACE_BOUND_SNAPSHOT").is_some();
         let function = self.resolve_registered_function_declaration(function_name)?;
         let user_function = self.user_function(function_name)?;
-        if self
+        if trace {
+            eprintln!(
+                "bound_snapshot_user_function:start function={function_name} arguments={arguments:?} this={this_binding:?} binding_keys={:?}",
+                bindings.keys().collect::<Vec<_>>()
+            );
+        }
+        if let Some(captures) = self
             .backend
             .function_registry
             .analysis
             .user_function_capture_bindings
             .get(&user_function.name)
-            .is_some_and(|captures| captures.keys().any(|name| !bindings.contains_key(name)))
-            || self.user_function_calls_captured_user_function(user_function)
         {
+            let missing = captures
+                .keys()
+                .filter(|name| !bindings.contains_key(*name))
+                .cloned()
+                .collect::<Vec<_>>();
+            if !missing.is_empty() {
+                if trace {
+                    eprintln!(
+                        "bound_snapshot_user_function:none function={function_name} reason=missing_captures missing={missing:?} captures={:?}",
+                        captures.keys().collect::<Vec<_>>()
+                    );
+                }
+                return None;
+            }
+        }
+        if self.user_function_calls_captured_user_function(user_function) {
+            if trace {
+                eprintln!(
+                    "bound_snapshot_user_function:none function={function_name} reason=calls_captured_user_function"
+                );
+            }
             return None;
         }
-        if user_function.has_parameter_defaults() {
+        if user_function.has_parameter_defaults()
+            && !user_function
+                .parameter_defaults
+                .iter()
+                .flatten()
+                .all(inline_summary_side_effect_free_expression)
+        {
+            if trace {
+                eprintln!(
+                    "bound_snapshot_user_function:none function={function_name} reason=effectful_parameter_defaults"
+                );
+            }
+            return None;
+        }
+        if self.user_function_deletes_call_frame_arguments_member(user_function) {
+            if trace {
+                eprintln!(
+                    "bound_snapshot_user_function:none function={function_name} reason=deletes_arguments_member"
+                );
+            }
             return None;
         }
         if user_function.has_lowered_pattern_parameters() {
+            if trace {
+                eprintln!(
+                    "bound_snapshot_user_function:none function={function_name} reason=lowered_pattern_parameters"
+                );
+            }
             return None;
         }
-        if !self
-            .user_function_parameter_iterator_consumption_indices(user_function)
-            .is_empty()
-        {
+        let iterator_consumption_indices =
+            self.user_function_parameter_iterator_consumption_indices(user_function);
+        if !iterator_consumption_indices.is_empty() {
+            if trace {
+                eprintln!(
+                    "bound_snapshot_user_function:none function={function_name} reason=parameter_iterator_consumption indices={iterator_consumption_indices:?}"
+                );
+            }
             return None;
         }
         if !user_function.params.is_empty() && !user_function.extra_argument_indices.is_empty() {
+            if trace {
+                eprintln!(
+                    "bound_snapshot_user_function:none function={function_name} reason=extra_argument_indices params={:?} extra={:?}",
+                    user_function.params, user_function.extra_argument_indices
+                );
+            }
             return None;
         }
         let materialized_arguments = arguments
@@ -379,16 +1200,53 @@ impl<'a> FunctionCompiler<'a> {
                 .entry(binding.clone())
                 .or_insert(Expression::Undefined);
         }
-        for (index, parameter_name) in user_function.params.iter().enumerate() {
+        local_bindings.insert("this".to_string(), this_binding.clone());
+        let arguments_shadowed = user_function.lexical_this
+            || user_function.body_declares_arguments_binding
+            || user_function.params.iter().any(|param| {
+                param == "arguments"
+                    || scoped_binding_source_name(param)
+                        .is_some_and(|source_name| source_name == "arguments")
+            });
+        if !arguments_shadowed {
             local_bindings.insert(
-                parameter_name.clone(),
-                materialized_arguments
-                    .get(index)
-                    .cloned()
-                    .unwrap_or(Expression::Undefined),
+                "arguments".to_string(),
+                Expression::Array(
+                    materialized_arguments
+                        .iter()
+                        .cloned()
+                        .map(ArrayElement::Expression)
+                        .collect(),
+                ),
             );
         }
-        local_bindings.insert("this".to_string(), this_binding.clone());
+        for (index, parameter_name) in user_function.params.iter().enumerate() {
+            let mut parameter_value = materialized_arguments
+                .get(index)
+                .cloned()
+                .unwrap_or(Expression::Undefined);
+            if matches!(parameter_value, Expression::Undefined)
+                && let Some(default) = user_function
+                    .parameter_defaults
+                    .get(index)
+                    .and_then(Option::as_ref)
+            {
+                parameter_value = self
+                    .evaluate_bound_snapshot_expression(
+                        default,
+                        &mut local_bindings,
+                        Some(function_name),
+                    )
+                    .or_else(|| {
+                        self.resolve_static_primitive_expression_with_context(
+                            default,
+                            Some(function_name),
+                        )
+                    })
+                    .unwrap_or_else(|| self.materialize_static_expression(default));
+            }
+            local_bindings.insert(parameter_name.clone(), parameter_value);
+        }
         if let Expression::Identifier(this_name) = this_binding
             && !local_bindings.contains_key(this_name)
         {
@@ -416,44 +1274,49 @@ impl<'a> FunctionCompiler<'a> {
                 local_bindings.insert(this_name.clone(), value);
             }
         }
-        let arguments_shadowed = user_function.lexical_this
-            || user_function.body_declares_arguments_binding
-            || user_function.params.iter().any(|param| {
-                param == "arguments"
-                    || scoped_binding_source_name(param)
-                        .is_some_and(|source_name| source_name == "arguments")
-            });
-        if !arguments_shadowed {
-            local_bindings.insert(
-                "arguments".to_string(),
-                Expression::Array(
-                    materialized_arguments
-                        .iter()
-                        .cloned()
-                        .map(ArrayElement::Expression)
-                        .collect(),
-                ),
-            );
-        }
-        let result = self.execute_bound_snapshot_statements(
+        let result = match self.execute_bound_snapshot_statements(
             &function.body,
             &mut local_bindings,
             Some(function_name),
-        )?;
+        ) {
+            Some(result) => result,
+            None => {
+                if trace {
+                    eprintln!(
+                        "bound_snapshot_user_function:none function={function_name} reason=statement_execution local_keys={:?}",
+                        local_bindings.keys().collect::<Vec<_>>()
+                    );
+                }
+                return None;
+            }
+        };
         let mut materialized_bindings =
             self.materialize_bound_snapshot_bindings(&local_bindings, Some(function_name));
+        let mut updated_nonlocal_names =
+            self.collect_user_function_assigned_nonlocal_bindings(user_function);
+        updated_nonlocal_names
+            .extend(self.collect_user_function_call_effect_nonlocal_bindings(user_function));
+        updated_nonlocal_names.insert(SNAPSHOT_AWAIT_RESOLUTION_VALUE.to_string());
+        updated_nonlocal_names.insert(SNAPSHOT_AWAIT_REJECTION_VALUE.to_string());
         let materialized_outcome = match result {
             BoundSnapshotControlFlow::None => BoundSnapshotControlFlow::None,
             BoundSnapshotControlFlow::Return(value) => BoundSnapshotControlFlow::Return(
-                self.evaluate_bound_snapshot_expression(
+                if self.should_preserve_bound_snapshot_control_value_identity(
                     &value,
-                    &mut materialized_bindings,
                     Some(function_name),
-                )
-                .unwrap_or(value),
+                ) {
+                    value
+                } else {
+                    self.evaluate_bound_snapshot_expression(
+                        &value,
+                        &mut materialized_bindings,
+                        Some(function_name),
+                    )
+                    .unwrap_or(value)
+                },
             ),
             BoundSnapshotControlFlow::Throw(value) => BoundSnapshotControlFlow::Throw(
-                if self.should_preserve_bound_snapshot_throw_identity(
+                if self.should_preserve_bound_snapshot_control_value_identity(
                     &value,
                     Some(function_name),
                 ) {
@@ -469,6 +1332,17 @@ impl<'a> FunctionCompiler<'a> {
             ),
             BoundSnapshotControlFlow::Break(_) => return None,
         };
+        self.preserve_bound_snapshot_returned_capture_bindings(
+            &materialized_outcome,
+            &local_bindings,
+            &mut materialized_bindings,
+            &mut updated_nonlocal_names,
+            Some(function_name),
+        );
+        materialized_bindings.retain(|name, _| {
+            let source_name = scoped_binding_source_name(name).unwrap_or(name);
+            updated_nonlocal_names.contains(source_name)
+        });
         Some((
             match materialized_outcome {
                 BoundSnapshotControlFlow::None => StaticEvalOutcome::Value(Expression::Undefined),
@@ -586,7 +1460,7 @@ impl<'a> FunctionCompiler<'a> {
                 ],
                 this_binding,
             )?;
-        *bindings = updated_bindings;
+        Self::merge_bound_snapshot_updated_bindings(bindings, updated_bindings);
         let resolution = bindings
             .get(SNAPSHOT_AWAIT_RESOLUTION_VALUE)
             .cloned()

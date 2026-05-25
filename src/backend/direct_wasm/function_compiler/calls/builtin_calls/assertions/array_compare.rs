@@ -35,6 +35,21 @@ impl<'a> FunctionCompiler<'a> {
                 actual,
                 Expression::Identifier(_) | Expression::Member { .. }
             )
+            && self
+                .runtime_array_binding_name_for_expression(actual)
+                .is_some()
+            && self
+                .runtime_array_binding_name_for_expression(expected)
+                .is_some()
+        {
+            return self.emit_runtime_assert_compare_arrays(actual, expected);
+        }
+
+        if self.has_current_user_function()
+            && matches!(
+                actual,
+                Expression::Identifier(_) | Expression::Member { .. }
+            )
         {
             return Ok(false);
         }
@@ -50,6 +65,12 @@ impl<'a> FunctionCompiler<'a> {
         let Some(actual_binding) = self.resolve_array_binding_from_expression(actual) else {
             return Ok(false);
         };
+        if std::env::var_os("AYY_TRACE_COMPARE_ARRAY").is_some() {
+            eprintln!(
+                "assert_compare_array:actual={:?} expected={:?}",
+                actual_binding.values, expected_binding.values
+            );
+        }
         if !self.array_bindings_equal(&actual_binding, &expected_binding) {
             self.emit_error_throw()?;
         } else {
@@ -120,6 +141,27 @@ impl<'a> FunctionCompiler<'a> {
         Ok(true)
     }
 
+    fn emit_runtime_assert_compare_arrays(
+        &mut self,
+        actual: &Expression,
+        expected: &Expression,
+    ) -> DirectResult<bool> {
+        let mismatch_local = self.emit_runtime_compare_arrays_mismatch_local(actual, expected)?;
+        self.push_local_get(mismatch_local);
+        self.state.emission.output.instructions.push(0x04);
+        self.state
+            .emission
+            .output
+            .instructions
+            .push(EMPTY_BLOCK_TYPE);
+        self.push_control_frame();
+        self.emit_error_throw()?;
+        self.state.emission.output.instructions.push(0x0b);
+        self.pop_control_frame();
+        self.push_i32_const(JS_UNDEFINED_TAG);
+        Ok(true)
+    }
+
     pub(in crate::backend::direct_wasm) fn emit_compare_array_call(
         &mut self,
         arguments: &[CallArgument],
@@ -147,6 +189,26 @@ impl<'a> FunctionCompiler<'a> {
                     self.state.emission.output.instructions.push(0x1a);
                 }
             }
+        }
+
+        if self.has_current_user_function()
+            && matches!(
+                actual,
+                Expression::Identifier(_) | Expression::Member { .. }
+            )
+            && self
+                .runtime_array_binding_name_for_expression(actual)
+                .is_some()
+            && self
+                .runtime_array_binding_name_for_expression(expected)
+                .is_some()
+        {
+            let mismatch_local =
+                self.emit_runtime_compare_arrays_mismatch_local(actual, expected)?;
+            self.push_local_get(mismatch_local);
+            self.push_i32_const(0);
+            self.push_binary_op(BinaryOp::Equal)?;
+            return Ok(true);
         }
 
         if self.has_current_user_function()
@@ -213,6 +275,12 @@ impl<'a> FunctionCompiler<'a> {
         let Some(actual_binding) = self.resolve_array_binding_from_expression(actual) else {
             return Ok(false);
         };
+        if std::env::var_os("AYY_TRACE_COMPARE_ARRAY").is_some() {
+            eprintln!(
+                "compare_array:actual={:?} expected={:?}",
+                actual_binding.values, expected_binding.values
+            );
+        }
         self.push_i32_const(
             if self.array_bindings_equal(&actual_binding, &expected_binding) {
                 1
@@ -221,5 +289,81 @@ impl<'a> FunctionCompiler<'a> {
             },
         );
         Ok(true)
+    }
+
+    fn emit_runtime_compare_arrays_mismatch_local(
+        &mut self,
+        actual: &Expression,
+        expected: &Expression,
+    ) -> DirectResult<u32> {
+        let mismatch_local = self.allocate_temp_local();
+        let actual_length_local = self.allocate_temp_local();
+        let expected_length_local = self.allocate_temp_local();
+
+        self.push_i32_const(0);
+        self.push_local_set(mismatch_local);
+
+        self.emit_numeric_expression(&Expression::Member {
+            object: Box::new(actual.clone()),
+            property: Box::new(Expression::String("length".to_string())),
+        })?;
+        self.push_local_set(actual_length_local);
+        self.emit_numeric_expression(&Expression::Member {
+            object: Box::new(expected.clone()),
+            property: Box::new(Expression::String("length".to_string())),
+        })?;
+        self.push_local_set(expected_length_local);
+
+        self.push_local_get(actual_length_local);
+        self.push_local_get(expected_length_local);
+        self.push_binary_op(BinaryOp::NotEqual)?;
+        self.state.emission.output.instructions.push(0x04);
+        self.state
+            .emission
+            .output
+            .instructions
+            .push(EMPTY_BLOCK_TYPE);
+        self.push_control_frame();
+        self.push_i32_const(1);
+        self.push_local_set(mismatch_local);
+        self.state.emission.output.instructions.push(0x0b);
+        self.pop_control_frame();
+
+        for index in 0..TRACKED_ARRAY_SLOT_LIMIT {
+            self.push_local_get(actual_length_local);
+            self.push_i32_const(index as i32);
+            self.push_binary_op(BinaryOp::GreaterThan)?;
+            self.state.emission.output.instructions.push(0x04);
+            self.state
+                .emission
+                .output
+                .instructions
+                .push(EMPTY_BLOCK_TYPE);
+            self.push_control_frame();
+            self.emit_numeric_expression(&Expression::Member {
+                object: Box::new(actual.clone()),
+                property: Box::new(Expression::Number(index as f64)),
+            })?;
+            self.emit_numeric_expression(&Expression::Member {
+                object: Box::new(expected.clone()),
+                property: Box::new(Expression::Number(index as f64)),
+            })?;
+            self.push_binary_op(BinaryOp::NotEqual)?;
+            self.state.emission.output.instructions.push(0x04);
+            self.state
+                .emission
+                .output
+                .instructions
+                .push(EMPTY_BLOCK_TYPE);
+            self.push_control_frame();
+            self.push_i32_const(1);
+            self.push_local_set(mismatch_local);
+            self.state.emission.output.instructions.push(0x0b);
+            self.pop_control_frame();
+            self.state.emission.output.instructions.push(0x0b);
+            self.pop_control_frame();
+        }
+
+        Ok(mismatch_local)
     }
 }

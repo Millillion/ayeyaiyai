@@ -60,6 +60,29 @@ impl RefinedAotValidator<'_> {
         self.resolve_compile_time_string(argument).is_some()
     }
 
+    pub(super) fn is_test262_compile_time_eval_script_call(
+        &self,
+        callee: &Expression,
+        arguments: &[CallArgument],
+    ) -> bool {
+        if !matches!(
+            callee,
+            Expression::Member { object, property }
+                if self.is_global_identifier(object, "$262")
+                    && self.is_string_literal(property, "evalScript")
+        ) {
+            return false;
+        }
+
+        match arguments.first() {
+            None => true,
+            Some(CallArgument::Expression(argument)) => {
+                self.resolve_compile_time_string(argument).is_some()
+            }
+            Some(CallArgument::Spread(_)) => false,
+        }
+    }
+
     pub(super) fn is_direct_non_string_eval_call(
         &self,
         callee: &Expression,

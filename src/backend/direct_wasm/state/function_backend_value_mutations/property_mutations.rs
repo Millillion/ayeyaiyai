@@ -6,6 +6,9 @@ impl<'a> FunctionCompilerBackend<'a> {
         name: String,
         state: GlobalPropertyDescriptorState,
     ) {
+        self.shared_global_semantics
+            .values
+            .upsert_property_descriptor(name.clone(), state.clone());
         self.global_semantics
             .values
             .upsert_property_descriptor(name, state);
@@ -40,6 +43,12 @@ impl<'a> FunctionCompilerBackend<'a> {
             .values
             .prototype_object_binding(name)
             .cloned()
+            .or_else(|| {
+                self.shared_global_semantics
+                    .values
+                    .prototype_object_binding(name)
+                    .cloned()
+            })
             .unwrap_or_else(empty_object_value_binding);
         object_binding_define_property(&mut binding, property, value, enumerable);
         self.sync_global_prototype_object_binding(name, Some(binding));

@@ -1,6 +1,51 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn expression_may_alias_iterator_step_binding(expression: &Expression) -> bool {
+        match expression {
+            Expression::Identifier(name) => {
+                name.starts_with("__ayy_array_step_") || name.starts_with("__ayy_for_of_step_")
+            }
+            Expression::Member { object, .. } => {
+                Self::expression_may_alias_iterator_step_binding(object)
+            }
+            Expression::Conditional {
+                then_expression,
+                else_expression,
+                ..
+            } => {
+                Self::expression_may_alias_iterator_step_binding(then_expression)
+                    || Self::expression_may_alias_iterator_step_binding(else_expression)
+            }
+            Expression::Assign { value, .. }
+            | Expression::AssignMember { value, .. }
+            | Expression::AssignSuperMember { value, .. }
+            | Expression::Await(value) => Self::expression_may_alias_iterator_step_binding(value),
+            Expression::Sequence(expressions) => expressions
+                .last()
+                .is_some_and(Self::expression_may_alias_iterator_step_binding),
+            _ => false,
+        }
+    }
+
+    fn identifier_value_may_alias_iterator_step_binding(&self, name: &str) -> bool {
+        if name.starts_with("__ayy_array_step_") || name.starts_with("__ayy_for_of_step_") {
+            return true;
+        }
+        let resolved_name = self
+            .resolve_current_local_binding(name)
+            .map(|(resolved_name, _)| resolved_name);
+        let candidates = [Some(name), resolved_name.as_deref()];
+        candidates.into_iter().flatten().any(|candidate| {
+            self.state
+                .speculation
+                .static_semantics
+                .local_value_binding(candidate)
+                .or_else(|| self.global_value_binding(candidate))
+                .is_some_and(Self::expression_may_alias_iterator_step_binding)
+        })
+    }
+
     fn expression_references_iterator_step_temp(expression: &Expression) -> bool {
         let mut referenced_names = HashSet::new();
         collect_referenced_binding_names_from_expression(expression, &mut referenced_names);
@@ -160,8 +205,22 @@ impl<'a> FunctionCompiler<'a> {
                 }
                 return Some(binding.clone());
             }
+            if !self.identifier_value_may_alias_iterator_step_binding(name) {
+                if trace {
+                    eprintln!("iterator_step_resolve:no_alias expression={expression:?}");
+                }
+                return None;
+            }
         }
         if matches!(expression, Expression::GetIterator(_)) {
+            if trace {
+                eprintln!("iterator_step_resolve:no_alias expression={expression:?}");
+            }
+            return None;
+        }
+        if !matches!(expression, Expression::Identifier(_))
+            && !Self::expression_may_alias_iterator_step_binding(expression)
+        {
             if trace {
                 eprintln!("iterator_step_resolve:no_alias expression={expression:?}");
             }

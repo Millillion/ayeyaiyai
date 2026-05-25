@@ -78,6 +78,29 @@ fn expression_contains_object_spread(expression: &Expression) -> bool {
     }
 }
 
+fn expression_is_identifier_iterator_method_call(expression: &Expression) -> bool {
+    matches!(
+        expression,
+        Expression::Call { callee, .. }
+            if matches!(
+                callee.as_ref(),
+                Expression::Member { object, property }
+                    if matches!(object.as_ref(), Expression::Identifier(_))
+                        && matches!(
+                            property.as_ref(),
+                            Expression::String(name)
+                                if matches!(name.as_str(), "next" | "return" | "throw")
+                        )
+            )
+    )
+}
+
+fn state_stores_identifier_iterator_method_result(state: &PreparedIdentifierStoreState) -> bool {
+    expression_is_identifier_iterator_method_call(&state.canonical_value_expression)
+        || expression_is_identifier_iterator_method_call(&state.tracked_value_expression)
+        || expression_is_identifier_iterator_method_call(&state.module_assignment_expression)
+}
+
 fn global_store_expression_references_internal_iterator_step(expression: &Expression) -> bool {
     match expression {
         Expression::Identifier(name) => {
@@ -197,7 +220,60 @@ fn state_stores_internal_iterator_value_temp(state: &PreparedIdentifierStoreStat
         && state_stores_internal_iterator_step_value(state)
 }
 
+fn state_stores_function_prototype_bind_call(state: &PreparedIdentifierStoreState) -> bool {
+    fn is_bind_call(expression: &Expression) -> bool {
+        matches!(
+            expression,
+            Expression::Call { callee, .. }
+                if matches!(
+                    callee.as_ref(),
+                    Expression::Member { property, .. }
+                        if matches!(property.as_ref(), Expression::String(name) if name == "bind")
+                )
+        )
+    }
+
+    is_bind_call(&state.canonical_value_expression)
+        || is_bind_call(&state.tracked_value_expression)
+        || is_bind_call(&state.module_assignment_expression)
+        || is_bind_call(&state.object_binding_expression)
+}
+
+fn state_stores_function_constructor_alias(state: &PreparedIdentifierStoreState) -> bool {
+    matches!(
+        (&state.canonical_value_expression, &state.function_binding),
+        (
+            Expression::Member { property, .. },
+            Some(LocalFunctionBinding::Builtin(constructor_name))
+        ) if matches!(property.as_ref(), Expression::String(property_name) if property_name == "constructor")
+            && is_function_constructor_builtin(constructor_name)
+    )
+}
+
 impl<'a> FunctionCompiler<'a> {
+    fn identifier_store_preserves_runtime_array_alias(
+        &self,
+        name: &str,
+        state: &PreparedIdentifierStoreState,
+    ) -> bool {
+        let Expression::Identifier(source_name) = &state.tracked_value_expression else {
+            return false;
+        };
+        if source_name == name {
+            return false;
+        }
+        (self
+            .runtime_array_binding_name_for_expression(&state.tracked_value_expression)
+            .is_some()
+            || self
+                .resolve_array_binding_from_expression(&state.tracked_value_expression)
+                .is_some())
+            && (self.backend.global_binding_index(name).is_some()
+                || self.backend.global_has_implicit_binding(name)
+                || self.backend.global_array_binding(name).is_some()
+                || self.uses_global_runtime_array_state(name))
+    }
+
     fn store_function_references_nested_function_in_body(
         function: &FunctionDeclaration,
         nested_function_name: &str,
@@ -234,7 +310,7 @@ impl<'a> FunctionCompiler<'a> {
         function: &FunctionDeclaration,
         source_name: &str,
     ) -> bool {
-        source_name == "arguments"
+        (!function.lexical_this && source_name == "arguments")
             || function.params.iter().any(|parameter| {
                 scoped_binding_source_name(&parameter.name).unwrap_or(&parameter.name)
                     == source_name
@@ -515,9 +591,15 @@ impl<'a> FunctionCompiler<'a> {
             ));
         }
         if self.parameter_default_can_reference_current_local(capture_name)
-            && self.resolve_current_local_binding(capture_name).is_some()
+            && let Some((resolved_name, _)) =
+                self.resolve_current_local_binding_by_source_name(capture_name)
         {
-            return Some((Expression::Identifier(capture_name.to_string()), true));
+            return Some((Expression::Identifier(resolved_name), true));
+        }
+        if let Some((resolved_name, _)) =
+            self.resolve_current_local_binding_by_source_name(capture_name)
+        {
+            return Some((Expression::Identifier(resolved_name), true));
         }
         if let Some(hidden_name) = self.resolve_eval_local_function_hidden_name(capture_name) {
             return Some((Expression::Identifier(hidden_name), true));
@@ -535,7 +617,7 @@ impl<'a> FunctionCompiler<'a> {
         None
     }
 
-    fn preserve_identifier_function_capture_slots_for_global_store(
+    pub(super) fn preserve_identifier_function_capture_slots_for_global_store(
         &mut self,
         name: &str,
         state: &PreparedIdentifierStoreState,
@@ -546,25 +628,22 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(());
         };
         let mut capture_bindings = self
-            .backend
-            .function_registry
-            .analysis
-            .user_function_capture_bindings
-            .get(function_name)
-            .cloned()
+            .user_function_capture_bindings(function_name)
             .unwrap_or_default();
         self.add_active_with_scope_function_capture_bindings(function_name, &mut capture_bindings)?;
         if capture_bindings.is_empty() {
             return Ok(());
         }
 
-        let call_capture_source_bindings =
-            state
-                .call_source_snapshot_expression
-                .as_ref()
-                .and_then(|source| {
-                    self.resolve_constructor_capture_source_bindings_from_expression(source)
-                });
+        let call_capture_source_bindings = state
+            .call_source_snapshot_expression
+            .as_ref()
+            .and_then(|source| {
+                self.resolve_constructor_capture_source_bindings_from_expression(source)
+            })
+            .or_else(|| {
+                self.resolve_class_init_function_store_capture_sources(function_name, state, true)
+            });
         let mut capture_slots = BTreeMap::new();
         for capture_name in capture_bindings.keys() {
             if let Some(source_name) =
@@ -614,10 +693,15 @@ impl<'a> FunctionCompiler<'a> {
                 continue;
             };
             if source_is_runtime_local {
-                let metadata_expression = self
-                    .resolve_static_string_value(&source_expression)
-                    .map(Expression::String)
-                    .unwrap_or_else(|| source_expression.clone());
+                let capture_slot_tracks_live_source =
+                    !capture_name.starts_with("__ayy_class_field_name_");
+                let metadata_expression = if capture_slot_tracks_live_source {
+                    self.resolve_static_string_value(&source_expression)
+                        .map(Expression::String)
+                        .unwrap_or_else(|| source_expression.clone())
+                } else {
+                    self.materialize_static_expression(&source_expression)
+                };
                 let hidden_name = format!("__ayy_closure_slot_{}_{}", name, capture_name);
                 let hidden_binding = self.ensure_implicit_global_binding(&hidden_name);
                 let derived_constructor_this_capture = capture_name == "this"
@@ -633,7 +717,11 @@ impl<'a> FunctionCompiler<'a> {
                     )?;
                 }
                 self.push_global_set(hidden_binding.value_index);
-                self.push_i32_const(if derived_constructor_this_capture { 0 } else { 1 });
+                self.push_i32_const(if derived_constructor_this_capture {
+                    0
+                } else {
+                    1
+                });
                 self.push_global_set(hidden_binding.present_index);
                 if !capture_name.starts_with("__ayy_class_brand_") {
                     self.update_static_global_assignment_metadata(
@@ -662,21 +750,29 @@ impl<'a> FunctionCompiler<'a> {
                 }
                 self.sync_capture_slot_runtime_object_shadows_from_expression(
                     &hidden_name,
-                    &source_expression,
+                    &metadata_expression,
                 )?;
-                if let Expression::Identifier(source_binding_name) = &source_expression {
+                if capture_slot_tracks_live_source
+                    && let Expression::Identifier(source_binding_name) = &source_expression
+                {
                     self.state
                         .speculation
                         .static_semantics
                         .capture_slot_source_bindings
-                        .insert(hidden_name.clone(), source_binding_name.clone());
-                } else if matches!(source_expression, Expression::This) {
+                        .insert(
+                            hidden_name.clone(),
+                            self.capture_slot_live_source_binding_name(source_binding_name),
+                        );
+                } else if capture_slot_tracks_live_source
+                    && matches!(source_expression, Expression::This)
+                {
                     self.state
                         .speculation
                         .static_semantics
                         .capture_slot_source_bindings
                         .insert(hidden_name.clone(), "this".to_string());
-                } else if let Expression::Member { object, property } = &source_expression
+                } else if capture_slot_tracks_live_source
+                    && let Expression::Member { object, property } = &source_expression
                     && let Some(source_key) = Self::capture_slot_member_source_key(object, property)
                 {
                     self.state
@@ -702,6 +798,206 @@ impl<'a> FunctionCompiler<'a> {
                 .set_global_member_function_capture_slots(key, capture_slots);
         }
         Ok(())
+    }
+
+    fn evaluate_class_init_statement_for_capture_sources(
+        &self,
+        statement: &Statement,
+        environment: &mut StaticResolutionEnvironment,
+    ) -> bool {
+        match statement {
+            Statement::Var { name, value } | Statement::Let { name, value, .. } => {
+                let value = self
+                    .evaluate_static_expression_with_state(value, environment)
+                    .or_else(|| self.materialize_static_expression_with_state(value, environment))
+                    .unwrap_or_else(|| value.clone());
+                environment.set_local_binding(name.clone(), value);
+                true
+            }
+            Statement::Assign { name, value } => {
+                let value = self
+                    .evaluate_static_expression_with_state(value, environment)
+                    .or_else(|| self.materialize_static_expression_with_state(value, environment))
+                    .unwrap_or_else(|| value.clone());
+                environment.assign_binding_value(name.clone(), value);
+                true
+            }
+            Statement::Expression(expression) => {
+                let _ = self
+                    .evaluate_static_expression_with_state(expression, environment)
+                    .or_else(|| {
+                        self.materialize_static_expression_with_state(expression, environment)
+                    });
+                true
+            }
+            Statement::Return(value) => {
+                let _ = self
+                    .evaluate_static_expression_with_state(value, environment)
+                    .or_else(|| self.materialize_static_expression_with_state(value, environment));
+                false
+            }
+            Statement::Declaration { body }
+            | Statement::Block { body }
+            | Statement::Labeled { body, .. }
+            | Statement::With { body, .. } => body.iter().all(|nested| {
+                self.evaluate_class_init_statement_for_capture_sources(nested, environment)
+            }),
+            Statement::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => match self.evaluate_static_expression_with_state(condition, environment) {
+                Some(Expression::Bool(true)) => then_branch.iter().all(|nested| {
+                    self.evaluate_class_init_statement_for_capture_sources(nested, environment)
+                }),
+                Some(Expression::Bool(false)) => else_branch.iter().all(|nested| {
+                    self.evaluate_class_init_statement_for_capture_sources(nested, environment)
+                }),
+                _ => true,
+            },
+            Statement::Throw(value) => {
+                let _ = self
+                    .evaluate_static_expression_with_state(value, environment)
+                    .or_else(|| self.materialize_static_expression_with_state(value, environment));
+                false
+            }
+            _ => true,
+        }
+    }
+
+    fn sync_class_init_capture_source_side_effects(
+        &mut self,
+        initial_local_bindings: HashMap<String, Expression>,
+        environment: &StaticResolutionEnvironment,
+    ) {
+        for (name, value) in &environment.global_value_overrides {
+            self.update_static_global_assignment_metadata(name, value);
+        }
+
+        for (name, before) in initial_local_bindings {
+            let Some(after) = environment.local_bindings.get(&name) else {
+                continue;
+            };
+            if !static_expression_matches(&before, after) {
+                self.update_local_value_binding(&name, after);
+            }
+        }
+
+        for (name, binding) in &environment.local_object_bindings {
+            self.state
+                .speculation
+                .static_semantics
+                .set_local_object_binding(name, binding.clone());
+            let kind = if self
+                .resolve_function_binding_from_expression(&Expression::Identifier(name.clone()))
+                .is_some()
+            {
+                StaticValueKind::Function
+            } else {
+                StaticValueKind::Object
+            };
+            self.state
+                .speculation
+                .static_semantics
+                .set_local_kind(name, kind);
+        }
+
+        for (name, binding) in &environment.global_object_overrides {
+            self.backend
+                .sync_global_object_binding(name, binding.clone());
+            if binding.is_some() {
+                let kind = if self
+                    .resolve_function_binding_from_expression(&Expression::Identifier(name.clone()))
+                    .is_some()
+                {
+                    StaticValueKind::Function
+                } else {
+                    StaticValueKind::Object
+                };
+                self.backend.set_global_binding_kind(name, kind);
+            }
+        }
+    }
+
+    pub(super) fn resolve_class_init_function_store_capture_sources(
+        &mut self,
+        function_name: &str,
+        state: &PreparedIdentifierStoreState,
+        commit_side_effects: bool,
+    ) -> Option<HashMap<String, Expression>> {
+        fn is_class_init_call(expression: &Expression) -> bool {
+            matches!(
+                expression,
+                Expression::Call { callee, arguments }
+                    if arguments.is_empty()
+                        && matches!(
+                            callee.as_ref(),
+                            Expression::Identifier(name) if name.starts_with("__ayy_class_init_")
+                        )
+            )
+        }
+
+        let class_init_source_expression = [
+            Some(&state.function_binding_expression),
+            state.call_source_snapshot_expression.as_ref(),
+            Some(&state.tracked_value_expression),
+            Some(&state.object_binding_expression),
+            Some(&state.canonical_value_expression),
+        ]
+        .into_iter()
+        .flatten()
+        .find(|expression| is_class_init_call(expression))
+        .or_else(|| match &state.function_binding_expression {
+            Expression::Call { .. } => Some(&state.function_binding_expression),
+            _ => state
+                .call_source_snapshot_expression
+                .as_ref()
+                .or(Some(&state.canonical_value_expression)),
+        })?;
+        let Expression::Call { callee, arguments } = class_init_source_expression else {
+            return None;
+        };
+        if !arguments.is_empty() {
+            return None;
+        }
+        let Expression::Identifier(class_init_name) = callee.as_ref() else {
+            return None;
+        };
+        if !class_init_name.starts_with("__ayy_class_init_") {
+            return None;
+        }
+
+        let capture_bindings = self.user_function_capture_bindings(function_name)?;
+        let class_init_function = self
+            .resolve_registered_function_declaration(class_init_name)?
+            .clone();
+        let initial_local_bindings = self
+            .state
+            .speculation
+            .static_semantics
+            .values
+            .local_value_bindings_snapshot();
+        let mut environment = self.snapshot_static_resolution_environment();
+        for statement in &class_init_function.body {
+            if !self.evaluate_class_init_statement_for_capture_sources(statement, &mut environment)
+            {
+                break;
+            }
+        }
+        if commit_side_effects {
+            self.sync_class_init_capture_source_side_effects(initial_local_bindings, &environment);
+        }
+
+        let mut resolved = HashMap::new();
+        for source_name in capture_bindings.keys() {
+            if Self::constructor_capture_source_is_stable_snapshot(source_name)
+                && let Some(source_expression) = environment.binding(source_name).cloned()
+            {
+                resolved.insert(source_name.clone(), source_expression);
+            }
+        }
+
+        (!resolved.is_empty()).then_some(resolved)
     }
 
     pub(in crate::backend::direct_wasm) fn add_active_with_scope_function_capture_bindings(
@@ -799,13 +1095,63 @@ impl<'a> FunctionCompiler<'a> {
         state: &PreparedIdentifierStoreState,
         ensure_descriptor: bool,
     ) -> DirectResult<()> {
+        let trace_identifier_store = std::env::var_os("AYY_TRACE_IDENTIFIER_STORE").is_some();
+        let trace_step = |label: &str| {
+            if trace_identifier_store {
+                eprintln!("identifier_store:{name}:global_metadata:{label}");
+            }
+        };
+        trace_step("start");
         if self.identifier_store_state_depends_on_active_loop_assignment(state) {
             self.clear_global_binding_state(name);
             self.preserve_active_loop_safe_global_metadata(name, state)?;
+            trace_step("active_loop");
             return Ok(());
         }
-        let object_binding =
-            self.resolve_object_binding_from_expression(&state.object_binding_expression);
+        if state_stores_identifier_iterator_method_result(state)
+            && expression_is_identifier_iterator_method_call(&state.module_assignment_expression)
+        {
+            let kind = StaticValueKind::Object;
+            self.backend.set_global_binding_kind(name, kind);
+            self.backend
+                .shared_global_semantics
+                .set_global_binding_kind(name, kind);
+            self.backend.sync_global_expression_binding(name, None);
+            self.backend
+                .shared_global_semantics
+                .values
+                .clear_value_binding(name);
+            self.backend.sync_global_array_binding(name, None);
+            self.backend.sync_global_object_binding(name, None);
+            self.backend.sync_global_arguments_binding(name, None);
+            self.backend.sync_global_function_binding(name, None);
+            self.backend
+                .shared_global_semantics
+                .clear_global_function_binding(name);
+            trace_step("direct_iterator_method");
+            trace_step("done");
+            return Ok(());
+        }
+        let stores_bind_call = state_stores_function_prototype_bind_call(state)
+            || state_stores_function_constructor_alias(state);
+        let stores_runtime_array_alias =
+            matches!(state.tracked_value_expression, Expression::Identifier(_))
+                && (self
+                    .runtime_array_binding_name_for_expression(&state.tracked_value_expression)
+                    .is_some()
+                    || self
+                        .resolve_array_binding_from_expression(&state.tracked_value_expression)
+                        .is_some())
+                && (self.is_named_global_array_binding(name)
+                    || self.backend.global_binding_index(name).is_some()
+                    || self.backend.global_has_implicit_binding(name));
+        trace_step("object_binding:start");
+        let object_binding = if stores_bind_call {
+            None
+        } else {
+            self.resolve_object_binding_from_expression(&state.object_binding_expression)
+        };
+        trace_step("object_binding:done");
         let metadata_assignment_expression = if (name.starts_with("__ayy_target_object_")
             || name.starts_with("__ayy_target_property_"))
             && matches!(
@@ -821,51 +1167,284 @@ impl<'a> FunctionCompiler<'a> {
         } else {
             state.module_assignment_expression.clone()
         };
-        self.update_object_prototype_binding_from_value(name, state.prototype_binding_expression());
-        self.update_static_global_assignment_metadata(name, &metadata_assignment_expression);
+        trace_step("prototype:start");
+        if !stores_bind_call {
+            self.update_object_prototype_binding_from_value(
+                name,
+                state.prototype_binding_expression(),
+            );
+        }
+        trace_step("prototype:done");
+        trace_step("static_global:start");
+        if stores_bind_call {
+            let kind = StaticValueKind::Function;
+            self.backend.set_global_binding_kind(name, kind);
+            self.backend
+                .shared_global_semantics
+                .set_global_binding_kind(name, kind);
+            self.backend
+                .sync_global_expression_binding(name, Some(metadata_assignment_expression.clone()));
+            self.backend
+                .shared_global_semantics
+                .values
+                .set_value_binding(name.to_string(), metadata_assignment_expression.clone());
+            self.backend.sync_global_array_binding(name, None);
+            self.backend.sync_global_object_binding(name, None);
+            self.backend.sync_global_arguments_binding(name, None);
+            if let Some(function_binding) = state.function_binding.clone() {
+                self.backend
+                    .sync_global_function_binding(name, Some(function_binding.clone()));
+                self.backend
+                    .shared_global_semantics
+                    .set_global_function_binding(name, function_binding);
+            } else {
+                self.backend.sync_global_function_binding(name, None);
+                self.backend
+                    .shared_global_semantics
+                    .clear_global_function_binding(name);
+            }
+        } else {
+            self.update_static_global_assignment_metadata(name, &metadata_assignment_expression);
+        }
+        if stores_runtime_array_alias {
+            self.backend.sync_global_array_binding(name, None);
+            self.backend
+                .shared_global_semantics
+                .values
+                .sync_array_binding(name, None);
+        }
+        trace_step("static_global:done");
+        if stores_runtime_array_alias {
+            if ensure_descriptor {
+                trace_step("descriptor_ensure:start");
+                self.ensure_global_property_descriptor_value(
+                    name,
+                    &metadata_assignment_expression,
+                    true,
+                );
+                trace_step("descriptor_ensure:done");
+            } else {
+                trace_step("descriptor_update:start");
+                self.update_global_property_descriptor_value(name, &metadata_assignment_expression);
+                trace_step("descriptor_update:done");
+            }
+            trace_step("runtime_array_alias");
+            trace_step("done");
+            return Ok(());
+        }
         if let Some(object_binding) = object_binding {
+            trace_step("sync_object:start");
             self.backend
                 .sync_global_object_binding(name, Some(object_binding));
+            trace_step("sync_object:done");
         }
-        self.seed_global_boxed_primitive_object_binding(name, state.prototype_source_expression());
-        self.seed_global_date_object_binding(name, state.prototype_source_expression());
-        self.seed_global_native_error_object_binding(name, state.prototype_source_expression());
-        self.seed_global_constructed_function_object_binding(
-            name,
-            state.prototype_source_expression(),
-        );
-        self.seed_global_viewed_array_buffer_object_binding(
-            name,
-            state.prototype_source_expression(),
-        );
-        self.seed_global_typed_array_object_binding(name, state.prototype_source_expression());
-        if let Some(array_binding) = state.array_binding.as_ref() {
+        if !stores_bind_call {
+            trace_step("seed_boxed:start");
+            self.seed_global_boxed_primitive_object_binding(
+                name,
+                state.prototype_source_expression(),
+            );
+            trace_step("seed_boxed:done");
+            trace_step("seed_date:start");
+            self.seed_global_date_object_binding(name, state.prototype_source_expression());
+            trace_step("seed_date:done");
+            trace_step("seed_error:start");
+            self.seed_global_native_error_object_binding(name, state.prototype_source_expression());
+            trace_step("seed_error:done");
+            trace_step("seed_function:start");
+            self.seed_global_constructed_function_object_binding(
+                name,
+                state.prototype_source_expression(),
+            );
+            trace_step("seed_function:done");
+            trace_step("seed_array_buffer:start");
+            self.seed_global_viewed_array_buffer_object_binding(
+                name,
+                state.prototype_source_expression(),
+            );
+            trace_step("seed_array_buffer:done");
+            trace_step("seed_typed_array:start");
+            self.seed_global_typed_array_object_binding(name, state.prototype_source_expression());
+            trace_step("seed_typed_array:done");
+        }
+        if !stores_runtime_array_alias && let Some(array_binding) = state.array_binding.as_ref() {
+            trace_step("sync_array:start");
             self.backend
                 .sync_global_array_binding(name, Some(array_binding.clone()));
+            trace_step("sync_array:done");
         }
+        trace_step("string:start");
         self.preserve_exact_static_global_string_binding(
             name,
             state.exact_static_number,
             state.static_string_value.as_ref(),
         );
+        trace_step("string:done");
+        trace_step("function:start");
         self.preserve_static_global_function_binding(name, state.function_binding.as_ref());
+        trace_step("function:done");
+        trace_step("captures:start");
         self.preserve_identifier_function_capture_slots_for_global_store(name, state)?;
+        trace_step("captures:done");
+        trace_step("arguments:start");
         self.backend.sync_global_arguments_binding(
             name,
             self.resolve_identifier_store_arguments_binding(state),
         );
+        trace_step("arguments:done");
+        trace_step("number:start");
         self.preserve_exact_static_global_number_binding(name, &metadata_assignment_expression);
-        self.update_global_specialized_function_value(name, &metadata_assignment_expression)?;
-        if ensure_descriptor {
-            self.ensure_global_property_descriptor_value(
-                name,
-                &metadata_assignment_expression,
-                true,
-            );
-        } else {
-            self.update_global_property_descriptor_value(name, &metadata_assignment_expression);
+        trace_step("number:done");
+        trace_step("specialized:start");
+        if !stores_bind_call {
+            self.update_global_specialized_function_value(name, &metadata_assignment_expression)?;
         }
+        trace_step("specialized:done");
+        if ensure_descriptor {
+            trace_step("descriptor_ensure:start");
+            if !stores_bind_call {
+                self.ensure_global_property_descriptor_value(
+                    name,
+                    &metadata_assignment_expression,
+                    true,
+                );
+            }
+            trace_step("descriptor_ensure:done");
+        } else {
+            trace_step("descriptor_update:start");
+            if !stores_bind_call {
+                self.update_global_property_descriptor_value(name, &metadata_assignment_expression);
+            }
+            trace_step("descriptor_update:done");
+        }
+        trace_step("done");
         Ok(())
+    }
+
+    fn array_binding_snapshot_expression(binding: &ArrayValueBinding) -> Expression {
+        Expression::Array(
+            binding
+                .values
+                .iter()
+                .map(|value| {
+                    crate::ir::hir::ArrayElement::Expression(
+                        value.clone().unwrap_or(Expression::Undefined),
+                    )
+                })
+                .collect(),
+        )
+    }
+
+    fn identifier_store_preserves_global_reference_identity(
+        &self,
+        name: &str,
+        state: &PreparedIdentifierStoreState,
+    ) -> bool {
+        let Some(target_key) = self.reference_identity_key_for_identifier(name) else {
+            return false;
+        };
+        [
+            &state.module_assignment_expression,
+            &state.canonical_value_expression,
+            &state.tracked_value_expression,
+        ]
+        .into_iter()
+        .filter_map(|expression| self.resolve_static_reference_identity_key(expression))
+        .any(|source_key| source_key == target_key)
+    }
+
+    pub(super) fn detach_global_reference_aliases_before_rebind(
+        &mut self,
+        name: &str,
+        state: &PreparedIdentifierStoreState,
+    ) {
+        if self.identifier_store_preserves_global_reference_identity(name, state) {
+            return;
+        }
+
+        let source_value = self.global_value_binding(name).cloned();
+        let source_expression = source_value
+            .as_ref()
+            .unwrap_or(&state.module_assignment_expression);
+        let array_binding = self
+            .global_array_binding(name)
+            .cloned()
+            .or_else(|| self.resolve_array_binding_from_expression(source_expression));
+        let object_binding = self
+            .global_object_binding(name)
+            .cloned()
+            .or_else(|| self.resolve_object_binding_from_expression(source_expression));
+        if array_binding.is_none() && object_binding.is_none() {
+            return;
+        }
+
+        let mut alias_names: Vec<String> = self
+            .backend
+            .global_semantics
+            .values
+            .value_bindings
+            .iter()
+            .filter_map(|(alias_name, value)| {
+                (alias_name != name
+                    && matches!(value, Expression::Identifier(source_name) if source_name == name))
+                .then(|| alias_name.clone())
+            })
+            .collect();
+        for (alias_name, value) in &self.backend.shared_global_semantics.values.value_bindings {
+            if alias_name != name
+                && matches!(value, Expression::Identifier(source_name) if source_name == name)
+                && !alias_names.iter().any(|existing| existing == alias_name)
+            {
+                alias_names.push(alias_name.clone());
+            }
+        }
+
+        for alias_name in alias_names {
+            self.backend
+                .set_global_binding_kind(&alias_name, StaticValueKind::Object);
+            self.backend
+                .shared_global_semantics
+                .set_global_binding_kind(&alias_name, StaticValueKind::Object);
+            if let Some(array_binding) = array_binding.clone() {
+                let snapshot_expression = Self::array_binding_snapshot_expression(&array_binding);
+                self.backend
+                    .sync_global_expression_binding(&alias_name, Some(snapshot_expression.clone()));
+                self.backend
+                    .shared_global_semantics
+                    .values
+                    .set_value_binding(alias_name.clone(), snapshot_expression);
+                self.backend
+                    .sync_global_array_binding(&alias_name, Some(array_binding.clone()));
+                self.backend
+                    .shared_global_semantics
+                    .values
+                    .sync_array_binding(&alias_name, Some(array_binding));
+                self.backend.sync_global_object_binding(&alias_name, None);
+                self.backend
+                    .shared_global_semantics
+                    .values
+                    .sync_object_binding(&alias_name, None);
+            } else if let Some(object_binding) = object_binding.clone() {
+                let snapshot_expression = object_binding_to_expression(&object_binding);
+                self.backend
+                    .sync_global_expression_binding(&alias_name, Some(snapshot_expression.clone()));
+                self.backend
+                    .shared_global_semantics
+                    .values
+                    .set_value_binding(alias_name.clone(), snapshot_expression);
+                self.backend.sync_global_array_binding(&alias_name, None);
+                self.backend
+                    .shared_global_semantics
+                    .values
+                    .sync_array_binding(&alias_name, None);
+                self.backend
+                    .sync_global_object_binding(&alias_name, Some(object_binding.clone()));
+                self.backend
+                    .shared_global_semantics
+                    .values
+                    .sync_object_binding(&alias_name, Some(object_binding));
+            }
+        }
     }
 
     fn preserve_active_loop_safe_global_metadata(
@@ -976,6 +1555,7 @@ impl<'a> FunctionCompiler<'a> {
         name: &str,
         value_local: u32,
         state: &PreparedIdentifierStoreState,
+        initialize_declared_global: bool,
     ) -> DirectResult<bool> {
         if !self
             .state
@@ -989,7 +1569,14 @@ impl<'a> FunctionCompiler<'a> {
         }
 
         if let Some(global_index) = self.backend.global_binding_index(name) {
-            if self.backend.lexical_global_binding(name).is_some() {
+            if initialize_declared_global {
+                self.initialize_identifier_value_to_declared_global(
+                    name,
+                    value_local,
+                    global_index,
+                    state,
+                )?;
+            } else if self.backend.lexical_global_binding(name).is_some() {
                 self.store_identifier_value_to_declared_global(
                     name,
                     value_local,
@@ -1070,10 +1657,12 @@ impl<'a> FunctionCompiler<'a> {
                         name,
                         &state.tracked_value_expression,
                     )? {
-                    } else if self.emit_sync_global_runtime_array_state_from_runtime_source(
-                        name,
-                        &state.tracked_value_expression,
-                    )? {
+                    } else if !self.identifier_store_preserves_runtime_array_alias(name, state)
+                        && self.emit_sync_global_runtime_array_state_from_runtime_source(
+                            name,
+                            &state.tracked_value_expression,
+                        )?
+                    {
                     } else if let Some(array_binding) = state.array_binding.as_ref() {
                         self.emit_sync_global_runtime_array_state_from_binding(
                             name,
@@ -1089,6 +1678,7 @@ impl<'a> FunctionCompiler<'a> {
                     || self.backend.global_object_binding(name).is_some();
                 let has_new_static_metadata =
                     self.identifier_store_has_preservable_global_metadata(state);
+                self.detach_global_reference_aliases_before_rebind(name, state);
                 self.clear_global_binding_state(name);
                 if had_static_initialization_metadata || has_new_static_metadata {
                     self.preserve_identifier_store_global_metadata(name, state, false)?;
@@ -1100,10 +1690,12 @@ impl<'a> FunctionCompiler<'a> {
                 name,
                 &state.tracked_value_expression,
             )? {
-            } else if self.emit_sync_global_runtime_array_state_from_runtime_source(
-                name,
-                &state.tracked_value_expression,
-            )? {
+            } else if !self.identifier_store_preserves_runtime_array_alias(name, state)
+                && self.emit_sync_global_runtime_array_state_from_runtime_source(
+                    name,
+                    &state.tracked_value_expression,
+                )?
+            {
             } else if let Some(array_binding) = state.array_binding.as_ref() {
                 self.emit_sync_global_runtime_array_state_from_binding(name, array_binding)?;
             }
@@ -1116,6 +1708,7 @@ impl<'a> FunctionCompiler<'a> {
             .execution_context
             .isolated_indirect_eval
         {
+            self.detach_global_reference_aliases_before_rebind(name, state);
             self.preserve_identifier_store_global_metadata(name, state, false)?;
         }
         self.push_local_get(value_local);
@@ -1125,10 +1718,12 @@ impl<'a> FunctionCompiler<'a> {
             name,
             &state.tracked_value_expression,
         )? {
-        } else if self.emit_sync_global_runtime_array_state_from_runtime_source(
-            name,
-            &state.tracked_value_expression,
-        )? {
+        } else if !self.identifier_store_preserves_runtime_array_alias(name, state)
+            && self.emit_sync_global_runtime_array_state_from_runtime_source(
+                name,
+                &state.tracked_value_expression,
+            )?
+        {
         } else if let Some(array_binding) = state.array_binding.as_ref() {
             self.emit_sync_global_runtime_array_state_from_binding(name, array_binding)?;
         }
@@ -1189,10 +1784,12 @@ impl<'a> FunctionCompiler<'a> {
             name,
             &state.tracked_value_expression,
         )? {
-        } else if self.emit_sync_global_runtime_array_state_from_runtime_source(
-            name,
-            &state.tracked_value_expression,
-        )? {
+        } else if !self.identifier_store_preserves_runtime_array_alias(name, state)
+            && self.emit_sync_global_runtime_array_state_from_runtime_source(
+                name,
+                &state.tracked_value_expression,
+            )?
+        {
         } else if let Some(array_binding) = state.array_binding.as_ref() {
             self.emit_sync_global_runtime_array_state_from_binding(name, array_binding)?;
         }
@@ -1218,6 +1815,7 @@ impl<'a> FunctionCompiler<'a> {
             .execution_context
             .isolated_indirect_eval
         {
+            self.detach_global_reference_aliases_before_rebind(name, state);
             self.preserve_identifier_store_global_metadata(name, state, true)?;
         }
         self.emit_store_implicit_global_from_local(binding, value_local)?;
@@ -1226,10 +1824,12 @@ impl<'a> FunctionCompiler<'a> {
             name,
             &state.tracked_value_expression,
         )? {
-        } else if self.emit_sync_global_runtime_array_state_from_runtime_source(
-            name,
-            &state.tracked_value_expression,
-        )? {
+        } else if !self.identifier_store_preserves_runtime_array_alias(name, state)
+            && self.emit_sync_global_runtime_array_state_from_runtime_source(
+                name,
+                &state.tracked_value_expression,
+            )?
+        {
         } else if let Some(array_binding) = state.array_binding.as_ref() {
             self.emit_sync_global_runtime_array_state_from_binding(name, array_binding)?;
         }

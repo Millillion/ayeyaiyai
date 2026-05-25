@@ -94,6 +94,82 @@ fn logical_expression_references_internal_iterator_temp(expression: &Expression)
 }
 
 impl<'a> FunctionCompiler<'a> {
+    fn logical_operand_static_truthiness_after_evaluation(
+        &self,
+        expression: &Expression,
+    ) -> Option<bool> {
+        if Self::expression_references_internal_assignment_temp(expression) {
+            return None;
+        }
+        match expression {
+            Expression::Array(_)
+            | Expression::Object(_)
+            | Expression::New { .. }
+            | Expression::This => Some(true),
+            Expression::Identifier(_) => {
+                if matches!(
+                    self.infer_value_kind(expression),
+                    Some(
+                        StaticValueKind::Object
+                            | StaticValueKind::Function
+                            | StaticValueKind::Symbol
+                    )
+                ) || self
+                    .resolve_object_binding_from_expression(expression)
+                    .is_some()
+                    || self
+                        .resolve_array_binding_from_expression(expression)
+                        .is_some()
+                    || self
+                        .resolve_arguments_binding_from_expression(expression)
+                        .is_some()
+                    || self
+                        .resolve_proxy_binding_from_expression(expression)
+                        .is_some()
+                    || self
+                        .resolve_function_binding_from_expression(expression)
+                        .is_some()
+                {
+                    Some(true)
+                } else {
+                    self.resolve_static_boolean_expression(expression)
+                }
+            }
+            _ => self.resolve_static_boolean_expression(expression),
+        }
+    }
+
+    fn emit_logical_operand_truthiness_from_local(
+        &mut self,
+        expression: &Expression,
+        value_local: u32,
+    ) -> DirectResult<()> {
+        if let Some(truthy) = self.logical_operand_static_truthiness_after_evaluation(expression) {
+            self.push_i32_const(truthy as i32);
+            return Ok(());
+        }
+
+        self.push_local_get(value_local);
+        self.push_i32_const(0);
+        self.push_binary_op(BinaryOp::NotEqual)?;
+
+        self.push_local_get(value_local);
+        self.push_i32_const(JS_NULL_TAG);
+        self.push_binary_op(BinaryOp::NotEqual)?;
+        self.state.emission.output.instructions.push(0x71);
+
+        self.push_local_get(value_local);
+        self.push_i32_const(JS_UNDEFINED_TAG);
+        self.push_binary_op(BinaryOp::NotEqual)?;
+        self.state.emission.output.instructions.push(0x71);
+
+        self.push_local_get(value_local);
+        self.push_i32_const(JS_NAN_TAG);
+        self.push_binary_op(BinaryOp::NotEqual)?;
+        self.state.emission.output.instructions.push(0x71);
+        Ok(())
+    }
+
     pub(in crate::backend::direct_wasm) fn emit_logical_and(
         &mut self,
         left: &Expression,
@@ -101,6 +177,8 @@ impl<'a> FunctionCompiler<'a> {
     ) -> DirectResult<()> {
         if !logical_expression_references_internal_iterator_temp(left)
             && !logical_expression_references_internal_iterator_temp(right)
+            && !Self::expression_references_internal_assignment_temp(left)
+            && !Self::expression_references_internal_assignment_temp(right)
             && inline_summary_side_effect_free_expression(left)
             && let Some(result) =
                 self.resolve_static_logical_result_expression(BinaryOp::LogicalAnd, left, right)
@@ -110,7 +188,7 @@ impl<'a> FunctionCompiler<'a> {
         let temp_local = self.allocate_temp_local();
         self.emit_numeric_expression(left)?;
         self.push_local_set(temp_local);
-        self.push_local_get(temp_local);
+        self.emit_logical_operand_truthiness_from_local(left, temp_local)?;
         self.state.emission.output.instructions.push(0x04);
         self.state.emission.output.instructions.push(I32_TYPE);
         self.push_control_frame();
@@ -130,6 +208,8 @@ impl<'a> FunctionCompiler<'a> {
     ) -> DirectResult<()> {
         if !logical_expression_references_internal_iterator_temp(left)
             && !logical_expression_references_internal_iterator_temp(right)
+            && !Self::expression_references_internal_assignment_temp(left)
+            && !Self::expression_references_internal_assignment_temp(right)
             && inline_summary_side_effect_free_expression(left)
             && let Some(result) =
                 self.resolve_static_logical_result_expression(BinaryOp::LogicalOr, left, right)
@@ -139,7 +219,7 @@ impl<'a> FunctionCompiler<'a> {
         let temp_local = self.allocate_temp_local();
         self.emit_numeric_expression(left)?;
         self.push_local_set(temp_local);
-        self.push_local_get(temp_local);
+        self.emit_logical_operand_truthiness_from_local(left, temp_local)?;
         self.state.emission.output.instructions.push(0x04);
         self.state.emission.output.instructions.push(I32_TYPE);
         self.push_control_frame();
@@ -159,6 +239,8 @@ impl<'a> FunctionCompiler<'a> {
     ) -> DirectResult<()> {
         if !logical_expression_references_internal_iterator_temp(left)
             && !logical_expression_references_internal_iterator_temp(right)
+            && !Self::expression_references_internal_assignment_temp(left)
+            && !Self::expression_references_internal_assignment_temp(right)
             && inline_summary_side_effect_free_expression(left)
             && let Some(result) = self.resolve_static_logical_result_expression(
                 BinaryOp::NullishCoalescing,

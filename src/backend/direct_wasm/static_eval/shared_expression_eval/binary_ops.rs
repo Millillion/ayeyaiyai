@@ -10,8 +10,12 @@ pub(in crate::backend::direct_wasm) fn evaluate_static_binary_expression<
     let Expression::Binary { op, left, right } = expression else {
         return None;
     };
-    let left = executor.evaluate_expression(left, environment)?;
-    let right = executor.evaluate_expression(right, environment)?;
+    let left = executor
+        .evaluate_expression(left, environment)
+        .or_else(|| executor.materialize_expression(left, environment))?;
+    let right = executor
+        .evaluate_expression(right, environment)
+        .or_else(|| executor.materialize_expression(right, environment))?;
     match op {
         BinaryOp::Add => {
             if matches!(left, Expression::String(_)) || matches!(right, Expression::String(_)) {
@@ -47,6 +51,17 @@ pub(in crate::backend::direct_wasm) fn evaluate_static_binary_expression<
             _ => None,
         },
         BinaryOp::Equal | BinaryOp::LooseEqual | BinaryOp::NotEqual | BinaryOp::LooseNotEqual => {
+            let is_object_like = |expression: &Expression| {
+                matches!(
+                    expression,
+                    Expression::Array(_)
+                        | Expression::Object(_)
+                        | Expression::New { .. }
+                        | Expression::This
+                        | Expression::Call { .. }
+                        | Expression::Member { .. }
+                )
+            };
             let equal = match (&left, &right) {
                 (Expression::Bool(lhs), Expression::Bool(rhs)) => lhs == rhs,
                 (Expression::Number(lhs), Expression::Number(rhs)) => lhs == rhs,
@@ -59,6 +74,7 @@ pub(in crate::backend::direct_wasm) fn evaluate_static_binary_expression<
                 {
                     true
                 }
+                _ if is_object_like(&left) || is_object_like(&right) => return None,
                 _ => false,
             };
             Some(Expression::Bool(match op {

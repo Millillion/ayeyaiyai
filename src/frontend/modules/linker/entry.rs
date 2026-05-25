@@ -1,6 +1,49 @@
 use super::super::*;
 
 impl ModuleLinker {
+    pub(super) fn dynamic_import_specifier_sources_for_script(
+        &self,
+        script: &swc_ecma_ast::Script,
+        source_text: &str,
+    ) -> Vec<String> {
+        let mut sources = collect_literal_dynamic_import_specifiers_in_statements(&script.body);
+        for source in collect_literal_dynamic_import_specifiers_in_source_comments(source_text) {
+            if !sources.contains(&source) {
+                sources.push(source);
+            }
+        }
+        sources
+    }
+
+    pub(super) fn dynamic_import_specifier_sources_for_module(
+        &self,
+        module: &Module,
+        source_text: &str,
+    ) -> Vec<String> {
+        let mut sources = collect_literal_dynamic_import_specifiers(module);
+        for source in collect_literal_dynamic_import_specifiers_in_source_comments(source_text) {
+            if !sources.contains(&source) {
+                sources.push(source);
+            }
+        }
+        sources
+    }
+
+    pub(super) fn dynamic_import_specifier_index_lookup(
+        &self,
+        module_path: &Path,
+        sources: &[String],
+    ) -> BTreeMap<String, usize> {
+        sources
+            .iter()
+            .filter_map(|source| {
+                let resolved = resolve_module_specifier(module_path, source).ok()?;
+                let module_index = self.module_indices.get(&resolved).copied()?;
+                Some((source.clone(), module_index))
+            })
+            .collect()
+    }
+
     pub(crate) fn bundle_entry(&mut self, path: &Path) -> Result<Program> {
         let entry_index = self.load_module(path)?;
         self.load_order = self.compute_static_load_order(entry_index);
@@ -10,8 +53,10 @@ impl ModuleLinker {
 
     pub(crate) fn bundle_script_entry(&mut self, path: &Path) -> Result<Program> {
         let (script, lowered_source) = parse_script_file(path)?;
-        for source in collect_literal_dynamic_import_specifiers_in_statements(&script.body) {
-            if let Ok(dependency_path) = resolve_module_specifier(path, &source) {
+        let dynamic_import_sources =
+            self.dynamic_import_specifier_sources_for_script(&script, &lowered_source);
+        for source in &dynamic_import_sources {
+            if let Ok(dependency_path) = resolve_module_specifier(path, source) {
                 self.load_module(&dependency_path)?;
             }
         }
@@ -19,6 +64,8 @@ impl ModuleLinker {
         self.lowerer.source_text = Some(lowered_source);
         self.lowerer.current_module_path = Some(normalize_module_path(path)?);
         self.lowerer.module_index_lookup = self.module_indices.clone();
+        self.lowerer.dynamic_import_specifier_lookup =
+            self.dynamic_import_specifier_index_lookup(path, &dynamic_import_sources);
         let strict = script_has_use_strict_directive(&script.body);
         self.lowerer.strict_modes.push(strict);
         self.lowerer.module_mode = false;
@@ -37,6 +84,7 @@ impl ModuleLinker {
         self.lowerer.source_text = None;
         self.lowerer.current_module_path = None;
         self.lowerer.module_index_lookup.clear();
+        self.lowerer.dynamic_import_specifier_lookup.clear();
 
         Ok(self.lowerer.finish_program(statements, strict))
     }

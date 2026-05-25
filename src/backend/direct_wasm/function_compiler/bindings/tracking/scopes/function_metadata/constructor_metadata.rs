@@ -10,6 +10,9 @@ impl<'a> FunctionCompiler<'a> {
         {
             return Some(binding);
         }
+        if self.expression_is_known_promise_instance_for_instanceof(object) {
+            return Some(LocalFunctionBinding::Builtin("Promise".to_string()));
+        }
         let materialized_object = self.materialize_static_expression(object);
         match &materialized_object {
             Expression::New { callee, .. } => self.resolve_function_binding_from_expression(callee),

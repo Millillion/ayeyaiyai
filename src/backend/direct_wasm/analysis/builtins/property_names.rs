@@ -9,6 +9,9 @@ pub(in crate::backend::direct_wasm) fn argument_index_from_expression(
             (index <= u32::MAX as u64).then_some(index as u32)
         }
         Expression::String(text) => canonical_array_index_from_property_name(text),
+        Expression::Sequence(expressions) => {
+            expressions.last().and_then(argument_index_from_expression)
+        }
         _ => None,
     }
 }
@@ -90,40 +93,35 @@ pub(in crate::backend::direct_wasm) fn static_numeric_property_name_value(
             left,
             right,
         } => Some(
-            static_numeric_property_name_value(left)?
-                + static_numeric_property_name_value(right)?,
+            static_numeric_property_name_value(left)? + static_numeric_property_name_value(right)?,
         ),
         Expression::Binary {
             op: BinaryOp::Subtract,
             left,
             right,
         } => Some(
-            static_numeric_property_name_value(left)?
-                - static_numeric_property_name_value(right)?,
+            static_numeric_property_name_value(left)? - static_numeric_property_name_value(right)?,
         ),
         Expression::Binary {
             op: BinaryOp::Multiply,
             left,
             right,
         } => Some(
-            static_numeric_property_name_value(left)?
-                * static_numeric_property_name_value(right)?,
+            static_numeric_property_name_value(left)? * static_numeric_property_name_value(right)?,
         ),
         Expression::Binary {
             op: BinaryOp::Divide,
             left,
             right,
         } => Some(
-            static_numeric_property_name_value(left)?
-                / static_numeric_property_name_value(right)?,
+            static_numeric_property_name_value(left)? / static_numeric_property_name_value(right)?,
         ),
         Expression::Binary {
             op: BinaryOp::Modulo,
             left,
             right,
         } => Some(
-            static_numeric_property_name_value(left)?
-                % static_numeric_property_name_value(right)?,
+            static_numeric_property_name_value(left)? % static_numeric_property_name_value(right)?,
         ),
         Expression::Binary {
             op: BinaryOp::Exponentiate,
@@ -163,7 +161,8 @@ pub(in crate::backend::direct_wasm) fn static_numeric_property_name_value(
             right,
         } => Some(
             (js_to_int32(static_numeric_property_name_value(left)?)
-                << (js_to_uint32(static_numeric_property_name_value(right)?) & 0x1f)) as f64,
+                << (js_to_uint32(static_numeric_property_name_value(right)?) & 0x1f))
+                as f64,
         ),
         Expression::Binary {
             op: BinaryOp::RightShift,
@@ -171,7 +170,8 @@ pub(in crate::backend::direct_wasm) fn static_numeric_property_name_value(
             right,
         } => Some(
             (js_to_int32(static_numeric_property_name_value(left)?)
-                >> (js_to_uint32(static_numeric_property_name_value(right)?) & 0x1f)) as f64,
+                >> (js_to_uint32(static_numeric_property_name_value(right)?) & 0x1f))
+                as f64,
         ),
         Expression::Binary {
             op: BinaryOp::UnsignedRightShift,
@@ -179,7 +179,8 @@ pub(in crate::backend::direct_wasm) fn static_numeric_property_name_value(
             right,
         } => Some(
             (js_to_uint32(static_numeric_property_name_value(left)?)
-                >> (js_to_uint32(static_numeric_property_name_value(right)?) & 0x1f)) as f64,
+                >> (js_to_uint32(static_numeric_property_name_value(right)?) & 0x1f))
+                as f64,
         ),
         _ => None,
     }
@@ -187,14 +188,18 @@ pub(in crate::backend::direct_wasm) fn static_numeric_property_name_value(
 
 fn static_strict_equal_value(left: &Expression, right: &Expression) -> Option<bool> {
     match (left, right) {
-        (Expression::Null, Expression::Null)
-        | (Expression::Undefined, Expression::Undefined) => Some(true),
-        (Expression::Null, Expression::Undefined)
-        | (Expression::Undefined, Expression::Null) => Some(false),
+        (Expression::Null, Expression::Null) | (Expression::Undefined, Expression::Undefined) => {
+            Some(true)
+        }
+        (Expression::Null, Expression::Undefined) | (Expression::Undefined, Expression::Null) => {
+            Some(false)
+        }
         (Expression::Bool(left), Expression::Bool(right)) => Some(left == right),
         (Expression::String(left), Expression::String(right)) => Some(left == right),
         (Expression::BigInt(left), Expression::BigInt(right)) => Some(left == right),
-        _ => Some(static_numeric_property_name_value(left)? == static_numeric_property_name_value(right)?),
+        _ => Some(
+            static_numeric_property_name_value(left)? == static_numeric_property_name_value(right)?,
+        ),
     }
 }
 
@@ -256,6 +261,147 @@ fn static_truthy_property_value(expression: &Expression) -> Option<bool> {
     }
 }
 
+fn static_array_property_name_from_elements(elements: &[ArrayElement]) -> Option<String> {
+    let mut parts = Vec::with_capacity(elements.len());
+    for element in elements {
+        match element {
+            ArrayElement::Expression(value)
+                if matches!(value, Expression::Null | Expression::Undefined) =>
+            {
+                parts.push(String::new());
+            }
+            ArrayElement::Expression(value) => {
+                parts.push(static_property_name_from_expression(value)?);
+            }
+            ArrayElement::Spread(_) => return None,
+        }
+    }
+    Some(parts.join(","))
+}
+
+enum StaticPropertyPrimitive {
+    String(String),
+    Number(f64),
+    Bool(bool),
+    BigInt(String),
+    Null,
+    Undefined,
+}
+
+impl StaticPropertyPrimitive {
+    fn is_string(&self) -> bool {
+        matches!(self, StaticPropertyPrimitive::String(_))
+    }
+
+    fn to_js_string(&self) -> String {
+        match self {
+            StaticPropertyPrimitive::String(value) => value.clone(),
+            StaticPropertyPrimitive::Number(value) => js_number_property_name(*value),
+            StaticPropertyPrimitive::Bool(value) => value.to_string(),
+            StaticPropertyPrimitive::BigInt(value) => value.trim_end_matches('n').to_string(),
+            StaticPropertyPrimitive::Null => "null".to_string(),
+            StaticPropertyPrimitive::Undefined => "undefined".to_string(),
+        }
+    }
+}
+
+fn static_property_addition_value(expression: &Expression) -> Option<StaticPropertyPrimitive> {
+    match expression {
+        Expression::String(value) => Some(StaticPropertyPrimitive::String(value.clone())),
+        Expression::Number(value) => Some(StaticPropertyPrimitive::Number(*value)),
+        Expression::Bool(value) => Some(StaticPropertyPrimitive::Bool(*value)),
+        Expression::BigInt(value) => Some(StaticPropertyPrimitive::BigInt(value.clone())),
+        Expression::Null => Some(StaticPropertyPrimitive::Null),
+        Expression::Undefined => Some(StaticPropertyPrimitive::Undefined),
+        Expression::Await(value) => static_property_addition_value(value),
+        Expression::Assign { value, .. } => static_property_addition_value(value),
+        Expression::Sequence(expressions) => {
+            expressions.last().and_then(static_property_addition_value)
+        }
+        Expression::Array(elements) => Some(StaticPropertyPrimitive::String(
+            static_array_property_name_from_elements(elements)?,
+        )),
+        Expression::Conditional {
+            condition,
+            then_expression,
+            else_expression,
+        } => {
+            if static_boolean_property_condition_value(condition)? {
+                static_property_addition_value(then_expression)
+            } else {
+                static_property_addition_value(else_expression)
+            }
+        }
+        Expression::Binary {
+            op: BinaryOp::LogicalAnd,
+            left,
+            right,
+        } => {
+            if static_truthy_property_value(left)? {
+                static_property_addition_value(right)
+            } else {
+                static_property_addition_value(left)
+            }
+        }
+        Expression::Binary {
+            op: BinaryOp::LogicalOr,
+            left,
+            right,
+        } => {
+            if static_truthy_property_value(left)? {
+                static_property_addition_value(left)
+            } else {
+                static_property_addition_value(right)
+            }
+        }
+        Expression::Binary {
+            op: BinaryOp::NullishCoalescing,
+            left,
+            right,
+        } => {
+            if matches!(left.as_ref(), Expression::Null | Expression::Undefined) {
+                static_property_addition_value(right)
+            } else {
+                static_property_addition_value(left)
+            }
+        }
+        Expression::Binary {
+            op: BinaryOp::Add,
+            left,
+            right,
+        } => {
+            let left = static_property_addition_value(left)?;
+            let right = static_property_addition_value(right)?;
+            if left.is_string() || right.is_string() {
+                Some(StaticPropertyPrimitive::String(format!(
+                    "{}{}",
+                    left.to_js_string(),
+                    right.to_js_string()
+                )))
+            } else if let (
+                StaticPropertyPrimitive::Number(left),
+                StaticPropertyPrimitive::Number(right),
+            ) = (&left, &right)
+            {
+                Some(StaticPropertyPrimitive::Number(left + right))
+            } else {
+                None
+            }
+        }
+        _ => static_numeric_property_name_value(expression).map(StaticPropertyPrimitive::Number),
+    }
+}
+
+fn static_addition_property_name(left: &Expression, right: &Expression) -> Option<String> {
+    let left = static_property_addition_value(left)?;
+    let right = static_property_addition_value(right)?;
+    if left.is_string() || right.is_string() {
+        Some(format!("{}{}", left.to_js_string(), right.to_js_string()))
+    } else {
+        None
+    }
+}
+
 pub(in crate::backend::direct_wasm) fn static_property_name_from_expression(
     expression: &Expression,
 ) -> Option<String> {
@@ -267,6 +413,17 @@ pub(in crate::backend::direct_wasm) fn static_property_name_from_expression(
         Expression::Undefined => Some("undefined".to_string()),
         Expression::Await(value) => static_property_name_from_expression(value),
         Expression::Assign { value, .. } => static_property_name_from_expression(value),
+        Expression::Sequence(expressions) => expressions
+            .last()
+            .and_then(static_property_name_from_expression),
+        Expression::Array(elements) => static_array_property_name_from_elements(elements),
+        Expression::Binary {
+            op: BinaryOp::Add,
+            left,
+            right,
+        } => static_addition_property_name(left, right).or_else(|| {
+            static_numeric_property_name_value(expression).map(js_number_property_name)
+        }),
         Expression::Binary {
             op: BinaryOp::LogicalAnd,
             left,

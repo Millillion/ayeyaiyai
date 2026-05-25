@@ -1,0 +1,4 @@
+phase=parse
+phase=lower_static_function_constructors
+phase=validate
+phase=backend_emit

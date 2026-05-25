@@ -69,6 +69,17 @@ impl DirectWasmCompiler {
                 if let Some(capture_slots) =
                     self.global_member_function_capture_slots(&key).cloned()
                 {
+                    let mut capture_slots = capture_slots;
+                    if matches!(
+                        key.target,
+                        MemberFunctionBindingTarget::Identifier(ref target)
+                            if target == source_name
+                    ) && capture_slots
+                        .get("this")
+                        .is_some_and(|slot_name| slot_name == source_name)
+                    {
+                        capture_slots.insert("this".to_string(), name.to_string());
+                    }
                     function_capture_slots.push((rebound_key, capture_slots));
                 }
             }

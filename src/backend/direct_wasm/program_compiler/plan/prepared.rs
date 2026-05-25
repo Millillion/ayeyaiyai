@@ -4,6 +4,7 @@ use super::*;
 pub(in crate::backend::direct_wasm) struct PreparedStartFunction {
     pub(in crate::backend::direct_wasm) statements: Vec<Statement>,
     pub(in crate::backend::direct_wasm) entry_state: PreparedFunctionEntryState,
+    pub(in crate::backend::direct_wasm) initial_named_error: Option<&'static str>,
 }
 
 #[derive(Clone)]

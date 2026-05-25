@@ -10,6 +10,10 @@ impl<'a> FunctionCompiler<'a> {
         if !self.scope_object_has_binding_property(object, name) {
             return;
         }
+        if self.static_with_scope_unscopables_blocks_for_specialization(object, name) != Some(false)
+        {
+            return;
+        }
         let property = Expression::String(name.to_string());
         let materialized_value = self.reference_preserving_static_value_expression(value);
         self.update_member_function_assignment_binding(object, &property, value);
@@ -254,6 +258,34 @@ impl<'a> FunctionCompiler<'a> {
         );
         let mut names = HashSet::new();
         let mut visited = HashSet::new();
+        let mut argument_bindings = HashMap::new();
+        for (index, parameter) in function.params.iter().enumerate() {
+            let value = if parameter.rest {
+                Expression::Array(
+                    arguments
+                        .iter()
+                        .skip(index)
+                        .cloned()
+                        .map(ArrayElement::Expression)
+                        .collect(),
+                )
+            } else {
+                arguments
+                    .get(index)
+                    .cloned()
+                    .unwrap_or(Expression::Undefined)
+            };
+            argument_bindings.insert(parameter.name.clone(), value);
+        }
+        for statement in &function.body {
+            let substituted = self.substitute_statement_bindings(statement, &argument_bindings);
+            self.collect_statement_call_effect_nonlocal_bindings(
+                &substituted,
+                Some(&user_function.name),
+                &mut names,
+                &mut visited,
+            );
+        }
         for iterator_name in iterator_names {
             let Some(iterated) =
                 Self::find_iterator_source_expression_in_statements(&function.body, &iterator_name)

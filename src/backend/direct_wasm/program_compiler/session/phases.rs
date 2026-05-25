@@ -8,9 +8,12 @@ impl<'a> ProgramCompilationSession<'a> {
     }
 
     pub(super) fn run_global_binding_phase(&mut self, program: &Program) {
+        self.compiler.register_template_object_sites(program);
         self.compiler.register_global_bindings(&program.statements);
         self.compiler
             .register_global_function_bindings(&program.functions);
+        self.compiler
+            .register_local_class_member_bindings(&program.functions);
         self.compiler
             .reserve_global_array_runtime_state_bindings(program);
     }

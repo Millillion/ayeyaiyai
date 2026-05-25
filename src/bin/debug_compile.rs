@@ -56,17 +56,21 @@ fn main() {
             eprintln!("parse error: {error:#}");
             std::process::exit(1);
         });
-        eprintln!("phase=validate");
-        ir::pipeline::validate(&program).unwrap_or_else(|error| {
-            eprintln!("validate error: {error:#}");
-            std::process::exit(1);
-        });
         eprintln!("phase=lower_static_function_constructors");
         let program =
             ir::passes::static_function_constructors::lower(program).unwrap_or_else(|error| {
                 eprintln!("lower error: {error:#}");
                 std::process::exit(1);
             });
+        if env::var_os("AYY_DEBUG_LOWERED_HIR").is_some() {
+            println!("{program:#?}");
+            return;
+        }
+        eprintln!("phase=validate");
+        ir::pipeline::validate(&program).unwrap_or_else(|error| {
+            eprintln!("validate error: {error:#}");
+            std::process::exit(1);
+        });
         eprintln!("phase=backend_emit");
         match backend::emit_wasm_with_reason(&program) {
             Ok(_) => println!("ok"),

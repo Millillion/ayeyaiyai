@@ -110,6 +110,49 @@ pub(in crate::backend::direct_wasm) fn object_binding_from_array_binding(
     object_binding
 }
 
+pub(in crate::backend::direct_wasm) fn array_binding_from_object_binding(
+    object_binding: &ObjectValueBinding,
+) -> Option<ArrayValueBinding> {
+    let length = array_length_from_object_binding(object_binding)?;
+
+    let mut values = vec![None; length];
+    for (name, value) in &object_binding.string_properties {
+        let Some(index) = canonical_array_index_from_property_name(name) else {
+            continue;
+        };
+        let index = index as usize;
+        if index >= values.len() {
+            continue;
+        }
+        values[index] = Some(value.clone());
+    }
+
+    Some(ArrayValueBinding { values })
+}
+
+pub(in crate::backend::direct_wasm) fn array_length_from_object_binding(
+    object_binding: &ObjectValueBinding,
+) -> Option<usize> {
+    if !object_binding
+        .non_enumerable_string_properties
+        .iter()
+        .any(|name| name == "length")
+    {
+        return None;
+    }
+
+    let length =
+        object_binding_lookup_value(object_binding, &Expression::String("length".to_string()))?;
+    let Expression::Number(length) = length else {
+        return None;
+    };
+    if !length.is_finite() || *length < 0.0 || length.fract() != 0.0 {
+        return None;
+    }
+
+    Some(*length as usize)
+}
+
 pub(in crate::backend::direct_wasm) fn ordered_object_property_names(
     object_binding: &ObjectValueBinding,
 ) -> Vec<String> {
@@ -117,6 +160,9 @@ pub(in crate::backend::direct_wasm) fn ordered_object_property_names(
     let mut other_keys = Vec::new();
 
     for (name, _) in &object_binding.string_properties {
+        if name == "__ayy$module$namespace" {
+            continue;
+        }
         if let Some(index) = canonical_array_index_from_property_name(name) {
             integer_keys.push((index, name.clone()));
         } else {

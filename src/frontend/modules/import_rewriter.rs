@@ -2,6 +2,7 @@ use super::*;
 
 pub(super) struct ImportBindingRewriter<'a> {
     import_bindings: &'a HashMap<String, ImportBinding>,
+    module_index: Option<usize>,
     scopes: Vec<HashSet<String>>,
 }
 
@@ -9,6 +10,18 @@ impl<'a> ImportBindingRewriter<'a> {
     pub(super) fn new(import_bindings: &'a HashMap<String, ImportBinding>) -> Self {
         Self {
             import_bindings,
+            module_index: None,
+            scopes: Vec::new(),
+        }
+    }
+
+    pub(super) fn new_for_module(
+        import_bindings: &'a HashMap<String, ImportBinding>,
+        module_index: usize,
+    ) -> Self {
+        Self {
+            import_bindings,
+            module_index: Some(module_index),
             scopes: Vec::new(),
         }
     }
@@ -186,6 +199,15 @@ impl<'a> ImportBindingRewriter<'a> {
     }
 
     fn rewrite_expression(&mut self, expression: &mut Expression) -> Result<()> {
+        if let Some(module_index) = self.module_index
+            && let Expression::Call { callee, arguments } = expression
+            && matches!(callee.as_ref(), Expression::Identifier(name) if name == "__ayyImportMeta")
+            && arguments.is_empty()
+        {
+            *expression = Expression::Identifier(format!("__ayy_import_meta_{module_index}"));
+            return Ok(());
+        }
+
         match expression {
             Expression::Array(elements) => {
                 for element in elements {
@@ -300,7 +322,7 @@ impl<'a> ImportBindingRewriter<'a> {
             | Expression::SuperCall { callee, arguments }
             | Expression::New { callee, arguments } => {
                 self.rewrite_expression(callee)?;
-                for argument in arguments {
+                for argument in arguments.iter_mut() {
                     match argument {
                         CallArgument::Expression(argument) | CallArgument::Spread(argument) => {
                             self.rewrite_expression(argument)?
@@ -354,6 +376,14 @@ pub(super) fn rewrite_import_bindings_in_function(
     import_bindings: &HashMap<String, ImportBinding>,
 ) -> Result<()> {
     ImportBindingRewriter::new(import_bindings).rewrite_function(function)
+}
+
+pub(super) fn rewrite_module_import_bindings_in_function(
+    function: &mut FunctionDeclaration,
+    import_bindings: &HashMap<String, ImportBinding>,
+    module_index: usize,
+) -> Result<()> {
+    ImportBindingRewriter::new_for_module(import_bindings, module_index).rewrite_function(function)
 }
 
 fn import_binding_expression(binding: &ImportBinding) -> Expression {

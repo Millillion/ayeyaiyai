@@ -92,6 +92,43 @@ fn context_expression_references_internal_iterator_step(expression: &Expression)
 }
 
 impl<'a> FunctionCompiler<'a> {
+    fn is_direct_local_array_iterator_method_call_expression(
+        &mut self,
+        expression: &Expression,
+    ) -> bool {
+        let Expression::Call { callee, .. } = expression else {
+            return false;
+        };
+        let Expression::Member { object, property } = callee.as_ref() else {
+            return false;
+        };
+        if !matches!(
+            property.as_ref(),
+            Expression::String(property_name)
+                if matches!(property_name.as_str(), "next" | "return" | "throw")
+        ) {
+            return false;
+        }
+        let Expression::Identifier(iterator_name) = object.as_ref() else {
+            return false;
+        };
+        if !iterator_name.is_empty() {
+            return true;
+        }
+        self.state
+            .speculation
+            .static_semantics
+            .has_local_array_iterator_binding(iterator_name)
+            || matches!(
+                self.lookup_identifier_kind(iterator_name),
+                Some(StaticValueKind::Object)
+            )
+            || self
+                .global_value_binding(iterator_name)
+                .cloned()
+                .is_some_and(|value| self.resolve_local_array_iterator_source(&value).is_some())
+    }
+
     fn is_local_array_iterator_next_call_expression(&self, expression: &Expression) -> bool {
         let Expression::Call { callee, arguments } = expression else {
             return false;
@@ -105,6 +142,9 @@ impl<'a> FunctionCompiler<'a> {
         if !matches!(property.as_ref(), Expression::String(property_name) if property_name == "next")
         {
             return false;
+        }
+        if self.is_async_generator_iterator_expression(object) {
+            return true;
         }
         let Expression::Identifier(iterator_name) = object.as_ref() else {
             return false;
@@ -126,7 +166,10 @@ impl<'a> FunctionCompiler<'a> {
             })
     }
 
-    fn is_local_simple_async_generator_next_call_expression(&self, expression: &Expression) -> bool {
+    fn is_local_simple_async_generator_next_call_expression(
+        &self,
+        expression: &Expression,
+    ) -> bool {
         let Expression::Call { callee, .. } = expression else {
             return false;
         };
@@ -156,6 +199,18 @@ impl<'a> FunctionCompiler<'a> {
             })
     }
 
+    fn call_snapshot_exact_match_can_represent_runtime_binding(expression: &Expression) -> bool {
+        !matches!(
+            expression,
+            Expression::Number(_)
+                | Expression::BigInt(_)
+                | Expression::String(_)
+                | Expression::Bool(_)
+                | Expression::Null
+                | Expression::Undefined
+        )
+    }
+
     pub(in crate::backend::direct_wasm) fn replace_call_snapshot_updated_values_with_runtime_reads(
         &self,
         expression: &Expression,
@@ -163,7 +218,9 @@ impl<'a> FunctionCompiler<'a> {
     ) -> Expression {
         for (name, value) in updated_bindings {
             let source_name = scoped_binding_source_name(name).unwrap_or(name);
-            if static_expression_matches(expression, value) {
+            if Self::call_snapshot_exact_match_can_represent_runtime_binding(expression)
+                && static_expression_matches(expression, value)
+            {
                 return Expression::Identifier(source_name.to_string());
             }
             let mut referenced_names = HashSet::new();
@@ -658,6 +715,17 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         expression: &Expression,
     ) -> Expression {
+        self.resolve_static_function_binding_store_expression_with_context(
+            expression,
+            self.current_function_name(),
+        )
+    }
+
+    pub(in crate::backend::direct_wasm) fn resolve_static_function_binding_store_expression_with_context(
+        &self,
+        expression: &Expression,
+        current_function_name: Option<&str>,
+    ) -> Expression {
         if let Expression::Binary {
             op: BinaryOp::LogicalAnd | BinaryOp::LogicalOr | BinaryOp::NullishCoalescing,
             left,
@@ -688,6 +756,14 @@ impl<'a> FunctionCompiler<'a> {
             Expression::Await(value) => value.as_ref(),
             _ => expression,
         };
+        if let Expression::Call { callee, arguments } = iterator_step_value
+            && arguments.is_empty()
+            && let Expression::Identifier(function_name) = callee.as_ref()
+            && let Some(constructor_name) =
+                self.resolve_static_class_init_call_constructor_alias(function_name)
+        {
+            return Expression::Identifier(constructor_name);
+        }
         if let Expression::Member { object, property } = iterator_step_value
             && matches!(property.as_ref(), Expression::String(property_name) if property_name == "value")
             && let Some(IteratorStepBinding::Runtime {
@@ -700,9 +776,40 @@ impl<'a> FunctionCompiler<'a> {
                 return Self::function_binding_to_expression(&function_binding);
             }
             if let Some(static_value) = static_value.as_ref() {
-                return self.resolve_static_function_binding_store_expression(static_value);
+                return self.resolve_static_function_binding_store_expression_with_context(
+                    static_value,
+                    current_function_name,
+                );
             }
             return expression.clone();
+        }
+
+        if let Expression::Call { callee, arguments } = iterator_step_value
+            && let Some((value, _)) = self.resolve_static_call_result_expression_with_context(
+                callee,
+                arguments,
+                current_function_name,
+            )
+            && !static_expression_matches(&value, expression)
+        {
+            return self.resolve_static_function_binding_store_expression_with_context(
+                &value,
+                current_function_name,
+            );
+        }
+
+        if let Expression::New { callee, arguments } = iterator_step_value {
+            let resolved_callee = self
+                .resolve_static_function_binding_store_expression_with_context(
+                    callee,
+                    current_function_name,
+                );
+            if !static_expression_matches(&resolved_callee, callee) {
+                return Expression::New {
+                    callee: Box::new(resolved_callee),
+                    arguments: arguments.clone(),
+                };
+            }
         }
 
         if let Expression::Conditional {
@@ -718,12 +825,18 @@ impl<'a> FunctionCompiler<'a> {
             } else {
                 else_expression
             };
-            return self.resolve_static_function_binding_store_expression(branch);
+            return self.resolve_static_function_binding_store_expression_with_context(
+                branch,
+                current_function_name,
+            );
         }
 
         let materialized = self.materialize_static_expression(expression);
         if !static_expression_matches(&materialized, expression) {
-            return self.resolve_static_function_binding_store_expression(&materialized);
+            return self.resolve_static_function_binding_store_expression_with_context(
+                &materialized,
+                current_function_name,
+            );
         }
 
         expression.clone()
@@ -796,6 +909,7 @@ impl<'a> FunctionCompiler<'a> {
                 function_binding_expression: tracked_value_expression.clone(),
                 function_binding: None,
                 object_binding_expression: Expression::Undefined,
+                object_binding: None,
                 kind: is_for_in_keys_temp.then_some(StaticValueKind::Object),
                 static_string_value: None,
                 exact_static_number: None,
@@ -849,6 +963,7 @@ impl<'a> FunctionCompiler<'a> {
                 function_binding_expression: Expression::Undefined,
                 function_binding: None,
                 object_binding_expression: Expression::Undefined,
+                object_binding: None,
                 kind: Some(StaticValueKind::String),
                 static_string_value: None,
                 exact_static_number: None,
@@ -861,6 +976,219 @@ impl<'a> FunctionCompiler<'a> {
         }
         if trace_identifier_store {
             eprintln!("identifier_store:{name}:canonical {canonical_value_expression:?}");
+        }
+        if let Expression::Member { object, property } = &canonical_value_expression
+            && matches!(property.as_ref(), Expression::String(property_name) if property_name == "constructor")
+            && let Some(binding) = self.resolve_function_binding_from_expression(object)
+        {
+            let constructor_name = match binding {
+                LocalFunctionBinding::User(function_name) => self
+                    .user_function(&function_name)
+                    .map(|function| match function.kind {
+                        FunctionKind::Ordinary => "Function",
+                        FunctionKind::Generator => "GeneratorFunction",
+                        FunctionKind::Async => "AsyncFunction",
+                        FunctionKind::AsyncGenerator => "AsyncGeneratorFunction",
+                    })
+                    .unwrap_or("Function"),
+                LocalFunctionBinding::Builtin(_) => "Function",
+            };
+            if is_function_constructor_builtin(constructor_name) {
+                let materialized_constructor = Expression::Identifier(constructor_name.to_string());
+                if trace_identifier_store {
+                    eprintln!(
+                        "identifier_store:{name}:function_constructor_alias {constructor_name}"
+                    );
+                }
+                return PreparedIdentifierValueStore {
+                    canonical_value_expression: canonical_value_expression.clone(),
+                    tracked_value_expression: materialized_constructor.clone(),
+                    descriptor_binding_expression: Expression::Undefined,
+                    tracked_object_expression: Expression::Undefined,
+                    call_source_snapshot_expression: None,
+                    prototype_source_snapshot_expression: None,
+                    function_binding_expression: materialized_constructor.clone(),
+                    function_binding: Some(LocalFunctionBinding::Builtin(
+                        constructor_name.to_string(),
+                    )),
+                    object_binding_expression: Expression::Undefined,
+                    object_binding: None,
+                    kind: Some(StaticValueKind::Function),
+                    static_string_value: None,
+                    exact_static_number: None,
+                    array_binding: None,
+                    module_assignment_expression: materialized_constructor,
+                    resolved_local_binding,
+                    returned_descriptor_binding: None,
+                    runtime_value_override: None,
+                };
+            }
+        }
+        if let Expression::Member { object, property } = &canonical_value_expression
+            && matches!(object.as_ref(), Expression::Call { .. })
+            && let Some(snapshot) = self
+                .state
+                .speculation
+                .static_semantics
+                .last_bound_user_function_call
+                .as_ref()
+            && snapshot
+                .source_expression
+                .as_ref()
+                .is_some_and(|source| static_expression_matches(source, object))
+            && let Some(result_expression) = snapshot.result_expression.as_ref()
+        {
+            let resolved_property = self
+                .resolve_property_key_expression(property)
+                .unwrap_or_else(|| self.materialize_static_expression(property));
+            let snapshot_result_binding =
+                self.resolve_object_binding_from_expression(result_expression);
+            let member_value_expression = snapshot_result_binding
+                .as_ref()
+                .and_then(|binding| object_binding_lookup_value(binding, &resolved_property))
+                .cloned()
+                .or_else(|| {
+                    matches!(
+                        resolved_property,
+                        Expression::String(_) | Expression::Number(_)
+                    )
+                    .then_some(Expression::Undefined)
+                });
+            if let Some(member_value_expression) = member_value_expression {
+                let function_binding_expression = self
+                    .resolve_static_function_binding_store_expression_with_context(
+                        &member_value_expression,
+                        Some(snapshot.function_name.as_str()),
+                    );
+                let function_binding = self
+                    .resolve_function_binding_from_expression_with_context(
+                        &function_binding_expression,
+                        Some(snapshot.function_name.as_str()),
+                    )
+                    .or_else(|| {
+                        self.resolve_function_binding_from_expression(&function_binding_expression)
+                    });
+                let object_binding =
+                    self.resolve_object_binding_from_expression(&member_value_expression);
+                let kind = self
+                    .infer_value_kind(&member_value_expression)
+                    .or_else(|| object_binding.as_ref().map(|_| StaticValueKind::Object))
+                    .unwrap_or(StaticValueKind::Unknown);
+                let static_string_value = (kind == StaticValueKind::String)
+                    .then(|| self.resolve_static_string_value(&member_value_expression))
+                    .flatten();
+                let exact_static_number = self
+                    .resolve_static_number_value(&member_value_expression)
+                    .filter(|number| {
+                        number.is_nan()
+                            || !number.is_finite()
+                            || number.fract() != 0.0
+                            || (*number == 0.0 && number.is_sign_negative())
+                    });
+                let array_binding =
+                    self.resolve_array_binding_from_expression(&member_value_expression);
+                let module_assignment_expression =
+                    self.materialize_static_expression(&member_value_expression);
+                if trace_identifier_store {
+                    eprintln!(
+                        "identifier_store:{name}:call_snapshot_member value={member_value_expression:?}"
+                    );
+                }
+                return PreparedIdentifierValueStore {
+                    canonical_value_expression: canonical_value_expression.clone(),
+                    tracked_value_expression: member_value_expression.clone(),
+                    descriptor_binding_expression: member_value_expression.clone(),
+                    tracked_object_expression: member_value_expression.clone(),
+                    call_source_snapshot_expression: snapshot.source_expression.clone(),
+                    prototype_source_snapshot_expression: None,
+                    function_binding_expression,
+                    function_binding,
+                    object_binding_expression: member_value_expression,
+                    object_binding,
+                    kind: Some(kind),
+                    static_string_value,
+                    exact_static_number,
+                    array_binding,
+                    module_assignment_expression,
+                    resolved_local_binding,
+                    returned_descriptor_binding: None,
+                    runtime_value_override: None,
+                };
+            }
+        }
+        if self.is_direct_local_array_iterator_method_call_expression(&canonical_value_expression) {
+            let matched_call_snapshot = self
+                .state
+                .speculation
+                .static_semantics
+                .last_bound_user_function_call
+                .as_ref()
+                .and_then(|snapshot| {
+                    let source_expression = snapshot.source_expression.as_ref()?;
+                    static_expression_matches(source_expression, &canonical_value_expression)
+                        .then_some(snapshot)
+                });
+            let call_result_snapshot_expression = matched_call_snapshot
+                .and_then(|snapshot| snapshot.result_expression.as_ref())
+                .map(|result| match result {
+                    Expression::Identifier(_) | Expression::This => result.clone(),
+                    _ => self.materialize_static_expression(result),
+                });
+            let metadata_value_expression = call_result_snapshot_expression
+                .as_ref()
+                .unwrap_or(&canonical_value_expression);
+            let object_binding_expression = call_result_snapshot_expression
+                .clone()
+                .unwrap_or(Expression::Undefined);
+            if trace_identifier_store {
+                eprintln!("identifier_store:{name}:direct_iterator_method_call");
+            }
+            if trace_identifier_store {
+                eprintln!(
+                    "identifier_store:{name}:direct_iterator_method_call:object_binding:start"
+                );
+            }
+            let object_binding =
+                self.resolve_object_binding_from_expression(&object_binding_expression);
+            if trace_identifier_store {
+                eprintln!(
+                    "identifier_store:{name}:direct_iterator_method_call:object_binding:done"
+                );
+                eprintln!("identifier_store:{name}:direct_iterator_method_call:kind:start");
+            }
+            let kind = self
+                .infer_value_kind(metadata_value_expression)
+                .or(Some(StaticValueKind::Object));
+            if trace_identifier_store {
+                eprintln!("identifier_store:{name}:direct_iterator_method_call:kind:done");
+                eprintln!("identifier_store:{name}:direct_iterator_method_call:array:start");
+            }
+            let array_binding =
+                self.resolve_array_binding_from_expression(metadata_value_expression);
+            if trace_identifier_store {
+                eprintln!("identifier_store:{name}:direct_iterator_method_call:array:done");
+            }
+            return PreparedIdentifierValueStore {
+                canonical_value_expression: canonical_value_expression.clone(),
+                tracked_value_expression: canonical_value_expression.clone(),
+                descriptor_binding_expression: object_binding_expression.clone(),
+                tracked_object_expression: object_binding_expression.clone(),
+                call_source_snapshot_expression: matched_call_snapshot
+                    .and_then(|snapshot| snapshot.source_expression.as_ref().cloned()),
+                prototype_source_snapshot_expression: None,
+                function_binding_expression: Expression::Undefined,
+                function_binding: None,
+                object_binding,
+                object_binding_expression,
+                kind,
+                static_string_value: None,
+                exact_static_number: None,
+                array_binding,
+                module_assignment_expression: metadata_value_expression.clone(),
+                resolved_local_binding,
+                returned_descriptor_binding: None,
+                runtime_value_override: None,
+            };
         }
         let iterator_step_member_kind = if let Expression::Member { object, property } =
             &canonical_value_expression
@@ -892,6 +1220,7 @@ impl<'a> FunctionCompiler<'a> {
                 function_binding_expression: Expression::Undefined,
                 function_binding: None,
                 object_binding_expression: Expression::Undefined,
+                object_binding: None,
                 kind: Some(kind),
                 static_string_value: None,
                 exact_static_number: None,
@@ -904,8 +1233,8 @@ impl<'a> FunctionCompiler<'a> {
         }
         let local_array_iterator_next_call =
             self.is_local_array_iterator_next_call_expression(&canonical_value_expression);
-        let local_simple_async_generator_next_call = self
-            .is_local_simple_async_generator_next_call_expression(&canonical_value_expression);
+        let local_simple_async_generator_next_call =
+            self.is_local_simple_async_generator_next_call_expression(&canonical_value_expression);
         let internal_iterator_step_next_call = (name.starts_with("__ayy_array_step_")
             || name.starts_with("__ayy_for_of_step_"))
             && matches!(
@@ -964,6 +1293,13 @@ impl<'a> FunctionCompiler<'a> {
                     .is_some()
                 {
                     canonical_value_expression.clone()
+                } else if matches!(
+                    object.as_ref(),
+                    Expression::Identifier(name) if name.starts_with("__ayy_inline_param_")
+                ) && let Some(value) =
+                    self.resolve_static_effect_member_value(&canonical_value_expression)
+                {
+                    value
                 } else {
                     self.resolve_member_getter_binding(object, property)
                         .and_then(|binding| {
@@ -981,7 +1317,7 @@ impl<'a> FunctionCompiler<'a> {
         if trace_identifier_store {
             eprintln!("identifier_store:{name}:tracked {tracked_value_expression:?}");
         }
-        if local_array_iterator_next_call {
+        if local_array_iterator_next_call || internal_iterator_step_next_call {
             if trace_identifier_store {
                 eprintln!("identifier_store:{name}:local_iterator_next");
             }
@@ -995,6 +1331,7 @@ impl<'a> FunctionCompiler<'a> {
                 function_binding_expression: Expression::Undefined,
                 function_binding: None,
                 object_binding_expression: Expression::Undefined,
+                object_binding: None,
                 kind: Some(StaticValueKind::Object),
                 static_string_value: None,
                 exact_static_number: None,
@@ -1021,11 +1358,44 @@ impl<'a> FunctionCompiler<'a> {
                 function_binding_expression: Expression::Undefined,
                 function_binding: None,
                 object_binding_expression: Expression::Undefined,
+                object_binding: None,
                 kind: None,
                 static_string_value: None,
                 exact_static_number: None,
                 array_binding: None,
                 module_assignment_expression: canonical_value_expression.clone(),
+                resolved_local_binding,
+                returned_descriptor_binding: None,
+                runtime_value_override: None,
+            };
+        }
+        if let Some(function_binding) =
+            self.resolve_function_binding_from_expression(&tracked_value_expression)
+            && matches!(
+                &function_binding,
+                LocalFunctionBinding::Builtin(function_name)
+                    if parse_bound_function_prototype_call_builtin_name(function_name).is_some()
+            )
+        {
+            if trace_identifier_store {
+                eprintln!("identifier_store:{name}:bound_call_builtin_fast_path");
+            }
+            return PreparedIdentifierValueStore {
+                canonical_value_expression: canonical_value_expression.clone(),
+                tracked_value_expression: tracked_value_expression.clone(),
+                descriptor_binding_expression: Expression::Undefined,
+                tracked_object_expression: Expression::Undefined,
+                call_source_snapshot_expression: None,
+                prototype_source_snapshot_expression: None,
+                function_binding_expression: tracked_value_expression.clone(),
+                function_binding: Some(function_binding),
+                object_binding_expression: Expression::Undefined,
+                object_binding: None,
+                kind: Some(StaticValueKind::Function),
+                static_string_value: None,
+                exact_static_number: None,
+                array_binding: None,
+                module_assignment_expression: tracked_value_expression.clone(),
                 resolved_local_binding,
                 returned_descriptor_binding: None,
                 runtime_value_override: None,
@@ -1144,8 +1514,9 @@ impl<'a> FunctionCompiler<'a> {
             if local_simple_async_generator_next_call && call_result_function_binding.is_none() {
                 raw_function_binding_expression.clone()
             } else {
-                self.resolve_static_function_binding_store_expression(
+                self.resolve_static_function_binding_store_expression_with_context(
                     &raw_function_binding_expression,
+                    call_snapshot_function_context.or_else(|| self.current_function_name()),
                 )
             };
         let function_binding_expression = if self
@@ -1177,6 +1548,21 @@ impl<'a> FunctionCompiler<'a> {
         } else {
             self.resolve_object_binding_from_expression(&canonical_value_expression)
         };
+        let returned_call_object_binding = if local_simple_async_generator_next_call {
+            None
+        } else if let Expression::Call { callee, arguments } = &canonical_value_expression {
+            self.resolve_returned_object_binding_from_call(callee, arguments)
+        } else {
+            None
+        };
+        let resolved_construct_object_binding = if matches!(
+            function_binding_expression,
+            Expression::Call { .. } | Expression::New { .. } | Expression::Object(_)
+        ) {
+            self.resolve_object_binding_from_expression(&function_binding_expression)
+        } else {
+            None
+        };
         let object_binding_expression = if canonical_object_binding
             .as_ref()
             .is_some_and(|binding| self.object_binding_is_static_map(binding))
@@ -1195,11 +1581,39 @@ impl<'a> FunctionCompiler<'a> {
                     self.resolve_object_binding_from_expression(expression)
                         .is_some()
                 })
+                .or_else(|| {
+                    resolved_construct_object_binding
+                        .as_ref()
+                        .map(|_| &function_binding_expression)
+                })
+                .or_else(|| {
+                    returned_call_object_binding
+                        .as_ref()
+                        .map(|_| &canonical_value_expression)
+                })
                 .unwrap_or(&tracked_object_expression)
                 .clone()
         };
+        let object_binding =
+            if static_expression_matches(&object_binding_expression, &canonical_value_expression) {
+                canonical_object_binding
+                    .clone()
+                    .or_else(|| returned_call_object_binding.clone())
+            } else if static_expression_matches(
+                &object_binding_expression,
+                &function_binding_expression,
+            ) {
+                resolved_construct_object_binding.clone()
+            } else if matches!(object_binding_expression, Expression::Object(_)) {
+                self.resolve_object_binding_from_expression(&object_binding_expression)
+            } else {
+                None
+            };
         if trace_identifier_store {
-            eprintln!("identifier_store:{name}:object_binding");
+            eprintln!(
+                "identifier_store:{name}:object_binding expr={object_binding_expression:?} prepared_binding={}",
+                object_binding.is_some()
+            );
         }
         let metadata_value_expression = call_result_snapshot_expression
             .as_ref()
@@ -1223,14 +1637,25 @@ impl<'a> FunctionCompiler<'a> {
         if trace_identifier_store {
             eprintln!("identifier_store:{name}:string");
         }
-        let exact_static_number = self
-            .resolve_static_number_value(metadata_value_expression)
-            .filter(|number| {
-                number.is_nan()
-                    || !number.is_finite()
-                    || number.fract() != 0.0
-                    || (*number == 0.0 && number.is_sign_negative())
-            });
+        let exact_static_number = matches!(
+            kind,
+            Some(
+                StaticValueKind::Number
+                    | StaticValueKind::BigInt
+                    | StaticValueKind::Bool
+                    | StaticValueKind::String
+                    | StaticValueKind::Null
+                    | StaticValueKind::Undefined
+            )
+        )
+        .then(|| self.resolve_static_number_value(metadata_value_expression))
+        .flatten()
+        .filter(|number| {
+            number.is_nan()
+                || !number.is_finite()
+                || number.fract() != 0.0
+                || (*number == 0.0 && number.is_sign_negative())
+        });
         if trace_identifier_store {
             eprintln!("identifier_store:{name}:number");
         }
@@ -1241,11 +1666,18 @@ impl<'a> FunctionCompiler<'a> {
         let preserve_tracked_member_expression = matches!(
             &tracked_value_expression,
             Expression::Member { object, property }
-                if self
-                    .resolve_member_function_capture_slots(object, property)
-                    .is_some()
+                if self.resolve_member_function_capture_slots(object, property).is_some()
+                    || self
+                        .object_literal_member_function_display_name(&tracked_value_expression, 0)
+                        .is_some()
         );
-        let module_assignment_expression = if preserve_tracked_member_expression {
+        let module_assignment_expression = if matches!(
+            &function_binding,
+            Some(LocalFunctionBinding::Builtin(function_name))
+                if parse_test262_realm_eval_builtin(function_name).is_some()
+        ) {
+            function_binding_expression.clone()
+        } else if preserve_tracked_member_expression {
             tracked_value_expression.clone()
         } else if matches!(
             call_result_snapshot_expression,
@@ -1271,6 +1703,7 @@ impl<'a> FunctionCompiler<'a> {
             function_binding_expression,
             function_binding,
             object_binding_expression,
+            object_binding,
             kind,
             static_string_value,
             exact_static_number,

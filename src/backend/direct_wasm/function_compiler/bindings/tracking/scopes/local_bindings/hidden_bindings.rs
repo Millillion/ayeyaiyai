@@ -118,6 +118,8 @@ impl<'a> FunctionCompiler<'a> {
         };
 
         self.emit_strict_deleted_member_source_check(&hidden_name, Some(name))?;
+        let global_fallback_source =
+            self.user_function_capture_global_fallback_source(name, &hidden_name);
 
         self.push_global_get(binding.present_index);
         self.state.emission.output.instructions.push(0x04);
@@ -125,11 +127,74 @@ impl<'a> FunctionCompiler<'a> {
         self.push_control_frame();
         self.push_global_get(binding.value_index);
         self.state.emission.output.instructions.push(0x05);
-        self.emit_print(&[Expression::String(format!("missing user capture {name}"))])?;
-        self.emit_named_error_throw("ReferenceError")?;
+        if let Some(source_name) = global_fallback_source {
+            self.emit_global_capture_fallback_read(&source_name)?;
+        } else {
+            self.emit_print(&[Expression::String(format!("missing user capture {name}"))])?;
+            self.emit_named_error_throw("ReferenceError")?;
+        }
         self.state.emission.output.instructions.push(0x0b);
         self.pop_control_frame();
         Ok(true)
+    }
+
+    fn user_function_capture_global_fallback_source(
+        &self,
+        name: &str,
+        hidden_name: &str,
+    ) -> Option<String> {
+        let current_function_name = self.current_function_name()?;
+        let source_name = self
+            .resolve_capture_slot_source_binding_name(hidden_name)
+            .unwrap_or_else(|| name.to_string());
+        if self.user_function_capture_originates_in_enclosing_local(
+            current_function_name,
+            &source_name,
+        ) {
+            return None;
+        }
+        (self.global_has_binding(&source_name)
+            || self.global_has_implicit_binding(&source_name)
+            || self.backend.global_has_lexical_binding(&source_name)
+            || self.backend.global_function_binding(&source_name).is_some())
+        .then_some(source_name)
+    }
+
+    fn emit_global_capture_fallback_read(&mut self, source_name: &str) -> DirectResult<()> {
+        if let Some(global_index) = self.resolve_global_binding_index(source_name) {
+            return self.emit_declared_global_binding_read(source_name, global_index);
+        }
+        if let Some(binding) = self.implicit_global_binding(source_name) {
+            self.push_global_get(binding.present_index);
+            self.state.emission.output.instructions.push(0x04);
+            self.state.emission.output.instructions.push(I32_TYPE);
+            self.push_control_frame();
+            self.push_global_get(binding.value_index);
+            self.state.emission.output.instructions.push(0x05);
+            self.emit_named_error_throw("ReferenceError")?;
+            self.state.emission.output.instructions.push(0x0b);
+            self.pop_control_frame();
+            return Ok(());
+        }
+        self.emit_named_error_throw("ReferenceError")
+    }
+
+    fn emit_global_capture_fallback_store_from_local(
+        &mut self,
+        source_name: &str,
+        value_local: u32,
+    ) -> DirectResult<()> {
+        if let Some(global_index) = self.resolve_global_binding_index(source_name) {
+            return self.emit_store_declared_global_from_local(
+                source_name,
+                value_local,
+                global_index,
+            );
+        }
+        if let Some(binding) = self.implicit_global_binding(source_name) {
+            return self.emit_store_implicit_global_from_local(binding, value_local);
+        }
+        self.emit_named_error_throw("ReferenceError")
     }
 
     pub(in crate::backend::direct_wasm) fn emit_store_user_function_capture_binding_from_local(
@@ -144,6 +209,8 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(false);
         };
         self.emit_strict_deleted_member_source_check(&hidden_name, Some(name))?;
+        let global_fallback_source =
+            self.user_function_capture_global_fallback_source(name, &hidden_name);
         self.push_global_get(binding.present_index);
         self.state.emission.output.instructions.push(0x04);
         self.state
@@ -153,7 +220,9 @@ impl<'a> FunctionCompiler<'a> {
             .push(EMPTY_BLOCK_TYPE);
         self.push_control_frame();
         if self.user_function_capture_binding_is_immutable(name) {
-            self.emit_named_error_throw("TypeError")?;
+            if self.state.speculation.execution_context.strict_mode {
+                self.emit_named_error_throw("TypeError")?;
+            }
         } else {
             self.push_local_get(value_local);
             self.push_global_set(binding.value_index);
@@ -161,7 +230,11 @@ impl<'a> FunctionCompiler<'a> {
             self.push_global_set(binding.present_index);
         }
         self.state.emission.output.instructions.push(0x05);
-        self.emit_named_error_throw("ReferenceError")?;
+        if let Some(source_name) = global_fallback_source {
+            self.emit_global_capture_fallback_store_from_local(&source_name, value_local)?;
+        } else {
+            self.emit_named_error_throw("ReferenceError")?;
+        }
         self.state.emission.output.instructions.push(0x0b);
         self.pop_control_frame();
         Ok(true)

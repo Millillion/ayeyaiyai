@@ -577,6 +577,12 @@ impl<'a> FunctionCompiler<'a> {
             return;
         };
         let metadata_targets = [constructor_function_name, class_name.as_str()];
+        let private_member_binding_expression = |binding: &LocalFunctionBinding| match binding {
+            LocalFunctionBinding::User(function_name)
+            | LocalFunctionBinding::Builtin(function_name) => {
+                Expression::Identifier(function_name.clone())
+            }
+        };
         let private_member_marker_expression = |binding: &LocalFunctionBinding| match binding {
             LocalFunctionBinding::User(function_name) => self
                 .user_function(function_name)
@@ -586,6 +592,9 @@ impl<'a> FunctionCompiler<'a> {
             LocalFunctionBinding::Builtin(function_name) => {
                 Expression::Identifier(function_name.clone())
             }
+        };
+        let private_member_marker_property = |property_name: &str| {
+            private_brand_marker_property_expression(&Expression::String(property_name.to_string()))
         };
         let trace_private = std::env::var_os("AYY_TRACE_PRIVATE_MEMBER_LOOKUP").is_some();
         if trace_private {
@@ -622,6 +631,17 @@ impl<'a> FunctionCompiler<'a> {
                     value.clone(),
                     enumerable,
                 );
+                if let Some(marker_property) = private_member_marker_property(property_name) {
+                    object_binding_define_property(
+                        object_binding,
+                        marker_property.clone(),
+                        value.clone(),
+                        false,
+                    );
+                    if trace_private {
+                        eprintln!("private_seed_function prototype marker={marker_property:?}");
+                    }
+                }
                 if trace_private {
                     eprintln!("private_seed_function prototype property={property_name}");
                 }
@@ -642,12 +662,25 @@ impl<'a> FunctionCompiler<'a> {
             {
                 continue;
             }
+            let member_value = private_member_binding_expression(binding);
+            let marker_value = private_member_marker_expression(binding);
             object_binding_define_property(
                 object_binding,
                 Expression::String(property_name.clone()),
-                private_member_marker_expression(binding),
+                member_value,
                 false,
             );
+            if let Some(marker_property) = private_member_marker_property(property_name) {
+                object_binding_define_property(
+                    object_binding,
+                    marker_property.clone(),
+                    marker_value,
+                    false,
+                );
+                if trace_private {
+                    eprintln!("private_seed_function getter marker={marker_property:?}");
+                }
+            }
             if trace_private {
                 eprintln!("private_seed_function getter property={property_name}");
             }
@@ -672,12 +705,25 @@ impl<'a> FunctionCompiler<'a> {
             {
                 continue;
             }
+            let member_value = private_member_binding_expression(binding);
+            let marker_value = private_member_marker_expression(binding);
             object_binding_define_property(
                 object_binding,
                 Expression::String(property_name.clone()),
-                private_member_marker_expression(binding),
+                member_value,
                 false,
             );
+            if let Some(marker_property) = private_member_marker_property(property_name) {
+                object_binding_define_property(
+                    object_binding,
+                    marker_property.clone(),
+                    marker_value,
+                    false,
+                );
+                if trace_private {
+                    eprintln!("private_seed_function method marker={marker_property:?}");
+                }
+            }
             if trace_private {
                 eprintln!("private_seed_function method property={property_name}");
             }
@@ -697,12 +743,25 @@ impl<'a> FunctionCompiler<'a> {
             {
                 continue;
             }
+            let member_value = private_member_binding_expression(binding);
+            let marker_value = private_member_marker_expression(binding);
             object_binding_define_property(
                 object_binding,
                 Expression::String(property_name.clone()),
-                private_member_marker_expression(binding),
+                member_value,
                 false,
             );
+            if let Some(marker_property) = private_member_marker_property(property_name) {
+                object_binding_define_property(
+                    object_binding,
+                    marker_property.clone(),
+                    marker_value,
+                    false,
+                );
+                if trace_private {
+                    eprintln!("private_seed_function setter marker={marker_property:?}");
+                }
+            }
             if trace_private {
                 eprintln!("private_seed_function setter property={property_name}");
             }
@@ -717,6 +776,141 @@ impl<'a> FunctionCompiler<'a> {
         self.evaluate_static_expression_with_state(expression, environment)
             .or_else(|| self.materialize_static_expression_with_state(expression, environment))
             .unwrap_or_else(|| expression.clone())
+    }
+
+    fn substitute_static_constructor_capture_source_expression(
+        expression: &Expression,
+        capture_source_bindings: &HashMap<String, Expression>,
+    ) -> Expression {
+        if let Expression::Identifier(name) = expression
+            && let Some(source_expression) = capture_source_bindings.get(name)
+        {
+            return source_expression.clone();
+        }
+        materialize_recursive_expression(expression, true, true, &|nested| {
+            Some(
+                Self::substitute_static_constructor_capture_source_expression(
+                    nested,
+                    capture_source_bindings,
+                ),
+            )
+        })
+        .unwrap_or_else(|| expression.clone())
+    }
+
+    fn substitute_static_constructor_capture_sources_in_descriptor(
+        descriptor: &mut PropertyDescriptorBinding,
+        capture_source_bindings: &HashMap<String, Expression>,
+    ) {
+        if let Some(value) = descriptor.value.as_mut() {
+            *value = Self::substitute_static_constructor_capture_source_expression(
+                value,
+                capture_source_bindings,
+            );
+        }
+        if let Some(getter) = descriptor.getter.as_mut() {
+            *getter = Self::substitute_static_constructor_capture_source_expression(
+                getter,
+                capture_source_bindings,
+            );
+        }
+        if let Some(setter) = descriptor.setter.as_mut() {
+            *setter = Self::substitute_static_constructor_capture_source_expression(
+                setter,
+                capture_source_bindings,
+            );
+        }
+    }
+
+    fn static_constructor_object_binding_with_capture_sources(
+        mut object_binding: ObjectValueBinding,
+        capture_source_bindings: Option<&HashMap<String, Expression>>,
+    ) -> ObjectValueBinding {
+        let Some(capture_source_bindings) = capture_source_bindings else {
+            return object_binding;
+        };
+        for (_, value) in &mut object_binding.string_properties {
+            *value = Self::substitute_static_constructor_capture_source_expression(
+                value,
+                capture_source_bindings,
+            );
+        }
+        for (property, value) in &mut object_binding.symbol_properties {
+            *property = Self::substitute_static_constructor_capture_source_expression(
+                property,
+                capture_source_bindings,
+            );
+            *value = Self::substitute_static_constructor_capture_source_expression(
+                value,
+                capture_source_bindings,
+            );
+        }
+        for (property, descriptor) in &mut object_binding.property_descriptors {
+            *property = Self::substitute_static_constructor_capture_source_expression(
+                property,
+                capture_source_bindings,
+            );
+            Self::substitute_static_constructor_capture_sources_in_descriptor(
+                descriptor,
+                capture_source_bindings,
+            );
+        }
+        object_binding
+    }
+
+    pub(in crate::backend::direct_wasm) fn constructor_capture_source_is_stable_snapshot(
+        name: &str,
+    ) -> bool {
+        name.starts_with("__ayy_class_field_name_")
+            || name.starts_with("__ayy_class_super_")
+            || name.starts_with("__ayy_class_brand_")
+    }
+
+    fn constructor_capture_sources_include_live_bindings(
+        capture_source_bindings: Option<&HashMap<String, Expression>>,
+    ) -> bool {
+        capture_source_bindings.is_some_and(|bindings| {
+            bindings
+                .keys()
+                .any(|name| !Self::constructor_capture_source_is_stable_snapshot(name))
+        })
+    }
+
+    fn current_constructor_capture_source_expression(
+        &self,
+        source_name: &str,
+        constructor_slot_owner: Option<&String>,
+    ) -> Expression {
+        if source_name == "this" {
+            return Expression::This;
+        }
+        if source_name == "new.target" {
+            return Expression::NewTarget;
+        }
+        if source_name.starts_with("__ayy_class_super_")
+            && let Some(source) = constructor_slot_owner
+                .and_then(|owner| self.resolve_constructor_synthetic_super_source_expression(owner))
+        {
+            return source;
+        }
+
+        let source_expression = Expression::Identifier(source_name.to_string());
+        if self.state.speculation.execution_context.top_level_function
+            && let Some(value) = self.global_value_binding(source_name).cloned()
+        {
+            return value;
+        }
+        self.state
+            .speculation
+            .static_semantics
+            .local_value_binding(source_name)
+            .cloned()
+            .or_else(|| self.global_value_binding(source_name).cloned())
+            .or_else(|| {
+                self.resolve_bound_alias_expression(&source_expression)
+                    .filter(|resolved| !static_expression_matches(resolved, &source_expression))
+            })
+            .unwrap_or(source_expression)
     }
 
     fn expression_is_static_constructor_this_reference(
@@ -1134,7 +1328,24 @@ impl<'a> FunctionCompiler<'a> {
                     ) {
                         return Err(StaticThrowValue::NamedError("TypeError"));
                     }
-                    let value = self.resolve_static_constructor_binding_value(value, environment);
+                    let this_binding =
+                        Expression::Identifier(Self::STATIC_NEW_THIS_BINDING.to_string());
+                    let value = self
+                        .resolve_static_define_property_value_expression_with_eval_environment(
+                            value,
+                            current_function_name,
+                            direct_eval_in_class_field_initializer,
+                            strict_mode,
+                            environment,
+                            Some(&this_binding),
+                        )
+                        .or_else(|| self.evaluate_static_expression_with_state(value, environment))
+                        .or_else(|| {
+                            self.materialize_static_expression_with_state(value, environment)
+                        })
+                        .unwrap_or_else(|| {
+                            self.resolve_static_constructor_binding_value(value, environment)
+                        });
                     if let Some(object_binding) = environment.object_binding_mut(&target_name) {
                         if !object_binding_can_define_property(object_binding, &property) {
                             return Err(StaticThrowValue::NamedError("TypeError"));
@@ -1633,6 +1844,12 @@ impl<'a> FunctionCompiler<'a> {
                 .environment
                 .object_binding(&this_name)
                 .cloned()
+                .map(|binding| {
+                    Self::static_constructor_object_binding_with_capture_sources(
+                        binding,
+                        capture_source_bindings,
+                    )
+                })
                 .map(Ok);
         }
         if return_value.is_none()
@@ -1646,6 +1863,12 @@ impl<'a> FunctionCompiler<'a> {
                 .environment
                 .object_binding(&this_name)
                 .cloned()
+                .map(|binding| {
+                    Self::static_constructor_object_binding_with_capture_sources(
+                        binding,
+                        capture_source_bindings,
+                    )
+                })
                 .map(Ok);
         }
         let return_value = return_value?;
@@ -1663,12 +1886,22 @@ impl<'a> FunctionCompiler<'a> {
                     this_object_binding,
                 );
             }
+            let returned_object = Self::static_constructor_object_binding_with_capture_sources(
+                returned_object,
+                capture_source_bindings,
+            );
             return Some(Ok(returned_object));
         }
         execution
             .environment
             .object_binding(&this_name)
             .cloned()
+            .map(|binding| {
+                Self::static_constructor_object_binding_with_capture_sources(
+                    binding,
+                    capture_source_bindings,
+                )
+            })
             .map(Ok)
     }
 
@@ -1723,10 +1956,10 @@ impl<'a> FunctionCompiler<'a> {
         execution
             .environment
             .set_local_object_binding(this_name.clone(), empty_object_value_binding());
-        self.execute_static_statements_with_state(
+        let _ = self.execute_static_statements_with_state(
             &execution.substituted_body,
             &mut execution.environment,
-        )?;
+        );
         if self
             .apply_static_constructor_define_property_statement_updates(
                 &execution.substituted_body,
@@ -1792,6 +2025,8 @@ impl<'a> FunctionCompiler<'a> {
                 self.user_function_is_derived_constructor(user_function)
             );
         }
+        let capture_source_bindings =
+            self.resolve_constructor_capture_source_bindings_from_expression(callee);
         let snapshot_result = self
             .state
             .speculation
@@ -1824,14 +2059,20 @@ impl<'a> FunctionCompiler<'a> {
             .as_ref()
             .is_some_and(|binding| !Self::object_binding_contains_static_update(binding))
             && !self.user_function_is_derived_constructor(user_function)
+            && !Self::constructor_capture_sources_include_live_bindings(
+                capture_source_bindings.as_ref(),
+            )
         {
             if trace_constructor {
                 eprintln!("constructor_new_object:return_snapshot function={function_name}");
             }
-            return snapshot_result;
+            return snapshot_result.map(|binding| {
+                Self::static_constructor_object_binding_with_capture_sources(
+                    binding,
+                    capture_source_bindings.as_ref(),
+                )
+            });
         }
-        let capture_source_bindings =
-            self.resolve_constructor_capture_source_bindings_from_expression(callee);
         let result = self.resolve_user_constructor_object_binding_for_function(
             user_function,
             arguments,
@@ -1846,33 +2087,44 @@ impl<'a> FunctionCompiler<'a> {
                     .unwrap_or_default()
             );
         }
-        result.or(snapshot_result)
+        result.or_else(|| {
+            snapshot_result.map(|binding| {
+                Self::static_constructor_object_binding_with_capture_sources(
+                    binding,
+                    capture_source_bindings.as_ref(),
+                )
+            })
+        })
     }
 
     pub(in crate::backend::direct_wasm) fn resolve_constructor_capture_source_bindings_from_expression(
         &self,
         expression: &Expression,
     ) -> Option<HashMap<String, Expression>> {
-        let resolved = self
-            .resolve_bound_alias_expression(expression)
-            .or_else(|| match expression {
-                Expression::Identifier(name) => self
-                    .state
-                    .speculation
-                    .static_semantics
-                    .local_value_binding(name)
-                    .cloned()
-                    .or_else(|| {
-                        self.backend
-                            .global_semantics
-                            .values
-                            .value_bindings
-                            .get(name)
-                            .cloned()
-                    }),
-                _ => None,
-            })
-            .unwrap_or_else(|| expression.clone());
+        let expression_capture_slots = self.resolve_function_expression_capture_slots(expression);
+        let resolved = if expression_capture_slots.is_some() {
+            expression.clone()
+        } else {
+            self.resolve_bound_alias_expression(expression)
+                .or_else(|| match expression {
+                    Expression::Identifier(name) => self
+                        .state
+                        .speculation
+                        .static_semantics
+                        .local_value_binding(name)
+                        .cloned()
+                        .or_else(|| {
+                            self.backend
+                                .global_semantics
+                                .values
+                                .value_bindings
+                                .get(name)
+                                .cloned()
+                        }),
+                    _ => None,
+                })
+                .unwrap_or_else(|| expression.clone())
+        };
         let mut call_arguments = None;
         let callee = match &resolved {
             Expression::Call { callee, arguments } | Expression::New { callee, arguments } => {
@@ -1888,8 +2140,6 @@ impl<'a> FunctionCompiler<'a> {
         };
         let user_function = self.user_function(&function_name)?;
         if call_arguments.is_none() {
-            let expression_capture_slots =
-                self.resolve_function_expression_capture_slots(expression);
             let constructor_slot_owner = match expression {
                 Expression::Identifier(name) => Some(name),
                 _ => match callee {
@@ -1908,11 +2158,7 @@ impl<'a> FunctionCompiler<'a> {
                 None
             };
             let capture_source_names = self
-                .backend
-                .function_registry
-                .analysis
-                .user_function_capture_bindings
-                .get(&function_name)
+                .user_function_capture_bindings(&function_name)
                 .filter(|captures| !captures.is_empty())
                 .map(|captures| captures.keys().cloned().collect::<Vec<_>>())
                 .or_else(|| {
@@ -1936,10 +2182,20 @@ impl<'a> FunctionCompiler<'a> {
                 })?;
             let mut bindings = HashMap::new();
             for source_name in capture_source_names {
-                if let Some(slot_name) = expression_capture_slots
+                let direct_class_brand_slot = expression_capture_slots
                     .as_ref()
                     .and_then(|capture_slots| capture_slots.get(&source_name))
-                    .filter(|slot_name| slot_name.as_str() != source_name.as_str())
+                    .filter(|slot_name| {
+                        source_name.starts_with("__ayy_class_brand_")
+                            && slot_name.as_str() == source_name.as_str()
+                    });
+                if let Some(slot_name) = direct_class_brand_slot
+                    .or_else(|| {
+                        expression_capture_slots
+                            .as_ref()
+                            .and_then(|capture_slots| capture_slots.get(&source_name))
+                            .filter(|slot_name| slot_name.as_str() != source_name.as_str())
+                    })
                     .or_else(|| {
                         constructor_capture_slots
                             .as_ref()
@@ -1951,32 +2207,47 @@ impl<'a> FunctionCompiler<'a> {
                             .and_then(|capture_slots| capture_slots.get(&source_name))
                     })
                 {
-                    let snapshot = self.snapshot_bound_capture_slot_expression(slot_name);
-                    let source_expression = if matches!(&snapshot, Expression::Identifier(name) if name == &source_name)
+                    let source_expression = if slot_name == &source_name
+                        && source_name.starts_with("__ayy_class_brand_")
                     {
-                        self.resolve_bound_alias_expression(&snapshot)
-                            .filter(|resolved| !static_expression_matches(resolved, &snapshot))
-                            .or_else(|| {
-                                source_name.starts_with("__ayy_class_super_").then(|| {
-                                    constructor_slot_owner.and_then(|owner| {
+                        Expression::Identifier(source_name.clone())
+                    } else if slot_name == &source_name
+                        && !Self::constructor_capture_source_is_stable_snapshot(&source_name)
+                    {
+                        self.current_constructor_capture_source_expression(
+                            &source_name,
+                            constructor_slot_owner,
+                        )
+                    } else {
+                        let snapshot = self.snapshot_bound_capture_slot_expression(slot_name);
+                        if matches!(&snapshot, Expression::Identifier(name) if name == &source_name)
+                        {
+                            self.resolve_bound_alias_expression(&snapshot)
+                                .filter(|resolved| !static_expression_matches(resolved, &snapshot))
+                                .or_else(|| {
+                                    source_name.starts_with("__ayy_class_super_").then(|| {
+                                        constructor_slot_owner.and_then(|owner| {
                                         self.resolve_constructor_synthetic_super_source_expression(
                                             owner,
                                         )
                                     })
-                                })?
-                            })
-                            .or_else(|| self.global_value_binding(&source_name).cloned())
-                            .unwrap_or(snapshot)
-                    } else if matches!(&snapshot, Expression::Identifier(name) if name == slot_name)
-                        && source_name.starts_with("__ayy_class_super_")
-                    {
-                        constructor_slot_owner
-                            .and_then(|owner| {
-                                self.resolve_constructor_synthetic_super_source_expression(owner)
-                            })
-                            .unwrap_or(snapshot)
-                    } else {
-                        snapshot
+                                    })?
+                                })
+                                .or_else(|| self.global_value_binding(&source_name).cloned())
+                                .unwrap_or(snapshot)
+                        } else if matches!(&snapshot, Expression::Identifier(name) if name == slot_name)
+                            && source_name.starts_with("__ayy_class_super_")
+                        {
+                            constructor_slot_owner
+                                .and_then(|owner| {
+                                    self.resolve_constructor_synthetic_super_source_expression(
+                                        owner,
+                                    )
+                                })
+                                .unwrap_or(snapshot)
+                        } else {
+                            snapshot
+                        }
                     };
                     if std::env::var_os("AYY_TRACE_CAPTURE_BINDINGS").is_some() {
                         eprintln!(

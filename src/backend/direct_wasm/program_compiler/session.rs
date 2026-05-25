@@ -34,6 +34,7 @@ impl<'a> ProgramCompilationSession<'a> {
     }
 
     fn reset_compilation_state(&mut self) {
+        reset_function_compiler_thread_locals();
         self.compiler.reset_for_program_compilation();
     }
 }

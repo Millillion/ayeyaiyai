@@ -1,6 +1,98 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn simple_generator_source_environment_cache_key(&self) -> String {
+        fn descriptor_cache_value(descriptor: &PropertyDescriptorBinding) -> String {
+            format!(
+                "value={:?};configurable={};enumerable={};writable={:?};getter={:?};setter={:?};has_get={};has_set={}",
+                descriptor.value,
+                descriptor.configurable,
+                descriptor.enumerable,
+                descriptor.writable,
+                descriptor.getter,
+                descriptor.setter,
+                descriptor.has_get,
+                descriptor.has_set
+            )
+        }
+
+        fn object_cache_value(binding: &ObjectValueBinding) -> String {
+            let mut descriptors = binding
+                .property_descriptors
+                .iter()
+                .map(|(key, descriptor)| format!("{key:?}:{}", descriptor_cache_value(descriptor)))
+                .collect::<Vec<_>>();
+            descriptors.sort();
+            format!(
+                "strings={:?};symbols={:?};descriptors={:?};non_enum={:?};runtime_symbols={};extensible={}",
+                binding.string_properties,
+                binding.symbol_properties,
+                descriptors,
+                binding.non_enumerable_string_properties,
+                binding.runtime_symbol_properties,
+                binding.extensible
+            )
+        }
+
+        let mut parts = Vec::new();
+        for (name, value) in &self
+            .state
+            .speculation
+            .static_semantics
+            .values
+            .local_value_bindings
+        {
+            parts.push(format!("local-value:{name}={value:?}"));
+        }
+        for (name, value) in &self.backend.global_semantics.values.value_bindings {
+            parts.push(format!("global-value:{name}={value:?}"));
+        }
+        for (name, value) in &self.backend.shared_global_semantics.values.value_bindings {
+            parts.push(format!("shared-global-value:{name}={value:?}"));
+        }
+        for (name, binding) in &self
+            .state
+            .speculation
+            .static_semantics
+            .objects
+            .local_object_bindings
+        {
+            parts.push(format!(
+                "local-object:{name}={}",
+                object_cache_value(binding)
+            ));
+        }
+        for (name, binding) in &self.backend.global_semantics.values.object_bindings {
+            parts.push(format!(
+                "global-object:{name}={}",
+                object_cache_value(binding)
+            ));
+        }
+        for (name, binding) in &self.backend.shared_global_semantics.values.object_bindings {
+            parts.push(format!(
+                "shared-global-object:{name}={}",
+                object_cache_value(binding)
+            ));
+        }
+        for (name, binding) in &self
+            .state
+            .speculation
+            .static_semantics
+            .arrays
+            .local_array_bindings
+        {
+            parts.push(format!("local-array:{name}={:?}", binding.values));
+        }
+        for (name, binding) in &self.backend.global_semantics.values.array_bindings {
+            parts.push(format!("global-array:{name}={:?}", binding.values));
+        }
+        for (name, binding) in &self.backend.shared_global_semantics.values.array_bindings {
+            parts.push(format!("shared-global-array:{name}={:?}", binding.values));
+        }
+        parts.sort();
+        parts.join("|")
+    }
+
     fn resolve_constructed_generator_function_source(
         &self,
         expression: &Expression,
@@ -180,6 +272,21 @@ impl<'a> FunctionCompiler<'a> {
             object: Box::new(Expression::Identifier("Array".to_string())),
             property: Box::new(Expression::String("prototype".to_string())),
         };
+        let object_prototype = Expression::Member {
+            object: Box::new(Expression::Identifier("Object".to_string())),
+            property: Box::new(Expression::String("prototype".to_string())),
+        };
+        let has_tracked_array_iterator = self
+            .member_function_binding_key(&array_prototype, &iterator_property)
+            .and_then(|key| self.member_function_binding_entry(&key))
+            .is_some()
+            || self
+                .member_function_binding_key(&object_prototype, &iterator_property)
+                .and_then(|key| self.member_function_binding_entry(&key))
+                .is_some();
+        if !has_tracked_array_iterator {
+            return None;
+        }
         let LocalFunctionBinding::User(function_name) =
             self.resolve_member_function_binding(&array_prototype, &iterator_property)?
         else {
@@ -195,7 +302,12 @@ impl<'a> FunctionCompiler<'a> {
         }
 
         let function = self.resolve_registered_function_declaration(&function_name)?;
-        let cache_key = simple_generator_source_cache_key("array-prototype", function, expression);
+        let cache_key = simple_generator_source_cache_key(
+            "array-prototype",
+            function,
+            expression,
+            &self.simple_generator_source_environment_cache_key(),
+        );
         if let Some(cached) = lookup_simple_generator_source_cache(&cache_key) {
             return cached
                 .map(|(_, steps, effects, completion_value)| (steps, effects, completion_value));
@@ -313,7 +425,12 @@ impl<'a> FunctionCompiler<'a> {
                 return None;
             }
             let function = self.resolve_registered_function_declaration(&function_name)?;
-            let cache_key = simple_generator_source_cache_key("call", function, expression);
+            let cache_key = simple_generator_source_cache_key(
+                "call",
+                function,
+                expression,
+                &self.simple_generator_source_environment_cache_key(),
+            );
             if let Some(cached) = lookup_simple_generator_source_cache(&cache_key) {
                 return cached;
             }
@@ -373,19 +490,47 @@ impl<'a> FunctionCompiler<'a> {
                     self.substitute_statement_bindings(statement, &body_var_scope_bindings)
                 })
                 .collect::<Vec<_>>();
-            let substituted_body = if parameter_scope_bindings.is_empty() {
-                substituted_body
-            } else {
-                parameter_scope_bindings
-                    .iter()
-                    .map(|(name, value)| Statement::Let {
-                        name: name.clone(),
-                        mutable: true,
-                        value: value.clone(),
-                    })
-                    .chain(substituted_body)
-                    .collect()
-            };
+            let mut body_var_initializers = body_var_scope_bindings
+                .values()
+                .filter_map(|value| {
+                    if let Expression::Identifier(name) = value {
+                        Some(Statement::Var {
+                            name: name.clone(),
+                            value: Expression::Undefined,
+                        })
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Vec<_>>();
+            body_var_initializers.sort_by(|left, right| {
+                let left_name = match left {
+                    Statement::Var { name, .. } => name.as_str(),
+                    _ => "",
+                };
+                let right_name = match right {
+                    Statement::Var { name, .. } => name.as_str(),
+                    _ => "",
+                };
+                left_name.cmp(right_name)
+            });
+            let substituted_body =
+                if parameter_scope_bindings.is_empty() && body_var_initializers.is_empty() {
+                    substituted_body
+                } else {
+                    body_var_initializers
+                        .iter()
+                        .cloned()
+                        .chain(parameter_scope_bindings.iter().map(|(name, value)| {
+                            Statement::Let {
+                                name: name.clone(),
+                                mutable: true,
+                                value: value.clone(),
+                            }
+                        }))
+                        .chain(substituted_body)
+                        .collect()
+                };
 
             let substituted_body =
                 self.expand_static_lowered_for_of_completion_effects(&substituted_body);
@@ -675,11 +820,14 @@ impl<'a> FunctionCompiler<'a> {
             return false;
         }
 
-        collect_eval_var_names(&program).into_iter().any(|var_name| {
-            user_function.params.iter().any(|param_name| {
-                scoped_binding_source_name(param_name).unwrap_or(param_name.as_str()) == var_name
+        collect_eval_var_names(&program)
+            .into_iter()
+            .any(|var_name| {
+                user_function.params.iter().any(|param_name| {
+                    scoped_binding_source_name(param_name).unwrap_or(param_name.as_str())
+                        == var_name
+                })
             })
-        })
     }
 
     fn simple_generator_direct_eval_program(&self, expression: &Expression) -> Option<Program> {
@@ -884,6 +1032,33 @@ impl<'a> FunctionCompiler<'a> {
         let (_, steps, effects, completion_value) =
             self.resolve_simple_generator_source_parts(expression)?;
         Some((steps, effects, completion_value))
+    }
+
+    pub(in crate::backend::direct_wasm) fn resolve_simple_generator_iterator_source_kind(
+        &self,
+        expression: &Expression,
+    ) -> Option<IteratorSourceKind> {
+        let (steps, completion_effects, completion_value) =
+            self.resolve_simple_generator_source(expression)?;
+        let is_async = matches!(
+            expression,
+            Expression::Call { callee, .. }
+                if self
+                    .resolve_function_binding_from_expression(callee)
+                    .and_then(|binding| match binding {
+                        LocalFunctionBinding::User(function_name) => {
+                            self.user_function(&function_name)
+                        }
+                        LocalFunctionBinding::Builtin(_) => None,
+                    })
+                    .is_some_and(|function| matches!(function.kind, FunctionKind::AsyncGenerator))
+        );
+        Some(IteratorSourceKind::SimpleGenerator {
+            is_async,
+            steps,
+            completion_effects,
+            completion_value,
+        })
     }
 
     pub(in crate::backend::direct_wasm) fn analyze_effectful_iterator_source_call(

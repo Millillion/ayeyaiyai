@@ -41,7 +41,113 @@ impl<'a> FunctionCompiler<'a> {
             .analysis
             .user_function_capture_bindings
             .get(&user_function.name)
-            .is_none_or(|captures| captures.keys().all(|name| name == "assert"))
+            .is_none_or(|captures| {
+                captures
+                    .keys()
+                    .all(|name| name == "assert" || name.starts_with("__ayy_class_brand_"))
+            })
+    }
+
+    fn lowered_pattern_inline_argument_reads_nonlocal_binding(
+        &self,
+        expression: &Expression,
+    ) -> bool {
+        if self.lowered_pattern_inline_argument_is_generator_call(expression) {
+            return false;
+        }
+        if let Expression::Identifier(name) = expression
+            && self
+                .resolve_local_array_iterator_binding_name(name)
+                .is_some()
+        {
+            return false;
+        }
+        let mut referenced_names = HashSet::new();
+        collect_referenced_binding_names_from_expression(expression, &mut referenced_names);
+        referenced_names.iter().any(|name| {
+            let source_name = scoped_binding_source_name(name).unwrap_or(name);
+            self.resolve_current_local_binding(source_name).is_none()
+                && (self.global_has_binding(source_name)
+                    || self.global_has_implicit_binding(source_name)
+                    || self
+                        .resolve_user_function_capture_hidden_name(source_name)
+                        .is_some())
+        })
+    }
+
+    fn lowered_pattern_inline_user_function_reads_nonlocal_binding(
+        &self,
+        function_name: &str,
+    ) -> bool {
+        let Some(function) = self.resolve_registered_function_declaration(function_name) else {
+            return false;
+        };
+        let Some(user_function) = self.user_function(function_name) else {
+            return false;
+        };
+        collect_referenced_binding_names_from_statements(&function.body)
+            .iter()
+            .any(|name| {
+                let source_name = scoped_binding_source_name(name).unwrap_or(name);
+                source_name != function.name
+                    && !user_function
+                        .params
+                        .iter()
+                        .any(|param| param == source_name)
+                    && !user_function.scope_bindings.iter().any(|binding| {
+                        scoped_binding_source_name(binding).unwrap_or(binding) == source_name
+                    })
+                    && (self.global_has_binding(source_name)
+                        || self.global_has_implicit_binding(source_name)
+                        || self
+                            .resolve_user_function_capture_hidden_name(source_name)
+                            .is_some())
+            })
+    }
+
+    fn lowered_pattern_inline_body_references_nonlocal_user_function(
+        &self,
+        statements: &[Statement],
+    ) -> bool {
+        collect_referenced_binding_names_from_statements(statements)
+            .iter()
+            .any(|name| {
+                if matches!(
+                    name.as_str(),
+                    "__assert"
+                        | "__assertSameValue"
+                        | "__assertNotSameValue"
+                        | "__ayyAssertCompareArray"
+                ) {
+                    return false;
+                }
+                self.user_function(name).is_some()
+                    && self.lowered_pattern_inline_user_function_reads_nonlocal_binding(name)
+            })
+    }
+
+    fn lowered_pattern_inline_body_references_call_frame_arguments(
+        &self,
+        user_function: &UserFunction,
+        statements: &[Statement],
+    ) -> bool {
+        if user_function.lexical_this
+            || user_function.params.iter().any(|param| {
+                param == "arguments"
+                    || scoped_binding_source_name(param)
+                        .is_some_and(|source_name| source_name == "arguments")
+            })
+            || user_function.body_declares_arguments_binding
+        {
+            return false;
+        }
+        collect_referenced_binding_names_from_statements(statements)
+            .iter()
+            .any(|name| {
+                name == "arguments"
+                    || scoped_binding_source_name(name)
+                        .is_some_and(|source_name| source_name == "arguments")
+            })
     }
 
     fn lowered_pattern_inline_statement_is_supported(statement: &Statement) -> bool {
@@ -358,10 +464,13 @@ impl<'a> FunctionCompiler<'a> {
             || arguments
                 .iter()
                 .any(|argument| self.inline_argument_mentions_shadowed_implicit_global(argument))
+            || arguments.iter().any(|argument| {
+                self.lowered_pattern_inline_argument_reads_nonlocal_binding(argument)
+            })
         {
             if trace_user_calls {
                 eprintln!(
-                    "lowered_pattern_inline:reject target={} async={} generator={} defaults={} private={} eval={} identifier_callee={} restricted={} captures={} captured_ref={} extra_args={} this_safe={} args_safe={} this_shadow={} args_shadow={}",
+                    "lowered_pattern_inline:reject target={} async={} generator={} defaults={} private={} eval={} identifier_callee={} restricted={} captures={} captured_ref={} extra_args={} this_safe={} args_safe={} this_shadow={} args_shadow={} args_nonlocal={}",
                     user_function.name,
                     user_function.is_async(),
                     user_function.is_generator(),
@@ -381,7 +490,9 @@ impl<'a> FunctionCompiler<'a> {
                     arguments
                         .iter()
                         .any(|argument| self
-                            .inline_argument_mentions_shadowed_implicit_global(argument))
+                            .inline_argument_mentions_shadowed_implicit_global(argument)),
+                    arguments.iter().any(|argument| self
+                        .lowered_pattern_inline_argument_reads_nonlocal_binding(argument))
                 );
             }
             return Ok(false);
@@ -392,6 +503,27 @@ impl<'a> FunctionCompiler<'a> {
         else {
             return Ok(false);
         };
+        if self.lowered_pattern_inline_body_references_call_frame_arguments(
+            user_function,
+            &function.body,
+        ) {
+            if trace_user_calls {
+                eprintln!(
+                    "lowered_pattern_inline:reject-arguments target={}",
+                    user_function.name
+                );
+            }
+            return Ok(false);
+        }
+        if self.lowered_pattern_inline_body_references_nonlocal_user_function(&function.body) {
+            if trace_user_calls {
+                eprintln!(
+                    "lowered_pattern_inline:reject-nonlocal-user-function target={}",
+                    user_function.name
+                );
+            }
+            return Ok(false);
+        }
         if !function
             .body
             .iter()

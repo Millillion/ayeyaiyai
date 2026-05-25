@@ -28,6 +28,14 @@ impl<'a> FunctionCompiler<'a> {
             }
             _ => {}
         }
+        if inline_summary_side_effect_free_expression(expression)
+            && !Self::expression_contains_assignment_or_update(expression)
+            && !Self::expression_references_internal_assignment_temp(expression)
+            && let Some(value) = self.resolve_static_boolean_expression(expression)
+        {
+            self.push_i32_const(value as i32);
+            return Ok(());
+        }
         let value_local = self.allocate_temp_local();
         self.emit_numeric_expression(expression)?;
         self.push_local_set(value_local);
@@ -57,6 +65,23 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         expression: &Expression,
     ) -> DirectResult<()> {
+        if let Some(primitive) = self.resolve_static_boxed_primitive_value(expression) {
+            return self.emit_loose_number(&primitive);
+        }
+        if let Some(StaticEvalOutcome::Value(primitive)) = self
+            .resolve_static_to_primitive_outcome_with_context(
+                expression,
+                PrimitiveHint::Default,
+                self.current_function_name(),
+            )
+            && !static_expression_matches(&primitive, expression)
+        {
+            if !inline_summary_side_effect_free_expression(expression) {
+                self.emit_numeric_expression(expression)?;
+                self.state.emission.output.instructions.push(0x1a);
+            }
+            return self.emit_loose_number(&primitive);
+        }
         match expression {
             Expression::Null => {
                 self.push_i32_const(0);
@@ -159,7 +184,24 @@ impl<'a> FunctionCompiler<'a> {
         push_u32(&mut self.state.emission.output.instructions, global_index);
     }
 
+    #[track_caller]
     pub(in crate::backend::direct_wasm) fn push_global_set(&mut self, global_index: u32) {
+        if let Some(targets) = std::env::var_os("AYY_TRACE_GLOBAL_SET")
+            && targets
+                .to_string_lossy()
+                .split(',')
+                .filter_map(|target| target.trim().parse::<u32>().ok())
+                .any(|target| target == global_index)
+        {
+            let caller = std::panic::Location::caller();
+            eprintln!(
+                "global_set_trace fn={:?} global={global_index} instruction={} caller={}:{}",
+                self.current_function_name(),
+                self.state.emission.output.instructions.len(),
+                caller.file(),
+                caller.line(),
+            );
+        }
         self.state.emission.output.instructions.push(0x24);
         push_u32(&mut self.state.emission.output.instructions, global_index);
     }

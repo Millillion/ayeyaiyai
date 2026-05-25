@@ -94,7 +94,10 @@ impl<'a> FunctionCompiler<'a> {
             ));
         }
         if self
-            .resolve_function_binding_from_expression_with_context(&identifier, current_function_name)
+            .resolve_function_binding_from_expression_with_context(
+                &identifier,
+                current_function_name,
+            )
             .is_some()
         {
             return Some(identifier);
@@ -142,6 +145,17 @@ impl<'a> FunctionCompiler<'a> {
                 {
                     return Some(binding);
                 }
+                if let Expression::Identifier(name) = &binding
+                    && bindings.get(name).is_some_and(|value| {
+                        matches!(
+                            value,
+                            Expression::Array(_) | Expression::Object(_) | Expression::New { .. }
+                        ) || self.resolve_object_binding_from_expression(value).is_some()
+                            || self.resolve_array_binding_from_expression(value).is_some()
+                    })
+                {
+                    return Some(binding);
+                }
                 self.evaluate_bound_snapshot_expression(&binding, bindings, current_function_name)
                     .or_else(|| Some(self.materialize_static_expression(&binding)))
             }
@@ -177,12 +191,36 @@ impl<'a> FunctionCompiler<'a> {
                     }
                 }
             }
-            BinaryOp::GreaterThanOrEqual => match (&left, &right) {
-                (Expression::Number(lhs), Expression::Number(rhs)) => {
-                    Some(Expression::Bool(lhs >= rhs))
-                }
-                _ => None,
-            },
+            BinaryOp::Subtract
+            | BinaryOp::Multiply
+            | BinaryOp::Divide
+            | BinaryOp::Modulo
+            | BinaryOp::Exponentiate => {
+                let left = bound_snapshot_primitive_to_number(&left)?;
+                let right = bound_snapshot_primitive_to_number(&right)?;
+                Some(Expression::Number(match op {
+                    BinaryOp::Subtract => left - right,
+                    BinaryOp::Multiply => left * right,
+                    BinaryOp::Divide => left / right,
+                    BinaryOp::Modulo => left % right,
+                    BinaryOp::Exponentiate => left.powf(right),
+                    _ => unreachable!("filtered above"),
+                }))
+            }
+            BinaryOp::LessThan
+            | BinaryOp::LessThanOrEqual
+            | BinaryOp::GreaterThan
+            | BinaryOp::GreaterThanOrEqual => {
+                let left = bound_snapshot_primitive_to_number(&left)?;
+                let right = bound_snapshot_primitive_to_number(&right)?;
+                Some(Expression::Bool(match op {
+                    BinaryOp::LessThan => left < right,
+                    BinaryOp::LessThanOrEqual => left <= right,
+                    BinaryOp::GreaterThan => left > right,
+                    BinaryOp::GreaterThanOrEqual => left >= right,
+                    _ => unreachable!("filtered above"),
+                }))
+            }
             BinaryOp::LogicalAnd => {
                 if self.resolve_static_boolean_expression(&left)? {
                     Some(right)
@@ -286,9 +324,30 @@ impl<'a> FunctionCompiler<'a> {
     ) -> Option<Expression> {
         let object =
             self.evaluate_bound_snapshot_expression(object, bindings, current_function_name)?;
-        let property = self.resolve_property_key_expression(property).or_else(|| {
-            self.evaluate_bound_snapshot_expression(property, bindings, current_function_name)
-        })?;
+        let property = if let Expression::Identifier(name) = property {
+            let resolved_name = self.resolve_bound_snapshot_binding_name(name, bindings);
+            if bindings.contains_key(resolved_name) {
+                let evaluated_property = self.evaluate_bound_snapshot_expression(
+                    property,
+                    bindings,
+                    current_function_name,
+                )?;
+                self.resolve_property_key_expression(&evaluated_property)
+                    .unwrap_or(evaluated_property)
+            } else {
+                self.resolve_property_key_expression(property).or_else(|| {
+                    self.evaluate_bound_snapshot_expression(
+                        property,
+                        bindings,
+                        current_function_name,
+                    )
+                })?
+            }
+        } else {
+            self.resolve_property_key_expression(property).or_else(|| {
+                self.evaluate_bound_snapshot_expression(property, bindings, current_function_name)
+            })?
+        };
         if matches!(object, Expression::This)
             && let Expression::String(property_name) = &property
             && let Some(descriptor) =

@@ -70,6 +70,21 @@ impl<'a> FunctionCompiler<'a> {
             return value;
         }
         if arguments.is_empty()
+            && let Expression::Identifier(function_name) = callee
+            && let Some(value) = self.infer_static_class_init_call_result_expression(function_name)
+        {
+            return self.materialize_static_expression(&value);
+        }
+        if let Expression::Member { object, property } = callee
+            && matches!(object.as_ref(), Expression::Identifier(name) if name == "Object")
+            && matches!(property.as_ref(), Expression::String(name) if name == "getPrototypeOf")
+            && let Some(CallArgument::Expression(target) | CallArgument::Spread(target)) =
+                arguments.first()
+            && let Some(prototype) = self.resolve_static_object_prototype_expression(target)
+        {
+            return self.materialize_static_expression(&prototype);
+        }
+        if arguments.is_empty()
             && let Expression::Member { object, property } = callee
             && let Expression::String(property_name) = property.as_ref()
             && matches!(property_name.as_str(), "toString" | "valueOf")
@@ -91,6 +106,27 @@ impl<'a> FunctionCompiler<'a> {
             && let Some(value) = self.resolve_static_call_result_expression(callee, arguments)
         {
             return self.materialize_static_expression(&value);
+        }
+        if let Expression::Member { object, property } = callee
+            && matches!(property.as_ref(), Expression::String(name) if name == "bind")
+        {
+            return Expression::Call {
+                callee: Box::new(Expression::Member {
+                    object: object.clone(),
+                    property: property.clone(),
+                }),
+                arguments: arguments
+                    .iter()
+                    .map(|argument| match argument {
+                        CallArgument::Expression(expression) => {
+                            CallArgument::Expression(self.materialize_static_expression(expression))
+                        }
+                        CallArgument::Spread(expression) => {
+                            CallArgument::Spread(self.materialize_static_expression(expression))
+                        }
+                    })
+                    .collect(),
+            };
         }
         materialize_recursive_expression(expression, true, true, &|nested| {
             Some(self.materialize_static_expression(nested))

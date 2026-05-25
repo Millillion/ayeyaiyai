@@ -99,7 +99,7 @@ impl<'a> FunctionCompiler<'a> {
         self.push_control_frame();
         self.push_local_get(result_local);
         self.state.emission.output.instructions.push(0x05);
-        self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
+        self.push_i32_const(JS_UNDEFINED_TAG);
         self.state.emission.output.instructions.push(0x0b);
         self.pop_control_frame();
         Ok(true)
@@ -219,7 +219,7 @@ impl<'a> FunctionCompiler<'a> {
         self.push_control_frame();
         self.push_local_get(result_local);
         self.state.emission.output.instructions.push(0x05);
-        self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
+        self.push_i32_const(JS_UNDEFINED_TAG);
         self.state.emission.output.instructions.push(0x0b);
         self.pop_control_frame();
         Ok(true)

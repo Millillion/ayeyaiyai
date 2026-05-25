@@ -32,13 +32,19 @@ impl<'a> FunctionCompiler<'a> {
         let assigned_nonlocal_binding_results = self
             .assigned_nonlocal_binding_results(&user_function.name)
             .cloned();
-        let additional_call_effect_nonlocal_bindings = call_effect_nonlocal_bindings
+        let updated_nonlocal_bindings =
+            self.collect_user_function_updated_nonlocal_bindings(user_function);
+        let mut additional_call_effect_nonlocal_bindings = call_effect_nonlocal_bindings
             .iter()
             .filter(|name| !synced_capture_source_bindings.contains(*name))
             .cloned()
             .collect::<HashSet<_>>();
-        let updated_nonlocal_bindings =
-            self.collect_user_function_updated_nonlocal_bindings(user_function);
+        for name in assigned_nonlocal_bindings
+            .iter()
+            .chain(updated_nonlocal_bindings.iter())
+        {
+            additional_call_effect_nonlocal_bindings.remove(name);
+        }
         self.emit_prepare_user_function_capture_globals(&user_function.name)?;
 
         let arguments_binding = Expression::Array(
@@ -216,11 +222,24 @@ impl<'a> FunctionCompiler<'a> {
                     "inline_param_writeback_commit hidden={hidden_name} source_owner={source_owner}"
                 );
             }
+            let alias_owners = self.runtime_object_reference_alias_owner_names(source_owner);
             self.emit_runtime_object_property_shadow_copy(hidden_name, source_owner)?;
             self.sync_runtime_object_shadow_owner_static_metadata_from_expression(
                 source_owner,
                 &Expression::Identifier(hidden_name.clone()),
             );
+            for alias_owner in alias_owners {
+                if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+                    eprintln!(
+                        "inline_param_writeback_alias hidden={hidden_name} alias_owner={alias_owner}"
+                    );
+                }
+                self.emit_runtime_object_property_shadow_copy(hidden_name, &alias_owner)?;
+                self.sync_runtime_object_shadow_owner_static_metadata_from_expression(
+                    &alias_owner,
+                    &Expression::Identifier(hidden_name.clone()),
+                );
+            }
         }
         self.pop_scoped_lexical_bindings(&state.inline_parameter_scope_names);
         self.sync_user_function_capture_source_bindings(
@@ -232,38 +251,22 @@ impl<'a> FunctionCompiler<'a> {
             None,
         )?;
         self.restore_user_function_capture_bindings(&state.prepared_capture_bindings);
+        // Inline emission has just emitted these writes through the ordinary assignment/update
+        // paths, so their static metadata already reflects the emitted code. The opaque runtime
+        // call paths still invalidate raw globals after calls; doing it here loses exact values
+        // needed by subsequent inline updates in the same top-level body.
         state.additional_call_effect_nonlocal_bindings = self
             .sync_snapshot_user_function_call_effect_bindings(
                 &state.additional_call_effect_nonlocal_bindings,
                 state.updated_bindings.as_ref(),
                 state.assigned_nonlocal_binding_results.as_ref(),
             )?;
+        self.sync_current_function_capture_runtime_values_for_call_effects(
+            &state.call_effect_nonlocal_bindings,
+        )?;
         if !state.additional_call_effect_nonlocal_bindings.is_empty() {
-            let preserved_kinds = state
-                .additional_call_effect_nonlocal_bindings
-                .iter()
-                .filter_map(|name| {
-                    self.lookup_identifier_kind(name)
-                        .map(|kind| (name.clone(), kind))
-                })
-                .collect::<HashMap<_, _>>();
-            self.invalidate_static_binding_metadata_for_names_with_preserved_kinds(
+            self.invalidate_static_binding_metadata_for_names(
                 &state.additional_call_effect_nonlocal_bindings,
-                &preserved_kinds,
-            );
-        }
-        if !state.updated_nonlocal_bindings.is_empty() {
-            let preserved_kinds = state
-                .updated_nonlocal_bindings
-                .iter()
-                .filter_map(|name| {
-                    self.lookup_identifier_kind(name)
-                        .map(|kind| (name.clone(), kind))
-                })
-                .collect::<HashMap<_, _>>();
-            self.invalidate_static_binding_metadata_for_names_with_preserved_kinds(
-                &state.updated_nonlocal_bindings,
-                &preserved_kinds,
             );
         }
         self.sync_argument_iterator_bindings_for_user_call(user_function, arguments);

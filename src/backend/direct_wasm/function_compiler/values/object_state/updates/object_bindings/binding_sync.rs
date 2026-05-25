@@ -406,6 +406,14 @@ impl<'a> FunctionCompiler<'a> {
         self.rewrite_static_new_this_object_binding_with_replacement(object_binding, &replacement)
     }
 
+    pub(in crate::backend::direct_wasm) fn rewrite_static_new_this_object_binding_for_expression(
+        &self,
+        object_binding: &ObjectValueBinding,
+        replacement: &Expression,
+    ) -> ObjectValueBinding {
+        self.rewrite_static_new_this_object_binding_with_replacement(object_binding, replacement)
+    }
+
     pub(in crate::backend::direct_wasm) fn seed_local_this_object_binding(&mut self) {
         if self
             .state
@@ -541,6 +549,12 @@ impl<'a> FunctionCompiler<'a> {
             else {
                 continue;
             };
+            if matches!(
+                object_binding_lookup_value(object_binding, &marker_property),
+                Some(Expression::Bool(true))
+            ) {
+                continue;
+            }
             object_binding_define_property(
                 object_binding,
                 marker_property,
@@ -564,7 +578,7 @@ impl<'a> FunctionCompiler<'a> {
             return;
         }
 
-        let Some(mut object_binding) = self.resolve_object_binding_from_expression(value) else {
+        let Some(object_binding) = self.resolve_object_binding_from_expression(value) else {
             self.state
                 .speculation
                 .static_semantics
@@ -574,10 +588,30 @@ impl<'a> FunctionCompiler<'a> {
             }
             return;
         };
-        self.seed_boxed_primitive_value_property(value, &mut object_binding);
-        self.seed_date_value_property(value, &mut object_binding);
-        self.seed_native_error_object_binding(value, &mut object_binding);
-        self.seed_constructed_function_object_binding(value, &mut object_binding);
+        self.update_local_object_binding_from_resolved(name, value, object_binding);
+    }
+
+    pub(in crate::backend::direct_wasm) fn update_local_object_binding_from_resolved(
+        &mut self,
+        name: &str,
+        value: &Expression,
+        mut object_binding: ObjectValueBinding,
+    ) {
+        let resolved_class_instance = matches!(
+            value,
+            Expression::New { callee, .. }
+                if matches!(
+                    callee.as_ref(),
+                    Expression::Identifier(function_name)
+                        if function_name.starts_with("__ayy_class_ctor_")
+                )
+        );
+        if !resolved_class_instance {
+            self.seed_boxed_primitive_value_property(value, &mut object_binding);
+            self.seed_date_value_property(value, &mut object_binding);
+            self.seed_native_error_object_binding(value, &mut object_binding);
+            self.seed_constructed_function_object_binding(value, &mut object_binding);
+        }
         self.rewrite_private_member_markers_for_binding_name(name, &mut object_binding);
         self.state
             .speculation
@@ -586,7 +620,9 @@ impl<'a> FunctionCompiler<'a> {
         if self.binding_name_is_global(name) {
             self.backend
                 .sync_global_object_binding(name, Some(object_binding));
-            let kind = if self
+            let kind = if resolved_class_instance {
+                StaticValueKind::Object
+            } else if self
                 .resolve_function_binding_from_expression(&Expression::Identifier(name.to_string()))
                 .is_some()
             {
@@ -602,11 +638,82 @@ impl<'a> FunctionCompiler<'a> {
             .set_local_kind(name, StaticValueKind::Object);
     }
 
+    fn prototype_member_references_owner(expression: &Expression, owner_name: &str) -> bool {
+        matches!(
+            expression,
+            Expression::Member { object, property }
+                if matches!(object.as_ref(), Expression::Identifier(name) if name == owner_name)
+                    && matches!(property.as_ref(), Expression::String(name) if name == "prototype")
+        )
+    }
+
+    fn snapshot_existing_object_prototype_references(
+        &mut self,
+        owner_name: &str,
+        old_binding: &ObjectValueBinding,
+    ) {
+        let referencing_object_names = self
+            .backend
+            .global_semantics
+            .values
+            .object_prototype_bindings
+            .iter()
+            .filter_map(|(object_name, prototype)| {
+                Self::prototype_member_references_owner(prototype, owner_name)
+                    .then(|| object_name.clone())
+            })
+            .collect::<Vec<_>>();
+
+        for object_name in referencing_object_names {
+            let snapshot_owner = format!("__ayy_prototype_snapshot_{owner_name}_{object_name}");
+            let snapshot_prototype = Expression::Member {
+                object: Box::new(Expression::Identifier(snapshot_owner.clone())),
+                property: Box::new(Expression::String("prototype".to_string())),
+            };
+            self.state
+                .speculation
+                .static_semantics
+                .objects
+                .local_prototype_object_bindings
+                .insert(snapshot_owner.clone(), old_binding.clone());
+            self.backend
+                .sync_global_prototype_object_binding(&snapshot_owner, Some(old_binding.clone()));
+            self.backend
+                .sync_global_object_prototype_expression(&object_name, Some(snapshot_prototype));
+        }
+    }
+
     pub(in crate::backend::direct_wasm) fn update_prototype_object_binding(
         &mut self,
         name: &str,
         value: &Expression,
     ) {
+        let old_binding = self
+            .state
+            .speculation
+            .static_semantics
+            .objects
+            .local_prototype_object_bindings
+            .get(name)
+            .cloned()
+            .or_else(|| {
+                self.backend
+                    .global_semantics
+                    .values
+                    .prototype_object_bindings
+                    .get(name)
+                    .cloned()
+            })
+            .or_else(|| {
+                self.resolve_function_binding_from_expression(&Expression::Identifier(
+                    name.to_string(),
+                ))
+                .and_then(|binding| self.default_function_prototype_object_binding(&binding))
+            });
+        if let Some(old_binding) = old_binding.as_ref() {
+            self.snapshot_existing_object_prototype_references(name, old_binding);
+        }
+
         let object_binding = match value {
             Expression::Identifier(value_name) => {
                 let resolved_name = self

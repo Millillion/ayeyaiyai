@@ -5,6 +5,13 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         property: &Expression,
     ) -> Expression {
+        if let Expression::Sequence(expressions) = property {
+            return expressions
+                .last()
+                .map(|expression| self.canonical_object_property_expression(expression))
+                .unwrap_or(Expression::Undefined);
+        }
+
         let identifier_property = match property {
             Expression::Identifier(name) => self
                 .resolve_current_local_binding(name)

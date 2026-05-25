@@ -75,7 +75,10 @@ impl DirectWasmCompiler {
         for entry in entries {
             let (key, binding, slot) = match entry {
                 ObjectEntry::Data { key, value } => {
-                    (key, self.infer_global_function_binding(value), 0)
+                    let binding = (!matches!(value, Expression::Sequence(_)))
+                        .then(|| self.infer_global_function_binding(value))
+                        .flatten();
+                    (key, binding, 0)
                 }
                 ObjectEntry::Getter { key, getter } => {
                     (key, self.infer_global_function_binding(getter), 1)

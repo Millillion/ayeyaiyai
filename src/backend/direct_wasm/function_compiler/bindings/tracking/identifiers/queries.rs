@@ -9,6 +9,12 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         name: &str,
     ) -> bool {
+        if matches!(name, "NaN" | "Infinity" | "undefined") {
+            return (self.current_function_name().is_none()
+                || self.resolve_current_local_binding(name).is_none())
+                && self.backend.global_function_binding(name).is_none()
+                && !is_internal_user_function_identifier(name);
+        }
         self.resolve_current_local_binding(name).is_none()
             && self.backend.global_binding_index(name).is_none()
             && self.backend.global_function_binding(name).is_none()

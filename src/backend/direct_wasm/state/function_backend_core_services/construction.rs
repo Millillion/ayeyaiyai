@@ -1,4 +1,5 @@
 use super::super::*;
+use std::collections::HashMap;
 
 impl<'a> FunctionCompilerBackend<'a> {
     pub(in crate::backend::direct_wasm) fn new(
@@ -6,6 +7,8 @@ impl<'a> FunctionCompilerBackend<'a> {
         function_registry: &'a mut FunctionRegistryState,
         shared_global_semantics: &'a mut GlobalSemanticState,
         test262: &'a mut Test262State,
+        template_object_array_bindings: &'a HashMap<i32, ArrayValueBinding>,
+        template_object_raw_array_bindings: &'a HashMap<i32, ArrayValueBinding>,
         global_semantics: GlobalStaticSemanticsSnapshot,
     ) -> FunctionCompilerBackend<'a> {
         Self {
@@ -13,6 +16,8 @@ impl<'a> FunctionCompilerBackend<'a> {
             function_registry,
             shared_global_semantics,
             test262,
+            template_object_array_bindings,
+            template_object_raw_array_bindings,
             global_semantics,
         }
     }

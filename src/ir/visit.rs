@@ -654,6 +654,7 @@ mod tests {
                 mapped_arguments: false,
                 strict: false,
                 lexical_this: false,
+                constructible: true,
                 derived_constructor: false,
                 direct_eval_in_class_field_initializer: false,
                 length: 1,

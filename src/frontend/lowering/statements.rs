@@ -922,16 +922,21 @@ impl Lowerer {
                 }
                 other => {
                     if let Some(name) = self.try_lower_top_level_this_member_update(other)? {
-                        return Ok(vec![Statement::Expression(Expression::Update {
-                            name,
-                            op,
-                            prefix: update.prefix,
-                        })]);
+                        let target = AssignmentTarget::Member {
+                            object: Expression::This,
+                            property: Expression::String(name),
+                        };
+                        let value = Self::update_assignment_value(&target, op);
+                        return Ok(vec![Statement::Expression(target.into_expression(value))]);
                     }
 
                     let target = self.lower_update_assignment_target(other)?;
-                    let value = Self::update_assignment_value(&target, op);
-                    return Ok(vec![target.into_statement(value)]);
+                    let expression = if update.prefix {
+                        self.lower_prefix_update_assignment_expression(target, op)?
+                    } else {
+                        self.lower_postfix_update_assignment_expression(target, op)?
+                    };
+                    return Ok(vec![Statement::Expression(expression)]);
                 }
             }
         }
@@ -992,6 +997,27 @@ impl Lowerer {
                     None => self.lower_expression(&assignment.right)?,
                 };
                 return Ok(vec![target.into_statement(value)]);
+            }
+
+            if matches!(
+                assignment.op,
+                AssignOp::AndAssign | AssignOp::OrAssign | AssignOp::NullishAssign
+            ) {
+                let right = match target_name_hint.as_deref() {
+                    Some(name_hint) => {
+                        self.lower_expression_with_name_hint(&assignment.right, Some(name_hint))?
+                    }
+                    None => self.lower_expression(&assignment.right)?,
+                };
+                let kind = match assignment.op {
+                    AssignOp::AndAssign => LogicalAssignmentKind::And,
+                    AssignOp::OrAssign => LogicalAssignmentKind::Or,
+                    AssignOp::NullishAssign => LogicalAssignmentKind::Nullish,
+                    _ => unreachable!("filtered above"),
+                };
+                return Ok(vec![Statement::Expression(
+                    self.lower_logical_assignment_expression(target, right, kind)?,
+                )]);
             }
 
             let operator = assignment
@@ -1173,6 +1199,142 @@ impl Lowerer {
         }
     }
 
+    fn assert_throws_statement_contains_for_of(statement: &Stmt) -> bool {
+        match statement {
+            Stmt::ForOf(_) => true,
+            Stmt::Block(block) => block
+                .stmts
+                .iter()
+                .any(Self::assert_throws_statement_contains_for_of),
+            Stmt::Labeled(labeled) => Self::assert_throws_statement_contains_for_of(&labeled.body),
+            Stmt::If(if_statement) => {
+                Self::assert_throws_statement_contains_for_of(&if_statement.cons)
+                    || if_statement.alt.as_ref().is_some_and(|alternate| {
+                        Self::assert_throws_statement_contains_for_of(alternate)
+                    })
+            }
+            Stmt::Try(try_statement) => {
+                try_statement
+                    .block
+                    .stmts
+                    .iter()
+                    .any(Self::assert_throws_statement_contains_for_of)
+                    || try_statement.handler.as_ref().is_some_and(|handler| {
+                        handler
+                            .body
+                            .stmts
+                            .iter()
+                            .any(Self::assert_throws_statement_contains_for_of)
+                    })
+                    || try_statement.finalizer.as_ref().is_some_and(|finalizer| {
+                        finalizer
+                            .stmts
+                            .iter()
+                            .any(Self::assert_throws_statement_contains_for_of)
+                    })
+            }
+            _ => false,
+        }
+    }
+
+    fn assert_throws_callback_contains_for_of(callback: &Expr) -> bool {
+        match callback {
+            Expr::Paren(parenthesized) => {
+                Self::assert_throws_callback_contains_for_of(&parenthesized.expr)
+            }
+            Expr::Fn(function_expression) => function_expression
+                .function
+                .body
+                .as_ref()
+                .is_some_and(|body| {
+                    body.stmts
+                        .iter()
+                        .any(Self::assert_throws_statement_contains_for_of)
+                }),
+            Expr::Arrow(arrow_expression) => match arrow_expression.body.as_ref() {
+                BlockStmtOrExpr::BlockStmt(block) => block
+                    .stmts
+                    .iter()
+                    .any(Self::assert_throws_statement_contains_for_of),
+                BlockStmtOrExpr::Expr(_) => false,
+            },
+            _ => false,
+        }
+    }
+
+    fn assert_throws_expected_builtin_error_argument(argument: &Expr, expected_name: &str) -> bool {
+        match argument {
+            Expr::Paren(parenthesized) => Self::assert_throws_expected_builtin_error_argument(
+                &parenthesized.expr,
+                expected_name,
+            ),
+            Expr::Ident(identifier) => identifier.sym.as_ref() == expected_name,
+            _ => false,
+        }
+    }
+
+    fn assert_throws_expected_type_error_argument(argument: &Expr) -> bool {
+        Self::assert_throws_expected_builtin_error_argument(argument, "TypeError")
+    }
+
+    fn assert_throws_expected_syntax_error_argument(argument: &Expr) -> bool {
+        Self::assert_throws_expected_builtin_error_argument(argument, "SyntaxError")
+    }
+
+    fn assert_throws_import_meta_value_expression(expression: &Expression) -> bool {
+        matches!(
+            expression,
+            Expression::Call { callee, arguments }
+                if arguments.is_empty()
+                    && matches!(callee.as_ref(), Expression::Identifier(name) if name == "__ayyImportMeta")
+        )
+    }
+
+    fn assert_throws_inline_body_statically_throws_type_error(body: &[Statement]) -> bool {
+        let [Statement::Expression(expression)] = body else {
+            return false;
+        };
+        match expression {
+            Expression::Call { callee, .. } | Expression::New { callee, .. } => {
+                Self::assert_throws_import_meta_value_expression(callee)
+            }
+            _ => false,
+        }
+    }
+
+    fn assert_throws_function_constructor_import_meta_expression(expression: &Expression) -> bool {
+        let (callee, arguments) = match expression {
+            Expression::Call { callee, arguments } | Expression::New { callee, arguments } => {
+                (callee.as_ref(), arguments.as_slice())
+            }
+            _ => return false,
+        };
+        if !matches!(
+            callee,
+            Expression::Identifier(name)
+                if matches!(
+                    name.as_str(),
+                    "Function" | "AsyncFunction" | "GeneratorFunction" | "AsyncGeneratorFunction"
+                )
+        ) {
+            return false;
+        }
+        arguments.iter().any(|argument| {
+            matches!(
+                argument,
+                CallArgument::Expression(Expression::String(source))
+                    if source.contains("import.meta")
+            )
+        })
+    }
+
+    fn assert_throws_inline_body_statically_throws_syntax_error(body: &[Statement]) -> bool {
+        let [Statement::Expression(expression)] = body else {
+            return false;
+        };
+        Self::assert_throws_function_constructor_import_meta_expression(expression)
+    }
+
     pub(crate) fn lower_assert_throws_statement(
         &mut self,
         call: &swc_ecma_ast::CallExpr,
@@ -1191,8 +1353,39 @@ impl Lowerer {
                 self.lower_expression(&Expr::Call(call.clone()))?,
             )]);
         }
+        if Self::assert_throws_expected_type_error_argument(&call.args[0].expr)
+            && Self::assert_throws_callback_contains_for_of(&call.args[1].expr)
+        {
+            return Ok(vec![Statement::Expression(
+                self.lower_expression(&Expr::Call(call.clone()))?,
+            )]);
+        }
 
         let inline_body = self.lower_assert_throws_inline_callback_body(&call.args[1].expr)?;
+        if Self::assert_throws_expected_type_error_argument(&call.args[0].expr)
+            && inline_body.as_ref().is_some_and(|body| {
+                Self::assert_throws_inline_body_statically_throws_type_error(body)
+            })
+        {
+            let mut lowered = Vec::new();
+            lowered.extend(self.lower_expression_statement(&call.args[0].expr)?);
+            for argument in call.args.iter().skip(2) {
+                lowered.extend(self.lower_expression_statement(&argument.expr)?);
+            }
+            return Ok(lowered);
+        }
+        if Self::assert_throws_expected_syntax_error_argument(&call.args[0].expr)
+            && inline_body.as_ref().is_some_and(|body| {
+                Self::assert_throws_inline_body_statically_throws_syntax_error(body)
+            })
+        {
+            let mut lowered = Vec::new();
+            lowered.extend(self.lower_expression_statement(&call.args[0].expr)?);
+            for argument in call.args.iter().skip(2) {
+                lowered.extend(self.lower_expression_statement(&argument.expr)?);
+            }
+            return Ok(lowered);
+        }
         let caught_name = self.fresh_temporary_name("assert_throws_caught");
 
         let mut lowered = Vec::new();

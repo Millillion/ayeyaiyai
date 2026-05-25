@@ -149,6 +149,173 @@ impl<'a> FunctionCompiler<'a> {
         self.try_emit_static_simple_generator_binding_effect(statement, &[])
     }
 
+    fn direct_static_class_constructor_new_expression(
+        &self,
+        expression: &Expression,
+        current_function_name: Option<&str>,
+    ) -> Option<Expression> {
+        let Expression::New { callee, arguments } = expression else {
+            return None;
+        };
+        if !arguments.is_empty() {
+            return None;
+        }
+
+        let constructor_name = match callee.as_ref() {
+            Expression::Identifier(function_name)
+                if function_name.starts_with("__ayy_class_ctor_") =>
+            {
+                Some(function_name.clone())
+            }
+            _ => match self.resolve_function_binding_from_expression_with_context(
+                callee,
+                current_function_name,
+            ) {
+                Some(LocalFunctionBinding::User(function_name))
+                    if function_name.starts_with("__ayy_class_ctor_") =>
+                {
+                    Some(function_name)
+                }
+                _ => None,
+            },
+        }?;
+
+        Some(Expression::New {
+            callee: Box::new(Expression::Identifier(constructor_name)),
+            arguments: Vec::new(),
+        })
+    }
+
+    fn is_single_return_new_function_body(body: &[Statement]) -> bool {
+        matches!(body, [Statement::Return(Expression::New { .. })])
+    }
+
+    fn static_class_constructor_call_initializer_result(
+        &self,
+        value: &Expression,
+    ) -> Option<Expression> {
+        let Expression::Call { callee, arguments } = value else {
+            return None;
+        };
+        let LocalFunctionBinding::User(function_name) =
+            self.resolve_function_binding_from_expression(callee)?
+        else {
+            return None;
+        };
+        let declaration = self.prepared_function_declaration(&function_name)?;
+        if !Self::is_single_return_new_function_body(&declaration.body) {
+            return None;
+        }
+        let (result, result_function_name) = self
+            .resolve_static_call_result_expression_with_context(
+                callee,
+                arguments,
+                self.current_function_name(),
+            )?;
+        self.direct_static_class_constructor_new_expression(
+            &result,
+            result_function_name
+                .as_deref()
+                .or_else(|| self.current_function_name()),
+        )
+    }
+
+    fn lowered_optional_member_non_nullish_target(
+        &self,
+        expression: &Expression,
+    ) -> Option<Expression> {
+        let Expression::Sequence(expressions) = expression else {
+            return None;
+        };
+        let Expression::Conditional {
+            then_expression,
+            else_expression,
+            ..
+        } = expressions.last()?
+        else {
+            return None;
+        };
+        if !matches!(then_expression.as_ref(), Expression::Undefined) {
+            return None;
+        }
+        let Expression::Member { object, property } = else_expression.as_ref() else {
+            return None;
+        };
+        let Expression::Identifier(temp_name) = object.as_ref() else {
+            return None;
+        };
+        let base = expressions
+            .iter()
+            .rev()
+            .find_map(|expression| match expression {
+                Expression::Assign { name, value } if name == temp_name => {
+                    Some(value.as_ref().clone())
+                }
+                _ => None,
+            })?;
+        Some(Expression::Member {
+            object: Box::new(base),
+            property: property.clone(),
+        })
+    }
+
+    fn for_await_iterator_initializer_source(
+        &self,
+        name: &str,
+        value: &Expression,
+    ) -> Option<Expression> {
+        if !name.starts_with("__ayy_for_await_iter_") {
+            return None;
+        }
+        let Expression::GetIterator(source) = value else {
+            return None;
+        };
+        Some(
+            self.lowered_optional_member_non_nullish_target(source)
+                .unwrap_or_else(|| source.as_ref().clone()),
+        )
+    }
+
+    fn has_static_async_iterator_property(
+        &self,
+        source: &Expression,
+        async_iterator_property: &Expression,
+    ) -> bool {
+        self.resolve_member_getter_binding(source, async_iterator_property)
+            .is_some()
+            || self
+                .resolve_member_function_binding(source, async_iterator_property)
+                .is_some()
+            || self
+                .resolve_object_binding_from_expression(source)
+                .and_then(|binding| {
+                    object_binding_lookup_value(&binding, async_iterator_property).cloned()
+                })
+                .is_some_and(|value| !matches!(value, Expression::Undefined | Expression::Null))
+    }
+
+    fn static_for_await_iterator_initializer_result(
+        &self,
+        name: &str,
+        value: &Expression,
+    ) -> Option<Expression> {
+        let source = self.for_await_iterator_initializer_source(name, value)?;
+        let async_iterator_property = self.materialize_static_expression(&Expression::Member {
+            object: Box::new(Expression::Identifier("Symbol".to_string())),
+            property: Box::new(Expression::String("asyncIterator".to_string())),
+        });
+        if !self.has_static_async_iterator_property(&source, &async_iterator_property) {
+            return None;
+        }
+        Some(Expression::Call {
+            callee: Box::new(Expression::Member {
+                object: Box::new(source),
+                property: Box::new(async_iterator_property),
+            }),
+            arguments: Vec::new(),
+        })
+    }
+
     fn emit_binding_initializer_value(
         &mut self,
         name: &str,
@@ -157,12 +324,24 @@ impl<'a> FunctionCompiler<'a> {
         if self.is_private_brand_binding_initializer(name, value) {
             return self.emit_fresh_private_brand_value();
         }
-        if let Some(LocalFunctionBinding::User(function_name)) =
-            self.resolve_function_binding_from_expression(value)
+        if !matches!(
+            value,
+            Expression::Call { .. } | Expression::New { .. } | Expression::SuperCall { .. }
+        ) && !Self::expression_contains_assignment_or_update(value)
+            && inline_summary_side_effect_free_expression(value)
+            && let Some(LocalFunctionBinding::User(function_name)) =
+                self.resolve_function_binding_from_expression(value)
             && let Some(runtime_value) = self.user_function_runtime_value(&function_name)
         {
             self.push_i32_const(runtime_value);
             return Ok(());
+        }
+        if let Some(resolved_value) = self.static_for_await_iterator_initializer_result(name, value)
+        {
+            return self.emit_numeric_expression(&resolved_value);
+        }
+        if let Some(resolved_value) = self.static_class_constructor_call_initializer_result(value) {
+            return self.emit_numeric_expression(&resolved_value);
         }
         if let Some((_, object, property, arguments)) =
             self.tracked_array_step_initializer_parts(name, value)
@@ -188,18 +367,199 @@ impl<'a> FunctionCompiler<'a> {
         scope_object: &Expression,
         name: &str,
         value: &Expression,
-    ) -> DirectResult<bool> {
+    ) -> DirectResult<Option<Expression>> {
         let Expression::Binary { op, left, right } = value else {
-            return Ok(false);
+            return Ok(None);
         };
         if !matches!(left.as_ref(), Expression::Identifier(left_name) if left_name == name) {
-            return Ok(false);
+            return Ok(None);
         }
 
+        let property = Expression::String(name.to_string());
+        let previous_value =
+            self.resolve_scoped_compound_assignment_previous_value(scope_object, &property);
         self.emit_scoped_property_read(scope_object, name)?;
         self.emit_numeric_expression(right)?;
         self.push_binary_op(*op)?;
-        Ok(true)
+        Ok(Some(
+            previous_value
+                .map(|previous_value| {
+                    self.scoped_compound_assignment_static_store_value(*op, previous_value, right)
+                })
+                .unwrap_or_else(|| value.clone()),
+        ))
+    }
+
+    fn resolve_scoped_compound_assignment_previous_value(
+        &self,
+        scope_object: &Expression,
+        property: &Expression,
+    ) -> Option<Expression> {
+        if let Some(getter_binding) = self.resolve_member_getter_binding(scope_object, property)
+            && let Some(value) = self.resolve_static_getter_value_from_binding_with_context(
+                &getter_binding,
+                scope_object,
+                self.current_function_name(),
+            )
+        {
+            return Some(value);
+        }
+
+        if let Some(object_binding) = self.resolve_object_binding_from_expression(scope_object)
+            && let Some(value) = object_binding_lookup_value(&object_binding, property)
+        {
+            return Some(value.clone());
+        }
+
+        let member = Expression::Member {
+            object: Box::new(scope_object.clone()),
+            property: Box::new(property.clone()),
+        };
+        let materialized = self.materialize_static_expression(&member);
+        (!static_expression_matches(&materialized, &member)).then_some(materialized)
+    }
+
+    fn emit_identifier_reference_target_read(
+        &mut self,
+        name: &str,
+        resolved_local_binding: Option<&(String, u32)>,
+        capture_binding: bool,
+        declared_global_index: Option<u32>,
+        eval_local_binding: bool,
+        implicit_global_binding: Option<ImplicitGlobalBinding>,
+        unresolvable_reference: bool,
+    ) -> DirectResult<()> {
+        if let Some((resolved_name, local_index)) = resolved_local_binding {
+            if let Some(initialized_local) = self.local_lexical_initialized_local(resolved_name) {
+                self.push_local_get(initialized_local);
+                self.state.emission.output.instructions.push(0x04);
+                self.state.emission.output.instructions.push(I32_TYPE);
+                self.push_control_frame();
+                self.push_local_get(*local_index);
+                self.state.emission.output.instructions.push(0x05);
+                self.emit_named_error_throw("ReferenceError")?;
+                self.state.emission.output.instructions.push(0x0b);
+                self.pop_control_frame();
+            } else {
+                self.push_local_get(*local_index);
+            }
+            return Ok(());
+        }
+
+        if capture_binding {
+            if !self.emit_user_function_capture_binding_read(name)? {
+                self.emit_named_error_throw("ReferenceError")?;
+            }
+            return Ok(());
+        }
+
+        if let Some(global_index) = declared_global_index {
+            return self.emit_declared_global_binding_read(name, global_index);
+        }
+
+        if eval_local_binding {
+            if !self.emit_eval_local_function_binding_read(name)? {
+                self.emit_named_error_throw("ReferenceError")?;
+            }
+            return Ok(());
+        }
+
+        if let Some(binding) = implicit_global_binding {
+            self.push_global_get(binding.present_index);
+            self.state.emission.output.instructions.push(0x04);
+            self.state.emission.output.instructions.push(I32_TYPE);
+            self.push_control_frame();
+            self.push_global_get(binding.value_index);
+            self.state.emission.output.instructions.push(0x05);
+            self.emit_named_error_throw("ReferenceError")?;
+            self.state.emission.output.instructions.push(0x0b);
+            self.pop_control_frame();
+            return Ok(());
+        }
+
+        if unresolvable_reference {
+            self.emit_named_error_throw("ReferenceError")?;
+            return Ok(());
+        }
+
+        self.emit_plain_identifier_read(name)
+    }
+
+    fn emit_identifier_compound_assignment_value(
+        &mut self,
+        name: &str,
+        value: &Expression,
+        resolved_local_binding: Option<&(String, u32)>,
+        capture_binding: bool,
+        declared_global_index: Option<u32>,
+        eval_local_binding: bool,
+        implicit_global_binding: Option<ImplicitGlobalBinding>,
+        unresolvable_reference: bool,
+    ) -> DirectResult<Option<Expression>> {
+        let Expression::Binary { op, left, right } = value else {
+            return Ok(None);
+        };
+        if !matches!(left.as_ref(), Expression::Identifier(left_name) if left_name == name) {
+            return Ok(None);
+        }
+        if !self.assignment_value_declares_static_direct_eval_var_binding(name, value) {
+            return Ok(None);
+        }
+
+        self.emit_identifier_reference_target_read(
+            name,
+            resolved_local_binding,
+            capture_binding,
+            declared_global_index,
+            eval_local_binding,
+            implicit_global_binding,
+            unresolvable_reference,
+        )?;
+        self.emit_numeric_expression(right)?;
+        self.push_binary_op(*op)?;
+        Ok(Some(value.clone()))
+    }
+
+    fn scoped_compound_assignment_static_store_value(
+        &self,
+        op: BinaryOp,
+        previous_value: Expression,
+        right: &Expression,
+    ) -> Expression {
+        if op == BinaryOp::Add
+            && let Some(StaticEvalOutcome::Value(value)) = self
+                .resolve_static_addition_outcome_with_context(
+                    &previous_value,
+                    right,
+                    self.current_function_name(),
+                )
+        {
+            return self.materialize_static_expression(&value);
+        }
+
+        let computed = Expression::Binary {
+            op,
+            left: Box::new(previous_value),
+            right: Box::new(right.clone()),
+        };
+        if matches!(
+            op,
+            BinaryOp::Subtract
+                | BinaryOp::Multiply
+                | BinaryOp::Divide
+                | BinaryOp::Modulo
+                | BinaryOp::Exponentiate
+                | BinaryOp::BitwiseAnd
+                | BinaryOp::BitwiseOr
+                | BinaryOp::BitwiseXor
+                | BinaryOp::LeftShift
+                | BinaryOp::RightShift
+                | BinaryOp::UnsignedRightShift
+        ) && let Some(value) = self.resolve_static_number_value(&computed)
+        {
+            return Expression::Number(value);
+        }
+        self.materialize_static_expression(&computed)
     }
 
     pub(super) fn emit_binding_statement(&mut self, statement: &Statement) -> DirectResult<()> {
@@ -209,10 +569,47 @@ impl<'a> FunctionCompiler<'a> {
         match statement {
             Statement::Var { name, value } => {
                 if matches!(value, Expression::Undefined) {
+                    if !self.state.emission.emitted_value_bindings.contains(name) {
+                        if self.global_has_binding(name) || self.global_has_implicit_binding(name) {
+                            self.update_static_global_assignment_metadata(
+                                name,
+                                &Expression::Undefined,
+                            );
+                        } else if let Some((resolved_name, local_index)) =
+                            self.resolve_current_local_binding(name)
+                        {
+                            let preserves_existing_local = local_index
+                                < self.state.parameters.param_count
+                                || self
+                                    .state
+                                    .speculation
+                                    .static_semantics
+                                    .local_value_binding(&resolved_name)
+                                    .is_some();
+                            if preserves_existing_local {
+                                return Ok(());
+                            }
+                            self.update_local_value_binding(&resolved_name, &Expression::Undefined);
+                            self.state
+                                .speculation
+                                .static_semantics
+                                .set_local_kind(&resolved_name, StaticValueKind::Undefined);
+                        } else {
+                            self.update_local_value_binding(name, &Expression::Undefined);
+                            self.state
+                                .speculation
+                                .static_semantics
+                                .set_local_kind(name, StaticValueKind::Undefined);
+                        }
+                    }
                     return Ok(());
                 }
                 let trace = std::env::var_os("AYY_TRACE_FUNCTION_COMPILE").is_some();
                 let value_local = self.allocate_temp_local();
+                let resolved_store_value = self
+                    .static_for_await_iterator_initializer_result(name, value)
+                    .or_else(|| self.static_class_constructor_call_initializer_result(value));
+                let store_value = resolved_store_value.as_ref().unwrap_or(value);
                 let scoped_target = self.resolve_with_scope_binding(name)?;
                 if trace {
                     eprintln!("binding_statement:var:start name={name}");
@@ -234,16 +631,16 @@ impl<'a> FunctionCompiler<'a> {
                     if trace {
                         eprintln!("binding_statement:var:before_store name={name}");
                     }
-                    self.emit_store_identifier_value_local(name, value, value_local)?;
+                    self.emit_store_identifier_value_local(name, store_value, value_local)?;
                     if trace {
                         eprintln!("binding_statement:var:after_store name={name}");
                     }
                 }
-                self.update_member_function_binding_from_expression(value);
+                self.update_member_function_binding_from_expression(store_value);
                 if trace {
                     eprintln!("binding_statement:var:after_member name={name}");
                 }
-                self.update_object_binding_from_expression(value);
+                self.update_object_binding_from_expression(store_value);
                 if trace {
                     eprintln!("binding_statement:var:done name={name}");
                 }
@@ -252,6 +649,10 @@ impl<'a> FunctionCompiler<'a> {
             Statement::Let { name, value, .. } => {
                 let trace = std::env::var_os("AYY_TRACE_FUNCTION_COMPILE").is_some();
                 let value_local = self.allocate_temp_local();
+                let resolved_store_value = self
+                    .static_for_await_iterator_initializer_result(name, value)
+                    .or_else(|| self.static_class_constructor_call_initializer_result(value));
+                let store_value = resolved_store_value.as_ref().unwrap_or(value);
                 if trace {
                     eprintln!("binding_statement:let:start name={name} value={value:?}");
                 }
@@ -260,13 +661,6 @@ impl<'a> FunctionCompiler<'a> {
                     eprintln!("binding_statement:let:after_emit name={name}");
                 }
                 self.push_local_set(value_local);
-                if trace {
-                    eprintln!("binding_statement:let:before_initialize name={name}");
-                }
-                self.emit_initialize_identifier_value_local(name, value, value_local)?;
-                if trace {
-                    eprintln!("binding_statement:let:after_initialize name={name}");
-                }
                 if let Some(initialized_local) = self
                     .state
                     .speculation
@@ -287,13 +681,20 @@ impl<'a> FunctionCompiler<'a> {
                     self.push_local_set(initialized_local);
                 }
                 if trace {
+                    eprintln!("binding_statement:let:before_initialize name={name}");
+                }
+                self.emit_initialize_identifier_value_local(name, store_value, value_local)?;
+                if trace {
+                    eprintln!("binding_statement:let:after_initialize name={name}");
+                }
+                if trace {
                     eprintln!("binding_statement:let:before_member name={name}");
                 }
-                self.update_member_function_binding_from_expression(value);
+                self.update_member_function_binding_from_expression(store_value);
                 if trace {
                     eprintln!("binding_statement:let:after_member name={name}");
                 }
-                self.update_object_binding_from_expression(value);
+                self.update_object_binding_from_expression(store_value);
                 if trace {
                     eprintln!("binding_statement:let:done name={name}");
                 }
@@ -350,22 +751,37 @@ impl<'a> FunctionCompiler<'a> {
                     && reference_implicit_global.is_none();
                 if let Some(scope_object) = scoped_target {
                     let value_local = self.allocate_temp_local();
-                    if !self.emit_scoped_compound_assignment_value(&scope_object, name, value)? {
+                    let scoped_store_value =
+                        self.emit_scoped_compound_assignment_value(&scope_object, name, value)?;
+                    if scoped_store_value.is_none() {
                         self.emit_binding_initializer_value(name, value)?;
                     }
                     if trace {
                         eprintln!("binding_statement:assign:after_emit name={name}");
                     }
                     self.push_local_set(value_local);
+                    let store_value = scoped_store_value.as_ref().unwrap_or(value);
                     self.emit_scoped_property_store_from_local(
                         &scope_object,
                         name,
                         value_local,
-                        value,
+                        store_value,
                     )?;
                     self.state.emission.output.instructions.push(0x1a);
                 } else {
-                    self.emit_binding_initializer_value(name, value)?;
+                    let compound_store_value = self.emit_identifier_compound_assignment_value(
+                        name,
+                        value,
+                        resolved_reference_local.as_ref(),
+                        reference_targets_capture,
+                        reference_global_index,
+                        reference_targets_eval_local,
+                        reference_implicit_global,
+                        reference_is_unresolvable,
+                    )?;
+                    if compound_store_value.is_none() {
+                        self.emit_binding_initializer_value(name, value)?;
+                    }
                     if trace {
                         eprintln!("binding_statement:assign:after_emit name={name}");
                     }
@@ -374,9 +790,10 @@ impl<'a> FunctionCompiler<'a> {
                     if trace {
                         eprintln!("binding_statement:assign:before_store name={name}");
                     }
+                    let store_value = compound_store_value.as_ref().unwrap_or(value);
                     self.emit_store_identifier_value_local_with_reference_target(
                         name,
-                        value,
+                        store_value,
                         value_local,
                         resolved_reference_local,
                         reference_targets_capture,

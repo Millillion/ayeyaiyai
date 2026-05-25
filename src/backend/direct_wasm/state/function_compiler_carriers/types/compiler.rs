@@ -16,5 +16,9 @@ pub(in crate::backend::direct_wasm) struct FunctionCompilerBackend<'a> {
     pub(in crate::backend::direct_wasm) function_registry: &'a mut FunctionRegistryState,
     pub(in crate::backend::direct_wasm) shared_global_semantics: &'a mut GlobalSemanticState,
     pub(in crate::backend::direct_wasm) test262: &'a mut Test262State,
+    pub(in crate::backend::direct_wasm) template_object_array_bindings:
+        &'a HashMap<i32, ArrayValueBinding>,
+    pub(in crate::backend::direct_wasm) template_object_raw_array_bindings:
+        &'a HashMap<i32, ArrayValueBinding>,
     pub(in crate::backend::direct_wasm) global_semantics: GlobalStaticSemanticsSnapshot,
 }

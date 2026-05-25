@@ -8,6 +8,24 @@ impl Lowerer {
         }
     }
 
+    pub(crate) fn current_immutable_class_bindings(&self) -> Vec<String> {
+        let mut bindings = Vec::new();
+        for binding in &self.immutable_class_binding_stack {
+            if !bindings.contains(binding) {
+                bindings.push(binding.clone());
+            }
+        }
+        bindings
+    }
+
+    pub(crate) fn current_immutable_class_bindings_with(&self, binding: &str) -> Vec<String> {
+        let mut bindings = self.current_immutable_class_bindings();
+        if !bindings.iter().any(|existing| existing == binding) {
+            bindings.push(binding.to_string());
+        }
+        bindings
+    }
+
     pub(crate) fn source_span_snippet(&self, span: Span) -> Option<&str> {
         let source = self.source_text.as_deref()?;
         if span.lo.is_dummy() || span.hi.is_dummy() {
@@ -16,6 +34,120 @@ impl Lowerer {
         let start = span.lo.0.saturating_sub(1) as usize;
         let end = span.hi.0.saturating_sub(1) as usize;
         source.get(start..end)
+    }
+
+    pub(crate) fn private_name_key(&self, private_name: &swc_ecma_ast::PrivateName) -> String {
+        let fallback = private_name.name.to_string();
+        let Some(source_name) = self
+            .source_span_snippet(private_name.span)
+            .and_then(Self::private_name_source_identifier)
+        else {
+            return fallback;
+        };
+
+        Self::decode_identifier_unicode_escapes(source_name).unwrap_or(fallback)
+    }
+
+    fn private_name_source_identifier(source: &str) -> Option<&str> {
+        let source = source.trim();
+        let source = source.strip_prefix('#')?;
+        let mut end = source.len();
+        let mut chars = source.char_indices().peekable();
+
+        while let Some((index, character)) = chars.next() {
+            match character {
+                '\\' => {
+                    let Some((_, 'u')) = chars.next() else {
+                        end = index;
+                        break;
+                    };
+
+                    if matches!(chars.peek(), Some((_, '{'))) {
+                        chars.next();
+                        let mut closed = false;
+                        for (_, escaped_character) in chars.by_ref() {
+                            if escaped_character == '}' {
+                                closed = true;
+                                break;
+                            }
+                        }
+                        if !closed {
+                            end = index;
+                            break;
+                        }
+                    } else {
+                        for _ in 0..4 {
+                            if chars.next().is_none() {
+                                end = index;
+                                break;
+                            }
+                        }
+                    }
+                }
+                '(' | ')' | '=' | ';' | ',' | ':' | '[' | ']' | '{' | '}' => {
+                    end = index;
+                    break;
+                }
+                character if character.is_whitespace() => {
+                    end = index;
+                    break;
+                }
+                _ => {}
+            }
+        }
+
+        source.get(..end)
+    }
+
+    fn decode_identifier_unicode_escapes(identifier: &str) -> Option<String> {
+        if !identifier.contains("\\u") {
+            return Some(identifier.to_string());
+        }
+
+        let mut decoded = String::with_capacity(identifier.len());
+        let mut chars = identifier.chars().peekable();
+
+        while let Some(character) = chars.next() {
+            if character != '\\' {
+                decoded.push(character);
+                continue;
+            }
+
+            if chars.next()? != 'u' {
+                return None;
+            }
+
+            let mut digits = String::new();
+            if matches!(chars.peek(), Some('{')) {
+                chars.next();
+                loop {
+                    let escaped_character = chars.next()?;
+                    if escaped_character == '}' {
+                        break;
+                    }
+                    if !escaped_character.is_ascii_hexdigit() {
+                        return None;
+                    }
+                    digits.push(escaped_character);
+                }
+                if digits.is_empty() {
+                    return None;
+                }
+            } else {
+                for _ in 0..4 {
+                    let digit = chars.next()?;
+                    if !digit.is_ascii_hexdigit() {
+                        return None;
+                    }
+                    digits.push(digit);
+                }
+            }
+
+            let code_point = u32::from_str_radix(&digits, 16).ok()?;
+            decoded.push(char::from_u32(code_point)?);
+        }
+
+        Some(decoded)
     }
 
     fn array_pattern_inner_source(&self, array: &swc_ecma_ast::ArrayPat) -> Option<&str> {
@@ -147,6 +279,7 @@ impl Lowerer {
         self.module_mode = false;
         self.current_module_path = None;
         self.module_index_lookup.clear();
+        self.dynamic_import_specifier_lookup.clear();
 
         Ok(self.finish_program(statements, strict_mode))
     }
@@ -155,6 +288,7 @@ impl Lowerer {
         self.module_mode = false;
         self.current_module_path = None;
         self.module_index_lookup.clear();
+        self.dynamic_import_specifier_lookup.clear();
 
         let mut functions = Vec::new();
         let mut seen = HashSet::new();
@@ -297,31 +431,54 @@ impl Lowerer {
         call: &swc_ecma_ast::CallExpr,
     ) -> Result<Expression> {
         ensure!(
-            call.args.len() == 1,
-            "dynamic import expects exactly one argument"
+            matches!(call.args.len(), 1 | 2),
+            "dynamic import expects one or two arguments"
         );
-        let argument = &call.args[0];
-        ensure!(
-            argument.spread.is_none(),
-            "dynamic import does not support spread arguments"
-        );
+        for argument in &call.args {
+            ensure!(
+                argument.spread.is_none(),
+                "dynamic import does not support spread arguments"
+            );
+        }
 
-        let Expr::Lit(Lit::Str(specifier)) = &*argument.expr else {
-            bail!("unsupported dynamic import specifier");
+        let argument = &call.args[0];
+        let lowered_argument = if let Expr::Lit(Lit::Str(specifier)) = &*argument.expr {
+            let module_index = self
+                .current_module_path
+                .as_ref()
+                .and_then(|module_path| {
+                    resolve_module_specifier(module_path, &specifier.value.to_string_lossy()).ok()
+                })
+                .and_then(|resolved| self.module_index_lookup.get(&resolved).copied())
+                .map(|module_index| module_index as f64)
+                .unwrap_or(-1.0);
+            Expression::Number(module_index)
+        } else {
+            self.lower_expression(&argument.expr)?
         };
-        let module_index = self
-            .current_module_path
-            .as_ref()
-            .and_then(|module_path| {
-                resolve_module_specifier(module_path, &specifier.value.to_string_lossy()).ok()
-            })
-            .and_then(|resolved| self.module_index_lookup.get(&resolved).copied())
-            .map(|module_index| module_index as f64)
-            .unwrap_or(-1.0);
+        let mut arguments = vec![CallArgument::Expression(lowered_argument)];
+        if let Some(options) = call.args.get(1) {
+            arguments.push(CallArgument::Expression(
+                self.lower_expression(&options.expr)?,
+            ));
+        } else if !self.dynamic_import_specifier_lookup.is_empty() {
+            arguments.push(CallArgument::Expression(Expression::Undefined));
+        }
+        if !self.dynamic_import_specifier_lookup.is_empty() {
+            arguments.push(CallArgument::Expression(Expression::Object(
+                self.dynamic_import_specifier_lookup
+                    .iter()
+                    .map(|(specifier, module_index)| ObjectEntry::Data {
+                        key: Expression::String(specifier.clone()),
+                        value: Expression::Number(*module_index as f64),
+                    })
+                    .collect(),
+            )));
+        }
 
         Ok(Expression::Call {
             callee: Box::new(Expression::Identifier("__ayyDynamicImport".to_string())),
-            arguments: vec![CallArgument::Expression(Expression::Number(module_index))],
+            arguments,
         })
     }
 
@@ -329,7 +486,7 @@ impl Lowerer {
         &mut self,
         private_name: &swc_ecma_ast::PrivateName,
     ) -> Result<Expression> {
-        let name = private_name.name.to_string();
+        let name = self.private_name_key(private_name);
         for (index, scope) in self.private_name_scopes.iter().enumerate().rev() {
             if let Some(mapped) = scope.get(&name) {
                 if let Some(brand_binding) = self
@@ -337,6 +494,7 @@ impl Lowerer {
                     .get(index)
                     .and_then(|scope| scope.get(&name))
                     .cloned()
+                    && self.private_brand_capture_suppression_depth == 0
                     && let Some(captures) = self.pending_private_brand_captures.last_mut()
                 {
                     captures.insert(brand_binding);
@@ -348,6 +506,16 @@ impl Lowerer {
         bail!("unsupported private name reference: #{name}")
     }
 
+    pub(crate) fn lower_private_name_without_capture(
+        &mut self,
+        private_name: &swc_ecma_ast::PrivateName,
+    ) -> Result<Expression> {
+        self.private_brand_capture_suppression_depth += 1;
+        let lowered = self.lower_private_name(private_name);
+        self.private_brand_capture_suppression_depth -= 1;
+        lowered
+    }
+
     pub(crate) fn class_private_name_map(
         &self,
         class: &Class,
@@ -357,23 +525,17 @@ impl Lowerer {
         for member in &class.body {
             match member {
                 ClassMember::PrivateProp(property) => {
-                    names.insert(
-                        property.key.name.to_string(),
-                        format!("__ayy$private${binding_name}${}", property.key.name),
-                    );
+                    let name = self.private_name_key(&property.key);
+                    names.insert(name.clone(), format!("__ayy$private${binding_name}${name}"));
                 }
                 ClassMember::PrivateMethod(method) => {
-                    names.insert(
-                        method.key.name.to_string(),
-                        format!("__ayy$private${binding_name}${}", method.key.name),
-                    );
+                    let name = self.private_name_key(&method.key);
+                    names.insert(name.clone(), format!("__ayy$private${binding_name}${name}"));
                 }
                 ClassMember::AutoAccessor(accessor) => {
                     if let Key::Private(private_name) = &accessor.key {
-                        names.insert(
-                            private_name.name.to_string(),
-                            format!("__ayy$private${binding_name}${}", private_name.name),
-                        );
+                        let name = self.private_name_key(private_name);
+                        names.insert(name.clone(), format!("__ayy$private${binding_name}${name}"));
                     }
                 }
                 _ => {}
@@ -393,24 +555,18 @@ impl Lowerer {
         let mut names = HashMap::new();
         for member in &class.body {
             match member {
-                ClassMember::PrivateProp(property) if !property.is_static => {
-                    names.insert(
-                        property.key.name.to_string(),
-                        instance_private_brand_binding.to_string(),
-                    );
+                ClassMember::PrivateProp(property) => {
+                    let name = self.private_name_key(&property.key);
+                    names.insert(name, instance_private_brand_binding.to_string());
                 }
-                ClassMember::PrivateMethod(method) if !method.is_static => {
-                    names.insert(
-                        method.key.name.to_string(),
-                        instance_private_brand_binding.to_string(),
-                    );
+                ClassMember::PrivateMethod(method) => {
+                    let name = self.private_name_key(&method.key);
+                    names.insert(name, instance_private_brand_binding.to_string());
                 }
-                ClassMember::AutoAccessor(accessor) if !accessor.is_static => {
+                ClassMember::AutoAccessor(accessor) => {
                     if let Key::Private(private_name) = &accessor.key {
-                        names.insert(
-                            private_name.name.to_string(),
-                            instance_private_brand_binding.to_string(),
-                        );
+                        let name = self.private_name_key(private_name);
+                        names.insert(name, instance_private_brand_binding.to_string());
                     }
                 }
                 _ => {}

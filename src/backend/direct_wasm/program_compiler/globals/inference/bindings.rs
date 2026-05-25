@@ -36,6 +36,13 @@ impl DirectWasmCompiler {
             Expression::Identifier(name) => self.global_array_binding(name).cloned(),
             Expression::EnumerateKeys(value) => self.static_enumerated_keys_binding(value),
             Expression::Call { callee, arguments } => {
+                if matches!(callee.as_ref(), Expression::Identifier(name) if name == "__ayyTemplateObject")
+                    && let Some(CallArgument::Expression(cooked) | CallArgument::Spread(cooked)) =
+                        arguments.get(1)
+                {
+                    return Self::template_object_array_binding_from_array(cooked)
+                        .or_else(|| self.infer_global_array_binding(cooked));
+                }
                 if let Some(binding) =
                     self.static_builtin_object_array_call_binding(callee, arguments)
                 {

@@ -44,6 +44,13 @@ impl<'a> FunctionCompiler<'a> {
                     realm_id,
                 )))
             }
+            Expression::Member { object, property } => {
+                let object_expression = self.prepare_special_assignment_expression(object)?;
+                Some(Expression::Member {
+                    object: Box::new(object_expression),
+                    property: property.clone(),
+                })
+            }
             _ => None,
         }
     }

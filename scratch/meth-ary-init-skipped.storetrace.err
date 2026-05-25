@@ -1,0 +1,1775 @@
+phase=parse
+phase=lower_static_function_constructors
+phase=validate
+phase=backend_emit
+program_compile=prepare
+program_compile=emit
+program_compile=start
+function_compile=register_statements
+function_compile=initialize_arguments_object
+function_compile=initialize_parameter_defaults
+function_compile=emit_direct_scope
+function_compile=statement:Assign { name: "Test262Error", value: Identifier("Test262Error") }
+binding_statement:assign:start name=Test262Error
+binding_statement:assign:after_emit name=Test262Error
+binding_statement:assign:before_store name=Test262Error
+identifier_store:Test262Error:prepare:start
+identifier_store:Test262Error:canonical Identifier("Test262Error")
+identifier_store:Test262Error:tracked Identifier("Test262Error")
+identifier_store:Test262Error:descriptor
+identifier_store:Test262Error:call_snapshot
+identifier_store:Test262Error:function_binding snapshot_context=None call_result=None raw=Identifier("Test262Error") expr=Identifier("Test262Error") binding=Some(User("Test262Error"))
+identifier_store:Test262Error:object_binding expr=Identifier("Test262Error") prepared_binding=true
+identifier_store:Test262Error:kind
+identifier_store:Test262Error:string
+identifier_store:Test262Error:number
+identifier_store:Test262Error:array
+identifier_store:Test262Error:module
+identifier_store:Test262Error:prepared
+identifier_store:Test262Error:shared_updates:start
+identifier_store:Test262Error:shared:member_bindings:start
+identifier_store:Test262Error:shared:member_bindings:done
+identifier_store:Test262Error:shared:local_function:start
+identifier_store:Test262Error:shared:local_function:done
+identifier_store:Test262Error:shared:specialized_function:start
+identifier_store:Test262Error:shared:specialized_function:done
+identifier_store:Test262Error:shared:proxy:start
+identifier_store:Test262Error:shared:proxy:done
+identifier_store:Test262Error:shared:object_literal_members:start
+identifier_store:Test262Error:shared:object_literal_members:done
+identifier_store:Test262Error:shared:array_binding:start
+identifier_store:Test262Error:shared:array_binding:done
+identifier_store:Test262Error:shared:resizable_array_buffer:start
+identifier_store:Test262Error:shared:resizable_array_buffer:done
+identifier_store:Test262Error:shared:typed_array_view:start
+identifier_store:Test262Error:shared:typed_array_view:done
+identifier_store:Test262Error:shared:iterator_step:start
+identifier_store:Test262Error:shared:iterator_step:done
+identifier_store:Test262Error:shared:object_binding:start
+identifier_store:Test262Error:shared:object_binding:done
+identifier_store:Test262Error:shared:arguments_binding:start
+identifier_store:Test262Error:shared:arguments_binding:done
+identifier_store:Test262Error:shared:descriptor_binding:start
+identifier_store:Test262Error:shared:descriptor_binding:done
+identifier_store:Test262Error:shared:iterator_source:start
+identifier_store:Test262Error:shared:iterator_source:done
+identifier_store:Test262Error:shared:array_iterator_binding:start
+identifier_store:Test262Error:shared:array_iterator_binding:done
+identifier_store:Test262Error:shared_updates:done
+identifier_store:Test262Error:store_pre_resolved_global
+identifier_store:Test262Error:global_metadata:start
+identifier_store:Test262Error:global_metadata:object_binding:start
+identifier_store:Test262Error:global_metadata:object_binding:done
+identifier_store:Test262Error:global_metadata:prototype:start
+identifier_store:Test262Error:global_metadata:prototype:done
+identifier_store:Test262Error:global_metadata:static_global:start
+identifier_store:Test262Error:global_metadata:static_global:done
+identifier_store:Test262Error:global_metadata:sync_object:start
+identifier_store:Test262Error:global_metadata:sync_object:done
+identifier_store:Test262Error:global_metadata:seed_boxed:start
+identifier_store:Test262Error:global_metadata:seed_boxed:done
+identifier_store:Test262Error:global_metadata:seed_date:start
+identifier_store:Test262Error:global_metadata:seed_date:done
+identifier_store:Test262Error:global_metadata:seed_error:start
+identifier_store:Test262Error:global_metadata:seed_error:done
+identifier_store:Test262Error:global_metadata:seed_function:start
+identifier_store:Test262Error:global_metadata:seed_function:done
+identifier_store:Test262Error:global_metadata:seed_array_buffer:start
+identifier_store:Test262Error:global_metadata:seed_array_buffer:done
+identifier_store:Test262Error:global_metadata:seed_typed_array:start
+identifier_store:Test262Error:global_metadata:seed_typed_array:done
+identifier_store:Test262Error:global_metadata:string:start
+identifier_store:Test262Error:global_metadata:string:done
+identifier_store:Test262Error:global_metadata:function:start
+identifier_store:Test262Error:global_metadata:function:done
+identifier_store:Test262Error:global_metadata:captures:start
+identifier_store:Test262Error:global_metadata:captures:done
+identifier_store:Test262Error:global_metadata:arguments:start
+identifier_store:Test262Error:arguments_binding tracked=false canonical=false
+identifier_store:Test262Error:global_metadata:arguments:done
+identifier_store:Test262Error:global_metadata:number:start
+identifier_store:Test262Error:global_metadata:number:done
+identifier_store:Test262Error:global_metadata:specialized:start
+identifier_store:Test262Error:global_metadata:specialized:done
+identifier_store:Test262Error:global_metadata:descriptor_update:start
+identifier_store:Test262Error:global_metadata:descriptor_update:done
+identifier_store:Test262Error:global_metadata:done
+identifier_store:Test262Error:runtime_shadows target_owner=Test262Error source_owner=Some("Test262Error") object_binding_present=true object_binding_props=[] object_binding_hidden=[]
+identifier_store:Test262Error:global_array_force_rest source_not_runtime source=Test262Error
+identifier_store:Test262Error:done
+binding_statement:assign:after_store name=Test262Error
+binding_statement:assign:before_member name=Test262Error
+binding_statement:assign:after_member name=Test262Error
+binding_statement:assign:done name=Test262Error
+function_compile=statement_done:Assign { name: "Test262Error", value: Identifier("Test262Error") }
+function_compile=statement:Assign { name: "__formatIdentityFreeValue", value: Identifier("__formatIdentityFreeValue") }
+binding_statement:assign:start name=__formatIdentityFreeValue
+binding_statement:assign:after_emit name=__formatIdentityFreeValue
+binding_statement:assign:before_store name=__formatIdentityFreeValue
+identifier_store:__formatIdentityFreeValue:prepare:start
+identifier_store:__formatIdentityFreeValue:canonical Identifier("__formatIdentityFreeValue")
+identifier_store:__formatIdentityFreeValue:tracked Identifier("__formatIdentityFreeValue")
+identifier_store:__formatIdentityFreeValue:descriptor
+identifier_store:__formatIdentityFreeValue:call_snapshot
+identifier_store:__formatIdentityFreeValue:function_binding snapshot_context=None call_result=None raw=Identifier("__formatIdentityFreeValue") expr=Identifier("__formatIdentityFreeValue") binding=Some(User("__formatIdentityFreeValue"))
+identifier_store:__formatIdentityFreeValue:object_binding expr=Identifier("__formatIdentityFreeValue") prepared_binding=true
+identifier_store:__formatIdentityFreeValue:kind
+identifier_store:__formatIdentityFreeValue:string
+identifier_store:__formatIdentityFreeValue:number
+identifier_store:__formatIdentityFreeValue:array
+identifier_store:__formatIdentityFreeValue:module
+identifier_store:__formatIdentityFreeValue:prepared
+identifier_store:__formatIdentityFreeValue:shared_updates:start
+identifier_store:__formatIdentityFreeValue:shared:member_bindings:start
+identifier_store:__formatIdentityFreeValue:shared:member_bindings:done
+identifier_store:__formatIdentityFreeValue:shared:local_function:start
+identifier_store:__formatIdentityFreeValue:shared:local_function:done
+identifier_store:__formatIdentityFreeValue:shared:specialized_function:start
+identifier_store:__formatIdentityFreeValue:shared:specialized_function:done
+identifier_store:__formatIdentityFreeValue:shared:proxy:start
+identifier_store:__formatIdentityFreeValue:shared:proxy:done
+identifier_store:__formatIdentityFreeValue:shared:object_literal_members:start
+identifier_store:__formatIdentityFreeValue:shared:object_literal_members:done
+identifier_store:__formatIdentityFreeValue:shared:array_binding:start
+identifier_store:__formatIdentityFreeValue:shared:array_binding:done
+identifier_store:__formatIdentityFreeValue:shared:resizable_array_buffer:start
+identifier_store:__formatIdentityFreeValue:shared:resizable_array_buffer:done
+identifier_store:__formatIdentityFreeValue:shared:typed_array_view:start
+identifier_store:__formatIdentityFreeValue:shared:typed_array_view:done
+identifier_store:__formatIdentityFreeValue:shared:iterator_step:start
+identifier_store:__formatIdentityFreeValue:shared:iterator_step:done
+identifier_store:__formatIdentityFreeValue:shared:object_binding:start
+identifier_store:__formatIdentityFreeValue:shared:object_binding:done
+identifier_store:__formatIdentityFreeValue:shared:arguments_binding:start
+identifier_store:__formatIdentityFreeValue:shared:arguments_binding:done
+identifier_store:__formatIdentityFreeValue:shared:descriptor_binding:start
+identifier_store:__formatIdentityFreeValue:shared:descriptor_binding:done
+identifier_store:__formatIdentityFreeValue:shared:iterator_source:start
+identifier_store:__formatIdentityFreeValue:shared:iterator_source:done
+identifier_store:__formatIdentityFreeValue:shared:array_iterator_binding:start
+identifier_store:__formatIdentityFreeValue:shared:array_iterator_binding:done
+identifier_store:__formatIdentityFreeValue:shared_updates:done
+identifier_store:__formatIdentityFreeValue:store_pre_resolved_global
+identifier_store:__formatIdentityFreeValue:global_metadata:start
+identifier_store:__formatIdentityFreeValue:global_metadata:object_binding:start
+identifier_store:__formatIdentityFreeValue:global_metadata:object_binding:done
+identifier_store:__formatIdentityFreeValue:global_metadata:prototype:start
+identifier_store:__formatIdentityFreeValue:global_metadata:prototype:done
+identifier_store:__formatIdentityFreeValue:global_metadata:static_global:start
+identifier_store:__formatIdentityFreeValue:global_metadata:static_global:done
+identifier_store:__formatIdentityFreeValue:global_metadata:sync_object:start
+identifier_store:__formatIdentityFreeValue:global_metadata:sync_object:done
+identifier_store:__formatIdentityFreeValue:global_metadata:seed_boxed:start
+identifier_store:__formatIdentityFreeValue:global_metadata:seed_boxed:done
+identifier_store:__formatIdentityFreeValue:global_metadata:seed_date:start
+identifier_store:__formatIdentityFreeValue:global_metadata:seed_date:done
+identifier_store:__formatIdentityFreeValue:global_metadata:seed_error:start
+identifier_store:__formatIdentityFreeValue:global_metadata:seed_error:done
+identifier_store:__formatIdentityFreeValue:global_metadata:seed_function:start
+identifier_store:__formatIdentityFreeValue:global_metadata:seed_function:done
+identifier_store:__formatIdentityFreeValue:global_metadata:seed_array_buffer:start
+identifier_store:__formatIdentityFreeValue:global_metadata:seed_array_buffer:done
+identifier_store:__formatIdentityFreeValue:global_metadata:seed_typed_array:start
+identifier_store:__formatIdentityFreeValue:global_metadata:seed_typed_array:done
+identifier_store:__formatIdentityFreeValue:global_metadata:string:start
+identifier_store:__formatIdentityFreeValue:global_metadata:string:done
+identifier_store:__formatIdentityFreeValue:global_metadata:function:start
+identifier_store:__formatIdentityFreeValue:global_metadata:function:done
+identifier_store:__formatIdentityFreeValue:global_metadata:captures:start
+identifier_store:__formatIdentityFreeValue:global_metadata:captures:done
+identifier_store:__formatIdentityFreeValue:global_metadata:arguments:start
+identifier_store:__formatIdentityFreeValue:arguments_binding tracked=false canonical=false
+identifier_store:__formatIdentityFreeValue:global_metadata:arguments:done
+identifier_store:__formatIdentityFreeValue:global_metadata:number:start
+identifier_store:__formatIdentityFreeValue:global_metadata:number:done
+identifier_store:__formatIdentityFreeValue:global_metadata:specialized:start
+identifier_store:__formatIdentityFreeValue:global_metadata:specialized:done
+identifier_store:__formatIdentityFreeValue:global_metadata:descriptor_update:start
+identifier_store:__formatIdentityFreeValue:global_metadata:descriptor_update:done
+identifier_store:__formatIdentityFreeValue:global_metadata:done
+identifier_store:__formatIdentityFreeValue:runtime_shadows target_owner=__formatIdentityFreeValue source_owner=Some("__formatIdentityFreeValue") object_binding_present=true object_binding_props=[] object_binding_hidden=[]
+identifier_store:__formatIdentityFreeValue:global_array_force_rest source_not_runtime source=__formatIdentityFreeValue
+identifier_store:__formatIdentityFreeValue:done
+binding_statement:assign:after_store name=__formatIdentityFreeValue
+binding_statement:assign:before_member name=__formatIdentityFreeValue
+binding_statement:assign:after_member name=__formatIdentityFreeValue
+binding_statement:assign:done name=__formatIdentityFreeValue
+function_compile=statement_done:Assign { name: "__formatIdentityFreeValue", value: Identifier("__formatIdentityFreeValue") }
+function_compile=statement:Assign { name: "__sameValue", value: Identifier("__sameValue") }
+binding_statement:assign:start name=__sameValue
+binding_statement:assign:after_emit name=__sameValue
+binding_statement:assign:before_store name=__sameValue
+identifier_store:__sameValue:prepare:start
+identifier_store:__sameValue:canonical Identifier("__sameValue")
+identifier_store:__sameValue:tracked Identifier("__sameValue")
+identifier_store:__sameValue:descriptor
+identifier_store:__sameValue:call_snapshot
+identifier_store:__sameValue:function_binding snapshot_context=None call_result=None raw=Identifier("__sameValue") expr=Identifier("__sameValue") binding=Some(User("__sameValue"))
+identifier_store:__sameValue:object_binding expr=Identifier("__sameValue") prepared_binding=true
+identifier_store:__sameValue:kind
+identifier_store:__sameValue:string
+identifier_store:__sameValue:number
+identifier_store:__sameValue:array
+identifier_store:__sameValue:module
+identifier_store:__sameValue:prepared
+identifier_store:__sameValue:shared_updates:start
+identifier_store:__sameValue:shared:member_bindings:start
+identifier_store:__sameValue:shared:member_bindings:done
+identifier_store:__sameValue:shared:local_function:start
+identifier_store:__sameValue:shared:local_function:done
+identifier_store:__sameValue:shared:specialized_function:start
+identifier_store:__sameValue:shared:specialized_function:done
+identifier_store:__sameValue:shared:proxy:start
+identifier_store:__sameValue:shared:proxy:done
+identifier_store:__sameValue:shared:object_literal_members:start
+identifier_store:__sameValue:shared:object_literal_members:done
+identifier_store:__sameValue:shared:array_binding:start
+identifier_store:__sameValue:shared:array_binding:done
+identifier_store:__sameValue:shared:resizable_array_buffer:start
+identifier_store:__sameValue:shared:resizable_array_buffer:done
+identifier_store:__sameValue:shared:typed_array_view:start
+identifier_store:__sameValue:shared:typed_array_view:done
+identifier_store:__sameValue:shared:iterator_step:start
+identifier_store:__sameValue:shared:iterator_step:done
+identifier_store:__sameValue:shared:object_binding:start
+identifier_store:__sameValue:shared:object_binding:done
+identifier_store:__sameValue:shared:arguments_binding:start
+identifier_store:__sameValue:shared:arguments_binding:done
+identifier_store:__sameValue:shared:descriptor_binding:start
+identifier_store:__sameValue:shared:descriptor_binding:done
+identifier_store:__sameValue:shared:iterator_source:start
+identifier_store:__sameValue:shared:iterator_source:done
+identifier_store:__sameValue:shared:array_iterator_binding:start
+identifier_store:__sameValue:shared:array_iterator_binding:done
+identifier_store:__sameValue:shared_updates:done
+identifier_store:__sameValue:store_pre_resolved_global
+identifier_store:__sameValue:global_metadata:start
+identifier_store:__sameValue:global_metadata:object_binding:start
+identifier_store:__sameValue:global_metadata:object_binding:done
+identifier_store:__sameValue:global_metadata:prototype:start
+identifier_store:__sameValue:global_metadata:prototype:done
+identifier_store:__sameValue:global_metadata:static_global:start
+identifier_store:__sameValue:global_metadata:static_global:done
+identifier_store:__sameValue:global_metadata:sync_object:start
+identifier_store:__sameValue:global_metadata:sync_object:done
+identifier_store:__sameValue:global_metadata:seed_boxed:start
+identifier_store:__sameValue:global_metadata:seed_boxed:done
+identifier_store:__sameValue:global_metadata:seed_date:start
+identifier_store:__sameValue:global_metadata:seed_date:done
+identifier_store:__sameValue:global_metadata:seed_error:start
+identifier_store:__sameValue:global_metadata:seed_error:done
+identifier_store:__sameValue:global_metadata:seed_function:start
+identifier_store:__sameValue:global_metadata:seed_function:done
+identifier_store:__sameValue:global_metadata:seed_array_buffer:start
+identifier_store:__sameValue:global_metadata:seed_array_buffer:done
+identifier_store:__sameValue:global_metadata:seed_typed_array:start
+identifier_store:__sameValue:global_metadata:seed_typed_array:done
+identifier_store:__sameValue:global_metadata:string:start
+identifier_store:__sameValue:global_metadata:string:done
+identifier_store:__sameValue:global_metadata:function:start
+identifier_store:__sameValue:global_metadata:function:done
+identifier_store:__sameValue:global_metadata:captures:start
+identifier_store:__sameValue:global_metadata:captures:done
+identifier_store:__sameValue:global_metadata:arguments:start
+identifier_store:__sameValue:arguments_binding tracked=false canonical=false
+identifier_store:__sameValue:global_metadata:arguments:done
+identifier_store:__sameValue:global_metadata:number:start
+identifier_store:__sameValue:global_metadata:number:done
+identifier_store:__sameValue:global_metadata:specialized:start
+identifier_store:__sameValue:global_metadata:specialized:done
+identifier_store:__sameValue:global_metadata:descriptor_update:start
+identifier_store:__sameValue:global_metadata:descriptor_update:done
+identifier_store:__sameValue:global_metadata:done
+identifier_store:__sameValue:runtime_shadows target_owner=__sameValue source_owner=Some("__sameValue") object_binding_present=true object_binding_props=[] object_binding_hidden=[]
+identifier_store:__sameValue:global_array_force_rest source_not_runtime source=__sameValue
+identifier_store:__sameValue:done
+binding_statement:assign:after_store name=__sameValue
+binding_statement:assign:before_member name=__sameValue
+binding_statement:assign:after_member name=__sameValue
+binding_statement:assign:done name=__sameValue
+function_compile=statement_done:Assign { name: "__sameValue", value: Identifier("__sameValue") }
+function_compile=statement:Assign { name: "__assertToString", value: Identifier("__assertToString") }
+binding_statement:assign:start name=__assertToString
+binding_statement:assign:after_emit name=__assertToString
+binding_statement:assign:before_store name=__assertToString
+identifier_store:__assertToString:prepare:start
+identifier_store:__assertToString:canonical Identifier("__assertToString")
+identifier_store:__assertToString:tracked Identifier("__assertToString")
+identifier_store:__assertToString:descriptor
+identifier_store:__assertToString:call_snapshot
+identifier_store:__assertToString:function_binding snapshot_context=None call_result=None raw=Identifier("__assertToString") expr=Identifier("__assertToString") binding=Some(User("__assertToString"))
+identifier_store:__assertToString:object_binding expr=Identifier("__assertToString") prepared_binding=true
+identifier_store:__assertToString:kind
+identifier_store:__assertToString:string
+identifier_store:__assertToString:number
+identifier_store:__assertToString:array
+identifier_store:__assertToString:module
+identifier_store:__assertToString:prepared
+identifier_store:__assertToString:shared_updates:start
+identifier_store:__assertToString:shared:member_bindings:start
+identifier_store:__assertToString:shared:member_bindings:done
+identifier_store:__assertToString:shared:local_function:start
+identifier_store:__assertToString:shared:local_function:done
+identifier_store:__assertToString:shared:specialized_function:start
+identifier_store:__assertToString:shared:specialized_function:done
+identifier_store:__assertToString:shared:proxy:start
+identifier_store:__assertToString:shared:proxy:done
+identifier_store:__assertToString:shared:object_literal_members:start
+identifier_store:__assertToString:shared:object_literal_members:done
+identifier_store:__assertToString:shared:array_binding:start
+identifier_store:__assertToString:shared:array_binding:done
+identifier_store:__assertToString:shared:resizable_array_buffer:start
+identifier_store:__assertToString:shared:resizable_array_buffer:done
+identifier_store:__assertToString:shared:typed_array_view:start
+identifier_store:__assertToString:shared:typed_array_view:done
+identifier_store:__assertToString:shared:iterator_step:start
+identifier_store:__assertToString:shared:iterator_step:done
+identifier_store:__assertToString:shared:object_binding:start
+identifier_store:__assertToString:shared:object_binding:done
+identifier_store:__assertToString:shared:arguments_binding:start
+identifier_store:__assertToString:shared:arguments_binding:done
+identifier_store:__assertToString:shared:descriptor_binding:start
+identifier_store:__assertToString:shared:descriptor_binding:done
+identifier_store:__assertToString:shared:iterator_source:start
+identifier_store:__assertToString:shared:iterator_source:done
+identifier_store:__assertToString:shared:array_iterator_binding:start
+identifier_store:__assertToString:shared:array_iterator_binding:done
+identifier_store:__assertToString:shared_updates:done
+identifier_store:__assertToString:store_pre_resolved_global
+identifier_store:__assertToString:global_metadata:start
+identifier_store:__assertToString:global_metadata:object_binding:start
+identifier_store:__assertToString:global_metadata:object_binding:done
+identifier_store:__assertToString:global_metadata:prototype:start
+identifier_store:__assertToString:global_metadata:prototype:done
+identifier_store:__assertToString:global_metadata:static_global:start
+identifier_store:__assertToString:global_metadata:static_global:done
+identifier_store:__assertToString:global_metadata:sync_object:start
+identifier_store:__assertToString:global_metadata:sync_object:done
+identifier_store:__assertToString:global_metadata:seed_boxed:start
+identifier_store:__assertToString:global_metadata:seed_boxed:done
+identifier_store:__assertToString:global_metadata:seed_date:start
+identifier_store:__assertToString:global_metadata:seed_date:done
+identifier_store:__assertToString:global_metadata:seed_error:start
+identifier_store:__assertToString:global_metadata:seed_error:done
+identifier_store:__assertToString:global_metadata:seed_function:start
+identifier_store:__assertToString:global_metadata:seed_function:done
+identifier_store:__assertToString:global_metadata:seed_array_buffer:start
+identifier_store:__assertToString:global_metadata:seed_array_buffer:done
+identifier_store:__assertToString:global_metadata:seed_typed_array:start
+identifier_store:__assertToString:global_metadata:seed_typed_array:done
+identifier_store:__assertToString:global_metadata:string:start
+identifier_store:__assertToString:global_metadata:string:done
+identifier_store:__assertToString:global_metadata:function:start
+identifier_store:__assertToString:global_metadata:function:done
+identifier_store:__assertToString:global_metadata:captures:start
+identifier_store:__assertToString:global_metadata:captures:done
+identifier_store:__assertToString:global_metadata:arguments:start
+identifier_store:__assertToString:arguments_binding tracked=false canonical=false
+identifier_store:__assertToString:global_metadata:arguments:done
+identifier_store:__assertToString:global_metadata:number:start
+identifier_store:__assertToString:global_metadata:number:done
+identifier_store:__assertToString:global_metadata:specialized:start
+identifier_store:__assertToString:global_metadata:specialized:done
+identifier_store:__assertToString:global_metadata:descriptor_update:start
+identifier_store:__assertToString:global_metadata:descriptor_update:done
+identifier_store:__assertToString:global_metadata:done
+identifier_store:__assertToString:runtime_shadows target_owner=__assertToString source_owner=Some("__assertToString") object_binding_present=true object_binding_props=[] object_binding_hidden=[]
+identifier_store:__assertToString:global_array_force_rest source_not_runtime source=__assertToString
+identifier_store:__assertToString:done
+binding_statement:assign:after_store name=__assertToString
+binding_statement:assign:before_member name=__assertToString
+binding_statement:assign:after_member name=__assertToString
+binding_statement:assign:done name=__assertToString
+function_compile=statement_done:Assign { name: "__assertToString", value: Identifier("__assertToString") }
+function_compile=statement:Assign { name: "assert", value: Identifier("assert") }
+binding_statement:assign:start name=assert
+binding_statement:assign:after_emit name=assert
+binding_statement:assign:before_store name=assert
+identifier_store:assert:prepare:start
+identifier_store:assert:canonical Identifier("assert")
+identifier_store:assert:tracked Identifier("assert")
+identifier_store:assert:descriptor
+identifier_store:assert:call_snapshot
+identifier_store:assert:function_binding snapshot_context=None call_result=None raw=Identifier("assert") expr=Identifier("assert") binding=Some(User("assert"))
+identifier_store:assert:object_binding expr=Identifier("assert") prepared_binding=true
+identifier_store:assert:kind
+identifier_store:assert:string
+identifier_store:assert:number
+identifier_store:assert:array
+identifier_store:assert:module
+identifier_store:assert:prepared
+identifier_store:assert:shared_updates:start
+identifier_store:assert:shared:member_bindings:start
+identifier_store:assert:shared:member_bindings:done
+identifier_store:assert:shared:local_function:start
+identifier_store:assert:shared:local_function:done
+identifier_store:assert:shared:specialized_function:start
+identifier_store:assert:shared:specialized_function:done
+identifier_store:assert:shared:proxy:start
+identifier_store:assert:shared:proxy:done
+identifier_store:assert:shared:object_literal_members:start
+identifier_store:assert:shared:object_literal_members:done
+identifier_store:assert:shared:array_binding:start
+identifier_store:assert:shared:array_binding:done
+identifier_store:assert:shared:resizable_array_buffer:start
+identifier_store:assert:shared:resizable_array_buffer:done
+identifier_store:assert:shared:typed_array_view:start
+identifier_store:assert:shared:typed_array_view:done
+identifier_store:assert:shared:iterator_step:start
+identifier_store:assert:shared:iterator_step:done
+identifier_store:assert:shared:object_binding:start
+identifier_store:assert:shared:object_binding:done
+identifier_store:assert:shared:arguments_binding:start
+identifier_store:assert:shared:arguments_binding:done
+identifier_store:assert:shared:descriptor_binding:start
+identifier_store:assert:shared:descriptor_binding:done
+identifier_store:assert:shared:iterator_source:start
+identifier_store:assert:shared:iterator_source:done
+identifier_store:assert:shared:array_iterator_binding:start
+identifier_store:assert:shared:array_iterator_binding:done
+identifier_store:assert:shared_updates:done
+identifier_store:assert:store_pre_resolved_global
+identifier_store:assert:global_metadata:start
+identifier_store:assert:global_metadata:object_binding:start
+identifier_store:assert:global_metadata:object_binding:done
+identifier_store:assert:global_metadata:prototype:start
+identifier_store:assert:global_metadata:prototype:done
+identifier_store:assert:global_metadata:static_global:start
+identifier_store:assert:global_metadata:static_global:done
+identifier_store:assert:global_metadata:sync_object:start
+identifier_store:assert:global_metadata:sync_object:done
+identifier_store:assert:global_metadata:seed_boxed:start
+identifier_store:assert:global_metadata:seed_boxed:done
+identifier_store:assert:global_metadata:seed_date:start
+identifier_store:assert:global_metadata:seed_date:done
+identifier_store:assert:global_metadata:seed_error:start
+identifier_store:assert:global_metadata:seed_error:done
+identifier_store:assert:global_metadata:seed_function:start
+identifier_store:assert:global_metadata:seed_function:done
+identifier_store:assert:global_metadata:seed_array_buffer:start
+identifier_store:assert:global_metadata:seed_array_buffer:done
+identifier_store:assert:global_metadata:seed_typed_array:start
+identifier_store:assert:global_metadata:seed_typed_array:done
+identifier_store:assert:global_metadata:string:start
+identifier_store:assert:global_metadata:string:done
+identifier_store:assert:global_metadata:function:start
+identifier_store:assert:global_metadata:function:done
+identifier_store:assert:global_metadata:captures:start
+identifier_store:assert:global_metadata:captures:done
+identifier_store:assert:global_metadata:arguments:start
+identifier_store:assert:arguments_binding tracked=false canonical=false
+identifier_store:assert:global_metadata:arguments:done
+identifier_store:assert:global_metadata:number:start
+identifier_store:assert:global_metadata:number:done
+identifier_store:assert:global_metadata:specialized:start
+identifier_store:assert:global_metadata:specialized:done
+identifier_store:assert:global_metadata:descriptor_update:start
+identifier_store:assert:global_metadata:descriptor_update:done
+identifier_store:assert:global_metadata:done
+identifier_store:assert:runtime_shadows target_owner=assert source_owner=Some("assert") object_binding_present=true object_binding_props=[] object_binding_hidden=[]
+identifier_store:assert:global_array_force_rest source_not_runtime source=assert
+identifier_store:assert:done
+binding_statement:assign:after_store name=assert
+binding_statement:assign:before_member name=assert
+binding_statement:assign:after_member name=assert
+binding_statement:assign:done name=assert
+function_compile=statement_done:Assign { name: "assert", value: Identifier("assert") }
+function_compile=statement:Assign { name: "__assert", value: Identifier("__assert") }
+binding_statement:assign:start name=__assert
+binding_statement:assign:after_emit name=__assert
+binding_statement:assign:before_store name=__assert
+identifier_store:__assert:prepare:start
+identifier_store:__assert:canonical Identifier("__assert")
+identifier_store:__assert:tracked Identifier("__assert")
+identifier_store:__assert:descriptor
+identifier_store:__assert:call_snapshot
+identifier_store:__assert:function_binding snapshot_context=None call_result=None raw=Identifier("__assert") expr=Identifier("__assert") binding=Some(User("__assert"))
+identifier_store:__assert:object_binding expr=Identifier("__assert") prepared_binding=true
+identifier_store:__assert:kind
+identifier_store:__assert:string
+identifier_store:__assert:number
+identifier_store:__assert:array
+identifier_store:__assert:module
+identifier_store:__assert:prepared
+identifier_store:__assert:shared_updates:start
+identifier_store:__assert:shared:member_bindings:start
+identifier_store:__assert:shared:member_bindings:done
+identifier_store:__assert:shared:local_function:start
+identifier_store:__assert:shared:local_function:done
+identifier_store:__assert:shared:specialized_function:start
+identifier_store:__assert:shared:specialized_function:done
+identifier_store:__assert:shared:proxy:start
+identifier_store:__assert:shared:proxy:done
+identifier_store:__assert:shared:object_literal_members:start
+identifier_store:__assert:shared:object_literal_members:done
+identifier_store:__assert:shared:array_binding:start
+identifier_store:__assert:shared:array_binding:done
+identifier_store:__assert:shared:resizable_array_buffer:start
+identifier_store:__assert:shared:resizable_array_buffer:done
+identifier_store:__assert:shared:typed_array_view:start
+identifier_store:__assert:shared:typed_array_view:done
+identifier_store:__assert:shared:iterator_step:start
+identifier_store:__assert:shared:iterator_step:done
+identifier_store:__assert:shared:object_binding:start
+identifier_store:__assert:shared:object_binding:done
+identifier_store:__assert:shared:arguments_binding:start
+identifier_store:__assert:shared:arguments_binding:done
+identifier_store:__assert:shared:descriptor_binding:start
+identifier_store:__assert:shared:descriptor_binding:done
+identifier_store:__assert:shared:iterator_source:start
+identifier_store:__assert:shared:iterator_source:done
+identifier_store:__assert:shared:array_iterator_binding:start
+identifier_store:__assert:shared:array_iterator_binding:done
+identifier_store:__assert:shared_updates:done
+identifier_store:__assert:store_pre_resolved_global
+identifier_store:__assert:global_metadata:start
+identifier_store:__assert:global_metadata:object_binding:start
+identifier_store:__assert:global_metadata:object_binding:done
+identifier_store:__assert:global_metadata:prototype:start
+identifier_store:__assert:global_metadata:prototype:done
+identifier_store:__assert:global_metadata:static_global:start
+identifier_store:__assert:global_metadata:static_global:done
+identifier_store:__assert:global_metadata:sync_object:start
+identifier_store:__assert:global_metadata:sync_object:done
+identifier_store:__assert:global_metadata:seed_boxed:start
+identifier_store:__assert:global_metadata:seed_boxed:done
+identifier_store:__assert:global_metadata:seed_date:start
+identifier_store:__assert:global_metadata:seed_date:done
+identifier_store:__assert:global_metadata:seed_error:start
+identifier_store:__assert:global_metadata:seed_error:done
+identifier_store:__assert:global_metadata:seed_function:start
+identifier_store:__assert:global_metadata:seed_function:done
+identifier_store:__assert:global_metadata:seed_array_buffer:start
+identifier_store:__assert:global_metadata:seed_array_buffer:done
+identifier_store:__assert:global_metadata:seed_typed_array:start
+identifier_store:__assert:global_metadata:seed_typed_array:done
+identifier_store:__assert:global_metadata:string:start
+identifier_store:__assert:global_metadata:string:done
+identifier_store:__assert:global_metadata:function:start
+identifier_store:__assert:global_metadata:function:done
+identifier_store:__assert:global_metadata:captures:start
+identifier_store:__assert:global_metadata:captures:done
+identifier_store:__assert:global_metadata:arguments:start
+identifier_store:__assert:arguments_binding tracked=false canonical=false
+identifier_store:__assert:global_metadata:arguments:done
+identifier_store:__assert:global_metadata:number:start
+identifier_store:__assert:global_metadata:number:done
+identifier_store:__assert:global_metadata:specialized:start
+identifier_store:__assert:global_metadata:specialized:done
+identifier_store:__assert:global_metadata:descriptor_update:start
+identifier_store:__assert:global_metadata:descriptor_update:done
+identifier_store:__assert:global_metadata:done
+identifier_store:__assert:runtime_shadows target_owner=__assert source_owner=Some("__assert") object_binding_present=true object_binding_props=[] object_binding_hidden=[]
+identifier_store:__assert:global_array_force_rest source_not_runtime source=__assert
+identifier_store:__assert:done
+binding_statement:assign:after_store name=__assert
+binding_statement:assign:before_member name=__assert
+binding_statement:assign:after_member name=__assert
+binding_statement:assign:done name=__assert
+function_compile=statement_done:Assign { name: "__assert", value: Identifier("__assert") }
+function_compile=statement:Assign { name: "__assertSameValue", value: Identifier("__assertSameValue") }
+binding_statement:assign:start name=__assertSameValue
+binding_statement:assign:after_emit name=__assertSameValue
+binding_statement:assign:before_store name=__assertSameValue
+identifier_store:__assertSameValue:prepare:start
+identifier_store:__assertSameValue:canonical Identifier("__assertSameValue")
+identifier_store:__assertSameValue:tracked Identifier("__assertSameValue")
+identifier_store:__assertSameValue:descriptor
+identifier_store:__assertSameValue:call_snapshot
+identifier_store:__assertSameValue:function_binding snapshot_context=None call_result=None raw=Identifier("__assertSameValue") expr=Identifier("__assertSameValue") binding=Some(User("__assertSameValue"))
+identifier_store:__assertSameValue:object_binding expr=Identifier("__assertSameValue") prepared_binding=true
+identifier_store:__assertSameValue:kind
+identifier_store:__assertSameValue:string
+identifier_store:__assertSameValue:number
+identifier_store:__assertSameValue:array
+identifier_store:__assertSameValue:module
+identifier_store:__assertSameValue:prepared
+identifier_store:__assertSameValue:shared_updates:start
+identifier_store:__assertSameValue:shared:member_bindings:start
+identifier_store:__assertSameValue:shared:member_bindings:done
+identifier_store:__assertSameValue:shared:local_function:start
+identifier_store:__assertSameValue:shared:local_function:done
+identifier_store:__assertSameValue:shared:specialized_function:start
+identifier_store:__assertSameValue:shared:specialized_function:done
+identifier_store:__assertSameValue:shared:proxy:start
+identifier_store:__assertSameValue:shared:proxy:done
+identifier_store:__assertSameValue:shared:object_literal_members:start
+identifier_store:__assertSameValue:shared:object_literal_members:done
+identifier_store:__assertSameValue:shared:array_binding:start
+identifier_store:__assertSameValue:shared:array_binding:done
+identifier_store:__assertSameValue:shared:resizable_array_buffer:start
+identifier_store:__assertSameValue:shared:resizable_array_buffer:done
+identifier_store:__assertSameValue:shared:typed_array_view:start
+identifier_store:__assertSameValue:shared:typed_array_view:done
+identifier_store:__assertSameValue:shared:iterator_step:start
+identifier_store:__assertSameValue:shared:iterator_step:done
+identifier_store:__assertSameValue:shared:object_binding:start
+identifier_store:__assertSameValue:shared:object_binding:done
+identifier_store:__assertSameValue:shared:arguments_binding:start
+identifier_store:__assertSameValue:shared:arguments_binding:done
+identifier_store:__assertSameValue:shared:descriptor_binding:start
+identifier_store:__assertSameValue:shared:descriptor_binding:done
+identifier_store:__assertSameValue:shared:iterator_source:start
+identifier_store:__assertSameValue:shared:iterator_source:done
+identifier_store:__assertSameValue:shared:array_iterator_binding:start
+identifier_store:__assertSameValue:shared:array_iterator_binding:done
+identifier_store:__assertSameValue:shared_updates:done
+identifier_store:__assertSameValue:store_pre_resolved_global
+identifier_store:__assertSameValue:global_metadata:start
+identifier_store:__assertSameValue:global_metadata:object_binding:start
+identifier_store:__assertSameValue:global_metadata:object_binding:done
+identifier_store:__assertSameValue:global_metadata:prototype:start
+identifier_store:__assertSameValue:global_metadata:prototype:done
+identifier_store:__assertSameValue:global_metadata:static_global:start
+identifier_store:__assertSameValue:global_metadata:static_global:done
+identifier_store:__assertSameValue:global_metadata:sync_object:start
+identifier_store:__assertSameValue:global_metadata:sync_object:done
+identifier_store:__assertSameValue:global_metadata:seed_boxed:start
+identifier_store:__assertSameValue:global_metadata:seed_boxed:done
+identifier_store:__assertSameValue:global_metadata:seed_date:start
+identifier_store:__assertSameValue:global_metadata:seed_date:done
+identifier_store:__assertSameValue:global_metadata:seed_error:start
+identifier_store:__assertSameValue:global_metadata:seed_error:done
+identifier_store:__assertSameValue:global_metadata:seed_function:start
+identifier_store:__assertSameValue:global_metadata:seed_function:done
+identifier_store:__assertSameValue:global_metadata:seed_array_buffer:start
+identifier_store:__assertSameValue:global_metadata:seed_array_buffer:done
+identifier_store:__assertSameValue:global_metadata:seed_typed_array:start
+identifier_store:__assertSameValue:global_metadata:seed_typed_array:done
+identifier_store:__assertSameValue:global_metadata:string:start
+identifier_store:__assertSameValue:global_metadata:string:done
+identifier_store:__assertSameValue:global_metadata:function:start
+identifier_store:__assertSameValue:global_metadata:function:done
+identifier_store:__assertSameValue:global_metadata:captures:start
+identifier_store:__assertSameValue:global_metadata:captures:done
+identifier_store:__assertSameValue:global_metadata:arguments:start
+identifier_store:__assertSameValue:arguments_binding tracked=false canonical=false
+identifier_store:__assertSameValue:global_metadata:arguments:done
+identifier_store:__assertSameValue:global_metadata:number:start
+identifier_store:__assertSameValue:global_metadata:number:done
+identifier_store:__assertSameValue:global_metadata:specialized:start
+identifier_store:__assertSameValue:global_metadata:specialized:done
+identifier_store:__assertSameValue:global_metadata:descriptor_update:start
+identifier_store:__assertSameValue:global_metadata:descriptor_update:done
+identifier_store:__assertSameValue:global_metadata:done
+identifier_store:__assertSameValue:runtime_shadows target_owner=__assertSameValue source_owner=Some("__assertSameValue") object_binding_present=true object_binding_props=[] object_binding_hidden=[]
+identifier_store:__assertSameValue:global_array_force_rest source_not_runtime source=__assertSameValue
+identifier_store:__assertSameValue:done
+binding_statement:assign:after_store name=__assertSameValue
+binding_statement:assign:before_member name=__assertSameValue
+binding_statement:assign:after_member name=__assertSameValue
+binding_statement:assign:done name=__assertSameValue
+function_compile=statement_done:Assign { name: "__assertSameValue", value: Identifier("__assertSameValue") }
+function_compile=statement:Assign { name: "__assertNotSameValue", value: Identifier("__assertNotSameValue") }
+binding_statement:assign:start name=__assertNotSameValue
+binding_statement:assign:after_emit name=__assertNotSameValue
+binding_statement:assign:before_store name=__assertNotSameValue
+identifier_store:__assertNotSameValue:prepare:start
+identifier_store:__assertNotSameValue:canonical Identifier("__assertNotSameValue")
+identifier_store:__assertNotSameValue:tracked Identifier("__assertNotSameValue")
+identifier_store:__assertNotSameValue:descriptor
+identifier_store:__assertNotSameValue:call_snapshot
+identifier_store:__assertNotSameValue:function_binding snapshot_context=None call_result=None raw=Identifier("__assertNotSameValue") expr=Identifier("__assertNotSameValue") binding=Some(User("__assertNotSameValue"))
+identifier_store:__assertNotSameValue:object_binding expr=Identifier("__assertNotSameValue") prepared_binding=true
+identifier_store:__assertNotSameValue:kind
+identifier_store:__assertNotSameValue:string
+identifier_store:__assertNotSameValue:number
+identifier_store:__assertNotSameValue:array
+identifier_store:__assertNotSameValue:module
+identifier_store:__assertNotSameValue:prepared
+identifier_store:__assertNotSameValue:shared_updates:start
+identifier_store:__assertNotSameValue:shared:member_bindings:start
+identifier_store:__assertNotSameValue:shared:member_bindings:done
+identifier_store:__assertNotSameValue:shared:local_function:start
+identifier_store:__assertNotSameValue:shared:local_function:done
+identifier_store:__assertNotSameValue:shared:specialized_function:start
+identifier_store:__assertNotSameValue:shared:specialized_function:done
+identifier_store:__assertNotSameValue:shared:proxy:start
+identifier_store:__assertNotSameValue:shared:proxy:done
+identifier_store:__assertNotSameValue:shared:object_literal_members:start
+identifier_store:__assertNotSameValue:shared:object_literal_members:done
+identifier_store:__assertNotSameValue:shared:array_binding:start
+identifier_store:__assertNotSameValue:shared:array_binding:done
+identifier_store:__assertNotSameValue:shared:resizable_array_buffer:start
+identifier_store:__assertNotSameValue:shared:resizable_array_buffer:done
+identifier_store:__assertNotSameValue:shared:typed_array_view:start
+identifier_store:__assertNotSameValue:shared:typed_array_view:done
+identifier_store:__assertNotSameValue:shared:iterator_step:start
+identifier_store:__assertNotSameValue:shared:iterator_step:done
+identifier_store:__assertNotSameValue:shared:object_binding:start
+identifier_store:__assertNotSameValue:shared:object_binding:done
+identifier_store:__assertNotSameValue:shared:arguments_binding:start
+identifier_store:__assertNotSameValue:shared:arguments_binding:done
+identifier_store:__assertNotSameValue:shared:descriptor_binding:start
+identifier_store:__assertNotSameValue:shared:descriptor_binding:done
+identifier_store:__assertNotSameValue:shared:iterator_source:start
+identifier_store:__assertNotSameValue:shared:iterator_source:done
+identifier_store:__assertNotSameValue:shared:array_iterator_binding:start
+identifier_store:__assertNotSameValue:shared:array_iterator_binding:done
+identifier_store:__assertNotSameValue:shared_updates:done
+identifier_store:__assertNotSameValue:store_pre_resolved_global
+identifier_store:__assertNotSameValue:global_metadata:start
+identifier_store:__assertNotSameValue:global_metadata:object_binding:start
+identifier_store:__assertNotSameValue:global_metadata:object_binding:done
+identifier_store:__assertNotSameValue:global_metadata:prototype:start
+identifier_store:__assertNotSameValue:global_metadata:prototype:done
+identifier_store:__assertNotSameValue:global_metadata:static_global:start
+identifier_store:__assertNotSameValue:global_metadata:static_global:done
+identifier_store:__assertNotSameValue:global_metadata:sync_object:start
+identifier_store:__assertNotSameValue:global_metadata:sync_object:done
+identifier_store:__assertNotSameValue:global_metadata:seed_boxed:start
+identifier_store:__assertNotSameValue:global_metadata:seed_boxed:done
+identifier_store:__assertNotSameValue:global_metadata:seed_date:start
+identifier_store:__assertNotSameValue:global_metadata:seed_date:done
+identifier_store:__assertNotSameValue:global_metadata:seed_error:start
+identifier_store:__assertNotSameValue:global_metadata:seed_error:done
+identifier_store:__assertNotSameValue:global_metadata:seed_function:start
+identifier_store:__assertNotSameValue:global_metadata:seed_function:done
+identifier_store:__assertNotSameValue:global_metadata:seed_array_buffer:start
+identifier_store:__assertNotSameValue:global_metadata:seed_array_buffer:done
+identifier_store:__assertNotSameValue:global_metadata:seed_typed_array:start
+identifier_store:__assertNotSameValue:global_metadata:seed_typed_array:done
+identifier_store:__assertNotSameValue:global_metadata:string:start
+identifier_store:__assertNotSameValue:global_metadata:string:done
+identifier_store:__assertNotSameValue:global_metadata:function:start
+identifier_store:__assertNotSameValue:global_metadata:function:done
+identifier_store:__assertNotSameValue:global_metadata:captures:start
+identifier_store:__assertNotSameValue:global_metadata:captures:done
+identifier_store:__assertNotSameValue:global_metadata:arguments:start
+identifier_store:__assertNotSameValue:arguments_binding tracked=false canonical=false
+identifier_store:__assertNotSameValue:global_metadata:arguments:done
+identifier_store:__assertNotSameValue:global_metadata:number:start
+identifier_store:__assertNotSameValue:global_metadata:number:done
+identifier_store:__assertNotSameValue:global_metadata:specialized:start
+identifier_store:__assertNotSameValue:global_metadata:specialized:done
+identifier_store:__assertNotSameValue:global_metadata:descriptor_update:start
+identifier_store:__assertNotSameValue:global_metadata:descriptor_update:done
+identifier_store:__assertNotSameValue:global_metadata:done
+identifier_store:__assertNotSameValue:runtime_shadows target_owner=__assertNotSameValue source_owner=Some("__assertNotSameValue") object_binding_present=true object_binding_props=[] object_binding_hidden=[]
+identifier_store:__assertNotSameValue:global_array_force_rest source_not_runtime source=__assertNotSameValue
+identifier_store:__assertNotSameValue:done
+binding_statement:assign:after_store name=__assertNotSameValue
+binding_statement:assign:before_member name=__assertNotSameValue
+binding_statement:assign:after_member name=__assertNotSameValue
+binding_statement:assign:done name=__assertNotSameValue
+function_compile=statement_done:Assign { name: "__assertNotSameValue", value: Identifier("__assertNotSameValue") }
+function_compile=statement:Assign { name: "__ayyAssertThrows", value: Identifier("__ayyAssertThrows") }
+binding_statement:assign:start name=__ayyAssertThrows
+binding_statement:assign:after_emit name=__ayyAssertThrows
+binding_statement:assign:before_store name=__ayyAssertThrows
+identifier_store:__ayyAssertThrows:prepare:start
+identifier_store:__ayyAssertThrows:canonical Identifier("__ayyAssertThrows")
+identifier_store:__ayyAssertThrows:tracked Identifier("__ayyAssertThrows")
+identifier_store:__ayyAssertThrows:descriptor
+identifier_store:__ayyAssertThrows:call_snapshot
+identifier_store:__ayyAssertThrows:function_binding snapshot_context=None call_result=None raw=Identifier("__ayyAssertThrows") expr=Identifier("__ayyAssertThrows") binding=Some(User("__ayyAssertThrows"))
+identifier_store:__ayyAssertThrows:object_binding expr=Identifier("__ayyAssertThrows") prepared_binding=true
+identifier_store:__ayyAssertThrows:kind
+identifier_store:__ayyAssertThrows:string
+identifier_store:__ayyAssertThrows:number
+identifier_store:__ayyAssertThrows:array
+identifier_store:__ayyAssertThrows:module
+identifier_store:__ayyAssertThrows:prepared
+identifier_store:__ayyAssertThrows:shared_updates:start
+identifier_store:__ayyAssertThrows:shared:member_bindings:start
+identifier_store:__ayyAssertThrows:shared:member_bindings:done
+identifier_store:__ayyAssertThrows:shared:local_function:start
+identifier_store:__ayyAssertThrows:shared:local_function:done
+identifier_store:__ayyAssertThrows:shared:specialized_function:start
+identifier_store:__ayyAssertThrows:shared:specialized_function:done
+identifier_store:__ayyAssertThrows:shared:proxy:start
+identifier_store:__ayyAssertThrows:shared:proxy:done
+identifier_store:__ayyAssertThrows:shared:object_literal_members:start
+identifier_store:__ayyAssertThrows:shared:object_literal_members:done
+identifier_store:__ayyAssertThrows:shared:array_binding:start
+identifier_store:__ayyAssertThrows:shared:array_binding:done
+identifier_store:__ayyAssertThrows:shared:resizable_array_buffer:start
+identifier_store:__ayyAssertThrows:shared:resizable_array_buffer:done
+identifier_store:__ayyAssertThrows:shared:typed_array_view:start
+identifier_store:__ayyAssertThrows:shared:typed_array_view:done
+identifier_store:__ayyAssertThrows:shared:iterator_step:start
+identifier_store:__ayyAssertThrows:shared:iterator_step:done
+identifier_store:__ayyAssertThrows:shared:object_binding:start
+identifier_store:__ayyAssertThrows:shared:object_binding:done
+identifier_store:__ayyAssertThrows:shared:arguments_binding:start
+identifier_store:__ayyAssertThrows:shared:arguments_binding:done
+identifier_store:__ayyAssertThrows:shared:descriptor_binding:start
+identifier_store:__ayyAssertThrows:shared:descriptor_binding:done
+identifier_store:__ayyAssertThrows:shared:iterator_source:start
+identifier_store:__ayyAssertThrows:shared:iterator_source:done
+identifier_store:__ayyAssertThrows:shared:array_iterator_binding:start
+identifier_store:__ayyAssertThrows:shared:array_iterator_binding:done
+identifier_store:__ayyAssertThrows:shared_updates:done
+identifier_store:__ayyAssertThrows:store_pre_resolved_global
+identifier_store:__ayyAssertThrows:global_metadata:start
+identifier_store:__ayyAssertThrows:global_metadata:object_binding:start
+identifier_store:__ayyAssertThrows:global_metadata:object_binding:done
+identifier_store:__ayyAssertThrows:global_metadata:prototype:start
+identifier_store:__ayyAssertThrows:global_metadata:prototype:done
+identifier_store:__ayyAssertThrows:global_metadata:static_global:start
+identifier_store:__ayyAssertThrows:global_metadata:static_global:done
+identifier_store:__ayyAssertThrows:global_metadata:sync_object:start
+identifier_store:__ayyAssertThrows:global_metadata:sync_object:done
+identifier_store:__ayyAssertThrows:global_metadata:seed_boxed:start
+identifier_store:__ayyAssertThrows:global_metadata:seed_boxed:done
+identifier_store:__ayyAssertThrows:global_metadata:seed_date:start
+identifier_store:__ayyAssertThrows:global_metadata:seed_date:done
+identifier_store:__ayyAssertThrows:global_metadata:seed_error:start
+identifier_store:__ayyAssertThrows:global_metadata:seed_error:done
+identifier_store:__ayyAssertThrows:global_metadata:seed_function:start
+identifier_store:__ayyAssertThrows:global_metadata:seed_function:done
+identifier_store:__ayyAssertThrows:global_metadata:seed_array_buffer:start
+identifier_store:__ayyAssertThrows:global_metadata:seed_array_buffer:done
+identifier_store:__ayyAssertThrows:global_metadata:seed_typed_array:start
+identifier_store:__ayyAssertThrows:global_metadata:seed_typed_array:done
+identifier_store:__ayyAssertThrows:global_metadata:string:start
+identifier_store:__ayyAssertThrows:global_metadata:string:done
+identifier_store:__ayyAssertThrows:global_metadata:function:start
+identifier_store:__ayyAssertThrows:global_metadata:function:done
+identifier_store:__ayyAssertThrows:global_metadata:captures:start
+identifier_store:__ayyAssertThrows:global_metadata:captures:done
+identifier_store:__ayyAssertThrows:global_metadata:arguments:start
+identifier_store:__ayyAssertThrows:arguments_binding tracked=false canonical=false
+identifier_store:__ayyAssertThrows:global_metadata:arguments:done
+identifier_store:__ayyAssertThrows:global_metadata:number:start
+identifier_store:__ayyAssertThrows:global_metadata:number:done
+identifier_store:__ayyAssertThrows:global_metadata:specialized:start
+identifier_store:__ayyAssertThrows:global_metadata:specialized:done
+identifier_store:__ayyAssertThrows:global_metadata:descriptor_update:start
+identifier_store:__ayyAssertThrows:global_metadata:descriptor_update:done
+identifier_store:__ayyAssertThrows:global_metadata:done
+identifier_store:__ayyAssertThrows:runtime_shadows target_owner=__ayyAssertThrows source_owner=Some("__ayyAssertThrows") object_binding_present=true object_binding_props=[] object_binding_hidden=[]
+identifier_store:__ayyAssertThrows:global_array_force_rest source_not_runtime source=__ayyAssertThrows
+identifier_store:__ayyAssertThrows:done
+binding_statement:assign:after_store name=__ayyAssertThrows
+binding_statement:assign:before_member name=__ayyAssertThrows
+binding_statement:assign:after_member name=__ayyAssertThrows
+binding_statement:assign:done name=__ayyAssertThrows
+function_compile=statement_done:Assign { name: "__ayyAssertThrows", value: Identifier("__ayyAssertThrows") }
+function_compile=statement:Assign { name: "compareArray", value: Identifier("compareArray") }
+binding_statement:assign:start name=compareArray
+binding_statement:assign:after_emit name=compareArray
+binding_statement:assign:before_store name=compareArray
+identifier_store:compareArray:prepare:start
+identifier_store:compareArray:canonical Identifier("compareArray")
+identifier_store:compareArray:tracked Identifier("compareArray")
+identifier_store:compareArray:descriptor
+identifier_store:compareArray:call_snapshot
+identifier_store:compareArray:function_binding snapshot_context=None call_result=None raw=Identifier("compareArray") expr=Identifier("compareArray") binding=Some(User("compareArray"))
+identifier_store:compareArray:object_binding expr=Identifier("compareArray") prepared_binding=true
+identifier_store:compareArray:kind
+identifier_store:compareArray:string
+identifier_store:compareArray:number
+identifier_store:compareArray:array
+identifier_store:compareArray:module
+identifier_store:compareArray:prepared
+identifier_store:compareArray:shared_updates:start
+identifier_store:compareArray:shared:member_bindings:start
+identifier_store:compareArray:shared:member_bindings:done
+identifier_store:compareArray:shared:local_function:start
+identifier_store:compareArray:shared:local_function:done
+identifier_store:compareArray:shared:specialized_function:start
+identifier_store:compareArray:shared:specialized_function:done
+identifier_store:compareArray:shared:proxy:start
+identifier_store:compareArray:shared:proxy:done
+identifier_store:compareArray:shared:object_literal_members:start
+identifier_store:compareArray:shared:object_literal_members:done
+identifier_store:compareArray:shared:array_binding:start
+identifier_store:compareArray:shared:array_binding:done
+identifier_store:compareArray:shared:resizable_array_buffer:start
+identifier_store:compareArray:shared:resizable_array_buffer:done
+identifier_store:compareArray:shared:typed_array_view:start
+identifier_store:compareArray:shared:typed_array_view:done
+identifier_store:compareArray:shared:iterator_step:start
+identifier_store:compareArray:shared:iterator_step:done
+identifier_store:compareArray:shared:object_binding:start
+identifier_store:compareArray:shared:object_binding:done
+identifier_store:compareArray:shared:arguments_binding:start
+identifier_store:compareArray:shared:arguments_binding:done
+identifier_store:compareArray:shared:descriptor_binding:start
+identifier_store:compareArray:shared:descriptor_binding:done
+identifier_store:compareArray:shared:iterator_source:start
+identifier_store:compareArray:shared:iterator_source:done
+identifier_store:compareArray:shared:array_iterator_binding:start
+identifier_store:compareArray:shared:array_iterator_binding:done
+identifier_store:compareArray:shared_updates:done
+identifier_store:compareArray:store_pre_resolved_global
+identifier_store:compareArray:global_metadata:start
+identifier_store:compareArray:global_metadata:object_binding:start
+identifier_store:compareArray:global_metadata:object_binding:done
+identifier_store:compareArray:global_metadata:prototype:start
+identifier_store:compareArray:global_metadata:prototype:done
+identifier_store:compareArray:global_metadata:static_global:start
+identifier_store:compareArray:global_metadata:static_global:done
+identifier_store:compareArray:global_metadata:sync_object:start
+identifier_store:compareArray:global_metadata:sync_object:done
+identifier_store:compareArray:global_metadata:seed_boxed:start
+identifier_store:compareArray:global_metadata:seed_boxed:done
+identifier_store:compareArray:global_metadata:seed_date:start
+identifier_store:compareArray:global_metadata:seed_date:done
+identifier_store:compareArray:global_metadata:seed_error:start
+identifier_store:compareArray:global_metadata:seed_error:done
+identifier_store:compareArray:global_metadata:seed_function:start
+identifier_store:compareArray:global_metadata:seed_function:done
+identifier_store:compareArray:global_metadata:seed_array_buffer:start
+identifier_store:compareArray:global_metadata:seed_array_buffer:done
+identifier_store:compareArray:global_metadata:seed_typed_array:start
+identifier_store:compareArray:global_metadata:seed_typed_array:done
+identifier_store:compareArray:global_metadata:string:start
+identifier_store:compareArray:global_metadata:string:done
+identifier_store:compareArray:global_metadata:function:start
+identifier_store:compareArray:global_metadata:function:done
+identifier_store:compareArray:global_metadata:captures:start
+identifier_store:compareArray:global_metadata:captures:done
+identifier_store:compareArray:global_metadata:arguments:start
+identifier_store:compareArray:arguments_binding tracked=false canonical=false
+identifier_store:compareArray:global_metadata:arguments:done
+identifier_store:compareArray:global_metadata:number:start
+identifier_store:compareArray:global_metadata:number:done
+identifier_store:compareArray:global_metadata:specialized:start
+identifier_store:compareArray:global_metadata:specialized:done
+identifier_store:compareArray:global_metadata:descriptor_update:start
+identifier_store:compareArray:global_metadata:descriptor_update:done
+identifier_store:compareArray:global_metadata:done
+identifier_store:compareArray:runtime_shadows target_owner=compareArray source_owner=Some("compareArray") object_binding_present=true object_binding_props=[] object_binding_hidden=[]
+identifier_store:compareArray:global_array_force_rest source_not_runtime source=compareArray
+identifier_store:compareArray:done
+binding_statement:assign:after_store name=compareArray
+binding_statement:assign:before_member name=compareArray
+binding_statement:assign:after_member name=compareArray
+binding_statement:assign:done name=compareArray
+function_compile=statement_done:Assign { name: "compareArray", value: Identifier("compareArray") }
+function_compile=statement:Assign { name: "__ayyAssertCompareArray", value: Identifier("__ayyAssertCompareArray") }
+binding_statement:assign:start name=__ayyAssertCompareArray
+binding_statement:assign:after_emit name=__ayyAssertCompareArray
+binding_statement:assign:before_store name=__ayyAssertCompareArray
+identifier_store:__ayyAssertCompareArray:prepare:start
+identifier_store:__ayyAssertCompareArray:canonical Identifier("__ayyAssertCompareArray")
+identifier_store:__ayyAssertCompareArray:tracked Identifier("__ayyAssertCompareArray")
+identifier_store:__ayyAssertCompareArray:descriptor
+identifier_store:__ayyAssertCompareArray:call_snapshot
+identifier_store:__ayyAssertCompareArray:function_binding snapshot_context=None call_result=None raw=Identifier("__ayyAssertCompareArray") expr=Identifier("__ayyAssertCompareArray") binding=Some(User("__ayyAssertCompareArray"))
+identifier_store:__ayyAssertCompareArray:object_binding expr=Identifier("__ayyAssertCompareArray") prepared_binding=true
+identifier_store:__ayyAssertCompareArray:kind
+identifier_store:__ayyAssertCompareArray:string
+identifier_store:__ayyAssertCompareArray:number
+identifier_store:__ayyAssertCompareArray:array
+identifier_store:__ayyAssertCompareArray:module
+identifier_store:__ayyAssertCompareArray:prepared
+identifier_store:__ayyAssertCompareArray:shared_updates:start
+identifier_store:__ayyAssertCompareArray:shared:member_bindings:start
+identifier_store:__ayyAssertCompareArray:shared:member_bindings:done
+identifier_store:__ayyAssertCompareArray:shared:local_function:start
+identifier_store:__ayyAssertCompareArray:shared:local_function:done
+identifier_store:__ayyAssertCompareArray:shared:specialized_function:start
+identifier_store:__ayyAssertCompareArray:shared:specialized_function:done
+identifier_store:__ayyAssertCompareArray:shared:proxy:start
+identifier_store:__ayyAssertCompareArray:shared:proxy:done
+identifier_store:__ayyAssertCompareArray:shared:object_literal_members:start
+identifier_store:__ayyAssertCompareArray:shared:object_literal_members:done
+identifier_store:__ayyAssertCompareArray:shared:array_binding:start
+identifier_store:__ayyAssertCompareArray:shared:array_binding:done
+identifier_store:__ayyAssertCompareArray:shared:resizable_array_buffer:start
+identifier_store:__ayyAssertCompareArray:shared:resizable_array_buffer:done
+identifier_store:__ayyAssertCompareArray:shared:typed_array_view:start
+identifier_store:__ayyAssertCompareArray:shared:typed_array_view:done
+identifier_store:__ayyAssertCompareArray:shared:iterator_step:start
+identifier_store:__ayyAssertCompareArray:shared:iterator_step:done
+identifier_store:__ayyAssertCompareArray:shared:object_binding:start
+identifier_store:__ayyAssertCompareArray:shared:object_binding:done
+identifier_store:__ayyAssertCompareArray:shared:arguments_binding:start
+identifier_store:__ayyAssertCompareArray:shared:arguments_binding:done
+identifier_store:__ayyAssertCompareArray:shared:descriptor_binding:start
+identifier_store:__ayyAssertCompareArray:shared:descriptor_binding:done
+identifier_store:__ayyAssertCompareArray:shared:iterator_source:start
+identifier_store:__ayyAssertCompareArray:shared:iterator_source:done
+identifier_store:__ayyAssertCompareArray:shared:array_iterator_binding:start
+identifier_store:__ayyAssertCompareArray:shared:array_iterator_binding:done
+identifier_store:__ayyAssertCompareArray:shared_updates:done
+identifier_store:__ayyAssertCompareArray:store_pre_resolved_global
+identifier_store:__ayyAssertCompareArray:global_metadata:start
+identifier_store:__ayyAssertCompareArray:global_metadata:object_binding:start
+identifier_store:__ayyAssertCompareArray:global_metadata:object_binding:done
+identifier_store:__ayyAssertCompareArray:global_metadata:prototype:start
+identifier_store:__ayyAssertCompareArray:global_metadata:prototype:done
+identifier_store:__ayyAssertCompareArray:global_metadata:static_global:start
+identifier_store:__ayyAssertCompareArray:global_metadata:static_global:done
+identifier_store:__ayyAssertCompareArray:global_metadata:sync_object:start
+identifier_store:__ayyAssertCompareArray:global_metadata:sync_object:done
+identifier_store:__ayyAssertCompareArray:global_metadata:seed_boxed:start
+identifier_store:__ayyAssertCompareArray:global_metadata:seed_boxed:done
+identifier_store:__ayyAssertCompareArray:global_metadata:seed_date:start
+identifier_store:__ayyAssertCompareArray:global_metadata:seed_date:done
+identifier_store:__ayyAssertCompareArray:global_metadata:seed_error:start
+identifier_store:__ayyAssertCompareArray:global_metadata:seed_error:done
+identifier_store:__ayyAssertCompareArray:global_metadata:seed_function:start
+identifier_store:__ayyAssertCompareArray:global_metadata:seed_function:done
+identifier_store:__ayyAssertCompareArray:global_metadata:seed_array_buffer:start
+identifier_store:__ayyAssertCompareArray:global_metadata:seed_array_buffer:done
+identifier_store:__ayyAssertCompareArray:global_metadata:seed_typed_array:start
+identifier_store:__ayyAssertCompareArray:global_metadata:seed_typed_array:done
+identifier_store:__ayyAssertCompareArray:global_metadata:string:start
+identifier_store:__ayyAssertCompareArray:global_metadata:string:done
+identifier_store:__ayyAssertCompareArray:global_metadata:function:start
+identifier_store:__ayyAssertCompareArray:global_metadata:function:done
+identifier_store:__ayyAssertCompareArray:global_metadata:captures:start
+identifier_store:__ayyAssertCompareArray:global_metadata:captures:done
+identifier_store:__ayyAssertCompareArray:global_metadata:arguments:start
+identifier_store:__ayyAssertCompareArray:arguments_binding tracked=false canonical=false
+identifier_store:__ayyAssertCompareArray:global_metadata:arguments:done
+identifier_store:__ayyAssertCompareArray:global_metadata:number:start
+identifier_store:__ayyAssertCompareArray:global_metadata:number:done
+identifier_store:__ayyAssertCompareArray:global_metadata:specialized:start
+identifier_store:__ayyAssertCompareArray:global_metadata:specialized:done
+identifier_store:__ayyAssertCompareArray:global_metadata:descriptor_update:start
+identifier_store:__ayyAssertCompareArray:global_metadata:descriptor_update:done
+identifier_store:__ayyAssertCompareArray:global_metadata:done
+identifier_store:__ayyAssertCompareArray:runtime_shadows target_owner=__ayyAssertCompareArray source_owner=Some("__ayyAssertCompareArray") object_binding_present=true object_binding_props=[] object_binding_hidden=[]
+identifier_store:__ayyAssertCompareArray:global_array_force_rest source_not_runtime source=__ayyAssertCompareArray
+identifier_store:__ayyAssertCompareArray:done
+binding_statement:assign:after_store name=__ayyAssertCompareArray
+binding_statement:assign:before_member name=__ayyAssertCompareArray
+binding_statement:assign:after_member name=__ayyAssertCompareArray
+binding_statement:assign:done name=__ayyAssertCompareArray
+function_compile=statement_done:Assign { name: "__ayyAssertCompareArray", value: Identifier("__ayyAssertCompareArray") }
+function_compile=statement:Assign { name: "counter", value: Identifier("counter") }
+binding_statement:assign:start name=counter
+binding_statement:assign:after_emit name=counter
+binding_statement:assign:before_store name=counter
+identifier_store:counter:prepare:start
+identifier_store:counter:canonical Identifier("counter")
+identifier_store:counter:tracked Identifier("counter")
+identifier_store:counter:descriptor
+identifier_store:counter:call_snapshot
+identifier_store:counter:function_binding snapshot_context=None call_result=None raw=Identifier("counter") expr=Identifier("counter") binding=Some(User("counter"))
+identifier_store:counter:object_binding expr=Identifier("counter") prepared_binding=true
+identifier_store:counter:kind
+identifier_store:counter:string
+identifier_store:counter:number
+identifier_store:counter:array
+identifier_store:counter:module
+identifier_store:counter:prepared
+identifier_store:counter:shared_updates:start
+identifier_store:counter:shared:member_bindings:start
+identifier_store:counter:shared:member_bindings:done
+identifier_store:counter:shared:local_function:start
+identifier_store:counter:shared:local_function:done
+identifier_store:counter:shared:specialized_function:start
+identifier_store:counter:shared:specialized_function:done
+identifier_store:counter:shared:proxy:start
+identifier_store:counter:shared:proxy:done
+identifier_store:counter:shared:object_literal_members:start
+identifier_store:counter:shared:object_literal_members:done
+identifier_store:counter:shared:array_binding:start
+identifier_store:counter:shared:array_binding:done
+identifier_store:counter:shared:resizable_array_buffer:start
+identifier_store:counter:shared:resizable_array_buffer:done
+identifier_store:counter:shared:typed_array_view:start
+identifier_store:counter:shared:typed_array_view:done
+identifier_store:counter:shared:iterator_step:start
+identifier_store:counter:shared:iterator_step:done
+identifier_store:counter:shared:object_binding:start
+identifier_store:counter:shared:object_binding:done
+identifier_store:counter:shared:arguments_binding:start
+identifier_store:counter:shared:arguments_binding:done
+identifier_store:counter:shared:descriptor_binding:start
+identifier_store:counter:shared:descriptor_binding:done
+identifier_store:counter:shared:iterator_source:start
+identifier_store:counter:shared:iterator_source:done
+identifier_store:counter:shared:array_iterator_binding:start
+identifier_store:counter:shared:array_iterator_binding:done
+identifier_store:counter:shared_updates:done
+identifier_store:counter:store_pre_resolved_global
+identifier_store:counter:global_metadata:start
+identifier_store:counter:global_metadata:object_binding:start
+identifier_store:counter:global_metadata:object_binding:done
+identifier_store:counter:global_metadata:prototype:start
+identifier_store:counter:global_metadata:prototype:done
+identifier_store:counter:global_metadata:static_global:start
+identifier_store:counter:global_metadata:static_global:done
+identifier_store:counter:global_metadata:sync_object:start
+identifier_store:counter:global_metadata:sync_object:done
+identifier_store:counter:global_metadata:seed_boxed:start
+identifier_store:counter:global_metadata:seed_boxed:done
+identifier_store:counter:global_metadata:seed_date:start
+identifier_store:counter:global_metadata:seed_date:done
+identifier_store:counter:global_metadata:seed_error:start
+identifier_store:counter:global_metadata:seed_error:done
+identifier_store:counter:global_metadata:seed_function:start
+identifier_store:counter:global_metadata:seed_function:done
+identifier_store:counter:global_metadata:seed_array_buffer:start
+identifier_store:counter:global_metadata:seed_array_buffer:done
+identifier_store:counter:global_metadata:seed_typed_array:start
+identifier_store:counter:global_metadata:seed_typed_array:done
+identifier_store:counter:global_metadata:string:start
+identifier_store:counter:global_metadata:string:done
+identifier_store:counter:global_metadata:function:start
+identifier_store:counter:global_metadata:function:done
+identifier_store:counter:global_metadata:captures:start
+identifier_store:counter:global_metadata:captures:done
+identifier_store:counter:global_metadata:arguments:start
+identifier_store:counter:arguments_binding tracked=false canonical=false
+identifier_store:counter:global_metadata:arguments:done
+identifier_store:counter:global_metadata:number:start
+identifier_store:counter:global_metadata:number:done
+identifier_store:counter:global_metadata:specialized:start
+identifier_store:counter:global_metadata:specialized:done
+identifier_store:counter:global_metadata:descriptor_update:start
+identifier_store:counter:global_metadata:descriptor_update:done
+identifier_store:counter:global_metadata:done
+identifier_store:counter:runtime_shadows target_owner=counter source_owner=Some("counter") object_binding_present=true object_binding_props=[] object_binding_hidden=[]
+identifier_store:counter:global_array_force_rest source_not_runtime source=counter
+identifier_store:counter:done
+binding_statement:assign:after_store name=counter
+binding_statement:assign:before_member name=counter
+binding_statement:assign:after_member name=counter
+binding_statement:assign:done name=counter
+function_compile=statement_done:Assign { name: "counter", value: Identifier("counter") }
+function_compile=statement:AssignMember { object: Identifier("globalThis"), property: String("assert"), value: Identifier("assert") }
+function_compile=statement_done:AssignMember { object: Identifier("globalThis"), property: String("assert"), value: Identifier("assert") }
+function_compile=statement:AssignMember { object: Identifier("assert"), property: String("_isSameValue"), value: Identifier("__sameValue") }
+function_compile=statement_done:AssignMember { object: Identifier("assert"), property: String("_isSameValue"), value: Identifier("__sameValue") }
+function_compile=statement:AssignMember { object: Identifier("assert"), property: String("_toString"), value: Identifier("__assertToString") }
+function_compile=statement_done:AssignMember { object: Identifier("assert"), property: String("_toString"), value: Identifier("__assertToString") }
+function_compile=statement:AssignMember { object: Identifier("assert"), property: String("sameValue"), value: Identifier("__assertSameValue") }
+function_compile=statement_done:AssignMember { object: Identifier("assert"), property: String("sameValue"), value: Identifier("__assertSameValue") }
+function_compile=statement:AssignMember { object: Identifier("assert"), property: String("notSameValue"), value: Identifier("__assertNotSameValue") }
+function_compile=statement_done:AssignMember { object: Identifier("assert"), property: String("notSameValue"), value: Identifier("__assertNotSameValue") }
+function_compile=statement:AssignMember { object: Identifier("assert"), property: String("throws"), value: Identifier("__ayyAssertThrows") }
+function_compile=statement_done:AssignMember { object: Identifier("assert"), property: String("throws"), value: Identifier("__ayyAssertThrows") }
+function_compile=statement:AssignMember { object: Identifier("compareArray"), property: String("format"), value: Identifier("__ayy_fnexpr_1__name_") }
+function_compile=statement_done:AssignMember { object: Identifier("compareArray"), property: String("format"), value: Identifier("__ayy_fnexpr_1__name_") }
+function_compile=statement:AssignMember { object: Identifier("assert"), property: String("compareArray"), value: Identifier("__ayyAssertCompareArray") }
+function_compile=statement_done:AssignMember { object: Identifier("assert"), property: String("compareArray"), value: Identifier("__ayyAssertCompareArray") }
+function_compile=statement:Var { name: "initCount", value: Number(0.0) }
+binding_statement:var:start name=initCount
+binding_statement:var:after_emit name=initCount
+binding_statement:var:before_store name=initCount
+identifier_store:initCount:prepare:start
+identifier_store:initCount:canonical Number(0.0)
+identifier_store:initCount:tracked Number(0.0)
+identifier_store:initCount:descriptor
+identifier_store:initCount:call_snapshot
+identifier_store:initCount:function_binding snapshot_context=None call_result=None raw=Number(0.0) expr=Number(0.0) binding=None
+identifier_store:initCount:object_binding expr=Number(0.0) prepared_binding=false
+identifier_store:initCount:kind
+identifier_store:initCount:string
+identifier_store:initCount:number
+identifier_store:initCount:array
+identifier_store:initCount:module
+identifier_store:initCount:prepared
+identifier_store:initCount:shared_updates:start
+identifier_store:initCount:shared:member_bindings:start
+identifier_store:initCount:shared:member_bindings:done
+identifier_store:initCount:shared:local_function:start
+identifier_store:initCount:shared:local_function:done
+identifier_store:initCount:shared:specialized_function:start
+identifier_store:initCount:shared:specialized_function:done
+identifier_store:initCount:shared:proxy:start
+identifier_store:initCount:shared:proxy:done
+identifier_store:initCount:shared:object_literal_members:start
+identifier_store:initCount:shared:object_literal_members:done
+identifier_store:initCount:shared:array_binding:start
+identifier_store:initCount:shared:array_binding:done
+identifier_store:initCount:shared:resizable_array_buffer:start
+identifier_store:initCount:shared:resizable_array_buffer:done
+identifier_store:initCount:shared:typed_array_view:start
+identifier_store:initCount:shared:typed_array_view:done
+identifier_store:initCount:shared:iterator_step:start
+identifier_store:initCount:shared:iterator_step:done
+identifier_store:initCount:shared:object_binding:start
+identifier_store:initCount:shared:object_binding:done
+identifier_store:initCount:shared:arguments_binding:start
+identifier_store:initCount:shared:arguments_binding:done
+identifier_store:initCount:shared:descriptor_binding:start
+identifier_store:initCount:shared:descriptor_binding:done
+identifier_store:initCount:shared:iterator_source:start
+identifier_store:initCount:shared:iterator_source:done
+identifier_store:initCount:shared:array_iterator_binding:start
+identifier_store:initCount:shared:array_iterator_binding:done
+identifier_store:initCount:shared_updates:done
+identifier_store:initCount:store_declared_global
+identifier_store:initCount:global_metadata:start
+identifier_store:initCount:global_metadata:object_binding:start
+identifier_store:initCount:global_metadata:object_binding:done
+identifier_store:initCount:global_metadata:prototype:start
+identifier_store:initCount:global_metadata:prototype:done
+identifier_store:initCount:global_metadata:static_global:start
+identifier_store:initCount:global_metadata:static_global:done
+identifier_store:initCount:global_metadata:seed_boxed:start
+identifier_store:initCount:global_metadata:seed_boxed:done
+identifier_store:initCount:global_metadata:seed_date:start
+identifier_store:initCount:global_metadata:seed_date:done
+identifier_store:initCount:global_metadata:seed_error:start
+identifier_store:initCount:global_metadata:seed_error:done
+identifier_store:initCount:global_metadata:seed_function:start
+identifier_store:initCount:global_metadata:seed_function:done
+identifier_store:initCount:global_metadata:seed_array_buffer:start
+identifier_store:initCount:global_metadata:seed_array_buffer:done
+identifier_store:initCount:global_metadata:seed_typed_array:start
+identifier_store:initCount:global_metadata:seed_typed_array:done
+identifier_store:initCount:global_metadata:string:start
+identifier_store:initCount:global_metadata:string:done
+identifier_store:initCount:global_metadata:function:start
+identifier_store:initCount:global_metadata:function:done
+identifier_store:initCount:global_metadata:captures:start
+identifier_store:initCount:global_metadata:captures:done
+identifier_store:initCount:global_metadata:arguments:start
+identifier_store:initCount:arguments_binding tracked=false canonical=false
+identifier_store:initCount:global_metadata:arguments:done
+identifier_store:initCount:global_metadata:number:start
+identifier_store:initCount:global_metadata:number:done
+identifier_store:initCount:global_metadata:specialized:start
+identifier_store:initCount:global_metadata:specialized:done
+identifier_store:initCount:global_metadata:descriptor_update:start
+identifier_store:initCount:global_metadata:descriptor_update:done
+identifier_store:initCount:global_metadata:done
+identifier_store:initCount:runtime_shadows target_owner=initCount source_owner=None object_binding_present=false object_binding_props=[] object_binding_hidden=[]
+identifier_store:initCount:global_array_force_rest source_not_identifier source=Number(0.0)
+identifier_store:initCount:done
+binding_statement:var:after_store name=initCount
+binding_statement:var:after_member name=initCount
+binding_statement:var:done name=initCount
+function_compile=statement_done:Var { name: "initCount", value: Number(0.0) }
+function_compile=statement:Var { name: "callCount", value: Number(0.0) }
+binding_statement:var:start name=callCount
+binding_statement:var:after_emit name=callCount
+binding_statement:var:before_store name=callCount
+identifier_store:callCount:prepare:start
+identifier_store:callCount:canonical Number(0.0)
+identifier_store:callCount:tracked Number(0.0)
+identifier_store:callCount:descriptor
+identifier_store:callCount:call_snapshot
+identifier_store:callCount:function_binding snapshot_context=None call_result=None raw=Number(0.0) expr=Number(0.0) binding=None
+identifier_store:callCount:object_binding expr=Number(0.0) prepared_binding=false
+identifier_store:callCount:kind
+identifier_store:callCount:string
+identifier_store:callCount:number
+identifier_store:callCount:array
+identifier_store:callCount:module
+identifier_store:callCount:prepared
+identifier_store:callCount:shared_updates:start
+identifier_store:callCount:shared:member_bindings:start
+identifier_store:callCount:shared:member_bindings:done
+identifier_store:callCount:shared:local_function:start
+identifier_store:callCount:shared:local_function:done
+identifier_store:callCount:shared:specialized_function:start
+identifier_store:callCount:shared:specialized_function:done
+identifier_store:callCount:shared:proxy:start
+identifier_store:callCount:shared:proxy:done
+identifier_store:callCount:shared:object_literal_members:start
+identifier_store:callCount:shared:object_literal_members:done
+identifier_store:callCount:shared:array_binding:start
+identifier_store:callCount:shared:array_binding:done
+identifier_store:callCount:shared:resizable_array_buffer:start
+identifier_store:callCount:shared:resizable_array_buffer:done
+identifier_store:callCount:shared:typed_array_view:start
+identifier_store:callCount:shared:typed_array_view:done
+identifier_store:callCount:shared:iterator_step:start
+identifier_store:callCount:shared:iterator_step:done
+identifier_store:callCount:shared:object_binding:start
+identifier_store:callCount:shared:object_binding:done
+identifier_store:callCount:shared:arguments_binding:start
+identifier_store:callCount:shared:arguments_binding:done
+identifier_store:callCount:shared:descriptor_binding:start
+identifier_store:callCount:shared:descriptor_binding:done
+identifier_store:callCount:shared:iterator_source:start
+identifier_store:callCount:shared:iterator_source:done
+identifier_store:callCount:shared:array_iterator_binding:start
+identifier_store:callCount:shared:array_iterator_binding:done
+identifier_store:callCount:shared_updates:done
+identifier_store:callCount:store_declared_global
+identifier_store:callCount:global_metadata:start
+identifier_store:callCount:global_metadata:object_binding:start
+identifier_store:callCount:global_metadata:object_binding:done
+identifier_store:callCount:global_metadata:prototype:start
+identifier_store:callCount:global_metadata:prototype:done
+identifier_store:callCount:global_metadata:static_global:start
+identifier_store:callCount:global_metadata:static_global:done
+identifier_store:callCount:global_metadata:seed_boxed:start
+identifier_store:callCount:global_metadata:seed_boxed:done
+identifier_store:callCount:global_metadata:seed_date:start
+identifier_store:callCount:global_metadata:seed_date:done
+identifier_store:callCount:global_metadata:seed_error:start
+identifier_store:callCount:global_metadata:seed_error:done
+identifier_store:callCount:global_metadata:seed_function:start
+identifier_store:callCount:global_metadata:seed_function:done
+identifier_store:callCount:global_metadata:seed_array_buffer:start
+identifier_store:callCount:global_metadata:seed_array_buffer:done
+identifier_store:callCount:global_metadata:seed_typed_array:start
+identifier_store:callCount:global_metadata:seed_typed_array:done
+identifier_store:callCount:global_metadata:string:start
+identifier_store:callCount:global_metadata:string:done
+identifier_store:callCount:global_metadata:function:start
+identifier_store:callCount:global_metadata:function:done
+identifier_store:callCount:global_metadata:captures:start
+identifier_store:callCount:global_metadata:captures:done
+identifier_store:callCount:global_metadata:arguments:start
+identifier_store:callCount:arguments_binding tracked=false canonical=false
+identifier_store:callCount:global_metadata:arguments:done
+identifier_store:callCount:global_metadata:number:start
+identifier_store:callCount:global_metadata:number:done
+identifier_store:callCount:global_metadata:specialized:start
+identifier_store:callCount:global_metadata:specialized:done
+identifier_store:callCount:global_metadata:descriptor_update:start
+identifier_store:callCount:global_metadata:descriptor_update:done
+identifier_store:callCount:global_metadata:done
+identifier_store:callCount:runtime_shadows target_owner=callCount source_owner=None object_binding_present=false object_binding_props=[] object_binding_hidden=[]
+identifier_store:callCount:global_array_force_rest source_not_identifier source=Number(0.0)
+identifier_store:callCount:done
+binding_statement:var:after_store name=callCount
+binding_statement:var:after_member name=callCount
+binding_statement:var:done name=callCount
+function_compile=statement_done:Var { name: "callCount", value: Number(0.0) }
+function_compile=statement:Var { name: "obj", value: Object([Data { key: String("method"), value: Identifier("__ayy_method_2") }]) }
+binding_statement:var:start name=obj
+binding_statement:var:after_emit name=obj
+binding_statement:var:before_store name=obj
+identifier_store:obj:prepare:start
+identifier_store:obj:canonical Object([Data { key: String("method"), value: Identifier("__ayy_method_2") }])
+identifier_store:obj:tracked Object([Data { key: String("method"), value: Identifier("__ayy_method_2") }])
+identifier_store:obj:descriptor
+identifier_store:obj:call_snapshot
+identifier_store:obj:function_binding snapshot_context=None call_result=None raw=Object([Data { key: String("method"), value: Identifier("__ayy_method_2") }]) expr=Object([Data { key: String("method"), value: Identifier("__ayy_method_2") }]) binding=None
+identifier_store:obj:object_binding expr=Object([Data { key: String("method"), value: Identifier("__ayy_method_2") }]) prepared_binding=true
+identifier_store:obj:kind
+identifier_store:obj:string
+identifier_store:obj:number
+identifier_store:obj:array
+identifier_store:obj:module
+identifier_store:obj:prepared
+identifier_store:obj:shared_updates:start
+identifier_store:obj:shared:member_bindings:start
+identifier_store:obj:shared:member_bindings:done
+identifier_store:obj:shared:local_function:start
+identifier_store:obj:shared:local_function:done
+identifier_store:obj:shared:specialized_function:start
+identifier_store:obj:shared:specialized_function:done
+identifier_store:obj:shared:proxy:start
+identifier_store:obj:shared:proxy:done
+identifier_store:obj:shared:object_literal_members:start
+identifier_store:obj:shared:object_literal_members:done
+identifier_store:obj:shared:array_binding:start
+identifier_store:obj:shared:array_binding:done
+identifier_store:obj:shared:resizable_array_buffer:start
+identifier_store:obj:shared:resizable_array_buffer:done
+identifier_store:obj:shared:typed_array_view:start
+identifier_store:obj:shared:typed_array_view:done
+identifier_store:obj:shared:iterator_step:start
+identifier_store:obj:shared:iterator_step:done
+identifier_store:obj:shared:object_binding:start
+identifier_store:obj:shared:object_binding:done
+identifier_store:obj:shared:arguments_binding:start
+identifier_store:obj:shared:arguments_binding:done
+identifier_store:obj:shared:descriptor_binding:start
+identifier_store:obj:shared:descriptor_binding:done
+identifier_store:obj:shared:iterator_source:start
+identifier_store:obj:shared:iterator_source:done
+identifier_store:obj:shared:array_iterator_binding:start
+identifier_store:obj:shared:array_iterator_binding:done
+identifier_store:obj:shared_updates:done
+identifier_store:obj:store_declared_global
+identifier_store:obj:global_metadata:start
+identifier_store:obj:global_metadata:object_binding:start
+identifier_store:obj:global_metadata:object_binding:done
+identifier_store:obj:global_metadata:prototype:start
+identifier_store:obj:global_metadata:prototype:done
+identifier_store:obj:global_metadata:static_global:start
+identifier_store:obj:global_metadata:static_global:done
+identifier_store:obj:global_metadata:sync_object:start
+identifier_store:obj:global_metadata:sync_object:done
+identifier_store:obj:global_metadata:seed_boxed:start
+identifier_store:obj:global_metadata:seed_boxed:done
+identifier_store:obj:global_metadata:seed_date:start
+identifier_store:obj:global_metadata:seed_date:done
+identifier_store:obj:global_metadata:seed_error:start
+identifier_store:obj:global_metadata:seed_error:done
+identifier_store:obj:global_metadata:seed_function:start
+identifier_store:obj:global_metadata:seed_function:done
+identifier_store:obj:global_metadata:seed_array_buffer:start
+identifier_store:obj:global_metadata:seed_array_buffer:done
+identifier_store:obj:global_metadata:seed_typed_array:start
+identifier_store:obj:global_metadata:seed_typed_array:done
+identifier_store:obj:global_metadata:string:start
+identifier_store:obj:global_metadata:string:done
+identifier_store:obj:global_metadata:function:start
+identifier_store:obj:global_metadata:function:done
+identifier_store:obj:global_metadata:captures:start
+identifier_store:obj:global_metadata:captures:done
+identifier_store:obj:global_metadata:arguments:start
+identifier_store:obj:arguments_binding tracked=false canonical=false
+identifier_store:obj:global_metadata:arguments:done
+identifier_store:obj:global_metadata:number:start
+identifier_store:obj:global_metadata:number:done
+identifier_store:obj:global_metadata:specialized:start
+identifier_store:obj:global_metadata:specialized:done
+identifier_store:obj:global_metadata:descriptor_update:start
+identifier_store:obj:global_metadata:descriptor_update:done
+identifier_store:obj:global_metadata:done
+identifier_store:obj:runtime_shadows target_owner=obj source_owner=None object_binding_present=true object_binding_props=["method"] object_binding_hidden=[]
+identifier_store:obj:global_array_force_rest source_not_identifier source=Object([Data { key: String("method"), value: Identifier("__ayy_method_2") }])
+identifier_store:obj:done
+binding_statement:var:after_store name=obj
+binding_statement:var:after_member name=obj
+binding_statement:var:done name=obj
+function_compile=statement_done:Var { name: "obj", value: Object([Data { key: String("method"), value: Identifier("__ayy_method_2") }]) }
+function_compile=statement:Expression(Call { callee: Member { object: Identifier("obj"), property: String("method") }, arguments: [Expression(Array([Expression(Null), Expression(Number(0.0)), Expression(Bool(false)), Expression(String(""))]))] })
+function_compile=statement_done:Expression(Call { callee: Member { object: Identifier("obj"), property: String("method") }, arguments: [Expression(Array([Expression(Null), Expression(Number(0.0)), Expression(Bool(false)), Expression(String(""))]))] })
+function_compile=statement:Expression(Call { callee: Identifier("__assertSameValue"), arguments: [Expression(Identifier("callCount")), Expression(Number(1.0)), Expression(String("method invoked exactly once"))] })
+function_compile=statement_done:Expression(Call { callee: Identifier("__assertSameValue"), arguments: [Expression(Identifier("callCount")), Expression(Number(1.0)), Expression(String("method invoked exactly once"))] })
+function_compile=finalize
+program_compile=user_function:__ayy_method_2
+function_compile=register_statements
+function_compile=initialize_arguments_object
+function_compile=initialize_parameter_defaults
+function_compile=emit_direct_scope
+function_compile=statement:Let { name: "__ayy_array_iter_value_15", mutable: true, value: Identifier("__ayy_param_14") }
+binding_statement:let:start name=__ayy_array_iter_value_15 value=Identifier("__ayy_param_14")
+binding_statement:let:after_emit name=__ayy_array_iter_value_15
+binding_statement:let:before_initialize name=__ayy_array_iter_value_15
+identifier_store:__ayy_array_iter_value_15:prepare:start
+identifier_store:__ayy_array_iter_value_15:canonical Identifier("__ayy_param_14")
+identifier_store:__ayy_array_iter_value_15:tracked Identifier("__ayy_param_14")
+identifier_store:__ayy_array_iter_value_15:descriptor
+identifier_store:__ayy_array_iter_value_15:call_snapshot
+identifier_store:__ayy_array_iter_value_15:function_binding snapshot_context=None call_result=None raw=Identifier("__ayy_param_14") expr=Identifier("__ayy_param_14") binding=None
+identifier_store:__ayy_array_iter_value_15:object_binding expr=Identifier("__ayy_param_14") prepared_binding=true
+identifier_store:__ayy_array_iter_value_15:kind
+identifier_store:__ayy_array_iter_value_15:string
+identifier_store:__ayy_array_iter_value_15:number
+identifier_store:__ayy_array_iter_value_15:array
+identifier_store:__ayy_array_iter_value_15:module
+identifier_store:__ayy_array_iter_value_15:prepared
+identifier_store:__ayy_array_iter_value_15:shared_updates:start
+identifier_store:__ayy_array_iter_value_15:shared:member_bindings:start
+identifier_store:__ayy_array_iter_value_15:shared:member_bindings:done
+identifier_store:__ayy_array_iter_value_15:shared:local_function:start
+identifier_store:__ayy_array_iter_value_15:shared:local_function:done
+identifier_store:__ayy_array_iter_value_15:shared:specialized_function:start
+identifier_store:__ayy_array_iter_value_15:shared:specialized_function:done
+identifier_store:__ayy_array_iter_value_15:shared:proxy:start
+identifier_store:__ayy_array_iter_value_15:shared:proxy:done
+identifier_store:__ayy_array_iter_value_15:shared:object_literal_members:start
+identifier_store:__ayy_array_iter_value_15:shared:object_literal_members:done
+identifier_store:__ayy_array_iter_value_15:shared:array_binding:start
+identifier_store:__ayy_array_iter_value_15:shared:array_binding:done
+identifier_store:__ayy_array_iter_value_15:shared:resizable_array_buffer:start
+identifier_store:__ayy_array_iter_value_15:shared:resizable_array_buffer:done
+identifier_store:__ayy_array_iter_value_15:shared:typed_array_view:start
+identifier_store:__ayy_array_iter_value_15:shared:typed_array_view:done
+identifier_store:__ayy_array_iter_value_15:shared:iterator_step:start
+identifier_store:__ayy_array_iter_value_15:shared:iterator_step:done
+identifier_store:__ayy_array_iter_value_15:shared:object_binding:start
+identifier_store:__ayy_array_iter_value_15:shared:object_binding:done
+identifier_store:__ayy_array_iter_value_15:shared:arguments_binding:start
+identifier_store:__ayy_array_iter_value_15:shared:arguments_binding:done
+identifier_store:__ayy_array_iter_value_15:shared:descriptor_binding:start
+identifier_store:__ayy_array_iter_value_15:shared:descriptor_binding:done
+identifier_store:__ayy_array_iter_value_15:shared:iterator_source:start
+identifier_store:__ayy_array_iter_value_15:shared:iterator_source:done
+identifier_store:__ayy_array_iter_value_15:shared:array_iterator_binding:start
+identifier_store:__ayy_array_iter_value_15:shared:array_iterator_binding:done
+identifier_store:__ayy_array_iter_value_15:shared_updates:done
+identifier_store:__ayy_array_iter_value_15:store_local
+identifier_store:__ayy_array_iter_value_15:runtime_shadows target_owner=__ayy_array_iter_value_15 source_owner=Some("__ayy_param_14") object_binding_present=true object_binding_props=["length"] object_binding_hidden=["length"]
+identifier_store:__ayy_array_iter_value_15:done
+binding_statement:let:after_initialize name=__ayy_array_iter_value_15
+binding_statement:let:before_member name=__ayy_array_iter_value_15
+binding_statement:let:after_member name=__ayy_array_iter_value_15
+binding_statement:let:done name=__ayy_array_iter_value_15
+function_compile=statement_done:Let { name: "__ayy_array_iter_value_15", mutable: true, value: Identifier("__ayy_param_14") }
+function_compile=statement:If { condition: Binary { op: LogicalOr, left: Binary { op: Equal, left: Identifier("__ayy_array_iter_value_15"), right: Null }, right: Binary { op: Equal, left: Identifier("__ayy_array_iter_value_15"), right: Undefined } }, then_branch: [Throw(New { callee: Identifier("TypeError"), arguments: [] })], else_branch: [] }
+function_compile=statement:Throw(New { callee: Identifier("TypeError"), arguments: [] })
+function_compile=statement_done:Throw(New { callee: Identifier("TypeError"), arguments: [] })
+function_compile=statement_done:If { condition: Binary { op: LogicalOr, left: Binary { op: Equal, left: Identifier("__ayy_array_iter_value_15"), right: Null }, right: Binary { op: Equal, left: Identifier("__ayy_array_iter_value_15"), right: Undefined } }, then_branch: [Throw(New { callee: Identifier("TypeError"), arguments: [] })], else_branch: [] }
+function_compile=statement:Let { name: "__ayy_array_iter_16", mutable: true, value: GetIterator(Identifier("__ayy_array_iter_value_15")) }
+binding_statement:let:start name=__ayy_array_iter_16 value=GetIterator(Identifier("__ayy_array_iter_value_15"))
+binding_statement:let:after_emit name=__ayy_array_iter_16
+binding_statement:let:before_initialize name=__ayy_array_iter_16
+identifier_store:__ayy_array_iter_16:prepare:start
+identifier_store:__ayy_array_iter_16:canonical GetIterator(Identifier("__ayy_array_iter_value_15"))
+identifier_store:__ayy_array_iter_16:tracked GetIterator(Identifier("__ayy_array_iter_value_15"))
+identifier_store:__ayy_array_iter_16:iterator_step_value
+identifier_store:__ayy_array_iter_16:prepared
+identifier_store:__ayy_array_iter_16:shared_updates:start
+identifier_store:__ayy_array_iter_16:shared:member_bindings:start
+identifier_store:__ayy_array_iter_16:shared:member_bindings:done
+identifier_store:__ayy_array_iter_16:shared:iterator_step:start
+identifier_store:__ayy_array_iter_16:shared:iterator_step:done
+identifier_store:__ayy_array_iter_16:shared:object_binding:start
+identifier_store:__ayy_array_iter_16:shared:object_binding:done
+identifier_store:__ayy_array_iter_16:shared:iterator_source:start
+identifier_store:__ayy_array_iter_16:shared:iterator_source:done
+identifier_store:__ayy_array_iter_16:shared:array_iterator_binding:start
+identifier_store:__ayy_array_iter_16:shared:array_iterator_binding:done
+identifier_store:__ayy_array_iter_16:shared_updates:done
+identifier_store:__ayy_array_iter_16:store_local
+identifier_store:__ayy_array_iter_16:runtime_shadows target_owner=__ayy_array_iter_16 source_owner=None object_binding_present=false object_binding_props=[] object_binding_hidden=[]
+identifier_store:__ayy_array_iter_16:done
+binding_statement:let:after_initialize name=__ayy_array_iter_16
+binding_statement:let:before_member name=__ayy_array_iter_16
+binding_statement:let:after_member name=__ayy_array_iter_16
+binding_statement:let:done name=__ayy_array_iter_16
+function_compile=statement_done:Let { name: "__ayy_array_iter_16", mutable: true, value: GetIterator(Identifier("__ayy_array_iter_value_15")) }
+function_compile=statement:Let { name: "__ayy_array_iter_done_17", mutable: true, value: Bool(false) }
+binding_statement:let:start name=__ayy_array_iter_done_17 value=Bool(false)
+binding_statement:let:after_emit name=__ayy_array_iter_done_17
+binding_statement:let:before_initialize name=__ayy_array_iter_done_17
+identifier_store:__ayy_array_iter_done_17:prepare:start
+identifier_store:__ayy_array_iter_done_17:canonical Bool(false)
+identifier_store:__ayy_array_iter_done_17:tracked Bool(false)
+identifier_store:__ayy_array_iter_done_17:descriptor
+identifier_store:__ayy_array_iter_done_17:call_snapshot
+identifier_store:__ayy_array_iter_done_17:function_binding snapshot_context=None call_result=None raw=Bool(false) expr=Bool(false) binding=None
+identifier_store:__ayy_array_iter_done_17:object_binding expr=Bool(false) prepared_binding=false
+identifier_store:__ayy_array_iter_done_17:kind
+identifier_store:__ayy_array_iter_done_17:string
+identifier_store:__ayy_array_iter_done_17:number
+identifier_store:__ayy_array_iter_done_17:array
+identifier_store:__ayy_array_iter_done_17:module
+identifier_store:__ayy_array_iter_done_17:prepared
+identifier_store:__ayy_array_iter_done_17:shared_updates:start
+identifier_store:__ayy_array_iter_done_17:shared:member_bindings:start
+identifier_store:__ayy_array_iter_done_17:shared:member_bindings:done
+identifier_store:__ayy_array_iter_done_17:shared:local_function:start
+identifier_store:__ayy_array_iter_done_17:shared:local_function:done
+identifier_store:__ayy_array_iter_done_17:shared:specialized_function:start
+identifier_store:__ayy_array_iter_done_17:shared:specialized_function:done
+identifier_store:__ayy_array_iter_done_17:shared:proxy:start
+identifier_store:__ayy_array_iter_done_17:shared:proxy:done
+identifier_store:__ayy_array_iter_done_17:shared:object_literal_members:start
+identifier_store:__ayy_array_iter_done_17:shared:object_literal_members:done
+identifier_store:__ayy_array_iter_done_17:shared:array_binding:start
+identifier_store:__ayy_array_iter_done_17:shared:array_binding:done
+identifier_store:__ayy_array_iter_done_17:shared:resizable_array_buffer:start
+identifier_store:__ayy_array_iter_done_17:shared:resizable_array_buffer:done
+identifier_store:__ayy_array_iter_done_17:shared:typed_array_view:start
+identifier_store:__ayy_array_iter_done_17:shared:typed_array_view:done
+identifier_store:__ayy_array_iter_done_17:shared:iterator_step:start
+identifier_store:__ayy_array_iter_done_17:shared:iterator_step:done
+identifier_store:__ayy_array_iter_done_17:shared:object_binding:start
+identifier_store:__ayy_array_iter_done_17:shared:object_binding:done
+identifier_store:__ayy_array_iter_done_17:shared:arguments_binding:start
+identifier_store:__ayy_array_iter_done_17:shared:arguments_binding:done
+identifier_store:__ayy_array_iter_done_17:shared:descriptor_binding:start
+identifier_store:__ayy_array_iter_done_17:shared:descriptor_binding:done
+identifier_store:__ayy_array_iter_done_17:shared:iterator_source:start
+identifier_store:__ayy_array_iter_done_17:shared:iterator_source:done
+identifier_store:__ayy_array_iter_done_17:shared:array_iterator_binding:start
+identifier_store:__ayy_array_iter_done_17:shared:array_iterator_binding:done
+identifier_store:__ayy_array_iter_done_17:shared_updates:done
+identifier_store:__ayy_array_iter_done_17:store_local
+identifier_store:__ayy_array_iter_done_17:runtime_shadows target_owner=__ayy_array_iter_done_17 source_owner=None object_binding_present=false object_binding_props=[] object_binding_hidden=[]
+identifier_store:__ayy_array_iter_done_17:done
+binding_statement:let:after_initialize name=__ayy_array_iter_done_17
+binding_statement:let:before_member name=__ayy_array_iter_done_17
+binding_statement:let:after_member name=__ayy_array_iter_done_17
+binding_statement:let:done name=__ayy_array_iter_done_17
+function_compile=statement_done:Let { name: "__ayy_array_iter_done_17", mutable: true, value: Bool(false) }
+function_compile=statement:Let { name: "__ayy_array_step_18", mutable: true, value: Call { callee: Member { object: Identifier("__ayy_array_iter_16"), property: String("next") }, arguments: [] } }
+binding_statement:let:start name=__ayy_array_step_18 value=Call { callee: Member { object: Identifier("__ayy_array_iter_16"), property: String("next") }, arguments: [] }
+binding_statement:let:after_emit name=__ayy_array_step_18
+binding_statement:let:before_initialize name=__ayy_array_step_18
+identifier_store:__ayy_array_step_18:prepare:start
+identifier_store:__ayy_array_step_18:canonical Call { callee: Member { object: Identifier("__ayy_array_iter_16"), property: String("next") }, arguments: [] }
+identifier_store:__ayy_array_step_18:direct_iterator_method_call
+identifier_store:__ayy_array_step_18:prepared
+identifier_store:__ayy_array_step_18:shared_updates:start
+identifier_store:__ayy_array_step_18:shared:member_bindings:start
+identifier_store:__ayy_array_step_18:shared:member_bindings:done
+identifier_store:__ayy_array_step_18:shared:iterator_step:start
+identifier_store:__ayy_array_step_18:shared:iterator_step:done
+identifier_store:__ayy_array_step_18:shared:object_binding:start
+identifier_store:__ayy_array_step_18:shared:object_binding:done
+identifier_store:__ayy_array_step_18:shared_updates:done
+identifier_store:__ayy_array_step_18:store_local
+identifier_store:__ayy_array_step_18:done
+binding_statement:let:after_initialize name=__ayy_array_step_18
+binding_statement:let:before_member name=__ayy_array_step_18
+binding_statement:let:after_member name=__ayy_array_step_18
+binding_statement:let:done name=__ayy_array_step_18
+function_compile=statement_done:Let { name: "__ayy_array_step_18", mutable: true, value: Call { callee: Member { object: Identifier("__ayy_array_iter_16"), property: String("next") }, arguments: [] } }
+function_compile=statement:Assign { name: "__ayy_array_iter_done_17", value: Member { object: Identifier("__ayy_array_step_18"), property: String("done") } }
+binding_statement:assign:start name=__ayy_array_iter_done_17
+binding_statement:assign:after_emit name=__ayy_array_iter_done_17
+binding_statement:assign:before_store name=__ayy_array_iter_done_17
+identifier_store:__ayy_array_iter_done_17:prepare:start
+identifier_store:__ayy_array_iter_done_17:canonical Member { object: Identifier("__ayy_array_step_18"), property: String("done") }
+identifier_store:__ayy_array_iter_done_17:iterator_step_member
+identifier_store:__ayy_array_iter_done_17:prepared
+identifier_store:__ayy_array_iter_done_17:shared_updates:start
+identifier_store:__ayy_array_iter_done_17:shared:member_bindings:start
+identifier_store:__ayy_array_iter_done_17:shared:member_bindings:done
+identifier_store:__ayy_array_iter_done_17:shared:iterator_step:start
+identifier_store:__ayy_array_iter_done_17:shared:iterator_step:done
+identifier_store:__ayy_array_iter_done_17:shared:object_binding:start
+identifier_store:__ayy_array_iter_done_17:shared:object_binding:done
+identifier_store:__ayy_array_iter_done_17:shared:arguments_binding:start
+identifier_store:__ayy_array_iter_done_17:shared:arguments_binding:done
+identifier_store:__ayy_array_iter_done_17:shared:descriptor_binding:start
+identifier_store:__ayy_array_iter_done_17:shared:descriptor_binding:done
+identifier_store:__ayy_array_iter_done_17:shared:iterator_source:start
+identifier_store:__ayy_array_iter_done_17:shared:iterator_source:done
+identifier_store:__ayy_array_iter_done_17:shared:array_iterator_binding:start
+identifier_store:__ayy_array_iter_done_17:shared:array_iterator_binding:done
+identifier_store:__ayy_array_iter_done_17:shared_updates:done
+identifier_store:__ayy_array_iter_done_17:store_pre_resolved_local resolved_name=__ayy_array_iter_done_17 local_index=6
+identifier_store:__ayy_array_iter_done_17:runtime_shadows target_owner=__ayy_array_iter_done_17 source_owner=None object_binding_present=false object_binding_props=[] object_binding_hidden=[]
+identifier_store:__ayy_array_iter_done_17:done
+binding_statement:assign:after_store name=__ayy_array_iter_done_17
+binding_statement:assign:before_member name=__ayy_array_iter_done_17
+binding_statement:assign:after_member name=__ayy_array_iter_done_17
+binding_statement:assign:done name=__ayy_array_iter_done_17
+function_compile=statement_done:Assign { name: "__ayy_array_iter_done_17", value: Member { object: Identifier("__ayy_array_step_18"), property: String("done") } }
+function_compile=statement:Let { name: "__ayy_binding_value_19", mutable: true, value: Conditional { condition: Binary { op: Equal, left: Member { object: Identifier("__ayy_array_step_18"), property: String("done") }, right: Bool(false) }, then_expression: Member { object: Identifier("__ayy_array_step_18"), property: String("value") }, else_expression: Undefined } }
+binding_statement:let:start name=__ayy_binding_value_19 value=Conditional { condition: Binary { op: Equal, left: Member { object: Identifier("__ayy_array_step_18"), property: String("done") }, right: Bool(false) }, then_expression: Member { object: Identifier("__ayy_array_step_18"), property: String("value") }, else_expression: Undefined }
+binding_statement:let:after_emit name=__ayy_binding_value_19
+binding_statement:let:before_initialize name=__ayy_binding_value_19
+identifier_store:__ayy_binding_value_19:prepare:start
+identifier_store:__ayy_binding_value_19:canonical Null
+identifier_store:__ayy_binding_value_19:tracked Null
+identifier_store:__ayy_binding_value_19:descriptor
+identifier_store:__ayy_binding_value_19:call_snapshot
+identifier_store:__ayy_binding_value_19:function_binding snapshot_context=None call_result=None raw=Null expr=Null binding=None
+identifier_store:__ayy_binding_value_19:object_binding expr=Null prepared_binding=false
+identifier_store:__ayy_binding_value_19:kind
+identifier_store:__ayy_binding_value_19:string
+identifier_store:__ayy_binding_value_19:number
+identifier_store:__ayy_binding_value_19:array
+identifier_store:__ayy_binding_value_19:module
+identifier_store:__ayy_binding_value_19:prepared
+identifier_store:__ayy_binding_value_19:shared_updates:start
+identifier_store:__ayy_binding_value_19:shared:member_bindings:start
+identifier_store:__ayy_binding_value_19:shared:member_bindings:done
+identifier_store:__ayy_binding_value_19:shared:local_function:start
+identifier_store:__ayy_binding_value_19:shared:local_function:done
+identifier_store:__ayy_binding_value_19:shared:specialized_function:start
+identifier_store:__ayy_binding_value_19:shared:specialized_function:done
+identifier_store:__ayy_binding_value_19:shared:proxy:start
+identifier_store:__ayy_binding_value_19:shared:proxy:done
+identifier_store:__ayy_binding_value_19:shared:object_literal_members:start
+identifier_store:__ayy_binding_value_19:shared:object_literal_members:done
+identifier_store:__ayy_binding_value_19:shared:array_binding:start
+identifier_store:__ayy_binding_value_19:shared:array_binding:done
+identifier_store:__ayy_binding_value_19:shared:resizable_array_buffer:start
+identifier_store:__ayy_binding_value_19:shared:resizable_array_buffer:done
+identifier_store:__ayy_binding_value_19:shared:typed_array_view:start
+identifier_store:__ayy_binding_value_19:shared:typed_array_view:done
+identifier_store:__ayy_binding_value_19:shared:iterator_step:start
+identifier_store:__ayy_binding_value_19:shared:iterator_step:done
+identifier_store:__ayy_binding_value_19:shared:object_binding:start
+identifier_store:__ayy_binding_value_19:shared:object_binding:done
+identifier_store:__ayy_binding_value_19:shared:arguments_binding:start
+identifier_store:__ayy_binding_value_19:shared:arguments_binding:done
+identifier_store:__ayy_binding_value_19:shared:descriptor_binding:start
+identifier_store:__ayy_binding_value_19:shared:descriptor_binding:done
+identifier_store:__ayy_binding_value_19:shared:iterator_source:start
+identifier_store:__ayy_binding_value_19:shared:iterator_source:done
+identifier_store:__ayy_binding_value_19:shared:array_iterator_binding:start
+identifier_store:__ayy_binding_value_19:shared:array_iterator_binding:done
+identifier_store:__ayy_binding_value_19:shared_updates:done
+identifier_store:__ayy_binding_value_19:store_local
+identifier_store:__ayy_binding_value_19:runtime_shadows target_owner=__ayy_binding_value_19 source_owner=None object_binding_present=false object_binding_props=[] object_binding_hidden=[]
+identifier_store:__ayy_binding_value_19:done
+binding_statement:let:after_initialize name=__ayy_binding_value_19
+binding_statement:let:before_member name=__ayy_binding_value_19
+binding_statement:let:after_member name=__ayy_binding_value_19
+binding_statement:let:done name=__ayy_binding_value_19
+function_compile=statement_done:Let { name: "__ayy_binding_value_19", mutable: true, value: Conditional { condition: Binary { op: Equal, left: Member { object: Identifier("__ayy_array_step_18"), property: String("done") }, right: Bool(false) }, then_expression: Member { object: Identifier("__ayy_array_step_18"), property: String("value") }, else_expression: Undefined } }
+function_compile=statement:Let { name: "w", mutable: true, value: Undefined }
+binding_statement:let:start name=w value=Undefined
+binding_statement:let:after_emit name=w
+binding_statement:let:before_initialize name=w
+identifier_store:w:prepare:start
+identifier_store:w:canonical Undefined
+identifier_store:w:tracked Undefined
+identifier_store:w:descriptor
+identifier_store:w:call_snapshot
+identifier_store:w:function_binding snapshot_context=None call_result=None raw=Undefined expr=Undefined binding=None
+identifier_store:w:object_binding expr=Undefined prepared_binding=false
+identifier_store:w:kind
+identifier_store:w:string
+identifier_store:w:number
+identifier_store:w:array
+identifier_store:w:module
+identifier_store:w:prepared
+identifier_store:w:shared_updates:start
+identifier_store:w:shared:member_bindings:start
+identifier_store:w:shared:member_bindings:done
+identifier_store:w:shared:local_function:start
+identifier_store:w:shared:local_function:done
+identifier_store:w:shared:specialized_function:start
+identifier_store:w:shared:specialized_function:done
+identifier_store:w:shared:proxy:start
+identifier_store:w:shared:proxy:done
+identifier_store:w:shared:object_literal_members:start
+identifier_store:w:shared:object_literal_members:done
+identifier_store:w:shared:array_binding:start
+identifier_store:w:shared:array_binding:done
+identifier_store:w:shared:resizable_array_buffer:start
+identifier_store:w:shared:resizable_array_buffer:done
+identifier_store:w:shared:typed_array_view:start
+identifier_store:w:shared:typed_array_view:done
+identifier_store:w:shared:iterator_step:start
+identifier_store:w:shared:iterator_step:done
+identifier_store:w:shared:object_binding:start
+identifier_store:w:shared:object_binding:done
+identifier_store:w:shared:arguments_binding:start
+identifier_store:w:shared:arguments_binding:done
+identifier_store:w:shared:descriptor_binding:start
+identifier_store:w:shared:descriptor_binding:done
+identifier_store:w:shared:iterator_source:start
+identifier_store:w:shared:iterator_source:done
+identifier_store:w:shared:array_iterator_binding:start
+identifier_store:w:shared:array_iterator_binding:done
+identifier_store:w:shared_updates:done
+identifier_store:w:store_local
+identifier_store:w:runtime_shadows target_owner=w source_owner=None object_binding_present=false object_binding_props=[] object_binding_hidden=[]
+identifier_store:w:done
+binding_statement:let:after_initialize name=w
+binding_statement:let:before_member name=w
+binding_statement:let:after_member name=w
+binding_statement:let:done name=w
+function_compile=statement_done:Let { name: "w", mutable: true, value: Undefined }
+function_compile=statement:If { condition: Binary { op: NotEqual, left: Identifier("__ayy_binding_value_19"), right: Undefined }, then_branch: [Assign { name: "w", value: Identifier("__ayy_binding_value_19") }], else_branch: [Assign { name: "w", value: Call { callee: Identifier("counter"), arguments: [] } }] }
+function_compile=statement:Assign { name: "w", value: Identifier("__ayy_binding_value_19") }
+binding_statement:assign:start name=w
+binding_statement:assign:after_emit name=w
+binding_statement:assign:before_store name=w
+identifier_store:w:prepare:start
+identifier_store:w:canonical Identifier("__ayy_binding_value_19")
+identifier_store:w:tracked Identifier("__ayy_binding_value_19")
+identifier_store:w:iterator_step_value
+identifier_store:w:prepared
+identifier_store:w:shared_updates:start
+identifier_store:w:shared:member_bindings:start
+identifier_store:w:shared:member_bindings:done
+identifier_store:w:shared:iterator_step:start
+identifier_store:w:shared:iterator_step:done
+identifier_store:w:shared:object_binding:start
+identifier_store:w:shared:object_binding:done
+identifier_store:w:shared:arguments_binding:start
+identifier_store:w:shared:arguments_binding:done
+identifier_store:w:shared:descriptor_binding:start
+identifier_store:w:shared:descriptor_binding:done
+identifier_store:w:shared:iterator_source:start
+identifier_store:w:shared:iterator_source:done
+identifier_store:w:shared:array_iterator_binding:start
+identifier_store:w:shared:array_iterator_binding:done
+identifier_store:w:shared_updates:done
+identifier_store:w:store_pre_resolved_local resolved_name=w local_index=16
+identifier_store:w:runtime_shadows target_owner=w source_owner=Some("__ayy_binding_value_19") object_binding_present=false object_binding_props=[] object_binding_hidden=[]
+identifier_store:w:done
+binding_statement:assign:after_store name=w
+binding_statement:assign:before_member name=w
+binding_statement:assign:after_member name=w
+binding_statement:assign:done name=w
+function_compile=statement_done:Assign { name: "w", value: Identifier("__ayy_binding_value_19") }
+function_compile=statement_done:If { condition: Binary { op: NotEqual, left: Identifier("__ayy_binding_value_19"), right: Undefined }, then_branch: [Assign { name: "w", value: Identifier("__ayy_binding_value_19") }], else_branch: [Assign { name: "w", value: Call { callee: Identifier("counter"), arguments: [] } }] }
+function_compile=statement:Let { name: "__ayy_array_step_20", mutable: true, value: Call { callee: Member { object: Identifier("__ayy_array_iter_16"), property: String("next") }, arguments: [] } }
+binding_statement:let:start name=__ayy_array_step_20 value=Call { callee: Member { object: Identifier("__ayy_array_iter_16"), property: String("next") }, arguments: [] }
+binding_statement:let:after_emit name=__ayy_array_step_20
+binding_statement:let:before_initialize name=__ayy_array_step_20
+identifier_store:__ayy_array_step_20:prepare:start
+identifier_store:__ayy_array_step_20:canonical Call { callee: Member { object: Identifier("__ayy_array_iter_16"), property: String("next") }, arguments: [] }
+identifier_store:__ayy_array_step_20:direct_iterator_method_call

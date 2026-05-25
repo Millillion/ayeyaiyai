@@ -35,8 +35,20 @@ impl<'a> FunctionCompiler<'a> {
             self.apply_object_prevent_extensions_update(object, arguments);
             return;
         }
+        if matches!(property.as_ref(), Expression::String(name) if name == "freeze" || name == "seal")
+            && matches!(object.as_ref(), Expression::Identifier(name) if name == "Object")
+        {
+            self.apply_object_freeze_update(arguments);
+            return;
+        }
         if matches!(property.as_ref(), Expression::String(name) if name == "defineProperty") {
             self.apply_object_define_property_update(arguments);
+            return;
+        }
+        if matches!(property.as_ref(), Expression::String(name) if name == "defineProperties")
+            && matches!(object.as_ref(), Expression::Identifier(name) if name == "Object")
+        {
+            self.apply_object_define_properties_update(arguments);
         }
     }
 }

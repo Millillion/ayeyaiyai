@@ -32,6 +32,21 @@ impl<'a> FunctionCompiler<'a> {
         (value.is_finite() && value.fract() == 0.0).then_some(*value as i64)
     }
 
+    fn static_array_length_member_i64(&self, expression: &Expression) -> Option<i64> {
+        let Expression::Member { object, property } = expression else {
+            return None;
+        };
+        if !matches!(property.as_ref(), Expression::String(name) if name == "length") {
+            return None;
+        }
+        i64::try_from(
+            self.resolve_array_binding_from_expression(object)?
+                .values
+                .len(),
+        )
+        .ok()
+    }
+
     fn loop_numeric_bound_candidates(&self, expression: &Expression) -> Option<Vec<i64>> {
         match expression {
             Expression::Number(_) => {
@@ -52,6 +67,9 @@ impl<'a> FunctionCompiler<'a> {
                         .and_then(Self::integer_number_literal)
                         .map(|value| vec![value])
                 }),
+            Expression::Member { .. } => self
+                .static_array_length_member_i64(expression)
+                .map(|value| vec![value]),
             _ => None,
         }
     }

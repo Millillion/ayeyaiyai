@@ -62,6 +62,30 @@ impl<'b, 'a> FunctionStaticEvalContext<'b, 'a> {
         self.compiler.resolve_property_key_expression(property)
     }
 
+    pub(in crate::backend::direct_wasm) fn resolve_property_key_with_state(
+        &self,
+        property: &Expression,
+        environment: &StaticResolutionEnvironment,
+    ) -> Option<Expression> {
+        if let Some(property) = self.resolve_property_key(property) {
+            return Some(property);
+        }
+
+        let Expression::Identifier(name) = property else {
+            return None;
+        };
+        let value = environment.binding(name)?;
+        if static_expression_matches(value, property) {
+            return None;
+        }
+        self.resolve_property_key(value).or_else(|| {
+            let materialized = self.materialize_expression_with_state(value, environment)?;
+            (!static_expression_matches(&materialized, property))
+                .then(|| self.resolve_property_key(&materialized))
+                .flatten()
+        })
+    }
+
     pub(in crate::backend::direct_wasm) fn lookup_identifier_kind(
         &self,
         name: &str,

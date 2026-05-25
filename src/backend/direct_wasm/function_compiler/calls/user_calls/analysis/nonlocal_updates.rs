@@ -6,6 +6,40 @@ mod statement_traversal;
 use statement_traversal::collect_updated_names_from_statement;
 
 impl<'a> FunctionCompiler<'a> {
+    pub(in crate::backend::direct_wasm) fn collect_user_function_raw_assigned_binding_names(
+        &self,
+        user_function: &UserFunction,
+    ) -> HashSet<String> {
+        let Some(function) = self.resolve_registered_function_declaration(&user_function.name)
+        else {
+            return HashSet::new();
+        };
+        let mut names = HashSet::new();
+        for statement in &function.body {
+            collect_assigned_binding_names_from_statement(statement, &mut names);
+        }
+        names
+    }
+
+    fn user_function_update_targets_immutable_class_binding(
+        &self,
+        user_function: &UserFunction,
+        name: &str,
+    ) -> bool {
+        let Some(function) = self.resolve_registered_function_declaration(&user_function.name)
+        else {
+            return false;
+        };
+        let source_name = scoped_binding_source_name(name).unwrap_or(name);
+        function.immutable_class_bindings.iter().any(|binding| {
+            let binding_source_name = scoped_binding_source_name(binding).unwrap_or(binding);
+            binding == name
+                || binding == source_name
+                || binding_source_name == name
+                || binding_source_name == source_name
+        })
+    }
+
     pub(in crate::backend::direct_wasm) fn collect_user_function_updated_nonlocal_bindings(
         &self,
         user_function: &UserFunction,
@@ -21,6 +55,7 @@ impl<'a> FunctionCompiler<'a> {
         names.retain(|name| {
             let source_name = scoped_binding_source_name(name).unwrap_or(name);
             !user_function.scope_bindings.contains(source_name)
+                && !self.user_function_update_targets_immutable_class_binding(user_function, name)
         });
         names
     }
@@ -73,6 +108,9 @@ impl<'a> FunctionCompiler<'a> {
                 continue;
             }
             if user_function.scope_bindings.contains(&source_name) {
+                continue;
+            }
+            if self.user_function_update_targets_immutable_class_binding(user_function, name) {
                 continue;
             }
             names.insert(source_name);

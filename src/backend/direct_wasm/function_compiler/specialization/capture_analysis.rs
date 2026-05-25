@@ -1,7 +1,7 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
-    fn static_with_scope_unscopables_blocks_for_specialization(
+    pub(in crate::backend::direct_wasm) fn static_with_scope_unscopables_blocks_for_specialization(
         &self,
         scope_object: &Expression,
         name: &str,

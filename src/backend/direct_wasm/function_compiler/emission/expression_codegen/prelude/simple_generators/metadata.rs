@@ -83,6 +83,17 @@ impl<'a> FunctionCompiler<'a> {
                 completion_value.clone(),
             ));
         }
+        if let Expression::Identifier(name) = object
+            && let Some(value) = self
+                .state
+                .speculation
+                .static_semantics
+                .local_value_binding(name)
+                .or_else(|| self.global_value_binding(name))
+            && !static_expression_matches(value, object)
+        {
+            return self.simple_generator_source_metadata(value);
+        }
         if let Expression::Call { callee, .. } = object
             && let Some(LocalFunctionBinding::User(function_name)) =
                 self.resolve_function_binding_from_expression(callee)
@@ -119,5 +130,49 @@ impl<'a> FunctionCompiler<'a> {
             completion_effects,
             completion_value,
         ))
+    }
+
+    pub(in crate::backend::direct_wasm) fn simple_generator_source_function_name(
+        &self,
+        object: &Expression,
+    ) -> Option<String> {
+        if let Some(resolved) = self
+            .resolve_bound_alias_expression(object)
+            .filter(|resolved| !static_expression_matches(resolved, object))
+        {
+            return self.simple_generator_source_function_name(&resolved);
+        }
+        if let Expression::Identifier(name) = object
+            && let Some(value) = self
+                .state
+                .speculation
+                .static_semantics
+                .local_value_binding(name)
+                .or_else(|| self.global_value_binding(name))
+            && !static_expression_matches(value, object)
+        {
+            return self.simple_generator_source_function_name(value);
+        }
+
+        if let Expression::Call { callee, .. } = object {
+            let binding = self.resolve_function_binding_from_expression(callee);
+            return match binding? {
+                LocalFunctionBinding::User(function_name) => Some(function_name),
+                LocalFunctionBinding::Builtin(_) => None,
+            };
+        }
+
+        let materialized = self.materialize_static_expression(object);
+        if !static_expression_matches(&materialized, object) {
+            return self.simple_generator_source_function_name(&materialized);
+        }
+
+        let Expression::Call { callee, .. } = object else {
+            return None;
+        };
+        match self.resolve_function_binding_from_expression(callee)? {
+            LocalFunctionBinding::User(function_name) => Some(function_name),
+            LocalFunctionBinding::Builtin(_) => None,
+        }
     }
 }

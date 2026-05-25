@@ -20,7 +20,27 @@ impl<'a> FunctionCompiler<'a> {
         property: &Expression,
         arguments: &[CallArgument],
     ) -> DirectResult<bool> {
-        if self.emit_builtin_member_call_shortcuts(callee, object, property, arguments)? {
+        if matches!(property, Expression::String(property_name) if property_name == "call" || property_name == "apply")
+        {
+            return self.emit_fallback_member_call_shortcuts(
+                source_expression,
+                callee,
+                object,
+                property,
+                arguments,
+            );
+        }
+        if matches!(property, Expression::String(property_name) if property_name == "hasOwnProperty")
+            && self.emit_property_member_call_shortcuts(
+                source_expression,
+                object,
+                property,
+                arguments,
+            )?
+        {
+            return Ok(true);
+        }
+        if self.emit_string_member_call_shortcuts(object, property, arguments)? {
             return Ok(true);
         }
         if self.emit_array_member_call_shortcuts(object, property, arguments)? {
@@ -34,7 +54,7 @@ impl<'a> FunctionCompiler<'a> {
         )? {
             return Ok(true);
         }
-        if self.emit_string_member_call_shortcuts(object, property, arguments)? {
+        if self.emit_builtin_member_call_shortcuts(callee, object, property, arguments)? {
             return Ok(true);
         }
         if self.emit_returned_member_call_shortcuts(callee, object, property, arguments)? {
@@ -56,6 +76,10 @@ impl<'a> FunctionCompiler<'a> {
         property: &Expression,
         arguments: &[CallArgument],
     ) -> DirectResult<bool> {
+        if matches!(property, Expression::String(property_name) if property_name == "call" || property_name == "apply")
+        {
+            return Ok(false);
+        }
         if matches!(object, Expression::Identifier(name) if name == "assert")
             && matches!(property, Expression::String(name) if name == "compareArray")
             && self.emit_assert_compare_array_call(arguments)?

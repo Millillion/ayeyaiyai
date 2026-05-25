@@ -1,0 +1,1523 @@
+Program {
+    strict: false,
+    functions: [
+        FunctionDeclaration {
+            name: "__ayy_class_ctor___ayy_ctor_3__name___ayy_local$x$1",
+            top_level_binding: None,
+            params: [],
+            body: [
+                If {
+                    condition: Binary {
+                        op: Equal,
+                        left: NewTarget,
+                        right: Undefined,
+                    },
+                    then_branch: [
+                        Throw(
+                            New {
+                                callee: Identifier(
+                                    "TypeError",
+                                ),
+                                arguments: [],
+                            },
+                        ),
+                    ],
+                    else_branch: [],
+                },
+            ],
+            register_global: false,
+            kind: Ordinary,
+            self_binding: Some(
+                "__ayy_local$x$1",
+            ),
+            mapped_arguments: false,
+            strict: true,
+            lexical_this: false,
+            derived_constructor: false,
+            direct_eval_in_class_field_initializer: false,
+            length: 0,
+            synthetic_capture_bindings: [],
+            immutable_class_bindings: [
+                "__ayy_local$x$1",
+            ],
+            private_brand_binding: None,
+        },
+        FunctionDeclaration {
+            name: "__ayy_class_init_2",
+            top_level_binding: None,
+            params: [],
+            body: [
+                Let {
+                    name: "__ayy_local$x$1",
+                    mutable: true,
+                    value: Identifier(
+                        "__ayy_class_ctor___ayy_ctor_3__name___ayy_local$x$1",
+                    ),
+                },
+                Expression(
+                    Call {
+                        callee: Member {
+                            object: Identifier(
+                                "Object",
+                            ),
+                            property: String(
+                                "defineProperty",
+                            ),
+                        },
+                        arguments: [
+                            Expression(
+                                Identifier(
+                                    "__ayy_local$x$1",
+                                ),
+                            ),
+                            Expression(
+                                String(
+                                    "name",
+                                ),
+                            ),
+                            Expression(
+                                Object(
+                                    [
+                                        Data {
+                                            key: String(
+                                                "value",
+                                            ),
+                                            value: String(
+                                                "__ayy_local$x$1",
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "writable",
+                                            ),
+                                            value: Bool(
+                                                false,
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "enumerable",
+                                            ),
+                                            value: Bool(
+                                                false,
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "configurable",
+                                            ),
+                                            value: Bool(
+                                                true,
+                                            ),
+                                        },
+                                    ],
+                                ),
+                            ),
+                        ],
+                    },
+                ),
+                Expression(
+                    Call {
+                        callee: Member {
+                            object: Identifier(
+                                "Object",
+                            ),
+                            property: String(
+                                "defineProperty",
+                            ),
+                        },
+                        arguments: [
+                            Expression(
+                                Identifier(
+                                    "__ayy_local$x$1",
+                                ),
+                            ),
+                            Expression(
+                                String(
+                                    "name",
+                                ),
+                            ),
+                            Expression(
+                                Object(
+                                    [
+                                        Data {
+                                            key: String(
+                                                "value",
+                                            ),
+                                            value: String(
+                                                "x",
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "writable",
+                                            ),
+                                            value: Bool(
+                                                false,
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "enumerable",
+                                            ),
+                                            value: Bool(
+                                                false,
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "configurable",
+                                            ),
+                                            value: Bool(
+                                                true,
+                                            ),
+                                        },
+                                    ],
+                                ),
+                            ),
+                        ],
+                    },
+                ),
+                Expression(
+                    Call {
+                        callee: Identifier(
+                            "__ayyClassPrototypeInit",
+                        ),
+                        arguments: [
+                            Expression(
+                                Identifier(
+                                    "__ayy_local$x$1",
+                                ),
+                            ),
+                            Expression(
+                                Member {
+                                    object: Identifier(
+                                        "Object",
+                                    ),
+                                    property: String(
+                                        "prototype",
+                                    ),
+                                },
+                            ),
+                        ],
+                    },
+                ),
+                Expression(
+                    Call {
+                        callee: Member {
+                            object: Identifier(
+                                "Object",
+                            ),
+                            property: String(
+                                "defineProperty",
+                            ),
+                        },
+                        arguments: [
+                            Expression(
+                                Member {
+                                    object: Identifier(
+                                        "__ayy_local$x$1",
+                                    ),
+                                    property: String(
+                                        "prototype",
+                                    ),
+                                },
+                            ),
+                            Expression(
+                                String(
+                                    "constructor",
+                                ),
+                            ),
+                            Expression(
+                                Object(
+                                    [
+                                        Data {
+                                            key: String(
+                                                "value",
+                                            ),
+                                            value: Identifier(
+                                                "__ayy_local$x$1",
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "writable",
+                                            ),
+                                            value: Bool(
+                                                true,
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "enumerable",
+                                            ),
+                                            value: Bool(
+                                                false,
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "configurable",
+                                            ),
+                                            value: Bool(
+                                                true,
+                                            ),
+                                        },
+                                    ],
+                                ),
+                            ),
+                        ],
+                    },
+                ),
+                Expression(
+                    Call {
+                        callee: Member {
+                            object: Identifier(
+                                "Object",
+                            ),
+                            property: String(
+                                "defineProperty",
+                            ),
+                        },
+                        arguments: [
+                            Expression(
+                                Identifier(
+                                    "__ayy_local$x$1",
+                                ),
+                            ),
+                            Expression(
+                                String(
+                                    "name",
+                                ),
+                            ),
+                            Expression(
+                                Object(
+                                    [
+                                        Data {
+                                            key: String(
+                                                "value",
+                                            ),
+                                            value: String(
+                                                "x",
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "writable",
+                                            ),
+                                            value: Bool(
+                                                false,
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "enumerable",
+                                            ),
+                                            value: Bool(
+                                                false,
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "configurable",
+                                            ),
+                                            value: Bool(
+                                                true,
+                                            ),
+                                        },
+                                    ],
+                                ),
+                            ),
+                        ],
+                    },
+                ),
+                Return(
+                    Identifier(
+                        "__ayy_local$x$1",
+                    ),
+                ),
+            ],
+            register_global: false,
+            kind: Ordinary,
+            self_binding: None,
+            mapped_arguments: false,
+            strict: true,
+            lexical_this: false,
+            derived_constructor: false,
+            direct_eval_in_class_field_initializer: false,
+            length: 0,
+            synthetic_capture_bindings: [],
+            immutable_class_bindings: [
+                "__ayy_local$x$1",
+            ],
+            private_brand_binding: None,
+        },
+        FunctionDeclaration {
+            name: "__ayy_class_ctor___ayy_ctor_6__name___ayy_class_expr_4",
+            top_level_binding: None,
+            params: [],
+            body: [
+                If {
+                    condition: Binary {
+                        op: Equal,
+                        left: NewTarget,
+                        right: Undefined,
+                    },
+                    then_branch: [
+                        Throw(
+                            New {
+                                callee: Identifier(
+                                    "TypeError",
+                                ),
+                                arguments: [],
+                            },
+                        ),
+                    ],
+                    else_branch: [],
+                },
+            ],
+            register_global: false,
+            kind: Ordinary,
+            self_binding: Some(
+                "__ayy_class_expr_4",
+            ),
+            mapped_arguments: false,
+            strict: true,
+            lexical_this: false,
+            derived_constructor: false,
+            direct_eval_in_class_field_initializer: false,
+            length: 0,
+            synthetic_capture_bindings: [],
+            immutable_class_bindings: [
+                "__ayy_class_expr_4",
+            ],
+            private_brand_binding: None,
+        },
+        FunctionDeclaration {
+            name: "__ayy_class_init_5",
+            top_level_binding: None,
+            params: [],
+            body: [
+                Let {
+                    name: "__ayy_class_expr_4",
+                    mutable: true,
+                    value: Identifier(
+                        "__ayy_class_ctor___ayy_ctor_6__name___ayy_class_expr_4",
+                    ),
+                },
+                Expression(
+                    Call {
+                        callee: Member {
+                            object: Identifier(
+                                "Object",
+                            ),
+                            property: String(
+                                "defineProperty",
+                            ),
+                        },
+                        arguments: [
+                            Expression(
+                                Identifier(
+                                    "__ayy_class_expr_4",
+                                ),
+                            ),
+                            Expression(
+                                String(
+                                    "name",
+                                ),
+                            ),
+                            Expression(
+                                Object(
+                                    [
+                                        Data {
+                                            key: String(
+                                                "value",
+                                            ),
+                                            value: String(
+                                                "__ayy_class_expr_4",
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "writable",
+                                            ),
+                                            value: Bool(
+                                                false,
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "enumerable",
+                                            ),
+                                            value: Bool(
+                                                false,
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "configurable",
+                                            ),
+                                            value: Bool(
+                                                true,
+                                            ),
+                                        },
+                                    ],
+                                ),
+                            ),
+                        ],
+                    },
+                ),
+                Expression(
+                    Call {
+                        callee: Identifier(
+                            "__ayyClassPrototypeInit",
+                        ),
+                        arguments: [
+                            Expression(
+                                Identifier(
+                                    "__ayy_class_expr_4",
+                                ),
+                            ),
+                            Expression(
+                                Member {
+                                    object: Identifier(
+                                        "Object",
+                                    ),
+                                    property: String(
+                                        "prototype",
+                                    ),
+                                },
+                            ),
+                        ],
+                    },
+                ),
+                Expression(
+                    Call {
+                        callee: Member {
+                            object: Identifier(
+                                "Object",
+                            ),
+                            property: String(
+                                "defineProperty",
+                            ),
+                        },
+                        arguments: [
+                            Expression(
+                                Member {
+                                    object: Identifier(
+                                        "__ayy_class_expr_4",
+                                    ),
+                                    property: String(
+                                        "prototype",
+                                    ),
+                                },
+                            ),
+                            Expression(
+                                String(
+                                    "constructor",
+                                ),
+                            ),
+                            Expression(
+                                Object(
+                                    [
+                                        Data {
+                                            key: String(
+                                                "value",
+                                            ),
+                                            value: Identifier(
+                                                "__ayy_class_expr_4",
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "writable",
+                                            ),
+                                            value: Bool(
+                                                true,
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "enumerable",
+                                            ),
+                                            value: Bool(
+                                                false,
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "configurable",
+                                            ),
+                                            value: Bool(
+                                                true,
+                                            ),
+                                        },
+                                    ],
+                                ),
+                            ),
+                        ],
+                    },
+                ),
+                Expression(
+                    Call {
+                        callee: Member {
+                            object: Identifier(
+                                "Object",
+                            ),
+                            property: String(
+                                "defineProperty",
+                            ),
+                        },
+                        arguments: [
+                            Expression(
+                                Identifier(
+                                    "__ayy_class_expr_4",
+                                ),
+                            ),
+                            Expression(
+                                String(
+                                    "name",
+                                ),
+                            ),
+                            Expression(
+                                Object(
+                                    [
+                                        Data {
+                                            key: String(
+                                                "value",
+                                            ),
+                                            value: String(
+                                                "",
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "writable",
+                                            ),
+                                            value: Bool(
+                                                false,
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "enumerable",
+                                            ),
+                                            value: Bool(
+                                                false,
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "configurable",
+                                            ),
+                                            value: Bool(
+                                                true,
+                                            ),
+                                        },
+                                    ],
+                                ),
+                            ),
+                        ],
+                    },
+                ),
+                Return(
+                    Identifier(
+                        "__ayy_class_expr_4",
+                    ),
+                ),
+            ],
+            register_global: false,
+            kind: Ordinary,
+            self_binding: None,
+            mapped_arguments: false,
+            strict: true,
+            lexical_this: false,
+            derived_constructor: false,
+            direct_eval_in_class_field_initializer: false,
+            length: 0,
+            synthetic_capture_bindings: [],
+            immutable_class_bindings: [],
+            private_brand_binding: None,
+        },
+        FunctionDeclaration {
+            name: "__ayy_class_ctor___ayy_ctor_9__name___ayy_class_expr_7",
+            top_level_binding: None,
+            params: [],
+            body: [
+                If {
+                    condition: Binary {
+                        op: Equal,
+                        left: NewTarget,
+                        right: Undefined,
+                    },
+                    then_branch: [
+                        Throw(
+                            New {
+                                callee: Identifier(
+                                    "TypeError",
+                                ),
+                                arguments: [],
+                            },
+                        ),
+                    ],
+                    else_branch: [],
+                },
+            ],
+            register_global: false,
+            kind: Ordinary,
+            self_binding: Some(
+                "__ayy_class_expr_7",
+            ),
+            mapped_arguments: false,
+            strict: true,
+            lexical_this: false,
+            derived_constructor: false,
+            direct_eval_in_class_field_initializer: false,
+            length: 0,
+            synthetic_capture_bindings: [],
+            immutable_class_bindings: [
+                "__ayy_class_expr_7",
+            ],
+            private_brand_binding: None,
+        },
+        FunctionDeclaration {
+            name: "__ayy_class_init_8",
+            top_level_binding: None,
+            params: [],
+            body: [
+                Let {
+                    name: "__ayy_class_expr_7",
+                    mutable: true,
+                    value: Identifier(
+                        "__ayy_class_ctor___ayy_ctor_9__name___ayy_class_expr_7",
+                    ),
+                },
+                Expression(
+                    Call {
+                        callee: Member {
+                            object: Identifier(
+                                "Object",
+                            ),
+                            property: String(
+                                "defineProperty",
+                            ),
+                        },
+                        arguments: [
+                            Expression(
+                                Identifier(
+                                    "__ayy_class_expr_7",
+                                ),
+                            ),
+                            Expression(
+                                String(
+                                    "name",
+                                ),
+                            ),
+                            Expression(
+                                Object(
+                                    [
+                                        Data {
+                                            key: String(
+                                                "value",
+                                            ),
+                                            value: String(
+                                                "__ayy_class_expr_7",
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "writable",
+                                            ),
+                                            value: Bool(
+                                                false,
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "enumerable",
+                                            ),
+                                            value: Bool(
+                                                false,
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "configurable",
+                                            ),
+                                            value: Bool(
+                                                true,
+                                            ),
+                                        },
+                                    ],
+                                ),
+                            ),
+                        ],
+                    },
+                ),
+                Expression(
+                    Call {
+                        callee: Identifier(
+                            "__ayyClassPrototypeInit",
+                        ),
+                        arguments: [
+                            Expression(
+                                Identifier(
+                                    "__ayy_class_expr_7",
+                                ),
+                            ),
+                            Expression(
+                                Member {
+                                    object: Identifier(
+                                        "Object",
+                                    ),
+                                    property: String(
+                                        "prototype",
+                                    ),
+                                },
+                            ),
+                        ],
+                    },
+                ),
+                Expression(
+                    Call {
+                        callee: Member {
+                            object: Identifier(
+                                "Object",
+                            ),
+                            property: String(
+                                "defineProperty",
+                            ),
+                        },
+                        arguments: [
+                            Expression(
+                                Member {
+                                    object: Identifier(
+                                        "__ayy_class_expr_7",
+                                    ),
+                                    property: String(
+                                        "prototype",
+                                    ),
+                                },
+                            ),
+                            Expression(
+                                String(
+                                    "constructor",
+                                ),
+                            ),
+                            Expression(
+                                Object(
+                                    [
+                                        Data {
+                                            key: String(
+                                                "value",
+                                            ),
+                                            value: Identifier(
+                                                "__ayy_class_expr_7",
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "writable",
+                                            ),
+                                            value: Bool(
+                                                true,
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "enumerable",
+                                            ),
+                                            value: Bool(
+                                                false,
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "configurable",
+                                            ),
+                                            value: Bool(
+                                                true,
+                                            ),
+                                        },
+                                    ],
+                                ),
+                            ),
+                        ],
+                    },
+                ),
+                Expression(
+                    Call {
+                        callee: Member {
+                            object: Identifier(
+                                "Object",
+                            ),
+                            property: String(
+                                "defineProperty",
+                            ),
+                        },
+                        arguments: [
+                            Expression(
+                                Identifier(
+                                    "__ayy_class_expr_7",
+                                ),
+                            ),
+                            Expression(
+                                String(
+                                    "name",
+                                ),
+                            ),
+                            Expression(
+                                Object(
+                                    [
+                                        Data {
+                                            key: String(
+                                                "value",
+                                            ),
+                                            value: String(
+                                                "",
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "writable",
+                                            ),
+                                            value: Bool(
+                                                false,
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "enumerable",
+                                            ),
+                                            value: Bool(
+                                                false,
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "configurable",
+                                            ),
+                                            value: Bool(
+                                                true,
+                                            ),
+                                        },
+                                    ],
+                                ),
+                            ),
+                        ],
+                    },
+                ),
+                Return(
+                    Identifier(
+                        "__ayy_class_expr_7",
+                    ),
+                ),
+            ],
+            register_global: false,
+            kind: Ordinary,
+            self_binding: None,
+            mapped_arguments: false,
+            strict: true,
+            lexical_this: false,
+            derived_constructor: false,
+            direct_eval_in_class_field_initializer: false,
+            length: 0,
+            synthetic_capture_bindings: [],
+            immutable_class_bindings: [],
+            private_brand_binding: None,
+        },
+        FunctionDeclaration {
+            name: "__ayy_class_ctor___ayy_ctor_12__name___ayy_class_expr_10",
+            top_level_binding: None,
+            params: [],
+            body: [
+                If {
+                    condition: Binary {
+                        op: Equal,
+                        left: NewTarget,
+                        right: Undefined,
+                    },
+                    then_branch: [
+                        Throw(
+                            New {
+                                callee: Identifier(
+                                    "TypeError",
+                                ),
+                                arguments: [],
+                            },
+                        ),
+                    ],
+                    else_branch: [],
+                },
+            ],
+            register_global: false,
+            kind: Ordinary,
+            self_binding: Some(
+                "__ayy_class_expr_10",
+            ),
+            mapped_arguments: false,
+            strict: true,
+            lexical_this: false,
+            derived_constructor: false,
+            direct_eval_in_class_field_initializer: false,
+            length: 0,
+            synthetic_capture_bindings: [],
+            immutable_class_bindings: [
+                "__ayy_class_expr_10",
+            ],
+            private_brand_binding: None,
+        },
+        FunctionDeclaration {
+            name: "__ayy_class_init_11",
+            top_level_binding: None,
+            params: [],
+            body: [
+                Let {
+                    name: "__ayy_class_expr_10",
+                    mutable: true,
+                    value: Identifier(
+                        "__ayy_class_ctor___ayy_ctor_12__name___ayy_class_expr_10",
+                    ),
+                },
+                Expression(
+                    Call {
+                        callee: Member {
+                            object: Identifier(
+                                "Object",
+                            ),
+                            property: String(
+                                "defineProperty",
+                            ),
+                        },
+                        arguments: [
+                            Expression(
+                                Identifier(
+                                    "__ayy_class_expr_10",
+                                ),
+                            ),
+                            Expression(
+                                String(
+                                    "name",
+                                ),
+                            ),
+                            Expression(
+                                Object(
+                                    [
+                                        Data {
+                                            key: String(
+                                                "value",
+                                            ),
+                                            value: String(
+                                                "__ayy_class_expr_10",
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "writable",
+                                            ),
+                                            value: Bool(
+                                                false,
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "enumerable",
+                                            ),
+                                            value: Bool(
+                                                false,
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "configurable",
+                                            ),
+                                            value: Bool(
+                                                true,
+                                            ),
+                                        },
+                                    ],
+                                ),
+                            ),
+                        ],
+                    },
+                ),
+                Expression(
+                    Call {
+                        callee: Identifier(
+                            "__ayyClassPrototypeInit",
+                        ),
+                        arguments: [
+                            Expression(
+                                Identifier(
+                                    "__ayy_class_expr_10",
+                                ),
+                            ),
+                            Expression(
+                                Member {
+                                    object: Identifier(
+                                        "Object",
+                                    ),
+                                    property: String(
+                                        "prototype",
+                                    ),
+                                },
+                            ),
+                        ],
+                    },
+                ),
+                Expression(
+                    Call {
+                        callee: Member {
+                            object: Identifier(
+                                "Object",
+                            ),
+                            property: String(
+                                "defineProperty",
+                            ),
+                        },
+                        arguments: [
+                            Expression(
+                                Member {
+                                    object: Identifier(
+                                        "__ayy_class_expr_10",
+                                    ),
+                                    property: String(
+                                        "prototype",
+                                    ),
+                                },
+                            ),
+                            Expression(
+                                String(
+                                    "constructor",
+                                ),
+                            ),
+                            Expression(
+                                Object(
+                                    [
+                                        Data {
+                                            key: String(
+                                                "value",
+                                            ),
+                                            value: Identifier(
+                                                "__ayy_class_expr_10",
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "writable",
+                                            ),
+                                            value: Bool(
+                                                true,
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "enumerable",
+                                            ),
+                                            value: Bool(
+                                                false,
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "configurable",
+                                            ),
+                                            value: Bool(
+                                                true,
+                                            ),
+                                        },
+                                    ],
+                                ),
+                            ),
+                        ],
+                    },
+                ),
+                Expression(
+                    Call {
+                        callee: Member {
+                            object: Identifier(
+                                "Object",
+                            ),
+                            property: String(
+                                "defineProperty",
+                            ),
+                        },
+                        arguments: [
+                            Expression(
+                                Identifier(
+                                    "__ayy_class_expr_10",
+                                ),
+                            ),
+                            Expression(
+                                String(
+                                    "name",
+                                ),
+                            ),
+                            Expression(
+                                Object(
+                                    [
+                                        Data {
+                                            key: String(
+                                                "value",
+                                            ),
+                                            value: String(
+                                                "",
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "writable",
+                                            ),
+                                            value: Bool(
+                                                false,
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "enumerable",
+                                            ),
+                                            value: Bool(
+                                                false,
+                                            ),
+                                        },
+                                        Data {
+                                            key: String(
+                                                "configurable",
+                                            ),
+                                            value: Bool(
+                                                true,
+                                            ),
+                                        },
+                                    ],
+                                ),
+                            ),
+                        ],
+                    },
+                ),
+                Return(
+                    Identifier(
+                        "__ayy_class_expr_10",
+                    ),
+                ),
+            ],
+            register_global: false,
+            kind: Ordinary,
+            self_binding: None,
+            mapped_arguments: false,
+            strict: true,
+            lexical_this: false,
+            derived_constructor: false,
+            direct_eval_in_class_field_initializer: false,
+            length: 0,
+            synthetic_capture_bindings: [],
+            immutable_class_bindings: [],
+            private_brand_binding: None,
+        },
+    ],
+    statements: [
+        Var {
+            name: "namedSym",
+            value: Call {
+                callee: Identifier(
+                    "Symbol",
+                ),
+                arguments: [
+                    Expression(
+                        String(
+                            "test262",
+                        ),
+                    ),
+                ],
+            },
+        },
+        Var {
+            name: "anonSym",
+            value: Call {
+                callee: Identifier(
+                    "Symbol",
+                ),
+                arguments: [],
+            },
+        },
+        Var {
+            name: "o",
+            value: Undefined,
+        },
+        Assign {
+            name: "o",
+            value: Object(
+                [
+                    Data {
+                        key: String(
+                            "xId",
+                        ),
+                        value: Call {
+                            callee: Identifier(
+                                "__ayy_class_init_2",
+                            ),
+                            arguments: [],
+                        },
+                    },
+                    Data {
+                        key: String(
+                            "id",
+                        ),
+                        value: Call {
+                            callee: Identifier(
+                                "__ayy_class_init_5",
+                            ),
+                            arguments: [],
+                        },
+                    },
+                    Data {
+                        key: Sequence(
+                            [
+                                Identifier(
+                                    "anonSym",
+                                ),
+                            ],
+                        ),
+                        value: Call {
+                            callee: Identifier(
+                                "__ayy_class_init_8",
+                            ),
+                            arguments: [],
+                        },
+                    },
+                    Data {
+                        key: Sequence(
+                            [
+                                Identifier(
+                                    "namedSym",
+                                ),
+                            ],
+                        ),
+                        value: Call {
+                            callee: Identifier(
+                                "__ayy_class_init_11",
+                            ),
+                            arguments: [],
+                        },
+                    },
+                ],
+            ),
+        },
+        Expression(
+            Call {
+                callee: Identifier(
+                    "assert",
+                ),
+                arguments: [
+                    Expression(
+                        Binary {
+                            op: NotEqual,
+                            left: Member {
+                                object: Member {
+                                    object: Identifier(
+                                        "o",
+                                    ),
+                                    property: String(
+                                        "xId",
+                                    ),
+                                },
+                                property: String(
+                                    "name",
+                                ),
+                            },
+                            right: String(
+                                "xId",
+                            ),
+                        },
+                    ),
+                ],
+            },
+        ),
+        Expression(
+            Call {
+                callee: Identifier(
+                    "verifyProperty",
+                ),
+                arguments: [
+                    Expression(
+                        Member {
+                            object: Identifier(
+                                "o",
+                            ),
+                            property: String(
+                                "id",
+                            ),
+                        },
+                    ),
+                    Expression(
+                        String(
+                            "name",
+                        ),
+                    ),
+                    Expression(
+                        Object(
+                            [
+                                Data {
+                                    key: String(
+                                        "value",
+                                    ),
+                                    value: String(
+                                        "id",
+                                    ),
+                                },
+                                Data {
+                                    key: String(
+                                        "writable",
+                                    ),
+                                    value: Bool(
+                                        false,
+                                    ),
+                                },
+                                Data {
+                                    key: String(
+                                        "enumerable",
+                                    ),
+                                    value: Bool(
+                                        false,
+                                    ),
+                                },
+                                Data {
+                                    key: String(
+                                        "configurable",
+                                    ),
+                                    value: Bool(
+                                        true,
+                                    ),
+                                },
+                            ],
+                        ),
+                    ),
+                ],
+            },
+        ),
+        Expression(
+            Call {
+                callee: Identifier(
+                    "verifyProperty",
+                ),
+                arguments: [
+                    Expression(
+                        Member {
+                            object: Identifier(
+                                "o",
+                            ),
+                            property: Identifier(
+                                "anonSym",
+                            ),
+                        },
+                    ),
+                    Expression(
+                        String(
+                            "name",
+                        ),
+                    ),
+                    Expression(
+                        Object(
+                            [
+                                Data {
+                                    key: String(
+                                        "value",
+                                    ),
+                                    value: String(
+                                        "",
+                                    ),
+                                },
+                                Data {
+                                    key: String(
+                                        "writable",
+                                    ),
+                                    value: Bool(
+                                        false,
+                                    ),
+                                },
+                                Data {
+                                    key: String(
+                                        "enumerable",
+                                    ),
+                                    value: Bool(
+                                        false,
+                                    ),
+                                },
+                                Data {
+                                    key: String(
+                                        "configurable",
+                                    ),
+                                    value: Bool(
+                                        true,
+                                    ),
+                                },
+                            ],
+                        ),
+                    ),
+                ],
+            },
+        ),
+        Expression(
+            Call {
+                callee: Identifier(
+                    "verifyProperty",
+                ),
+                arguments: [
+                    Expression(
+                        Member {
+                            object: Identifier(
+                                "o",
+                            ),
+                            property: Identifier(
+                                "namedSym",
+                            ),
+                        },
+                    ),
+                    Expression(
+                        String(
+                            "name",
+                        ),
+                    ),
+                    Expression(
+                        Object(
+                            [
+                                Data {
+                                    key: String(
+                                        "value",
+                                    ),
+                                    value: String(
+                                        "[test262]",
+                                    ),
+                                },
+                                Data {
+                                    key: String(
+                                        "writable",
+                                    ),
+                                    value: Bool(
+                                        false,
+                                    ),
+                                },
+                                Data {
+                                    key: String(
+                                        "enumerable",
+                                    ),
+                                    value: Bool(
+                                        false,
+                                    ),
+                                },
+                                Data {
+                                    key: String(
+                                        "configurable",
+                                    ),
+                                    value: Bool(
+                                        true,
+                                    ),
+                                },
+                            ],
+                        ),
+                    ),
+                ],
+            },
+        ),
+    ],
+}
+ok

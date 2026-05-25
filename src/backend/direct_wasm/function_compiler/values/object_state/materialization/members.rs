@@ -80,6 +80,54 @@ impl<'a> FunctionCompiler<'a> {
         });
         if matches!(property, Expression::String(name) if name == "prototype") {
             let mut materialized_object = self.materialize_static_expression(object);
+            let prototype_property = Expression::String("prototype".to_string());
+            if let Expression::Identifier(name) = object {
+                let mut candidate_names = Vec::new();
+                if let Some((resolved_name, _)) = self.resolve_current_local_binding(name) {
+                    candidate_names.push(resolved_name);
+                }
+                candidate_names.push(name.clone());
+                candidate_names.sort();
+                candidate_names.dedup();
+                for candidate_name in candidate_names {
+                    if let Some(value) = self
+                        .state
+                        .speculation
+                        .static_semantics
+                        .local_object_binding(&candidate_name)
+                        .and_then(|object_binding| {
+                            object_binding_lookup_value(object_binding, &prototype_property)
+                        })
+                        .or_else(|| {
+                            self.global_object_binding(&candidate_name)
+                                .and_then(|object_binding| {
+                                    object_binding_lookup_value(object_binding, &prototype_property)
+                                })
+                        })
+                        .cloned()
+                    {
+                        return self.materialize_static_expression(&value);
+                    }
+                }
+            }
+            if let Some(value) = self
+                .resolve_object_binding_from_expression(object)
+                .or_else(|| {
+                    resolved_object.as_ref().and_then(|resolved_object| {
+                        self.resolve_object_binding_from_expression(resolved_object)
+                    })
+                })
+                .or_else(|| {
+                    (!static_expression_matches(&materialized_object, object))
+                        .then(|| self.resolve_object_binding_from_expression(&materialized_object))
+                        .flatten()
+                })
+                .and_then(|object_binding| {
+                    object_binding_lookup_value(&object_binding, &prototype_property).cloned()
+                })
+            {
+                return self.materialize_static_expression(&value);
+            }
             if let Some(LocalFunctionBinding::Builtin(function_name)) =
                 self.resolve_function_binding_from_expression(&materialized_object)
                 && is_function_constructor_builtin(&function_name)
@@ -141,31 +189,39 @@ impl<'a> FunctionCompiler<'a> {
         }
         let materialized_object = self.materialize_static_expression(object);
         let materialized_property = self.materialize_static_expression(property);
-        if self
-            .runtime_object_property_shadow_binding_name_for_expression(object, property)
+        let original_shadow_binding_name =
+            self.runtime_object_property_shadow_binding_name_for_expression(object, property);
+        let original_shadow_should_defer =
+            original_shadow_binding_name
+                .as_ref()
+                .is_some_and(|shadow_binding_name| {
+                    self.runtime_object_property_shadow_binding_should_defer_static_resolution(
+                        shadow_binding_name,
+                    )
+                });
+        let materialized_shadow_should_defer = self
+            .runtime_object_property_shadow_binding_name_for_expression(
+                &materialized_object,
+                &materialized_property,
+            )
             .is_some_and(|shadow_binding_name| {
                 self.runtime_object_property_shadow_binding_should_defer_static_resolution(
                     &shadow_binding_name,
                 )
-            })
-            || self
-                .runtime_object_property_shadow_binding_name_for_expression(
-                    &materialized_object,
-                    &materialized_property,
-                )
-                .is_some_and(|shadow_binding_name| {
-                    self.runtime_object_property_shadow_binding_should_defer_static_resolution(
-                        &shadow_binding_name,
-                    )
-                })
-        {
+            });
+        if original_shadow_should_defer || materialized_shadow_should_defer {
             if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
                 eprintln!(
                     "runtime_shadow_materialize_preserve object={object:?} property={property:?} materialized_object={materialized_object:?} materialized_property={materialized_property:?}"
                 );
             }
+            let preserved_object = if original_shadow_should_defer {
+                object.clone()
+            } else {
+                materialized_object
+            };
             return Expression::Member {
-                object: Box::new(materialized_object),
+                object: Box::new(preserved_object),
                 property: Box::new(materialized_property),
             };
         }
@@ -239,6 +295,24 @@ impl<'a> FunctionCompiler<'a> {
             };
             return Expression::Identifier(constructor_name.to_string());
         }
+        if matches!(&materialized_property, Expression::String(name) if name == "constructor") {
+            if let Some(binding) = self.resolve_constructed_object_constructor_binding(object) {
+                let constructor_name = match binding {
+                    LocalFunctionBinding::User(function_name) => function_name,
+                    LocalFunctionBinding::Builtin(function_name) => function_name,
+                };
+                return Expression::Identifier(constructor_name);
+            }
+            if self.expression_is_known_array_value(object) {
+                return Expression::Identifier("Array".to_string());
+            }
+            if self
+                .resolve_object_binding_from_expression(object)
+                .is_some()
+            {
+                return Expression::Identifier("Object".to_string());
+            }
+        }
         if let Some(getter_binding) = self
             .resolve_member_getter_binding_shallow(object, &materialized_property)
             .or_else(|| {
@@ -284,42 +358,28 @@ impl<'a> FunctionCompiler<'a> {
             };
         }
         if let Some(array_binding) = self.resolve_array_binding_from_expression(object) {
+            let runtime_array_binding_name = self.runtime_array_binding_name_for_expression(object);
+            let has_runtime_array_state = runtime_array_binding_name
+                .as_ref()
+                .is_some_and(|name| self.runtime_array_binding_has_state(name));
             if matches!(property, Expression::String(text) if text == "length") {
-                let has_runtime_array_state = self
-                    .runtime_array_length_local_for_expression(object)
-                    .is_some()
-                    || matches!(
-                        object,
-                        Expression::Identifier(name)
-                            if self.is_named_global_array_binding(name)
-                                && self.uses_global_runtime_array_state(name)
-                    );
                 if has_runtime_array_state {
                     return Expression::Member {
-                        object: Box::new(self.materialize_static_expression(object)),
+                        object: Box::new(object.clone()),
                         property: Box::new(self.materialize_static_expression(property)),
                     };
                 }
                 return Expression::Number(array_binding.values.len() as f64);
             }
             if let Some(index) = argument_index_from_expression(property) {
-                if let Some(Some(value)) = array_binding.values.get(index as usize) {
-                    return self.materialize_static_expression(value);
-                }
-                let has_runtime_array_state = self
-                    .runtime_array_length_local_for_expression(object)
-                    .is_some()
-                    || matches!(
-                        object,
-                        Expression::Identifier(name)
-                            if self.is_named_global_array_binding(name)
-                                && self.uses_global_runtime_array_state(name)
-                    );
                 if has_runtime_array_state {
                     return Expression::Member {
-                        object: Box::new(self.materialize_static_expression(object)),
+                        object: Box::new(object.clone()),
                         property: Box::new(self.materialize_static_expression(property)),
                     };
+                }
+                if let Some(Some(value)) = array_binding.values.get(index as usize) {
+                    return self.materialize_static_expression(value);
                 }
                 return Expression::Undefined;
             }
@@ -379,6 +439,18 @@ impl<'a> FunctionCompiler<'a> {
             })
         {
             return Expression::Number(function_length as f64);
+        }
+        if let Expression::Member {
+            object: prototype_owner,
+            property: prototype_property,
+        } = &materialized_object
+            && matches!(prototype_property.as_ref(), Expression::String(name) if name == "prototype")
+            && let Expression::Identifier(object_name) = prototype_owner.as_ref()
+            && self.is_unshadowed_builtin_identifier(object_name)
+            && let Expression::String(property_name) = &materialized_property
+            && let Some(value) = builtin_prototype_number_value(object_name, property_name)
+        {
+            return Expression::Number(value);
         }
         if matches!(&materialized_property, Expression::String(name) if name == "buffer")
             && let Some(buffer_expression) = self
@@ -519,6 +591,23 @@ impl<'a> FunctionCompiler<'a> {
                 })
                 .is_some()
             {
+                return Expression::Member {
+                    object: Box::new(materialized_object),
+                    property: Box::new(materialized_property),
+                };
+            }
+            let dynamic_shadow_owner = match &materialized_object {
+                Expression::Identifier(name) => {
+                    self.runtime_object_property_shadow_owner_name_for_identifier(name)
+                }
+                Expression::This => {
+                    self.runtime_object_property_shadow_owner_name_for_identifier("this")
+                }
+                _ => None,
+            };
+            if dynamic_shadow_owner.is_some_and(|owner_name| {
+                self.runtime_object_dynamic_property_shadow_has_binding(&owner_name)
+            }) {
                 return Expression::Member {
                     object: Box::new(materialized_object),
                     property: Box::new(materialized_property),

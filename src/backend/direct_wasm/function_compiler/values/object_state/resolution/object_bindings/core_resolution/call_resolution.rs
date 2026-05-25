@@ -1,6 +1,140 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn is_import_meta_call(callee: &Expression, arguments: &[CallArgument]) -> bool {
+        matches!(callee, Expression::Identifier(function_name) if function_name == "__ayyImportMeta")
+            && matches!(
+                arguments,
+                [] | [CallArgument::Expression(Expression::Number(_))]
+                    | [CallArgument::Spread(Expression::Number(_))]
+            )
+    }
+
+    fn optional_member_call_sequence_parts(
+        &self,
+        callee: &Expression,
+    ) -> Option<(Expression, Expression)> {
+        let Expression::Sequence(expressions) = callee else {
+            return None;
+        };
+        let [
+            Expression::Assign { name, value },
+            Expression::Conditional {
+                then_expression,
+                else_expression,
+                ..
+            },
+        ] = expressions.as_slice()
+        else {
+            return None;
+        };
+        if !matches!(then_expression.as_ref(), Expression::Undefined) {
+            return None;
+        }
+        let Expression::Member { object, property } = else_expression.as_ref() else {
+            return None;
+        };
+        if !matches!(object.as_ref(), Expression::Identifier(object_name) if object_name == name)
+            || !Self::expression_references_internal_assignment_temp(object)
+        {
+            return None;
+        }
+        Some((value.as_ref().clone(), property.as_ref().clone()))
+    }
+
+    fn optional_call_base_is_statically_nullish(&self, value: &Expression) -> Option<bool> {
+        let materialized = self.materialize_static_expression(value);
+        match &materialized {
+            Expression::Null | Expression::Undefined => return Some(true),
+            Expression::Array(_)
+            | Expression::Object(_)
+            | Expression::This
+            | Expression::New { .. } => {
+                return Some(false);
+            }
+            _ => {}
+        }
+
+        self.infer_value_kind(&materialized)
+            .or_else(|| self.infer_value_kind(value))
+            .and_then(|kind| match kind {
+                StaticValueKind::Null | StaticValueKind::Undefined => Some(true),
+                StaticValueKind::Unknown => None,
+                _ => Some(false),
+            })
+            .or_else(|| {
+                self.resolve_object_binding_from_expression(value)
+                    .map(|_| false)
+            })
+    }
+
+    fn resolve_optional_member_call_sequence_result_expression(
+        &self,
+        callee: &Expression,
+        arguments: &[CallArgument],
+    ) -> Option<Expression> {
+        let (object, property) = self.optional_member_call_sequence_parts(callee)?;
+        if !inline_summary_side_effect_free_expression(&object)
+            || !inline_summary_side_effect_free_expression(&property)
+            || arguments
+                .iter()
+                .any(|argument| !inline_summary_side_effect_free_expression(argument.expression()))
+        {
+            return None;
+        }
+        if self.optional_call_base_is_statically_nullish(&object)? {
+            return Some(Expression::Undefined);
+        }
+
+        let member_callee = Expression::Member {
+            object: Box::new(object.clone()),
+            property: Box::new(property.clone()),
+        };
+        self.resolve_static_call_result_expression_with_context(
+            &member_callee,
+            arguments,
+            self.current_function_name(),
+        )
+        .map(|(value, _)| self.materialize_static_expression(&value))
+        .or_else(|| {
+            if !arguments.is_empty() {
+                return None;
+            }
+            let Expression::String(property_name) = property else {
+                return None;
+            };
+            match self.resolve_static_member_call_outcome_with_context(
+                &object,
+                &property_name,
+                self.current_function_name(),
+            )? {
+                StaticEvalOutcome::Value(value) => Some(self.materialize_static_expression(&value)),
+                StaticEvalOutcome::Throw(_) => None,
+            }
+        })
+    }
+
+    fn resolve_side_effect_free_static_call_object_binding(
+        &self,
+        callee: &Expression,
+        arguments: &[CallArgument],
+    ) -> Option<ObjectValueBinding> {
+        if !inline_summary_side_effect_free_expression(callee)
+            || arguments
+                .iter()
+                .any(|argument| !inline_summary_side_effect_free_expression(argument.expression()))
+        {
+            return None;
+        }
+
+        let (result_expression, _) = self.resolve_static_call_result_expression_with_context(
+            callee,
+            arguments,
+            self.current_function_name(),
+        )?;
+        self.resolve_object_binding_from_expression(&result_expression)
+    }
+
     pub(super) fn resolve_call_or_new_object_binding(
         &self,
         expression: &Expression,
@@ -21,6 +155,35 @@ impl<'a> FunctionCompiler<'a> {
         callee: &Expression,
         arguments: &[CallArgument],
     ) -> Option<ObjectValueBinding> {
+        if let Some(result_expression) =
+            self.resolve_optional_member_call_sequence_result_expression(callee, arguments)
+            && let Some(object_binding) =
+                self.resolve_object_binding_from_expression(&result_expression)
+        {
+            return Some(object_binding);
+        }
+        if let Some(object_binding) =
+            self.resolve_side_effect_free_static_call_object_binding(callee, arguments)
+        {
+            return Some(object_binding);
+        }
+        if Self::is_import_meta_call(callee, arguments) {
+            let mut object_binding = empty_object_value_binding();
+            object_binding_set_property(
+                &mut object_binding,
+                Expression::String("toString".to_string()),
+                Expression::Identifier("String".to_string()),
+            );
+            return Some(object_binding);
+        }
+        if arguments.is_empty()
+            && let Expression::Identifier(function_name) = callee
+            && function_name.starts_with("__ayy_class_init_")
+            && let Some(object_binding) =
+                self.infer_static_class_init_constructor_object_binding(function_name)
+        {
+            return Some(object_binding);
+        }
         if matches!(
             callee,
             Expression::Member { object, property }
@@ -36,6 +199,20 @@ impl<'a> FunctionCompiler<'a> {
                     && matches!(property.as_ref(), Expression::String(name) if name == "create")
         ) {
             return Some(empty_object_value_binding());
+        }
+        if matches!(
+            callee,
+            Expression::Member { object, property }
+                if matches!(object.as_ref(), Expression::Identifier(name) if name == "Object")
+                    && matches!(property.as_ref(), Expression::String(name) if name == "getPrototypeOf")
+        ) {
+            let Some(CallArgument::Expression(target) | CallArgument::Spread(target)) =
+                arguments.first()
+            else {
+                return None;
+            };
+            let prototype = self.resolve_static_object_prototype_expression(target)?;
+            return self.resolve_object_binding_from_expression(&prototype);
         }
         if arguments.is_empty()
             && matches!(
@@ -98,6 +275,17 @@ impl<'a> FunctionCompiler<'a> {
             )
         {
             return Some(empty_object_value_binding());
+        }
+        if let Some(LocalFunctionBinding::User(function_name)) = self
+            .resolve_function_binding_from_expression_with_context(
+                callee,
+                self.current_function_name(),
+            )
+            && self
+                .user_function(&function_name)
+                .is_some_and(|function| matches!(function.kind, FunctionKind::Async))
+        {
+            return None;
         }
         self.resolve_native_error_object_binding(callee, arguments)
             .or_else(|| {
@@ -1256,6 +1444,37 @@ impl<'a> FunctionCompiler<'a> {
         arguments: &[CallArgument],
     ) -> Option<ObjectValueBinding> {
         self.resolve_user_constructor_object_binding_from_new(callee, arguments)
+            .map(|binding| {
+                self.rewrite_static_new_this_object_binding_for_expression(&binding, expression)
+            })
+            .or_else(|| {
+                let Expression::Call {
+                    callee: init_callee,
+                    arguments: init_arguments,
+                } = callee
+                else {
+                    return None;
+                };
+                if !init_arguments.is_empty() {
+                    return None;
+                }
+                let Expression::Identifier(function_name) = init_callee.as_ref() else {
+                    return None;
+                };
+                let constructor_expression = self
+                    .resolve_static_class_init_call_constructor_alias(function_name)
+                    .map(Expression::Identifier)
+                    .or_else(|| {
+                        self.infer_static_class_init_call_result_expression(function_name)
+                    })?;
+                self.resolve_user_constructor_object_binding_from_new(
+                    &constructor_expression,
+                    arguments,
+                )
+                .map(|binding| {
+                    self.rewrite_static_new_this_object_binding_for_expression(&binding, expression)
+                })
+            })
             .or_else(|| {
                 self.state
                     .speculation

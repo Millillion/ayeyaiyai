@@ -81,6 +81,20 @@ impl<'a> FunctionCompiler<'a> {
         expression: &Expression,
     ) -> Option<&'static str> {
         let trace = std::env::var_os("AYY_TRACE_CONSTRUCTED_FUNCTIONS").is_some();
+        if let Expression::Member { object, property } = expression
+            && let Expression::String(name) = property.as_ref()
+            && let Some(constructor_name) = Self::function_constructor_builtin_name(name)
+            && self
+                .resolve_test262_realm_global_id_from_expression(object)
+                .is_some()
+        {
+            if trace {
+                eprintln!(
+                    "constructed_function_ctor:realm_builtin expression={expression:?} constructor={constructor_name}"
+                );
+            }
+            return Some(constructor_name);
+        }
         if let Expression::Identifier(name) = expression
             && let Some(constructor_name) = Self::function_constructor_builtin_name(name)
             && (self.is_unshadowed_builtin_identifier(name)
@@ -822,12 +836,6 @@ impl<'a> FunctionCompiler<'a> {
         arguments: &[CallArgument],
     ) -> Option<&'static str> {
         let trace = std::env::var_os("AYY_TRACE_CONSTRUCTED_FUNCTIONS").is_some();
-        let Expression::Identifier(_name) = callee else {
-            if trace {
-                eprintln!("constructed_function_ctor:non_identifier callee={callee:?}");
-            }
-            return None;
-        };
         if let Some(constructor_name) =
             self.expression_resolves_to_function_constructor_builtin(callee)
         {
@@ -838,6 +846,12 @@ impl<'a> FunctionCompiler<'a> {
             }
             return Some(constructor_name);
         }
+        let Expression::Identifier(_name) = callee else {
+            if trace {
+                eprintln!("constructed_function_ctor:non_identifier callee={callee:?}");
+            }
+            return None;
+        };
         let mut callee_candidates = vec![callee.clone()];
         if let Some(resolved) = self
             .resolve_bound_alias_expression(callee)
@@ -874,29 +888,39 @@ impl<'a> FunctionCompiler<'a> {
             );
         }
         for candidate in &callee_candidates {
-            let candidate_function_name = self
-                .resolve_function_binding_from_expression(candidate)
-                .and_then(|binding| match binding {
-                    LocalFunctionBinding::User(function_name) => Some(function_name),
-                    LocalFunctionBinding::Builtin(_) => None,
-                })
-                .or_else(|| match candidate {
-                    Expression::Identifier(name)
-                        if self.user_function(name).is_some()
-                            || self
-                                .backend
-                                .function_registry
-                                .catalog
-                                .user_function(name)
-                                .is_some() =>
-                    {
-                        Some(name.clone())
+            let candidate_function_name = match candidate {
+                Expression::Call { callee, arguments } if arguments.is_empty() => {
+                    match callee.as_ref() {
+                        Expression::Identifier(function_name) => {
+                            self.resolve_static_class_init_call_constructor_alias(function_name)
+                        }
+                        _ => None,
                     }
-                    Expression::Identifier(name) => self
-                        .resolve_user_function_by_binding_name(name)
-                        .map(|function| function.name.clone()),
-                    _ => None,
-                });
+                }
+                _ => self
+                    .resolve_function_binding_from_expression(candidate)
+                    .and_then(|binding| match binding {
+                        LocalFunctionBinding::User(function_name) => Some(function_name),
+                        LocalFunctionBinding::Builtin(_) => None,
+                    }),
+            }
+            .or_else(|| match candidate {
+                Expression::Identifier(name)
+                    if self.user_function(name).is_some()
+                        || self
+                            .backend
+                            .function_registry
+                            .catalog
+                            .user_function(name)
+                            .is_some() =>
+                {
+                    Some(name.clone())
+                }
+                Expression::Identifier(name) => self
+                    .resolve_user_function_by_binding_name(name)
+                    .map(|function| function.name.clone()),
+                _ => None,
+            });
             if let Some(function_name) = candidate_function_name
                 && let Some(constructor_name) = self
                     .resolve_derived_constructed_function_constructor_name(
@@ -959,10 +983,13 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         expression: &Expression,
     ) -> Option<Expression> {
-        let resolved = self
-            .resolve_bound_alias_expression(expression)
-            .filter(|resolved| !static_expression_matches(resolved, expression))
-            .unwrap_or_else(|| expression.clone());
+        let resolved = if matches!(expression, Expression::Identifier(_)) {
+            self.resolve_bound_alias_expression(expression)
+                .filter(|resolved| !static_expression_matches(resolved, expression))
+                .unwrap_or_else(|| expression.clone())
+        } else {
+            expression.clone()
+        };
         let Expression::New { callee, arguments } = &resolved else {
             return None;
         };
@@ -1019,9 +1046,45 @@ impl<'a> FunctionCompiler<'a> {
         object_binding_define_property(
             &mut object_binding,
             function_constructor_source_property_expression(),
-            source_expression,
+            source_expression.clone(),
             false,
         );
+        if let Expression::New { callee, .. } = &source_expression
+            && let Expression::Member { object, property } = callee.as_ref()
+            && matches!(
+                property.as_ref(),
+                Expression::String(name)
+                    if matches!(
+                        name.as_str(),
+                        "Function"
+                            | "GeneratorFunction"
+                            | "AsyncFunction"
+                            | "AsyncGeneratorFunction"
+                    )
+            )
+            && let Some(realm_id) = self.resolve_test262_realm_global_id_from_expression(object)
+        {
+            object_binding_define_property(
+                &mut object_binding,
+                function_constructor_realm_id_property_expression(),
+                Expression::Number(f64::from(realm_id)),
+                false,
+            );
+            object_binding_define_property(
+                &mut object_binding,
+                function_constructor_realm_object_prototype_property_expression(),
+                Expression::Member {
+                    object: Box::new(Expression::Member {
+                        object: Box::new(Expression::Identifier(test262_realm_global_identifier(
+                            realm_id,
+                        ))),
+                        property: Box::new(Expression::String("Object".to_string())),
+                    }),
+                    property: Box::new(Expression::String("prototype".to_string())),
+                },
+                false,
+            );
+        }
         object_binding_define_property(
             &mut object_binding,
             Expression::String("length".to_string()),
@@ -1731,6 +1794,43 @@ impl<'a> FunctionCompiler<'a> {
             return None;
         };
         self.resolve_static_boxed_primitive_argument_value(boxed_constructor_name, &arguments)
+    }
+
+    pub(in crate::backend::direct_wasm) fn expression_is_static_boxed_primitive_object(
+        &self,
+        expression: &Expression,
+    ) -> bool {
+        if self
+            .resolve_static_constructed_boxed_primitive_value(expression)
+            .is_some()
+        {
+            return true;
+        }
+        if let Some(object_binding) = self.resolve_object_binding_from_expression(expression)
+            && object_binding_lookup_value(
+                &object_binding,
+                &boxed_primitive_value_property_expression(),
+            )
+            .is_some()
+        {
+            return true;
+        }
+        if let Expression::Identifier(name) = expression
+            && let Some(object_binding) = self.backend.global_object_binding(name)
+            && object_binding_lookup_value(
+                object_binding,
+                &boxed_primitive_value_property_expression(),
+            )
+            .is_some()
+        {
+            return true;
+        }
+        if let Some(resolved) = self.resolve_bound_alias_expression(expression)
+            && !static_expression_matches(&resolved, expression)
+        {
+            return self.expression_is_static_boxed_primitive_object(&resolved);
+        }
+        false
     }
 
     pub(in crate::backend::direct_wasm) fn resolve_static_symbol_to_primitive_outcome_with_context(

@@ -1,6 +1,25 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    pub(in crate::backend::direct_wasm) fn expression_is_template_object_raw_array_candidate(
+        &self,
+        expression: &Expression,
+    ) -> bool {
+        let Expression::Member { object, property } = expression else {
+            return false;
+        };
+        if !matches!(property.as_ref(), Expression::String(name) if name == "raw")
+            || self.backend.template_object_raw_array_bindings.is_empty()
+        {
+            return false;
+        }
+        self.runtime_array_binding_name_for_expression(object)
+            .is_some()
+            || self
+                .resolve_template_object_reference_identity_expression(object)
+                .is_some()
+    }
+
     pub(in crate::backend::direct_wasm) fn emit_array_is_array_call(
         &mut self,
         callee_object: &Expression,
@@ -27,12 +46,14 @@ impl<'a> FunctionCompiler<'a> {
                     .resolve_array_binding_from_expression(expression)
                     .is_some();
                 let runtime_array = self.runtime_array_binding_name_for_expression(expression);
+                let template_raw_array =
+                    self.expression_is_template_object_raw_array_candidate(expression);
                 if std::env::var_os("AYY_TRACE_ARRAY_IS_ARRAY").is_some() {
                     eprintln!(
-                        "array_is_array:emit expression={expression:?} typed_array={typed_array} static_array={static_array} runtime_array={runtime_array:?}"
+                        "array_is_array:emit expression={expression:?} typed_array={typed_array} static_array={static_array} runtime_array={runtime_array:?} template_raw_array={template_raw_array}"
                     );
                 }
-                !typed_array && (static_array || runtime_array.is_some())
+                !typed_array && (static_array || runtime_array.is_some() || template_raw_array)
             }
         };
 

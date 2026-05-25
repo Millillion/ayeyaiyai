@@ -72,6 +72,7 @@ impl<'a> FunctionCompiler<'a> {
         name: &str,
         arguments: &[CallArgument],
     ) -> DirectResult<()> {
+        let trace_call_dispatch = std::env::var_os("AYY_TRACE_CALL_DISPATCH").is_some();
         if let Some(scope_object) = self.resolve_with_scope_binding(name)? {
             self.emit_scoped_property_read(&scope_object, name)?;
             self.state.emission.output.instructions.push(0x1a);
@@ -151,13 +152,75 @@ impl<'a> FunctionCompiler<'a> {
         {
             return Ok(());
         }
+        if matches!(
+            name,
+            "__assert" | "__assertSameValue" | "__assertNotSameValue"
+        ) && self.emit_builtin_call(name, arguments)?
+        {
+            return Ok(());
+        }
+        if name == "__ayyAssertThrows" && self.emit_assert_throws_call(arguments)? {
+            return Ok(());
+        }
         let resolved_local_name = self
             .resolve_current_local_binding(name)
             .map(|(resolved_name, _)| resolved_name);
+        let has_static_lexical_global_value = self.backend.lexical_global_binding(name).is_some()
+            && self
+                .state
+                .speculation
+                .static_semantics
+                .local_value_binding(name)
+                .is_some();
+        if trace_call_dispatch {
+            eprintln!(
+                "identifier_call:resolution name={name} resolved_local={resolved_local_name:?} eval_hidden={:?} lexical_global={} local_value={:?} local_function={:?} global_value={:?} global_function={:?}",
+                self.resolve_eval_local_function_hidden_name(name),
+                self.backend.lexical_global_binding(name).is_some(),
+                self.state
+                    .speculation
+                    .static_semantics
+                    .local_value_binding(name),
+                self.state
+                    .speculation
+                    .static_semantics
+                    .local_function_binding(name),
+                self.global_value_binding(name),
+                self.backend
+                    .global_semantics
+                    .functions
+                    .function_binding(name),
+            );
+        }
         if resolved_local_name.is_some()
             || self.resolve_eval_local_function_hidden_name(name).is_some()
+            || has_static_lexical_global_value
         {
             let binding_name = resolved_local_name.as_deref().unwrap_or(name);
+            if trace_call_dispatch {
+                eprintln!(
+                    "identifier_call:local name={name} binding={binding_name} value={:?} function={:?}",
+                    self.state
+                        .speculation
+                        .static_semantics
+                        .local_value_binding(binding_name),
+                    self.state
+                        .speculation
+                        .static_semantics
+                        .local_function_binding(binding_name),
+                );
+            }
+            if let Some(value) = self
+                .state
+                .speculation
+                .static_semantics
+                .local_value_binding(binding_name)
+                .cloned()
+                && self.emit_function_prototype_bind_call(&value, arguments)?
+            {
+                self.note_last_bound_user_function_source_expression(source_expression);
+                return Ok(());
+            }
             if let Some(function_name) = self
                 .state
                 .speculation
@@ -165,6 +228,21 @@ impl<'a> FunctionCompiler<'a> {
                 .local_function_binding(binding_name)
                 .cloned()
             {
+                if let Some(value) = self
+                    .state
+                    .speculation
+                    .static_semantics
+                    .local_value_binding(binding_name)
+                    .cloned()
+                    && self.emit_function_prototype_bind_call_with_resolved_binding(
+                        &value,
+                        arguments,
+                        function_name.clone(),
+                    )?
+                {
+                    self.note_last_bound_user_function_source_expression(source_expression);
+                    return Ok(());
+                }
                 match function_name {
                     LocalFunctionBinding::User(function_name) => {
                         if let Some(user_function) = self.user_function(&function_name).cloned() {
@@ -203,9 +281,28 @@ impl<'a> FunctionCompiler<'a> {
                 .static_semantics
                 .local_value_binding(binding_name)
                 .cloned()
-                && let Some(function_binding) =
-                    self.resolve_function_binding_from_expression(&value)
             {
+                if self.emit_function_prototype_bind_call(&value, arguments)? {
+                    self.note_last_bound_user_function_source_expression(source_expression);
+                    return Ok(());
+                }
+                let Some(function_binding) = self.resolve_function_binding_from_expression(&value)
+                else {
+                    if self.emit_dynamic_user_function_call(callee, arguments)? {
+                        return Ok(());
+                    }
+                    self.emit_ignored_call_arguments(arguments)?;
+                    self.push_i32_const(JS_UNDEFINED_TAG);
+                    return Ok(());
+                };
+                if self.emit_function_prototype_bind_call_with_resolved_binding(
+                    &value,
+                    arguments,
+                    function_binding.clone(),
+                )? {
+                    self.note_last_bound_user_function_source_expression(source_expression);
+                    return Ok(());
+                }
                 match function_binding {
                     LocalFunctionBinding::User(function_name) => {
                         if let Some(user_function) = self.user_function(&function_name).cloned() {
@@ -262,17 +359,7 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(());
         }
 
-        if name == "__ayyAssertThrows" && self.emit_assert_throws_call(arguments)? {
-            return Ok(());
-        }
         if name == "__ayyClassPrototypeInit" && self.emit_class_prototype_init_call(arguments)? {
-            return Ok(());
-        }
-        if matches!(
-            name,
-            "__assert" | "__assertSameValue" | "__assertNotSameValue"
-        ) && self.emit_builtin_call(name, arguments)?
-        {
             return Ok(());
         }
         if name == "__ayyAssertCompareArray" && self.emit_assert_compare_array_call(arguments)? {
@@ -288,6 +375,20 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(());
         }
 
+        if let Some(function_binding) = self.global_value_binding(name).cloned().filter(|value| {
+            self.resolve_function_prototype_bind_call(value, self.current_function_name())
+                .is_some()
+        }) {
+            if trace_call_dispatch {
+                eprintln!(
+                    "identifier_call:global-bind-value name={name} value={function_binding:?}"
+                );
+            }
+            if self.emit_function_prototype_bind_call(&function_binding, arguments)? {
+                self.note_last_bound_user_function_source_expression(source_expression);
+                return Ok(());
+            }
+        }
         if let Some(function_binding) = self
             .backend
             .global_semantics
@@ -296,6 +397,22 @@ impl<'a> FunctionCompiler<'a> {
             .cloned()
             && !global_identifier_call_requires_runtime_value(self, callee, name, &function_binding)
         {
+            if trace_call_dispatch {
+                eprintln!(
+                    "identifier_call:global-function name={name} value={:?} function={function_binding:?}",
+                    self.global_value_binding(name),
+                );
+            }
+            if let Some(value) = self.global_value_binding(name).cloned()
+                && self.emit_function_prototype_bind_call_with_resolved_binding(
+                    &value,
+                    arguments,
+                    function_binding.clone(),
+                )?
+            {
+                self.note_last_bound_user_function_source_expression(source_expression);
+                return Ok(());
+            }
             match function_binding {
                 LocalFunctionBinding::User(function_name) => {
                     if let Some(user_function) = self.user_function(&function_name).cloned() {
@@ -336,9 +453,35 @@ impl<'a> FunctionCompiler<'a> {
             .value_bindings
             .get(name)
             .cloned()
-            && let Some(function_binding) = self.resolve_function_binding_from_expression(&value)
-            && !global_identifier_call_requires_runtime_value(self, callee, name, &function_binding)
         {
+            if self.emit_function_prototype_bind_call(&value, arguments)? {
+                self.note_last_bound_user_function_source_expression(source_expression);
+                return Ok(());
+            }
+            let Some(function_binding) = self.resolve_function_binding_from_expression(&value)
+            else {
+                if self.emit_dynamic_user_function_call(callee, arguments)? {
+                    return Ok(());
+                }
+                self.push_i32_const(JS_UNDEFINED_TAG);
+                return Ok(());
+            };
+            if self.emit_function_prototype_bind_call_with_resolved_binding(
+                &value,
+                arguments,
+                function_binding.clone(),
+            )? {
+                self.note_last_bound_user_function_source_expression(source_expression);
+                return Ok(());
+            }
+            if global_identifier_call_requires_runtime_value(self, callee, name, &function_binding)
+            {
+                if self.emit_dynamic_user_function_call(callee, arguments)? {
+                    return Ok(());
+                }
+                self.push_i32_const(JS_UNDEFINED_TAG);
+                return Ok(());
+            }
             match function_binding {
                 LocalFunctionBinding::User(function_name) => {
                     if let Some(user_function) = self.user_function(&function_name).cloned() {

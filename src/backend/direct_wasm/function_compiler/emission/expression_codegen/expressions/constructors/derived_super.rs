@@ -51,59 +51,14 @@ impl<'a> FunctionCompiler<'a> {
         self.push_global_set(CURRENT_THIS_GLOBAL_INDEX);
     }
 
-    fn sync_derived_super_argument_binding(&mut self, hidden_name: &str, argument: &Expression) {
-        self.update_local_value_binding(hidden_name, argument);
-        self.update_local_function_binding(hidden_name, argument);
-        self.update_local_proxy_binding(hidden_name, argument);
-        self.update_local_object_binding(hidden_name, argument);
-        self.update_local_array_binding(hidden_name, argument);
-        let kind = self
-            .infer_value_kind(argument)
-            .unwrap_or(StaticValueKind::Unknown);
-        self.state
-            .speculation
-            .static_semantics
-            .set_local_kind(hidden_name, kind);
-    }
-
     pub(in crate::backend::direct_wasm) fn emit_derived_constructor_super_call(
         &mut self,
         user_function: &UserFunction,
         arguments: &[CallArgument],
     ) -> DirectResult<()> {
         let expanded_arguments = self.expand_call_arguments(arguments);
-        let runtime_arguments = expanded_arguments
-            .iter()
-            .enumerate()
-            .map(|(index, argument)| {
-                let argument_local = self.allocate_temp_local();
-                self.emit_numeric_expression(argument)?;
-                self.push_local_set(argument_local);
-                let hidden_name = self.allocate_named_hidden_local(
-                    &format!("derived_super_arg_{index}"),
-                    self.infer_value_kind(argument)
-                        .unwrap_or(StaticValueKind::Unknown),
-                );
-                let hidden_local = self
-                    .state
-                    .runtime
-                    .locals
-                    .get(&hidden_name)
-                    .copied()
-                    .expect("fresh derived super argument local must exist");
-                self.push_local_get(argument_local);
-                self.push_local_set(hidden_local);
-                self.sync_derived_super_argument_binding(&hidden_name, argument);
-                self.update_capture_slot_binding_from_expression(&hidden_name, argument)?;
-                self.sync_capture_slot_runtime_object_shadows_from_expression(
-                    &hidden_name,
-                    argument,
-                )?;
-                Ok(CallArgument::Expression(Expression::Identifier(
-                    hidden_name,
-                )))
-            })
-            .collect::<DirectResult<Vec<_>>>()?;
+        let (runtime_arguments, argument_shadow_writebacks) =
+            self.prepare_constructor_runtime_argument_bindings(arguments)?;
 
         let super_target_hidden_name = Self::STATIC_NEW_THIS_BINDING.to_string();
         if !self
@@ -152,18 +107,30 @@ impl<'a> FunctionCompiler<'a> {
         } else {
             None
         };
+        let super_this_expression = if self.user_function_is_derived_constructor(user_function) {
+            Expression::Undefined
+        } else {
+            Expression::Identifier(super_target_hidden_name.clone())
+        };
         self.emit_user_function_call_with_current_new_target_and_this_expression(
             user_function,
             &runtime_arguments,
-            &Expression::Identifier(super_target_hidden_name),
+            &super_this_expression,
         )?;
+        let return_value_local = self.allocate_temp_local();
+        self.push_local_set(return_value_local);
+        for (hidden_name, source_owner) in argument_shadow_writebacks {
+            self.emit_runtime_object_property_shadow_copy(&hidden_name, &source_owner)?;
+        }
         if let Some(saved_new_target_local) = saved_new_target_local {
-            let return_value_local = self.allocate_temp_local();
-            self.push_local_set(return_value_local);
             self.push_local_get(saved_new_target_local);
             self.push_global_set(CURRENT_NEW_TARGET_GLOBAL_INDEX);
-            self.push_local_get(return_value_local);
         }
+        self.push_local_get(return_value_local);
+        self.sync_direct_arguments_assignments_from_static_user_call(
+            user_function,
+            &expanded_arguments,
+        );
         self.finish_derived_super_call_return(&runtime_arguments, |compiler| {
             compiler.sync_derived_constructor_this_binding_after_super_call(
                 user_function,

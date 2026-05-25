@@ -1,0 +1,14 @@
+RUNTIME_FAIL .cache/test262/test/language/expressions/function/dstr/dflt-obj-ptrn-id-get-value-err.js
+stdout:
+
+stderr:
+Error
+Error: failed to run main module `/tmp/.tmp5XNbt3/test.wasm`
+
+Caused by:
+    0: failed to invoke command default
+    1: error while executing at wasm backtrace:
+           0: 0x1273 - <unknown>!<wasm function 5>
+    2: wasm trap: wasm `unreachable` instruction executed
+
+SUMMARY discovered=1 attempted=1 passed=0 compile_failed=0 runtime_failed=1 skipped_metadata=0 skipped_content=0 attempt_rate_percent=100.00 compliance_percent=0.00

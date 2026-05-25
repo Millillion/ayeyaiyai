@@ -1,6 +1,21 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn binding_name_matches_source(binding: &str, source_name: &str) -> bool {
+        binding == source_name || scoped_binding_source_name(binding) == Some(source_name)
+    }
+
+    fn function_declaration_has_immutable_self_binding(
+        function: &FunctionDeclaration,
+        source_name: &str,
+    ) -> bool {
+        function.name.starts_with("__ayy_fnexpr_")
+            && function.self_binding.as_ref().is_some_and(|self_binding| {
+                function.name == source_name
+                    || Self::binding_name_matches_source(self_binding, source_name)
+            })
+    }
+
     fn capture_binding_function_references_nested_function(
         &self,
         function: &FunctionDeclaration,
@@ -126,6 +141,9 @@ impl<'a> FunctionCompiler<'a> {
         ) {
             return true;
         }
+        if Self::function_declaration_has_immutable_self_binding(enclosing_function, source_name) {
+            return true;
+        }
 
         self.user_function_capture_bindings(&enclosing_name)
             .is_some_and(|bindings| bindings.contains_key(source_name))
@@ -148,6 +166,25 @@ impl<'a> FunctionCompiler<'a> {
         name: &str,
     ) -> Option<u32> {
         self.backend.resolve_global_binding_index(name)
+    }
+
+    pub(in crate::backend::direct_wasm) fn global_binding_index(&self, name: &str) -> Option<u32> {
+        self.backend.global_binding_index(name)
+    }
+
+    pub(in crate::backend::direct_wasm) fn resolve_active_global_lexical_binding(
+        &self,
+        name: &str,
+    ) -> Option<(String, u32)> {
+        let active_name = self
+            .state
+            .emission
+            .lexical_scopes
+            .active_scoped_lexical_bindings
+            .get(name)
+            .and_then(|bindings| bindings.last())?;
+        self.global_binding_index(active_name)
+            .map(|global_index| (active_name.clone(), global_index))
     }
 
     pub(in crate::backend::direct_wasm) fn resolve_eval_local_function_hidden_name(
@@ -329,6 +366,29 @@ impl<'a> FunctionCompiler<'a> {
                     .static_semantics
                     .immutable_local_bindings
                     .contains(source_name)
+            })
+    }
+
+    pub(in crate::backend::direct_wasm) fn assignment_targets_immutable_function_self_binding(
+        &self,
+        name: &str,
+    ) -> bool {
+        let Some(function) = self.current_user_function_declaration() else {
+            return false;
+        };
+        let source_name = scoped_binding_source_name(name).unwrap_or(name);
+        Self::function_declaration_has_immutable_self_binding(function, source_name)
+    }
+
+    pub(in crate::backend::direct_wasm) fn binding_is_immutable_function_self_binding_source(
+        &self,
+        name: &str,
+    ) -> bool {
+        let source_name = scoped_binding_source_name(name).unwrap_or(name);
+        self.resolve_registered_function_declaration(source_name)
+            .or_else(|| self.prepared_function_declaration(source_name))
+            .is_some_and(|function| {
+                Self::function_declaration_has_immutable_self_binding(function, source_name)
             })
     }
 

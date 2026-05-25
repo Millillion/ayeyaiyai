@@ -85,6 +85,9 @@ impl<'a> FunctionCompiler<'a> {
         if !parameter_iterator_consumption_indices.is_empty() {
             return Ok(false);
         }
+        if self.user_function_deletes_call_frame_arguments_member(user_function) {
+            return Ok(false);
+        }
         let mut state =
             self.prepare_inline_summary_emission_state(user_function, arguments, this_binding)?;
         if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
