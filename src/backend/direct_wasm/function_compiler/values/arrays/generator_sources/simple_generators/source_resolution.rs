@@ -821,10 +821,10 @@ impl<'a> FunctionCompiler<'a> {
         }
 
         let var_names = collect_eval_var_names(&program);
-        if user_function.body_declares_arguments_binding
-            && var_names.iter().any(|var_name| var_name == "arguments")
-        {
-            return true;
+        if var_names.iter().any(|var_name| var_name == "arguments") {
+            if !user_function.lexical_this || user_function.body_declares_arguments_binding {
+                return true;
+            }
         }
 
         var_names.into_iter().any(|var_name| {
