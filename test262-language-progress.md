@@ -1,4 +1,4 @@
-22694/23637 (96.01%) — avg(last 10): 0.49 min/check
+22695/23637 (96.01%) — avg(last 10): 0.47 min/check
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -25,7 +25,7 @@ Sub-category progress
 - identifier-resolution: 14/14 (100.00%)
 - computed-property-names: 48/48 (100.00%)
 - destructuring: 18/19 (94.74%)
-- eval-code: 146/347 (42.07%)
+- eval-code: 147/347 (42.36%)
 - import: 0/123 (0.00%)
 - export: 0/3 (0.00%)
 - module-code: 0/592 (0.00%)
@@ -22796,7 +22796,7 @@ Sub-category progress
   - [x] (2026-05-25T07:19:41-06:00) test/language/eval-code/direct/func-expr-fn-body-cntns-arguments-var-bind-declare-arguments-and-assign.js
   - [x] (2026-05-25T07:20:12-06:00) test/language/eval-code/direct/func-expr-fn-body-cntns-arguments-var-bind-declare-arguments.js
   - [x] (2026-05-25T07:20:37-06:00) test/language/eval-code/direct/func-expr-no-pre-existing-arguments-bindings-are-present-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/func-expr-no-pre-existing-arguments-bindings-are-present-declare-arguments.js
+  - [x] (2026-05-25T07:20:59-06:00) test/language/eval-code/direct/func-expr-no-pre-existing-arguments-bindings-are-present-declare-arguments.js
   - [ ] test/language/eval-code/direct/gen-func-decl-a-following-parameter-is-named-arguments-declare-arguments-and-assign.js
   - [ ] test/language/eval-code/direct/gen-func-decl-a-following-parameter-is-named-arguments-declare-arguments.js
   - [ ] test/language/eval-code/direct/gen-func-decl-a-preceding-parameter-is-named-arguments-declare-arguments-and-assign.js
