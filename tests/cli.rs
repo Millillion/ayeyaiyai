@@ -7400,6 +7400,58 @@ fn compiles_detached_object_method_aliases_and_async_generator_eval_throws() {
 }
 
 #[test]
+fn compiles_async_generator_default_eval_arguments_body_binding_conflict() {
+    let tempdir = tempdir().unwrap();
+    let input = tempdir
+        .path()
+        .join("async-generator-default-eval-arguments-body-conflict.js");
+    let output = tempdir
+        .path()
+        .join("async-generator-default-eval-arguments-body-conflict.wasm");
+
+    fs::write(
+        &input,
+        r#"
+        async function * f(p = eval("var arguments = 'param'")) {
+          function arguments() {}
+        }
+
+        try {
+          f();
+          console.log("caught", false);
+        } catch (error) {
+          console.log("caught", error instanceof SyntaxError);
+        }
+        "#,
+    )
+    .unwrap();
+
+    let compile = Command::new(env!("CARGO_BIN_EXE_ayeyaiyai"))
+        .arg(&input)
+        .arg("-o")
+        .arg(&output)
+        .output()
+        .unwrap();
+
+    assert!(
+        compile.status.success(),
+        "compiler failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&compile.stdout),
+        String::from_utf8_lossy(&compile.stderr),
+    );
+
+    let run = Command::new("wasmtime").arg(&output).output().unwrap();
+
+    assert!(
+        run.status.success(),
+        "wasmtime failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&run.stdout),
+        String::from_utf8_lossy(&run.stderr),
+    );
+    assert_eq!(String::from_utf8_lossy(&run.stdout), "caught true\n");
+}
+
+#[test]
 fn async_default_eval_errors_are_rejected_at_compile_time() {
     let run = Command::new(env!("CARGO_BIN_EXE_test262"))
         .arg("--test262-dir")

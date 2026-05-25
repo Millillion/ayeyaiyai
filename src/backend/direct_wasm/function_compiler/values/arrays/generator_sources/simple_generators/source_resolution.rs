@@ -820,14 +820,18 @@ impl<'a> FunctionCompiler<'a> {
             return false;
         }
 
-        collect_eval_var_names(&program)
-            .into_iter()
-            .any(|var_name| {
-                user_function.params.iter().any(|param_name| {
-                    scoped_binding_source_name(param_name).unwrap_or(param_name.as_str())
-                        == var_name
-                })
+        let var_names = collect_eval_var_names(&program);
+        if user_function.body_declares_arguments_binding
+            && var_names.iter().any(|var_name| var_name == "arguments")
+        {
+            return true;
+        }
+
+        var_names.into_iter().any(|var_name| {
+            user_function.params.iter().any(|param_name| {
+                scoped_binding_source_name(param_name).unwrap_or(param_name.as_str()) == var_name
             })
+        })
     }
 
     fn simple_generator_direct_eval_program(&self, expression: &Expression) -> Option<Program> {
