@@ -123,6 +123,9 @@ impl<'a> FunctionCompiler<'a> {
         left: &Expression,
         prototype: &Expression,
     ) -> bool {
+        if self.module_namespace_index_from_expression(left).is_some() {
+            return false;
+        }
         if let Some(resolved) = self
             .resolve_bound_alias_expression(prototype)
             .filter(|resolved| !static_expression_matches(resolved, prototype))

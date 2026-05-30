@@ -55,7 +55,7 @@ impl Lowerer {
             body,
             register_global: false,
             kind,
-            self_binding: None,
+            self_binding: Some(identifier.sym.to_string()),
             mapped_arguments: self.function_has_mapped_arguments(&function_expression.function),
             strict: self.function_strict_mode(&function_expression.function),
             lexical_this: false,

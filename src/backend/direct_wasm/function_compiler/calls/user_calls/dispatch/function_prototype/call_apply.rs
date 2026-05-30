@@ -160,11 +160,10 @@ impl<'a> FunctionCompiler<'a> {
             {
                 if trace {
                     eprintln!(
-                        "reflect_construct_call:new_target_static expression={new_target_expression:?} fallback_value={}",
-                        user_function_runtime_value(&user_function)
+                        "reflect_construct_call:new_target_static expression={new_target_expression:?} fallback_value={JS_TYPEOF_FUNCTION_TAG}"
                     );
                 }
-                user_function_runtime_value(&user_function)
+                JS_TYPEOF_FUNCTION_TAG
             } else {
                 if trace {
                     eprintln!(

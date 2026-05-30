@@ -757,6 +757,12 @@ impl<'a> FunctionCompiler<'a> {
                 {
                     return Some(Self::prototype_member_expression("Symbol"));
                 }
+                Expression::Identifier(name)
+                    if FunctionCompiler::module_index_from_namespace_like_identifier(name)
+                        .is_some() =>
+                {
+                    return Some(Expression::Null);
+                }
                 Expression::Call { callee, arguments }
                     if arguments.is_empty()
                         && matches!(callee.as_ref(), Expression::Identifier(name) if name == "Symbol") =>
@@ -984,6 +990,27 @@ impl<'a> FunctionCompiler<'a> {
                 Expression::Sequence(expressions) => {
                     let last = expressions.last()?;
                     return this.resolve_static_object_prototype_expression(last);
+                }
+                Expression::Member { object, property }
+                    if matches!(
+                        object.as_ref(),
+                        Expression::Identifier(name)
+                            if Self::module_index_from_namespace_like_identifier(name).is_some()
+                    ) =>
+                {
+                    if let Expression::Identifier(name) = object.as_ref()
+                        && let Some(module_index) =
+                            Self::module_index_from_namespace_like_identifier(name)
+                        && let Some(initializer) = this
+                            .resolve_static_dynamic_import_namespace_live_binding_member_initializer_value(
+                                module_index,
+                                property,
+                            )
+                        && let Some(prototype) =
+                            this.resolve_static_object_prototype_expression(&initializer)
+                    {
+                        return Some(prototype);
+                    }
                 }
                 Expression::Identifier(name) => {
                     if let Some(resolved) = this
@@ -1218,6 +1245,15 @@ impl<'a> FunctionCompiler<'a> {
                             CallArgument::Expression(prototype) | CallArgument::Spread(prototype),
                         ) = arguments.first()
                         {
+                            if matches!(
+                                prototype,
+                                Expression::Identifier(name)
+                                    if Self::module_index_from_namespace_like_identifier(name).is_some()
+                            ) {
+                                return Some(Self::normalize_static_object_prototype_target_expression(
+                                    prototype,
+                                ));
+                            }
                             let prototype = this
                                 .resolve_bound_alias_expression(prototype)
                                 .filter(|resolved| !static_expression_matches(resolved, prototype))

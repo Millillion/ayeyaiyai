@@ -3,8 +3,59 @@ use super::*;
 const MODULE_NAMESPACE_DESCRIPTOR_MODULE_INDEX: &str = "__ayy$module$namespace$moduleIndex";
 const MODULE_REEXPORT_DESCRIPTOR_MODULE_INDEX: &str = "__ayy$module$reexport$moduleIndex";
 const MODULE_REEXPORT_DESCRIPTOR_NAME: &str = "__ayy$module$reexport$name";
+const DYNAMIC_IMPORT_DEFER_PHASE: &str = "__ayy$importPhase$defer";
+
+thread_local! {
+    static STATIC_DYNAMIC_IMPORT_MODULE_THROW_CACHE: RefCell<HashMap<String, Option<Expression>>> =
+        RefCell::new(HashMap::new());
+}
+
+pub(super) fn reset_static_dynamic_import_caches() {
+    STATIC_DYNAMIC_IMPORT_MODULE_THROW_CACHE.with(|cache| cache.borrow_mut().clear());
+}
 
 impl<'a> FunctionCompiler<'a> {
+    fn static_module_promise_init_call_expression(&self, name: &str) -> Option<Expression> {
+        if !name.starts_with("__ayy_module_promise_") {
+            return None;
+        }
+        let resolved_local_name = self
+            .resolve_current_local_binding(name)
+            .map(|(resolved_name, _)| resolved_name);
+        let active_name = resolved_local_name.as_deref().unwrap_or(name);
+        let value = self
+            .state
+            .speculation
+            .static_semantics
+            .local_value_binding(active_name)
+            .or_else(|| {
+                resolved_local_name.as_deref().and_then(|resolved_name| {
+                    self.state
+                        .speculation
+                        .static_semantics
+                        .local_value_binding(resolved_name)
+                })
+            })
+            .or_else(|| self.global_value_binding(name))?;
+        match value {
+            Expression::Call { callee, .. } if matches!(callee.as_ref(), Expression::Identifier(init_name) if init_name.starts_with("__ayy_module_init_")) => {
+                Some(value.clone())
+            }
+            _ => None,
+        }
+    }
+
+    fn static_module_init_call_throw_value(&self, callee: &Expression) -> Option<Expression> {
+        let Expression::Identifier(init_name) = callee else {
+            return None;
+        };
+        if !init_name.starts_with("__ayy_module_init_") {
+            return None;
+        }
+        let init_function = self.resolve_registered_function_declaration(init_name)?;
+        self.static_dynamic_import_module_throw_value(init_function)
+    }
+
     fn awaited_resolution_should_remain_unresolved(
         &self,
         resolution: &Expression,
@@ -30,11 +81,131 @@ impl<'a> FunctionCompiler<'a> {
             .is_some_and(|function| function.is_async())
     }
 
+    fn static_promise_handler_expression<'b>(
+        &self,
+        argument: Option<&'b CallArgument>,
+    ) -> Option<&'b Expression> {
+        match argument? {
+            CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                Some(expression)
+            }
+        }
+    }
+
+    fn resolve_static_immediate_promise_handler_outcome(
+        &self,
+        handler: &Expression,
+        argument: &Expression,
+        current_function_name: Option<&str>,
+    ) -> Option<StaticEvalOutcome> {
+        let binding = self.resolve_function_binding_from_expression_with_context(
+            handler,
+            current_function_name,
+        )?;
+        let LocalFunctionBinding::User(_) = binding else {
+            return Some(StaticEvalOutcome::Value(argument.clone()));
+        };
+        let returned = self.resolve_function_binding_static_return_expression_with_call_frame(
+            &binding,
+            &[argument.clone()],
+            &Expression::Undefined,
+        )?;
+        let returned = self.materialize_static_expression(&returned);
+        self.resolve_static_immediate_promise_chain_outcome(&returned, current_function_name)
+            .or_else(|| self.resolve_static_await_resolution_outcome(&returned))
+            .or(Some(StaticEvalOutcome::Value(returned)))
+    }
+
+    fn resolve_static_immediate_promise_chain_outcome(
+        &self,
+        expression: &Expression,
+        current_function_name: Option<&str>,
+    ) -> Option<StaticEvalOutcome> {
+        let Expression::Call { callee, arguments } = expression else {
+            return None;
+        };
+        if let Expression::Member { object, property } = callee.as_ref()
+            && matches!(object.as_ref(), Expression::Identifier(name) if name == "Promise")
+            && let Expression::String(property_name) = property.as_ref()
+        {
+            let settled_argument = arguments
+                .first()
+                .map(|argument| self.materialize_static_expression(argument.expression()));
+            return match property_name.as_str() {
+                "resolve" => Some(match settled_argument {
+                    Some(argument) => self
+                        .resolve_static_immediate_promise_chain_outcome(
+                            &argument,
+                            current_function_name,
+                        )
+                        .or_else(|| self.resolve_static_await_resolution_outcome(&argument))
+                        .unwrap_or(StaticEvalOutcome::Value(argument)),
+                    None => StaticEvalOutcome::Value(Expression::Undefined),
+                }),
+                "reject" => Some(StaticEvalOutcome::Throw(StaticThrowValue::Value(
+                    settled_argument.unwrap_or(Expression::Undefined),
+                ))),
+                _ => None,
+            };
+        }
+
+        let Expression::Member { object, property } = callee.as_ref() else {
+            return None;
+        };
+        let Expression::String(property_name) = property.as_ref() else {
+            return None;
+        };
+        if property_name != "then" && property_name != "catch" {
+            return None;
+        }
+
+        let base_outcome =
+            self.resolve_static_immediate_promise_chain_outcome(object, current_function_name)?;
+        let (handler, passthrough) = match (property_name.as_str(), base_outcome) {
+            ("then", StaticEvalOutcome::Value(value)) => (
+                self.static_promise_handler_expression(arguments.first()),
+                StaticEvalOutcome::Value(value),
+            ),
+            ("then", StaticEvalOutcome::Throw(throw_value)) => (
+                self.static_promise_handler_expression(arguments.get(1)),
+                StaticEvalOutcome::Throw(throw_value),
+            ),
+            ("catch", StaticEvalOutcome::Value(value)) => (None, StaticEvalOutcome::Value(value)),
+            ("catch", StaticEvalOutcome::Throw(throw_value)) => (
+                self.static_promise_handler_expression(arguments.first()),
+                StaticEvalOutcome::Throw(throw_value),
+            ),
+            _ => unreachable!("promise chain property filtered above"),
+        };
+        let Some(handler) = handler else {
+            return Some(passthrough);
+        };
+        let argument = match &passthrough {
+            StaticEvalOutcome::Value(value) => value.clone(),
+            StaticEvalOutcome::Throw(throw_value) => {
+                self.resolve_static_throw_value_expression(throw_value)?
+            }
+        };
+        self.resolve_static_immediate_promise_handler_outcome(
+            handler,
+            &argument,
+            current_function_name,
+        )
+    }
+
     pub(in crate::backend::direct_wasm) fn resolve_static_await_resolution_outcome(
         &self,
         resolution: &Expression,
     ) -> Option<StaticEvalOutcome> {
         let current_function_name = self.current_function_name();
+        if let Some(outcome) = self.static_module_dependency_promise_outcome(resolution) {
+            return Some(outcome);
+        }
+        if let Expression::Identifier(name) = resolution
+            && let Some(init_call) = self.static_module_promise_init_call_expression(name)
+        {
+            return self.resolve_static_await_resolution_outcome(&init_call);
+        }
         if let Expression::Await(value) = resolution {
             let materialized = self.materialize_static_expression(value);
             if let Some(outcome) = self.resolve_static_await_resolution_outcome(&materialized) {
@@ -57,7 +228,17 @@ impl<'a> FunctionCompiler<'a> {
         {
             return Some(outcome);
         }
+        if let Some(outcome) =
+            self.resolve_static_immediate_promise_chain_outcome(resolution, current_function_name)
+        {
+            return Some(outcome);
+        }
         if let Expression::Call { callee, arguments } = resolution {
+            if let Some(throw_value) = self.static_module_init_call_throw_value(callee) {
+                return Some(StaticEvalOutcome::Throw(StaticThrowValue::Value(
+                    throw_value,
+                )));
+            }
             if let Some(outcome) = self.resolve_static_dynamic_import_outcome(callee, arguments) {
                 return Some(outcome);
             }
@@ -165,7 +346,16 @@ impl<'a> FunctionCompiler<'a> {
         }
         let materialized = self.materialize_static_expression(resolution);
         if !static_expression_matches(&materialized, resolution) {
-            return self.resolve_static_await_resolution_outcome(&materialized);
+            return self
+                .resolve_static_await_resolution_outcome(&materialized)
+                .map(|outcome| match outcome {
+                    StaticEvalOutcome::Value(value)
+                        if static_expression_matches(&value, &materialized) =>
+                    {
+                        StaticEvalOutcome::Value(resolution.clone())
+                    }
+                    other => other,
+                });
         }
         if let Expression::Call { callee, arguments } = &materialized
             && let Expression::Member { object, property } = callee.as_ref()
@@ -201,6 +391,9 @@ impl<'a> FunctionCompiler<'a> {
             return Some(StaticEvalOutcome::Value(materialized));
         }
         if !self.static_expression_is_object_like(&materialized) {
+            return Some(StaticEvalOutcome::Value(materialized));
+        }
+        if self.expression_is_static_regexp_instance(&materialized) {
             return Some(StaticEvalOutcome::Value(materialized));
         }
 
@@ -273,6 +466,11 @@ impl<'a> FunctionCompiler<'a> {
             )));
         }
         let import_type = self.static_dynamic_import_attribute_type(arguments);
+        if Self::static_dynamic_import_is_defer_phase(arguments) {
+            return Some(StaticEvalOutcome::Value(Expression::Identifier(format!(
+                "__ayy_module_deferred_namespace_{module_index}"
+            ))));
+        }
         Some(StaticEvalOutcome::Value(
             self.static_dynamic_import_module_namespace_value(
                 module_index,
@@ -296,6 +494,13 @@ impl<'a> FunctionCompiler<'a> {
             .static_dynamic_import_specifier_string(argument_expression)
             .or_else(|| self.static_dynamic_import_specifier_string(&argument))?;
         self.dynamic_import_module_index_from_specifier_table(arguments, &specifier)
+    }
+
+    fn static_dynamic_import_is_defer_phase(arguments: &[CallArgument]) -> bool {
+        matches!(
+            arguments.get(3),
+            Some(CallArgument::Expression(Expression::String(phase))) if phase == DYNAMIC_IMPORT_DEFER_PHASE
+        )
     }
 
     fn static_dynamic_import_numeric_module_index(argument: &Expression) -> Option<usize> {
@@ -400,6 +605,12 @@ impl<'a> FunctionCompiler<'a> {
         if init_declaration.params.len() != 1 {
             return Ok(());
         }
+        if self
+            .static_dynamic_import_module_throw_value(init_declaration)
+            .is_some()
+        {
+            return Ok(());
+        }
         let live_initializers =
             self.static_dynamic_import_live_binding_initializers(init_declaration);
         for (hidden_name, initial_value) in live_initializers {
@@ -433,7 +644,7 @@ impl<'a> FunctionCompiler<'a> {
         Ok(())
     }
 
-    fn static_dynamic_import_live_binding_initializers(
+    pub(in crate::backend::direct_wasm) fn static_dynamic_import_live_binding_initializers(
         &self,
         init_function: &FunctionDeclaration,
     ) -> Vec<(String, Expression)> {
@@ -880,35 +1091,343 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         init_function: &FunctionDeclaration,
     ) -> Option<Expression> {
+        if let Some(cached) = STATIC_DYNAMIC_IMPORT_MODULE_THROW_CACHE
+            .with(|cache| cache.borrow().get(&init_function.name).cloned())
+        {
+            return cached;
+        }
+        let trace = std::env::var_os("AYY_TRACE_DYNAMIC_IMPORT_AWAIT").is_some();
+        let mut local_bindings = self.static_dynamic_import_module_local_bindings(init_function);
+        if trace {
+            eprintln!(
+                "dynamic_import_await:scan_module function={} locals={:?}",
+                init_function.name, local_bindings
+            );
+        }
         for statement in &init_function.body {
-            if let Some(throw_value) = self.static_dynamic_import_statement_throw_value(statement) {
+            if trace {
+                eprintln!("dynamic_import_await:scan_statement {statement:?}");
+            }
+            if let Some(throw_value) =
+                self.static_dynamic_import_statement_throw_value(statement, &mut local_bindings)
+            {
+                if trace {
+                    eprintln!("dynamic_import_await:found_throw {throw_value:?}");
+                }
+                STATIC_DYNAMIC_IMPORT_MODULE_THROW_CACHE.with(|cache| {
+                    cache
+                        .borrow_mut()
+                        .insert(init_function.name.clone(), Some(throw_value.clone()));
+                });
+                return Some(throw_value);
+            }
+        }
+        if trace {
+            eprintln!(
+                "dynamic_import_await:no_throw function={}",
+                init_function.name
+            );
+        }
+        STATIC_DYNAMIC_IMPORT_MODULE_THROW_CACHE.with(|cache| {
+            cache.borrow_mut().insert(init_function.name.clone(), None);
+        });
+        None
+    }
+
+    pub(in crate::backend::direct_wasm) fn static_dynamic_import_module_throw_value_by_index(
+        &self,
+        module_index: usize,
+    ) -> Option<Expression> {
+        let init_name = format!("__ayy_module_init_{module_index}");
+        let init_function = self.resolve_registered_function_declaration(&init_name)?;
+        self.static_dynamic_import_module_throw_value(init_function)
+    }
+
+    fn static_dynamic_import_statement_throw_value(
+        &self,
+        statement: &Statement,
+        local_bindings: &mut HashMap<String, Expression>,
+    ) -> Option<Expression> {
+        match statement {
+            Statement::Throw(expression) => Some(self.materialize_static_expression(expression)),
+            Statement::Yield { value } | Statement::YieldDelegate { value } => {
+                self.static_dynamic_import_await_throw_value(value, local_bindings)
+            }
+            Statement::Expression(Expression::Await(value)) => {
+                self.static_dynamic_import_await_throw_value(value, local_bindings)
+            }
+            Statement::Var {
+                value: Expression::Await(value),
+                ..
+            }
+            | Statement::Let {
+                value: Expression::Await(value),
+                ..
+            }
+            | Statement::Assign {
+                value: Expression::Await(value),
+                ..
+            }
+            | Statement::Return(Expression::Await(value)) => {
+                self.static_dynamic_import_await_throw_value(value, local_bindings)
+            }
+            Statement::Var { name, value }
+            | Statement::Let { name, value, .. }
+            | Statement::Assign { name, value } => {
+                let value = Self::static_dynamic_import_localized_expression(value, local_bindings);
+                local_bindings.insert(name.clone(), self.materialize_static_expression(&value));
+                None
+            }
+            Statement::Block { body } | Statement::Declaration { body } => {
+                self.static_dynamic_import_statements_throw_value(body, local_bindings)
+            }
+            Statement::Labeled { body, .. } => {
+                self.static_dynamic_import_statements_throw_value(body, local_bindings)
+            }
+            Statement::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                let condition =
+                    Self::static_dynamic_import_localized_expression(condition, local_bindings);
+                if let Some(taken) = self.resolve_static_boolean_expression(&condition) {
+                    let branch = if taken { then_branch } else { else_branch };
+                    return self
+                        .static_dynamic_import_statements_throw_value(branch, local_bindings);
+                }
+
+                let mut then_bindings = local_bindings.clone();
+                if let Some(throw_value) = self
+                    .static_dynamic_import_statements_throw_value(then_branch, &mut then_bindings)
+                {
+                    return Some(throw_value);
+                }
+                let mut else_bindings = local_bindings.clone();
+                self.static_dynamic_import_statements_throw_value(else_branch, &mut else_bindings)
+            }
+            Statement::Try {
+                body,
+                catch_binding,
+                catch_setup,
+                catch_body,
+            } => {
+                let assert_throws_caught_marker = if catch_binding.is_none()
+                    && catch_setup.is_empty()
+                    && let [
+                        Statement::Assign {
+                            name,
+                            value: Expression::Bool(true),
+                        },
+                    ] = catch_body.as_slice()
+                    && name.starts_with("__ayy_assert_throws_caught_")
+                {
+                    Some(name.clone())
+                } else {
+                    None
+                };
+                let mut body_bindings = local_bindings.clone();
+                let Some(throw_value) =
+                    self.static_dynamic_import_statements_throw_value(body, &mut body_bindings)
+                else {
+                    if let Some(marker) = assert_throws_caught_marker {
+                        body_bindings.insert(marker, Expression::Bool(true));
+                    }
+                    *local_bindings = body_bindings;
+                    return None;
+                };
+
+                let mut catch_bindings = local_bindings.clone();
+                if let Some(catch_binding) = catch_binding {
+                    catch_bindings.insert(catch_binding.clone(), throw_value);
+                }
+                if let Some(catch_throw_value) = self
+                    .static_dynamic_import_statements_throw_value(catch_setup, &mut catch_bindings)
+                {
+                    return Some(catch_throw_value);
+                }
+                if let Some(catch_throw_value) = self
+                    .static_dynamic_import_statements_throw_value(catch_body, &mut catch_bindings)
+                {
+                    return Some(catch_throw_value);
+                }
+                *local_bindings = catch_bindings;
+                None
+            }
+            _ => None,
+        }
+    }
+
+    fn static_dynamic_import_statements_throw_value(
+        &self,
+        statements: &[Statement],
+        local_bindings: &mut HashMap<String, Expression>,
+    ) -> Option<Expression> {
+        for statement in statements {
+            if let Some(throw_value) =
+                self.static_dynamic_import_statement_throw_value(statement, local_bindings)
+            {
                 return Some(throw_value);
             }
         }
         None
     }
 
-    fn static_dynamic_import_statement_throw_value(
+    fn static_dynamic_import_localized_expression(
+        expression: &Expression,
+        local_bindings: &HashMap<String, Expression>,
+    ) -> Expression {
+        match expression {
+            Expression::Identifier(name) => {
+                Self::static_dynamic_import_local_binding_value(name, local_bindings)
+                    .unwrap_or_else(|| expression.clone())
+            }
+            Expression::Await(value)
+            | Expression::EnumerateKeys(value)
+            | Expression::GetIterator(value)
+            | Expression::IteratorClose(value) => {
+                let value = Self::static_dynamic_import_localized_expression(value, local_bindings);
+                match expression {
+                    Expression::Await(_) => Expression::Await(Box::new(value)),
+                    Expression::EnumerateKeys(_) => Expression::EnumerateKeys(Box::new(value)),
+                    Expression::GetIterator(_) => Expression::GetIterator(Box::new(value)),
+                    Expression::IteratorClose(_) => Expression::IteratorClose(Box::new(value)),
+                    _ => unreachable!("filtered above"),
+                }
+            }
+            Expression::Unary { op, expression } => Expression::Unary {
+                op: *op,
+                expression: Box::new(Self::static_dynamic_import_localized_expression(
+                    expression,
+                    local_bindings,
+                )),
+            },
+            Expression::Binary { op, left, right } => Expression::Binary {
+                op: *op,
+                left: Box::new(Self::static_dynamic_import_localized_expression(
+                    left,
+                    local_bindings,
+                )),
+                right: Box::new(Self::static_dynamic_import_localized_expression(
+                    right,
+                    local_bindings,
+                )),
+            },
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => Expression::Conditional {
+                condition: Box::new(Self::static_dynamic_import_localized_expression(
+                    condition,
+                    local_bindings,
+                )),
+                then_expression: Box::new(Self::static_dynamic_import_localized_expression(
+                    then_expression,
+                    local_bindings,
+                )),
+                else_expression: Box::new(Self::static_dynamic_import_localized_expression(
+                    else_expression,
+                    local_bindings,
+                )),
+            },
+            Expression::Sequence(expressions) => Expression::Sequence(
+                expressions
+                    .iter()
+                    .map(|expression| {
+                        Self::static_dynamic_import_localized_expression(expression, local_bindings)
+                    })
+                    .collect(),
+            ),
+            Expression::Member { object, property } => Expression::Member {
+                object: Box::new(Self::static_dynamic_import_localized_expression(
+                    object,
+                    local_bindings,
+                )),
+                property: Box::new(Self::static_dynamic_import_localized_expression(
+                    property,
+                    local_bindings,
+                )),
+            },
+            Expression::Call { callee, arguments } => Expression::Call {
+                callee: Box::new(Self::static_dynamic_import_localized_expression(
+                    callee,
+                    local_bindings,
+                )),
+                arguments: arguments
+                    .iter()
+                    .map(|argument| match argument {
+                        CallArgument::Expression(expression) => CallArgument::Expression(
+                            Self::static_dynamic_import_localized_expression(
+                                expression,
+                                local_bindings,
+                            ),
+                        ),
+                        CallArgument::Spread(expression) => {
+                            CallArgument::Spread(Self::static_dynamic_import_localized_expression(
+                                expression,
+                                local_bindings,
+                            ))
+                        }
+                    })
+                    .collect(),
+            },
+            Expression::Assign { name, value } => Expression::Assign {
+                name: name.clone(),
+                value: Box::new(Self::static_dynamic_import_localized_expression(
+                    value,
+                    local_bindings,
+                )),
+            },
+            _ => expression.clone(),
+        }
+    }
+
+    fn static_dynamic_import_await_throw_value(
         &self,
-        statement: &Statement,
+        value: &Expression,
+        local_bindings: &HashMap<String, Expression>,
     ) -> Option<Expression> {
-        match statement {
-            Statement::Throw(expression) => Some(self.materialize_static_expression(expression)),
-            Statement::Block { body } | Statement::Declaration { body } => body
-                .iter()
-                .find_map(|statement| self.static_dynamic_import_statement_throw_value(statement)),
-            Statement::Labeled { body, .. } => body
-                .iter()
-                .find_map(|statement| self.static_dynamic_import_statement_throw_value(statement)),
-            Statement::If {
-                then_branch,
-                else_branch,
-                ..
-            } => then_branch
-                .iter()
-                .chain(else_branch)
-                .find_map(|statement| self.static_dynamic_import_statement_throw_value(statement)),
-            _ => None,
+        let trace = std::env::var_os("AYY_TRACE_DYNAMIC_IMPORT_AWAIT").is_some();
+        let localized = Self::static_dynamic_import_localized_expression(value, local_bindings);
+        if expression_references_module_dependency_param(&localized) {
+            if trace {
+                eprintln!(
+                    "dynamic_import_await:await_unresolved_module_dep value={value:?} localized={localized:?}"
+                );
+            }
+            return None;
+        }
+        let awaited = match &localized {
+            Expression::Identifier(name) => {
+                Self::static_dynamic_import_local_binding_value(name, local_bindings)
+                    .unwrap_or_else(|| self.materialize_static_expression(&localized))
+            }
+            _ => self.materialize_static_expression(&localized),
+        };
+        if trace {
+            eprintln!("dynamic_import_await:await value={value:?} awaited={awaited:?}");
+        }
+        match self.resolve_static_await_resolution_outcome(&awaited)? {
+            StaticEvalOutcome::Throw(throw_value) => {
+                let resolved = self.resolve_static_throw_value_expression(&throw_value);
+                if trace {
+                    let throw_label = match &throw_value {
+                        StaticThrowValue::Value(_) => "value",
+                        StaticThrowValue::NamedError(name) => name,
+                    };
+                    eprintln!(
+                        "dynamic_import_await:await_throw throw={throw_label} resolved={resolved:?}"
+                    );
+                }
+                resolved
+            }
+            StaticEvalOutcome::Value(value) => {
+                if trace {
+                    eprintln!("dynamic_import_await:await_value {value:?}");
+                }
+                None
+            }
         }
     }
 
@@ -1040,6 +1559,94 @@ impl<'a> FunctionCompiler<'a> {
             self.collect_static_dynamic_import_module_local_bindings(statement, &mut bindings);
         }
         bindings
+    }
+
+    fn static_dynamic_import_module_local_bindings_with_continuations(
+        &self,
+        module_index: usize,
+        init_function: &FunctionDeclaration,
+    ) -> HashMap<String, Expression> {
+        let mut bindings = self.static_dynamic_import_module_local_bindings(init_function);
+        let prefix = format!("__ayy_module_async_continuation_{module_index}_");
+        let mut continuations = self
+            .user_functions()
+            .into_iter()
+            .filter_map(|function| {
+                function
+                    .name
+                    .starts_with(&prefix)
+                    .then(|| function.name.clone())
+            })
+            .collect::<Vec<_>>();
+        continuations.sort_by_key(|name| {
+            name.strip_prefix(&prefix)
+                .and_then(|suffix| suffix.parse::<usize>().ok())
+                .unwrap_or(usize::MAX)
+        });
+
+        for continuation_name in continuations {
+            if let Some(continuation) =
+                self.resolve_registered_function_declaration(&continuation_name)
+            {
+                self.collect_static_dynamic_import_module_continuation_local_bindings(
+                    &continuation.body,
+                    &mut bindings,
+                );
+            }
+        }
+
+        bindings
+    }
+
+    fn expression_is_static_await_resume_sent(expression: &Expression) -> bool {
+        matches!(
+            expression,
+            Expression::Call { callee, arguments }
+                if matches!(callee.as_ref(), Expression::Identifier(name) if name == "__ayyAwaitResume")
+                    && matches!(
+                        arguments.as_slice(),
+                        [CallArgument::Expression(Expression::Sent)]
+                    )
+        )
+    }
+
+    fn collect_static_dynamic_import_module_continuation_local_bindings(
+        &self,
+        statements: &[Statement],
+        bindings: &mut HashMap<String, Expression>,
+    ) {
+        let mut last_yield_value = None::<Expression>;
+        for statement in statements {
+            match statement {
+                Statement::Yield { value } => {
+                    last_yield_value = Some(self.materialize_static_expression(value));
+                }
+                Statement::Var { name, value }
+                | Statement::Let { name, value, .. }
+                | Statement::Assign { name, value } => {
+                    let value = if Self::expression_is_static_await_resume_sent(value) {
+                        last_yield_value
+                            .take()
+                            .unwrap_or_else(|| self.materialize_static_expression(value))
+                    } else {
+                        last_yield_value = None;
+                        self.materialize_static_expression(value)
+                    };
+                    bindings.insert(name.clone(), value);
+                }
+                Statement::Declaration { body }
+                | Statement::Block { body }
+                | Statement::Labeled { body, .. } => {
+                    self.collect_static_dynamic_import_module_continuation_local_bindings(
+                        body, bindings,
+                    );
+                    last_yield_value = None;
+                }
+                _ => {
+                    last_yield_value = None;
+                }
+            }
+        }
     }
 
     fn collect_static_dynamic_import_module_local_bindings(
@@ -1186,6 +1793,41 @@ impl<'a> FunctionCompiler<'a> {
         Some((hidden_name, initial_value))
     }
 
+    fn static_dynamic_import_getter_binding_initializer(
+        &self,
+        getter_name: &str,
+        local_bindings: &HashMap<String, Expression>,
+    ) -> Option<(String, Expression)> {
+        let getter = self.resolve_registered_function_declaration(getter_name)?;
+        let [Statement::Return(Expression::Identifier(return_name))] = getter.body.as_slice()
+        else {
+            return None;
+        };
+        if let Some(value) =
+            Self::static_dynamic_import_global_namespace_capture_expression(return_name)
+        {
+            return Some((return_name.clone(), value));
+        }
+        if let Some((source_name, value)) = self
+            .static_dynamic_import_getter_global_namespace_capture_source(getter_name, return_name)
+        {
+            return Some((source_name, value));
+        }
+        let binding_name = if local_bindings.contains_key(return_name) {
+            return_name.clone()
+        } else {
+            self.user_function_capture_bindings(getter_name)?
+                .iter()
+                .find_map(|(binding_name, hidden_name)| {
+                    (hidden_name == return_name && local_bindings.contains_key(binding_name))
+                        .then(|| binding_name.clone())
+                })?
+        };
+        let initial_value =
+            Self::static_dynamic_import_local_binding_value(&binding_name, local_bindings)?;
+        Some((binding_name, initial_value))
+    }
+
     pub(in crate::backend::direct_wasm) fn resolve_static_dynamic_import_namespace_live_binding_member_value(
         &self,
         module_index: usize,
@@ -1194,28 +1836,97 @@ impl<'a> FunctionCompiler<'a> {
         let property = self
             .resolve_property_key_expression(property)
             .unwrap_or_else(|| self.materialize_static_expression(property));
+        let property = static_property_name_from_expression(&property)
+            .map(Expression::String)
+            .unwrap_or(property);
+        if is_symbol_to_string_tag_expression(&property) {
+            return Some(Expression::String("Module".to_string()));
+        }
         let Expression::String(export_name) = property else {
             return None;
         };
+        let mut visited = HashSet::new();
+        self.resolve_static_dynamic_import_namespace_live_binding_member_value_by_name(
+            module_index,
+            &export_name,
+            &mut visited,
+        )
+    }
+
+    fn resolve_static_dynamic_import_namespace_live_binding_member_value_by_name(
+        &self,
+        module_index: usize,
+        export_name: &str,
+        visited: &mut HashSet<(usize, String)>,
+    ) -> Option<Expression> {
+        let key = (module_index, export_name.to_string());
+        if !visited.insert(key.clone()) {
+            return None;
+        }
+        let result = self
+            .resolve_static_dynamic_import_namespace_live_binding_member_value_by_name_inner(
+                module_index,
+                export_name,
+                visited,
+            );
+        visited.remove(&key);
+        result
+    }
+
+    fn resolve_static_dynamic_import_namespace_live_binding_member_value_by_name_inner(
+        &self,
+        module_index: usize,
+        export_name: &str,
+        visited: &mut HashSet<(usize, String)>,
+    ) -> Option<Expression> {
         let init_function = self.resolve_registered_function_declaration(&format!(
             "__ayy_module_init_{module_index}"
         ))?;
-        let local_bindings = self.static_dynamic_import_module_local_bindings(init_function);
+        let local_bindings = self.static_dynamic_import_module_local_bindings_with_continuations(
+            module_index,
+            init_function,
+        );
         for statement in &init_function.body {
             let Some((candidate_name, getter_name, namespace_module_index, reexport_source)) =
                 self.static_dynamic_import_export_getter(statement)
             else {
                 continue;
             };
-            if candidate_name != export_name
-                || namespace_module_index.is_some()
-                || reexport_source.is_some()
-            {
+            if candidate_name != export_name {
                 continue;
+            }
+            if let Some(namespace_module_index) = namespace_module_index {
+                let mut namespace_visited = HashSet::new();
+                return Some(
+                    self.resolve_registered_function_declaration(&format!(
+                        "__ayy_module_init_{namespace_module_index}"
+                    ))
+                    .map(|namespace_init| {
+                        self.static_dynamic_import_module_namespace_value(
+                            namespace_module_index,
+                            namespace_init,
+                            None,
+                            &mut namespace_visited,
+                        )
+                    })
+                    .unwrap_or_else(|| {
+                        Expression::Identifier(format!(
+                            "__ayy_module_namespace_{namespace_module_index}"
+                        ))
+                    }),
+                );
+            }
+            if let Some((reexport_module_index, imported_name)) = reexport_source {
+                return self
+                    .resolve_static_dynamic_import_namespace_live_binding_member_value_by_name(
+                        reexport_module_index,
+                        &imported_name,
+                        visited,
+                    );
             }
             if let Some(hidden_name) = self
                 .user_function_capture_bindings(&getter_name)
-                .and_then(|captures| captures.get(&export_name).cloned())
+                .and_then(|captures| captures.get(export_name).cloned())
                 && self
                     .implicit_global_binding(&hidden_name)
                     .or_else(|| self.hidden_implicit_global_binding(&hidden_name))
@@ -1224,16 +1935,148 @@ impl<'a> FunctionCompiler<'a> {
                 return Some(Expression::Identifier(hidden_name));
             }
             let value = self.static_dynamic_import_getter_value(&getter_name, &local_bindings)?;
-            let Expression::Identifier(name) = &value else {
-                return None;
-            };
-            if name.starts_with("__ayy_capture_binding__")
+            if let Expression::Identifier(name) = &value
+                && name.starts_with("__ayy_capture_binding__")
                 && self
                     .implicit_global_binding(name)
                     .or_else(|| self.hidden_implicit_global_binding(name))
                     .is_some()
             {
                 return Some(value);
+            }
+            if !expression_references_module_dependency_param(&value) {
+                return Some(value);
+            }
+        }
+        None
+    }
+
+    pub(in crate::backend::direct_wasm) fn resolve_static_dynamic_import_namespace_own_property_names_binding(
+        &self,
+        module_index: usize,
+    ) -> Option<ArrayValueBinding> {
+        let init_function = self.resolve_registered_function_declaration(&format!(
+            "__ayy_module_init_{module_index}"
+        ))?;
+        let mut names = Vec::new();
+        for statement in &init_function.body {
+            let Some((export_name, _, _, _)) = self.static_dynamic_import_export_getter(statement)
+            else {
+                continue;
+            };
+            if export_name.starts_with("__ayy$") {
+                continue;
+            }
+            names.push(export_name);
+        }
+        names.sort();
+        names.dedup();
+        Some(ArrayValueBinding {
+            values: names
+                .into_iter()
+                .map(|name| Some(Expression::String(name)))
+                .collect(),
+        })
+    }
+
+    pub(in crate::backend::direct_wasm) fn resolve_static_dynamic_import_namespace_own_property_symbols_binding(
+        &self,
+        _module_index: usize,
+    ) -> ArrayValueBinding {
+        ArrayValueBinding {
+            values: vec![Some(Expression::Member {
+                object: Box::new(Expression::Identifier("Symbol".to_string())),
+                property: Box::new(Expression::String("toStringTag".to_string())),
+            })],
+        }
+    }
+
+    pub(in crate::backend::direct_wasm) fn resolve_static_dynamic_import_namespace_live_binding_member_initializer_value(
+        &self,
+        module_index: usize,
+        property: &Expression,
+    ) -> Option<Expression> {
+        self.resolve_static_dynamic_import_namespace_live_binding_member_binding_initializer_value(
+            module_index,
+            property,
+        )
+        .map(|(_, initializer)| initializer)
+    }
+
+    pub(in crate::backend::direct_wasm) fn resolve_static_dynamic_import_namespace_live_binding_member_binding_initializer_value(
+        &self,
+        module_index: usize,
+        property: &Expression,
+    ) -> Option<(String, Expression)> {
+        let property = self
+            .resolve_property_key_expression(property)
+            .unwrap_or_else(|| self.materialize_static_expression(property));
+        let property = static_property_name_from_expression(&property)
+            .map(Expression::String)
+            .unwrap_or(property);
+        let Expression::String(export_name) = property else {
+            return None;
+        };
+        let mut visited = HashSet::new();
+        self.resolve_static_dynamic_import_namespace_live_binding_member_binding_initializer_value_by_name(
+            module_index,
+            &export_name,
+            &mut visited,
+        )
+    }
+
+    fn resolve_static_dynamic_import_namespace_live_binding_member_binding_initializer_value_by_name(
+        &self,
+        module_index: usize,
+        export_name: &str,
+        visited: &mut HashSet<(usize, String)>,
+    ) -> Option<(String, Expression)> {
+        let key = (module_index, export_name.to_string());
+        if !visited.insert(key.clone()) {
+            return None;
+        }
+        let result = self.resolve_static_dynamic_import_namespace_live_binding_member_binding_initializer_value_by_name_inner(
+            module_index,
+            export_name,
+            visited,
+        );
+        visited.remove(&key);
+        result
+    }
+
+    fn resolve_static_dynamic_import_namespace_live_binding_member_binding_initializer_value_by_name_inner(
+        &self,
+        module_index: usize,
+        export_name: &str,
+        visited: &mut HashSet<(usize, String)>,
+    ) -> Option<(String, Expression)> {
+        let init_function = self.resolve_registered_function_declaration(&format!(
+            "__ayy_module_init_{module_index}"
+        ))?;
+        let local_bindings = self.static_dynamic_import_module_local_bindings_with_continuations(
+            module_index,
+            init_function,
+        );
+        for statement in &init_function.body {
+            let Some((candidate_name, getter_name, namespace_module_index, reexport_source)) =
+                self.static_dynamic_import_export_getter(statement)
+            else {
+                continue;
+            };
+            if candidate_name != export_name || namespace_module_index.is_some() {
+                continue;
+            }
+            if let Some((reexport_module_index, imported_name)) = reexport_source {
+                return self.resolve_static_dynamic_import_namespace_live_binding_member_binding_initializer_value_by_name(
+                    reexport_module_index,
+                    &imported_name,
+                    visited,
+                );
+            }
+            if let Some((binding_name, initializer)) =
+                self.static_dynamic_import_getter_binding_initializer(&getter_name, &local_bindings)
+            {
+                return Some((binding_name, initializer));
             }
         }
         None
@@ -1245,6 +2088,18 @@ impl<'a> FunctionCompiler<'a> {
         value: &Expression,
         getter_name: &str,
     ) -> Option<Expression> {
+        if let Some(value) =
+            Self::static_dynamic_import_global_namespace_capture_expression(binding_name)
+        {
+            return Some(value);
+        }
+        if let Some(hidden_name) = self
+            .user_function_capture_bindings(getter_name)
+            .and_then(|captures| captures.get(binding_name).cloned())
+        {
+            return Some(Expression::Identifier(hidden_name));
+        }
+
         if let Expression::Identifier(function_name) = value
             && let Some(hidden_name) = self
                 .user_function_capture_bindings(function_name)
@@ -1253,7 +2108,6 @@ impl<'a> FunctionCompiler<'a> {
             return Some(Expression::Identifier(hidden_name));
         }
 
-        let mut getter_capture = None;
         for user_function in self.user_functions() {
             let Some(hidden_name) = self
                 .user_function_capture_bindings(&user_function.name)
@@ -1261,14 +2115,40 @@ impl<'a> FunctionCompiler<'a> {
             else {
                 continue;
             };
-            if user_function.name == getter_name {
-                getter_capture = Some(Expression::Identifier(hidden_name));
-            } else {
+            if user_function.name != getter_name {
                 return Some(Expression::Identifier(hidden_name));
             }
         }
 
-        getter_capture
+        None
+    }
+
+    fn static_dynamic_import_global_namespace_capture_expression(
+        binding_name: &str,
+    ) -> Option<Expression> {
+        if binding_name.starts_with("__ayy_module_namespace_")
+            || binding_name.starts_with("__ayy_module_deferred_namespace_")
+        {
+            return Some(Expression::Identifier(binding_name.to_string()));
+        }
+        None
+    }
+
+    fn static_dynamic_import_getter_global_namespace_capture_source(
+        &self,
+        getter_name: &str,
+        hidden_name: &str,
+    ) -> Option<(String, Expression)> {
+        self.user_function_capture_bindings(getter_name)?
+            .iter()
+            .find_map(|(source_name, capture_hidden_name)| {
+                (capture_hidden_name == hidden_name)
+                    .then(|| {
+                        Self::static_dynamic_import_global_namespace_capture_expression(source_name)
+                            .map(|value| (source_name.clone(), value))
+                    })
+                    .flatten()
+            })
     }
 
     fn resolve_static_promise_constructor_outcome(

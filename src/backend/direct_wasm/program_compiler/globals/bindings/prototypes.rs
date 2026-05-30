@@ -337,6 +337,7 @@ impl DirectWasmCompiler {
                         .runtime_prototype_binding(&target_name)
                         .is_some();
                     if !self.global_has_binding(&target_name)
+                        && !self.global_has_lexical_binding(&target_name)
                         && !has_runtime_prototype
                         && self
                             .global_object_prototype_expression(&target_name)

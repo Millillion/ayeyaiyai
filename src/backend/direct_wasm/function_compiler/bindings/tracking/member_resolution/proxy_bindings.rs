@@ -232,6 +232,23 @@ impl<'a> FunctionCompiler<'a> {
         name: &str,
         value: &Expression,
     ) {
+        if matches!(
+            value,
+            Expression::New { callee, .. }
+                if matches!(
+                    callee.as_ref(),
+                    Expression::Identifier(name) if !name.starts_with("__ayy_class_ctor_")
+                )
+        ) {
+            self.state
+                .speculation
+                .static_semantics
+                .clear_local_proxy_binding(name);
+            if self.binding_name_is_global(name) {
+                self.backend.sync_global_proxy_binding(name, None);
+            }
+            return;
+        }
         let Some(proxy_binding) = self.resolve_proxy_binding_from_expression(value) else {
             self.state
                 .speculation

@@ -85,15 +85,8 @@ impl DirectWasmCompiler {
         source_bindings: &HashMap<String, HashMap<String, Option<Expression>>>,
         current_function_name: Option<&str>,
     ) {
-        let constructor_binding = self
-            .resolve_function_binding_from_expression_with_aliases(callee, aliases)
-            .or_else(|| {
-                let Expression::Identifier(name) = callee else {
-                    return None;
-                };
-                let resolved = self.resolve_static_class_init_local_alias_expression(name)?;
-                self.resolve_function_binding_from_expression_with_aliases(&resolved, aliases)
-            });
+        let constructor_binding =
+            self.resolve_parameter_analysis_constructor_binding(callee, aliases);
         let Some(LocalFunctionBinding::User(called_function_name)) = constructor_binding else {
             return;
         };
@@ -105,6 +98,49 @@ impl DirectWasmCompiler {
             source_bindings,
             current_function_name,
         );
+    }
+
+    pub(in crate::backend::direct_wasm) fn resolve_parameter_analysis_constructor_binding(
+        &self,
+        callee: &Expression,
+        aliases: &HashMap<String, Option<LocalFunctionBinding>>,
+    ) -> Option<LocalFunctionBinding> {
+        self.resolve_function_binding_from_expression_with_aliases(callee, aliases)
+            .or_else(|| {
+                let Expression::Identifier(name) = callee else {
+                    return None;
+                };
+                let resolved = self.resolve_static_class_init_local_alias_expression(name)?;
+                self.resolve_function_binding_from_expression_with_aliases(&resolved, aliases)
+            })
+            .or_else(|| {
+                let Expression::Identifier(name) = callee else {
+                    return None;
+                };
+                self.resolve_class_constructor_self_binding_for_parameter_analysis(name)
+            })
+    }
+
+    fn resolve_class_constructor_self_binding_for_parameter_analysis(
+        &self,
+        name: &str,
+    ) -> Option<LocalFunctionBinding> {
+        let source_name = scoped_binding_source_name(name);
+        self.state.user_functions().iter().find_map(|function| {
+            if !function.name.starts_with("__ayy_class_ctor_") {
+                return None;
+            }
+            let declaration = self.registered_function(&function.name)?;
+            declaration
+                .self_binding
+                .as_deref()
+                .filter(|self_binding| {
+                    *self_binding == name
+                        || source_name.is_some_and(|source_name| *self_binding == source_name)
+                        || scoped_binding_source_name(self_binding) == Some(name)
+                })
+                .map(|_| LocalFunctionBinding::User(function.name.clone()))
+        })
     }
 
     fn register_parameter_value_binding_candidates(
@@ -125,75 +161,147 @@ impl DirectWasmCompiler {
         let Some(parameter_bindings) = bindings.get_mut(called_function_name) else {
             return;
         };
+        let rest_parameter_index =
+            self.registered_function(called_function_name)
+                .and_then(|declaration| {
+                    declaration
+                        .params
+                        .iter()
+                        .position(|parameter| parameter.rest)
+                });
 
+        let mut handled_rest_parameter = false;
         for (index, argument) in call_arguments.iter().enumerate() {
             if index >= user_function.params.len() {
                 break;
             }
             let param_name = &user_function.params[index];
-            let materialized_argument = self
-                .materialize_current_or_global_parameter_value_argument(
-                    argument,
-                    &current_function_value_bindings,
+            if rest_parameter_index == Some(index) {
+                let rest_values = call_arguments[index..]
+                    .iter()
+                    .map(|argument| {
+                        self.effective_parameter_value_binding_argument(
+                            argument,
+                            &current_function_value_bindings,
+                        )
+                    })
+                    .collect::<Option<Vec<_>>>();
+                let candidate = rest_values.map(|values| {
+                    Expression::Array(
+                        values
+                            .into_iter()
+                            .map(ArrayElement::Expression)
+                            .collect::<Vec<_>>(),
+                    )
+                });
+                Self::merge_parameter_value_binding_candidate(
+                    parameter_bindings,
+                    param_name,
+                    candidate,
                 );
-            let global_identifier_argument = matches!(
+                handled_rest_parameter = true;
+                break;
+            }
+            let candidate = self.effective_parameter_value_binding_argument(
                 argument,
-                Expression::Identifier(name)
-                    if self.global_object_binding(name).is_some()
-                        || self.global_array_binding(name).is_some()
+                &current_function_value_bindings,
             );
-            let effective_argument = if global_identifier_argument {
-                argument.clone()
-            } else if matches!(
-                argument,
-                Expression::Member { property, .. }
-                    if matches!(property.as_ref(), Expression::String(name) if name == "prototype")
-            ) {
-                argument.clone()
-            } else if matches!(
-                materialized_argument,
-                Expression::Member { ref property, .. }
-                    if matches!(property.as_ref(), Expression::String(name) if name == "prototype")
-            ) {
-                materialized_argument
-            } else if matches!(
-                materialized_argument,
-                Expression::Number(_)
-                    | Expression::BigInt(_)
-                    | Expression::String(_)
-                    | Expression::Bool(_)
-                    | Expression::Null
-                    | Expression::Undefined
-            ) {
-                materialized_argument
-            } else {
-                self.infer_global_object_binding(argument)
-                    .map(|binding| object_binding_to_expression(&binding))
-                    .unwrap_or(materialized_argument)
-            };
-            if !global_identifier_argument
-                && !self.prepared_parameter_value_argument_is_stable(&effective_argument)
-            {
-                parameter_bindings.insert(param_name.to_string(), None);
-                continue;
-            }
-            match parameter_bindings.get(param_name) {
-                Some(None) => {}
-                Some(Some(existing)) if *existing == effective_argument => {}
-                Some(Some(_)) => {
-                    parameter_bindings.insert(param_name.to_string(), None);
-                }
-                None => {
-                    parameter_bindings.insert(param_name.to_string(), Some(effective_argument));
-                }
-            }
+            Self::merge_parameter_value_binding_candidate(
+                parameter_bindings,
+                param_name,
+                candidate,
+            );
         }
 
-        if call_arguments.len() < user_function.params.len() {
-            for param_name in user_function.params.iter().skip(call_arguments.len()) {
-                parameter_bindings.insert(param_name.to_string(), None);
+        if !handled_rest_parameter && call_arguments.len() < user_function.params.len() {
+            for (index, param_name) in user_function
+                .params
+                .iter()
+                .enumerate()
+                .skip(call_arguments.len())
+            {
+                let candidate = if rest_parameter_index == Some(index) {
+                    Some(Expression::Array(Vec::new()))
+                } else {
+                    None
+                };
+                Self::merge_parameter_value_binding_candidate(
+                    parameter_bindings,
+                    param_name,
+                    candidate,
+                );
             }
         }
+    }
+
+    fn merge_parameter_value_binding_candidate(
+        parameter_bindings: &mut HashMap<String, Option<Expression>>,
+        param_name: &str,
+        candidate: Option<Expression>,
+    ) {
+        let Some(candidate) = candidate else {
+            parameter_bindings.insert(param_name.to_string(), None);
+            return;
+        };
+        match parameter_bindings.get(param_name) {
+            Some(None) => {}
+            Some(Some(existing)) if *existing == candidate => {}
+            Some(Some(_)) => {
+                parameter_bindings.insert(param_name.to_string(), None);
+            }
+            None => {
+                parameter_bindings.insert(param_name.to_string(), Some(candidate));
+            }
+        }
+    }
+
+    fn effective_parameter_value_binding_argument(
+        &self,
+        argument: &Expression,
+        current_function_value_bindings: &HashMap<String, Option<Expression>>,
+    ) -> Option<Expression> {
+        let materialized_argument = self.materialize_current_or_global_parameter_value_argument(
+            argument,
+            current_function_value_bindings,
+        );
+        let global_identifier_argument = matches!(
+            argument,
+            Expression::Identifier(name)
+                if self.global_object_binding(name).is_some()
+                    || self.global_array_binding(name).is_some()
+        );
+        let effective_argument = if global_identifier_argument {
+            argument.clone()
+        } else if matches!(
+            argument,
+            Expression::Member { property, .. }
+                if matches!(property.as_ref(), Expression::String(name) if name == "prototype")
+        ) {
+            argument.clone()
+        } else if matches!(
+            materialized_argument,
+            Expression::Member { ref property, .. }
+                if matches!(property.as_ref(), Expression::String(name) if name == "prototype")
+        ) {
+            materialized_argument
+        } else if matches!(
+            materialized_argument,
+            Expression::Number(_)
+                | Expression::BigInt(_)
+                | Expression::String(_)
+                | Expression::Bool(_)
+                | Expression::Null
+                | Expression::Undefined
+        ) {
+            materialized_argument
+        } else {
+            self.infer_global_object_binding(argument)
+                .map(|binding| object_binding_to_expression(&binding))
+                .unwrap_or(materialized_argument)
+        };
+        (global_identifier_argument
+            || self.prepared_parameter_value_argument_is_stable(&effective_argument))
+        .then_some(effective_argument)
     }
 
     fn materialize_current_or_global_parameter_value_argument(

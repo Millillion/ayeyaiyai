@@ -82,6 +82,24 @@ impl<'a> FunctionCompiler<'a> {
         let property = self
             .resolve_property_key_expression(property)
             .unwrap_or_else(|| self.materialize_static_expression(property));
+        if let Some(value) =
+            self.resolve_module_namespace_live_binding_member_value(object, &property)
+        {
+            if let Some(binding) = self.resolve_object_binding_from_expression(&value) {
+                return Some(binding);
+            }
+        }
+        if let Expression::Identifier(name) = object.as_ref()
+            && let Some(module_index) = Self::module_index_from_namespace_like_identifier(name)
+            && let Some(initializer) = self
+                .resolve_static_dynamic_import_namespace_live_binding_member_initializer_value(
+                    module_index,
+                    &property,
+                )
+            && let Some(binding) = self.resolve_object_binding_from_expression(&initializer)
+        {
+            return Some(binding);
+        }
         if let Some(IteratorStepBinding::Runtime {
             static_value,
             value_candidates,

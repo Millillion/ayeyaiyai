@@ -89,15 +89,8 @@ impl DirectWasmCompiler {
         object_bindings: &mut HashMap<String, HashMap<String, Option<ObjectValueBinding>>>,
         current_function_name: Option<&str>,
     ) {
-        let constructor_binding = self
-            .resolve_function_binding_from_expression_with_aliases(callee, aliases)
-            .or_else(|| {
-                let Expression::Identifier(name) = callee else {
-                    return None;
-                };
-                let resolved = self.resolve_static_class_init_local_alias_expression(name)?;
-                self.resolve_function_binding_from_expression_with_aliases(&resolved, aliases)
-            });
+        let constructor_binding =
+            self.resolve_parameter_analysis_constructor_binding(callee, aliases);
         let Some(LocalFunctionBinding::User(called_function_name)) = constructor_binding else {
             return;
         };
@@ -140,6 +133,14 @@ impl DirectWasmCompiler {
         let Some(parameter_object_bindings) = object_bindings.get_mut(called_function_name) else {
             return;
         };
+        let rest_parameter_index =
+            self.registered_function(called_function_name)
+                .and_then(|declaration| {
+                    declaration
+                        .params
+                        .iter()
+                        .position(|parameter| parameter.rest)
+                });
 
         let mut register_candidate =
             |param_name: &str, candidate: Option<LocalFunctionBinding>| match candidate {
@@ -190,11 +191,26 @@ impl DirectWasmCompiler {
                 },
             };
 
+        let mut handled_rest_parameter = false;
         for (index, argument) in call_arguments.iter().enumerate() {
             if index >= user_function.params.len() {
                 break;
             }
             let param_name = &user_function.params[index];
+            if rest_parameter_index == Some(index) {
+                let rest_candidate = self.rest_parameter_array_binding_candidate(
+                    &call_arguments[index..],
+                    &current_parameter_object_bindings,
+                );
+                register_candidate(param_name, None);
+                register_object_candidate(param_name, None);
+                if rest_candidate.is_some() {
+                    register_array_candidate(param_name, rest_candidate);
+                }
+                handled_rest_parameter = true;
+                break;
+            }
+
             let candidate =
                 self.resolve_function_binding_from_expression_with_aliases(argument, aliases);
             register_candidate(param_name, candidate);
@@ -224,8 +240,6 @@ impl DirectWasmCompiler {
                     if matches!(property.as_ref(), Expression::String(name) if name == "prototype")
             ) {
                 None
-            } else if !stable_argument && !matches!(argument, Expression::Object(_)) {
-                None
             } else if matches!(
                 materialized_argument,
                 Expression::Member { ref property, .. }
@@ -242,8 +256,8 @@ impl DirectWasmCompiler {
                     | Expression::Undefined
             ) {
                 None
-            } else {
-                self.infer_current_or_global_object_binding(
+            } else if let Some(binding) = self
+                .infer_current_or_global_object_binding(
                     argument,
                     &current_parameter_object_bindings,
                 )
@@ -253,17 +267,80 @@ impl DirectWasmCompiler {
                         &current_parameter_object_bindings,
                     )
                 })
+            {
+                Some(binding)
+            } else if !stable_argument && !matches!(argument, Expression::Object(_)) {
+                None
+            } else {
+                None
             };
             register_object_candidate(param_name, object_candidate);
         }
 
-        if call_arguments.len() < user_function.params.len() {
-            for param_name in user_function.params.iter().skip(call_arguments.len()) {
+        if !handled_rest_parameter && call_arguments.len() < user_function.params.len() {
+            for (index, param_name) in user_function
+                .params
+                .iter()
+                .enumerate()
+                .skip(call_arguments.len())
+            {
                 parameter_bindings.insert(param_name.to_string(), None);
-                parameter_array_bindings.insert(param_name.to_string(), None);
+                parameter_array_bindings.insert(
+                    param_name.to_string(),
+                    rest_parameter_index
+                        .filter(|rest_index| *rest_index == index)
+                        .map(|_| ArrayValueBinding { values: Vec::new() }),
+                );
                 parameter_object_bindings.insert(param_name.to_string(), None);
             }
         }
+    }
+
+    fn rest_parameter_array_binding_candidate(
+        &self,
+        arguments: &[Expression],
+        current_parameter_object_bindings: &HashMap<String, Option<ObjectValueBinding>>,
+    ) -> Option<ArrayValueBinding> {
+        let values = arguments
+            .iter()
+            .map(|argument| {
+                self.rest_parameter_array_element_expression(
+                    argument,
+                    current_parameter_object_bindings,
+                )
+                .map(Some)
+            })
+            .collect::<Option<Vec<_>>>()?;
+        Some(ArrayValueBinding { values })
+    }
+
+    fn rest_parameter_array_element_expression(
+        &self,
+        argument: &Expression,
+        current_parameter_object_bindings: &HashMap<String, Option<ObjectValueBinding>>,
+    ) -> Option<Expression> {
+        let global_bindings = self.snapshot_global_binding_environment();
+        let materialized_argument = self
+            .materialize_global_expression_with_state(
+                argument,
+                &HashMap::new(),
+                &global_bindings.value_bindings,
+                &global_bindings.object_bindings,
+            )
+            .unwrap_or_else(|| self.materialize_global_expression(argument));
+        if let Some(object_binding) = self
+            .infer_current_or_global_object_binding(argument, current_parameter_object_bindings)
+            .or_else(|| {
+                self.infer_current_or_global_object_binding(
+                    &materialized_argument,
+                    current_parameter_object_bindings,
+                )
+            })
+        {
+            return Some(object_binding_to_expression(&object_binding));
+        }
+        Self::prepared_parameter_argument_is_stable(&materialized_argument)
+            .then_some(materialized_argument)
     }
 
     fn infer_current_or_global_object_binding(

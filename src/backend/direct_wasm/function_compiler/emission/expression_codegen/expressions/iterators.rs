@@ -511,8 +511,44 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         expression: &Expression,
     ) -> DirectResult<()> {
+        let module_index = self.module_namespace_index_from_expression(expression);
         self.emit_numeric_expression(expression)?;
         self.state.emission.output.instructions.push(0x1a);
+        if let Some(module_index) = module_index
+            && let Some(names) = self
+                .resolve_static_dynamic_import_namespace_own_property_names_binding(module_index)
+        {
+            for name in names.values.into_iter().flatten() {
+                let Expression::String(name) = name else {
+                    continue;
+                };
+                let property = Expression::String(name);
+                let live_value = self
+                    .resolve_static_dynamic_import_namespace_live_binding_member_value(
+                        module_index,
+                        &property,
+                    );
+                if let Some(live_value) = live_value.as_ref()
+                    && self.module_namespace_live_value_is_readable_in_current_context(live_value)
+                {
+                    self.emit_numeric_expression(live_value)?;
+                    self.state.emission.output.instructions.push(0x1a);
+                    continue;
+                }
+                if let Some((binding_name, _)) = self
+                    .resolve_static_dynamic_import_namespace_live_binding_member_binding_initializer_value(
+                        module_index,
+                        &property,
+                    )
+                {
+                    let binding = Expression::Identifier(binding_name);
+                    if self.module_namespace_live_value_is_readable_in_current_context(&binding) {
+                        self.emit_numeric_expression(&binding)?;
+                        self.state.emission.output.instructions.push(0x1a);
+                    }
+                }
+            }
+        }
         self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
         Ok(())
     }
@@ -535,6 +571,43 @@ impl<'a> FunctionCompiler<'a> {
                 .resolve_local_array_iterator_binding_name(name)
                 .is_some()
         {
+            self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
+            return Ok(());
+        }
+        if matches!(
+            expression,
+            Expression::Identifier(name)
+                if name.starts_with("__ayy_array_iter_value_")
+                    || name.starts_with("__ayy_for_of_iter_value_")
+        ) {
+            if trace_get_iterator {
+                if let Expression::Identifier(name) = expression {
+                    let value = self
+                        .state
+                        .speculation
+                        .static_semantics
+                        .local_value_binding(name);
+                    eprintln!(
+                        "get_iterator:internal_value_alias name={name} value={value:?} typed_view={}",
+                        self.resolve_typed_array_view_binding_from_expression(expression)
+                            .is_some()
+                    );
+                }
+            }
+        }
+        if matches!(
+            expression,
+            Expression::Identifier(name)
+                if name.starts_with("__ayy_array_iter_value_")
+                    || name.starts_with("__ayy_for_of_iter_value_")
+        ) && let Some(view) = self.resolve_typed_array_view_binding_from_expression(expression)
+        {
+            if self
+                .typed_array_view_static_out_of_bounds(&view)
+                .unwrap_or(false)
+            {
+                return self.emit_named_error_throw("TypeError");
+            }
             self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
             return Ok(());
         }
@@ -665,12 +738,13 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(());
         }
         if let Expression::Identifier(name) = expression {
-            if self
-                .state
-                .speculation
-                .static_semantics
-                .has_local_typed_array_view_binding(name)
-            {
+            if let Some(view) = self.typed_array_view_binding_for_name(name) {
+                if self
+                    .typed_array_view_static_out_of_bounds(&view)
+                    .unwrap_or(false)
+                {
+                    return self.emit_named_error_throw("TypeError");
+                }
                 if let Some(oob_local) = self
                     .state
                     .speculation
@@ -1049,6 +1123,16 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         expression: &Expression,
     ) -> DirectResult<()> {
+        if let Expression::Identifier(_) = expression {
+            let then_property = Expression::String("then".to_string());
+            if let Some(object_binding) = self.resolve_object_binding_from_expression(expression)
+                && object_binding_lookup_value(&object_binding, &then_property).is_none()
+                && object_binding_lookup_descriptor(&object_binding, &then_property).is_none()
+            {
+                self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
+                return Ok(());
+            }
+        }
         if let Some(outcome) = self.resolve_static_await_resolution_outcome(expression) {
             match outcome {
                 StaticEvalOutcome::Value(awaited_value) => {

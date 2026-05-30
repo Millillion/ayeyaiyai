@@ -37,7 +37,7 @@ use self::{
         collect_literal_dynamic_import_specifiers_in_source_comments,
         collect_literal_dynamic_import_specifiers_in_statements,
     },
-    export_resolution::module_export_name_string,
+    export_resolution::{import_attribute_type, module_export_name_string},
     import_rewriter::rewrite_module_import_bindings_in_function,
     resolution::{normalize_module_path, resolve_module_specifier},
 };
@@ -55,21 +55,31 @@ struct ModuleLinker {
     lowerer: Lowerer,
     modules: Vec<LinkedModule>,
     module_indices: HashMap<PathBuf, usize>,
+    text_module_indices: HashMap<PathBuf, usize>,
+    bytes_module_indices: HashMap<PathBuf, usize>,
     load_order: Vec<usize>,
+    deferred_async_modules: HashSet<usize>,
 }
 
 #[derive(Clone)]
 struct LinkedModule {
     path: PathBuf,
     state: ModuleState,
+    load_error: Option<String>,
     namespace_name: String,
+    deferred_namespace_name: String,
+    status_name: String,
+    error_name: String,
     init_name: String,
     promise_name: String,
+    async_continuation_names: Vec<String>,
     init_async: bool,
     dependency_params: Vec<ModuleDependencyParam>,
     export_names: Vec<String>,
     export_resolutions: BTreeMap<String, ExportResolution>,
+    star_export_module_indices: Vec<usize>,
     ambiguous_export_names: HashSet<String>,
+    pending_import_resolutions: Vec<(usize, String)>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -77,12 +87,15 @@ enum ModuleState {
     Reserved,
     Lowering,
     Lowered,
+    Failed,
 }
 
 #[derive(Clone)]
 struct ModuleDependencyParam {
     module_index: usize,
     param_name: String,
+    eager: bool,
+    deferred: bool,
 }
 
 #[derive(Clone)]
@@ -90,11 +103,13 @@ enum ImportBinding {
     Namespace {
         module_index: usize,
         namespace_param: String,
+        deferred: bool,
     },
     Named {
         module_index: usize,
         namespace_param: String,
         export_name: String,
+        self_local_binding: Option<String>,
     },
 }
 

@@ -36,6 +36,31 @@ fn statement_defines_static_name_property(statement: &Statement, expected_name: 
             })
 }
 
+fn static_numeric_literal_value(expression: &Expression) -> Option<f64> {
+    match expression {
+        Expression::Number(value) => Some(*value),
+        Expression::Unary {
+            op: UnaryOp::Plus,
+            expression,
+        } => static_numeric_literal_value(expression),
+        Expression::Unary {
+            op: UnaryOp::Negate,
+            expression,
+        } => static_numeric_literal_value(expression).map(|value| -value),
+        _ => None,
+    }
+}
+
+fn static_numeric_literal_values_match(actual: &Expression, expected: &Expression) -> bool {
+    let Some(actual_value) = static_numeric_literal_value(actual) else {
+        return false;
+    };
+    let Some(expected_value) = static_numeric_literal_value(expected) else {
+        return false;
+    };
+    (actual_value.is_nan() && expected_value.is_nan()) || actual_value == expected_value
+}
+
 impl<'a> FunctionCompiler<'a> {
     fn runtime_shadow_member_matches_expected_value(
         &self,
@@ -76,7 +101,12 @@ impl<'a> FunctionCompiler<'a> {
             return true;
         };
         static_expression_matches(actual, expected)
+            || static_numeric_literal_values_match(actual, expected)
             || static_expression_matches(&self.materialize_static_expression(actual), expected)
+            || static_numeric_literal_values_match(
+                &self.materialize_static_expression(actual),
+                expected,
+            )
             || self
                 .resolve_static_reference_identity_key(actual)
                 .zip(self.resolve_static_reference_identity_key(expected))
@@ -284,6 +314,11 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(false);
         };
         let trace_verify_property = std::env::var_os("AYY_TRACE_VERIFY_PROPERTY").is_some();
+        if trace_verify_property {
+            eprintln!(
+                "verify_property:start object={object_expression:?} property={property_expression:?}"
+            );
+        }
         let expected_value = descriptor.value.as_ref().map(|value| {
             let materialized = self.materialize_static_expression(value);
             match materialized {
@@ -295,6 +330,9 @@ impl<'a> FunctionCompiler<'a> {
                 _ => materialized,
             }
         });
+        if trace_verify_property {
+            eprintln!("verify_property:expected_done");
+        }
         let expected_writable = descriptor.writable;
         let expected_enumerable = descriptor.enumerable;
         let expected_configurable = descriptor.configurable;
@@ -302,8 +340,15 @@ impl<'a> FunctionCompiler<'a> {
             |actual: bool, expected: Option<bool>| expected.is_none_or(|value| value == actual);
         let matches_missing_bool = |expected: Option<bool>| expected.is_none();
 
+        if trace_verify_property {
+            eprintln!("verify_property:direct_arguments:start");
+        }
         let direct_arguments = self.is_direct_arguments_object(object_expression);
         let arguments_binding = self.resolve_arguments_binding_from_expression(object_expression);
+        if trace_verify_property {
+            eprintln!("verify_property:direct_arguments:done");
+            eprintln!("verify_property:object_binding:start");
+        }
         let object_binding = self
             .resolve_object_binding_from_expression(object_expression)
             .or_else(|| match object_expression {
@@ -313,9 +358,20 @@ impl<'a> FunctionCompiler<'a> {
                 Expression::This => self.resolve_runtime_shadow_object_binding("this"),
                 _ => None,
             });
+        if trace_verify_property {
+            eprintln!(
+                "verify_property:object_binding:done present={}",
+                object_binding.is_some()
+            );
+            eprintln!("verify_property:resolved_property:start");
+        }
         let resolved_property = self
             .resolve_property_key_expression(property_expression)
             .unwrap_or_else(|| self.materialize_static_expression(property_expression));
+        if trace_verify_property {
+            eprintln!("verify_property:resolved_property:done property={resolved_property:?}");
+            eprintln!("verify_property:symbol_property:start");
+        }
         let symbol_property = [&resolved_property, property_expression]
             .into_iter()
             .find_map(|candidate| {
@@ -325,6 +381,9 @@ impl<'a> FunctionCompiler<'a> {
                     self.resolve_symbol_identity_expression(candidate)
                 }
             });
+        if trace_verify_property {
+            eprintln!("verify_property:symbol_property:done property={symbol_property:?}");
+        }
 
         if direct_arguments
             && symbol_property
@@ -371,6 +430,106 @@ impl<'a> FunctionCompiler<'a> {
                 self.descriptor_value_matches_expected(actual, Some(expected))
             })
         };
+        let descriptor_matches_expected = |object_descriptor: &PropertyDescriptorBinding| -> bool {
+            object_descriptor.value.as_ref().is_none_or(|value| {
+                self.descriptor_value_matches_expected(value, expected_value.as_ref())
+            }) && match object_descriptor.writable {
+                Some(writable) => matches_bool(writable, expected_writable),
+                None => matches_missing_bool(expected_writable),
+            } && matches_bool(object_descriptor.enumerable, expected_enumerable)
+                && matches_bool(object_descriptor.configurable, expected_configurable)
+        };
+
+        if property_name.is_none()
+            && symbol_property.is_none()
+            && expected_value.is_none()
+            && inline_summary_side_effect_free_expression(object_expression)
+            && inline_summary_side_effect_free_expression(property_expression)
+            && inline_summary_side_effect_free_expression(descriptor_expression)
+            && let Some(object_binding) = object_binding.as_ref()
+        {
+            let matching_property_names = ordered_object_property_names(object_binding)
+                .into_iter()
+                .filter(|property_name| {
+                    let property = Expression::String(property_name.clone());
+                    let descriptor =
+                        object_binding_lookup_descriptor(object_binding, &property).cloned();
+                    let fallback_descriptor = || {
+                        let value = object_binding_lookup_value(object_binding, &property)?.clone();
+                        let enumerable = !object_binding
+                            .non_enumerable_string_properties
+                            .iter()
+                            .any(|name| name == property_name);
+                        Some(PropertyDescriptorBinding {
+                            value: Some(value),
+                            configurable: true,
+                            enumerable,
+                            writable: Some(true),
+                            getter: None,
+                            setter: None,
+                            has_get: false,
+                            has_set: false,
+                        })
+                    };
+                    descriptor
+                        .or_else(fallback_descriptor)
+                        .as_ref()
+                        .is_some_and(descriptor_matches_expected)
+                })
+                .collect::<Vec<_>>();
+
+            if !matching_property_names.is_empty() {
+                let property_local = self.allocate_temp_local();
+                self.emit_numeric_expression(property_expression)?;
+                self.push_local_set(property_local);
+
+                fn emit_dynamic_property_branch<'a>(
+                    compiler: &mut FunctionCompiler<'a>,
+                    property_local: u32,
+                    matching_property_names: &[String],
+                    index: usize,
+                ) -> DirectResult<()> {
+                    let Some(property_name) = matching_property_names.get(index) else {
+                        return compiler.emit_error_throw();
+                    };
+
+                    compiler.push_local_get(property_local);
+                    compiler.emit_static_string_literal(property_name)?;
+                    compiler.push_binary_op(BinaryOp::Equal)?;
+                    compiler.state.emission.output.instructions.push(0x04);
+                    compiler.state.emission.output.instructions.push(I32_TYPE);
+                    compiler.push_control_frame();
+                    compiler.push_i32_const(JS_UNDEFINED_TAG);
+                    compiler.state.emission.output.instructions.push(0x05);
+                    emit_dynamic_property_branch(
+                        compiler,
+                        property_local,
+                        matching_property_names,
+                        index.saturating_add(1),
+                    )?;
+                    compiler.state.emission.output.instructions.push(0x0b);
+                    compiler.pop_control_frame();
+                    Ok(())
+                }
+
+                emit_dynamic_property_branch(self, property_local, &matching_property_names, 0)?;
+
+                for argument in arguments.iter().skip(3) {
+                    match argument {
+                        CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                            self.emit_numeric_expression(expression)?;
+                            self.state.emission.output.instructions.push(0x1a);
+                        }
+                    }
+                }
+                return Ok(true);
+            }
+        }
+
+        let resolved_object_expression = self
+            .resolve_bound_alias_expression(object_expression)
+            .filter(|resolved| !static_expression_matches(resolved, object_expression));
+        let materialized_object_expression = self.materialize_static_expression(object_expression);
         let global_property_descriptor =
             (self.state.speculation.execution_context.top_level_function
                 && matches!(object_expression, Expression::This))
@@ -547,19 +706,29 @@ impl<'a> FunctionCompiler<'a> {
         }
 
         let matches_property = if let Some(symbol_property) = symbol_property.as_ref() {
-            object_binding
-                .as_ref()
-                .and_then(|object_binding| {
-                    self.resolve_object_binding_property_value_for_object(
-                        object_expression,
-                        object_binding,
-                        symbol_property,
-                    )
-                })
-                .is_some_and(|actual| matches_value(&actual))
-                && matches_bool(true, expected_writable)
-                && matches_bool(true, expected_enumerable)
-                && matches_bool(true, expected_configurable)
+            if let Some(object_descriptor) = self.resolve_object_property_descriptor_binding(
+                object_expression,
+                resolved_object_expression.as_ref(),
+                &materialized_object_expression,
+                symbol_property,
+                None,
+            ) {
+                descriptor_matches_expected(&object_descriptor)
+            } else {
+                object_binding
+                    .as_ref()
+                    .and_then(|object_binding| {
+                        self.resolve_object_binding_property_value_for_object(
+                            object_expression,
+                            object_binding,
+                            symbol_property,
+                        )
+                    })
+                    .is_some_and(|actual| matches_value(&actual))
+                    && matches_bool(true, expected_writable)
+                    && matches_bool(true, expected_enumerable)
+                    && matches_bool(true, expected_configurable)
+            }
         } else if property_name.as_deref() == Some("length") {
             if direct_arguments {
                 self.state

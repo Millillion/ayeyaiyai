@@ -1,6 +1,119 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn collect_module_init_call_effect_nonlocal_bindings_for_module_index(
+        &self,
+        module_index: usize,
+        names: &mut HashSet<String>,
+        visited: &mut HashSet<String>,
+        seen_modules: &mut HashSet<usize>,
+    ) {
+        if !seen_modules.insert(module_index) {
+            return;
+        }
+
+        let init_name = format!("__ayy_module_init_{module_index}");
+        if let Some(init_function) = self.user_function(&init_name) {
+            for parameter in init_function.params.iter().skip(1) {
+                let Some(dependency_index) = parameter
+                    .strip_prefix("__ayy_module_dep_")
+                    .and_then(|index| index.parse::<usize>().ok())
+                else {
+                    continue;
+                };
+                if self
+                    .backend
+                    .global_binding_index(&format!(
+                        "__ayy_module_eager_dependency_{module_index}_{dependency_index}"
+                    ))
+                    .is_some()
+                {
+                    self.collect_module_init_call_effect_nonlocal_bindings_for_module_index(
+                        dependency_index,
+                        names,
+                        visited,
+                        seen_modules,
+                    );
+                }
+            }
+        }
+
+        names.extend(
+            self.collect_user_function_call_effect_nonlocal_bindings_for_name(&init_name, visited),
+        );
+    }
+
+    fn deferred_module_namespace_super_call_effect_property_may_trigger(
+        &self,
+        property: &Expression,
+    ) -> bool {
+        let property_key = self
+            .resolve_property_key_expression(property)
+            .or_else(|| {
+                if let Expression::Identifier(name) = property {
+                    self.state
+                        .speculation
+                        .static_semantics
+                        .local_value_binding(name)
+                        .or_else(|| self.global_value_binding(name))
+                        .cloned()
+                        .and_then(|value| self.resolve_property_key_expression(&value))
+                } else {
+                    None
+                }
+            })
+            .unwrap_or_else(|| self.canonical_object_property_expression(property));
+        let Some(property_name) = static_property_name_from_expression(&property_key) else {
+            return true;
+        };
+        property_name != "then" && !property_name.starts_with("__ayy$")
+    }
+
+    fn collect_deferred_module_namespace_super_member_call_effects(
+        &self,
+        property: &Expression,
+        current_function_name: Option<&str>,
+        names: &mut HashSet<String>,
+        visited: &mut HashSet<String>,
+    ) {
+        if !self.deferred_module_namespace_super_call_effect_property_may_trigger(property) {
+            return;
+        }
+        let Some(super_base) =
+            self.resolve_super_base_expression_with_context(current_function_name)
+        else {
+            return;
+        };
+
+        let mut candidate_bases = Vec::new();
+        candidate_bases.push(super_base.clone());
+        let materialized_base = self.materialize_static_expression(&super_base);
+        if !static_expression_matches(&materialized_base, &super_base) {
+            candidate_bases.push(materialized_base);
+        }
+
+        let Some(module_index) = candidate_bases.into_iter().find_map(|candidate| {
+            let Expression::Identifier(name) = candidate else {
+                return None;
+            };
+            Self::module_index_from_namespace_like_identifier(&name)
+        }) else {
+            return;
+        };
+        if current_function_name.is_some_and(|function_name| {
+            function_name == format!("__ayy_module_init_{module_index}")
+        }) {
+            return;
+        }
+
+        self.collect_module_init_call_effect_nonlocal_bindings_for_module_index(
+            module_index,
+            names,
+            visited,
+            &mut HashSet::new(),
+        );
+    }
+
     fn collect_member_assignment_call_effect_target(
         &self,
         object: &Expression,
@@ -12,6 +125,18 @@ impl<'a> FunctionCompiler<'a> {
             }
             Expression::This => {
                 names.insert("this".to_string());
+            }
+            Expression::Member { object, property } => {
+                let canonical_property = self.canonical_object_property_expression(property);
+                if let Some(shadow_binding_name) = self
+                    .runtime_object_property_shadow_binding_name_for_expression(
+                        object,
+                        &canonical_property,
+                    )
+                {
+                    names.insert(shadow_binding_name);
+                }
+                self.collect_member_assignment_call_effect_target(object, names);
             }
             _ => {}
         }
@@ -30,28 +155,35 @@ impl<'a> FunctionCompiler<'a> {
             && let Expression::Member { object, property } = callee.as_ref()
             && let Expression::String(property_name) = property.as_ref()
         {
-            let object_is_async_user_call = if let Expression::Call { callee, .. } = object.as_ref()
-            {
-                self.resolve_function_binding_from_expression_with_context(
-                    callee,
-                    current_function_name,
-                )
-                .is_some_and(|binding| {
-                    let LocalFunctionBinding::User(function_name) = binding else {
-                        return false;
-                    };
-                    self.user_function(&function_name)
-                        .is_some_and(|function| function.is_async())
-                })
-            } else {
-                false
-            };
+            let object_is_promise_like_chain = Self::call_is_promise_like_chain(object);
+            let object_is_async_user_call = matches!(property_name.as_str(), "then" | "catch")
+                && !object_is_promise_like_chain
+                && if let Expression::Call { callee, .. } = object.as_ref() {
+                    self.resolve_function_binding_from_expression_with_context(
+                        callee,
+                        current_function_name,
+                    )
+                    .is_some_and(|binding| {
+                        let LocalFunctionBinding::User(function_name) = binding else {
+                            return false;
+                        };
+                        self.user_function(&function_name)
+                            .is_some_and(|function| function.is_async())
+                    })
+                } else {
+                    false
+                };
             let is_promise_protocol_call = matches!(property_name.as_str(), "then" | "catch")
-                && (Self::call_is_promise_like_chain(object) || object_is_async_user_call);
+                && (object_is_promise_like_chain || object_is_async_user_call);
+            let object_is_async_generator_iterator =
+                matches!(property_name.as_str(), "next" | "return" | "throw")
+                    && self.is_async_generator_iterator_expression(object);
+            let object_has_simple_generator_metadata =
+                matches!(property_name.as_str(), "next" | "return" | "throw")
+                    && self.simple_generator_source_metadata(object).is_some();
             let is_generator_protocol_call =
                 matches!(property_name.as_str(), "next" | "return" | "throw")
-                    && (self.is_async_generator_iterator_expression(object)
-                        || self.simple_generator_source_metadata(object).is_some());
+                    && (object_is_async_generator_iterator || object_has_simple_generator_metadata);
             let is_function_meta_call = matches!(property_name.as_str(), "call" | "apply");
             let is_tracked_mutating_member_call = matches!(property_name.as_str(), "push");
             if is_tracked_mutating_member_call {
@@ -86,6 +218,21 @@ impl<'a> FunctionCompiler<'a> {
                 for argument in arguments {
                     match argument {
                         CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                            if is_promise_protocol_call
+                                && matches!(property_name.as_str(), "then" | "catch" | "finally")
+                                && let Some(LocalFunctionBinding::User(function_name)) = self
+                                    .resolve_function_binding_from_expression_with_context(
+                                        expression,
+                                        current_function_name,
+                                    )
+                            {
+                                names.extend(
+                                    self.collect_user_function_call_effect_nonlocal_bindings_for_name(
+                                        &function_name,
+                                        visited,
+                                    ),
+                                );
+                            }
                             self.collect_expression_call_effect_nonlocal_bindings(
                                 expression,
                                 current_function_name,
@@ -245,6 +392,12 @@ impl<'a> FunctionCompiler<'a> {
                 );
             }
             Expression::SuperMember { property } => {
+                self.collect_deferred_module_namespace_super_member_call_effects(
+                    property,
+                    current_function_name,
+                    names,
+                    visited,
+                );
                 self.collect_expression_call_effect_nonlocal_bindings(
                     property,
                     current_function_name,

@@ -34,7 +34,9 @@ where
             };
         }
         match statement {
-            Statement::Declaration { body } | Statement::Block { body } => {
+            Statement::Declaration { body }
+            | Statement::Block { body }
+            | Statement::Labeled { body, .. } => {
                 if let StaticStatementControl::Return(result) =
                     trace_unwrap!(execute_static_statement_block(executor, body, environment))
                 {

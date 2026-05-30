@@ -1,6 +1,34 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn expression_is_json_module_default_import_member(&self, expression: &Expression) -> bool {
+        let Expression::Member { object, property } = expression else {
+            return false;
+        };
+        let Expression::Identifier(dependency_name) = object.as_ref() else {
+            return false;
+        };
+        let Some(module_index) = dependency_name
+            .strip_prefix("__ayy_module_dep_")
+            .and_then(|index| index.parse::<usize>().ok())
+        else {
+            return false;
+        };
+        if !matches!(property.as_ref(), Expression::String(name) if name == "default") {
+            return false;
+        }
+
+        self.resolve_registered_function_declaration(&format!("__ayy_module_init_{module_index}"))
+            .is_some_and(|function| {
+                function.body.iter().any(|statement| {
+                    matches!(
+                        statement,
+                        Statement::Let { name, .. } if name.starts_with("__ayy_json_default_")
+                    )
+                })
+            })
+    }
+
     fn substitute_setter_receiver_this_binding(
         &self,
         expression: &Expression,
@@ -541,6 +569,10 @@ impl<'a> FunctionCompiler<'a> {
         property: &Expression,
         value: &Expression,
     ) -> DirectResult<bool> {
+        if self.expression_is_json_module_default_import_member(object) {
+            return Ok(false);
+        }
+
         let Some(function_binding) = self.resolve_member_setter_binding(object, property) else {
             return Ok(false);
         };
@@ -745,14 +777,39 @@ impl<'a> FunctionCompiler<'a> {
                 }
                 match object {
                     Expression::Identifier(name) => {
-                        self.update_local_value_binding(name, &updated_receiver);
+                        let preserve_function_identity =
+                            self.runtime_shadow_owner_should_preserve_function_identity(name);
+                        if !preserve_function_identity {
+                            self.update_local_value_binding(name, &updated_receiver);
+                        }
                         self.update_local_object_binding(name, &updated_receiver);
+                        if preserve_function_identity {
+                            self.state
+                                .speculation
+                                .static_semantics
+                                .set_local_kind(name, StaticValueKind::Function);
+                        }
                         if let Some(identifier_owner) =
                             self.runtime_object_property_shadow_owner_name_for_identifier(name)
                             && identifier_owner != *name
                         {
-                            self.update_local_value_binding(&identifier_owner, &updated_receiver);
+                            let preserve_owner_function_identity = self
+                                .runtime_shadow_owner_should_preserve_function_identity(
+                                    &identifier_owner,
+                                );
+                            if !preserve_owner_function_identity {
+                                self.update_local_value_binding(
+                                    &identifier_owner,
+                                    &updated_receiver,
+                                );
+                            }
                             self.update_local_object_binding(&identifier_owner, &updated_receiver);
+                            if preserve_owner_function_identity {
+                                self.state
+                                    .speculation
+                                    .static_semantics
+                                    .set_local_kind(&identifier_owner, StaticValueKind::Function);
+                            }
                         }
                         if object_aliases_this {
                             self.update_local_value_binding("this", &updated_receiver);

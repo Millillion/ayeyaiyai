@@ -11,6 +11,10 @@ pub(in crate::backend::direct_wasm) struct GlobalValueService {
     pub(in crate::backend::direct_wasm) value_bindings: HashMap<String, Expression>,
     pub(in crate::backend::direct_wasm) array_bindings: HashMap<String, ArrayValueBinding>,
     pub(in crate::backend::direct_wasm) arrays_with_runtime_state: HashSet<String>,
+    pub(in crate::backend::direct_wasm) resizable_array_buffer_bindings:
+        HashMap<String, ResizableArrayBufferBinding>,
+    pub(in crate::backend::direct_wasm) typed_array_view_bindings:
+        HashMap<String, TypedArrayViewBinding>,
     pub(in crate::backend::direct_wasm) object_bindings: HashMap<String, ObjectValueBinding>,
     pub(in crate::backend::direct_wasm) property_descriptors:
         HashMap<String, GlobalPropertyDescriptorState>,

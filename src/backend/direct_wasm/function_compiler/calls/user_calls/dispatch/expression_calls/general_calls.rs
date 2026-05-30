@@ -66,10 +66,17 @@ impl<'a> FunctionCompiler<'a> {
         allow_inline: bool,
     ) -> DirectResult<()> {
         let expanded_arguments = self.expand_call_arguments(arguments);
-        let materialized_inline_arguments = expanded_arguments
+        let arguments_contain_await = expanded_arguments
             .iter()
-            .map(|argument| self.materialize_static_expression(argument))
-            .collect::<Vec<_>>();
+            .any(Self::expression_contains_await_for_user_call_runtime);
+        let materialized_inline_arguments = if arguments_contain_await {
+            Vec::new()
+        } else {
+            expanded_arguments
+                .iter()
+                .map(|argument| self.materialize_static_expression(argument))
+                .collect::<Vec<_>>()
+        };
         let static_this_expression = self
             .with_suspended_with_scopes_if_active_scope_object(this_expression, |compiler| {
                 Ok(compiler.resolve_static_snapshot_this_expression(this_expression))
@@ -77,7 +84,7 @@ impl<'a> FunctionCompiler<'a> {
         if self.emit_deferred_generator_call_result(user_function, &expanded_arguments)? {
             return Ok(());
         }
-        if allow_inline {
+        if allow_inline && !arguments_contain_await {
             if self.emit_inline_lowered_pattern_user_function_with_arguments(
                 user_function,
                 &expanded_arguments,
@@ -86,7 +93,10 @@ impl<'a> FunctionCompiler<'a> {
                 return Ok(());
             }
         }
-        if allow_inline && self.can_inline_user_function_call(user_function, &expanded_arguments) {
+        if allow_inline
+            && !arguments_contain_await
+            && self.can_inline_user_function_call(user_function, &expanded_arguments)
+        {
             self.with_suspended_with_scopes_if_active_scope_object(this_expression, |compiler| {
                 compiler.emit_numeric_expression(this_expression)
             })?;
@@ -112,12 +122,13 @@ impl<'a> FunctionCompiler<'a> {
             additional_call_effect_nonlocal_bindings,
             assigned_nonlocal_binding_results,
             updated_bindings,
+            skip_static_argument_member_writebacks,
         } = self.prepare_general_user_function_call_plan(
             user_function,
             expanded_arguments,
             new_target_value,
             &static_this_expression,
-            enable_static_snapshot,
+            enable_static_snapshot && !arguments_contain_await,
         )?;
 
         let saved_new_target_local = if user_function.lexical_this {
@@ -148,6 +159,7 @@ impl<'a> FunctionCompiler<'a> {
         let saved_this_shadow_owner = if user_function.lexical_this {
             None
         } else {
+            self.predeclare_user_function_this_private_initializer_shadow_properties(user_function);
             self.with_suspended_with_scopes_if_active_scope_object(this_expression, |compiler| {
                 compiler.prepare_user_function_runtime_this_shadow_state(this_expression)
             })?
@@ -163,6 +175,7 @@ impl<'a> FunctionCompiler<'a> {
             user_function,
             &expanded_arguments,
             updated_bindings.as_ref(),
+            skip_static_argument_member_writebacks,
         )?;
         let receiver_updated_via_parameter_writeback = self
             .receiver_shadow_updated_via_parameter_writebacks(

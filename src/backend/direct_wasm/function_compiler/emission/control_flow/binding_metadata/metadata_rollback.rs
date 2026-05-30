@@ -606,6 +606,22 @@ impl<'a> FunctionCompiler<'a> {
         names: &HashSet<String>,
     ) {
         for name in names {
+            if self.backend.global_array_binding(name).is_some()
+                || self
+                    .backend
+                    .shared_global_semantics
+                    .values
+                    .array_bindings
+                    .contains_key(name)
+                || self.uses_global_runtime_array_state(name)
+                || name.starts_with("__ayy_object_property__")
+            {
+                self.backend.mark_global_array_with_runtime_state(name);
+                self.backend
+                    .shared_global_semantics
+                    .values
+                    .mark_array_with_runtime_state(name);
+            }
             self.clear_static_identifier_binding_metadata(name);
         }
     }

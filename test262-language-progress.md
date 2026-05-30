@@ -1,4 +1,4 @@
-22787/23637 (96.40%) — avg(last 10): 1.57 min/check
+23632/23637 (99.98%) — avg(last 10): 59.14 min/check
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,8 +14,8 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 9320/9337 (99.82%)
-- expressions: 11032/11038 (99.95%)
+- statements: 9337/9337 (100.00%)
+- expressions: 11038/11038 (100.00%)
 - types: 113/113 (100.00%)
 - function-code: 217/217 (100.00%)
 - global-code: 42/42 (100.00%)
@@ -24,11 +24,11 @@ Sub-category progress
 - block-scope: 145/145 (100.00%)
 - identifier-resolution: 14/14 (100.00%)
 - computed-property-names: 48/48 (100.00%)
-- destructuring: 18/19 (94.74%)
-- eval-code: 239/347 (68.88%)
-- import: 0/123 (0.00%)
-- export: 0/3 (0.00%)
-- module-code: 0/592 (0.00%)
+- destructuring: 19/19 (100.00%)
+- eval-code: 347/347 (100.00%)
+- import: 121/123 (98.37%)
+- export: 3/3 (100.00%)
+- module-code: 589/592 (99.49%)
 
   - [x] (2026-03-23T23:47:42-06:00) test/language/comments/S7.4_A1_T1.js
   - [x] (2026-03-23T23:47:56-06:00) test/language/comments/S7.4_A1_T2.js
@@ -2034,9 +2034,9 @@ Sub-category progress
   - [x] (2026-03-24T04:31:59-06:00) test/language/statements/class/async-gen-method-static/yield-star-next-then-non-callable-symbol-fulfillpromise.js
   - [x] (2026-03-24T04:32:00-06:00) test/language/statements/class/async-gen-method-static/yield-star-next-then-non-callable-undefined-fulfillpromise.js
   - [x] (2026-03-24T04:32:01-06:00) test/language/statements/class/async-gen-method-static/yield-star-next-then-returns-abrupt.js
-  - [ ] (SKIPPED 2026-03-26T21:59:39-06:00 after 1h) test/language/statements/class/async-gen-method-static/yield-star-sync-next.js
-  - [ ] (SKIPPED 2026-03-26T22:48:55-06:00 after 1h) test/language/statements/class/async-gen-method-static/yield-star-sync-return.js
-  - [ ] (SKIPPED 2026-03-26T23:50:57-06:00 after 1h) test/language/statements/class/async-gen-method-static/yield-star-sync-throw.js
+  - [x] (2026-05-27T16:34:39-06:00) test/language/statements/class/async-gen-method-static/yield-star-sync-next.js
+  - [x] (2026-05-27T16:36:03-06:00) test/language/statements/class/async-gen-method-static/yield-star-sync-return.js
+  - [x] (2026-05-27T16:37:09-06:00) test/language/statements/class/async-gen-method-static/yield-star-sync-throw.js
   - [x] (2026-03-27T00:11:53-06:00) test/language/statements/class/async-gen-method/array-destructuring-param-strict-body.js
   - [x] (2026-03-27T00:22:49-06:00) test/language/statements/class/async-gen-method/await-as-binding-identifier-escaped.js
   - [x] (2026-03-27T00:27:33-06:00) test/language/statements/class/async-gen-method/await-as-binding-identifier.js
@@ -2053,7 +2053,7 @@ Sub-category progress
   - [x] (2026-03-27T00:36:51-06:00) test/language/statements/class/async-gen-method/dflt-params-ref-self.js
   - [x] (2026-03-27T00:37:52-06:00) test/language/statements/class/async-gen-method/dflt-params-rest.js
   - [x] (2026-03-27T00:39:05-06:00) test/language/statements/class/async-gen-method/dflt-params-trailing-comma.js
-  - [ ] (SKIPPED 2026-03-27T01:48:12-06:00 after 1h) test/language/statements/class/async-gen-method/forbidden-ext/b1/cls-decl-async-gen-meth-forbidden-ext-direct-access-prop-arguments.js
+  - [x] (2026-05-27T16:37:55-06:00) test/language/statements/class/async-gen-method/forbidden-ext/b1/cls-decl-async-gen-meth-forbidden-ext-direct-access-prop-arguments.js
   - [x] (2026-03-27T02:26:23-06:00) test/language/statements/class/async-gen-method/forbidden-ext/b1/cls-decl-async-gen-meth-forbidden-ext-direct-access-prop-caller.js
   - [x] (2026-03-27T02:27:53-06:00) test/language/statements/class/async-gen-method/forbidden-ext/b2/cls-decl-async-gen-meth-forbidden-ext-indirect-access-own-prop-caller-get.js
   - [x] (2026-03-27T02:28:30-06:00) test/language/statements/class/async-gen-method/forbidden-ext/b2/cls-decl-async-gen-meth-forbidden-ext-indirect-access-own-prop-caller-value.js
@@ -2071,16 +2071,16 @@ Sub-category progress
   - [x] (2026-03-27T02:37:15-06:00) test/language/statements/class/async-gen-method/yield-as-label-identifier.js
   - [x] (2026-03-27T02:37:56-06:00) test/language/statements/class/async-gen-method/yield-identifier-spread-strict.js
   - [x] (2026-03-27T02:38:28-06:00) test/language/statements/class/async-gen-method/yield-identifier-strict.js
-  - [ ] (SKIPPED 2026-03-27T03:19:01-06:00 after 1h) test/language/statements/class/async-gen-method/yield-promise-reject-next-catch.js
+  - [x] (2026-05-27T16:49:37-06:00) test/language/statements/class/async-gen-method/yield-promise-reject-next-catch.js
   - [x] (2026-03-27T04:15:58-06:00) test/language/statements/class/async-gen-method/yield-promise-reject-next-for-await-of-async-iterator.js
-  - [ ] (SKIPPED 2026-03-27T05:16:24-06:00 after 1h) test/language/statements/class/async-gen-method/yield-promise-reject-next-for-await-of-sync-iterator.js
+  - [x] (2026-05-27T16:50:51-06:00) test/language/statements/class/async-gen-method/yield-promise-reject-next-for-await-of-sync-iterator.js
   - [x] (2026-03-27T05:54:36-06:00) test/language/statements/class/async-gen-method/yield-promise-reject-next-yield-star-async-iterator.js
   - [x] (2026-03-27T06:00:26-06:00) test/language/statements/class/async-gen-method/yield-promise-reject-next-yield-star-sync-iterator.js
   - [x] (2026-03-27T06:00:50-06:00) test/language/statements/class/async-gen-method/yield-promise-reject-next.js
   - [x] (2026-03-27T06:17:38-06:00) test/language/statements/class/async-gen-method/yield-spread-arr-multiple.js
   - [x] (2026-03-27T06:18:28-06:00) test/language/statements/class/async-gen-method/yield-spread-arr-single.js
   - [x] (2026-03-27T06:18:57-06:00) test/language/statements/class/async-gen-method/yield-spread-obj.js
-  - [ ] (SKIPPED 2026-03-27T07:19:22-06:00 after 1h) test/language/statements/class/async-gen-method/yield-star-async-next.js
+  - [x] (2026-05-27T16:52:30-06:00) test/language/statements/class/async-gen-method/yield-star-async-next.js
   - [x] (2026-03-27T09:01:09-06:00) test/language/statements/class/async-gen-method/yield-star-async-return.js
   - [x] (2026-03-27T09:11:28-06:00) test/language/statements/class/async-gen-method/yield-star-async-throw.js
   - [x] (2026-03-27T09:12:29-06:00) test/language/statements/class/async-gen-method/yield-star-expr-abrupt.js
@@ -2133,8 +2133,8 @@ Sub-category progress
   - [x] (2026-03-27T10:43:38-06:00) test/language/statements/class/async-gen-method/yield-star-next-then-non-callable-symbol-fulfillpromise.js
   - [x] (2026-03-27T10:44:21-06:00) test/language/statements/class/async-gen-method/yield-star-next-then-non-callable-undefined-fulfillpromise.js
   - [x] (2026-03-27T10:44:49-06:00) test/language/statements/class/async-gen-method/yield-star-next-then-returns-abrupt.js
-  - [ ] (SKIPPED 2026-03-27T11:40:55-06:00 after 1h) test/language/statements/class/async-gen-method/yield-star-sync-next.js
-  - [ ] (SKIPPED 2026-03-27T12:54:32-06:00 after 1h) test/language/statements/class/async-gen-method/yield-star-sync-return.js
+  - [x] (2026-05-27T16:53:53-06:00) test/language/statements/class/async-gen-method/yield-star-sync-next.js
+  - [x] (2026-05-27T16:54:41-06:00) test/language/statements/class/async-gen-method/yield-star-sync-return.js
   - [x] (2026-03-27T13:12:54-06:00) test/language/statements/class/async-gen-method/yield-star-sync-throw.js
   - [x] (2026-03-27T13:14:33-06:00) test/language/statements/class/async-meth-escaped-async.js
   - [x] (2026-03-27T13:15:06-06:00) test/language/statements/class/async-method-static/array-destructuring-param-strict-body.js
@@ -2379,7 +2379,7 @@ Sub-category progress
   - [x] (2026-03-28T01:30:49-06:00) test/language/statements/class/definition/getters-restricted-ids.js
   - [x] (2026-03-28T01:30:57-06:00) test/language/statements/class/definition/implicit-constructor.js
   - [x] (2026-03-28T01:31:43-06:00) test/language/statements/class/definition/invalid-extends.js
-  - [ ] (SKIPPED 2026-03-28T02:18:15-06:00 after 1h) test/language/statements/class/definition/methods-async-super-call-body.js
+  - [x] (2026-05-27T16:55:29-06:00) test/language/statements/class/definition/methods-async-super-call-body.js
   - [x] (2026-03-28T02:19:34-06:00) test/language/statements/class/definition/methods-async-super-call-param.js
   - [x] (2026-03-28T02:27:27-06:00) test/language/statements/class/definition/methods-gen-no-yield.js
   - [x] (2026-03-28T02:28:37-06:00) test/language/statements/class/definition/methods-gen-return.js
@@ -2407,7 +2407,7 @@ Sub-category progress
   - [x] (2026-03-28T03:00:36-06:00) test/language/statements/class/definition/prototype-setter.js
   - [x] (2026-03-28T03:16:41-06:00) test/language/statements/class/definition/prototype-wiring.js
   - [x] (2026-03-28T03:17:03-06:00) test/language/statements/class/definition/setters-non-configurable-err.js
-  - [ ] (SKIPPED 2026-03-28T05:01:38-06:00 after 1h) test/language/statements/class/definition/setters-prop-desc.js
+  - [x] (2026-05-27T18:43:48-06:00) test/language/statements/class/definition/setters-prop-desc.js
   - [x] (2026-03-28T05:02:49-06:00) test/language/statements/class/definition/setters-restricted-ids.js
   - [x] (2026-03-28T05:33:27-06:00) test/language/statements/class/definition/side-effects-in-extends.js
   - [x] (2026-03-28T05:36:55-06:00) test/language/statements/class/definition/side-effects-in-property-define.js
@@ -4705,7 +4705,7 @@ Sub-category progress
   - [x] (2026-04-09T01:32:02-06:00) test/language/statements/class/elements/async-gen-private-method/yield-spread-arr-multiple.js
   - [x] (2026-04-09T01:32:16-06:00) test/language/statements/class/elements/async-gen-private-method/yield-spread-arr-single.js
   - [x] (2026-04-09T01:33:05-06:00) test/language/statements/class/elements/async-gen-private-method/yield-spread-obj.js
-  - [ ] (SKIPPED 2026-04-09T02:59:07-06:00 after 1h) test/language/statements/class/elements/async-gen-private-method/yield-star-async-next.js
+  - [x] (2026-05-27T19:44:32-06:00) test/language/statements/class/elements/async-gen-private-method/yield-star-async-next.js
   - [x] (2026-04-09T03:55:36-06:00) test/language/statements/class/elements/async-gen-private-method/yield-star-async-return.js
   - [x] (2026-04-09T03:57:05-06:00) test/language/statements/class/elements/async-gen-private-method/yield-star-async-throw.js
   - [x] (2026-04-09T03:57:42-06:00) test/language/statements/class/elements/async-gen-private-method/yield-star-expr-abrupt.js
@@ -5387,7 +5387,7 @@ Sub-category progress
   - [x] (2026-04-24T12:06:28-06:00) test/language/statements/class/elements/same-line-async-gen-rs-privatename-identifier-initializer-alt.js
   - [x] (2026-04-24T12:07:06-06:00) test/language/statements/class/elements/same-line-async-gen-rs-privatename-identifier-initializer.js
   - [x] (2026-04-24T12:07:43-06:00) test/language/statements/class/elements/same-line-async-gen-rs-privatename-identifier.js
-  - [ ] (SKIPPED 2026-04-24T13:07:44-06:00 after 1h) test/language/statements/class/elements/same-line-async-gen-rs-static-async-generator-method-privatename-identifier-alt.js
+  - [x] (2026-05-27T20:23:43-06:00) test/language/statements/class/elements/same-line-async-gen-rs-static-async-generator-method-privatename-identifier-alt.js
   - [x] (2026-04-24T13:19:03-06:00) test/language/statements/class/elements/same-line-async-gen-rs-static-async-generator-method-privatename-identifier.js
   - [x] (2026-04-24T13:25:15-06:00) test/language/statements/class/elements/same-line-async-gen-rs-static-async-method-privatename-identifier-alt.js
   - [x] (2026-04-24T13:26:09-06:00) test/language/statements/class/elements/same-line-async-gen-rs-static-async-method-privatename-identifier.js
@@ -6193,8 +6193,8 @@ Sub-category progress
   - [x] (2026-04-25T17:00:30-06:00) test/language/statements/class/subclass/builtin-objects/String/super-must-be-called.js
   - [x] (2026-04-25T17:05:36-06:00) test/language/statements/class/subclass/builtin-objects/Symbol/new-symbol-with-super-throws.js
   - [x] (2026-04-25T17:05:36-06:00) test/language/statements/class/subclass/builtin-objects/Symbol/symbol-valid-as-extends-value.js
-  - [ ] (SKIPPED 2026-04-25T17:45:58-06:00 after 1h) test/language/statements/class/subclass/builtin-objects/TypedArray/regular-subclassing.js
-  - [ ] (SKIPPED 2026-04-25T17:45:58-06:00 after 1h) test/language/statements/class/subclass/builtin-objects/TypedArray/super-must-be-called.js
+  - [x] (2026-05-27T23:35:21-06:00) test/language/statements/class/subclass/builtin-objects/TypedArray/regular-subclassing.js
+  - [x] (2026-05-27T23:39:20-06:00) test/language/statements/class/subclass/builtin-objects/TypedArray/super-must-be-called.js
   - [x] (2026-04-25T17:52:57-06:00) test/language/statements/class/subclass/builtin-objects/WeakMap/regular-subclassing.js
   - [x] (2026-04-25T17:47:07-06:00) test/language/statements/class/subclass/builtin-objects/WeakMap/super-must-be-called.js
   - [x] (2026-04-25T17:52:57-06:00) test/language/statements/class/subclass/builtin-objects/WeakSet/regular-subclassing.js
@@ -7684,7 +7684,7 @@ Sub-category progress
   - [x] (2026-04-30T06:43:42-06:00) test/language/statements/for-await-of/head-lhs-async.js
   - [x] (2026-04-30T06:43:42-06:00) test/language/statements/for-await-of/head-using-init.js
   - [x] (2026-04-30T06:43:42-06:00) test/language/statements/for-await-of/head-var-init.js
-  - [ ] (SKIPPED 2026-04-30T07:24:02-06:00 after 1h) test/language/statements/for-await-of/iterator-close-non-throw-get-method-abrupt.js
+  - [x] (2026-05-27T23:50:39-06:00) test/language/statements/for-await-of/iterator-close-non-throw-get-method-abrupt.js
   - [x] (2026-04-30T07:24:51-06:00) test/language/statements/for-await-of/iterator-close-non-throw-get-method-is-null.js
   - [x] (2026-04-30T07:53:27-06:00) test/language/statements/for-await-of/iterator-close-non-throw-get-method-non-callable.js
   - [x] (2026-04-30T08:06:53-06:00) test/language/statements/for-await-of/iterator-close-throw-get-method-abrupt.js
@@ -9041,7 +9041,7 @@ Sub-category progress
   - [x] (2026-05-02T14:54:57-06:00) test/language/statements/function/S13.2.2_A16_T1.js
   - [x] (2026-05-02T14:55:19-06:00) test/language/statements/function/S13.2.2_A16_T2.js
   - [x] (2026-05-02T15:15:45-06:00) test/language/statements/function/S13.2.2_A16_T3.js
-  - [ ] (SKIPPED 2026-05-02T16:16:24-06:00 after 1h) test/language/statements/function/S13.2.2_A17_T2.js
+  - [x] (2026-05-27T23:52:07-06:00) test/language/statements/function/S13.2.2_A17_T2.js
   - [x] (2026-05-02T16:30:55-06:00) test/language/statements/function/S13.2.2_A17_T3.js
   - [x] (2026-05-02T16:44:32-06:00) test/language/statements/function/S13.2.2_A18_T1.js
   - [x] (2026-05-02T17:00:39-06:00) test/language/statements/function/S13.2.2_A18_T2.js
@@ -16197,7 +16197,7 @@ Sub-category progress
   - [x] (2026-05-14T09:22:13-06:00) test/language/expressions/class/elements/private-method-shadowed-by-getter-on-nested-class.js
   - [x] (2026-05-14T09:22:53-06:00) test/language/expressions/class/elements/private-method-shadowed-by-setter-on-nested-class.js
   - [x] (2026-05-14T09:23:34-06:00) test/language/expressions/class/elements/private-method-shadowed-on-nested-class.js
-  - [ ] (SKIPPED 2026-05-14T09:53:26-06:00 after 1h) test/language/expressions/class/elements/private-methods/prod-private-async-generator.js
+  - [x] (2026-05-28T09:06:35-06:00) test/language/expressions/class/elements/private-methods/prod-private-async-generator.js
   - [x] (2026-05-14T11:02:11-06:00) test/language/expressions/class/elements/private-methods/prod-private-async-method.js
   - [x] (2026-05-14T11:17:40-06:00) test/language/expressions/class/elements/private-methods/prod-private-generator.js
   - [x] (2026-05-14T11:36:10-06:00) test/language/expressions/class/elements/private-methods/prod-private-method-initialize-order.js
@@ -17913,7 +17913,7 @@ Sub-category progress
   - [x] (2026-05-18T10:08:06-06:00) test/language/expressions/dynamic-import/eval-rqstd-once.js
   - [x] (2026-05-18T10:08:38-06:00) test/language/expressions/dynamic-import/eval-self-once-module.js
   - [x] (2026-05-18T10:09:18-06:00) test/language/expressions/dynamic-import/eval-self-once-script.js
-  - [ ] (SKIPPED 2026-05-18T11:09:18-06:00 after 1h) test/language/expressions/dynamic-import/for-await-resolution-and-error-agen-yield.js
+  - [x] (2026-05-28T14:01:25-06:00) test/language/expressions/dynamic-import/for-await-resolution-and-error-agen-yield.js
   - [x] (2026-05-18T11:25:05-06:00) test/language/expressions/dynamic-import/for-await-resolution-and-error-agen.js
   - [x] (2026-05-18T11:25:52-06:00) test/language/expressions/dynamic-import/for-await-resolution-and-error.js
   - [x] (2026-05-18T11:32:53-06:00) test/language/expressions/dynamic-import/import-attributes/2nd-param-await-expr.js
@@ -21089,7 +21089,7 @@ Sub-category progress
   - [x] (2026-05-20T13:56:26-06:00) test/language/expressions/optional-chaining/iteration-statement-for-of-type-error.js
   - [x] (2026-05-20T14:04:22-06:00) test/language/expressions/optional-chaining/iteration-statement-for.js
   - [x] (2026-05-20T14:05:07-06:00) test/language/expressions/optional-chaining/iteration-statement-while.js
-  - [ ] (SKIPPED 2026-05-20T15:10:11-06:00 after 1h) test/language/expressions/optional-chaining/member-expression-async-identifier.js
+  - [x] (2026-05-28T15:25:11-06:00) test/language/expressions/optional-chaining/member-expression-async-identifier.js
   - [x] (2026-05-20T15:14:01-06:00) test/language/expressions/optional-chaining/member-expression-async-literal.js
   - [x] (2026-05-20T15:15:17-06:00) test/language/expressions/optional-chaining/member-expression-async-this.js
   - [x] (2026-05-20T15:58:11-06:00) test/language/expressions/optional-chaining/member-expression.js
@@ -21462,7 +21462,7 @@ Sub-category progress
   - [x] (2026-05-21T04:14:44-06:00) test/language/expressions/super/prop-dot-cls-ref-strict.js
   - [x] (2026-05-21T03:49:12-06:00) test/language/expressions/super/prop-dot-cls-ref-this.js
   - [x] (2026-05-21T04:43:40-06:00) test/language/expressions/super/prop-dot-cls-this-uninit.js
-  - [ ] (SKIPPED 2026-05-21T05:10:59-06:00 after 1h) test/language/expressions/super/prop-dot-cls-val-from-arrow.js
+  - [x] (2026-05-28T15:26:41-06:00) test/language/expressions/super/prop-dot-cls-val-from-arrow.js
   - [x] (2026-05-21T05:57:50-06:00) test/language/expressions/super/prop-dot-cls-val-from-eval.js
   - [x] (2026-05-21T05:58:48-06:00) test/language/expressions/super/prop-dot-cls-val.js
   - [x] (2026-05-21T05:59:23-06:00) test/language/expressions/super/prop-dot-obj-null-proto.js
@@ -21501,7 +21501,7 @@ Sub-category progress
   - [x] (2026-05-21T07:26:16-06:00) test/language/expressions/super/prop-expr-uninitialized-this-putvalue-increment.js
   - [x] (2026-05-21T07:26:37-06:00) test/language/expressions/super/prop-expr-uninitialized-this-putvalue.js
   - [x] (2026-05-21T07:35:19-06:00) test/language/expressions/super/prop-poisoned-underscore-proto.js
-  - [ ] (SKIPPED 2026-05-21T08:35:21-06:00 after 1h) test/language/expressions/super/realm.js
+  - [x] (2026-05-28T18:27:59-06:00) test/language/expressions/super/realm.js
   - [x] (2026-05-21T08:43:30-06:00) test/language/expressions/super/super-reference-resolution.js
   - [x] (2026-05-21T08:44:25-06:00) test/language/expressions/tagged-template/cache-different-functions-same-site.js
   - [x] (2026-05-21T09:11:03-06:00) test/language/expressions/tagged-template/cache-differing-expressions-eval.js
@@ -21519,7 +21519,7 @@ Sub-category progress
   - [x] (2026-05-21T10:23:29-06:00) test/language/expressions/tagged-template/call-expression-argument-list-evaluation.js
   - [x] (2026-05-21T10:23:59-06:00) test/language/expressions/tagged-template/call-expression-context-no-strict.js
   - [x] (2026-05-21T10:37:46-06:00) test/language/expressions/tagged-template/call-expression-context-strict.js
-  - [ ] (SKIPPED 2026-05-21T11:11:15-06:00 after 1h) test/language/expressions/tagged-template/chained-application.js
+  - [x] (2026-05-28T18:38:07-06:00) test/language/expressions/tagged-template/chained-application.js
   - [x] (2026-05-21T11:21:11-06:00) test/language/expressions/tagged-template/constructor-invocation.js
   - [x] (2026-05-21T11:38:55-06:00) test/language/expressions/tagged-template/invalid-escape-sequences.js
   - [x] (2026-05-21T11:39:50-06:00) test/language/expressions/tagged-template/member-expression-argument-list-evaluation.js
@@ -22647,7 +22647,7 @@ Sub-category progress
   - [x] (2026-05-25T04:27:10-06:00) test/language/destructuring/binding/syntax/property-list-single-name-bindings.js
   - [x] (2026-05-25T04:27:34-06:00) test/language/destructuring/binding/syntax/property-list-with-property-list.js
   - [x] (2026-05-25T04:27:59-06:00) test/language/destructuring/binding/syntax/recursive-array-and-object-patterns.js
-  - [ ] (SKIPPED 2026-05-25T05:02:33-06:00 after 1h) test/language/destructuring/binding/typedarray-backed-by-resizable-buffer.js
+  - [x] (2026-05-29T06:18:10-06:00) test/language/destructuring/binding/typedarray-backed-by-resizable-buffer.js
 
 - [ ] eval-code (347 tests)
   - [x] (2026-05-25T05:06:31-06:00) test/language/eval-code/direct/arrow-fn-a-following-parameter-is-named-arguments-arrow-func-declare-arguments-assign-incl-def-param-arrow-arguments.js
@@ -22889,835 +22889,835 @@ Sub-category progress
   - [x] (2026-05-25T09:35:30-06:00) test/language/eval-code/direct/strict-caller-function-context.js
   - [x] (2026-05-25T09:36:46-06:00) test/language/eval-code/direct/strict-caller-global.js
   - [x] (2026-05-25T09:37:45-06:00) test/language/eval-code/direct/strictness-override.js
-  - [ ] test/language/eval-code/direct/super-call-arrow.js
-  - [ ] test/language/eval-code/direct/super-call-fn.js
-  - [ ] test/language/eval-code/direct/super-call-method.js
-  - [ ] test/language/eval-code/direct/super-call.js
-  - [ ] test/language/eval-code/direct/super-prop-arrow.js
-  - [ ] test/language/eval-code/direct/super-prop-dot-no-home.js
-  - [ ] test/language/eval-code/direct/super-prop-expr-no-home-no-eval.js
-  - [ ] test/language/eval-code/direct/super-prop-expr-no-home.js
-  - [ ] test/language/eval-code/direct/super-prop-method.js
-  - [ ] test/language/eval-code/direct/super-prop.js
-  - [ ] test/language/eval-code/direct/switch-case-decl-eval-source-is-strict-nostrict.js
-  - [ ] test/language/eval-code/direct/switch-case-decl-eval-source-is-strict-onlystrict.js
-  - [ ] test/language/eval-code/direct/switch-case-decl-onlystrict.js
-  - [ ] test/language/eval-code/direct/switch-dflt-decl-eval-source-is-strict-nostrict.js
-  - [ ] test/language/eval-code/direct/switch-dflt-decl-eval-source-is-strict-onlystrict.js
-  - [ ] test/language/eval-code/direct/switch-dflt-decl-onlystrict.js
-  - [ ] test/language/eval-code/direct/this-value-func-non-strict.js
-  - [ ] test/language/eval-code/direct/this-value-func-strict-caller.js
-  - [ ] test/language/eval-code/direct/this-value-func-strict-source.js
-  - [ ] test/language/eval-code/direct/this-value-global.js
-  - [ ] test/language/eval-code/direct/var-env-func-init-global-new.js
-  - [ ] test/language/eval-code/direct/var-env-func-init-global-update-configurable.js
-  - [ ] test/language/eval-code/direct/var-env-func-init-global-update-non-configurable.js
-  - [ ] test/language/eval-code/direct/var-env-func-init-local-new-delete.js
-  - [ ] test/language/eval-code/direct/var-env-func-init-local-new.js
-  - [ ] test/language/eval-code/direct/var-env-func-init-local-update.js
-  - [ ] test/language/eval-code/direct/var-env-func-init-multi.js
-  - [ ] test/language/eval-code/direct/var-env-func-non-strict.js
-  - [ ] test/language/eval-code/direct/var-env-func-strict-caller-2.js
-  - [ ] test/language/eval-code/direct/var-env-func-strict-caller.js
-  - [ ] test/language/eval-code/direct/var-env-func-strict-source.js
-  - [ ] test/language/eval-code/direct/var-env-gloabl-lex-strict-caller.js
-  - [ ] test/language/eval-code/direct/var-env-global-lex-non-strict.js
-  - [ ] test/language/eval-code/direct/var-env-global-lex-strict-source.js
-  - [ ] test/language/eval-code/direct/var-env-lower-lex-non-strict.js
-  - [ ] test/language/eval-code/direct/var-env-lower-lex-strict-caller.js
-  - [ ] test/language/eval-code/direct/var-env-lower-lex-strict-source.js
-  - [ ] test/language/eval-code/direct/var-env-var-init-global-exstng.js
-  - [ ] test/language/eval-code/direct/var-env-var-init-global-new.js
-  - [ ] test/language/eval-code/direct/var-env-var-init-local-exstng.js
-  - [ ] test/language/eval-code/direct/var-env-var-init-local-new-delete.js
-  - [ ] test/language/eval-code/direct/var-env-var-init-local-new.js
-  - [ ] test/language/eval-code/direct/var-env-var-non-strict.js
-  - [ ] test/language/eval-code/direct/var-env-var-strict-caller-2.js
-  - [ ] test/language/eval-code/direct/var-env-var-strict-caller-3.js
-  - [ ] test/language/eval-code/direct/var-env-var-strict-caller.js
-  - [ ] test/language/eval-code/direct/var-env-var-strict-source.js
-  - [ ] test/language/eval-code/indirect/always-non-strict.js
-  - [ ] test/language/eval-code/indirect/block-decl-strict.js
-  - [ ] test/language/eval-code/indirect/cptn-nrml-empty-block.js
-  - [ ] test/language/eval-code/indirect/cptn-nrml-empty-do-while.js
-  - [ ] test/language/eval-code/indirect/cptn-nrml-empty-empty.js
-  - [ ] test/language/eval-code/indirect/cptn-nrml-empty-for.js
-  - [ ] test/language/eval-code/indirect/cptn-nrml-empty-if.js
-  - [ ] test/language/eval-code/indirect/cptn-nrml-empty-switch.js
-  - [ ] test/language/eval-code/indirect/cptn-nrml-empty-var.js
-  - [ ] test/language/eval-code/indirect/cptn-nrml-empty-while.js
-  - [ ] test/language/eval-code/indirect/cptn-nrml-expr-obj.js
-  - [ ] test/language/eval-code/indirect/cptn-nrml-expr-prim.js
-  - [ ] test/language/eval-code/indirect/export.js
-  - [ ] test/language/eval-code/indirect/global-env-rec-catch.js
-  - [ ] test/language/eval-code/indirect/global-env-rec-eval.js
-  - [ ] test/language/eval-code/indirect/global-env-rec-fun.js
-  - [ ] test/language/eval-code/indirect/global-env-rec-with.js
-  - [ ] test/language/eval-code/indirect/global-env-rec.js
-  - [ ] test/language/eval-code/indirect/import.js
-  - [ ] test/language/eval-code/indirect/lex-env-distinct-cls.js
-  - [ ] test/language/eval-code/indirect/lex-env-distinct-const.js
-  - [ ] test/language/eval-code/indirect/lex-env-distinct-let.js
-  - [ ] test/language/eval-code/indirect/lex-env-heritage.js
-  - [ ] test/language/eval-code/indirect/lex-env-no-init-cls.js
-  - [ ] test/language/eval-code/indirect/lex-env-no-init-const.js
-  - [ ] test/language/eval-code/indirect/lex-env-no-init-let.js
-  - [ ] test/language/eval-code/indirect/new.target.js
-  - [ ] test/language/eval-code/indirect/non-definable-function-with-function.js
-  - [ ] test/language/eval-code/indirect/non-definable-function-with-variable.js
-  - [ ] test/language/eval-code/indirect/non-definable-global-function.js
-  - [ ] test/language/eval-code/indirect/non-definable-global-generator.js
-  - [ ] test/language/eval-code/indirect/non-definable-global-var.js
-  - [ ] test/language/eval-code/indirect/non-string-object.js
-  - [ ] test/language/eval-code/indirect/non-string-primitive.js
-  - [ ] test/language/eval-code/indirect/parse-failure-1.js
-  - [ ] test/language/eval-code/indirect/parse-failure-2.js
-  - [ ] test/language/eval-code/indirect/parse-failure-3.js
-  - [ ] test/language/eval-code/indirect/parse-failure-4.js
-  - [ ] test/language/eval-code/indirect/parse-failure-5.js
-  - [ ] test/language/eval-code/indirect/parse-failure-6.js
-  - [ ] test/language/eval-code/indirect/realm.js
-  - [ ] test/language/eval-code/indirect/super-call.js
-  - [ ] test/language/eval-code/indirect/super-prop.js
-  - [ ] test/language/eval-code/indirect/switch-case-decl-strict.js
-  - [ ] test/language/eval-code/indirect/switch-dflt-decl-strict.js
-  - [ ] test/language/eval-code/indirect/this-value-func.js
-  - [ ] test/language/eval-code/indirect/this-value-global.js
-  - [ ] test/language/eval-code/indirect/var-env-func-init-global-new.js
-  - [ ] test/language/eval-code/indirect/var-env-func-init-global-update-configurable.js
-  - [ ] test/language/eval-code/indirect/var-env-func-init-global-update-non-configurable.js
-  - [ ] test/language/eval-code/indirect/var-env-func-init-multi.js
-  - [ ] test/language/eval-code/indirect/var-env-func-non-strict.js
-  - [ ] test/language/eval-code/indirect/var-env-func-strict.js
-  - [ ] test/language/eval-code/indirect/var-env-global-lex-non-strict.js
-  - [ ] test/language/eval-code/indirect/var-env-global-lex-strict.js
-  - [ ] test/language/eval-code/indirect/var-env-lower-lex-non-strict.js
-  - [ ] test/language/eval-code/indirect/var-env-lower-lex-strict.js
-  - [ ] test/language/eval-code/indirect/var-env-var-init-global-exstng.js
-  - [ ] test/language/eval-code/indirect/var-env-var-init-global-new.js
-  - [ ] test/language/eval-code/indirect/var-env-var-non-strict.js
-  - [ ] test/language/eval-code/indirect/var-env-var-strict.js
+  - [x] (2026-05-25T09:43:38-06:00) test/language/eval-code/direct/super-call-arrow.js
+  - [x] (2026-05-25T09:44:18-06:00) test/language/eval-code/direct/super-call-fn.js
+  - [x] (2026-05-25T09:44:54-06:00) test/language/eval-code/direct/super-call-method.js
+  - [x] (2026-05-25T09:45:34-06:00) test/language/eval-code/direct/super-call.js
+  - [x] (2026-05-25T09:46:06-06:00) test/language/eval-code/direct/super-prop-arrow.js
+  - [x] (2026-05-25T09:46:06-06:00) test/language/eval-code/direct/super-prop-dot-no-home.js
+  - [x] (2026-05-25T09:46:36-06:00) test/language/eval-code/direct/super-prop-expr-no-home-no-eval.js
+  - [x] (2026-05-25T09:46:36-06:00) test/language/eval-code/direct/super-prop-expr-no-home.js
+  - [x] (2026-05-25T09:50:21-06:00) test/language/eval-code/direct/super-prop-method.js
+  - [x] (2026-05-25T09:47:14-06:00) test/language/eval-code/direct/super-prop.js
+  - [x] (2026-05-25T09:50:54-06:00) test/language/eval-code/direct/switch-case-decl-eval-source-is-strict-nostrict.js
+  - [x] (2026-05-25T09:51:20-06:00) test/language/eval-code/direct/switch-case-decl-eval-source-is-strict-onlystrict.js
+  - [x] (2026-05-25T09:51:20-06:00) test/language/eval-code/direct/switch-case-decl-onlystrict.js
+  - [x] (2026-05-25T09:51:50-06:00) test/language/eval-code/direct/switch-dflt-decl-eval-source-is-strict-nostrict.js
+  - [x] (2026-05-25T09:51:50-06:00) test/language/eval-code/direct/switch-dflt-decl-eval-source-is-strict-onlystrict.js
+  - [x] (2026-05-25T09:51:50-06:00) test/language/eval-code/direct/switch-dflt-decl-onlystrict.js
+  - [x] (2026-05-25T09:52:28-06:00) test/language/eval-code/direct/this-value-func-non-strict.js
+  - [x] (2026-05-25T09:52:28-06:00) test/language/eval-code/direct/this-value-func-strict-caller.js
+  - [x] (2026-05-25T09:52:28-06:00) test/language/eval-code/direct/this-value-func-strict-source.js
+  - [x] (2026-05-25T09:52:28-06:00) test/language/eval-code/direct/this-value-global.js
+  - [x] (2026-05-25T09:53:10-06:00) test/language/eval-code/direct/var-env-func-init-global-new.js
+  - [x] (2026-05-25T09:53:10-06:00) test/language/eval-code/direct/var-env-func-init-global-update-configurable.js
+  - [x] (2026-05-25T09:53:10-06:00) test/language/eval-code/direct/var-env-func-init-global-update-non-configurable.js
+  - [x] (2026-05-25T09:53:10-06:00) test/language/eval-code/direct/var-env-func-init-local-new-delete.js
+  - [x] (2026-05-25T09:53:59-06:00) test/language/eval-code/direct/var-env-func-init-local-new.js
+  - [x] (2026-05-25T09:53:59-06:00) test/language/eval-code/direct/var-env-func-init-local-update.js
+  - [x] (2026-05-25T09:53:59-06:00) test/language/eval-code/direct/var-env-func-init-multi.js
+  - [x] (2026-05-25T09:53:59-06:00) test/language/eval-code/direct/var-env-func-non-strict.js
+  - [x] (2026-05-25T09:54:37-06:00) test/language/eval-code/direct/var-env-func-strict-caller-2.js
+  - [x] (2026-05-25T09:54:37-06:00) test/language/eval-code/direct/var-env-func-strict-caller.js
+  - [x] (2026-05-25T09:54:37-06:00) test/language/eval-code/direct/var-env-func-strict-source.js
+  - [x] (2026-05-25T09:54:37-06:00) test/language/eval-code/direct/var-env-gloabl-lex-strict-caller.js
+  - [x] (2026-05-25T09:55:14-06:00) test/language/eval-code/direct/var-env-global-lex-non-strict.js
+  - [x] (2026-05-25T09:55:14-06:00) test/language/eval-code/direct/var-env-global-lex-strict-source.js
+  - [x] (2026-05-25T09:55:14-06:00) test/language/eval-code/direct/var-env-lower-lex-non-strict.js
+  - [x] (2026-05-25T09:55:14-06:00) test/language/eval-code/direct/var-env-lower-lex-strict-caller.js
+  - [x] (2026-05-25T09:55:48-06:00) test/language/eval-code/direct/var-env-lower-lex-strict-source.js
+  - [x] (2026-05-25T09:55:48-06:00) test/language/eval-code/direct/var-env-var-init-global-exstng.js
+  - [x] (2026-05-25T09:55:48-06:00) test/language/eval-code/direct/var-env-var-init-global-new.js
+  - [x] (2026-05-25T09:55:48-06:00) test/language/eval-code/direct/var-env-var-init-local-exstng.js
+  - [x] (2026-05-25T10:09:00-06:00) test/language/eval-code/direct/var-env-var-init-local-new-delete.js
+  - [x] (2026-05-25T09:56:50-06:00) test/language/eval-code/direct/var-env-var-init-local-new.js
+  - [x] (2026-05-25T09:56:50-06:00) test/language/eval-code/direct/var-env-var-non-strict.js
+  - [x] (2026-05-25T09:56:50-06:00) test/language/eval-code/direct/var-env-var-strict-caller-2.js
+  - [x] (2026-05-25T10:09:59-06:00) test/language/eval-code/direct/var-env-var-strict-caller-3.js
+  - [x] (2026-05-25T10:10:21-06:00) test/language/eval-code/direct/var-env-var-strict-caller.js
+  - [x] (2026-05-25T10:10:40-06:00) test/language/eval-code/direct/var-env-var-strict-source.js
+  - [x] (2026-05-25T10:11:10-06:00) test/language/eval-code/indirect/always-non-strict.js
+  - [x] (2026-05-25T10:11:28-06:00) test/language/eval-code/indirect/block-decl-strict.js
+  - [x] (2026-05-25T10:11:48-06:00) test/language/eval-code/indirect/cptn-nrml-empty-block.js
+  - [x] (2026-05-25T10:12:09-06:00) test/language/eval-code/indirect/cptn-nrml-empty-do-while.js
+  - [x] (2026-05-25T10:12:09-06:00) test/language/eval-code/indirect/cptn-nrml-empty-empty.js
+  - [x] (2026-05-25T10:12:09-06:00) test/language/eval-code/indirect/cptn-nrml-empty-for.js
+  - [x] (2026-05-25T10:12:09-06:00) test/language/eval-code/indirect/cptn-nrml-empty-if.js
+  - [x] (2026-05-25T10:12:46-06:00) test/language/eval-code/indirect/cptn-nrml-empty-switch.js
+  - [x] (2026-05-25T10:12:46-06:00) test/language/eval-code/indirect/cptn-nrml-empty-var.js
+  - [x] (2026-05-25T10:12:46-06:00) test/language/eval-code/indirect/cptn-nrml-empty-while.js
+  - [x] (2026-05-25T10:12:46-06:00) test/language/eval-code/indirect/cptn-nrml-expr-obj.js
+  - [x] (2026-05-25T10:21:34-06:00) test/language/eval-code/indirect/cptn-nrml-expr-prim.js
+  - [x] (2026-05-25T10:22:22-06:00) test/language/eval-code/indirect/export.js
+  - [x] (2026-05-25T10:22:45-06:00) test/language/eval-code/indirect/global-env-rec-catch.js
+  - [x] (2026-05-25T10:40:53-06:00) test/language/eval-code/indirect/global-env-rec-eval.js
+  - [x] (2026-05-25T10:41:45-06:00) test/language/eval-code/indirect/global-env-rec-fun.js
+  - [x] (2026-05-25T10:42:15-06:00) test/language/eval-code/indirect/global-env-rec-with.js
+  - [x] (2026-05-25T10:42:43-06:00) test/language/eval-code/indirect/global-env-rec.js
+  - [x] (2026-05-25T10:43:15-06:00) test/language/eval-code/indirect/import.js
+  - [x] (2026-05-25T10:43:46-06:00) test/language/eval-code/indirect/lex-env-distinct-cls.js
+  - [x] (2026-05-25T10:44:09-06:00) test/language/eval-code/indirect/lex-env-distinct-const.js
+  - [x] (2026-05-25T10:44:48-06:00) test/language/eval-code/indirect/lex-env-distinct-let.js
+  - [x] (2026-05-25T10:45:13-06:00) test/language/eval-code/indirect/lex-env-heritage.js
+  - [x] (2026-05-25T10:45:36-06:00) test/language/eval-code/indirect/lex-env-no-init-cls.js
+  - [x] (2026-05-25T10:46:06-06:00) test/language/eval-code/indirect/lex-env-no-init-const.js
+  - [x] (2026-05-25T10:46:29-06:00) test/language/eval-code/indirect/lex-env-no-init-let.js
+  - [x] (2026-05-25T10:46:55-06:00) test/language/eval-code/indirect/new.target.js
+  - [x] (2026-05-25T10:47:19-06:00) test/language/eval-code/indirect/non-definable-function-with-function.js
+  - [x] (2026-05-25T10:47:49-06:00) test/language/eval-code/indirect/non-definable-function-with-variable.js
+  - [x] (2026-05-25T10:48:15-06:00) test/language/eval-code/indirect/non-definable-global-function.js
+  - [x] (2026-05-25T10:48:38-06:00) test/language/eval-code/indirect/non-definable-global-generator.js
+  - [x] (2026-05-25T10:49:03-06:00) test/language/eval-code/indirect/non-definable-global-var.js
+  - [x] (2026-05-25T10:49:39-06:00) test/language/eval-code/indirect/non-string-object.js
+  - [x] (2026-05-25T10:50:05-06:00) test/language/eval-code/indirect/non-string-primitive.js
+  - [x] (2026-05-25T10:50:36-06:00) test/language/eval-code/indirect/parse-failure-1.js
+  - [x] (2026-05-25T10:50:59-06:00) test/language/eval-code/indirect/parse-failure-2.js
+  - [x] (2026-05-25T10:51:29-06:00) test/language/eval-code/indirect/parse-failure-3.js
+  - [x] (2026-05-25T10:51:58-06:00) test/language/eval-code/indirect/parse-failure-4.js
+  - [x] (2026-05-25T10:52:25-06:00) test/language/eval-code/indirect/parse-failure-5.js
+  - [x] (2026-05-25T10:52:49-06:00) test/language/eval-code/indirect/parse-failure-6.js
+  - [x] (2026-05-25T11:01:53-06:00) test/language/eval-code/indirect/realm.js
+  - [x] (2026-05-25T11:02:47-06:00) test/language/eval-code/indirect/super-call.js
+  - [x] (2026-05-25T11:03:28-06:00) test/language/eval-code/indirect/super-prop.js
+  - [x] (2026-05-25T11:03:58-06:00) test/language/eval-code/indirect/switch-case-decl-strict.js
+  - [x] (2026-05-25T11:04:19-06:00) test/language/eval-code/indirect/switch-dflt-decl-strict.js
+  - [x] (2026-05-25T11:04:52-06:00) test/language/eval-code/indirect/this-value-func.js
+  - [x] (2026-05-25T11:05:13-06:00) test/language/eval-code/indirect/this-value-global.js
+  - [x] (2026-05-25T11:05:34-06:00) test/language/eval-code/indirect/var-env-func-init-global-new.js
+  - [x] (2026-05-25T11:06:06-06:00) test/language/eval-code/indirect/var-env-func-init-global-update-configurable.js
+  - [x] (2026-05-25T11:06:27-06:00) test/language/eval-code/indirect/var-env-func-init-global-update-non-configurable.js
+  - [x] (2026-05-25T11:06:55-06:00) test/language/eval-code/indirect/var-env-func-init-multi.js
+  - [x] (2026-05-25T11:07:21-06:00) test/language/eval-code/indirect/var-env-func-non-strict.js
+  - [x] (2026-05-25T11:07:54-06:00) test/language/eval-code/indirect/var-env-func-strict.js
+  - [x] (2026-05-25T11:08:14-06:00) test/language/eval-code/indirect/var-env-global-lex-non-strict.js
+  - [x] (2026-05-25T11:08:34-06:00) test/language/eval-code/indirect/var-env-global-lex-strict.js
+  - [x] (2026-05-25T11:19:11-06:00) test/language/eval-code/indirect/var-env-lower-lex-non-strict.js
+  - [x] (2026-05-25T11:19:25-06:00) test/language/eval-code/indirect/var-env-lower-lex-strict.js
+  - [x] (2026-05-25T11:20:15-06:00) test/language/eval-code/indirect/var-env-var-init-global-exstng.js
+  - [x] (2026-05-25T11:20:15-06:00) test/language/eval-code/indirect/var-env-var-init-global-new.js
+  - [x] (2026-05-25T11:20:15-06:00) test/language/eval-code/indirect/var-env-var-non-strict.js
+  - [x] (2026-05-25T11:20:15-06:00) test/language/eval-code/indirect/var-env-var-strict.js
 
 - [ ] import (123 tests)
-  - [ ] test/language/import/dup-bound-names.js
-  - [ ] test/language/import/escaped-as-import-specifier.js
-  - [ ] test/language/import/escaped-as-namespace-import.js
-  - [ ] test/language/import/escaped-from.js
-  - [ ] test/language/import/import-attributes/json-extensibility-array.js
-  - [ ] test/language/import/import-attributes/json-extensibility-object.js
-  - [ ] test/language/import/import-attributes/json-idempotency.js
-  - [ ] test/language/import/import-attributes/json-invalid.js
-  - [ ] test/language/import/import-attributes/json-named-bindings.js
-  - [ ] test/language/import/import-attributes/json-value-array.js
-  - [ ] test/language/import/import-attributes/json-value-boolean.js
-  - [ ] test/language/import/import-attributes/json-value-null.js
-  - [ ] test/language/import/import-attributes/json-value-number.js
-  - [ ] test/language/import/import-attributes/json-value-object.js
-  - [ ] test/language/import/import-attributes/json-value-string.js
-  - [ ] test/language/import/import-attributes/json-via-namespace.js
-  - [ ] test/language/import/import-attributes/text-empty.js
-  - [ ] test/language/import/import-attributes/text-javascript.js
-  - [ ] test/language/import/import-attributes/text-self.js
-  - [ ] test/language/import/import-attributes/text-string.js
-  - [ ] test/language/import/import-attributes/text-via-namespace.js
-  - [ ] test/language/import/import-bytes/bytes-from-empty.js
-  - [ ] test/language/import/import-bytes/bytes-from-js.js
-  - [ ] test/language/import/import-bytes/bytes-from-json.js
-  - [ ] test/language/import/import-bytes/bytes-from-png.js
-  - [ ] test/language/import/import-bytes/bytes-from-txt.js
-  - [ ] test/language/import/import-defer/deferred-namespace-object/exotic-object-behavior.js
-  - [ ] test/language/import/import-defer/deferred-namespace-object/identity.js
-  - [ ] test/language/import/import-defer/deferred-namespace-object/reexport-deferred-ns-evaluation.js
-  - [ ] test/language/import/import-defer/deferred-namespace-object/to-string-tag.js
-  - [ ] test/language/import/import-defer/errors/get-other-while-dep-evaluating-async/main.js
-  - [ ] test/language/import/import-defer/errors/get-other-while-dep-evaluating/main.js
-  - [ ] test/language/import/import-defer/errors/get-other-while-evaluating-async/main.js
-  - [ ] test/language/import/import-defer/errors/get-other-while-evaluating/main.js
-  - [ ] test/language/import/import-defer/errors/get-self-while-defer-evaluating/main.js
-  - [ ] test/language/import/import-defer/errors/get-self-while-evaluating-async/main.js
-  - [ ] test/language/import/import-defer/errors/get-self-while-evaluating.js
-  - [ ] test/language/import/import-defer/errors/module-throws/defer-import-after-evaluation.js
-  - [ ] test/language/import/import-defer/errors/module-throws/third-party-evaluation-after-defer-import.js
-  - [ ] test/language/import/import-defer/errors/module-throws/trigger-evaluation.js
-  - [ ] test/language/import/import-defer/errors/resolution-error/import-defer-of-missing-module-fails.js
-  - [ ] test/language/import/import-defer/errors/syntax-error/import-defer-of-syntax-error-fails.js
-  - [ ] test/language/import/import-defer/evaluation-sync/import-defer-does-not-evaluate.js
-  - [ ] test/language/import/import-defer/evaluation-sync/module-imported-defer-and-eager.js
-  - [ ] test/language/import/import-defer/evaluation-top-level-await/flattening-order/main.js
-  - [ ] test/language/import/import-defer/evaluation-top-level-await/import-defer-async-module/main.js
-  - [ ] test/language/import/import-defer/evaluation-top-level-await/import-defer-transitive-async-module/main.js
-  - [ ] test/language/import/import-defer/evaluation-top-level-await/sync-dependency-of-deferred-async-module/main.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-exported-then-defineOwnProperty.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-exported-then-delete.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-exported-then-get-in-prototype.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-exported-then-get.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-exported-then-getOwnProperty.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-exported-then-hasProperty-in-prototype.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-exported-then-hasProperty.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-exported-then-super-get.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-exported-then-super-property-define.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-getPrototypeOf.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-isExtensible.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-not-exported-then-defineOwnProperty.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-not-exported-then-delete.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-not-exported-then-get-in-prototype.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-not-exported-then-get.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-not-exported-then-getOwnProperty.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-not-exported-then-hasProperty-in-prototype.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-not-exported-then-hasProperty.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-not-exported-then-super-get.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-not-exported-then-super-property-define.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-preventExtensions.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-private-name-access.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-set-string-exported.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-set-string-not-exported.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-setPrototypeOf.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-super-property-set-exported.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-super-property-set-not-exported.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-symbol-other-defineOwnProperty.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-symbol-other-delete.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-symbol-other-get-in-prototype.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-symbol-other-get.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-symbol-other-getOwnProperty.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-symbol-other-hasProperty-in-prototype.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-symbol-other-hasProperty.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-symbol-other-super-get.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-symbol-other-super-property-define.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-symbol-toStringTag-defineOwnProperty.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-symbol-toStringTag-delete.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-symbol-toStringTag-get-in-prototype.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-symbol-toStringTag-get.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-symbol-toStringTag-getOwnProperty.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-symbol-toStringTag-hasProperty-in-prototype.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-symbol-toStringTag-hasProperty.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-symbol-toStringTag-super-get.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-symbol-toStringTag-super-property-define.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/trigger-exported-string-defineOwnProperty.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/trigger-exported-string-delete.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/trigger-exported-string-get-in-prototype.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/trigger-exported-string-get.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/trigger-exported-string-getOwnProperty.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/trigger-exported-string-hasProperty-in-prototype.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/trigger-exported-string-hasProperty.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/trigger-exported-string-super-get.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/trigger-exported-string-super-property-define.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/trigger-not-exported-string-defineOwnProperty.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/trigger-not-exported-string-delete.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/trigger-not-exported-string-get-in-prototype.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/trigger-not-exported-string-get.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/trigger-not-exported-string-getOwnProperty.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/trigger-not-exported-string-hasProperty-in-prototype.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/trigger-not-exported-string-hasProperty.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/trigger-not-exported-string-super-get.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/trigger-not-exported-string-super-property-define.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/trigger-ownPropertyKey-names.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/trigger-ownPropertyKeys-symbols.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/trigger-ownPropertyKeys.js
-  - [ ] test/language/import/import-defer/syntax/import-attributes.js
-  - [ ] test/language/import/import-defer/syntax/invalid-default-and-defer-namespace.js
-  - [ ] test/language/import/import-defer/syntax/invalid-defer-as-with-no-asterisk.js
-  - [ ] test/language/import/import-defer/syntax/invalid-defer-default-and-namespace.js
-  - [ ] test/language/import/import-defer/syntax/invalid-defer-default.js
-  - [ ] test/language/import/import-defer/syntax/invalid-defer-named.js
-  - [ ] test/language/import/import-defer/syntax/invalid-export-defer-namespace.js
-  - [ ] test/language/import/import-defer/syntax/valid-default-binding-named-defer.js
-  - [ ] test/language/import/import-defer/syntax/valid-defer-namespace.js
+  - [x] (2026-05-25T11:20:53-06:00) test/language/import/dup-bound-names.js
+  - [x] (2026-05-25T11:22:46-06:00) test/language/import/escaped-as-import-specifier.js
+  - [x] (2026-05-25T11:22:46-06:00) test/language/import/escaped-as-namespace-import.js
+  - [x] (2026-05-25T11:22:46-06:00) test/language/import/escaped-from.js
+  - [x] (2026-05-25T12:20:42-06:00) test/language/import/import-attributes/json-extensibility-array.js
+  - [x] (2026-05-25T12:21:52-06:00) test/language/import/import-attributes/json-extensibility-object.js
+  - [x] (2026-05-25T12:56:39-06:00) test/language/import/import-attributes/json-idempotency.js
+  - [x] (2026-05-25T12:57:13-06:00) test/language/import/import-attributes/json-invalid.js
+  - [x] (2026-05-25T12:57:41-06:00) test/language/import/import-attributes/json-named-bindings.js
+  - [x] (2026-05-25T13:39:33-06:00) test/language/import/import-attributes/json-value-array.js
+  - [x] (2026-05-25T13:40:47-06:00) test/language/import/import-attributes/json-value-boolean.js
+  - [x] (2026-05-25T13:41:37-06:00) test/language/import/import-attributes/json-value-null.js
+  - [x] (2026-05-25T13:42:36-06:00) test/language/import/import-attributes/json-value-number.js
+  - [x] (2026-05-25T13:54:53-06:00) test/language/import/import-attributes/json-value-object.js
+  - [x] (2026-05-25T13:59:43-06:00) test/language/import/import-attributes/json-value-string.js
+  - [x] (2026-05-25T14:00:33-06:00) test/language/import/import-attributes/json-via-namespace.js
+  - [x] (2026-05-25T14:13:46-06:00) test/language/import/import-attributes/text-empty.js
+  - [x] (2026-05-25T14:14:39-06:00) test/language/import/import-attributes/text-javascript.js
+  - [x] (2026-05-25T14:16:59-06:00) test/language/import/import-attributes/text-self.js
+  - [x] (2026-05-25T14:17:28-06:00) test/language/import/import-attributes/text-string.js
+  - [x] (2026-05-25T14:18:03-06:00) test/language/import/import-attributes/text-via-namespace.js
+  - [x] (2026-05-25T15:39:53-06:00) test/language/import/import-bytes/bytes-from-empty.js
+  - [x] (2026-05-25T15:42:18-06:00) test/language/import/import-bytes/bytes-from-js.js
+  - [x] (2026-05-25T15:44:05-06:00) test/language/import/import-bytes/bytes-from-json.js
+  - [x] (2026-05-25T15:45:52-06:00) test/language/import/import-bytes/bytes-from-png.js
+  - [x] (2026-05-25T15:47:38-06:00) test/language/import/import-bytes/bytes-from-txt.js
+  - [x] (2026-05-25T16:56:26-06:00) test/language/import/import-defer/deferred-namespace-object/exotic-object-behavior.js
+  - [x] (2026-05-25T17:31:17-06:00) test/language/import/import-defer/deferred-namespace-object/identity.js
+  - [x] (2026-05-29T08:28:30-06:00) test/language/import/import-defer/deferred-namespace-object/reexport-deferred-ns-evaluation.js
+  - [x] (2026-05-25T18:37:39-06:00) test/language/import/import-defer/deferred-namespace-object/to-string-tag.js
+  - [x] (2026-05-29T13:02:26-06:00) test/language/import/import-defer/errors/get-other-while-dep-evaluating-async/main.js
+  - [x] (2026-05-25T19:42:13-06:00) test/language/import/import-defer/errors/get-other-while-dep-evaluating/main.js
+  - [x] (2026-05-29T13:05:21-06:00) test/language/import/import-defer/errors/get-other-while-evaluating-async/main.js
+  - [x] (2026-05-25T19:58:24-06:00) test/language/import/import-defer/errors/get-other-while-evaluating/main.js
+  - [x] (2026-05-25T20:22:10-06:00) test/language/import/import-defer/errors/get-self-while-defer-evaluating/main.js
+  - [x] (2026-05-25T20:44:16-06:00) test/language/import/import-defer/errors/get-self-while-evaluating-async/main.js
+  - [x] (2026-05-25T20:45:16-06:00) test/language/import/import-defer/errors/get-self-while-evaluating.js
+  - [x] (2026-05-25T20:46:31-06:00) test/language/import/import-defer/errors/module-throws/defer-import-after-evaluation.js
+  - [x] (2026-05-25T20:47:36-06:00) test/language/import/import-defer/errors/module-throws/third-party-evaluation-after-defer-import.js
+  - [x] (2026-05-29T21:43:04-06:00) test/language/import/import-defer/errors/module-throws/trigger-evaluation.js
+  - [x] (2026-05-25T21:52:01-06:00) test/language/import/import-defer/errors/resolution-error/import-defer-of-missing-module-fails.js
+  - [x] (2026-05-25T21:52:39-06:00) test/language/import/import-defer/errors/syntax-error/import-defer-of-syntax-error-fails.js
+  - [x] (2026-05-29T14:34:58-06:00) test/language/import/import-defer/evaluation-sync/import-defer-does-not-evaluate.js
+  - [x] (2026-05-25T23:11:24-06:00) test/language/import/import-defer/evaluation-sync/module-imported-defer-and-eager.js
+  - [x] (2026-05-29T21:54:44-06:00) test/language/import/import-defer/evaluation-top-level-await/flattening-order/main.js
+  - [x] (2026-05-26T00:18:12-06:00) test/language/import/import-defer/evaluation-top-level-await/import-defer-async-module/main.js
+  - [x] (2026-05-26T00:19:39-06:00) test/language/import/import-defer/evaluation-top-level-await/import-defer-transitive-async-module/main.js
+  - [x] (2026-05-26T00:21:24-06:00) test/language/import/import-defer/evaluation-top-level-await/sync-dependency-of-deferred-async-module/main.js
+  - [x] (2026-05-26T00:22:24-06:00) test/language/import/import-defer/evaluation-triggers/ignore-exported-then-defineOwnProperty.js
+  - [x] (2026-05-26T00:23:46-06:00) test/language/import/import-defer/evaluation-triggers/ignore-exported-then-delete.js
+  - [x] (2026-05-26T00:24:54-06:00) test/language/import/import-defer/evaluation-triggers/ignore-exported-then-get-in-prototype.js
+  - [x] (2026-05-26T00:31:01-06:00) test/language/import/import-defer/evaluation-triggers/ignore-exported-then-get.js
+  - [x] (2026-05-26T00:32:05-06:00) test/language/import/import-defer/evaluation-triggers/ignore-exported-then-getOwnProperty.js
+  - [x] (2026-05-26T00:33:10-06:00) test/language/import/import-defer/evaluation-triggers/ignore-exported-then-hasProperty-in-prototype.js
+  - [x] (2026-05-26T00:34:16-06:00) test/language/import/import-defer/evaluation-triggers/ignore-exported-then-hasProperty.js
+  - [x] (2026-05-26T00:35:54-06:00) test/language/import/import-defer/evaluation-triggers/ignore-exported-then-super-get.js
+  - [x] (2026-05-29T13:13:06-06:00) test/language/import/import-defer/evaluation-triggers/ignore-exported-then-super-property-define.js
+  - [x] (2026-05-26T00:40:23-06:00) test/language/import/import-defer/evaluation-triggers/ignore-getPrototypeOf.js
+  - [x] (2026-05-26T00:41:41-06:00) test/language/import/import-defer/evaluation-triggers/ignore-isExtensible.js
+  - [x] (2026-05-26T00:42:55-06:00) test/language/import/import-defer/evaluation-triggers/ignore-not-exported-then-defineOwnProperty.js
+  - [x] (2026-05-26T00:45:05-06:00) test/language/import/import-defer/evaluation-triggers/ignore-not-exported-then-delete.js
+  - [x] (2026-05-26T00:46:23-06:00) test/language/import/import-defer/evaluation-triggers/ignore-not-exported-then-get-in-prototype.js
+  - [x] (2026-05-26T00:47:25-06:00) test/language/import/import-defer/evaluation-triggers/ignore-not-exported-then-get.js
+  - [x] (2026-05-26T00:48:40-06:00) test/language/import/import-defer/evaluation-triggers/ignore-not-exported-then-getOwnProperty.js
+  - [x] (2026-05-26T00:49:38-06:00) test/language/import/import-defer/evaluation-triggers/ignore-not-exported-then-hasProperty-in-prototype.js
+  - [x] (2026-05-26T00:50:50-06:00) test/language/import/import-defer/evaluation-triggers/ignore-not-exported-then-hasProperty.js
+  - [x] (2026-05-26T00:51:51-06:00) test/language/import/import-defer/evaluation-triggers/ignore-not-exported-then-super-get.js
+  - [x] (2026-05-29T13:14:02-06:00) test/language/import/import-defer/evaluation-triggers/ignore-not-exported-then-super-property-define.js
+  - [x] (2026-05-26T00:56:06-06:00) test/language/import/import-defer/evaluation-triggers/ignore-preventExtensions.js
+  - [x] (2026-05-26T03:08:02-06:00) test/language/import/import-defer/evaluation-triggers/ignore-private-name-access.js
+  - [x] (2026-05-26T03:10:13-06:00) test/language/import/import-defer/evaluation-triggers/ignore-set-string-exported.js
+  - [x] (2026-05-26T03:12:49-06:00) test/language/import/import-defer/evaluation-triggers/ignore-set-string-not-exported.js
+  - [x] (2026-05-26T03:14:00-06:00) test/language/import/import-defer/evaluation-triggers/ignore-setPrototypeOf.js
+  - [ ] (SKIPPED 2026-05-26T03:15:06-06:00 missing from .cache/test262) test/language/import/import-defer/evaluation-triggers/ignore-super-property-set-exported.js
+  - [ ] (SKIPPED 2026-05-26T03:15:06-06:00 missing from .cache/test262) test/language/import/import-defer/evaluation-triggers/ignore-super-property-set-not-exported.js
+  - [x] (2026-05-26T03:16:06-06:00) test/language/import/import-defer/evaluation-triggers/ignore-symbol-other-defineOwnProperty.js
+  - [x] (2026-05-26T03:17:20-06:00) test/language/import/import-defer/evaluation-triggers/ignore-symbol-other-delete.js
+  - [x] (2026-05-26T03:18:46-06:00) test/language/import/import-defer/evaluation-triggers/ignore-symbol-other-get-in-prototype.js
+  - [x] (2026-05-26T03:19:53-06:00) test/language/import/import-defer/evaluation-triggers/ignore-symbol-other-get.js
+  - [x] (2026-05-26T03:21:01-06:00) test/language/import/import-defer/evaluation-triggers/ignore-symbol-other-getOwnProperty.js
+  - [x] (2026-05-26T03:22:08-06:00) test/language/import/import-defer/evaluation-triggers/ignore-symbol-other-hasProperty-in-prototype.js
+  - [x] (2026-05-26T03:23:20-06:00) test/language/import/import-defer/evaluation-triggers/ignore-symbol-other-hasProperty.js
+  - [x] (2026-05-26T03:24:24-06:00) test/language/import/import-defer/evaluation-triggers/ignore-symbol-other-super-get.js
+  - [x] (2026-05-26T04:04:44-06:00) test/language/import/import-defer/evaluation-triggers/ignore-symbol-other-super-property-define.js
+  - [x] (2026-05-26T04:05:59-06:00) test/language/import/import-defer/evaluation-triggers/ignore-symbol-toStringTag-defineOwnProperty.js
+  - [x] (2026-05-26T04:07:03-06:00) test/language/import/import-defer/evaluation-triggers/ignore-symbol-toStringTag-delete.js
+  - [x] (2026-05-26T04:08:35-06:00) test/language/import/import-defer/evaluation-triggers/ignore-symbol-toStringTag-get-in-prototype.js
+  - [x] (2026-05-26T04:09:43-06:00) test/language/import/import-defer/evaluation-triggers/ignore-symbol-toStringTag-get.js
+  - [x] (2026-05-26T04:10:45-06:00) test/language/import/import-defer/evaluation-triggers/ignore-symbol-toStringTag-getOwnProperty.js
+  - [x] (2026-05-26T04:11:54-06:00) test/language/import/import-defer/evaluation-triggers/ignore-symbol-toStringTag-hasProperty-in-prototype.js
+  - [x] (2026-05-26T04:12:55-06:00) test/language/import/import-defer/evaluation-triggers/ignore-symbol-toStringTag-hasProperty.js
+  - [x] (2026-05-26T04:13:59-06:00) test/language/import/import-defer/evaluation-triggers/ignore-symbol-toStringTag-super-get.js
+  - [x] (2026-05-26T04:17:14-06:00) test/language/import/import-defer/evaluation-triggers/ignore-symbol-toStringTag-super-property-define.js
+  - [x] (2026-05-26T05:10:57-06:00) test/language/import/import-defer/evaluation-triggers/trigger-exported-string-defineOwnProperty.js
+  - [x] (2026-05-26T05:17:20-06:00) test/language/import/import-defer/evaluation-triggers/trigger-exported-string-delete.js
+  - [x] (2026-05-26T05:37:59-06:00) test/language/import/import-defer/evaluation-triggers/trigger-exported-string-get-in-prototype.js
+  - [x] (2026-05-26T05:40:43-06:00) test/language/import/import-defer/evaluation-triggers/trigger-exported-string-get.js
+  - [x] (2026-05-26T05:45:04-06:00) test/language/import/import-defer/evaluation-triggers/trigger-exported-string-getOwnProperty.js
+  - [x] (2026-05-26T05:50:35-06:00) test/language/import/import-defer/evaluation-triggers/trigger-exported-string-hasProperty-in-prototype.js
+  - [x] (2026-05-26T05:52:38-06:00) test/language/import/import-defer/evaluation-triggers/trigger-exported-string-hasProperty.js
+  - [x] (2026-05-26T06:35:24-06:00) test/language/import/import-defer/evaluation-triggers/trigger-exported-string-super-get.js
+  - [x] (2026-05-26T11:36:27-06:00) test/language/import/import-defer/evaluation-triggers/trigger-exported-string-super-property-define.js
+  - [x] (2026-05-26T11:43:09-06:00) test/language/import/import-defer/evaluation-triggers/trigger-not-exported-string-defineOwnProperty.js
+  - [x] (2026-05-26T11:45:54-06:00) test/language/import/import-defer/evaluation-triggers/trigger-not-exported-string-delete.js
+  - [x] (2026-05-26T11:48:56-06:00) test/language/import/import-defer/evaluation-triggers/trigger-not-exported-string-get-in-prototype.js
+  - [x] (2026-05-26T11:51:50-06:00) test/language/import/import-defer/evaluation-triggers/trigger-not-exported-string-get.js
+  - [x] (2026-05-26T11:54:39-06:00) test/language/import/import-defer/evaluation-triggers/trigger-not-exported-string-getOwnProperty.js
+  - [x] (2026-05-26T11:57:29-06:00) test/language/import/import-defer/evaluation-triggers/trigger-not-exported-string-hasProperty-in-prototype.js
+  - [x] (2026-05-26T12:01:49-06:00) test/language/import/import-defer/evaluation-triggers/trigger-not-exported-string-hasProperty.js
+  - [x] (2026-05-26T12:04:22-06:00) test/language/import/import-defer/evaluation-triggers/trigger-not-exported-string-super-get.js
+  - [x] (2026-05-26T12:08:36-06:00) test/language/import/import-defer/evaluation-triggers/trigger-not-exported-string-super-property-define.js
+  - [x] (2026-05-26T12:16:59-06:00) test/language/import/import-defer/evaluation-triggers/trigger-ownPropertyKey-names.js
+  - [x] (2026-05-26T12:19:24-06:00) test/language/import/import-defer/evaluation-triggers/trigger-ownPropertyKeys-symbols.js
+  - [x] (2026-05-26T12:21:58-06:00) test/language/import/import-defer/evaluation-triggers/trigger-ownPropertyKeys.js
+  - [x] (2026-05-26T12:24:12-06:00) test/language/import/import-defer/syntax/import-attributes.js
+  - [x] (2026-05-26T12:25:05-06:00) test/language/import/import-defer/syntax/invalid-default-and-defer-namespace.js
+  - [x] (2026-05-26T12:25:40-06:00) test/language/import/import-defer/syntax/invalid-defer-as-with-no-asterisk.js
+  - [x] (2026-05-26T12:26:12-06:00) test/language/import/import-defer/syntax/invalid-defer-default-and-namespace.js
+  - [x] (2026-05-26T12:26:42-06:00) test/language/import/import-defer/syntax/invalid-defer-default.js
+  - [x] (2026-05-26T12:27:18-06:00) test/language/import/import-defer/syntax/invalid-defer-named.js
+  - [x] (2026-05-26T12:27:49-06:00) test/language/import/import-defer/syntax/invalid-export-defer-namespace.js
+  - [x] (2026-05-26T12:29:16-06:00) test/language/import/import-defer/syntax/valid-default-binding-named-defer.js
+  - [x] (2026-05-26T12:30:57-06:00) test/language/import/import-defer/syntax/valid-defer-namespace.js
 
 - [ ] export (3 tests)
-  - [ ] test/language/export/escaped-as-export-specifier.js
-  - [ ] test/language/export/escaped-default.js
-  - [ ] test/language/export/escaped-from.js
+  - [x] (2026-05-26T12:32:04-06:00) test/language/export/escaped-as-export-specifier.js
+  - [x] (2026-05-26T12:33:24-06:00) test/language/export/escaped-default.js
+  - [x] (2026-05-26T12:33:59-06:00) test/language/export/escaped-from.js
 
 - [ ] module-code (592 tests)
-  - [ ] test/language/module-code/ambiguous-export-bindings/error-export-from-named-as.js
-  - [ ] test/language/module-code/ambiguous-export-bindings/error-export-from-named.js
-  - [ ] test/language/module-code/ambiguous-export-bindings/error-import-named-as.js
-  - [ ] test/language/module-code/ambiguous-export-bindings/error-import-named.js
-  - [ ] test/language/module-code/ambiguous-export-bindings/import-and-export-propagates-binding.js
-  - [ ] test/language/module-code/ambiguous-export-bindings/namespace-unambiguous-if-export-star-as-from-and-import-star-as-and-export.js
-  - [ ] test/language/module-code/ambiguous-export-bindings/namespace-unambiguous-if-export-star-as-from.js
-  - [ ] test/language/module-code/ambiguous-export-bindings/namespace-unambiguous-if-import-star-as-and-export.js
-  - [ ] test/language/module-code/ambiguous-export-bindings/omitted-from-namespace.js
-  - [ ] test/language/module-code/comment-multi-line-html-close.js
-  - [ ] test/language/module-code/comment-single-line-html-close.js
-  - [ ] test/language/module-code/comment-single-line-html-open.js
-  - [ ] test/language/module-code/early-dup-export-as-star-as.js
-  - [ ] test/language/module-code/early-dup-export-decl.js
-  - [ ] test/language/module-code/early-dup-export-dflt-id.js
-  - [ ] test/language/module-code/early-dup-export-dflt.js
-  - [ ] test/language/module-code/early-dup-export-id-as.js
-  - [ ] test/language/module-code/early-dup-export-id.js
-  - [ ] test/language/module-code/early-dup-export-star-as-dflt.js
-  - [ ] test/language/module-code/early-dup-lables.js
-  - [ ] test/language/module-code/early-dup-lex.js
-  - [ ] test/language/module-code/early-dup-top-function-async-generator.js
-  - [ ] test/language/module-code/early-dup-top-function-async.js
-  - [ ] test/language/module-code/early-dup-top-function-generator.js
-  - [ ] test/language/module-code/early-dup-top-function.js
-  - [ ] test/language/module-code/early-export-global.js
-  - [ ] test/language/module-code/early-export-ill-formed-string.js
-  - [ ] test/language/module-code/early-export-unresolvable.js
-  - [ ] test/language/module-code/early-import-arguments.js
-  - [ ] test/language/module-code/early-import-as-arguments.js
-  - [ ] test/language/module-code/early-import-as-eval.js
-  - [ ] test/language/module-code/early-import-eval.js
-  - [ ] test/language/module-code/early-lex-and-var.js
-  - [ ] test/language/module-code/early-new-target.js
-  - [ ] test/language/module-code/early-strict-mode.js
-  - [ ] test/language/module-code/early-super.js
-  - [ ] test/language/module-code/early-undef-break.js
-  - [ ] test/language/module-code/early-undef-continue.js
-  - [ ] test/language/module-code/eval-export-cls-semi.js
-  - [ ] test/language/module-code/eval-export-dflt-cls-anon-semi.js
-  - [ ] test/language/module-code/eval-export-dflt-cls-anon.js
-  - [ ] test/language/module-code/eval-export-dflt-cls-name-meth.js
-  - [ ] test/language/module-code/eval-export-dflt-cls-named-semi.js
-  - [ ] test/language/module-code/eval-export-dflt-cls-named.js
-  - [ ] test/language/module-code/eval-export-dflt-expr-cls-anon.js
-  - [ ] test/language/module-code/eval-export-dflt-expr-cls-name-meth.js
-  - [ ] test/language/module-code/eval-export-dflt-expr-cls-named.js
-  - [ ] test/language/module-code/eval-export-dflt-expr-err-eval.js
-  - [ ] test/language/module-code/eval-export-dflt-expr-err-get-value.js
-  - [ ] test/language/module-code/eval-export-dflt-expr-fn-anon.js
-  - [ ] test/language/module-code/eval-export-dflt-expr-fn-named.js
-  - [ ] test/language/module-code/eval-export-dflt-expr-gen-anon.js
-  - [ ] test/language/module-code/eval-export-dflt-expr-gen-named.js
-  - [ ] test/language/module-code/eval-export-dflt-expr-in.js
-  - [ ] test/language/module-code/eval-export-dflt-fun-anon-semi.js
-  - [ ] test/language/module-code/eval-export-dflt-fun-named-semi.js
-  - [ ] test/language/module-code/eval-export-dflt-gen-anon-semi.js
-  - [ ] test/language/module-code/eval-export-dflt-gen-named-semi.js
-  - [ ] test/language/module-code/eval-export-fun-semi.js
-  - [ ] test/language/module-code/eval-export-gen-semi.js
-  - [ ] test/language/module-code/eval-gtbndng-indirect-trlng-comma.js
-  - [ ] test/language/module-code/eval-gtbndng-indirect-update-as.js
-  - [ ] test/language/module-code/eval-gtbndng-indirect-update-dflt.js
-  - [ ] test/language/module-code/eval-gtbndng-indirect-update.js
-  - [ ] test/language/module-code/eval-gtbndng-local-bndng-cls.js
-  - [ ] test/language/module-code/eval-gtbndng-local-bndng-const.js
-  - [ ] test/language/module-code/eval-gtbndng-local-bndng-let.js
-  - [ ] test/language/module-code/eval-gtbndng-local-bndng-var.js
-  - [ ] test/language/module-code/eval-rqstd-abrupt.js
-  - [ ] test/language/module-code/eval-rqstd-once.js
-  - [ ] test/language/module-code/eval-rqstd-order.js
-  - [ ] test/language/module-code/eval-self-abrupt.js
-  - [ ] test/language/module-code/eval-self-once.js
-  - [ ] test/language/module-code/eval-this.js
-  - [ ] test/language/module-code/export-default-asyncfunction-declaration-binding-exists.js
-  - [ ] test/language/module-code/export-default-asyncfunction-declaration-binding.js
-  - [ ] test/language/module-code/export-default-asyncgenerator-declaration-binding-exists.js
-  - [ ] test/language/module-code/export-default-asyncgenerator-declaration-binding.js
-  - [ ] test/language/module-code/export-default-function-declaration-binding-exists.js
-  - [ ] test/language/module-code/export-default-function-declaration-binding.js
-  - [ ] test/language/module-code/export-default-generator-declaration-binding-exists.js
-  - [ ] test/language/module-code/export-default-generator-declaration-binding.js
-  - [ ] test/language/module-code/export-expname-binding-index.js
-  - [ ] test/language/module-code/export-expname-binding-string.js
-  - [ ] test/language/module-code/export-expname-from-as-unpaired-surrogate.js
-  - [ ] test/language/module-code/export-expname-from-binding-string.js
-  - [ ] test/language/module-code/export-expname-from-star-string.js
-  - [ ] test/language/module-code/export-expname-from-star-unpaired-surrogate.js
-  - [ ] test/language/module-code/export-expname-from-star.js
-  - [ ] test/language/module-code/export-expname-from-string-binding.js
-  - [ ] test/language/module-code/export-expname-from-string-string.js
-  - [ ] test/language/module-code/export-expname-from-string.js
-  - [ ] test/language/module-code/export-expname-from-unpaired-surrogate.js
-  - [ ] test/language/module-code/export-expname-import-string-binding.js
-  - [ ] test/language/module-code/export-expname-import-unpaired-surrogate.js
-  - [ ] test/language/module-code/export-expname-string-binding.js
-  - [ ] test/language/module-code/export-expname-unpaired-surrogate.js
-  - [ ] test/language/module-code/export-star-as-dflt.js
-  - [ ] test/language/module-code/import-attributes/allow-nlt-before-with.js
-  - [ ] test/language/module-code/import-attributes/early-dup-attribute-key-export.js
-  - [ ] test/language/module-code/import-attributes/early-dup-attribute-key-import-nobinding.js
-  - [ ] test/language/module-code/import-attributes/early-dup-attribute-key-import-withbinding.js
-  - [ ] test/language/module-code/import-attributes/import-attribute-empty.js
-  - [ ] test/language/module-code/import-attributes/import-attribute-key-identifiername.js
-  - [ ] test/language/module-code/import-attributes/import-attribute-key-string-double.js
-  - [ ] test/language/module-code/import-attributes/import-attribute-key-string-single.js
-  - [ ] test/language/module-code/import-attributes/import-attribute-many.js
-  - [ ] test/language/module-code/import-attributes/import-attribute-newlines.js
-  - [ ] test/language/module-code/import-attributes/import-attribute-trlng-comma.js
-  - [ ] test/language/module-code/import-attributes/import-attribute-value-string-double.js
-  - [ ] test/language/module-code/import-attributes/import-attribute-value-string-single.js
-  - [ ] test/language/module-code/instn-iee-bndng-cls.js
-  - [ ] test/language/module-code/instn-iee-bndng-const.js
-  - [ ] test/language/module-code/instn-iee-bndng-fun.js
-  - [ ] test/language/module-code/instn-iee-bndng-gen.js
-  - [ ] test/language/module-code/instn-iee-bndng-let.js
-  - [ ] test/language/module-code/instn-iee-bndng-var.js
-  - [ ] test/language/module-code/instn-iee-err-circular-as.js
-  - [ ] test/language/module-code/instn-iee-err-circular.js
-  - [ ] test/language/module-code/instn-iee-err-dflt-thru-star-as.js
-  - [ ] test/language/module-code/instn-iee-err-dflt-thru-star.js
-  - [ ] test/language/module-code/instn-iee-err-not-found-as.js
-  - [ ] test/language/module-code/instn-iee-err-not-found.js
-  - [ ] test/language/module-code/instn-iee-iee-cycle.js
-  - [ ] test/language/module-code/instn-iee-star-cycle.js
-  - [ ] test/language/module-code/instn-iee-trlng-comma.js
-  - [ ] test/language/module-code/instn-local-bndng-cls.js
-  - [ ] test/language/module-code/instn-local-bndng-const.js
-  - [ ] test/language/module-code/instn-local-bndng-export-cls.js
-  - [ ] test/language/module-code/instn-local-bndng-export-const.js
-  - [ ] test/language/module-code/instn-local-bndng-export-fun.js
-  - [ ] test/language/module-code/instn-local-bndng-export-gen.js
-  - [ ] test/language/module-code/instn-local-bndng-export-let.js
-  - [ ] test/language/module-code/instn-local-bndng-export-var.js
-  - [ ] test/language/module-code/instn-local-bndng-for-dup.js
-  - [ ] test/language/module-code/instn-local-bndng-for.js
-  - [ ] test/language/module-code/instn-local-bndng-fun.js
-  - [ ] test/language/module-code/instn-local-bndng-gen.js
-  - [ ] test/language/module-code/instn-local-bndng-let.js
-  - [ ] test/language/module-code/instn-local-bndng-var-dup.js
-  - [ ] test/language/module-code/instn-local-bndng-var.js
-  - [ ] test/language/module-code/instn-named-bndng-cls.js
-  - [ ] test/language/module-code/instn-named-bndng-const.js
-  - [ ] test/language/module-code/instn-named-bndng-dflt-cls.js
-  - [ ] test/language/module-code/instn-named-bndng-dflt-expr.js
-  - [ ] test/language/module-code/instn-named-bndng-dflt-fun-anon.js
-  - [ ] test/language/module-code/instn-named-bndng-dflt-fun-named.js
-  - [ ] test/language/module-code/instn-named-bndng-dflt-gen-anon.js
-  - [ ] test/language/module-code/instn-named-bndng-dflt-gen-named.js
-  - [ ] test/language/module-code/instn-named-bndng-dflt-named.js
-  - [ ] test/language/module-code/instn-named-bndng-dflt-star.js
-  - [ ] test/language/module-code/instn-named-bndng-fun.js
-  - [ ] test/language/module-code/instn-named-bndng-gen.js
-  - [ ] test/language/module-code/instn-named-bndng-let.js
-  - [ ] test/language/module-code/instn-named-bndng-trlng-comma.js
-  - [ ] test/language/module-code/instn-named-bndng-var.js
-  - [ ] test/language/module-code/instn-named-err-dflt-thru-star-as.js
-  - [ ] test/language/module-code/instn-named-err-dflt-thru-star-dflt.js
-  - [ ] test/language/module-code/instn-named-err-not-found-as.js
-  - [ ] test/language/module-code/instn-named-err-not-found-dflt.js
-  - [ ] test/language/module-code/instn-named-err-not-found.js
-  - [ ] test/language/module-code/instn-named-id-name.js
-  - [ ] test/language/module-code/instn-named-iee-cycle.js
-  - [ ] test/language/module-code/instn-named-star-cycle.js
-  - [ ] test/language/module-code/instn-once.js
-  - [ ] test/language/module-code/instn-resolve-empty-export.js
-  - [ ] test/language/module-code/instn-resolve-empty-import.js
-  - [ ] test/language/module-code/instn-resolve-err-syntax-1.js
-  - [ ] test/language/module-code/instn-resolve-err-syntax-2.js
-  - [ ] test/language/module-code/instn-resolve-order-depth.js
-  - [ ] test/language/module-code/instn-resolve-order-src.js
-  - [ ] test/language/module-code/instn-same-global.js
-  - [ ] test/language/module-code/instn-star-as-props-dflt-skip.js
-  - [ ] test/language/module-code/instn-star-binding.js
-  - [ ] test/language/module-code/instn-star-equality.js
-  - [ ] test/language/module-code/instn-star-err-not-found.js
-  - [ ] test/language/module-code/instn-star-id-name.js
-  - [ ] test/language/module-code/instn-star-iee-cycle.js
-  - [ ] test/language/module-code/instn-star-props-circular.js
-  - [ ] test/language/module-code/instn-star-props-dflt-keep-indirect.js
-  - [ ] test/language/module-code/instn-star-props-dflt-keep-local.js
-  - [ ] test/language/module-code/instn-star-props-dflt-skip.js
-  - [ ] test/language/module-code/instn-star-props-nrml.js
-  - [ ] test/language/module-code/instn-star-star-cycle.js
-  - [ ] test/language/module-code/instn-uniq-env-rec.js
-  - [ ] test/language/module-code/invalid-private-names-call-expression-bad-reference.js
-  - [ ] test/language/module-code/invalid-private-names-call-expression-this.js
-  - [ ] test/language/module-code/invalid-private-names-member-expression-bad-reference.js
-  - [ ] test/language/module-code/invalid-private-names-member-expression-this.js
-  - [ ] test/language/module-code/namespace/Symbol.iterator.js
-  - [ ] test/language/module-code/namespace/Symbol.toStringTag.js
-  - [ ] test/language/module-code/namespace/internals/define-own-property.js
-  - [ ] test/language/module-code/namespace/internals/delete-exported-init.js
-  - [ ] test/language/module-code/namespace/internals/delete-exported-uninit.js
-  - [ ] test/language/module-code/namespace/internals/delete-non-exported.js
-  - [ ] test/language/module-code/namespace/internals/enumerate-binding-uninit.js
-  - [ ] test/language/module-code/namespace/internals/get-nested-namespace-dflt-skip.js
-  - [ ] test/language/module-code/namespace/internals/get-nested-namespace-props-nrml.js
-  - [ ] test/language/module-code/namespace/internals/get-own-property-str-found-init.js
-  - [ ] test/language/module-code/namespace/internals/get-own-property-str-found-uninit.js
-  - [ ] test/language/module-code/namespace/internals/get-own-property-str-not-found.js
-  - [ ] test/language/module-code/namespace/internals/get-own-property-sym.js
-  - [ ] test/language/module-code/namespace/internals/get-prototype-of.js
-  - [ ] test/language/module-code/namespace/internals/get-str-found-init.js
-  - [ ] test/language/module-code/namespace/internals/get-str-found-uninit.js
-  - [ ] test/language/module-code/namespace/internals/get-str-initialize.js
-  - [ ] test/language/module-code/namespace/internals/get-str-not-found.js
-  - [ ] test/language/module-code/namespace/internals/get-str-update.js
-  - [ ] test/language/module-code/namespace/internals/get-sym-found.js
-  - [ ] test/language/module-code/namespace/internals/get-sym-not-found.js
-  - [ ] test/language/module-code/namespace/internals/has-property-str-found-init.js
-  - [ ] test/language/module-code/namespace/internals/has-property-str-found-uninit.js
-  - [ ] test/language/module-code/namespace/internals/has-property-str-not-found.js
-  - [ ] test/language/module-code/namespace/internals/has-property-sym-found.js
-  - [ ] test/language/module-code/namespace/internals/has-property-sym-not-found.js
-  - [ ] test/language/module-code/namespace/internals/is-extensible.js
-  - [ ] test/language/module-code/namespace/internals/object-hasOwnProperty-binding-uninit.js
-  - [ ] test/language/module-code/namespace/internals/object-keys-binding-uninit.js
-  - [ ] test/language/module-code/namespace/internals/object-propertyIsEnumerable-binding-uninit.js
-  - [ ] test/language/module-code/namespace/internals/own-property-keys-binding-types.js
-  - [ ] test/language/module-code/namespace/internals/own-property-keys-sort.js
-  - [ ] test/language/module-code/namespace/internals/prevent-extensions.js
-  - [ ] test/language/module-code/namespace/internals/set-prototype-of-null.js
-  - [ ] test/language/module-code/namespace/internals/set-prototype-of.js
-  - [ ] test/language/module-code/namespace/internals/set.js
-  - [ ] test/language/module-code/parse-err-decl-pos-export-arrow-function.js
-  - [ ] test/language/module-code/parse-err-decl-pos-export-block-stmt-list.js
-  - [ ] test/language/module-code/parse-err-decl-pos-export-block-stmt.js
-  - [ ] test/language/module-code/parse-err-decl-pos-export-class-decl-meth-static.js
-  - [ ] test/language/module-code/parse-err-decl-pos-export-class-decl-meth.js
-  - [ ] test/language/module-code/parse-err-decl-pos-export-class-decl-method-gen-static.js
-  - [ ] test/language/module-code/parse-err-decl-pos-export-class-decl-method-gen.js
-  - [ ] test/language/module-code/parse-err-decl-pos-export-class-expr-meth-gen-static.js
-  - [ ] test/language/module-code/parse-err-decl-pos-export-class-expr-meth-gen.js
-  - [ ] test/language/module-code/parse-err-decl-pos-export-class-expr-meth-static.js
-  - [ ] test/language/module-code/parse-err-decl-pos-export-class-expr-meth.js
-  - [ ] test/language/module-code/parse-err-decl-pos-export-do-while.js
-  - [ ] test/language/module-code/parse-err-decl-pos-export-for-const.js
-  - [ ] test/language/module-code/parse-err-decl-pos-export-for-in-const.js
-  - [ ] test/language/module-code/parse-err-decl-pos-export-for-in-let.js
-  - [ ] test/language/module-code/parse-err-decl-pos-export-for-in-lhs.js
-  - [ ] test/language/module-code/parse-err-decl-pos-export-for-in-var.js
-  - [ ] test/language/module-code/parse-err-decl-pos-export-for-let.js
-  - [ ] test/language/module-code/parse-err-decl-pos-export-for-lhs.js
-  - [ ] test/language/module-code/parse-err-decl-pos-export-for-of-const.js
-  - [ ] test/language/module-code/parse-err-decl-pos-export-for-of-let.js
-  - [ ] test/language/module-code/parse-err-decl-pos-export-for-of-lhs.js
-  - [ ] test/language/module-code/parse-err-decl-pos-export-for-of-var.js
-  - [ ] test/language/module-code/parse-err-decl-pos-export-for-var.js
-  - [ ] test/language/module-code/parse-err-decl-pos-export-function-decl.js
-  - [ ] test/language/module-code/parse-err-decl-pos-export-function-expr.js
-  - [ ] test/language/module-code/parse-err-decl-pos-export-generator-decl.js
-  - [ ] test/language/module-code/parse-err-decl-pos-export-generator-expr.js
-  - [ ] test/language/module-code/parse-err-decl-pos-export-if-else.js
-  - [ ] test/language/module-code/parse-err-decl-pos-export-if-if.js
-  - [ ] test/language/module-code/parse-err-decl-pos-export-labeled.js
-  - [ ] test/language/module-code/parse-err-decl-pos-export-object-gen-method.js
-  - [ ] test/language/module-code/parse-err-decl-pos-export-object-getter.js
-  - [ ] test/language/module-code/parse-err-decl-pos-export-object-method.js
-  - [ ] test/language/module-code/parse-err-decl-pos-export-object-setter.js
-  - [ ] test/language/module-code/parse-err-decl-pos-export-switch-case-dflt.js
-  - [ ] test/language/module-code/parse-err-decl-pos-export-switch-case.js
-  - [ ] test/language/module-code/parse-err-decl-pos-export-switch-dftl.js
-  - [ ] test/language/module-code/parse-err-decl-pos-export-try-catch-finally.js
-  - [ ] test/language/module-code/parse-err-decl-pos-export-try-catch.js
-  - [ ] test/language/module-code/parse-err-decl-pos-export-try-finally.js
-  - [ ] test/language/module-code/parse-err-decl-pos-export-try-try.js
-  - [ ] test/language/module-code/parse-err-decl-pos-export-while.js
-  - [ ] test/language/module-code/parse-err-decl-pos-import-arrow-function.js
-  - [ ] test/language/module-code/parse-err-decl-pos-import-block-stmt-list.js
-  - [ ] test/language/module-code/parse-err-decl-pos-import-block-stmt.js
-  - [ ] test/language/module-code/parse-err-decl-pos-import-class-decl-meth-static.js
-  - [ ] test/language/module-code/parse-err-decl-pos-import-class-decl-meth.js
-  - [ ] test/language/module-code/parse-err-decl-pos-import-class-decl-method-gen-static.js
-  - [ ] test/language/module-code/parse-err-decl-pos-import-class-decl-method-gen.js
-  - [ ] test/language/module-code/parse-err-decl-pos-import-class-expr-meth-gen-static.js
-  - [ ] test/language/module-code/parse-err-decl-pos-import-class-expr-meth-gen.js
-  - [ ] test/language/module-code/parse-err-decl-pos-import-class-expr-meth-static.js
-  - [ ] test/language/module-code/parse-err-decl-pos-import-class-expr-meth.js
-  - [ ] test/language/module-code/parse-err-decl-pos-import-do-while.js
-  - [ ] test/language/module-code/parse-err-decl-pos-import-for-const.js
-  - [ ] test/language/module-code/parse-err-decl-pos-import-for-in-const.js
-  - [ ] test/language/module-code/parse-err-decl-pos-import-for-in-let.js
-  - [ ] test/language/module-code/parse-err-decl-pos-import-for-in-lhs.js
-  - [ ] test/language/module-code/parse-err-decl-pos-import-for-in-var.js
-  - [ ] test/language/module-code/parse-err-decl-pos-import-for-let.js
-  - [ ] test/language/module-code/parse-err-decl-pos-import-for-lhs.js
-  - [ ] test/language/module-code/parse-err-decl-pos-import-for-of-const.js
-  - [ ] test/language/module-code/parse-err-decl-pos-import-for-of-let.js
-  - [ ] test/language/module-code/parse-err-decl-pos-import-for-of-lhs.js
-  - [ ] test/language/module-code/parse-err-decl-pos-import-for-of-var.js
-  - [ ] test/language/module-code/parse-err-decl-pos-import-for-var.js
-  - [ ] test/language/module-code/parse-err-decl-pos-import-function-decl.js
-  - [ ] test/language/module-code/parse-err-decl-pos-import-function-expr.js
-  - [ ] test/language/module-code/parse-err-decl-pos-import-generator-decl.js
-  - [ ] test/language/module-code/parse-err-decl-pos-import-generator-expr.js
-  - [ ] test/language/module-code/parse-err-decl-pos-import-if-else.js
-  - [ ] test/language/module-code/parse-err-decl-pos-import-if-if.js
-  - [ ] test/language/module-code/parse-err-decl-pos-import-labeled.js
-  - [ ] test/language/module-code/parse-err-decl-pos-import-object-gen-method.js
-  - [ ] test/language/module-code/parse-err-decl-pos-import-object-getter.js
-  - [ ] test/language/module-code/parse-err-decl-pos-import-object-method.js
-  - [ ] test/language/module-code/parse-err-decl-pos-import-object-setter.js
-  - [ ] test/language/module-code/parse-err-decl-pos-import-switch-case-dflt.js
-  - [ ] test/language/module-code/parse-err-decl-pos-import-switch-case.js
-  - [ ] test/language/module-code/parse-err-decl-pos-import-switch-dftl.js
-  - [ ] test/language/module-code/parse-err-decl-pos-import-try-catch-finally.js
-  - [ ] test/language/module-code/parse-err-decl-pos-import-try-catch.js
-  - [ ] test/language/module-code/parse-err-decl-pos-import-try-finally.js
-  - [ ] test/language/module-code/parse-err-decl-pos-import-try-try.js
-  - [ ] test/language/module-code/parse-err-decl-pos-import-while.js
-  - [ ] test/language/module-code/parse-err-export-dflt-const.js
-  - [ ] test/language/module-code/parse-err-export-dflt-expr.js
-  - [ ] test/language/module-code/parse-err-export-dflt-let.js
-  - [ ] test/language/module-code/parse-err-export-dflt-var.js
-  - [ ] test/language/module-code/parse-err-hoist-lex-fun.js
-  - [ ] test/language/module-code/parse-err-hoist-lex-gen.js
-  - [ ] test/language/module-code/parse-err-invoke-anon-fun-decl.js
-  - [ ] test/language/module-code/parse-err-invoke-anon-gen-decl.js
-  - [ ] test/language/module-code/parse-err-return.js
-  - [ ] test/language/module-code/parse-err-semi-dflt-expr.js
-  - [ ] test/language/module-code/parse-err-semi-export-star.js
-  - [ ] test/language/module-code/parse-err-semi-name-space-export.js
-  - [ ] test/language/module-code/parse-err-semi-named-export-from.js
-  - [ ] test/language/module-code/parse-err-semi-named-export.js
-  - [ ] test/language/module-code/parse-err-syntax-1.js
-  - [ ] test/language/module-code/parse-err-syntax-2.js
-  - [ ] test/language/module-code/parse-err-yield.js
-  - [ ] test/language/module-code/parse-export-empty.js
-  - [ ] test/language/module-code/private-identifiers-not-empty.js
-  - [ ] test/language/module-code/privatename-not-valid-earlyerr-module-1.js
-  - [ ] test/language/module-code/privatename-not-valid-earlyerr-module-2.js
-  - [ ] test/language/module-code/privatename-not-valid-earlyerr-module-3.js
-  - [ ] test/language/module-code/privatename-not-valid-earlyerr-module-4.js
-  - [ ] test/language/module-code/privatename-not-valid-earlyerr-module-5.js
-  - [ ] test/language/module-code/privatename-not-valid-earlyerr-module-6.js
-  - [ ] test/language/module-code/privatename-not-valid-earlyerr-module-7.js
-  - [ ] test/language/module-code/privatename-not-valid-earlyerr-module-8.js
-  - [ ] test/language/module-code/privatename-valid-no-earlyerr.js
-  - [ ] test/language/module-code/source-phase-import/import-source.js
-  - [ ] test/language/module-code/top-level-await/async-module-does-not-block-sibling-modules.js
-  - [ ] test/language/module-code/top-level-await/await-awaits-thenable-not-callable.js
-  - [ ] test/language/module-code/top-level-await/await-awaits-thenables-that-throw.js
-  - [ ] test/language/module-code/top-level-await/await-awaits-thenables.js
-  - [ ] test/language/module-code/top-level-await/await-dynamic-import-rejection.js
-  - [ ] test/language/module-code/top-level-await/await-dynamic-import-resolution.js
-  - [ ] test/language/module-code/top-level-await/await-expr-func-expression.js
-  - [ ] test/language/module-code/top-level-await/await-expr-new-expr-reject.js
-  - [ ] test/language/module-code/top-level-await/await-expr-new-expr.js
-  - [ ] test/language/module-code/top-level-await/await-expr-regexp.js
-  - [ ] test/language/module-code/top-level-await/await-expr-reject-throws.js
-  - [ ] test/language/module-code/top-level-await/await-expr-resolution.js
-  - [ ] test/language/module-code/top-level-await/await-void-expr.js
-  - [ ] test/language/module-code/top-level-await/dfs-invariant.js
-  - [ ] test/language/module-code/top-level-await/dynamic-import-of-waiting-module.js
-  - [ ] test/language/module-code/top-level-await/dynamic-import-rejection.js
-  - [ ] test/language/module-code/top-level-await/dynamic-import-resolution.js
-  - [ ] test/language/module-code/top-level-await/early-errors-await-not-simple-assignment-target.js
-  - [ ] test/language/module-code/top-level-await/fulfillment-order.js
-  - [ ] test/language/module-code/top-level-await/if-await-expr.js
-  - [ ] test/language/module-code/top-level-await/module-async-import-async-resolution-ticks.js
-  - [ ] test/language/module-code/top-level-await/module-graphs-does-not-hang.js
-  - [ ] test/language/module-code/top-level-await/module-import-rejection-body.js
-  - [ ] test/language/module-code/top-level-await/module-import-rejection-tick.js
-  - [ ] test/language/module-code/top-level-await/module-import-rejection.js
-  - [ ] test/language/module-code/top-level-await/module-import-resolution.js
-  - [ ] test/language/module-code/top-level-await/module-import-unwrapped.js
-  - [ ] test/language/module-code/top-level-await/module-self-import-async-resolution-ticks.js
-  - [ ] test/language/module-code/top-level-await/module-sync-import-async-resolution-ticks.js
-  - [ ] test/language/module-code/top-level-await/new-await-parens.js
-  - [ ] test/language/module-code/top-level-await/new-await-script-code.js
-  - [ ] test/language/module-code/top-level-await/new-await.js
-  - [ ] test/language/module-code/top-level-await/no-operand.js
-  - [ ] test/language/module-code/top-level-await/pending-async-dep-from-cycle.js
-  - [ ] test/language/module-code/top-level-await/rejection-order.js
-  - [ ] test/language/module-code/top-level-await/syntax/await-expr-dyn-import.js
-  - [ ] test/language/module-code/top-level-await/syntax/block-await-expr-array-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/block-await-expr-func-expression.js
-  - [ ] test/language/module-code/top-level-await/syntax/block-await-expr-identifier.js
-  - [ ] test/language/module-code/top-level-await/syntax/block-await-expr-literal-number.js
-  - [ ] test/language/module-code/top-level-await/syntax/block-await-expr-literal-string.js
-  - [ ] test/language/module-code/top-level-await/syntax/block-await-expr-nested.js
-  - [ ] test/language/module-code/top-level-await/syntax/block-await-expr-new-expr.js
-  - [ ] test/language/module-code/top-level-await/syntax/block-await-expr-null.js
-  - [ ] test/language/module-code/top-level-await/syntax/block-await-expr-obj-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/block-await-expr-regexp.js
-  - [ ] test/language/module-code/top-level-await/syntax/block-await-expr-template-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/block-await-expr-this.js
-  - [ ] test/language/module-code/top-level-await/syntax/catch-parameter.js
-  - [ ] test/language/module-code/top-level-await/syntax/early-does-not-propagate-to-fn-declaration-body.js
-  - [ ] test/language/module-code/top-level-await/syntax/early-does-not-propagate-to-fn-declaration-params.js
-  - [ ] test/language/module-code/top-level-await/syntax/early-does-not-propagate-to-fn-expr-body.js
-  - [ ] test/language/module-code/top-level-await/syntax/early-does-not-propagate-to-fn-expr-params.js
-  - [ ] test/language/module-code/top-level-await/syntax/early-no-escaped-await.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-class-decl-await-expr-array-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-class-decl-await-expr-func-expression.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-class-decl-await-expr-identifier.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-class-decl-await-expr-literal-number.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-class-decl-await-expr-literal-string.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-class-decl-await-expr-nested.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-class-decl-await-expr-new-expr.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-class-decl-await-expr-null.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-class-decl-await-expr-obj-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-class-decl-await-expr-regexp.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-class-decl-await-expr-template-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-class-decl-await-expr-this.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-dflt-assign-expr-await-expr-array-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-dflt-assign-expr-await-expr-func-expression.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-dflt-assign-expr-await-expr-identifier.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-dflt-assign-expr-await-expr-literal-number.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-dflt-assign-expr-await-expr-literal-string.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-dflt-assign-expr-await-expr-nested.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-dflt-assign-expr-await-expr-new-expr.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-dflt-assign-expr-await-expr-null.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-dflt-assign-expr-await-expr-obj-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-dflt-assign-expr-await-expr-regexp.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-dflt-assign-expr-await-expr-template-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-dflt-assign-expr-await-expr-this.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-array-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-func-expression.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-identifier.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-literal-number.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-literal-string.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-nested.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-new-expr.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-null.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-obj-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-regexp.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-template-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-this.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-lex-decl-await-expr-array-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-lex-decl-await-expr-func-expression.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-lex-decl-await-expr-identifier.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-lex-decl-await-expr-literal-number.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-lex-decl-await-expr-literal-string.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-lex-decl-await-expr-nested.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-lex-decl-await-expr-new-expr.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-lex-decl-await-expr-null.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-lex-decl-await-expr-obj-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-lex-decl-await-expr-regexp.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-lex-decl-await-expr-template-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-lex-decl-await-expr-this.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-var-await-expr-array-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-var-await-expr-func-expression.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-var-await-expr-identifier.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-var-await-expr-literal-number.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-var-await-expr-literal-string.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-var-await-expr-nested.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-var-await-expr-new-expr.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-var-await-expr-null.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-var-await-expr-obj-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-var-await-expr-regexp.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-var-await-expr-template-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/export-var-await-expr-this.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-await-await-expr-array-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-await-await-expr-func-expression.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-await-await-expr-identifier.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-await-await-expr-literal-number.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-await-await-expr-literal-string.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-await-await-expr-nested.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-await-await-expr-new-expr.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-await-await-expr-null.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-await-await-expr-obj-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-await-await-expr-regexp.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-await-await-expr-template-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-await-await-expr-this.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-await-expr-array-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-await-expr-func-expression.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-await-expr-identifier.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-await-expr-literal-number.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-await-expr-literal-string.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-await-expr-nested.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-await-expr-new-expr.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-await-expr-null.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-await-expr-obj-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-await-expr-regexp.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-await-expr-template-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-await-expr-this.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-in-await-expr-array-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-in-await-expr-func-expression.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-in-await-expr-identifier.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-in-await-expr-literal-number.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-in-await-expr-literal-string.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-in-await-expr-nested.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-in-await-expr-new-expr.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-in-await-expr-null.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-in-await-expr-obj-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-in-await-expr-regexp.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-in-await-expr-template-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-in-await-expr-this.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-of-await-expr-array-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-of-await-expr-func-expression.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-of-await-expr-identifier.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-of-await-expr-literal-number.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-of-await-expr-literal-string.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-of-await-expr-nested.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-of-await-expr-new-expr.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-of-await-expr-null.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-of-await-expr-obj-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-of-await-expr-regexp.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-of-await-expr-template-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/for-of-await-expr-this.js
-  - [ ] test/language/module-code/top-level-await/syntax/if-block-await-expr-array-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/if-block-await-expr-func-expression.js
-  - [ ] test/language/module-code/top-level-await/syntax/if-block-await-expr-identifier.js
-  - [ ] test/language/module-code/top-level-await/syntax/if-block-await-expr-literal-number.js
-  - [ ] test/language/module-code/top-level-await/syntax/if-block-await-expr-literal-string.js
-  - [ ] test/language/module-code/top-level-await/syntax/if-block-await-expr-nested.js
-  - [ ] test/language/module-code/top-level-await/syntax/if-block-await-expr-new-expr.js
-  - [ ] test/language/module-code/top-level-await/syntax/if-block-await-expr-null.js
-  - [ ] test/language/module-code/top-level-await/syntax/if-block-await-expr-obj-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/if-block-await-expr-regexp.js
-  - [ ] test/language/module-code/top-level-await/syntax/if-block-await-expr-template-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/if-block-await-expr-this.js
-  - [ ] test/language/module-code/top-level-await/syntax/if-expr-await-expr-array-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/if-expr-await-expr-func-expression.js
-  - [ ] test/language/module-code/top-level-await/syntax/if-expr-await-expr-identifier.js
-  - [ ] test/language/module-code/top-level-await/syntax/if-expr-await-expr-literal-number.js
-  - [ ] test/language/module-code/top-level-await/syntax/if-expr-await-expr-literal-string.js
-  - [ ] test/language/module-code/top-level-await/syntax/if-expr-await-expr-nested.js
-  - [ ] test/language/module-code/top-level-await/syntax/if-expr-await-expr-new-expr.js
-  - [ ] test/language/module-code/top-level-await/syntax/if-expr-await-expr-null.js
-  - [ ] test/language/module-code/top-level-await/syntax/if-expr-await-expr-obj-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/if-expr-await-expr-regexp.js
-  - [ ] test/language/module-code/top-level-await/syntax/if-expr-await-expr-template-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/if-expr-await-expr-this.js
-  - [ ] test/language/module-code/top-level-await/syntax/top-level-await-expr-array-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/top-level-await-expr-func-expression.js
-  - [ ] test/language/module-code/top-level-await/syntax/top-level-await-expr-identifier.js
-  - [ ] test/language/module-code/top-level-await/syntax/top-level-await-expr-literal-number.js
-  - [ ] test/language/module-code/top-level-await/syntax/top-level-await-expr-literal-string.js
-  - [ ] test/language/module-code/top-level-await/syntax/top-level-await-expr-nested.js
-  - [ ] test/language/module-code/top-level-await/syntax/top-level-await-expr-new-expr.js
-  - [ ] test/language/module-code/top-level-await/syntax/top-level-await-expr-null.js
-  - [ ] test/language/module-code/top-level-await/syntax/top-level-await-expr-obj-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/top-level-await-expr-regexp.js
-  - [ ] test/language/module-code/top-level-await/syntax/top-level-await-expr-template-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/top-level-await-expr-this.js
-  - [ ] test/language/module-code/top-level-await/syntax/try-await-expr-array-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/try-await-expr-func-expression.js
-  - [ ] test/language/module-code/top-level-await/syntax/try-await-expr-identifier.js
-  - [ ] test/language/module-code/top-level-await/syntax/try-await-expr-literal-number.js
-  - [ ] test/language/module-code/top-level-await/syntax/try-await-expr-literal-string.js
-  - [ ] test/language/module-code/top-level-await/syntax/try-await-expr-nested.js
-  - [ ] test/language/module-code/top-level-await/syntax/try-await-expr-new-expr.js
-  - [ ] test/language/module-code/top-level-await/syntax/try-await-expr-null.js
-  - [ ] test/language/module-code/top-level-await/syntax/try-await-expr-obj-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/try-await-expr-regexp.js
-  - [ ] test/language/module-code/top-level-await/syntax/try-await-expr-template-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/try-await-expr-this.js
-  - [ ] test/language/module-code/top-level-await/syntax/typeof-await-expr-array-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/typeof-await-expr-func-expression.js
-  - [ ] test/language/module-code/top-level-await/syntax/typeof-await-expr-identifier.js
-  - [ ] test/language/module-code/top-level-await/syntax/typeof-await-expr-literal-number.js
-  - [ ] test/language/module-code/top-level-await/syntax/typeof-await-expr-literal-string.js
-  - [ ] test/language/module-code/top-level-await/syntax/typeof-await-expr-nested.js
-  - [ ] test/language/module-code/top-level-await/syntax/typeof-await-expr-new-expr.js
-  - [ ] test/language/module-code/top-level-await/syntax/typeof-await-expr-null.js
-  - [ ] test/language/module-code/top-level-await/syntax/typeof-await-expr-obj-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/typeof-await-expr-regexp.js
-  - [ ] test/language/module-code/top-level-await/syntax/typeof-await-expr-template-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/typeof-await-expr-this.js
-  - [ ] test/language/module-code/top-level-await/syntax/void-await-expr-array-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/void-await-expr-func-expression.js
-  - [ ] test/language/module-code/top-level-await/syntax/void-await-expr-identifier.js
-  - [ ] test/language/module-code/top-level-await/syntax/void-await-expr-literal-number.js
-  - [ ] test/language/module-code/top-level-await/syntax/void-await-expr-literal-string.js
-  - [ ] test/language/module-code/top-level-await/syntax/void-await-expr-nested.js
-  - [ ] test/language/module-code/top-level-await/syntax/void-await-expr-new-expr.js
-  - [ ] test/language/module-code/top-level-await/syntax/void-await-expr-null.js
-  - [ ] test/language/module-code/top-level-await/syntax/void-await-expr-obj-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/void-await-expr-regexp.js
-  - [ ] test/language/module-code/top-level-await/syntax/void-await-expr-template-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/void-await-expr-this.js
-  - [ ] test/language/module-code/top-level-await/syntax/while-await-expr-array-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/while-await-expr-func-expression.js
-  - [ ] test/language/module-code/top-level-await/syntax/while-await-expr-identifier.js
-  - [ ] test/language/module-code/top-level-await/syntax/while-await-expr-literal-number.js
-  - [ ] test/language/module-code/top-level-await/syntax/while-await-expr-literal-string.js
-  - [ ] test/language/module-code/top-level-await/syntax/while-await-expr-nested.js
-  - [ ] test/language/module-code/top-level-await/syntax/while-await-expr-new-expr.js
-  - [ ] test/language/module-code/top-level-await/syntax/while-await-expr-null.js
-  - [ ] test/language/module-code/top-level-await/syntax/while-await-expr-obj-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/while-await-expr-regexp.js
-  - [ ] test/language/module-code/top-level-await/syntax/while-await-expr-template-literal.js
-  - [ ] test/language/module-code/top-level-await/syntax/while-await-expr-this.js
-  - [ ] test/language/module-code/top-level-await/top-level-ticks-2.js
-  - [ ] test/language/module-code/top-level-await/top-level-ticks.js
-  - [ ] test/language/module-code/top-level-await/unobservable-global-async-evaluation-count-reset.js
-  - [ ] test/language/module-code/top-level-await/void-await-expr.js
-  - [ ] test/language/module-code/top-level-await/while-dynamic-evaluation.js
-  - [ ] test/language/module-code/verify-dfs.js
+  - [x] (2026-05-26T12:39:00-06:00) test/language/module-code/ambiguous-export-bindings/error-export-from-named-as.js
+  - [x] (2026-05-26T12:39:47-06:00) test/language/module-code/ambiguous-export-bindings/error-export-from-named.js
+  - [x] (2026-05-26T12:40:23-06:00) test/language/module-code/ambiguous-export-bindings/error-import-named-as.js
+  - [x] (2026-05-26T12:40:57-06:00) test/language/module-code/ambiguous-export-bindings/error-import-named.js
+  - [x] (2026-05-26T12:59:15-06:00) test/language/module-code/ambiguous-export-bindings/import-and-export-propagates-binding.js
+  - [x] (2026-05-26T13:01:19-06:00) test/language/module-code/ambiguous-export-bindings/namespace-unambiguous-if-export-star-as-from-and-import-star-as-and-export.js
+  - [x] (2026-05-26T13:07:59-06:00) test/language/module-code/ambiguous-export-bindings/namespace-unambiguous-if-export-star-as-from.js
+  - [x] (2026-05-26T13:09:28-06:00) test/language/module-code/ambiguous-export-bindings/namespace-unambiguous-if-import-star-as-and-export.js
+  - [x] (2026-05-26T13:16:53-06:00) test/language/module-code/ambiguous-export-bindings/omitted-from-namespace.js
+  - [x] (2026-05-26T13:17:18-06:00) test/language/module-code/comment-multi-line-html-close.js
+  - [x] (2026-05-26T13:17:45-06:00) test/language/module-code/comment-single-line-html-close.js
+  - [x] (2026-05-26T13:18:06-06:00) test/language/module-code/comment-single-line-html-open.js
+  - [x] (2026-05-26T13:22:28-06:00) test/language/module-code/early-dup-export-as-star-as.js
+  - [x] (2026-05-26T13:22:53-06:00) test/language/module-code/early-dup-export-decl.js
+  - [x] (2026-05-26T13:23:20-06:00) test/language/module-code/early-dup-export-dflt-id.js
+  - [x] (2026-05-26T13:23:53-06:00) test/language/module-code/early-dup-export-dflt.js
+  - [x] (2026-05-26T13:24:20-06:00) test/language/module-code/early-dup-export-id-as.js
+  - [x] (2026-05-26T13:24:39-06:00) test/language/module-code/early-dup-export-id.js
+  - [x] (2026-05-26T13:25:00-06:00) test/language/module-code/early-dup-export-star-as-dflt.js
+  - [x] (2026-05-26T13:25:22-06:00) test/language/module-code/early-dup-lables.js
+  - [x] (2026-05-26T13:25:45-06:00) test/language/module-code/early-dup-lex.js
+  - [x] (2026-05-26T13:26:04-06:00) test/language/module-code/early-dup-top-function-async-generator.js
+  - [x] (2026-05-26T13:26:25-06:00) test/language/module-code/early-dup-top-function-async.js
+  - [x] (2026-05-26T13:26:47-06:00) test/language/module-code/early-dup-top-function-generator.js
+  - [x] (2026-05-26T13:27:07-06:00) test/language/module-code/early-dup-top-function.js
+  - [x] (2026-05-26T13:27:28-06:00) test/language/module-code/early-export-global.js
+  - [x] (2026-05-26T13:27:49-06:00) test/language/module-code/early-export-ill-formed-string.js
+  - [x] (2026-05-26T13:28:06-06:00) test/language/module-code/early-export-unresolvable.js
+  - [x] (2026-05-26T13:29:40-06:00) test/language/module-code/early-import-arguments.js
+  - [x] (2026-05-26T13:30:02-06:00) test/language/module-code/early-import-as-arguments.js
+  - [x] (2026-05-26T13:30:21-06:00) test/language/module-code/early-import-as-eval.js
+  - [x] (2026-05-26T13:30:38-06:00) test/language/module-code/early-import-eval.js
+  - [x] (2026-05-26T13:32:32-06:00) test/language/module-code/early-lex-and-var.js
+  - [x] (2026-05-26T13:32:52-06:00) test/language/module-code/early-new-target.js
+  - [x] (2026-05-26T13:33:11-06:00) test/language/module-code/early-strict-mode.js
+  - [x] (2026-05-26T13:33:30-06:00) test/language/module-code/early-super.js
+  - [x] (2026-05-26T13:33:53-06:00) test/language/module-code/early-undef-break.js
+  - [x] (2026-05-26T13:34:13-06:00) test/language/module-code/early-undef-continue.js
+  - [x] (2026-05-26T13:34:54-06:00) test/language/module-code/eval-export-cls-semi.js
+  - [x] (2026-05-26T13:35:29-06:00) test/language/module-code/eval-export-dflt-cls-anon-semi.js
+  - [x] (2026-05-26T13:44:24-06:00) test/language/module-code/eval-export-dflt-cls-anon.js
+  - [x] (2026-05-26T13:45:08-06:00) test/language/module-code/eval-export-dflt-cls-name-meth.js
+  - [x] (2026-05-26T13:45:51-06:00) test/language/module-code/eval-export-dflt-cls-named-semi.js
+  - [x] (2026-05-26T13:46:32-06:00) test/language/module-code/eval-export-dflt-cls-named.js
+  - [x] (2026-05-26T13:53:57-06:00) test/language/module-code/eval-export-dflt-expr-cls-anon.js
+  - [x] (2026-05-26T13:54:47-06:00) test/language/module-code/eval-export-dflt-expr-cls-name-meth.js
+  - [x] (2026-05-26T13:55:21-06:00) test/language/module-code/eval-export-dflt-expr-cls-named.js
+  - [x] (2026-05-26T13:59:43-06:00) test/language/module-code/eval-export-dflt-expr-err-eval.js
+  - [x] (2026-05-26T14:00:24-06:00) test/language/module-code/eval-export-dflt-expr-err-get-value.js
+  - [x] (2026-05-26T14:01:06-06:00) test/language/module-code/eval-export-dflt-expr-fn-anon.js
+  - [x] (2026-05-26T14:01:46-06:00) test/language/module-code/eval-export-dflt-expr-fn-named.js
+  - [x] (2026-05-26T14:02:34-06:00) test/language/module-code/eval-export-dflt-expr-gen-anon.js
+  - [x] (2026-05-26T14:03:17-06:00) test/language/module-code/eval-export-dflt-expr-gen-named.js
+  - [x] (2026-05-26T14:03:54-06:00) test/language/module-code/eval-export-dflt-expr-in.js
+  - [x] (2026-05-26T14:04:41-06:00) test/language/module-code/eval-export-dflt-fun-anon-semi.js
+  - [x] (2026-05-26T14:05:19-06:00) test/language/module-code/eval-export-dflt-fun-named-semi.js
+  - [x] (2026-05-26T14:05:57-06:00) test/language/module-code/eval-export-dflt-gen-anon-semi.js
+  - [x] (2026-05-26T14:06:38-06:00) test/language/module-code/eval-export-dflt-gen-named-semi.js
+  - [x] (2026-05-26T14:07:20-06:00) test/language/module-code/eval-export-fun-semi.js
+  - [x] (2026-05-26T14:08:00-06:00) test/language/module-code/eval-export-gen-semi.js
+  - [x] (2026-05-26T14:08:49-06:00) test/language/module-code/eval-gtbndng-indirect-trlng-comma.js
+  - [x] (2026-05-26T14:09:41-06:00) test/language/module-code/eval-gtbndng-indirect-update-as.js
+  - [x] (2026-05-26T15:01:12-06:00) test/language/module-code/eval-gtbndng-indirect-update-dflt.js
+  - [x] (2026-05-26T15:06:44-06:00) test/language/module-code/eval-gtbndng-indirect-update.js
+  - [x] (2026-05-26T15:07:22-06:00) test/language/module-code/eval-gtbndng-local-bndng-cls.js
+  - [x] (2026-05-26T15:07:56-06:00) test/language/module-code/eval-gtbndng-local-bndng-const.js
+  - [x] (2026-05-26T15:08:31-06:00) test/language/module-code/eval-gtbndng-local-bndng-let.js
+  - [x] (2026-05-26T15:09:06-06:00) test/language/module-code/eval-gtbndng-local-bndng-var.js
+  - [x] (2026-05-26T15:10:02-06:00) test/language/module-code/eval-rqstd-abrupt.js
+  - [x] (2026-05-26T15:37:37-06:00) test/language/module-code/eval-rqstd-once.js
+  - [ ] (SKIPPED 2026-05-26T16:37:47-06:00 after 1h) test/language/module-code/eval-rqstd-order.js
+  - [x] (2026-05-26T16:38:16-06:00) test/language/module-code/eval-self-abrupt.js
+  - [x] (2026-05-26T16:39:21-06:00) test/language/module-code/eval-self-once.js
+  - [x] (2026-05-26T16:39:58-06:00) test/language/module-code/eval-this.js
+  - [x] (2026-05-26T16:40:17-06:00) test/language/module-code/export-default-asyncfunction-declaration-binding-exists.js
+  - [x] (2026-05-26T16:40:44-06:00) test/language/module-code/export-default-asyncfunction-declaration-binding.js
+  - [x] (2026-05-26T16:41:04-06:00) test/language/module-code/export-default-asyncgenerator-declaration-binding-exists.js
+  - [x] (2026-05-26T16:41:29-06:00) test/language/module-code/export-default-asyncgenerator-declaration-binding.js
+  - [x] (2026-05-26T16:42:00-06:00) test/language/module-code/export-default-function-declaration-binding-exists.js
+  - [x] (2026-05-26T16:42:24-06:00) test/language/module-code/export-default-function-declaration-binding.js
+  - [x] (2026-05-26T16:42:43-06:00) test/language/module-code/export-default-generator-declaration-binding-exists.js
+  - [x] (2026-05-26T16:43:08-06:00) test/language/module-code/export-default-generator-declaration-binding.js
+  - [x] (2026-05-26T17:20:28-06:00) test/language/module-code/export-expname-binding-index.js
+  - [x] (2026-05-26T17:21:23-06:00) test/language/module-code/export-expname-binding-string.js
+  - [x] (2026-05-26T17:21:50-06:00) test/language/module-code/export-expname-from-as-unpaired-surrogate.js
+  - [x] (2026-05-26T17:22:31-06:00) test/language/module-code/export-expname-from-binding-string.js
+  - [x] (2026-05-26T17:29:21-06:00) test/language/module-code/export-expname-from-star-string.js
+  - [x] (2026-05-26T17:29:40-06:00) test/language/module-code/export-expname-from-star-unpaired-surrogate.js
+  - [x] (2026-05-26T17:30:15-06:00) test/language/module-code/export-expname-from-star.js
+  - [x] (2026-05-26T17:30:51-06:00) test/language/module-code/export-expname-from-string-binding.js
+  - [x] (2026-05-26T17:31:27-06:00) test/language/module-code/export-expname-from-string-string.js
+  - [x] (2026-05-26T17:31:59-06:00) test/language/module-code/export-expname-from-string.js
+  - [x] (2026-05-26T17:32:21-06:00) test/language/module-code/export-expname-from-unpaired-surrogate.js
+  - [x] (2026-05-26T17:32:48-06:00) test/language/module-code/export-expname-import-string-binding.js
+  - [x] (2026-05-26T17:33:05-06:00) test/language/module-code/export-expname-import-unpaired-surrogate.js
+  - [x] (2026-05-26T17:33:23-06:00) test/language/module-code/export-expname-string-binding.js
+  - [x] (2026-05-26T17:33:41-06:00) test/language/module-code/export-expname-unpaired-surrogate.js
+  - [x] (2026-05-26T17:34:08-06:00) test/language/module-code/export-star-as-dflt.js
+  - [x] (2026-05-26T17:34:28-06:00) test/language/module-code/import-attributes/allow-nlt-before-with.js
+  - [x] (2026-05-26T17:34:46-06:00) test/language/module-code/import-attributes/early-dup-attribute-key-export.js
+  - [x] (2026-05-26T17:35:06-06:00) test/language/module-code/import-attributes/early-dup-attribute-key-import-nobinding.js
+  - [x] (2026-05-26T17:35:27-06:00) test/language/module-code/import-attributes/early-dup-attribute-key-import-withbinding.js
+  - [x] (2026-05-26T17:36:00-06:00) test/language/module-code/import-attributes/import-attribute-empty.js
+  - [x] (2026-05-26T17:36:19-06:00) test/language/module-code/import-attributes/import-attribute-key-identifiername.js
+  - [x] (2026-05-26T17:36:39-06:00) test/language/module-code/import-attributes/import-attribute-key-string-double.js
+  - [x] (2026-05-26T17:36:59-06:00) test/language/module-code/import-attributes/import-attribute-key-string-single.js
+  - [x] (2026-05-26T17:37:21-06:00) test/language/module-code/import-attributes/import-attribute-many.js
+  - [x] (2026-05-26T17:37:42-06:00) test/language/module-code/import-attributes/import-attribute-newlines.js
+  - [x] (2026-05-26T17:38:03-06:00) test/language/module-code/import-attributes/import-attribute-trlng-comma.js
+  - [x] (2026-05-26T17:38:22-06:00) test/language/module-code/import-attributes/import-attribute-value-string-double.js
+  - [x] (2026-05-26T17:38:42-06:00) test/language/module-code/import-attributes/import-attribute-value-string-single.js
+  - [ ] (SKIPPED 2026-05-26T18:39:10-06:00 after 1h) test/language/module-code/instn-iee-bndng-cls.js
+  - [x] (2026-05-29T13:19:22-06:00) test/language/module-code/instn-iee-bndng-const.js
+  - [x] (2026-05-26T19:50:38-06:00) test/language/module-code/instn-iee-bndng-fun.js
+  - [x] (2026-05-29T13:20:49-06:00) test/language/module-code/instn-iee-bndng-gen.js
+  - [x] (2026-05-26T21:25:25-06:00) test/language/module-code/instn-iee-bndng-let.js
+  - [x] (2026-05-26T21:27:03-06:00) test/language/module-code/instn-iee-bndng-var.js
+  - [x] (2026-05-26T21:28:04-06:00) test/language/module-code/instn-iee-err-circular-as.js
+  - [x] (2026-05-26T21:28:41-06:00) test/language/module-code/instn-iee-err-circular.js
+  - [x] (2026-05-26T21:29:20-06:00) test/language/module-code/instn-iee-err-dflt-thru-star-as.js
+  - [x] (2026-05-26T21:29:46-06:00) test/language/module-code/instn-iee-err-dflt-thru-star.js
+  - [x] (2026-05-26T21:30:15-06:00) test/language/module-code/instn-iee-err-not-found-as.js
+  - [x] (2026-05-26T21:30:53-06:00) test/language/module-code/instn-iee-err-not-found.js
+  - [x] (2026-05-26T21:34:34-06:00) test/language/module-code/instn-iee-iee-cycle.js
+  - [x] (2026-05-26T21:39:54-06:00) test/language/module-code/instn-iee-star-cycle.js
+  - [x] (2026-05-26T21:40:35-06:00) test/language/module-code/instn-iee-trlng-comma.js
+  - [x] (2026-05-26T22:04:33-06:00) test/language/module-code/instn-local-bndng-cls.js
+  - [x] (2026-05-26T22:05:30-06:00) test/language/module-code/instn-local-bndng-const.js
+  - [x] (2026-05-26T22:06:14-06:00) test/language/module-code/instn-local-bndng-export-cls.js
+  - [x] (2026-05-26T22:06:50-06:00) test/language/module-code/instn-local-bndng-export-const.js
+  - [x] (2026-05-26T22:07:24-06:00) test/language/module-code/instn-local-bndng-export-fun.js
+  - [x] (2026-05-26T22:07:52-06:00) test/language/module-code/instn-local-bndng-export-gen.js
+  - [x] (2026-05-26T22:08:21-06:00) test/language/module-code/instn-local-bndng-export-let.js
+  - [x] (2026-05-26T22:08:52-06:00) test/language/module-code/instn-local-bndng-export-var.js
+  - [x] (2026-05-26T22:09:24-06:00) test/language/module-code/instn-local-bndng-for-dup.js
+  - [x] (2026-05-26T22:09:52-06:00) test/language/module-code/instn-local-bndng-for.js
+  - [x] (2026-05-26T22:10:22-06:00) test/language/module-code/instn-local-bndng-fun.js
+  - [x] (2026-05-26T22:12:03-06:00) test/language/module-code/instn-local-bndng-gen.js
+  - [x] (2026-05-26T22:12:32-06:00) test/language/module-code/instn-local-bndng-let.js
+  - [x] (2026-05-26T22:12:56-06:00) test/language/module-code/instn-local-bndng-var-dup.js
+  - [x] (2026-05-26T22:13:25-06:00) test/language/module-code/instn-local-bndng-var.js
+  - [x] (2026-05-26T22:13:56-06:00) test/language/module-code/instn-named-bndng-cls.js
+  - [x] (2026-05-26T22:14:25-06:00) test/language/module-code/instn-named-bndng-const.js
+  - [x] (2026-05-26T22:14:55-06:00) test/language/module-code/instn-named-bndng-dflt-cls.js
+  - [x] (2026-05-26T22:15:29-06:00) test/language/module-code/instn-named-bndng-dflt-expr.js
+  - [x] (2026-05-26T22:19:19-06:00) test/language/module-code/instn-named-bndng-dflt-fun-anon.js
+  - [x] (2026-05-26T22:21:31-06:00) test/language/module-code/instn-named-bndng-dflt-fun-named.js
+  - [x] (2026-05-26T22:21:59-06:00) test/language/module-code/instn-named-bndng-dflt-gen-anon.js
+  - [x] (2026-05-26T22:22:26-06:00) test/language/module-code/instn-named-bndng-dflt-gen-named.js
+  - [x] (2026-05-26T22:22:55-06:00) test/language/module-code/instn-named-bndng-dflt-named.js
+  - [x] (2026-05-26T22:23:25-06:00) test/language/module-code/instn-named-bndng-dflt-star.js
+  - [x] (2026-05-26T22:27:32-06:00) test/language/module-code/instn-named-bndng-fun.js
+  - [x] (2026-05-26T22:28:02-06:00) test/language/module-code/instn-named-bndng-gen.js
+  - [x] (2026-05-26T22:28:29-06:00) test/language/module-code/instn-named-bndng-let.js
+  - [x] (2026-05-26T22:28:55-06:00) test/language/module-code/instn-named-bndng-trlng-comma.js
+  - [x] (2026-05-26T22:29:30-06:00) test/language/module-code/instn-named-bndng-var.js
+  - [x] (2026-05-26T22:29:49-06:00) test/language/module-code/instn-named-err-dflt-thru-star-as.js
+  - [x] (2026-05-26T22:30:09-06:00) test/language/module-code/instn-named-err-dflt-thru-star-dflt.js
+  - [x] (2026-05-26T22:30:30-06:00) test/language/module-code/instn-named-err-not-found-as.js
+  - [x] (2026-05-26T22:30:50-06:00) test/language/module-code/instn-named-err-not-found-dflt.js
+  - [x] (2026-05-26T22:31:11-06:00) test/language/module-code/instn-named-err-not-found.js
+  - [x] (2026-05-26T22:32:01-06:00) test/language/module-code/instn-named-id-name.js
+  - [x] (2026-05-26T22:34:18-06:00) test/language/module-code/instn-named-iee-cycle.js
+  - [x] (2026-05-26T22:34:55-06:00) test/language/module-code/instn-named-star-cycle.js
+  - [x] (2026-05-26T22:35:37-06:00) test/language/module-code/instn-once.js
+  - [x] (2026-05-26T22:35:58-06:00) test/language/module-code/instn-resolve-empty-export.js
+  - [x] (2026-05-26T22:36:30-06:00) test/language/module-code/instn-resolve-empty-import.js
+  - [x] (2026-05-26T22:37:10-06:00) test/language/module-code/instn-resolve-err-syntax-1.js
+  - [x] (2026-05-26T22:37:32-06:00) test/language/module-code/instn-resolve-err-syntax-2.js
+  - [x] (2026-05-26T22:37:54-06:00) test/language/module-code/instn-resolve-order-depth.js
+  - [x] (2026-05-26T22:38:13-06:00) test/language/module-code/instn-resolve-order-src.js
+  - [x] (2026-05-26T22:38:42-06:00) test/language/module-code/instn-same-global.js
+  - [x] (2026-05-26T22:39:31-06:00) test/language/module-code/instn-star-as-props-dflt-skip.js
+  - [x] (2026-05-26T22:39:55-06:00) test/language/module-code/instn-star-binding.js
+  - [x] (2026-05-26T22:40:27-06:00) test/language/module-code/instn-star-equality.js
+  - [x] (2026-05-26T22:40:48-06:00) test/language/module-code/instn-star-err-not-found.js
+  - [x] (2026-05-26T22:41:36-06:00) test/language/module-code/instn-star-id-name.js
+  - [x] (2026-05-26T22:43:49-06:00) test/language/module-code/instn-star-iee-cycle.js
+  - [x] (2026-05-26T22:44:27-06:00) test/language/module-code/instn-star-props-circular.js
+  - [x] (2026-05-26T22:45:04-06:00) test/language/module-code/instn-star-props-dflt-keep-indirect.js
+  - [x] (2026-05-26T22:45:36-06:00) test/language/module-code/instn-star-props-dflt-keep-local.js
+  - [x] (2026-05-26T22:46:20-06:00) test/language/module-code/instn-star-props-dflt-skip.js
+  - [x] (2026-05-26T22:53:31-06:00) test/language/module-code/instn-star-props-nrml.js
+  - [x] (2026-05-26T22:54:10-06:00) test/language/module-code/instn-star-star-cycle.js
+  - [x] (2026-05-26T23:06:59-06:00) test/language/module-code/instn-uniq-env-rec.js
+  - [x] (2026-05-26T23:07:37-06:00) test/language/module-code/invalid-private-names-call-expression-bad-reference.js
+  - [x] (2026-05-26T23:08:06-06:00) test/language/module-code/invalid-private-names-call-expression-this.js
+  - [x] (2026-05-26T23:08:30-06:00) test/language/module-code/invalid-private-names-member-expression-bad-reference.js
+  - [x] (2026-05-26T23:08:56-06:00) test/language/module-code/invalid-private-names-member-expression-this.js
+  - [x] (2026-05-26T23:09:33-06:00) test/language/module-code/namespace/Symbol.iterator.js
+  - [x] (2026-05-26T23:15:49-06:00) test/language/module-code/namespace/Symbol.toStringTag.js
+  - [ ] (SKIPPED 2026-05-27T00:16:38-06:00 after 1h) test/language/module-code/namespace/internals/define-own-property.js
+  - [x] (2026-05-27T00:17:39-06:00) test/language/module-code/namespace/internals/delete-exported-init.js
+  - [x] (2026-05-27T00:18:30-06:00) test/language/module-code/namespace/internals/delete-exported-uninit.js
+  - [x] (2026-05-27T00:24:50-06:00) test/language/module-code/namespace/internals/delete-non-exported.js
+  - [x] (2026-05-27T00:37:30-06:00) test/language/module-code/namespace/internals/enumerate-binding-uninit.js
+  - [x] (2026-05-27T00:38:28-06:00) test/language/module-code/namespace/internals/get-nested-namespace-dflt-skip.js
+  - [x] (2026-05-27T00:39:57-06:00) test/language/module-code/namespace/internals/get-nested-namespace-props-nrml.js
+  - [x] (2026-05-27T00:41:53-06:00) test/language/module-code/namespace/internals/get-own-property-str-found-init.js
+  - [x] (2026-05-27T00:52:35-06:00) test/language/module-code/namespace/internals/get-own-property-str-found-uninit.js
+  - [x] (2026-05-27T01:05:22-06:00) test/language/module-code/namespace/internals/get-own-property-str-not-found.js
+  - [x] (2026-05-27T01:17:57-06:00) test/language/module-code/namespace/internals/get-own-property-sym.js
+  - [x] (2026-05-27T01:25:02-06:00) test/language/module-code/namespace/internals/get-prototype-of.js
+  - [x] (2026-05-27T01:26:01-06:00) test/language/module-code/namespace/internals/get-str-found-init.js
+  - [x] (2026-05-27T01:26:41-06:00) test/language/module-code/namespace/internals/get-str-found-uninit.js
+  - [x] (2026-05-27T01:27:15-06:00) test/language/module-code/namespace/internals/get-str-initialize.js
+  - [x] (2026-05-27T01:28:17-06:00) test/language/module-code/namespace/internals/get-str-not-found.js
+  - [x] (2026-05-27T01:28:48-06:00) test/language/module-code/namespace/internals/get-str-update.js
+  - [x] (2026-05-27T01:29:22-06:00) test/language/module-code/namespace/internals/get-sym-found.js
+  - [x] (2026-05-27T01:29:53-06:00) test/language/module-code/namespace/internals/get-sym-not-found.js
+  - [x] (2026-05-27T01:30:27-06:00) test/language/module-code/namespace/internals/has-property-str-found-init.js
+  - [x] (2026-05-27T01:31:05-06:00) test/language/module-code/namespace/internals/has-property-str-found-uninit.js
+  - [x] (2026-05-27T01:35:29-06:00) test/language/module-code/namespace/internals/has-property-str-not-found.js
+  - [x] (2026-05-27T01:40:05-06:00) test/language/module-code/namespace/internals/has-property-sym-found.js
+  - [x] (2026-05-27T01:40:52-06:00) test/language/module-code/namespace/internals/has-property-sym-not-found.js
+  - [x] (2026-05-27T01:41:27-06:00) test/language/module-code/namespace/internals/is-extensible.js
+  - [x] (2026-05-27T01:41:53-06:00) test/language/module-code/namespace/internals/object-hasOwnProperty-binding-uninit.js
+  - [x] (2026-05-27T01:44:49-06:00) test/language/module-code/namespace/internals/object-keys-binding-uninit.js
+  - [x] (2026-05-27T01:47:16-06:00) test/language/module-code/namespace/internals/object-propertyIsEnumerable-binding-uninit.js
+  - [x] (2026-05-27T02:28:05-06:00) test/language/module-code/namespace/internals/own-property-keys-binding-types.js
+  - [x] (2026-05-27T02:29:02-06:00) test/language/module-code/namespace/internals/own-property-keys-sort.js
+  - [x] (2026-05-27T02:30:04-06:00) test/language/module-code/namespace/internals/prevent-extensions.js
+  - [x] (2026-05-27T02:31:00-06:00) test/language/module-code/namespace/internals/set-prototype-of-null.js
+  - [x] (2026-05-27T02:31:50-06:00) test/language/module-code/namespace/internals/set-prototype-of.js
+  - [x] (2026-05-27T02:52:04-06:00) test/language/module-code/namespace/internals/set.js
+  - [x] (2026-05-27T02:52:44-06:00) test/language/module-code/parse-err-decl-pos-export-arrow-function.js
+  - [x] (2026-05-27T02:53:08-06:00) test/language/module-code/parse-err-decl-pos-export-block-stmt-list.js
+  - [x] (2026-05-27T02:53:35-06:00) test/language/module-code/parse-err-decl-pos-export-block-stmt.js
+  - [x] (2026-05-27T02:54:01-06:00) test/language/module-code/parse-err-decl-pos-export-class-decl-meth-static.js
+  - [x] (2026-05-27T02:54:34-06:00) test/language/module-code/parse-err-decl-pos-export-class-decl-meth.js
+  - [x] (2026-05-27T02:55:00-06:00) test/language/module-code/parse-err-decl-pos-export-class-decl-method-gen-static.js
+  - [x] (2026-05-27T02:55:28-06:00) test/language/module-code/parse-err-decl-pos-export-class-decl-method-gen.js
+  - [x] (2026-05-27T02:55:54-06:00) test/language/module-code/parse-err-decl-pos-export-class-expr-meth-gen-static.js
+  - [x] (2026-05-27T02:57:59-06:00) test/language/module-code/parse-err-decl-pos-export-class-expr-meth-gen.js
+  - [x] (2026-05-27T02:58:39-06:00) test/language/module-code/parse-err-decl-pos-export-class-expr-meth-static.js
+  - [x] (2026-05-27T02:59:05-06:00) test/language/module-code/parse-err-decl-pos-export-class-expr-meth.js
+  - [x] (2026-05-27T02:59:41-06:00) test/language/module-code/parse-err-decl-pos-export-do-while.js
+  - [x] (2026-05-27T03:00:10-06:00) test/language/module-code/parse-err-decl-pos-export-for-const.js
+  - [x] (2026-05-27T03:00:30-06:00) test/language/module-code/parse-err-decl-pos-export-for-in-const.js
+  - [x] (2026-05-27T03:00:51-06:00) test/language/module-code/parse-err-decl-pos-export-for-in-let.js
+  - [x] (2026-05-27T03:01:13-06:00) test/language/module-code/parse-err-decl-pos-export-for-in-lhs.js
+  - [x] (2026-05-27T03:01:38-06:00) test/language/module-code/parse-err-decl-pos-export-for-in-var.js
+  - [x] (2026-05-27T03:02:00-06:00) test/language/module-code/parse-err-decl-pos-export-for-let.js
+  - [x] (2026-05-27T03:02:19-06:00) test/language/module-code/parse-err-decl-pos-export-for-lhs.js
+  - [x] (2026-05-27T03:02:40-06:00) test/language/module-code/parse-err-decl-pos-export-for-of-const.js
+  - [x] (2026-05-27T03:03:00-06:00) test/language/module-code/parse-err-decl-pos-export-for-of-let.js
+  - [x] (2026-05-27T03:03:21-06:00) test/language/module-code/parse-err-decl-pos-export-for-of-lhs.js
+  - [x] (2026-05-27T03:03:43-06:00) test/language/module-code/parse-err-decl-pos-export-for-of-var.js
+  - [x] (2026-05-27T03:04:02-06:00) test/language/module-code/parse-err-decl-pos-export-for-var.js
+  - [x] (2026-05-27T03:04:27-06:00) test/language/module-code/parse-err-decl-pos-export-function-decl.js
+  - [x] (2026-05-27T03:04:48-06:00) test/language/module-code/parse-err-decl-pos-export-function-expr.js
+  - [x] (2026-05-27T03:05:12-06:00) test/language/module-code/parse-err-decl-pos-export-generator-decl.js
+  - [x] (2026-05-27T03:05:32-06:00) test/language/module-code/parse-err-decl-pos-export-generator-expr.js
+  - [x] (2026-05-27T03:06:04-06:00) test/language/module-code/parse-err-decl-pos-export-if-else.js
+  - [x] (2026-05-27T03:06:26-06:00) test/language/module-code/parse-err-decl-pos-export-if-if.js
+  - [x] (2026-05-27T03:06:47-06:00) test/language/module-code/parse-err-decl-pos-export-labeled.js
+  - [x] (2026-05-27T03:07:10-06:00) test/language/module-code/parse-err-decl-pos-export-object-gen-method.js
+  - [x] (2026-05-27T03:07:32-06:00) test/language/module-code/parse-err-decl-pos-export-object-getter.js
+  - [x] (2026-05-27T03:07:52-06:00) test/language/module-code/parse-err-decl-pos-export-object-method.js
+  - [x] (2026-05-27T03:08:33-06:00) test/language/module-code/parse-err-decl-pos-export-object-setter.js
+  - [x] (2026-05-27T03:08:52-06:00) test/language/module-code/parse-err-decl-pos-export-switch-case-dflt.js
+  - [x] (2026-05-27T03:09:18-06:00) test/language/module-code/parse-err-decl-pos-export-switch-case.js
+  - [x] (2026-05-27T03:09:38-06:00) test/language/module-code/parse-err-decl-pos-export-switch-dftl.js
+  - [x] (2026-05-27T03:10:04-06:00) test/language/module-code/parse-err-decl-pos-export-try-catch-finally.js
+  - [x] (2026-05-27T03:10:31-06:00) test/language/module-code/parse-err-decl-pos-export-try-catch.js
+  - [x] (2026-05-27T03:10:59-06:00) test/language/module-code/parse-err-decl-pos-export-try-finally.js
+  - [x] (2026-05-27T03:11:22-06:00) test/language/module-code/parse-err-decl-pos-export-try-try.js
+  - [x] (2026-05-27T03:11:49-06:00) test/language/module-code/parse-err-decl-pos-export-while.js
+  - [x] (2026-05-27T03:12:14-06:00) test/language/module-code/parse-err-decl-pos-import-arrow-function.js
+  - [x] (2026-05-27T03:12:35-06:00) test/language/module-code/parse-err-decl-pos-import-block-stmt-list.js
+  - [x] (2026-05-27T03:12:55-06:00) test/language/module-code/parse-err-decl-pos-import-block-stmt.js
+  - [x] (2026-05-27T03:13:18-06:00) test/language/module-code/parse-err-decl-pos-import-class-decl-meth-static.js
+  - [x] (2026-05-27T03:13:39-06:00) test/language/module-code/parse-err-decl-pos-import-class-decl-meth.js
+  - [x] (2026-05-27T03:14:04-06:00) test/language/module-code/parse-err-decl-pos-import-class-decl-method-gen-static.js
+  - [x] (2026-05-27T03:14:25-06:00) test/language/module-code/parse-err-decl-pos-import-class-decl-method-gen.js
+  - [x] (2026-05-27T03:14:52-06:00) test/language/module-code/parse-err-decl-pos-import-class-expr-meth-gen-static.js
+  - [x] (2026-05-27T03:15:15-06:00) test/language/module-code/parse-err-decl-pos-import-class-expr-meth-gen.js
+  - [x] (2026-05-27T03:15:37-06:00) test/language/module-code/parse-err-decl-pos-import-class-expr-meth-static.js
+  - [x] (2026-05-27T03:16:01-06:00) test/language/module-code/parse-err-decl-pos-import-class-expr-meth.js
+  - [x] (2026-05-27T03:16:23-06:00) test/language/module-code/parse-err-decl-pos-import-do-while.js
+  - [x] (2026-05-27T03:16:42-06:00) test/language/module-code/parse-err-decl-pos-import-for-const.js
+  - [x] (2026-05-27T03:17:05-06:00) test/language/module-code/parse-err-decl-pos-import-for-in-const.js
+  - [x] (2026-05-27T03:17:28-06:00) test/language/module-code/parse-err-decl-pos-import-for-in-let.js
+  - [x] (2026-05-27T03:17:51-06:00) test/language/module-code/parse-err-decl-pos-import-for-in-lhs.js
+  - [x] (2026-05-27T03:18:16-06:00) test/language/module-code/parse-err-decl-pos-import-for-in-var.js
+  - [x] (2026-05-27T03:18:41-06:00) test/language/module-code/parse-err-decl-pos-import-for-let.js
+  - [x] (2026-05-27T03:19:01-06:00) test/language/module-code/parse-err-decl-pos-import-for-lhs.js
+  - [x] (2026-05-27T03:19:24-06:00) test/language/module-code/parse-err-decl-pos-import-for-of-const.js
+  - [x] (2026-05-27T03:19:47-06:00) test/language/module-code/parse-err-decl-pos-import-for-of-let.js
+  - [x] (2026-05-27T03:20:15-06:00) test/language/module-code/parse-err-decl-pos-import-for-of-lhs.js
+  - [x] (2026-05-27T03:20:37-06:00) test/language/module-code/parse-err-decl-pos-import-for-of-var.js
+  - [x] (2026-05-27T03:20:55-06:00) test/language/module-code/parse-err-decl-pos-import-for-var.js
+  - [x] (2026-05-27T03:21:20-06:00) test/language/module-code/parse-err-decl-pos-import-function-decl.js
+  - [x] (2026-05-27T03:21:45-06:00) test/language/module-code/parse-err-decl-pos-import-function-expr.js
+  - [x] (2026-05-27T03:22:09-06:00) test/language/module-code/parse-err-decl-pos-import-generator-decl.js
+  - [x] (2026-05-27T03:22:37-06:00) test/language/module-code/parse-err-decl-pos-import-generator-expr.js
+  - [x] (2026-05-27T03:22:58-06:00) test/language/module-code/parse-err-decl-pos-import-if-else.js
+  - [x] (2026-05-27T03:23:21-06:00) test/language/module-code/parse-err-decl-pos-import-if-if.js
+  - [x] (2026-05-27T03:23:46-06:00) test/language/module-code/parse-err-decl-pos-import-labeled.js
+  - [x] (2026-05-27T03:24:09-06:00) test/language/module-code/parse-err-decl-pos-import-object-gen-method.js
+  - [x] (2026-05-27T03:24:34-06:00) test/language/module-code/parse-err-decl-pos-import-object-getter.js
+  - [x] (2026-05-27T03:25:01-06:00) test/language/module-code/parse-err-decl-pos-import-object-method.js
+  - [x] (2026-05-27T03:25:20-06:00) test/language/module-code/parse-err-decl-pos-import-object-setter.js
+  - [x] (2026-05-27T03:25:47-06:00) test/language/module-code/parse-err-decl-pos-import-switch-case-dflt.js
+  - [x] (2026-05-27T03:26:22-06:00) test/language/module-code/parse-err-decl-pos-import-switch-case.js
+  - [x] (2026-05-27T03:26:50-06:00) test/language/module-code/parse-err-decl-pos-import-switch-dftl.js
+  - [x] (2026-05-27T03:27:10-06:00) test/language/module-code/parse-err-decl-pos-import-try-catch-finally.js
+  - [x] (2026-05-27T03:27:37-06:00) test/language/module-code/parse-err-decl-pos-import-try-catch.js
+  - [x] (2026-05-27T03:28:04-06:00) test/language/module-code/parse-err-decl-pos-import-try-finally.js
+  - [x] (2026-05-27T03:28:25-06:00) test/language/module-code/parse-err-decl-pos-import-try-try.js
+  - [x] (2026-05-27T03:28:51-06:00) test/language/module-code/parse-err-decl-pos-import-while.js
+  - [x] (2026-05-27T03:29:22-06:00) test/language/module-code/parse-err-export-dflt-const.js
+  - [x] (2026-05-27T03:29:43-06:00) test/language/module-code/parse-err-export-dflt-expr.js
+  - [x] (2026-05-27T03:30:10-06:00) test/language/module-code/parse-err-export-dflt-let.js
+  - [x] (2026-05-27T03:30:30-06:00) test/language/module-code/parse-err-export-dflt-var.js
+  - [x] (2026-05-27T03:30:58-06:00) test/language/module-code/parse-err-hoist-lex-fun.js
+  - [x] (2026-05-27T03:31:18-06:00) test/language/module-code/parse-err-hoist-lex-gen.js
+  - [x] (2026-05-27T03:31:48-06:00) test/language/module-code/parse-err-invoke-anon-fun-decl.js
+  - [x] (2026-05-27T03:32:18-06:00) test/language/module-code/parse-err-invoke-anon-gen-decl.js
+  - [x] (2026-05-27T03:32:40-06:00) test/language/module-code/parse-err-return.js
+  - [x] (2026-05-27T03:33:08-06:00) test/language/module-code/parse-err-semi-dflt-expr.js
+  - [x] (2026-05-27T03:33:35-06:00) test/language/module-code/parse-err-semi-export-star.js
+  - [x] (2026-05-27T03:33:56-06:00) test/language/module-code/parse-err-semi-name-space-export.js
+  - [x] (2026-05-27T03:34:25-06:00) test/language/module-code/parse-err-semi-named-export-from.js
+  - [x] (2026-05-27T03:43:45-06:00) test/language/module-code/parse-err-semi-named-export.js
+  - [x] (2026-05-27T03:44:04-06:00) test/language/module-code/parse-err-syntax-1.js
+  - [x] (2026-05-27T03:44:23-06:00) test/language/module-code/parse-err-syntax-2.js
+  - [x] (2026-05-27T03:44:43-06:00) test/language/module-code/parse-err-yield.js
+  - [x] (2026-05-27T03:45:10-06:00) test/language/module-code/parse-export-empty.js
+  - [x] (2026-05-27T03:45:29-06:00) test/language/module-code/private-identifiers-not-empty.js
+  - [x] (2026-05-27T03:45:54-06:00) test/language/module-code/privatename-not-valid-earlyerr-module-1.js
+  - [x] (2026-05-27T03:46:25-06:00) test/language/module-code/privatename-not-valid-earlyerr-module-2.js
+  - [x] (2026-05-27T03:46:47-06:00) test/language/module-code/privatename-not-valid-earlyerr-module-3.js
+  - [x] (2026-05-27T03:47:10-06:00) test/language/module-code/privatename-not-valid-earlyerr-module-4.js
+  - [x] (2026-05-27T03:47:30-06:00) test/language/module-code/privatename-not-valid-earlyerr-module-5.js
+  - [x] (2026-05-27T03:47:52-06:00) test/language/module-code/privatename-not-valid-earlyerr-module-6.js
+  - [x] (2026-05-27T03:48:17-06:00) test/language/module-code/privatename-not-valid-earlyerr-module-7.js
+  - [x] (2026-05-27T03:48:44-06:00) test/language/module-code/privatename-not-valid-earlyerr-module-8.js
+  - [x] (2026-05-27T04:43:13-06:00) test/language/module-code/privatename-valid-no-earlyerr.js
+  - [x] (2026-05-27T04:46:36-06:00) test/language/module-code/source-phase-import/import-source.js
+  - [x] (2026-05-27T04:56:22-06:00) test/language/module-code/top-level-await/async-module-does-not-block-sibling-modules.js
+  - [x] (2026-05-27T05:06:54-06:00) test/language/module-code/top-level-await/await-awaits-thenable-not-callable.js
+  - [x] (2026-05-27T05:10:03-06:00) test/language/module-code/top-level-await/await-awaits-thenables-that-throw.js
+  - [x] (2026-05-27T05:10:32-06:00) test/language/module-code/top-level-await/await-awaits-thenables.js
+  - [x] (2026-05-27T05:30:57-06:00) test/language/module-code/top-level-await/await-dynamic-import-rejection.js
+  - [x] (2026-05-27T05:32:34-06:00) test/language/module-code/top-level-await/await-dynamic-import-resolution.js
+  - [x] (2026-05-27T05:43:24-06:00) test/language/module-code/top-level-await/await-expr-func-expression.js
+  - [x] (2026-05-27T05:44:04-06:00) test/language/module-code/top-level-await/await-expr-new-expr-reject.js
+  - [x] (2026-05-27T05:44:42-06:00) test/language/module-code/top-level-await/await-expr-new-expr.js
+  - [x] (2026-05-27T05:47:40-06:00) test/language/module-code/top-level-await/await-expr-regexp.js
+  - [x] (2026-05-27T05:48:48-06:00) test/language/module-code/top-level-await/await-expr-reject-throws.js
+  - [x] (2026-05-27T06:01:45-06:00) test/language/module-code/top-level-await/await-expr-resolution.js
+  - [x] (2026-05-27T06:02:26-06:00) test/language/module-code/top-level-await/await-void-expr.js
+  - [x] (2026-05-27T06:22:55-06:00) test/language/module-code/top-level-await/dfs-invariant.js
+  - [x] (2026-05-27T07:12:19-06:00) test/language/module-code/top-level-await/dynamic-import-of-waiting-module.js
+  - [x] (2026-05-27T07:13:09-06:00) test/language/module-code/top-level-await/dynamic-import-rejection.js
+  - [x] (2026-05-27T07:13:47-06:00) test/language/module-code/top-level-await/dynamic-import-resolution.js
+  - [x] (2026-05-27T07:14:10-06:00) test/language/module-code/top-level-await/early-errors-await-not-simple-assignment-target.js
+  - [x] (2026-05-29T13:25:05-06:00) test/language/module-code/top-level-await/fulfillment-order.js
+  - [x] (2026-05-27T08:14:33-06:00) test/language/module-code/top-level-await/if-await-expr.js
+  - [x] (2026-05-27T08:36:12-06:00) test/language/module-code/top-level-await/module-async-import-async-resolution-ticks.js
+  - [x] (2026-05-27T08:38:14-06:00) test/language/module-code/top-level-await/module-graphs-does-not-hang.js
+  - [x] (2026-05-27T08:39:02-06:00) test/language/module-code/top-level-await/module-import-rejection-body.js
+  - [x] (2026-05-27T08:39:44-06:00) test/language/module-code/top-level-await/module-import-rejection-tick.js
+  - [x] (2026-05-27T08:40:10-06:00) test/language/module-code/top-level-await/module-import-rejection.js
+  - [x] (2026-05-27T08:50:53-06:00) test/language/module-code/top-level-await/module-import-resolution.js
+  - [x] (2026-05-27T09:13:01-06:00) test/language/module-code/top-level-await/module-import-unwrapped.js
+  - [x] (2026-05-27T09:30:40-06:00) test/language/module-code/top-level-await/module-self-import-async-resolution-ticks.js
+  - [x] (2026-05-27T09:31:32-06:00) test/language/module-code/top-level-await/module-sync-import-async-resolution-ticks.js
+  - [x] (2026-05-27T09:46:58-06:00) test/language/module-code/top-level-await/new-await-parens.js
+  - [x] (2026-05-27T09:49:46-06:00) test/language/module-code/top-level-await/new-await-script-code.js
+  - [x] (2026-05-27T09:50:38-06:00) test/language/module-code/top-level-await/new-await.js
+  - [x] (2026-05-27T09:51:19-06:00) test/language/module-code/top-level-await/no-operand.js
+  - [x] (2026-05-27T09:52:06-06:00) test/language/module-code/top-level-await/pending-async-dep-from-cycle.js
+  - [x] (2026-05-27T11:02:45-06:00) test/language/module-code/top-level-await/rejection-order.js
+  - [x] (2026-05-27T11:04:46-06:00) test/language/module-code/top-level-await/syntax/await-expr-dyn-import.js
+  - [x] (2026-05-27T11:05:21-06:00) test/language/module-code/top-level-await/syntax/block-await-expr-array-literal.js
+  - [x] (2026-05-27T11:05:59-06:00) test/language/module-code/top-level-await/syntax/block-await-expr-func-expression.js
+  - [x] (2026-05-27T11:06:26-06:00) test/language/module-code/top-level-await/syntax/block-await-expr-identifier.js
+  - [x] (2026-05-27T11:06:54-06:00) test/language/module-code/top-level-await/syntax/block-await-expr-literal-number.js
+  - [x] (2026-05-27T11:07:27-06:00) test/language/module-code/top-level-await/syntax/block-await-expr-literal-string.js
+  - [x] (2026-05-27T11:08:13-06:00) test/language/module-code/top-level-await/syntax/block-await-expr-nested.js
+  - [x] (2026-05-27T11:08:39-06:00) test/language/module-code/top-level-await/syntax/block-await-expr-new-expr.js
+  - [x] (2026-05-27T11:09:05-06:00) test/language/module-code/top-level-await/syntax/block-await-expr-null.js
+  - [x] (2026-05-27T11:09:31-06:00) test/language/module-code/top-level-await/syntax/block-await-expr-obj-literal.js
+  - [x] (2026-05-27T11:09:58-06:00) test/language/module-code/top-level-await/syntax/block-await-expr-regexp.js
+  - [x] (2026-05-27T11:10:35-06:00) test/language/module-code/top-level-await/syntax/block-await-expr-template-literal.js
+  - [x] (2026-05-27T11:11:03-06:00) test/language/module-code/top-level-await/syntax/block-await-expr-this.js
+  - [x] (2026-05-27T11:20:09-06:00) test/language/module-code/top-level-await/syntax/catch-parameter.js
+  - [x] (2026-05-27T11:20:43-06:00) test/language/module-code/top-level-await/syntax/early-does-not-propagate-to-fn-declaration-body.js
+  - [x] (2026-05-27T11:21:13-06:00) test/language/module-code/top-level-await/syntax/early-does-not-propagate-to-fn-declaration-params.js
+  - [x] (2026-05-27T11:21:45-06:00) test/language/module-code/top-level-await/syntax/early-does-not-propagate-to-fn-expr-body.js
+  - [x] (2026-05-27T11:22:18-06:00) test/language/module-code/top-level-await/syntax/early-does-not-propagate-to-fn-expr-params.js
+  - [x] (2026-05-27T11:22:49-06:00) test/language/module-code/top-level-await/syntax/early-no-escaped-await.js
+  - [x] (2026-05-27T11:23:27-06:00) test/language/module-code/top-level-await/syntax/export-class-decl-await-expr-array-literal.js
+  - [x] (2026-05-27T11:24:02-06:00) test/language/module-code/top-level-await/syntax/export-class-decl-await-expr-func-expression.js
+  - [x] (2026-05-27T11:24:35-06:00) test/language/module-code/top-level-await/syntax/export-class-decl-await-expr-identifier.js
+  - [x] (2026-05-27T11:25:08-06:00) test/language/module-code/top-level-await/syntax/export-class-decl-await-expr-literal-number.js
+  - [x] (2026-05-27T11:25:43-06:00) test/language/module-code/top-level-await/syntax/export-class-decl-await-expr-literal-string.js
+  - [x] (2026-05-27T11:26:11-06:00) test/language/module-code/top-level-await/syntax/export-class-decl-await-expr-nested.js
+  - [x] (2026-05-27T11:27:08-06:00) test/language/module-code/top-level-await/syntax/export-class-decl-await-expr-new-expr.js
+  - [x] (2026-05-27T11:27:44-06:00) test/language/module-code/top-level-await/syntax/export-class-decl-await-expr-null.js
+  - [x] (2026-05-27T11:28:30-06:00) test/language/module-code/top-level-await/syntax/export-class-decl-await-expr-obj-literal.js
+  - [x] (2026-05-27T11:29:09-06:00) test/language/module-code/top-level-await/syntax/export-class-decl-await-expr-regexp.js
+  - [x] (2026-05-27T11:29:55-06:00) test/language/module-code/top-level-await/syntax/export-class-decl-await-expr-template-literal.js
+  - [x] (2026-05-27T11:30:37-06:00) test/language/module-code/top-level-await/syntax/export-class-decl-await-expr-this.js
+  - [x] (2026-05-27T11:45:07-06:00) test/language/module-code/top-level-await/syntax/export-dflt-assign-expr-await-expr-array-literal.js
+  - [x] (2026-05-27T11:46:17-06:00) test/language/module-code/top-level-await/syntax/export-dflt-assign-expr-await-expr-func-expression.js
+  - [x] (2026-05-27T11:46:58-06:00) test/language/module-code/top-level-await/syntax/export-dflt-assign-expr-await-expr-identifier.js
+  - [x] (2026-05-27T11:47:41-06:00) test/language/module-code/top-level-await/syntax/export-dflt-assign-expr-await-expr-literal-number.js
+  - [x] (2026-05-27T11:48:24-06:00) test/language/module-code/top-level-await/syntax/export-dflt-assign-expr-await-expr-literal-string.js
+  - [x] (2026-05-27T11:49:06-06:00) test/language/module-code/top-level-await/syntax/export-dflt-assign-expr-await-expr-nested.js
+  - [x] (2026-05-27T11:49:44-06:00) test/language/module-code/top-level-await/syntax/export-dflt-assign-expr-await-expr-new-expr.js
+  - [x] (2026-05-27T11:50:25-06:00) test/language/module-code/top-level-await/syntax/export-dflt-assign-expr-await-expr-null.js
+  - [x] (2026-05-27T11:51:11-06:00) test/language/module-code/top-level-await/syntax/export-dflt-assign-expr-await-expr-obj-literal.js
+  - [x] (2026-05-27T11:51:50-06:00) test/language/module-code/top-level-await/syntax/export-dflt-assign-expr-await-expr-regexp.js
+  - [x] (2026-05-27T11:52:27-06:00) test/language/module-code/top-level-await/syntax/export-dflt-assign-expr-await-expr-template-literal.js
+  - [x] (2026-05-27T11:53:11-06:00) test/language/module-code/top-level-await/syntax/export-dflt-assign-expr-await-expr-this.js
+  - [x] (2026-05-27T11:53:54-06:00) test/language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-array-literal.js
+  - [x] (2026-05-27T11:54:37-06:00) test/language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-func-expression.js
+  - [x] (2026-05-27T11:55:23-06:00) test/language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-identifier.js
+  - [x] (2026-05-27T11:56:10-06:00) test/language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-literal-number.js
+  - [x] (2026-05-27T11:57:00-06:00) test/language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-literal-string.js
+  - [x] (2026-05-27T11:57:51-06:00) test/language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-nested.js
+  - [x] (2026-05-27T11:58:47-06:00) test/language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-new-expr.js
+  - [x] (2026-05-27T11:59:34-06:00) test/language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-null.js
+  - [x] (2026-05-27T12:00:27-06:00) test/language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-obj-literal.js
+  - [x] (2026-05-27T12:01:11-06:00) test/language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-regexp.js
+  - [x] (2026-05-27T12:01:54-06:00) test/language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-template-literal.js
+  - [x] (2026-05-27T12:03:58-06:00) test/language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-this.js
+  - [x] (2026-05-27T12:04:36-06:00) test/language/module-code/top-level-await/syntax/export-lex-decl-await-expr-array-literal.js
+  - [x] (2026-05-27T12:05:16-06:00) test/language/module-code/top-level-await/syntax/export-lex-decl-await-expr-func-expression.js
+  - [x] (2026-05-27T12:05:56-06:00) test/language/module-code/top-level-await/syntax/export-lex-decl-await-expr-identifier.js
+  - [x] (2026-05-27T12:06:36-06:00) test/language/module-code/top-level-await/syntax/export-lex-decl-await-expr-literal-number.js
+  - [x] (2026-05-27T12:07:13-06:00) test/language/module-code/top-level-await/syntax/export-lex-decl-await-expr-literal-string.js
+  - [x] (2026-05-27T12:07:55-06:00) test/language/module-code/top-level-await/syntax/export-lex-decl-await-expr-nested.js
+  - [x] (2026-05-27T12:08:36-06:00) test/language/module-code/top-level-await/syntax/export-lex-decl-await-expr-new-expr.js
+  - [x] (2026-05-27T12:09:16-06:00) test/language/module-code/top-level-await/syntax/export-lex-decl-await-expr-null.js
+  - [x] (2026-05-27T12:09:54-06:00) test/language/module-code/top-level-await/syntax/export-lex-decl-await-expr-obj-literal.js
+  - [x] (2026-05-27T12:10:34-06:00) test/language/module-code/top-level-await/syntax/export-lex-decl-await-expr-regexp.js
+  - [x] (2026-05-27T12:11:15-06:00) test/language/module-code/top-level-await/syntax/export-lex-decl-await-expr-template-literal.js
+  - [x] (2026-05-27T12:11:52-06:00) test/language/module-code/top-level-await/syntax/export-lex-decl-await-expr-this.js
+  - [x] (2026-05-27T12:12:27-06:00) test/language/module-code/top-level-await/syntax/export-var-await-expr-array-literal.js
+  - [x] (2026-05-27T12:13:04-06:00) test/language/module-code/top-level-await/syntax/export-var-await-expr-func-expression.js
+  - [x] (2026-05-27T12:13:53-06:00) test/language/module-code/top-level-await/syntax/export-var-await-expr-identifier.js
+  - [x] (2026-05-27T12:14:37-06:00) test/language/module-code/top-level-await/syntax/export-var-await-expr-literal-number.js
+  - [x] (2026-05-27T12:15:13-06:00) test/language/module-code/top-level-await/syntax/export-var-await-expr-literal-string.js
+  - [x] (2026-05-27T12:15:50-06:00) test/language/module-code/top-level-await/syntax/export-var-await-expr-nested.js
+  - [x] (2026-05-27T12:16:26-06:00) test/language/module-code/top-level-await/syntax/export-var-await-expr-new-expr.js
+  - [x] (2026-05-27T12:17:03-06:00) test/language/module-code/top-level-await/syntax/export-var-await-expr-null.js
+  - [x] (2026-05-27T12:17:44-06:00) test/language/module-code/top-level-await/syntax/export-var-await-expr-obj-literal.js
+  - [x] (2026-05-27T12:18:20-06:00) test/language/module-code/top-level-await/syntax/export-var-await-expr-regexp.js
+  - [x] (2026-05-27T12:18:58-06:00) test/language/module-code/top-level-await/syntax/export-var-await-expr-template-literal.js
+  - [x] (2026-05-27T12:19:39-06:00) test/language/module-code/top-level-await/syntax/export-var-await-expr-this.js
+  - [x] (2026-05-27T12:57:52-06:00) test/language/module-code/top-level-await/syntax/for-await-await-expr-array-literal.js
+  - [x] (2026-05-27T13:04:15-06:00) test/language/module-code/top-level-await/syntax/for-await-await-expr-func-expression.js
+  - [x] (2026-05-27T13:05:27-06:00) test/language/module-code/top-level-await/syntax/for-await-await-expr-identifier.js
+  - [x] (2026-05-27T13:06:18-06:00) test/language/module-code/top-level-await/syntax/for-await-await-expr-literal-number.js
+  - [x] (2026-05-27T13:07:07-06:00) test/language/module-code/top-level-await/syntax/for-await-await-expr-literal-string.js
+  - [x] (2026-05-27T13:08:18-06:00) test/language/module-code/top-level-await/syntax/for-await-await-expr-nested.js
+  - [x] (2026-05-27T13:09:27-06:00) test/language/module-code/top-level-await/syntax/for-await-await-expr-new-expr.js
+  - [x] (2026-05-27T13:10:30-06:00) test/language/module-code/top-level-await/syntax/for-await-await-expr-null.js
+  - [x] (2026-05-27T13:16:29-06:00) test/language/module-code/top-level-await/syntax/for-await-await-expr-obj-literal.js
+  - [x] (2026-05-27T13:17:44-06:00) test/language/module-code/top-level-await/syntax/for-await-await-expr-regexp.js
+  - [x] (2026-05-27T13:18:35-06:00) test/language/module-code/top-level-await/syntax/for-await-await-expr-template-literal.js
+  - [x] (2026-05-27T13:19:50-06:00) test/language/module-code/top-level-await/syntax/for-await-await-expr-this.js
+  - [x] (2026-05-27T13:20:47-06:00) test/language/module-code/top-level-await/syntax/for-await-expr-array-literal.js
+  - [x] (2026-05-27T13:21:23-06:00) test/language/module-code/top-level-await/syntax/for-await-expr-func-expression.js
+  - [x] (2026-05-27T13:22:03-06:00) test/language/module-code/top-level-await/syntax/for-await-expr-identifier.js
+  - [x] (2026-05-27T13:22:44-06:00) test/language/module-code/top-level-await/syntax/for-await-expr-literal-number.js
+  - [x] (2026-05-27T13:23:26-06:00) test/language/module-code/top-level-await/syntax/for-await-expr-literal-string.js
+  - [x] (2026-05-27T13:24:08-06:00) test/language/module-code/top-level-await/syntax/for-await-expr-nested.js
+  - [x] (2026-05-27T13:24:48-06:00) test/language/module-code/top-level-await/syntax/for-await-expr-new-expr.js
+  - [x] (2026-05-27T13:25:28-06:00) test/language/module-code/top-level-await/syntax/for-await-expr-null.js
+  - [x] (2026-05-27T13:26:16-06:00) test/language/module-code/top-level-await/syntax/for-await-expr-obj-literal.js
+  - [x] (2026-05-27T13:27:01-06:00) test/language/module-code/top-level-await/syntax/for-await-expr-regexp.js
+  - [x] (2026-05-27T13:27:43-06:00) test/language/module-code/top-level-await/syntax/for-await-expr-template-literal.js
+  - [x] (2026-05-27T13:28:27-06:00) test/language/module-code/top-level-await/syntax/for-await-expr-this.js
+  - [x] (2026-05-27T13:29:07-06:00) test/language/module-code/top-level-await/syntax/for-in-await-expr-array-literal.js
+  - [x] (2026-05-27T13:29:53-06:00) test/language/module-code/top-level-await/syntax/for-in-await-expr-func-expression.js
+  - [x] (2026-05-27T13:30:30-06:00) test/language/module-code/top-level-await/syntax/for-in-await-expr-identifier.js
+  - [x] (2026-05-27T13:31:16-06:00) test/language/module-code/top-level-await/syntax/for-in-await-expr-literal-number.js
+  - [x] (2026-05-27T13:32:03-06:00) test/language/module-code/top-level-await/syntax/for-in-await-expr-literal-string.js
+  - [x] (2026-05-27T13:32:42-06:00) test/language/module-code/top-level-await/syntax/for-in-await-expr-nested.js
+  - [x] (2026-05-27T13:33:36-06:00) test/language/module-code/top-level-await/syntax/for-in-await-expr-new-expr.js
+  - [x] (2026-05-27T13:34:21-06:00) test/language/module-code/top-level-await/syntax/for-in-await-expr-null.js
+  - [x] (2026-05-27T13:35:05-06:00) test/language/module-code/top-level-await/syntax/for-in-await-expr-obj-literal.js
+  - [x] (2026-05-27T13:35:44-06:00) test/language/module-code/top-level-await/syntax/for-in-await-expr-regexp.js
+  - [x] (2026-05-27T13:36:24-06:00) test/language/module-code/top-level-await/syntax/for-in-await-expr-template-literal.js
+  - [x] (2026-05-27T13:37:03-06:00) test/language/module-code/top-level-await/syntax/for-in-await-expr-this.js
+  - [x] (2026-05-27T13:37:57-06:00) test/language/module-code/top-level-await/syntax/for-of-await-expr-array-literal.js
+  - [x] (2026-05-27T13:38:57-06:00) test/language/module-code/top-level-await/syntax/for-of-await-expr-func-expression.js
+  - [x] (2026-05-27T13:40:17-06:00) test/language/module-code/top-level-await/syntax/for-of-await-expr-identifier.js
+  - [x] (2026-05-27T13:41:13-06:00) test/language/module-code/top-level-await/syntax/for-of-await-expr-literal-number.js
+  - [x] (2026-05-27T13:42:06-06:00) test/language/module-code/top-level-await/syntax/for-of-await-expr-literal-string.js
+  - [x] (2026-05-27T13:43:26-06:00) test/language/module-code/top-level-await/syntax/for-of-await-expr-nested.js
+  - [x] (2026-05-27T13:46:12-06:00) test/language/module-code/top-level-await/syntax/for-of-await-expr-new-expr.js
+  - [x] (2026-05-27T13:47:11-06:00) test/language/module-code/top-level-await/syntax/for-of-await-expr-null.js
+  - [x] (2026-05-27T13:48:20-06:00) test/language/module-code/top-level-await/syntax/for-of-await-expr-obj-literal.js
+  - [x] (2026-05-27T13:49:36-06:00) test/language/module-code/top-level-await/syntax/for-of-await-expr-regexp.js
+  - [x] (2026-05-27T13:50:31-06:00) test/language/module-code/top-level-await/syntax/for-of-await-expr-template-literal.js
+  - [x] (2026-05-27T13:51:54-06:00) test/language/module-code/top-level-await/syntax/for-of-await-expr-this.js
+  - [x] (2026-05-27T13:52:37-06:00) test/language/module-code/top-level-await/syntax/if-block-await-expr-array-literal.js
+  - [x] (2026-05-27T13:53:21-06:00) test/language/module-code/top-level-await/syntax/if-block-await-expr-func-expression.js
+  - [x] (2026-05-27T13:54:02-06:00) test/language/module-code/top-level-await/syntax/if-block-await-expr-identifier.js
+  - [x] (2026-05-27T13:54:40-06:00) test/language/module-code/top-level-await/syntax/if-block-await-expr-literal-number.js
+  - [x] (2026-05-27T13:55:18-06:00) test/language/module-code/top-level-await/syntax/if-block-await-expr-literal-string.js
+  - [x] (2026-05-27T13:56:03-06:00) test/language/module-code/top-level-await/syntax/if-block-await-expr-nested.js
+  - [x] (2026-05-27T13:56:50-06:00) test/language/module-code/top-level-await/syntax/if-block-await-expr-new-expr.js
+  - [x] (2026-05-27T13:57:31-06:00) test/language/module-code/top-level-await/syntax/if-block-await-expr-null.js
+  - [x] (2026-05-27T13:58:12-06:00) test/language/module-code/top-level-await/syntax/if-block-await-expr-obj-literal.js
+  - [x] (2026-05-27T13:58:56-06:00) test/language/module-code/top-level-await/syntax/if-block-await-expr-regexp.js
+  - [x] (2026-05-27T13:59:45-06:00) test/language/module-code/top-level-await/syntax/if-block-await-expr-template-literal.js
+  - [x] (2026-05-27T14:00:25-06:00) test/language/module-code/top-level-await/syntax/if-block-await-expr-this.js
+  - [x] (2026-05-27T14:03:16-06:00) test/language/module-code/top-level-await/syntax/if-expr-await-expr-array-literal.js
+  - [x] (2026-05-27T14:04:03-06:00) test/language/module-code/top-level-await/syntax/if-expr-await-expr-func-expression.js
+  - [x] (2026-05-27T14:05:07-06:00) test/language/module-code/top-level-await/syntax/if-expr-await-expr-identifier.js
+  - [x] (2026-05-27T14:05:57-06:00) test/language/module-code/top-level-await/syntax/if-expr-await-expr-literal-number.js
+  - [x] (2026-05-27T14:06:46-06:00) test/language/module-code/top-level-await/syntax/if-expr-await-expr-literal-string.js
+  - [x] (2026-05-27T14:08:00-06:00) test/language/module-code/top-level-await/syntax/if-expr-await-expr-nested.js
+  - [x] (2026-05-27T14:09:07-06:00) test/language/module-code/top-level-await/syntax/if-expr-await-expr-new-expr.js
+  - [x] (2026-05-27T14:10:02-06:00) test/language/module-code/top-level-await/syntax/if-expr-await-expr-null.js
+  - [x] (2026-05-27T14:11:04-06:00) test/language/module-code/top-level-await/syntax/if-expr-await-expr-obj-literal.js
+  - [x] (2026-05-27T14:13:30-06:00) test/language/module-code/top-level-await/syntax/if-expr-await-expr-regexp.js
+  - [x] (2026-05-27T14:14:14-06:00) test/language/module-code/top-level-await/syntax/if-expr-await-expr-template-literal.js
+  - [x] (2026-05-27T14:14:58-06:00) test/language/module-code/top-level-await/syntax/if-expr-await-expr-this.js
+  - [x] (2026-05-27T14:15:41-06:00) test/language/module-code/top-level-await/syntax/top-level-await-expr-array-literal.js
+  - [x] (2026-05-27T14:16:23-06:00) test/language/module-code/top-level-await/syntax/top-level-await-expr-func-expression.js
+  - [x] (2026-05-27T14:17:10-06:00) test/language/module-code/top-level-await/syntax/top-level-await-expr-identifier.js
+  - [x] (2026-05-27T14:18:01-06:00) test/language/module-code/top-level-await/syntax/top-level-await-expr-literal-number.js
+  - [x] (2026-05-27T14:19:07-06:00) test/language/module-code/top-level-await/syntax/top-level-await-expr-literal-string.js
+  - [x] (2026-05-27T14:19:47-06:00) test/language/module-code/top-level-await/syntax/top-level-await-expr-nested.js
+  - [x] (2026-05-27T14:20:27-06:00) test/language/module-code/top-level-await/syntax/top-level-await-expr-new-expr.js
+  - [x] (2026-05-27T14:21:15-06:00) test/language/module-code/top-level-await/syntax/top-level-await-expr-null.js
+  - [x] (2026-05-27T14:21:55-06:00) test/language/module-code/top-level-await/syntax/top-level-await-expr-obj-literal.js
+  - [x] (2026-05-27T14:22:35-06:00) test/language/module-code/top-level-await/syntax/top-level-await-expr-regexp.js
+  - [x] (2026-05-27T14:23:13-06:00) test/language/module-code/top-level-await/syntax/top-level-await-expr-template-literal.js
+  - [x] (2026-05-27T14:23:52-06:00) test/language/module-code/top-level-await/syntax/top-level-await-expr-this.js
+  - [x] (2026-05-27T14:24:31-06:00) test/language/module-code/top-level-await/syntax/try-await-expr-array-literal.js
+  - [x] (2026-05-27T14:25:31-06:00) test/language/module-code/top-level-await/syntax/try-await-expr-func-expression.js
+  - [x] (2026-05-27T14:26:09-06:00) test/language/module-code/top-level-await/syntax/try-await-expr-identifier.js
+  - [x] (2026-05-27T14:26:48-06:00) test/language/module-code/top-level-await/syntax/try-await-expr-literal-number.js
+  - [x] (2026-05-27T14:27:26-06:00) test/language/module-code/top-level-await/syntax/try-await-expr-literal-string.js
+  - [x] (2026-05-27T14:28:07-06:00) test/language/module-code/top-level-await/syntax/try-await-expr-nested.js
+  - [x] (2026-05-27T14:28:52-06:00) test/language/module-code/top-level-await/syntax/try-await-expr-new-expr.js
+  - [x] (2026-05-27T14:29:36-06:00) test/language/module-code/top-level-await/syntax/try-await-expr-null.js
+  - [x] (2026-05-27T14:30:16-06:00) test/language/module-code/top-level-await/syntax/try-await-expr-obj-literal.js
+  - [x] (2026-05-27T14:30:52-06:00) test/language/module-code/top-level-await/syntax/try-await-expr-regexp.js
+  - [x] (2026-05-27T14:31:49-06:00) test/language/module-code/top-level-await/syntax/try-await-expr-template-literal.js
+  - [x] (2026-05-27T14:32:25-06:00) test/language/module-code/top-level-await/syntax/try-await-expr-this.js
+  - [x] (2026-05-27T14:33:09-06:00) test/language/module-code/top-level-await/syntax/typeof-await-expr-array-literal.js
+  - [x] (2026-05-27T14:33:49-06:00) test/language/module-code/top-level-await/syntax/typeof-await-expr-func-expression.js
+  - [x] (2026-05-27T14:34:25-06:00) test/language/module-code/top-level-await/syntax/typeof-await-expr-identifier.js
+  - [x] (2026-05-27T14:35:10-06:00) test/language/module-code/top-level-await/syntax/typeof-await-expr-literal-number.js
+  - [x] (2026-05-27T14:35:57-06:00) test/language/module-code/top-level-await/syntax/typeof-await-expr-literal-string.js
+  - [x] (2026-05-27T14:36:42-06:00) test/language/module-code/top-level-await/syntax/typeof-await-expr-nested.js
+  - [x] (2026-05-27T14:37:20-06:00) test/language/module-code/top-level-await/syntax/typeof-await-expr-new-expr.js
+  - [x] (2026-05-27T14:38:05-06:00) test/language/module-code/top-level-await/syntax/typeof-await-expr-null.js
+  - [x] (2026-05-27T14:38:55-06:00) test/language/module-code/top-level-await/syntax/typeof-await-expr-obj-literal.js
+  - [x] (2026-05-27T14:39:33-06:00) test/language/module-code/top-level-await/syntax/typeof-await-expr-regexp.js
+  - [x] (2026-05-27T14:40:22-06:00) test/language/module-code/top-level-await/syntax/typeof-await-expr-template-literal.js
+  - [x] (2026-05-27T14:41:04-06:00) test/language/module-code/top-level-await/syntax/typeof-await-expr-this.js
+  - [x] (2026-05-27T14:41:51-06:00) test/language/module-code/top-level-await/syntax/void-await-expr-array-literal.js
+  - [x] (2026-05-27T14:42:41-06:00) test/language/module-code/top-level-await/syntax/void-await-expr-func-expression.js
+  - [x] (2026-05-27T14:43:19-06:00) test/language/module-code/top-level-await/syntax/void-await-expr-identifier.js
+  - [x] (2026-05-27T14:44:04-06:00) test/language/module-code/top-level-await/syntax/void-await-expr-literal-number.js
+  - [x] (2026-05-27T14:45:20-06:00) test/language/module-code/top-level-await/syntax/void-await-expr-literal-string.js
+  - [x] (2026-05-27T14:46:03-06:00) test/language/module-code/top-level-await/syntax/void-await-expr-nested.js
+  - [x] (2026-05-27T14:46:39-06:00) test/language/module-code/top-level-await/syntax/void-await-expr-new-expr.js
+  - [x] (2026-05-27T14:47:26-06:00) test/language/module-code/top-level-await/syntax/void-await-expr-null.js
+  - [x] (2026-05-27T14:48:12-06:00) test/language/module-code/top-level-await/syntax/void-await-expr-obj-literal.js
+  - [x] (2026-05-27T14:48:49-06:00) test/language/module-code/top-level-await/syntax/void-await-expr-regexp.js
+  - [x] (2026-05-27T14:49:30-06:00) test/language/module-code/top-level-await/syntax/void-await-expr-template-literal.js
+  - [x] (2026-05-27T14:50:08-06:00) test/language/module-code/top-level-await/syntax/void-await-expr-this.js
+  - [x] (2026-05-27T14:50:58-06:00) test/language/module-code/top-level-await/syntax/while-await-expr-array-literal.js
+  - [x] (2026-05-27T14:52:01-06:00) test/language/module-code/top-level-await/syntax/while-await-expr-func-expression.js
+  - [x] (2026-05-27T14:53:00-06:00) test/language/module-code/top-level-await/syntax/while-await-expr-identifier.js
+  - [x] (2026-05-27T14:53:43-06:00) test/language/module-code/top-level-await/syntax/while-await-expr-literal-number.js
+  - [x] (2026-05-27T14:54:27-06:00) test/language/module-code/top-level-await/syntax/while-await-expr-literal-string.js
+  - [x] (2026-05-27T14:55:13-06:00) test/language/module-code/top-level-await/syntax/while-await-expr-nested.js
+  - [x] (2026-05-27T14:55:49-06:00) test/language/module-code/top-level-await/syntax/while-await-expr-new-expr.js
+  - [x] (2026-05-27T14:56:28-06:00) test/language/module-code/top-level-await/syntax/while-await-expr-null.js
+  - [x] (2026-05-27T14:57:08-06:00) test/language/module-code/top-level-await/syntax/while-await-expr-obj-literal.js
+  - [x] (2026-05-27T14:57:50-06:00) test/language/module-code/top-level-await/syntax/while-await-expr-regexp.js
+  - [x] (2026-05-27T14:58:35-06:00) test/language/module-code/top-level-await/syntax/while-await-expr-template-literal.js
+  - [x] (2026-05-27T14:59:12-06:00) test/language/module-code/top-level-await/syntax/while-await-expr-this.js
+  - [x] (2026-05-27T15:15:25-06:00) test/language/module-code/top-level-await/top-level-ticks-2.js
+  - [x] (2026-05-27T15:16:06-06:00) test/language/module-code/top-level-await/top-level-ticks.js
+  - [x] (2026-05-27T15:16:46-06:00) test/language/module-code/top-level-await/unobservable-global-async-evaluation-count-reset.js
+  - [x] (2026-05-27T15:17:18-06:00) test/language/module-code/top-level-await/void-await-expr.js
+  - [x] (2026-05-27T15:26:11-06:00) test/language/module-code/top-level-await/while-dynamic-evaluation.js
+  - [x] (2026-05-27T15:50:25-06:00) test/language/module-code/verify-dfs.js

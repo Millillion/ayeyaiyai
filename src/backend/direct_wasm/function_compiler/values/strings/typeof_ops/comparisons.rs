@@ -7,6 +7,11 @@ impl<'a> FunctionCompiler<'a> {
         right: &Expression,
         op: BinaryOp,
     ) -> DirectResult<bool> {
+        let trace_typeof = std::env::var_os("AYY_TRACE_TYPEOF").is_some()
+            || std::env::var_os("AYY_TRACE_ASSERTIONS").is_some();
+        if trace_typeof {
+            eprintln!("typeof_string_comparison:start left={left:?} right={right:?} op={op:?}");
+        }
         let (typeof_expression, type_name) = match (left, right) {
             (
                 Expression::Unary {
@@ -22,8 +27,18 @@ impl<'a> FunctionCompiler<'a> {
                     expression,
                 },
             ) => (expression.as_ref(), text.as_str()),
-            _ => return Ok(false),
+            _ => {
+                if trace_typeof {
+                    eprintln!("typeof_string_comparison:not_typeof_pair");
+                }
+                return Ok(false);
+            }
         };
+        if trace_typeof {
+            eprintln!(
+                "typeof_string_comparison:operand expression={typeof_expression:?} type_name={type_name}"
+            );
+        }
 
         if let Expression::Member { object, property } = typeof_expression
             && self.is_direct_arguments_object(object)
@@ -45,10 +60,18 @@ impl<'a> FunctionCompiler<'a> {
                 _ => unreachable!("filtered above"),
             };
             self.push_binary_op(comparison)?;
+            if trace_typeof {
+                eprintln!("typeof_string_comparison:arguments_slot_done");
+            }
             return Ok(true);
         }
 
         let Some(type_tag) = parse_typeof_tag_optional(type_name) else {
+            if trace_typeof {
+                eprintln!(
+                    "typeof_string_comparison:unknown_type_name_emit_operand expression={typeof_expression:?}"
+                );
+            }
             self.emit_numeric_expression(typeof_expression)?;
             self.state.emission.output.instructions.push(0x1a);
             self.push_i32_const(match op {
@@ -56,13 +79,21 @@ impl<'a> FunctionCompiler<'a> {
                 BinaryOp::NotEqual | BinaryOp::LooseNotEqual => 1,
                 _ => return Ok(false),
             });
+            if trace_typeof {
+                eprintln!("typeof_string_comparison:unknown_type_name_done");
+            }
             return Ok(true);
         };
 
-        self.emit_numeric_expression(&Expression::Unary {
-            op: UnaryOp::TypeOf,
-            expression: Box::new(typeof_expression.clone()),
-        })?;
+        if trace_typeof {
+            eprintln!(
+                "typeof_string_comparison:emit_typeof_expression expression={typeof_expression:?} type_tag={type_tag}"
+            );
+        }
+        self.emit_typeof_expression(typeof_expression)?;
+        if trace_typeof {
+            eprintln!("typeof_string_comparison:typeof_expression_done");
+        }
         self.push_i32_const(type_tag);
         let comparison = match op {
             BinaryOp::Equal | BinaryOp::LooseEqual => BinaryOp::Equal,
@@ -70,6 +101,9 @@ impl<'a> FunctionCompiler<'a> {
             _ => return Ok(false),
         };
         self.push_binary_op(comparison)?;
+        if trace_typeof {
+            eprintln!("typeof_string_comparison:done");
+        }
         Ok(true)
     }
 

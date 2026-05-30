@@ -165,6 +165,30 @@ impl DirectWasmCompiler {
         }
     }
 
+    fn register_local_set_prototype_metadata(
+        &mut self,
+        arguments: &[CallArgument],
+        local_bindings: &HashMap<String, Expression>,
+    ) {
+        let [
+            CallArgument::Expression(target),
+            CallArgument::Expression(prototype),
+            ..,
+        ] = arguments
+        else {
+            return;
+        };
+        let target_name = match target {
+            Expression::Identifier(name) => name.clone(),
+            _ => match Self::resolve_local_member_metadata_expression(target, local_bindings) {
+                Expression::Identifier(name) => name,
+                _ => return,
+            },
+        };
+        let prototype = Self::resolve_local_member_metadata_expression(prototype, local_bindings);
+        self.update_global_object_prototype_binding(&target_name, &prototype);
+    }
+
     fn register_local_class_member_bindings_in_statements(
         &mut self,
         statements: &[Statement],
@@ -173,16 +197,20 @@ impl DirectWasmCompiler {
         for statement in statements {
             match statement {
                 Statement::Var { name, value } | Statement::Let { name, value, .. } => {
-                    local_bindings.insert(
-                        name.clone(),
-                        Self::resolve_local_member_metadata_expression(value, local_bindings),
-                    );
+                    let resolved_value =
+                        Self::resolve_local_member_metadata_expression(value, local_bindings);
+                    if matches!(resolved_value, Expression::Object(_)) {
+                        self.update_global_object_literal_home_bindings(name, &resolved_value);
+                    }
+                    local_bindings.insert(name.clone(), resolved_value);
                 }
                 Statement::Assign { name, value } => {
-                    local_bindings.insert(
-                        name.clone(),
-                        Self::resolve_local_member_metadata_expression(value, local_bindings),
-                    );
+                    let resolved_value =
+                        Self::resolve_local_member_metadata_expression(value, local_bindings);
+                    if matches!(resolved_value, Expression::Object(_)) {
+                        self.update_global_object_literal_home_bindings(name, &resolved_value);
+                    }
+                    local_bindings.insert(name.clone(), resolved_value);
                 }
                 Statement::Declaration { body }
                 | Statement::Block { body }
@@ -241,6 +269,17 @@ impl DirectWasmCompiler {
                         &descriptor,
                         local_bindings,
                     );
+                }
+                Statement::Expression(Expression::Call { callee, arguments })
+                | Statement::Return(Expression::Call { callee, arguments })
+                    if matches!(
+                        callee.as_ref(),
+                        Expression::Member { object, property }
+                            if matches!(object.as_ref(), Expression::Identifier(name) if name == "Object")
+                                && matches!(property.as_ref(), Expression::String(name) if name == "setPrototypeOf")
+                    ) =>
+                {
+                    self.register_local_set_prototype_metadata(arguments, local_bindings);
                 }
                 _ => {}
             }
@@ -2244,6 +2283,7 @@ impl DirectWasmCompiler {
                 Self::capture_scan_function_mentions_direct_eval(function);
             let has_enclosing_function =
                 Self::function_has_capture_enclosing_context(&capture_functions, function_index);
+            let is_root_module_init = function.name.starts_with("__ayy_module_init_");
             let eval_local_function_bindings = self
                 .state
                 .function_registry
@@ -2269,6 +2309,9 @@ impl DirectWasmCompiler {
                     .synthetic_capture_bindings
                     .iter()
                     .any(|binding| binding == &name || binding == &source_name);
+                if is_root_module_init && !is_synthetic_capture {
+                    continue;
+                }
                 if !is_synthetic_capture && is_eval_local_function_binding {
                     continue;
                 }

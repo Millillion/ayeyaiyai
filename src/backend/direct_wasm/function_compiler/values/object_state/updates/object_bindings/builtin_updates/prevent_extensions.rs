@@ -30,6 +30,14 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         expression: &Expression,
     ) -> Option<bool> {
+        if matches!(
+            expression,
+            Expression::Identifier(name)
+                if FunctionCompiler::module_index_from_namespace_like_identifier(name).is_some()
+        ) {
+            return Some(false);
+        }
+
         let direct_lookup = match expression {
             Expression::Identifier(name) => {
                 let storage_name = self.resolve_object_binding_storage_name(name);

@@ -14,54 +14,67 @@ impl DirectWasmCompiler {
             array_bindings_by_function.insert(function.name.clone(), HashMap::new());
             object_bindings_by_function.insert(function.name.clone(), HashMap::new());
         }
-        let mut top_level_aliases = HashMap::new();
-        let (mut top_level_value_bindings, mut top_level_object_state) =
-            self.snapshot_top_level_static_state();
-        for statement in &program.statements {
-            let aliases_before_statement = top_level_aliases.clone();
-            let value_bindings_before_statement = top_level_value_bindings.clone();
-            let object_state_before_statement = top_level_object_state.clone();
-            self.collect_parameter_bindings_from_statement(
-                statement,
-                &mut top_level_aliases,
-                &mut function_bindings_by_function,
-                &mut array_bindings_by_function,
-                &mut object_bindings_by_function,
-            );
-            self.collect_stateful_callback_bindings_from_statement(
-                statement,
-                &aliases_before_statement,
-                &mut function_bindings_by_function,
-                &mut array_bindings_by_function,
-                &mut object_bindings_by_function,
-                &value_bindings_before_statement,
-                &object_state_before_statement,
-                true,
-            );
-            self.update_parameter_binding_state_from_statement(
-                statement,
-                &mut top_level_value_bindings,
-                &mut top_level_object_state,
-            );
-        }
-        for function in &program.functions {
-            let mut aliases = top_level_aliases.clone();
-            for parameter in &function.params {
-                aliases.entry(parameter.name.clone()).or_insert(None);
+        for _ in 0..8 {
+            let previous_function_bindings = function_bindings_by_function.clone();
+            let previous_array_bindings = array_bindings_by_function.clone();
+            let previous_object_bindings = object_bindings_by_function.clone();
+
+            let mut top_level_aliases = HashMap::new();
+            let (mut top_level_value_bindings, mut top_level_object_state) =
+                self.snapshot_top_level_static_state();
+            for statement in &program.statements {
+                let aliases_before_statement = top_level_aliases.clone();
+                let value_bindings_before_statement = top_level_value_bindings.clone();
+                let object_state_before_statement = top_level_object_state.clone();
+                self.collect_parameter_bindings_from_statement(
+                    statement,
+                    &mut top_level_aliases,
+                    &mut function_bindings_by_function,
+                    &mut array_bindings_by_function,
+                    &mut object_bindings_by_function,
+                );
+                self.collect_stateful_callback_bindings_from_statement(
+                    statement,
+                    &aliases_before_statement,
+                    &mut function_bindings_by_function,
+                    &mut array_bindings_by_function,
+                    &mut object_bindings_by_function,
+                    &value_bindings_before_statement,
+                    &object_state_before_statement,
+                    true,
+                );
+                self.update_parameter_binding_state_from_statement(
+                    statement,
+                    &mut top_level_value_bindings,
+                    &mut top_level_object_state,
+                );
             }
-            self.collect_parameter_bindings_from_statements_in_function(
-                &function.body,
-                &mut aliases,
-                &mut function_bindings_by_function,
-                &mut array_bindings_by_function,
+            for function in &program.functions {
+                let mut aliases = top_level_aliases.clone();
+                for parameter in &function.params {
+                    aliases.entry(parameter.name.clone()).or_insert(None);
+                }
+                self.collect_parameter_bindings_from_statements_in_function(
+                    &function.body,
+                    &mut aliases,
+                    &mut function_bindings_by_function,
+                    &mut array_bindings_by_function,
+                    &mut object_bindings_by_function,
+                    Some(&function.name),
+                );
+            }
+            self.seed_proxy_define_property_handler_parameter_bindings(
+                program,
                 &mut object_bindings_by_function,
-                Some(&function.name),
             );
+
+            if function_bindings_by_function == previous_function_bindings
+                && array_bindings_by_function == previous_array_bindings
+                && object_bindings_by_function == previous_object_bindings
+            {
+                break;
+            }
         }
-        self.seed_proxy_define_property_handler_parameter_bindings(
-            program,
-            &mut object_bindings_by_function,
-        );
 
         UserFunctionParameterAnalysis {
             function_bindings_by_function,

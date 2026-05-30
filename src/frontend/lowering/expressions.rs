@@ -371,7 +371,7 @@ impl Lowerer {
                             .collect::<Result<Vec<_>>>()?,
                     })
                 }
-                Callee::Import(_) => self.lower_dynamic_import_expression(call),
+                Callee::Import(import) => self.lower_dynamic_import_expression(call, import.phase),
             },
             Expr::TaggedTpl(tagged_template) => {
                 let template_site_id = self.next_template_object_id;
@@ -1243,6 +1243,9 @@ impl Lowerer {
         };
         let source_text = source.value.to_string_lossy();
         if source_text.contains('`') {
+            return Ok(None);
+        }
+        if source_text.contains("super") {
             return Ok(None);
         }
         let Ok(SwcProgram::Script(script)) = parse_script_program_source(&source_text) else {

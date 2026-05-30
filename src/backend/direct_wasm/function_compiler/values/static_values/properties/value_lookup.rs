@@ -1,6 +1,276 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn static_statement_binding_source_expression_from_statement(
+        statement: &Statement,
+        binding_name: &str,
+    ) -> Option<Expression> {
+        match statement {
+            Statement::Let { name, value, .. }
+            | Statement::Var { name, value }
+            | Statement::Assign { name, value }
+                if name == binding_name =>
+            {
+                Some(value.clone())
+            }
+            Statement::Declaration { body }
+            | Statement::Block { body }
+            | Statement::Labeled { body, .. } => {
+                Self::static_statement_binding_source_expression_from_statements(body, binding_name)
+            }
+            Statement::If {
+                then_branch,
+                else_branch,
+                ..
+            } => Self::static_statement_binding_source_expression_from_statements(
+                then_branch,
+                binding_name,
+            )
+            .or_else(|| {
+                Self::static_statement_binding_source_expression_from_statements(
+                    else_branch,
+                    binding_name,
+                )
+            }),
+            Statement::With { body, .. }
+            | Statement::While { body, .. }
+            | Statement::DoWhile { body, .. } => {
+                Self::static_statement_binding_source_expression_from_statements(body, binding_name)
+            }
+            Statement::Try {
+                body,
+                catch_setup,
+                catch_body,
+                ..
+            } => {
+                Self::static_statement_binding_source_expression_from_statements(body, binding_name)
+                    .or_else(|| {
+                        Self::static_statement_binding_source_expression_from_statements(
+                            catch_setup,
+                            binding_name,
+                        )
+                    })
+                    .or_else(|| {
+                        Self::static_statement_binding_source_expression_from_statements(
+                            catch_body,
+                            binding_name,
+                        )
+                    })
+            }
+            Statement::Switch { cases, .. } => cases.iter().find_map(|case| {
+                Self::static_statement_binding_source_expression_from_statements(
+                    &case.body,
+                    binding_name,
+                )
+            }),
+            Statement::For { init, body, .. } => {
+                Self::static_statement_binding_source_expression_from_statements(init, binding_name)
+                    .or_else(|| {
+                        Self::static_statement_binding_source_expression_from_statements(
+                            body,
+                            binding_name,
+                        )
+                    })
+            }
+            Statement::Assign { .. }
+            | Statement::AssignMember { .. }
+            | Statement::Let { .. }
+            | Statement::Var { .. }
+            | Statement::Print { .. }
+            | Statement::Expression(_)
+            | Statement::Throw(_)
+            | Statement::Return(_)
+            | Statement::Break { .. }
+            | Statement::Continue { .. }
+            | Statement::Yield { .. }
+            | Statement::YieldDelegate { .. } => None,
+        }
+    }
+
+    fn static_statement_binding_source_expression_from_statements(
+        statements: &[Statement],
+        binding_name: &str,
+    ) -> Option<Expression> {
+        statements.iter().find_map(|statement| {
+            Self::static_statement_binding_source_expression_from_statement(statement, binding_name)
+        })
+    }
+
+    fn resolve_generated_class_field_source_expression_from_statements(
+        expression: Expression,
+        statements: &[Statement],
+        depth: usize,
+    ) -> Expression {
+        if depth == 0 {
+            return expression;
+        }
+        match expression {
+            Expression::Identifier(name) => {
+                let Some(source) = Self::static_statement_binding_source_expression_from_statements(
+                    statements, &name,
+                ) else {
+                    return Expression::Identifier(name);
+                };
+                if matches!(&source, Expression::Identifier(source_name) if source_name == &name) {
+                    return source;
+                }
+                Self::resolve_generated_class_field_source_expression_from_statements(
+                    source,
+                    statements,
+                    depth - 1,
+                )
+            }
+            Expression::Sequence(expressions) => Expression::Sequence(
+                expressions
+                    .into_iter()
+                    .map(|expression| {
+                        Self::resolve_generated_class_field_source_expression_from_statements(
+                            expression, statements, depth,
+                        )
+                    })
+                    .collect(),
+            ),
+            Expression::Assign { name, value } => Expression::Assign {
+                name,
+                value: Box::new(
+                    Self::resolve_generated_class_field_source_expression_from_statements(
+                        *value, statements, depth,
+                    ),
+                ),
+            },
+            Expression::Binary { op, left, right } => Expression::Binary {
+                op,
+                left: Box::new(
+                    Self::resolve_generated_class_field_source_expression_from_statements(
+                        *left, statements, depth,
+                    ),
+                ),
+                right: Box::new(
+                    Self::resolve_generated_class_field_source_expression_from_statements(
+                        *right, statements, depth,
+                    ),
+                ),
+            },
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => Expression::Conditional {
+                condition: Box::new(
+                    Self::resolve_generated_class_field_source_expression_from_statements(
+                        *condition, statements, depth,
+                    ),
+                ),
+                then_expression: Box::new(
+                    Self::resolve_generated_class_field_source_expression_from_statements(
+                        *then_expression,
+                        statements,
+                        depth,
+                    ),
+                ),
+                else_expression: Box::new(
+                    Self::resolve_generated_class_field_source_expression_from_statements(
+                        *else_expression,
+                        statements,
+                        depth,
+                    ),
+                ),
+            },
+            _ => expression,
+        }
+    }
+
+    fn generated_class_field_source_expression_from_statement(
+        statement: &Statement,
+        capture_name: &str,
+    ) -> Option<Expression> {
+        match statement {
+            Statement::Let { name, value, .. } | Statement::Var { name, value }
+                if name == capture_name =>
+            {
+                Some(value.clone())
+            }
+            Statement::Declaration { body }
+            | Statement::Block { body }
+            | Statement::Labeled { body, .. } => {
+                Self::generated_class_field_source_expression_from_statements(body, capture_name)
+            }
+            Statement::If {
+                then_branch,
+                else_branch,
+                ..
+            } => Self::generated_class_field_source_expression_from_statements(
+                then_branch,
+                capture_name,
+            )
+            .or_else(|| {
+                Self::generated_class_field_source_expression_from_statements(
+                    else_branch,
+                    capture_name,
+                )
+            }),
+            Statement::With { body, .. }
+            | Statement::While { body, .. }
+            | Statement::DoWhile { body, .. } => {
+                Self::generated_class_field_source_expression_from_statements(body, capture_name)
+            }
+            Statement::Try {
+                body,
+                catch_setup,
+                catch_body,
+                ..
+            } => Self::generated_class_field_source_expression_from_statements(body, capture_name)
+                .or_else(|| {
+                    Self::generated_class_field_source_expression_from_statements(
+                        catch_setup,
+                        capture_name,
+                    )
+                })
+                .or_else(|| {
+                    Self::generated_class_field_source_expression_from_statements(
+                        catch_body,
+                        capture_name,
+                    )
+                }),
+            Statement::Switch { cases, .. } => cases.iter().find_map(|case| {
+                Self::generated_class_field_source_expression_from_statements(
+                    &case.body,
+                    capture_name,
+                )
+            }),
+            Statement::For { init, body, .. } => {
+                Self::generated_class_field_source_expression_from_statements(init, capture_name)
+                    .or_else(|| {
+                        Self::generated_class_field_source_expression_from_statements(
+                            body,
+                            capture_name,
+                        )
+                    })
+            }
+            Statement::Assign { .. }
+            | Statement::AssignMember { .. }
+            | Statement::Let { .. }
+            | Statement::Var { .. }
+            | Statement::Print { .. }
+            | Statement::Expression(_)
+            | Statement::Throw(_)
+            | Statement::Return(_)
+            | Statement::Break { .. }
+            | Statement::Continue { .. }
+            | Statement::Yield { .. }
+            | Statement::YieldDelegate { .. } => None,
+        }
+    }
+
+    fn generated_class_field_source_expression_from_statements(
+        statements: &[Statement],
+        capture_name: &str,
+    ) -> Option<Expression> {
+        statements.iter().find_map(|statement| {
+            Self::generated_class_field_source_expression_from_statement(statement, capture_name)
+        })
+    }
+
     fn global_alias_for_identifier_value(&self, target_name: &str) -> Option<String> {
         self.backend
             .global_semantics
@@ -57,7 +327,10 @@ impl<'a> FunctionCompiler<'a> {
             })
     }
 
-    fn generated_class_field_source_expression(&self, capture_name: &str) -> Option<Expression> {
+    pub(in crate::backend::direct_wasm) fn generated_class_field_source_expression(
+        &self,
+        capture_name: &str,
+    ) -> Option<Expression> {
         if !capture_name.starts_with("__ayy_class_field_name_") {
             return None;
         }
@@ -67,14 +340,17 @@ impl<'a> FunctionCompiler<'a> {
             .registered_function_declarations
             .iter()
             .find_map(|function| {
-                function.body.iter().find_map(|statement| match statement {
-                    Statement::Let { name, value, .. } | Statement::Var { name, value }
-                        if name == capture_name =>
-                    {
-                        Some(value.clone())
-                    }
-                    _ => None,
-                })
+                let source = Self::generated_class_field_source_expression_from_statements(
+                    &function.body,
+                    capture_name,
+                )?;
+                Some(
+                    Self::resolve_generated_class_field_source_expression_from_statements(
+                        source,
+                        &function.body,
+                        8,
+                    ),
+                )
             })
     }
 

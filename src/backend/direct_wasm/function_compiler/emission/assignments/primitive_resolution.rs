@@ -86,6 +86,15 @@ impl<'a> FunctionCompiler<'a> {
             } if matches!(expression.as_ref(), Expression::Identifier(name) if name == "Infinity" && self.is_unshadowed_builtin_identifier(name)) => {
                 Some(Expression::Number(f64::NEG_INFINITY))
             }
+            Expression::Identifier(_)
+                if self
+                    .state
+                    .speculation
+                    .execution_context
+                    .isolated_indirect_eval =>
+            {
+                None
+            }
             Expression::Identifier(_) => self
                 .resolve_static_string_value_with_context(expression, current_function_name)
                 .map(Expression::String),
@@ -148,6 +157,15 @@ impl<'a> FunctionCompiler<'a> {
                         .is_some()
                 {
                     return None;
+                }
+                if let Some(value) = self.resolve_static_typed_array_or_array_buffer_member_value(
+                    object,
+                    &materialized_property,
+                ) {
+                    return self.resolve_static_primitive_expression_with_context(
+                        &value,
+                        current_function_name,
+                    );
                 }
                 if matches!(&materialized_property, Expression::String(name) if name == "length")
                     && self

@@ -122,7 +122,7 @@ impl<'a> FunctionCompiler<'a> {
         if self.user_function_mentions_direct_eval(user_function) {
             let this_binding =
                 if self.should_box_sloppy_function_this(user_function, &Expression::Undefined) {
-                    Expression::This
+                    Expression::Identifier("globalThis".to_string())
                 } else {
                     Expression::Undefined
                 };
@@ -138,7 +138,7 @@ impl<'a> FunctionCompiler<'a> {
         }
         let this_binding =
             if self.should_box_sloppy_function_this(user_function, &Expression::Undefined) {
-                Expression::This
+                Expression::Identifier("globalThis".to_string())
             } else {
                 Expression::Undefined
             };

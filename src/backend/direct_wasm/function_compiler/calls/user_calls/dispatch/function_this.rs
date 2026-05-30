@@ -240,7 +240,9 @@ impl<'a> FunctionCompiler<'a> {
             Expression::String(_) => "String",
             Expression::Bool(_) => "Boolean",
             Expression::BigInt(_) => "Object",
-            Expression::Undefined | Expression::Null => return Some(Expression::This),
+            Expression::Undefined | Expression::Null => {
+                return Some(Expression::Identifier("globalThis".to_string()));
+            }
             _ if self.infer_value_kind(&primitive) == Some(StaticValueKind::Symbol) => "Object",
             _ => return None,
         };

@@ -728,6 +728,16 @@ impl Lowerer {
         allow_return: bool,
         allow_loop_control: bool,
     ) -> Result<Vec<Statement>> {
+        if try_statement.finalizer.is_none()
+            && try_statement.block.stmts.is_empty()
+            && try_statement
+                .handler
+                .as_ref()
+                .is_some_and(|handler| handler.body.stmts.is_empty())
+        {
+            return Ok(Vec::new());
+        }
+
         let lowered_body =
             self.lower_statements(&try_statement.block.stmts, allow_return, allow_loop_control)?;
         let lowered_handler = try_statement

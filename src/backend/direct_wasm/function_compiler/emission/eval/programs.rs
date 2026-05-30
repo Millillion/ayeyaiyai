@@ -1775,6 +1775,102 @@ impl<'a> FunctionCompiler<'a> {
         Some(completion.unwrap_or(Expression::Undefined))
     }
 
+    fn static_eval_expression_reads_current_local_binding(&self, expression: &Expression) -> bool {
+        match expression {
+            Expression::Identifier(name) | Expression::Update { name, .. } => {
+                self.resolve_current_local_binding(name).is_some()
+            }
+            Expression::Array(elements) => elements.iter().any(|element| match element {
+                ArrayElement::Expression(expression) | ArrayElement::Spread(expression) => {
+                    self.static_eval_expression_reads_current_local_binding(expression)
+                }
+            }),
+            Expression::Object(entries) => entries.iter().any(|entry| match entry {
+                ObjectEntry::Data { key, value } => {
+                    self.static_eval_expression_reads_current_local_binding(key)
+                        || self.static_eval_expression_reads_current_local_binding(value)
+                }
+                ObjectEntry::Getter { key, getter } => {
+                    self.static_eval_expression_reads_current_local_binding(key)
+                        || self.static_eval_expression_reads_current_local_binding(getter)
+                }
+                ObjectEntry::Setter { key, setter } => {
+                    self.static_eval_expression_reads_current_local_binding(key)
+                        || self.static_eval_expression_reads_current_local_binding(setter)
+                }
+                ObjectEntry::Spread(expression) => {
+                    self.static_eval_expression_reads_current_local_binding(expression)
+                }
+            }),
+            Expression::Member { object, property } => {
+                self.static_eval_expression_reads_current_local_binding(object)
+                    || self.static_eval_expression_reads_current_local_binding(property)
+            }
+            Expression::SuperMember { property } => {
+                self.static_eval_expression_reads_current_local_binding(property)
+            }
+            Expression::Assign { name, value } => {
+                self.resolve_current_local_binding(name).is_some()
+                    || self.static_eval_expression_reads_current_local_binding(value)
+            }
+            Expression::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                self.static_eval_expression_reads_current_local_binding(object)
+                    || self.static_eval_expression_reads_current_local_binding(property)
+                    || self.static_eval_expression_reads_current_local_binding(value)
+            }
+            Expression::AssignSuperMember { property, value } => {
+                self.static_eval_expression_reads_current_local_binding(property)
+                    || self.static_eval_expression_reads_current_local_binding(value)
+            }
+            Expression::Await(value)
+            | Expression::EnumerateKeys(value)
+            | Expression::GetIterator(value)
+            | Expression::IteratorClose(value)
+            | Expression::Unary {
+                expression: value, ..
+            } => self.static_eval_expression_reads_current_local_binding(value),
+            Expression::Binary { left, right, .. } => {
+                self.static_eval_expression_reads_current_local_binding(left)
+                    || self.static_eval_expression_reads_current_local_binding(right)
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                self.static_eval_expression_reads_current_local_binding(condition)
+                    || self.static_eval_expression_reads_current_local_binding(then_expression)
+                    || self.static_eval_expression_reads_current_local_binding(else_expression)
+            }
+            Expression::Sequence(expressions) => expressions.iter().any(|expression| {
+                self.static_eval_expression_reads_current_local_binding(expression)
+            }),
+            Expression::Call { callee, arguments }
+            | Expression::SuperCall { callee, arguments }
+            | Expression::New { callee, arguments } => {
+                self.static_eval_expression_reads_current_local_binding(callee)
+                    || arguments.iter().any(|argument| match argument {
+                        CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                            self.static_eval_expression_reads_current_local_binding(expression)
+                        }
+                    })
+            }
+            Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined
+            | Expression::NewTarget
+            | Expression::This
+            | Expression::Sent => false,
+        }
+    }
+
     pub(in crate::backend::direct_wasm) fn resolve_static_direct_eval_completion_outcome_with_context(
         &self,
         arguments: &[CallArgument],
@@ -1800,9 +1896,15 @@ impl<'a> FunctionCompiler<'a> {
             arguments,
             current_function_name,
         ) {
-            Ok(Some(program)) => self
-                .resolve_static_eval_statement_list_completion_expression(&program.statements)
-                .map(StaticEvalOutcome::Value),
+            Ok(Some(program)) => {
+                let completion = self.resolve_static_eval_statement_list_completion_expression(
+                    &program.statements,
+                )?;
+                if self.static_eval_expression_reads_current_local_binding(&completion) {
+                    return None;
+                }
+                Some(StaticEvalOutcome::Value(completion))
+            }
             Ok(None) => None,
             Err(error) => Some(StaticEvalOutcome::Throw(error)),
         }

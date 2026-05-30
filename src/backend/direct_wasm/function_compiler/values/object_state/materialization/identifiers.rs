@@ -18,6 +18,16 @@ impl<'a> FunctionCompiler<'a> {
         if name == "undefined" && self.is_unshadowed_builtin_identifier(name) {
             return Expression::Undefined;
         }
+        if self
+            .state
+            .speculation
+            .execution_context
+            .isolated_indirect_eval
+            && !self.is_unshadowed_builtin_identifier(name)
+            && !name.starts_with("__ayy_")
+        {
+            return expression.clone();
+        }
         if name.starts_with("__ayy_target_object_") {
             let immediate_target_alias = resolved_local_name
                 .as_deref()
@@ -56,6 +66,36 @@ impl<'a> FunctionCompiler<'a> {
             {
                 return self.materialize_static_expression(&resolved);
             }
+        }
+        let immediate_static_value = resolved_local_name
+            .as_deref()
+            .and_then(|resolved_name| {
+                self.state
+                    .speculation
+                    .static_semantics
+                    .local_value_binding(resolved_name)
+            })
+            .or_else(|| {
+                self.state
+                    .speculation
+                    .static_semantics
+                    .local_value_binding(name)
+            })
+            .or_else(|| {
+                (!has_current_local_binding)
+                    .then(|| self.global_value_binding(name))
+                    .flatten()
+            });
+        if let Some(
+            literal @ (Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined),
+        ) = immediate_static_value
+        {
+            return literal.clone();
         }
         if self
             .state

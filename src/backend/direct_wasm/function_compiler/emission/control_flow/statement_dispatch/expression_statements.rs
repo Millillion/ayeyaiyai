@@ -11,28 +11,19 @@ impl<'a> FunctionCompiler<'a> {
                 if self.emit_assert_throws_statement(expression)? {
                     return Ok(());
                 }
-                if self.has_current_user_function()
-                    && let Expression::Call { callee, .. } = expression
-                    && let Expression::Member { object, property } = callee.as_ref()
-                    && matches!(
-                        property.as_ref(),
-                        Expression::String(name) if name == "then" || name == "catch"
-                    )
-                    && let Expression::Call {
-                        callee: inner_callee,
-                        ..
-                    } = object.as_ref()
-                    && let Expression::Member {
-                        property: inner_property,
-                        ..
-                    } = inner_callee.as_ref()
-                    && matches!(
-                        inner_property.as_ref(),
-                        Expression::String(name)
-                            if matches!(name.as_str(), "then" | "catch" | "next" | "return" | "throw")
-                    )
-                {
-                    self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
+                if self.emit_static_top_level_await_tick_order_push_statement(expression)? {
+                    self.state.emission.output.instructions.push(0x1a);
+                    return Ok(());
+                }
+                if self.emit_static_top_level_await_tick_order_statement(expression)? {
+                    self.state.emission.output.instructions.push(0x1a);
+                    return Ok(());
+                }
+                if self.emit_static_top_level_promise_then_statement(expression)? {
+                    self.state.emission.output.instructions.push(0x1a);
+                    return Ok(());
+                }
+                if self.emit_static_module_dependency_promise_all_then_statement(expression)? {
                     self.state.emission.output.instructions.push(0x1a);
                     return Ok(());
                 }

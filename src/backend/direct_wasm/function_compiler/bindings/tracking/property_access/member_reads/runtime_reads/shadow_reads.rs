@@ -29,11 +29,6 @@ impl<'a> FunctionCompiler<'a> {
         object: &Expression,
         property: &Expression,
     ) -> DirectResult<bool> {
-        if self.is_private_member_read_property(property)
-            || self.dynamic_object_shadow_read_has_static_fallback(object, property)
-        {
-            return Ok(false);
-        }
         let owner_name = match object {
             Expression::Identifier(name) => {
                 self.runtime_object_property_shadow_owner_name_for_identifier(name)
@@ -46,6 +41,11 @@ impl<'a> FunctionCompiler<'a> {
         let Some(owner_name) = owner_name else {
             return Ok(false);
         };
+        if self.is_private_member_read_property(property)
+            || self.dynamic_object_shadow_read_has_static_fallback(object, property)
+        {
+            return Ok(false);
+        }
         if !self.runtime_object_dynamic_property_shadow_has_binding(&owner_name) {
             return Ok(false);
         }

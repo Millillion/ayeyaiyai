@@ -33,6 +33,114 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    fn function_capture_immutable_class_alias_source_name(
+        &self,
+        function_name: &str,
+        source_name: &str,
+    ) -> Option<String> {
+        if matches!(source_name, "this" | "new.target") {
+            return None;
+        }
+        let function = self
+            .prepared_function_declaration(function_name)
+            .or_else(|| self.resolve_registered_function_declaration(function_name))?;
+        if function
+            .immutable_class_bindings
+            .iter()
+            .any(|binding| binding == source_name)
+        {
+            return None;
+        }
+        let current_function_name = self.current_function_name()?;
+        let current_function = self
+            .prepared_function_declaration(current_function_name)
+            .or_else(|| self.resolve_registered_function_declaration(current_function_name))?;
+        function
+            .immutable_class_bindings
+            .iter()
+            .find(|class_binding| {
+                self.resolve_current_local_binding(class_binding).is_some()
+                    && Self::statements_bind_alias_to_identifier(
+                        &current_function.body,
+                        source_name,
+                        class_binding,
+                    )
+            })
+            .cloned()
+    }
+
+    fn statements_bind_alias_to_identifier(
+        statements: &[Statement],
+        alias_name: &str,
+        source_name: &str,
+    ) -> bool {
+        statements.iter().any(|statement| {
+            Self::statement_binds_alias_to_identifier(statement, alias_name, source_name)
+        })
+    }
+
+    fn statement_binds_alias_to_identifier(
+        statement: &Statement,
+        alias_name: &str,
+        source_name: &str,
+    ) -> bool {
+        match statement {
+            Statement::Let { name, value, .. }
+            | Statement::Var { name, value }
+            | Statement::Assign { name, value } => {
+                scoped_binding_source_name(name).unwrap_or(name) == alias_name
+                    && matches!(value, Expression::Identifier(value_name) if value_name == source_name)
+            }
+            Statement::Block { body }
+            | Statement::Declaration { body }
+            | Statement::Labeled { body, .. }
+            | Statement::With { body, .. } => {
+                Self::statements_bind_alias_to_identifier(body, alias_name, source_name)
+            }
+            Statement::If {
+                then_branch,
+                else_branch,
+                ..
+            } => {
+                Self::statements_bind_alias_to_identifier(then_branch, alias_name, source_name)
+                    || Self::statements_bind_alias_to_identifier(
+                        else_branch,
+                        alias_name,
+                        source_name,
+                    )
+            }
+            Statement::Try {
+                body,
+                catch_setup,
+                catch_body,
+                ..
+            } => {
+                Self::statements_bind_alias_to_identifier(body, alias_name, source_name)
+                    || Self::statements_bind_alias_to_identifier(
+                        catch_setup,
+                        alias_name,
+                        source_name,
+                    )
+                    || Self::statements_bind_alias_to_identifier(
+                        catch_body,
+                        alias_name,
+                        source_name,
+                    )
+            }
+            Statement::For { init, body, .. } => {
+                Self::statements_bind_alias_to_identifier(init, alias_name, source_name)
+                    || Self::statements_bind_alias_to_identifier(body, alias_name, source_name)
+            }
+            Statement::While { body, .. } | Statement::DoWhile { body, .. } => {
+                Self::statements_bind_alias_to_identifier(body, alias_name, source_name)
+            }
+            Statement::Switch { cases, .. } => cases.iter().any(|case| {
+                Self::statements_bind_alias_to_identifier(&case.body, alias_name, source_name)
+            }),
+            _ => false,
+        }
+    }
+
     fn capture_prepare_function_references_nested_function_in_body(
         function: &FunctionDeclaration,
         nested_function_name: &str,
@@ -305,54 +413,69 @@ impl<'a> FunctionCompiler<'a> {
                 .unwrap_or_else(|| self.ensure_implicit_global_binding(&hidden_name));
             let capture_originates_in_enclosing_local = self
                 .user_function_capture_originates_in_enclosing_local(function_name, &source_name);
+            let capture_source_name = self
+                .function_capture_immutable_class_alias_source_name(function_name, &source_name)
+                .unwrap_or_else(|| source_name.clone());
             let source_is_directly_bound = if source_name == "this" || source_name == "new.target" {
                 true
             } else {
-                self.parameter_scope_arguments_local_for(&source_name)
+                self.parameter_scope_arguments_local_for(&capture_source_name)
                     .is_some()
-                    || (self.is_current_arguments_binding_name(&source_name)
+                    || (self.is_current_arguments_binding_name(&capture_source_name)
                         && self.has_arguments_object())
-                    || self.resolve_current_local_binding(&source_name).is_some()
+                    || self
+                        .resolve_current_local_binding(&capture_source_name)
+                        .is_some()
                     || self
                         .state
                         .speculation
                         .static_semantics
-                        .has_local_function_binding(&source_name)
-                    || (is_internal_user_function_identifier(&source_name)
-                        && self.contains_user_function(&source_name))
+                        .has_local_function_binding(&capture_source_name)
+                    || (is_internal_user_function_identifier(&capture_source_name)
+                        && self.contains_user_function(&capture_source_name))
                     || self
-                        .resolve_eval_local_function_hidden_name(&source_name)
+                        .resolve_eval_local_function_hidden_name(&capture_source_name)
                         .is_some()
                     || self
-                        .resolve_user_function_capture_hidden_name(&source_name)
+                        .resolve_user_function_capture_hidden_name(&capture_source_name)
                         .is_some()
                     || (!capture_originates_in_enclosing_local
-                        && (self.global_has_binding(&source_name)
-                            || self.backend.global_has_lexical_binding(&source_name)
-                            || self.backend.global_function_binding(&source_name).is_some()))
-                    || self.user_function_capture_source_is_unshadowed_builtin(&source_name)
+                        && (self.global_has_binding(&capture_source_name)
+                            || self
+                                .backend
+                                .global_has_lexical_binding(&capture_source_name)
+                            || self
+                                .backend
+                                .global_function_binding(&capture_source_name)
+                                .is_some()))
+                    || self.user_function_capture_source_is_unshadowed_builtin(&capture_source_name)
             };
             if !source_is_directly_bound {
                 continue;
             }
             let source_expression = self.capture_source_expression_with_this_override(
-                &source_name,
+                &capture_source_name,
                 this_expression_override,
             );
-            let resolved_local_binding = self.resolve_current_local_binding(&source_name);
+            let resolved_local_binding = self.resolve_current_local_binding(&capture_source_name);
             let prefer_global_source = !capture_originates_in_enclosing_local
                 && resolved_local_binding.is_none()
-                && (self.global_has_binding(&source_name)
-                    || self.global_has_implicit_binding(&source_name)
-                    || self.backend.global_has_lexical_binding(&source_name)
-                    || self.backend.global_function_binding(&source_name).is_some());
+                && (self.global_has_binding(&capture_source_name)
+                    || self.global_has_implicit_binding(&capture_source_name)
+                    || self
+                        .backend
+                        .global_has_lexical_binding(&capture_source_name)
+                    || self
+                        .backend
+                        .global_function_binding(&capture_source_name)
+                        .is_some());
             let value_local = self.allocate_temp_local();
             let lexical_initialized_local = resolved_local_binding
                 .as_ref()
                 .and_then(|(resolved_name, _)| self.local_lexical_initialized_local(resolved_name));
             if std::env::var_os("AYY_TRACE_CAPTURE_BINDINGS").is_some() {
                 eprintln!(
-                    "capture_prepare fn={function_name} source={source_name} hidden={hidden_name} resolved={:?} initialized_local={:?} statically_uninitialized={}",
+                    "capture_prepare fn={function_name} source={source_name} capture_source={capture_source_name} hidden={hidden_name} resolved={:?} initialized_local={:?} statically_uninitialized={}",
                     resolved_local_binding,
                     lexical_initialized_local,
                     resolved_local_binding
@@ -391,7 +514,7 @@ impl<'a> FunctionCompiler<'a> {
                     .push(EMPTY_BLOCK_TYPE);
                 self.push_control_frame();
                 self.emit_user_function_capture_source_value(
-                    &source_name,
+                    &capture_source_name,
                     &source_expression,
                     prefer_global_source,
                 )?;
@@ -402,7 +525,7 @@ impl<'a> FunctionCompiler<'a> {
                 self.push_global_set(binding.present_index);
                 self.sync_user_function_capture_runtime_object_shadows_for_source(
                     &hidden_name,
-                    &source_name,
+                    &capture_source_name,
                     &source_expression,
                 )?;
                 self.state.emission.output.instructions.push(0x05);
@@ -414,7 +537,7 @@ impl<'a> FunctionCompiler<'a> {
                 self.pop_control_frame();
             } else {
                 self.emit_user_function_capture_source_value(
-                    &source_name,
+                    &capture_source_name,
                     &source_expression,
                     prefer_global_source,
                 )?;
@@ -423,7 +546,7 @@ impl<'a> FunctionCompiler<'a> {
                 self.push_global_set(binding.value_index);
                 self.sync_user_function_capture_runtime_object_shadows_for_source(
                     &hidden_name,
-                    &source_name,
+                    &capture_source_name,
                     &source_expression,
                 )?;
             }
@@ -470,6 +593,8 @@ impl<'a> FunctionCompiler<'a> {
     ) {
         self.backend
             .clear_global_static_binding_metadata(hidden_name);
+        self.backend
+            .clear_shared_global_static_binding_metadata(hidden_name);
     }
 
     pub(in crate::backend::direct_wasm) fn sync_user_function_capture_static_metadata(
@@ -491,23 +616,97 @@ impl<'a> FunctionCompiler<'a> {
     ) {
         let inferred_kind = self.infer_value_kind(&source_expression);
         let resolved_value = self.resolve_bound_alias_expression(&source_expression);
+        let expression_binding =
+            resolved_value.filter(|value| !static_expression_matches(value, &source_expression));
+        let array_binding = self.resolve_array_binding_from_expression(&source_expression);
+        let object_binding = self.resolve_object_binding_from_expression(&source_expression);
+        let function_binding = self.resolve_function_binding_from_expression(&source_expression);
+        let resizable_buffer_binding =
+            self.resolve_resizable_array_buffer_binding_from_expression(&source_expression);
+        let typed_array_view_binding =
+            self.resolve_typed_array_view_binding_from_expression(&source_expression);
 
-        self.backend.sync_global_expression_binding(
-            hidden_name,
-            resolved_value.filter(|value| !static_expression_matches(value, &source_expression)),
-        );
-        self.backend.sync_global_array_binding(
-            hidden_name,
-            self.resolve_array_binding_from_expression(&source_expression),
-        );
-        self.backend.sync_global_object_binding(
-            hidden_name,
-            self.resolve_object_binding_from_expression(&source_expression),
-        );
-        self.backend.sync_global_function_binding(
-            hidden_name,
-            self.resolve_function_binding_from_expression(&source_expression),
-        );
+        self.backend
+            .sync_global_expression_binding(hidden_name, expression_binding.clone());
+        if let Some(value) = expression_binding {
+            self.backend
+                .shared_global_semantics
+                .values
+                .set_value_binding(hidden_name.to_string(), value);
+        } else {
+            self.backend
+                .shared_global_semantics
+                .values
+                .clear_value_binding(hidden_name);
+        }
+        self.backend
+            .sync_global_array_binding(hidden_name, array_binding.clone());
+        self.backend
+            .shared_global_semantics
+            .values
+            .sync_array_binding(hidden_name, array_binding);
+        self.backend
+            .sync_global_object_binding(hidden_name, object_binding.clone());
+        self.backend
+            .shared_global_semantics
+            .values
+            .sync_object_binding(hidden_name, object_binding);
+        self.backend
+            .sync_global_function_binding(hidden_name, function_binding.clone());
+        if let Some(function_binding) = function_binding {
+            self.backend
+                .shared_global_semantics
+                .set_global_function_binding(hidden_name, function_binding);
+        } else {
+            self.backend
+                .shared_global_semantics
+                .clear_global_function_binding(hidden_name);
+        }
+        self.backend
+            .global_semantics
+            .values
+            .sync_resizable_array_buffer_binding(hidden_name, resizable_buffer_binding.clone());
+        self.backend
+            .shared_global_semantics
+            .values
+            .sync_resizable_array_buffer_binding(hidden_name, resizable_buffer_binding);
+        self.backend
+            .global_semantics
+            .values
+            .sync_typed_array_view_binding(hidden_name, typed_array_view_binding.clone());
+        self.backend
+            .shared_global_semantics
+            .values
+            .sync_typed_array_view_binding(hidden_name, typed_array_view_binding.clone());
+        if let Some(view) = typed_array_view_binding
+            && let Some(buffer_binding) = self
+                .state
+                .speculation
+                .static_semantics
+                .local_resizable_array_buffer_binding(&view.buffer_name)
+                .cloned()
+                .or_else(|| {
+                    self.global_resizable_array_buffer_binding(&view.buffer_name)
+                        .cloned()
+                })
+        {
+            self.backend
+                .global_semantics
+                .values
+                .sync_resizable_array_buffer_binding(
+                    &view.buffer_name,
+                    Some(buffer_binding.clone()),
+                );
+            self.backend
+                .shared_global_semantics
+                .values
+                .sync_resizable_array_buffer_binding(&view.buffer_name, Some(buffer_binding));
+        }
+        if let Expression::Identifier(source_name) = source_expression
+            && source_name != hidden_name
+        {
+            self.copy_member_bindings_for_alias(hidden_name, source_name);
+        }
 
         if let Some(kind) = inferred_kind {
             self.backend.set_global_binding_kind(hidden_name, kind);
@@ -631,7 +830,11 @@ impl<'a> FunctionCompiler<'a> {
             let source_is_immutable_local = self
                 .resolve_current_local_binding(&binding.source_name)
                 .is_some_and(|(resolved_name, _)| self.local_binding_is_immutable(&resolved_name))
-                || self.binding_is_immutable_function_self_binding_source(&binding.source_name);
+                || self.binding_is_immutable_function_self_binding_source(&binding.source_name)
+                || self
+                    .backend
+                    .lexical_global_binding(&binding.source_name)
+                    .is_some_and(|global_binding| !global_binding.mutable);
             if !source_is_immutable_local {
                 self.emit_sync_identifier_runtime_value_from_local(
                     &binding.source_name,

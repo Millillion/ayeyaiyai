@@ -1,6 +1,82 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn expression_references_module_dependency_namespace(expression: &Expression) -> bool {
+        match expression {
+            Expression::Identifier(name) => name.starts_with("__ayy_module_dep_"),
+            Expression::Member { object, property } => {
+                Self::expression_references_module_dependency_namespace(object)
+                    || Self::expression_references_module_dependency_namespace(property)
+            }
+            Expression::SuperMember { property } => {
+                Self::expression_references_module_dependency_namespace(property)
+            }
+            Expression::Call { callee, arguments } | Expression::New { callee, arguments } => {
+                Self::expression_references_module_dependency_namespace(callee)
+                    || arguments.iter().any(|argument| match argument {
+                        CallArgument::Expression(value) | CallArgument::Spread(value) => {
+                            Self::expression_references_module_dependency_namespace(value)
+                        }
+                    })
+            }
+            Expression::Array(elements) => elements.iter().any(|element| match element {
+                ArrayElement::Expression(value) | ArrayElement::Spread(value) => {
+                    Self::expression_references_module_dependency_namespace(value)
+                }
+            }),
+            Expression::Object(entries) => entries.iter().any(|entry| match entry {
+                ObjectEntry::Data { key, value } => {
+                    Self::expression_references_module_dependency_namespace(key)
+                        || Self::expression_references_module_dependency_namespace(value)
+                }
+                ObjectEntry::Getter { key, getter } => {
+                    Self::expression_references_module_dependency_namespace(key)
+                        || Self::expression_references_module_dependency_namespace(getter)
+                }
+                ObjectEntry::Setter { key, setter } => {
+                    Self::expression_references_module_dependency_namespace(key)
+                        || Self::expression_references_module_dependency_namespace(setter)
+                }
+                ObjectEntry::Spread(value) => {
+                    Self::expression_references_module_dependency_namespace(value)
+                }
+            }),
+            Expression::Assign { value, .. } | Expression::Await(value) => {
+                Self::expression_references_module_dependency_namespace(value)
+            }
+            Expression::Update { name, .. } => name.starts_with("__ayy_module_dep_"),
+            Expression::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                Self::expression_references_module_dependency_namespace(object)
+                    || Self::expression_references_module_dependency_namespace(property)
+                    || Self::expression_references_module_dependency_namespace(value)
+            }
+            Expression::Binary { left, right, .. } => {
+                Self::expression_references_module_dependency_namespace(left)
+                    || Self::expression_references_module_dependency_namespace(right)
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                Self::expression_references_module_dependency_namespace(condition)
+                    || Self::expression_references_module_dependency_namespace(then_expression)
+                    || Self::expression_references_module_dependency_namespace(else_expression)
+            }
+            Expression::Sequence(expressions) => expressions
+                .iter()
+                .any(Self::expression_references_module_dependency_namespace),
+            Expression::Unary { expression, .. } => {
+                Self::expression_references_module_dependency_namespace(expression)
+            }
+            _ => false,
+        }
+    }
+
     fn statement_contains_nested_promise_member_chain(statement: &Statement) -> bool {
         match statement {
             Statement::Block { body } => body
@@ -305,6 +381,14 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         handler: &Expression,
     ) -> bool {
+        if matches!(
+            handler,
+            Expression::Member { property, .. }
+                if matches!(property.as_ref(), Expression::String(name) if matches!(name.as_str(), "resolve" | "reject"))
+                    && Self::expression_references_module_dependency_namespace(handler)
+        ) {
+            return false;
+        }
         let Some(user_function) = self.resolve_user_function_from_expression(handler) else {
             return false;
         };
@@ -371,7 +455,10 @@ impl<'a> FunctionCompiler<'a> {
         matches!(
             property.as_ref(),
             Expression::String(name)
-                if matches!(name.as_str(), "then" | "catch" | "next" | "return" | "throw")
+                if matches!(
+                    name.as_str(),
+                    "then" | "catch" | "finally" | "next" | "return" | "throw"
+                )
         )
     }
 }

@@ -19,6 +19,21 @@ struct PreparedIdentifierValueStore {
     resolved_local_binding: Option<(String, u32)>,
     returned_descriptor_binding: Option<PropertyDescriptorBinding>,
     runtime_value_override: Option<Expression>,
+    opaque_runtime_value: bool,
+}
+
+fn expression_is_object_create_null_call(expression: &Expression) -> bool {
+    matches!(
+        expression,
+        Expression::Call { callee, arguments }
+            if matches!(
+                callee.as_ref(),
+                Expression::Member { object, property }
+                    if matches!(object.as_ref(), Expression::Identifier(name) if name == "Object")
+                        && matches!(property.as_ref(), Expression::String(name) if name == "create")
+            )
+                && matches!(arguments.as_slice(), [CallArgument::Expression(Expression::Null)])
+    )
 }
 
 mod context;

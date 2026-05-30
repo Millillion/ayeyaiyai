@@ -1111,6 +1111,14 @@ impl<'a> FunctionCompiler<'a> {
                 bindings.keys().collect::<Vec<_>>()
             );
         }
+        if user_function.is_generator() {
+            if trace {
+                eprintln!(
+                    "bound_snapshot_user_function:none function={function_name} reason=generator"
+                );
+            }
+            return None;
+        }
         if let Some(captures) = self
             .backend
             .function_registry

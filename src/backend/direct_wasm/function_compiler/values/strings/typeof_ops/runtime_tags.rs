@@ -86,6 +86,12 @@ impl<'a> FunctionCompiler<'a> {
             JS_NATIVE_ERROR_VALUE_BASE + JS_NATIVE_ERROR_VALUE_LIMIT,
             JS_TYPEOF_OBJECT_TAG,
         )?;
+        self.emit_runtime_typeof_exact_match(
+            value_local,
+            result_local,
+            TEST262_ERROR_RUNTIME_VALUE,
+            JS_TYPEOF_OBJECT_TAG,
+        )?;
         self.emit_runtime_typeof_range_match(
             value_local,
             result_local,

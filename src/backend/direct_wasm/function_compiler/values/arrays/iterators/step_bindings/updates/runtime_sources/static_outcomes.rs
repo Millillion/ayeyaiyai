@@ -25,6 +25,37 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    fn runtime_name_fixed_typed_array_length(&self, name: &str) -> Option<usize> {
+        let identifier = Expression::Identifier(name.to_string());
+        self.resolve_typed_array_view_binding_from_expression(&identifier)
+            .and_then(|view| view.fixed_length)
+            .or_else(|| {
+                let value = self
+                    .state
+                    .speculation
+                    .static_semantics
+                    .local_value_binding(name)
+                    .or_else(|| self.global_value_binding(name))?;
+                if static_expression_matches(value, &identifier) {
+                    return None;
+                }
+                self.resolve_typed_array_view_binding_from_expression(value)
+                    .and_then(|view| view.fixed_length)
+            })
+    }
+
+    pub(in crate::backend::direct_wasm) fn static_array_source_exhaustion_length(
+        &self,
+        values_len: usize,
+        length_local: Option<u32>,
+        runtime_name: Option<&str>,
+    ) -> Option<usize> {
+        if !self.static_array_source_has_dynamic_length(length_local, runtime_name) {
+            return Some(values_len);
+        }
+        runtime_name.and_then(|name| self.runtime_name_fixed_typed_array_length(name))
+    }
+
     pub(in crate::backend::direct_wasm) fn resolve_iterator_step_static_outcome(
         &self,
         iterator_binding: &ArrayIteratorBinding,
@@ -40,11 +71,24 @@ impl<'a> FunctionCompiler<'a> {
             } => {
                 let has_dynamic_length = self
                     .static_array_source_has_dynamic_length(*length_local, runtime_name.as_deref());
-                let static_done = (!has_dynamic_length)
-                    .then(|| current_static_index.map(|index| index >= values.len()))
-                    .flatten();
+                let exhaustion_length = self.static_array_source_exhaustion_length(
+                    values.len(),
+                    *length_local,
+                    runtime_name.as_deref(),
+                );
+                let static_done = current_static_index.and_then(|index| {
+                    if exhaustion_length.is_some_and(|length| index >= length) {
+                        Some(true)
+                    } else if !has_dynamic_length {
+                        Some(false)
+                    } else {
+                        None
+                    }
+                });
                 let static_value = current_static_index.and_then(|index| {
-                    if index >= values.len() && has_dynamic_length {
+                    if exhaustion_length.is_some_and(|length| index >= length) {
+                        Some(Expression::Undefined)
+                    } else if index >= values.len() && has_dynamic_length {
                         None
                     } else if index >= values.len() {
                         Some(Expression::Undefined)
@@ -75,11 +119,24 @@ impl<'a> FunctionCompiler<'a> {
             } => {
                 let has_dynamic_length = self
                     .static_array_source_has_dynamic_length(*length_local, runtime_name.as_deref());
-                let static_done = (!has_dynamic_length)
-                    .then(|| current_static_index.map(|index| index >= values.len()))
-                    .flatten();
+                let exhaustion_length = self.static_array_source_exhaustion_length(
+                    values.len(),
+                    *length_local,
+                    runtime_name.as_deref(),
+                );
+                let static_done = current_static_index.and_then(|index| {
+                    if exhaustion_length.is_some_and(|length| index >= length) {
+                        Some(true)
+                    } else if !has_dynamic_length {
+                        Some(false)
+                    } else {
+                        None
+                    }
+                });
                 let static_value = current_static_index.and_then(|index| {
-                    if index >= values.len() && has_dynamic_length {
+                    if exhaustion_length.is_some_and(|length| index >= length) {
+                        Some(Expression::Undefined)
+                    } else if index >= values.len() && has_dynamic_length {
                         None
                     } else if index >= values.len() {
                         Some(Expression::Undefined)
@@ -165,6 +222,28 @@ impl<'a> FunctionCompiler<'a> {
                     Some(_) => (Some(true), Some(Expression::Undefined)),
                     None => (None, None),
                 }
+            }
+            IteratorSourceKind::TypedArrayView { name } => {
+                let view = self.typed_array_view_binding_for_name(name);
+                let static_length = view
+                    .as_ref()
+                    .and_then(|view| self.typed_array_view_static_length(view));
+                let static_values = view
+                    .as_ref()
+                    .and_then(|view| self.typed_array_view_static_values(view));
+                let static_done = static_length
+                    .and_then(|length| current_static_index.map(|index| index >= length));
+                let static_value = current_static_index.and_then(|index| {
+                    if static_done == Some(true) {
+                        Some(Expression::Undefined)
+                    } else {
+                        static_values
+                            .as_ref()
+                            .and_then(|values| values.values.get(index).cloned().flatten())
+                            .or(Some(Expression::Undefined))
+                    }
+                });
+                (static_done, static_value)
             }
             _ => (None, None),
         };

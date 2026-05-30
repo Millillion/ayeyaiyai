@@ -146,6 +146,22 @@ impl<'a> FunctionCompiler<'a> {
             .is_some()
         {
             self.resolve_function_object_has_own_property(receiver, argument_property)
+        } else if self
+            .module_namespace_index_from_expression(receiver)
+            .is_some()
+        {
+            Some(
+                is_symbol_to_string_tag_expression(&canonical_argument_property)
+                    || is_symbol_to_string_tag_expression(argument_property)
+                    || static_property_name_from_expression(&canonical_argument_property)
+                        .is_some_and(|_| {
+                            self.resolve_module_namespace_live_binding_member_value(
+                                receiver,
+                                &canonical_argument_property,
+                            )
+                            .is_some()
+                        }),
+            )
         } else if let Some(has_property) =
             self.resolve_static_object_has_own_property_result(receiver, argument_property)
         {

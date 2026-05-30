@@ -159,7 +159,53 @@ impl<'a> FunctionCompiler<'a> {
         {
             return Ok(());
         }
+        if name == "__sameValue" {
+            let [
+                CallArgument::Expression(actual),
+                CallArgument::Expression(expected),
+                rest @ ..,
+            ] = arguments
+            else {
+                self.emit_ignored_call_arguments(arguments)?;
+                self.push_i32_const(0);
+                return Ok(());
+            };
+            if let Some(result) = self.resolve_static_same_value_result_with_context(
+                actual,
+                expected,
+                self.current_function_name(),
+            ) {
+                self.emit_numeric_expression(actual)?;
+                self.state.emission.output.instructions.push(0x1a);
+                self.emit_numeric_expression(expected)?;
+                self.state.emission.output.instructions.push(0x1a);
+                self.discard_call_arguments(rest)?;
+                self.push_i32_const(i32::from(result));
+                return Ok(());
+            }
+
+            let actual_local = self.allocate_temp_local();
+            let expected_local = self.allocate_temp_local();
+            let result_local = self.allocate_temp_local();
+            self.emit_numeric_expression(actual)?;
+            self.push_local_set(actual_local);
+            self.emit_numeric_expression(expected)?;
+            self.push_local_set(expected_local);
+            self.discard_call_arguments(rest)?;
+            self.emit_same_value_result_from_locals(actual_local, expected_local, result_local)?;
+            self.push_local_get(result_local);
+            return Ok(());
+        }
         if name == "__ayyAssertThrows" && self.emit_assert_throws_call(arguments)? {
+            return Ok(());
+        }
+        if name == "__ayyAssertCompareArray" && self.emit_assert_compare_array_call(arguments)? {
+            return Ok(());
+        }
+        if name == "compareArray" && self.emit_compare_array_call(arguments)? {
+            return Ok(());
+        }
+        if name == "verifyProperty" && self.emit_verify_property_call(arguments)? {
             return Ok(());
         }
         let resolved_local_name = self
@@ -372,6 +418,23 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(());
         }
         if name == "assert" && self.emit_assertion_builtin_call("__assert", arguments)? {
+            return Ok(());
+        }
+        if name.starts_with("__ayy_module_init_")
+            && let Some(user_function) = self.user_function(name).cloned()
+        {
+            let this_value = if user_function.strict {
+                JS_UNDEFINED_TAG
+            } else {
+                JS_TYPEOF_OBJECT_TAG
+            };
+            self.emit_user_function_call_without_inline_or_static_snapshot_with_new_target_and_this(
+                &user_function,
+                arguments,
+                JS_UNDEFINED_TAG,
+                this_value,
+            )?;
+            self.note_last_bound_user_function_source_expression(source_expression);
             return Ok(());
         }
 

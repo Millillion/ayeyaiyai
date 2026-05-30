@@ -47,38 +47,126 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    fn user_function_home_object_member_target(
+        &self,
+        binding: &LocalFunctionBinding,
+    ) -> Option<MemberFunctionBindingTarget> {
+        let LocalFunctionBinding::User(function_name) = binding else {
+            return None;
+        };
+        let home_object = self
+            .user_function(function_name)?
+            .home_object_binding
+            .as_deref()?;
+        if let Some(class_name) = home_object.strip_suffix(".prototype") {
+            Some(MemberFunctionBindingTarget::Prototype(
+                class_name.to_string(),
+            ))
+        } else {
+            Some(MemberFunctionBindingTarget::Identifier(
+                home_object.to_string(),
+            ))
+        }
+    }
+
+    fn insert_or_merge_member_function_capture_slots(
+        &mut self,
+        key: &MemberFunctionBindingKey,
+        mut capture_slots: BTreeMap<String, String>,
+    ) {
+        if let Some(existing_capture_slots) = self
+            .state
+            .speculation
+            .static_semantics
+            .objects
+            .member_function_capture_slots
+            .get(key)
+            .cloned()
+            .or_else(|| {
+                self.backend
+                    .global_member_function_capture_slots(key)
+                    .cloned()
+            })
+        {
+            for (capture_name, slot_name) in existing_capture_slots {
+                capture_slots.entry(capture_name).or_insert(slot_name);
+            }
+        }
+        self.state
+            .speculation
+            .static_semantics
+            .objects
+            .member_function_capture_slots
+            .insert(key.clone(), capture_slots.clone());
+        if self.binding_key_is_global(key) {
+            self.backend
+                .set_global_member_function_capture_slots(key.clone(), capture_slots);
+        }
+    }
+
+    fn insert_inherited_member_function_binding_for_key(
+        &mut self,
+        key: MemberFunctionBindingKey,
+        binding: LocalFunctionBinding,
+        capture_slots: Option<BTreeMap<String, String>>,
+    ) {
+        self.state
+            .speculation
+            .static_semantics
+            .objects
+            .member_function_bindings
+            .insert(key.clone(), binding.clone());
+        if let Some(capture_slots) = capture_slots {
+            self.insert_or_merge_member_function_capture_slots(&key, capture_slots);
+        }
+        if self.binding_key_is_global(&key) {
+            self.backend
+                .set_global_member_function_binding(key, binding);
+        }
+    }
+
     fn insert_inherited_member_function_binding_for_name(
         &mut self,
         name: &str,
         binding: ReturnedMemberFunctionBinding,
         capture_slots_by_property: &HashMap<String, BTreeMap<String, String>>,
     ) {
+        let trace_inherited_bindings = std::env::var_os("AYY_TRACE_INHERITED_BINDINGS").is_some();
         let property_name = binding.property.clone();
         let key = MemberFunctionBindingKey {
             target: self.inherited_member_binding_target(name, binding.target),
             property: MemberFunctionBindingProperty::String(property_name.clone()),
         };
-        self.state
-            .speculation
-            .static_semantics
-            .objects
-            .member_function_bindings
-            .insert(key.clone(), binding.binding.clone());
-        if let Some(capture_slots) = capture_slots_by_property.get(&property_name).cloned() {
-            self.state
-                .speculation
-                .static_semantics
-                .objects
-                .member_function_capture_slots
-                .insert(key.clone(), capture_slots.clone());
-            if self.binding_name_is_global(name) {
-                self.backend
-                    .set_global_member_function_capture_slots(key.clone(), capture_slots);
-            }
+        if trace_inherited_bindings {
+            eprintln!(
+                "inherited_member_function_bindings:insert name={name} key={key:?} binding={:?} slots={:?}",
+                binding.binding,
+                capture_slots_by_property.get(&property_name)
+            );
         }
-        if self.binding_name_is_global(name) {
-            self.backend
-                .set_global_member_function_binding(key, binding.binding);
+        let capture_slots = capture_slots_by_property.get(&property_name).cloned();
+        self.insert_inherited_member_function_binding_for_key(
+            key.clone(),
+            binding.binding.clone(),
+            capture_slots.clone(),
+        );
+        if let Some(home_target) = self.user_function_home_object_member_target(&binding.binding)
+            && home_target != key.target
+        {
+            let home_key = MemberFunctionBindingKey {
+                target: home_target,
+                property: key.property.clone(),
+            };
+            if self
+                .member_function_binding_entry(&home_key)
+                .is_none_or(|existing_binding| existing_binding == binding.binding)
+            {
+                self.insert_inherited_member_function_binding_for_key(
+                    home_key,
+                    binding.binding,
+                    capture_slots,
+                );
+            }
         }
     }
 
@@ -168,6 +256,16 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         value: &Expression,
     ) -> Vec<(MemberFunctionBindingProperty, LocalFunctionBinding)> {
+        if matches!(
+            value,
+            Expression::New { callee, .. }
+                if matches!(
+                    callee.as_ref(),
+                    Expression::Identifier(name) if !name.starts_with("__ayy_class_ctor_")
+                )
+        ) {
+            return Vec::new();
+        }
         let Some(object_binding) = self.resolve_object_binding_from_expression(value) else {
             return Vec::new();
         };

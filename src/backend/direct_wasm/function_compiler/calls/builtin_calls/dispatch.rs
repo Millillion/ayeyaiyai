@@ -400,6 +400,9 @@ impl<'a> FunctionCompiler<'a> {
         expression: &Expression,
         active_functions: &mut HashSet<String>,
     ) {
+        if Self::call_is_promise_like_chain(expression) {
+            return;
+        }
         match expression {
             Expression::Assign { value, .. }
             | Expression::Await(value)
@@ -1063,10 +1066,38 @@ impl<'a> FunctionCompiler<'a> {
                     arguments,
                 );
             }
+            "Reflect.get" => {
+                return self.emit_reflect_get_call(
+                    &reflect_identifier,
+                    &Expression::String("get".to_string()),
+                    arguments,
+                );
+            }
+            "Reflect.getOwnPropertyDescriptor" => {
+                return self.emit_object_get_own_property_descriptor_call(
+                    &reflect_identifier,
+                    &Expression::String("getOwnPropertyDescriptor".to_string()),
+                    arguments,
+                );
+            }
+            "Reflect.getPrototypeOf" => {
+                return self.emit_object_get_prototype_of_call(
+                    &reflect_identifier,
+                    &Expression::String("getPrototypeOf".to_string()),
+                    arguments,
+                );
+            }
             "Reflect.has" => {
                 return self.emit_reflect_has_call(
                     &reflect_identifier,
                     &Expression::String("has".to_string()),
+                    arguments,
+                );
+            }
+            "Reflect.isExtensible" => {
+                return self.emit_object_is_extensible_call(
+                    &reflect_identifier,
+                    &Expression::String("isExtensible".to_string()),
                     arguments,
                 );
             }
@@ -1088,6 +1119,13 @@ impl<'a> FunctionCompiler<'a> {
                 return self.emit_reflect_set_call(
                     &reflect_identifier,
                     &Expression::String("set".to_string()),
+                    arguments,
+                );
+            }
+            "Reflect.setPrototypeOf" => {
+                return self.emit_object_set_prototype_of_call(
+                    &reflect_identifier,
+                    &Expression::String("setPrototypeOf".to_string()),
                     arguments,
                 );
             }
@@ -1249,7 +1287,9 @@ impl<'a> FunctionCompiler<'a> {
         }
 
         let Some(result_tag) = (match name {
-            "Promise.resolve" | "Promise.reject" => Some(JS_TYPEOF_OBJECT_TAG),
+            "Promise.resolve" | "Promise.reject" | "Promise.withResolvers" => {
+                Some(JS_TYPEOF_OBJECT_TAG)
+            }
             "Number" => Some(JS_TYPEOF_NUMBER_TAG),
             "Boolean" => Some(JS_TYPEOF_BOOLEAN_TAG),
             "Object" | "Array" | "ArrayBuffer" | "SharedArrayBuffer" | "DataView" | "RegExp"

@@ -72,6 +72,19 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         expression: &Expression,
     ) -> Option<Expression> {
+        if let Expression::Identifier(name) = expression
+            && (name.starts_with("__ayy_array_iter_done_")
+                || name.starts_with("__ayy_for_of_iter_done_"))
+            && let Some(value) = self
+                .state
+                .speculation
+                .static_semantics
+                .local_value_binding(name)
+                .or_else(|| self.global_value_binding(name))
+            && !static_expression_matches(value, expression)
+        {
+            return self.resolve_static_iterator_step_condition_operand_value(value);
+        }
         self.resolve_static_iterator_step_member_value(expression, "done")
             .or_else(|| self.resolve_static_iterator_step_assignment_value(expression))
             .or_else(|| self.materialize_non_iterator_step_expression(expression))

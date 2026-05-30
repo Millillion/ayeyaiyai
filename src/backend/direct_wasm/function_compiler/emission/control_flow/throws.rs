@@ -1184,14 +1184,18 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    #[track_caller]
     pub(in crate::backend::direct_wasm) fn emit_throw_from_locals(&mut self) -> DirectResult<()> {
         if std::env::var_os("AYY_TRACE_THROW_SITES").is_some() {
+            let caller = std::panic::Location::caller();
             self.emit_print(&[Expression::String(format!(
-                "throw_from_locals fn={:?} allow_return={} try_depth={} instruction={}",
+                "throw_from_locals fn={:?} allow_return={} try_depth={} instruction={} caller={}:{}",
                 self.current_function_name(),
                 self.state.runtime.behavior.allow_return,
                 self.state.emission.control_flow.try_stack.len(),
-                self.state.emission.output.instructions.len()
+                self.state.emission.output.instructions.len(),
+                caller.file(),
+                caller.line()
             ))])?;
         }
         self.push_local_get(self.state.runtime.throws.throw_value_local);
@@ -1285,7 +1289,18 @@ impl<'a> FunctionCompiler<'a> {
         self.push_global_set(THROW_VALUE_GLOBAL_INDEX);
     }
 
+    #[track_caller]
     pub(in crate::backend::direct_wasm) fn emit_error_throw(&mut self) -> DirectResult<()> {
+        if std::env::var_os("AYY_TRACE_THROW_SITES").is_some() {
+            let caller = std::panic::Location::caller();
+            self.emit_print(&[Expression::String(format!(
+                "throw_site name=Error fn={:?} instruction={} caller={}:{}",
+                self.current_function_name(),
+                self.state.emission.output.instructions.len(),
+                caller.file(),
+                caller.line()
+            ))])?;
+        }
         self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
         self.push_local_set(self.state.runtime.throws.throw_value_local);
         self.push_i32_const(1);
@@ -1310,6 +1325,13 @@ impl<'a> FunctionCompiler<'a> {
         }
         if let Some(value) = native_error_runtime_value(name) {
             self.push_i32_const(value);
+            self.push_local_set(self.state.runtime.throws.throw_value_local);
+            self.push_i32_const(1);
+            self.push_local_set(self.state.runtime.throws.throw_tag_local);
+            return self.emit_throw_from_locals();
+        }
+        if name == "Test262Error" {
+            self.push_i32_const(TEST262_ERROR_RUNTIME_VALUE);
             self.push_local_set(self.state.runtime.throws.throw_value_local);
             self.push_i32_const(1);
             self.push_local_set(self.state.runtime.throws.throw_tag_local);

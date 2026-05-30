@@ -1048,6 +1048,13 @@ impl<'a> FunctionCompiler<'a> {
         property: &Expression,
         static_array_property: &Expression,
     ) -> DirectResult<bool> {
+        let trace_member_reads = std::env::var_os("AYY_TRACE_MEMBER_READS").is_some()
+            || std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some();
+        if trace_member_reads {
+            eprintln!(
+                "runtime_or_object_read:start object={object:?} property={property:?} static={static_array_property:?}"
+            );
+        }
         let object_uses_internal_assignment_temp =
             Self::expression_references_internal_assignment_temp(object);
         let property_is_arguments_own_property =
@@ -1094,6 +1101,9 @@ impl<'a> FunctionCompiler<'a> {
             }
             return Ok(true);
         }
+        if trace_member_reads {
+            eprintln!("runtime_or_object_read:before_descriptor");
+        }
         if self.emit_runtime_descriptor_member_read(object, property)? {
             if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
                 eprintln!(
@@ -1101,6 +1111,9 @@ impl<'a> FunctionCompiler<'a> {
                 );
             }
             return Ok(true);
+        }
+        if trace_member_reads {
+            eprintln!("runtime_or_object_read:before_array");
         }
         if self.emit_runtime_array_member_read(object, static_array_property)? {
             if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
@@ -1110,9 +1123,27 @@ impl<'a> FunctionCompiler<'a> {
             }
             return Ok(true);
         }
-        if self.emit_runtime_object_dynamic_shadow_member_read_without_static_fallback(
-            object, property,
-        )? {
+        let dynamic_descriptor_member_read = matches!(
+            (object, property),
+            (Expression::Identifier(name), Expression::String(property_name))
+                if matches!(
+                    property_name.as_str(),
+                    "value" | "configurable" | "enumerable" | "writable" | "get" | "set"
+                ) && self.local_binding_is_dynamic_property_descriptor_result(name)
+        );
+        if trace_member_reads && dynamic_descriptor_member_read {
+            eprintln!(
+                "runtime_or_object_read:skip_static_shadow_for_dynamic_descriptor object={object:?} property={property:?}"
+            );
+        }
+        if trace_member_reads {
+            eprintln!("runtime_or_object_read:before_dynamic_shadow");
+        }
+        if !dynamic_descriptor_member_read
+            && self.emit_runtime_object_dynamic_shadow_member_read_without_static_fallback(
+                object, property,
+            )?
+        {
             if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
                 eprintln!(
                     "runtime_shadow_member_branch dynamic_shadow object={object:?} property={property:?}"
@@ -1120,13 +1151,21 @@ impl<'a> FunctionCompiler<'a> {
             }
             return Ok(true);
         }
-        if self.emit_runtime_object_shadow_member_read(object, property)? {
+        if trace_member_reads {
+            eprintln!("runtime_or_object_read:before_shadow");
+        }
+        if !dynamic_descriptor_member_read
+            && self.emit_runtime_object_shadow_member_read(object, property)?
+        {
             if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
                 eprintln!(
                     "runtime_shadow_member_branch shadow object={object:?} property={property:?}"
                 );
             }
             return Ok(true);
+        }
+        if trace_member_reads {
+            eprintln!("runtime_or_object_read:before_object_binding");
         }
         if self.emit_runtime_object_binding_member_read(object, property)? {
             if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
@@ -1136,6 +1175,9 @@ impl<'a> FunctionCompiler<'a> {
             }
             return Ok(true);
         }
+        if trace_member_reads {
+            eprintln!("runtime_or_object_read:before_string");
+        }
         if self.emit_runtime_string_member_read(object, property)? {
             if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
                 eprintln!(
@@ -1143,6 +1185,9 @@ impl<'a> FunctionCompiler<'a> {
                 );
             }
             return Ok(true);
+        }
+        if trace_member_reads {
+            eprintln!("runtime_or_object_read:before_arguments");
         }
         if self.emit_runtime_arguments_member_read(object, property)? {
             if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
@@ -1152,6 +1197,9 @@ impl<'a> FunctionCompiler<'a> {
             }
             return Ok(true);
         }
+        if trace_member_reads {
+            eprintln!("runtime_or_object_read:before_native_error");
+        }
         if self.emit_runtime_native_error_member_read(object, property)? {
             if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
                 eprintln!(
@@ -1159,6 +1207,9 @@ impl<'a> FunctionCompiler<'a> {
                 );
             }
             return Ok(true);
+        }
+        if trace_member_reads {
+            eprintln!("runtime_or_object_read:before_returned_or_function");
         }
         if self.emit_runtime_returned_or_function_member_read(object, property)? {
             if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
@@ -1168,6 +1219,9 @@ impl<'a> FunctionCompiler<'a> {
             }
             return Ok(true);
         }
+        if trace_member_reads {
+            eprintln!("runtime_or_object_read:before_array_undefined");
+        }
         if self.resolve_array_binding_from_expression(object).is_some() {
             if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
                 eprintln!(
@@ -1176,6 +1230,9 @@ impl<'a> FunctionCompiler<'a> {
             }
             self.push_i32_const(JS_UNDEFINED_TAG);
             return Ok(true);
+        }
+        if trace_member_reads {
+            eprintln!("runtime_or_object_read:done_false");
         }
         Ok(false)
     }

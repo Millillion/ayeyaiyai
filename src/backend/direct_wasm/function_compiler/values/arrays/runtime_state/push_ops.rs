@@ -179,6 +179,7 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         name: &str,
         value_local: u32,
+        initial_length_override: Option<i32>,
     ) -> DirectResult<bool> {
         if !self.is_named_global_array_binding(name) {
             return Ok(false);
@@ -189,11 +190,12 @@ impl<'a> FunctionCompiler<'a> {
             .values
             .mark_array_with_runtime_state(name);
 
-        let initial_length = self
-            .backend
-            .global_array_binding(name)
-            .map(|binding| binding.values.len() as i32)
-            .unwrap_or(0);
+        let initial_length = initial_length_override.unwrap_or_else(|| {
+            self.backend
+                .global_array_binding(name)
+                .map(|binding| binding.values.len() as i32)
+                .unwrap_or(0)
+        });
         let length_binding = self.global_runtime_array_length_binding(name);
         let length_local = self.allocate_temp_local();
         self.push_global_get(length_binding.present_index);

@@ -1,6 +1,33 @@
 use super::*;
 
 impl DirectWasmCompiler {
+    fn resolve_scoped_class_static_member_binding(
+        &self,
+        object: &Expression,
+        property: &Expression,
+    ) -> Option<LocalFunctionBinding> {
+        let Expression::Identifier(object_name) = object else {
+            return None;
+        };
+        let property = self.global_member_function_binding_property(property)?;
+        let mut matches = self
+            .global_member_function_binding_entries()
+            .into_iter()
+            .filter_map(|(key, binding)| {
+                if key.property != property {
+                    return None;
+                }
+                let MemberFunctionBindingTarget::Identifier(target_name) = key.target else {
+                    return None;
+                };
+                (target_name == *object_name
+                    || scoped_binding_source_name(&target_name) == Some(object_name.as_str()))
+                .then_some(binding)
+            });
+        let binding = matches.next()?;
+        matches.next().is_none().then_some(binding)
+    }
+
     pub(in crate::backend::direct_wasm) fn resolve_function_binding_from_expression_with_aliases(
         &self,
         expression: &Expression,
@@ -26,6 +53,11 @@ impl DirectWasmCompiler {
                     && let Some(binding) = self.global_member_function_binding(&key)
                 {
                     return Some(binding.clone());
+                }
+                if let Some(binding) =
+                    self.resolve_scoped_class_static_member_binding(object, property)
+                {
+                    return Some(binding);
                 }
 
                 let materialized = self.materialize_global_expression(expression);

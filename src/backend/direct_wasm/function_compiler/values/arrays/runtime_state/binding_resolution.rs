@@ -19,6 +19,13 @@ impl<'a> FunctionCompiler<'a> {
                 && self.uses_global_runtime_array_state(name))
     }
 
+    pub(in crate::backend::direct_wasm) fn runtime_array_binding_may_have_shared_state(
+        &self,
+        name: &str,
+    ) -> bool {
+        self.runtime_array_binding_has_state(name)
+    }
+
     pub(in crate::backend::direct_wasm) fn ensure_runtime_array_length_local(
         &mut self,
         name: &str,
@@ -116,6 +123,36 @@ impl<'a> FunctionCompiler<'a> {
             .runtime_array_length_local(&binding_name)
     }
 
+    pub(in crate::backend::direct_wasm) fn expression_uses_runtime_array_state(
+        &self,
+        expression: &Expression,
+    ) -> bool {
+        if let Expression::Call { callee, arguments } = expression
+            && self
+                .resolve_test262_to_numbers_call_binding(callee, arguments)
+                .is_some()
+        {
+            return false;
+        }
+        if let Expression::Member { object, .. } = expression
+            && matches!(object.as_ref(), Expression::Call { .. })
+        {
+            return false;
+        }
+        if let Expression::Member { object, .. } = expression
+            && self.expression_uses_runtime_array_state(object)
+        {
+            return true;
+        }
+        self.runtime_array_length_local_for_expression(expression)
+            .is_some()
+            || self
+                .runtime_array_binding_name_for_expression(expression)
+                .is_some_and(|binding_name| {
+                    self.runtime_array_binding_may_have_shared_state(&binding_name)
+                })
+    }
+
     pub(in crate::backend::direct_wasm) fn runtime_array_binding_name_for_expression(
         &self,
         expression: &Expression,
@@ -125,7 +162,7 @@ impl<'a> FunctionCompiler<'a> {
                 && !static_expression_matches(alias_expression, expression)
                 && let Some(alias_binding_name) =
                     self.runtime_array_binding_name_for_expression(alias_expression)
-                && self.runtime_array_binding_has_state(&alias_binding_name)
+                && self.runtime_array_binding_may_have_shared_state(&alias_binding_name)
             {
                 return Some(alias_binding_name);
             }
@@ -167,6 +204,59 @@ impl<'a> FunctionCompiler<'a> {
 
         if let Expression::Member { object, property } = expression {
             let canonical_property = self.canonical_object_property_expression(property);
+            if let Expression::Identifier(name) = object.as_ref()
+                && let Some(module_index) = Self::module_index_from_namespace_like_identifier(name)
+            {
+                if let Some(value) = self
+                    .resolve_static_dynamic_import_namespace_live_binding_member_value(
+                        module_index,
+                        &canonical_property,
+                    )
+                    .or_else(|| {
+                        self.resolve_static_dynamic_import_namespace_live_binding_member_value(
+                            module_index,
+                            property,
+                        )
+                    })
+                    && !static_expression_matches(&value, expression)
+                    && let Some(binding_name) =
+                        self.runtime_array_binding_name_for_expression(&value)
+                {
+                    return Some(binding_name);
+                }
+            }
+            if matches!(object.as_ref(), Expression::Identifier(_))
+                && let Some(value) = self
+                    .resolve_module_namespace_live_binding_member_value(object, &canonical_property)
+                    .or_else(|| {
+                        self.resolve_module_namespace_live_binding_member_value(object, property)
+                    })
+                && !static_expression_matches(&value, expression)
+                && let Some(binding_name) = self.runtime_array_binding_name_for_expression(&value)
+            {
+                return Some(binding_name);
+            }
+
+            if let Some(shadow_binding_name) = self
+                .runtime_object_property_shadow_binding_name_for_expression(
+                    object,
+                    &canonical_property,
+                )
+                && (self.runtime_array_binding_may_have_shared_state(&shadow_binding_name)
+                    || self
+                        .backend
+                        .global_array_binding(&shadow_binding_name)
+                        .is_some()
+                    || self
+                        .backend
+                        .shared_global_semantics
+                        .values
+                        .array_bindings
+                        .contains_key(&shadow_binding_name))
+            {
+                return Some(shadow_binding_name);
+            }
+
             if let Some(shadow_binding_name) = self
                 .runtime_object_property_shadow_binding_name_for_expression(
                     object,

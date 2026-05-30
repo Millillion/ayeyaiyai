@@ -232,6 +232,13 @@ impl StaticSpecialExpressionSource for FunctionStaticEvalContext<'_, '_> {
                 && let Some(function) = self.registered_function_declaration(function_name)
                 && let [Statement::Return(return_value)] = function.body.as_slice()
             {
+                if matches!(return_value, Expression::This) {
+                    return Some(if user_function.strict || user_function.lexical_this {
+                        Expression::Undefined
+                    } else {
+                        Expression::Identifier("globalThis".to_string())
+                    });
+                }
                 return Some(self.substitute_user_function_arguments(
                     return_value,
                     user_function,
@@ -559,6 +566,68 @@ impl FunctionStaticEvalContext<'_, '_> {
         self.resolve_array_binding(expression)
     }
 
+    fn module_namespace_binding_module_index(binding: &ObjectValueBinding) -> Option<usize> {
+        fn number_to_index(value: &Expression) -> Option<usize> {
+            let Expression::Number(index) = value else {
+                return None;
+            };
+            if index.is_finite() && *index >= 0.0 && index.fract() == 0.0 {
+                Some(*index as usize)
+            } else {
+                None
+            }
+        }
+
+        binding
+            .string_properties
+            .iter()
+            .find_map(|(key, value)| {
+                (key == "__ayy$module$namespace$moduleIndex")
+                    .then(|| number_to_index(value))
+                    .flatten()
+            })
+            .or_else(|| {
+                binding
+                    .property_descriptors
+                    .iter()
+                    .find_map(|(property, descriptor)| {
+                        matches!(
+                            property,
+                            Expression::String(key)
+                                if key == "__ayy$module$namespace$moduleIndex"
+                        )
+                        .then(|| descriptor.value.as_ref().and_then(number_to_index))
+                        .flatten()
+                    })
+            })
+    }
+
+    fn module_namespace_module_index_with_state(
+        &self,
+        target: &Expression,
+        environment: &mut StaticResolutionEnvironment,
+    ) -> Option<usize> {
+        self.namespace_like_module_index(target)
+            .or_else(|| {
+                let evaluated = self
+                    .evaluate_expression_with_state(target, environment)
+                    .or_else(|| self.materialize_expression_with_state(target, environment))?;
+                self.namespace_like_module_index(&evaluated).or_else(|| {
+                    let binding =
+                        self.resolve_object_binding_with_state(&evaluated, environment)?;
+                    FunctionCompiler::object_binding_has_module_namespace_marker(&binding)
+                        .then(|| Self::module_namespace_binding_module_index(&binding))
+                        .flatten()
+                })
+            })
+            .or_else(|| {
+                let binding = self.resolve_object_binding_with_state(target, environment)?;
+                FunctionCompiler::object_binding_has_module_namespace_marker(&binding)
+                    .then(|| Self::module_namespace_binding_module_index(&binding))
+                    .flatten()
+            })
+    }
+
     fn static_evaluate_object_array_member_expression(
         &self,
         expression: &Expression,
@@ -627,6 +696,9 @@ impl FunctionStaticEvalContext<'_, '_> {
             ("Object", Expression::String(name)) if name == "getOwnPropertySymbols" => {
                 self.static_own_property_symbols_binding_with_state(target, environment)
             }
+            ("Array", Expression::String(name)) if name == "from" => self
+                .resolve_array_binding_with_state(target, environment)
+                .or_else(|| self.resolve_static_typed_array_values(target)),
             ("Reflect", Expression::String(name)) if name == "ownKeys" => {
                 let mut names =
                     self.static_own_property_names_binding_with_state(target, environment)?;
@@ -646,6 +718,12 @@ impl FunctionStaticEvalContext<'_, '_> {
         target: &Expression,
         environment: &mut StaticResolutionEnvironment,
     ) -> Option<ArrayValueBinding> {
+        if let Some(module_index) =
+            self.module_namespace_module_index_with_state(target, environment)
+        {
+            return self
+                .resolve_static_dynamic_import_namespace_own_property_names_binding(module_index);
+        }
         if let Some(array_binding) = self.resolve_array_binding_with_state(target, environment) {
             return Some(enumerated_keys_from_array_binding(&array_binding));
         }
@@ -658,6 +736,12 @@ impl FunctionStaticEvalContext<'_, '_> {
         target: &Expression,
         environment: &mut StaticResolutionEnvironment,
     ) -> Option<ArrayValueBinding> {
+        if let Some(module_index) =
+            self.module_namespace_module_index_with_state(target, environment)
+        {
+            return self
+                .resolve_static_dynamic_import_namespace_own_property_names_binding(module_index);
+        }
         if let Some(array_binding) = self.resolve_array_binding_with_state(target, environment) {
             return Some(own_property_names_from_array_binding(&array_binding));
         }
@@ -682,6 +766,15 @@ impl FunctionStaticEvalContext<'_, '_> {
         target: &Expression,
         environment: &mut StaticResolutionEnvironment,
     ) -> Option<ArrayValueBinding> {
+        if let Some(module_index) =
+            self.module_namespace_module_index_with_state(target, environment)
+        {
+            return Some(
+                self.resolve_static_dynamic_import_namespace_own_property_symbols_binding(
+                    module_index,
+                ),
+            );
+        }
         self.resolve_object_binding_with_state(target, environment)
             .map(|binding| own_property_symbols_from_object_binding(&binding))
     }

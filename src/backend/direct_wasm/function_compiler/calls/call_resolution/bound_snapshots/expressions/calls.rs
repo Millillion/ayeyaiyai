@@ -112,6 +112,16 @@ impl<'a> FunctionCompiler<'a> {
             effective_callee,
             current_function_name,
         )?;
+        if let LocalFunctionBinding::User(function_name) = &binding
+            && self
+                .user_function(function_name)
+                .is_some_and(|function| function.is_generator())
+        {
+            return Some(Expression::Call {
+                callee: Box::new(effective_callee.clone()),
+                arguments: arguments.to_vec(),
+            });
+        }
         let call_receiver = self.evaluate_bound_snapshot_call_receiver(
             effective_callee,
             bindings,

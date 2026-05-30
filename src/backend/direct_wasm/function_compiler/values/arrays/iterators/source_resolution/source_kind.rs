@@ -6,6 +6,61 @@ fn is_internal_declaration_array_binding_name(name: &str) -> bool {
 }
 
 impl<'a> FunctionCompiler<'a> {
+    fn typed_array_view_source_name_for_iterator_alias_with_depth(
+        &self,
+        expression: &Expression,
+        depth: usize,
+    ) -> Option<String> {
+        if depth > 4 {
+            return None;
+        }
+        let Expression::Identifier(name) = expression else {
+            return None;
+        };
+        if self.has_typed_array_view_binding_for_name(name) {
+            return Some(name.clone());
+        }
+        if let Some((resolved_name, _)) = self.resolve_current_local_binding(name)
+            && self.has_typed_array_view_binding_for_name(&resolved_name)
+        {
+            return Some(resolved_name);
+        }
+        if let Some(hidden_name) = self.resolve_user_function_capture_hidden_name(name)
+            && hidden_name != *name
+            && self.has_typed_array_view_binding_for_name(&hidden_name)
+        {
+            return Some(hidden_name);
+        }
+        let value = self
+            .state
+            .speculation
+            .static_semantics
+            .local_value_binding(name)
+            .or_else(|| self.global_value_binding(name))?;
+        if static_expression_matches(value, expression) {
+            return None;
+        }
+        if let Some(source_name) =
+            self.typed_array_view_source_name_for_iterator_alias_with_depth(value, depth + 1)
+        {
+            return Some(source_name);
+        }
+        let materialized = self.materialize_static_expression(value);
+        if static_expression_matches(&materialized, value)
+            || static_expression_matches(&materialized, expression)
+        {
+            return None;
+        }
+        self.typed_array_view_source_name_for_iterator_alias_with_depth(&materialized, depth + 1)
+    }
+
+    fn typed_array_view_source_name_for_iterator_alias(
+        &self,
+        expression: &Expression,
+    ) -> Option<String> {
+        self.typed_array_view_source_name_for_iterator_alias_with_depth(expression, 0)
+    }
+
     fn internal_iterator_value_source_cache_key(&self, expression: &Expression) -> Option<String> {
         let Expression::Identifier(name) = expression else {
             return None;
@@ -301,11 +356,7 @@ impl<'a> FunctionCompiler<'a> {
         }
         trace_probe!("typed-array-local:start");
         if let Expression::Identifier(name) = expression
-            && self
-                .state
-                .speculation
-                .static_semantics
-                .has_local_typed_array_view_binding(name)
+            && self.has_typed_array_view_binding_for_name(name)
         {
             trace_source!("typed-array-local");
             return Some(IteratorSourceKind::TypedArrayView { name: name.clone() });
@@ -313,15 +364,20 @@ impl<'a> FunctionCompiler<'a> {
         trace_probe!("typed-array-resolved:start");
         if let Expression::Identifier(name) = expression
             && let Some((resolved_name, _)) = self.resolve_current_local_binding(name)
-            && self
-                .state
-                .speculation
-                .static_semantics
-                .has_local_typed_array_view_binding(&resolved_name)
+            && self.has_typed_array_view_binding_for_name(&resolved_name)
         {
             return Some(IteratorSourceKind::TypedArrayView {
                 name: resolved_name,
             });
+        }
+        trace_probe!("typed-array-capture:start");
+        if let Expression::Identifier(name) = expression
+            && let Some(hidden_name) = self.resolve_user_function_capture_hidden_name(name)
+            && hidden_name != *name
+            && self.has_typed_array_view_binding_for_name(&hidden_name)
+        {
+            trace_source!("typed-array-capture");
+            return Some(IteratorSourceKind::TypedArrayView { name: hidden_name });
         }
         trace_probe!("existing-local-array-iterator:start");
         if let Expression::Identifier(name) = expression
@@ -336,6 +392,20 @@ impl<'a> FunctionCompiler<'a> {
             return Some(binding.source.clone());
         }
         if expression_is_internal_iterator_value
+            && let Some(name) = self.typed_array_view_source_name_for_iterator_alias(expression)
+        {
+            let source = IteratorSourceKind::TypedArrayView { name };
+            if let Some(cache_key) = internal_iterator_value_cache_key.as_ref() {
+                INTERNAL_ITERATOR_VALUE_SOURCE_CACHE.with(|cache| {
+                    cache
+                        .borrow_mut()
+                        .insert(cache_key.clone(), Some(source.clone()));
+                });
+            }
+            trace_source!("internal-iterator-typed-array-alias");
+            return Some(source);
+        }
+        if expression_is_internal_iterator_value
             && let Expression::Identifier(name) = expression
             && let Some(value) = self
                 .state
@@ -345,6 +415,11 @@ impl<'a> FunctionCompiler<'a> {
                 .or_else(|| self.global_value_binding(name))
             && !static_expression_matches(value, expression)
         {
+            if trace_iterator_source {
+                eprintln!(
+                    "iterator_source_kind:internal-value-binding name={name} value={value:?}"
+                );
+            }
             if let Some(source) = self.resolve_iterator_source_kind(value) {
                 if let Some(cache_key) = internal_iterator_value_cache_key.as_ref() {
                     INTERNAL_ITERATOR_VALUE_SOURCE_CACHE.with(|cache| {
@@ -375,6 +450,9 @@ impl<'a> FunctionCompiler<'a> {
                 INTERNAL_ITERATOR_VALUE_SOURCE_CACHE.with(|cache| {
                     cache.borrow_mut().insert(cache_key.clone(), None);
                 });
+            }
+            if trace_iterator_source {
+                eprintln!("iterator_source_kind:internal-value-binding:miss name={name}");
             }
             return None;
         }
@@ -452,6 +530,11 @@ impl<'a> FunctionCompiler<'a> {
             && !static_expression_matches(value, expression)
             && let Some(source) = self.resolve_iterator_source_kind(value)
         {
+            if trace_iterator_source {
+                eprintln!(
+                    "iterator_source_kind:identifier-binding:value name={name} value={value:?}"
+                );
+            }
             trace_source!("identifier-binding");
             return Some(source);
         }

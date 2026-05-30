@@ -39,6 +39,120 @@ struct DestructuringDefaultIteratorClosePattern {
 }
 
 impl<'a> FunctionCompiler<'a> {
+    fn static_caught_bytes_module_array_buffer_mutation_argument_safe(
+        argument: &CallArgument,
+    ) -> bool {
+        let CallArgument::Expression(expression) = argument else {
+            return false;
+        };
+        matches!(
+            expression,
+            Expression::Number(_)
+                | Expression::BigInt(_)
+                | Expression::String(_)
+                | Expression::Bool(_)
+                | Expression::Null
+                | Expression::Undefined
+        )
+    }
+
+    fn expression_is_static_bytes_module_array_buffer_mutation_throw(
+        &self,
+        expression: &Expression,
+    ) -> bool {
+        let Expression::Call { callee, arguments } = expression else {
+            return false;
+        };
+        if !arguments
+            .iter()
+            .all(Self::static_caught_bytes_module_array_buffer_mutation_argument_safe)
+        {
+            return false;
+        }
+        let Expression::Member { object, property } = callee.as_ref() else {
+            return false;
+        };
+        matches!(
+            property.as_ref(),
+            Expression::String(name) if matches!(name.as_str(), "resize" | "transfer")
+        ) && self.expression_is_static_bytes_module_array_buffer(object)
+    }
+
+    fn expression_is_static_module_namespace_reference(&self, expression: &Expression) -> bool {
+        if let Expression::Identifier(name) = expression
+            && Self::module_index_from_namespace_like_identifier(name).is_some()
+        {
+            return true;
+        }
+        self.resolve_object_binding_from_expression(expression)
+            .is_some_and(|binding| Self::object_binding_has_module_namespace_marker(&binding))
+    }
+
+    fn expression_is_static_reflect_module_namespace_call_throw(
+        &self,
+        expression: &Expression,
+    ) -> bool {
+        let Expression::Call { callee, arguments } = expression else {
+            return false;
+        };
+        if !arguments.iter().all(|argument| {
+            matches!(argument, CallArgument::Expression(expression) if inline_summary_side_effect_free_expression(expression))
+        }) {
+            return false;
+        }
+        let Expression::Member { object, property } = callee.as_ref() else {
+            return false;
+        };
+        if !matches!(object.as_ref(), Expression::Identifier(name) if name == "Reflect") {
+            return false;
+        }
+        let Expression::String(property_name) = property.as_ref() else {
+            return false;
+        };
+        match property_name.as_str() {
+            "apply" => arguments
+                .first()
+                .map(CallArgument::expression)
+                .is_some_and(|target| self.expression_is_static_module_namespace_reference(target)),
+            "construct" => arguments
+                .first()
+                .map(CallArgument::expression)
+                .is_some_and(|target| self.expression_is_static_module_namespace_reference(target)),
+            _ => false,
+        }
+    }
+
+    fn emit_static_caught_bytes_module_array_buffer_mutation_try(
+        &mut self,
+        body: &[Statement],
+        catch_binding: Option<&String>,
+        catch_setup: &[Statement],
+        catch_body: &[Statement],
+    ) -> DirectResult<bool> {
+        if catch_binding.is_some() || !catch_setup.is_empty() {
+            return Ok(false);
+        }
+        let [Statement::Expression(expression)] = body else {
+            return Ok(false);
+        };
+        if !self.expression_is_static_bytes_module_array_buffer_mutation_throw(expression)
+            && !self.expression_is_static_reflect_module_namespace_call_throw(expression)
+        {
+            return Ok(false);
+        }
+        if !matches!(
+            catch_body,
+            [Statement::Assign {
+                value: Expression::Bool(true),
+                ..
+            }]
+        ) {
+            return Ok(false);
+        }
+        self.emit_statements(catch_body)?;
+        Ok(true)
+    }
+
     fn concrete_static_binding_value_condition_operand(
         &self,
         expression: Expression,
@@ -869,6 +983,38 @@ impl<'a> FunctionCompiler<'a> {
             self.restore_local_try_body_binding_metadata_for_name(name, local_snapshot);
             self.restore_global_try_body_binding_metadata_for_name(name, global_snapshot);
         }
+    }
+
+    fn static_deferred_module_error_identity_from_try_body(
+        &self,
+        body: &[Statement],
+    ) -> Option<Expression> {
+        let [Statement::Expression(Expression::Member { object, property })] = body else {
+            return None;
+        };
+        let (module_index, _) =
+            self.deferred_module_namespace_materialized_member_access(object, property)?;
+        self.static_dynamic_import_module_throw_value_by_index(module_index)?;
+        Some(Expression::Identifier(format!(
+            "__ayy_module_error_{module_index}"
+        )))
+    }
+
+    fn static_catch_binding_alias_assignments(
+        catch_body: &[Statement],
+        catch_binding: &str,
+    ) -> Vec<String> {
+        catch_body
+            .iter()
+            .filter_map(|statement| match statement {
+                Statement::Assign { name, value }
+                    if matches!(value, Expression::Identifier(alias) if alias == catch_binding) =>
+                {
+                    Some(name.clone())
+                }
+                _ => None,
+            })
+            .collect()
     }
 
     pub(in crate::backend::direct_wasm) fn statement_preserves_try_metadata_before_terminal_throw(
@@ -2350,6 +2496,14 @@ impl<'a> FunctionCompiler<'a> {
                 catch_setup,
                 catch_body,
             } => {
+                if self.emit_static_caught_bytes_module_array_buffer_mutation_try(
+                    body,
+                    catch_binding.as_ref(),
+                    catch_setup,
+                    catch_body,
+                )? {
+                    return Ok(());
+                }
                 let mut try_body_assigned_bindings = HashSet::new();
                 for statement in body {
                     collect_assigned_binding_names_from_statement(
@@ -2381,11 +2535,12 @@ impl<'a> FunctionCompiler<'a> {
                 let try_body_metadata_survives_catch = catch_binding.is_some()
                     && (catch_body_has_deterministic_terminal_throw
                         || try_body_has_deterministic_terminal_throw);
-                let static_catch_value = catch_binding.as_ref().and_then(|_| {
-                    try_body_has_deterministic_terminal_throw
-                        .then(|| self.resolve_static_catch_value_from_try_body(body))
-                        .flatten()
-                });
+                let static_catch_value = catch_binding
+                    .as_ref()
+                    .and_then(|_| self.resolve_static_catch_value_from_try_body(body));
+                let static_catch_identity_value = catch_binding
+                    .as_ref()
+                    .and_then(|_| self.static_deferred_module_error_identity_from_try_body(body));
                 let assert_throws_single_call_try = catch_binding.is_none()
                     && catch_setup.is_empty()
                     && matches!(
@@ -2447,7 +2602,12 @@ impl<'a> FunctionCompiler<'a> {
                     invalidated_bindings.insert(catch_binding.clone());
                     self.invalidate_static_binding_metadata_for_names(&invalidated_bindings);
                     if let Some(static_catch_value) = static_catch_value.as_ref() {
-                        self.update_local_value_binding(catch_binding, static_catch_value);
+                        self.update_local_value_binding(
+                            catch_binding,
+                            static_catch_identity_value
+                                .as_ref()
+                                .unwrap_or(static_catch_value),
+                        );
                         if let Some(object_binding) =
                             self.resolve_object_binding_from_expression(static_catch_value)
                         {
@@ -2496,14 +2656,30 @@ impl<'a> FunctionCompiler<'a> {
                     Ok(())
                 })?;
 
+                let static_catch_identity_alias_targets = catch_binding
+                    .as_ref()
+                    .filter(|_| static_catch_identity_value.is_some())
+                    .map(|catch_binding| {
+                        Self::static_catch_binding_alias_assignments(catch_body, catch_binding)
+                    })
+                    .unwrap_or_default();
+
                 self.state.emission.output.instructions.push(0x0b);
                 self.pop_control_frame();
                 self.invalidate_static_binding_metadata_for_names(&try_body_assigned_bindings);
-                let catch_assigned_bindings_to_invalidate = catch_assigned_bindings
-                    .iter()
-                    .filter(|name| !is_using_completion_binding(name))
-                    .cloned()
-                    .collect::<HashSet<_>>();
+                let catch_assigned_bindings_to_invalidate = if static_catch_value.is_some() {
+                    catch_binding
+                        .iter()
+                        .filter(|name| !is_using_completion_binding(name))
+                        .cloned()
+                        .collect::<HashSet<_>>()
+                } else {
+                    catch_assigned_bindings
+                        .iter()
+                        .filter(|name| !is_using_completion_binding(name))
+                        .cloned()
+                        .collect::<HashSet<_>>()
+                };
                 self.invalidate_static_binding_metadata_for_names(
                     &catch_assigned_bindings_to_invalidate,
                 );
@@ -2520,6 +2696,28 @@ impl<'a> FunctionCompiler<'a> {
                         local_snapshot,
                         global_snapshot,
                     );
+                }
+                if let (Some(static_catch_identity_value), Some(static_catch_value)) = (
+                    static_catch_identity_value.as_ref(),
+                    static_catch_value.as_ref(),
+                ) {
+                    for alias_target in static_catch_identity_alias_targets {
+                        self.update_local_value_binding(&alias_target, static_catch_identity_value);
+                        if let Some(object_binding) =
+                            self.resolve_object_binding_from_expression(static_catch_value)
+                        {
+                            let object_binding = self
+                                .object_binding_with_constructed_constructor_shadow(
+                                    object_binding,
+                                    static_catch_value,
+                                );
+                            self.update_local_object_binding_from_resolved(
+                                &alias_target,
+                                static_catch_value,
+                                object_binding,
+                            );
+                        }
+                    }
                 }
                 if assert_throws_single_call_try {
                     self.sync_assert_throws_iterator_bindings_for_body(body);

@@ -372,7 +372,24 @@ impl<'a> FunctionCompiler<'a> {
         environment: &mut StaticResolutionEnvironment,
     ) -> Option<Expression> {
         match expression {
+            Expression::Identifier(name)
+                if environment.binding(name).is_none()
+                    && self.user_function_capture_read_would_throw_reference_error(name) =>
+            {
+                self.resolve_static_throw_value_expression(&StaticThrowValue::NamedError(
+                    "ReferenceError",
+                ))
+            }
             Expression::Call { callee, arguments } => {
+                if let Expression::Member { object, property } = callee.as_ref()
+                    && matches!(
+                        property.as_ref(),
+                        Expression::String(name) if matches!(name.as_str(), "then" | "catch")
+                    )
+                    && matches!(object.as_ref(), Expression::Call { .. })
+                {
+                    return None;
+                }
                 let callee = match callee.as_ref() {
                     Expression::Identifier(name) => {
                         environment.binding(name).cloned().unwrap_or_else(|| {
@@ -434,7 +451,13 @@ impl<'a> FunctionCompiler<'a> {
                 self.resolve_terminal_expression_throw_value_with_state(value, environment)
             }
             Expression::Member { object, property } => self
-                .resolve_terminal_expression_throw_value_with_state(object, environment)
+                .deferred_module_namespace_materialized_member_access(object, property)
+                .and_then(|(module_index, _)| {
+                    self.static_dynamic_import_module_throw_value_by_index(module_index)
+                })
+                .or_else(|| {
+                    self.resolve_terminal_expression_throw_value_with_state(object, environment)
+                })
                 .or_else(|| {
                     self.resolve_terminal_expression_throw_value_with_state(property, environment)
                 }),
@@ -542,6 +565,13 @@ impl<'a> FunctionCompiler<'a> {
             Expression::AssignSuperMember { property, value } => self
                 .resolve_terminal_expression_throw_value(property)
                 .or_else(|| self.resolve_terminal_expression_throw_value(value)),
+            Expression::Member { object, property } => self
+                .deferred_module_namespace_materialized_member_access(object, property)
+                .and_then(|(module_index, _)| {
+                    self.static_dynamic_import_module_throw_value_by_index(module_index)
+                })
+                .or_else(|| self.resolve_terminal_expression_throw_value(object))
+                .or_else(|| self.resolve_terminal_expression_throw_value(property)),
             Expression::Binary { op, left, right } => self
                 .resolve_terminal_expression_throw_value(left)
                 .or_else(|| self.resolve_terminal_expression_throw_value(right))

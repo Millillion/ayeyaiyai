@@ -38,11 +38,6 @@ impl<'a> FunctionCompiler<'a> {
                 Vec::new(),
             ));
         }
-        if let Some(source) = self.resolve_iterator_source_kind(expression)
-            && let Some(flattened) = self.flatten_simple_yield_delegate_iterator_source(&source)
-        {
-            return Some(flattened);
-        }
         let async_iterator_property = self.materialize_static_expression(&Expression::Member {
             object: Box::new(Expression::Identifier("Symbol".to_string())),
             property: Box::new(Expression::String("asyncIterator".to_string())),
@@ -106,7 +101,15 @@ impl<'a> FunctionCompiler<'a> {
                 Some(outcome) => outcome,
                 None => match resolve_iterator_method_call_outcome(self, &iterator_property)? {
                     Some(outcome) => outcome,
-                    None => return None,
+                    None => {
+                        if let Some(source) = self.resolve_iterator_source_kind(expression)
+                            && let Some(flattened) =
+                                self.flatten_simple_yield_delegate_iterator_source(&source)
+                        {
+                            return Some(flattened);
+                        }
+                        return None;
+                    }
                 },
             };
 

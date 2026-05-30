@@ -65,8 +65,79 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    fn resolve_static_instanceof_expression_result(
+        &self,
+        left: &Expression,
+        right: &Expression,
+    ) -> Option<bool> {
+        let materialized_right = self.materialize_static_expression(right);
+        if self.expression_is_known_non_object_value_for_instanceof(&materialized_right)
+            || (self.expression_is_known_object_like_value_for_instanceof(&materialized_right)
+                && !self.expression_is_known_function_value_for_instanceof(&materialized_right))
+        {
+            return None;
+        }
+
+        if self.expression_is_builtin_array_constructor(&materialized_right) {
+            return Some(self.expression_is_known_array_value(left));
+        }
+
+        if let Expression::Identifier(name) = &materialized_right
+            && (name == "Error" || native_error_runtime_value(name).is_some())
+        {
+            if let Expression::Member { object, property } = left
+                && let Some(shadow_binding_name) = self
+                    .runtime_object_property_shadow_binding_name_for_expression(object, property)
+                && self.global_has_implicit_binding(&shadow_binding_name)
+            {
+                return None;
+            }
+            if self.expression_is_known_non_object_value_for_instanceof(left) {
+                return Some(false);
+            }
+            if self.expression_inherits_from_prototype_for_instanceof(
+                left,
+                &Self::prototype_member_expression(name),
+            ) {
+                return Some(true);
+            }
+            if self.expression_is_known_object_like_value_for_instanceof(left) {
+                return Some(false);
+            }
+            return None;
+        }
+
+        let prototype_expression =
+            self.resolve_instanceof_prototype_expression(&materialized_right)?;
+        let materialized_prototype_expression =
+            self.materialize_static_expression(&prototype_expression);
+        if self.expression_is_known_non_object_value_for_instanceof(left) {
+            return Some(false);
+        }
+        if self
+            .expression_is_known_non_object_value_for_instanceof(&materialized_prototype_expression)
+        {
+            return None;
+        }
+
+        Some(self.expression_inherits_from_prototype_for_instanceof(left, &prototype_expression))
+    }
+
     fn boolean_expression_reads_runtime_nonlocal_binding(&self, expression: &Expression) -> bool {
         if self.current_function_name().is_none() {
+            return false;
+        }
+
+        if let Expression::Binary {
+            op: BinaryOp::In,
+            left,
+            right,
+        } = expression
+            && self.module_namespace_index_from_expression(right).is_some()
+            && self
+                .resolve_static_in_expression_result(left, right)
+                .is_some()
+        {
             return false;
         }
 
@@ -74,6 +145,9 @@ impl<'a> FunctionCompiler<'a> {
         collect_referenced_binding_names_from_expression(expression, &mut referenced_names);
         referenced_names.iter().any(|name| {
             let source_name = scoped_binding_source_name(name).unwrap_or(name);
+            if Self::module_index_from_namespace_like_identifier(source_name).is_some() {
+                return false;
+            }
             self.with_scope_blocks_static_identifier_resolution(source_name)
                 || (self.resolve_current_local_binding(source_name).is_none()
                     && (self.global_has_binding(source_name)
@@ -149,7 +223,12 @@ impl<'a> FunctionCompiler<'a> {
                                 .map(|number| number != 0.0 && !number.is_nan()),
                             Some(StaticValueKind::Bool) => self
                                 .resolve_bound_alias_expression(&identifier)
-                                .or_else(|| self.resolve_global_value_expression(&identifier))
+                                .filter(|value| !static_expression_matches(value, &identifier))
+                                .or_else(|| {
+                                    self.resolve_global_value_expression(&identifier).filter(
+                                        |value| !static_expression_matches(value, &identifier),
+                                    )
+                                })
                                 .and_then(|value| self.resolve_static_boolean_expression(&value)),
                             Some(StaticValueKind::Null) | Some(StaticValueKind::Undefined) => {
                                 Some(false)
@@ -182,6 +261,9 @@ impl<'a> FunctionCompiler<'a> {
                     self.resolve_static_binary_boolean_result(&op, &left, &right)
                 }
                 BinaryOp::In => self.resolve_static_in_expression_result(&left, &right),
+                BinaryOp::InstanceOf => {
+                    self.resolve_static_instanceof_expression_result(&left, &right)
+                }
                 _ => None,
             },
             Expression::Unary {
@@ -268,6 +350,46 @@ impl<'a> FunctionCompiler<'a> {
                 &object_name,
                 &property_name,
             ));
+        }
+
+        if let Expression::Identifier(name) = right
+            && let Some(module_index) = Self::module_index_from_namespace_like_identifier(name)
+        {
+            let materialized_left = self.materialize_static_expression(left);
+            if is_symbol_to_string_tag_expression(left)
+                || (!static_expression_matches(&materialized_left, left)
+                    && is_symbol_to_string_tag_expression(&materialized_left))
+            {
+                return Some(true);
+            }
+            if self.well_known_symbol_name(left).is_some()
+                || self.well_known_symbol_name(&materialized_left).is_some()
+                || self.resolve_symbol_identity_expression(left).is_some()
+                || (!static_expression_matches(&materialized_left, left)
+                    && self
+                        .resolve_symbol_identity_expression(&materialized_left)
+                        .is_some())
+            {
+                return Some(false);
+            }
+            let property_name = self.static_property_name_for_in_result(left)?;
+            if property_name.starts_with("__ayy$") {
+                return Some(false);
+            }
+            let property = Expression::String(property_name);
+            return Some(
+                self.resolve_static_dynamic_import_namespace_live_binding_member_value(
+                    module_index,
+                    &property,
+                )
+                .or_else(|| {
+                    self.resolve_static_dynamic_import_namespace_live_binding_member_initializer_value(
+                        module_index,
+                        &property,
+                    )
+                })
+                .is_some(),
+            );
         }
 
         let materialized_right = self.materialize_static_expression(right);
@@ -475,6 +597,12 @@ impl<'a> FunctionCompiler<'a> {
     ) -> Option<bool> {
         let private_property_expression = Expression::String(private_property.to_string());
         let materialized = self.materialize_static_expression(expression);
+        if self.expression_is_module_namespace_for_private_presence(expression)
+            || (!static_expression_matches(&materialized, expression)
+                && self.expression_is_module_namespace_for_private_presence(&materialized))
+        {
+            return Some(false);
+        }
         let object_binding = self
             .resolve_object_binding_from_expression(expression)
             .or_else(|| {
@@ -502,6 +630,16 @@ impl<'a> FunctionCompiler<'a> {
             return Some(constructed_owner == private_owner);
         }
         None
+    }
+
+    fn expression_is_module_namespace_for_private_presence(&self, expression: &Expression) -> bool {
+        if let Expression::Identifier(name) = expression
+            && Self::module_index_from_namespace_like_identifier(name).is_some()
+        {
+            return true;
+        }
+        self.resolve_object_binding_from_expression(expression)
+            .is_some_and(|binding| Self::object_binding_has_module_namespace_marker(&binding))
     }
 
     fn resolve_constructed_static_private_brand_owner(

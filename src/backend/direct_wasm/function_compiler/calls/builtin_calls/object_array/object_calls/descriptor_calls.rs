@@ -9,12 +9,127 @@ fn object_binding_is_module_namespace(object_binding: &ObjectValueBinding) -> bo
         })
 }
 
-fn target_is_module_init_exports_parameter(
+fn target_is_module_init_namespace_construction_target(
     current_function_name: Option<&str>,
     target: &Expression,
 ) -> bool {
-    current_function_name.is_some_and(|name| name.starts_with("__ayy_module_init_"))
-        && matches!(target, Expression::Identifier(name) if name == "exports")
+    current_function_name.is_some_and(|name| {
+        name.starts_with("__ayy_module_init_")
+            || name.starts_with("__ayy_module_async_continuation_")
+    }) && matches!(
+        target,
+        Expression::Identifier(name)
+            if name == "exports" || name.starts_with("__ayy_module_deferred_namespace_")
+    )
+}
+
+fn target_is_generated_module_namespace_define_property_target(
+    current_function_name: Option<&str>,
+    target: &Expression,
+) -> bool {
+    target_is_module_init_namespace_construction_target(current_function_name, target)
+        || matches!(
+            target,
+            Expression::Identifier(name)
+                if name.starts_with("__ayy_module_namespace_")
+                    || name.starts_with("__ayy_module_deferred_namespace_")
+        )
+}
+
+fn generated_module_namespace_define_property_descriptor(
+    property: &Expression,
+    descriptor_expression: &Expression,
+) -> Option<(Expression, PropertyDescriptorBinding)> {
+    let generated_property = if matches!(
+        property,
+        Expression::String(name) if name == "__ayy$module$namespace"
+    ) {
+        Some((
+            Expression::String("__ayy$module$namespace".to_string()),
+            true,
+        ))
+    } else if matches!(
+        property,
+        Expression::Member { object, property }
+            if matches!(object.as_ref(), Expression::Identifier(name) if name == "Symbol")
+                && matches!(property.as_ref(), Expression::String(name) if name == "toStringTag")
+    ) {
+        Some((property.clone(), false))
+    } else {
+        None
+    }?;
+
+    let Expression::Object(entries) = descriptor_expression else {
+        return None;
+    };
+    let mut value = None;
+    let mut writable = None;
+    let mut enumerable = None;
+    let mut configurable = None;
+    for entry in entries {
+        let ObjectEntry::Data {
+            key,
+            value: entry_value,
+        } = entry
+        else {
+            return None;
+        };
+        let Expression::String(name) = key else {
+            return None;
+        };
+        match name.as_str() {
+            "value" => value = Some(entry_value.clone()),
+            "writable" => {
+                let Expression::Bool(flag) = entry_value else {
+                    return None;
+                };
+                writable = Some(*flag);
+            }
+            "enumerable" => {
+                let Expression::Bool(flag) = entry_value else {
+                    return None;
+                };
+                enumerable = Some(*flag);
+            }
+            "configurable" => {
+                let Expression::Bool(flag) = entry_value else {
+                    return None;
+                };
+                configurable = Some(*flag);
+            }
+            _ => return None,
+        }
+    }
+
+    if writable != Some(false) || enumerable != Some(false) || configurable != Some(false) {
+        return None;
+    }
+    let value = value?;
+    if generated_property.1 && !matches!(value, Expression::Bool(true)) {
+        return None;
+    }
+    if !generated_property.1
+        && !matches!(
+            value,
+            Expression::String(ref tag) if tag == "Module" || tag == "Deferred Module"
+        )
+    {
+        return None;
+    }
+
+    Some((
+        generated_property.0,
+        PropertyDescriptorBinding {
+            value: Some(value),
+            configurable: false,
+            enumerable: false,
+            writable: Some(false),
+            getter: None,
+            setter: None,
+            has_get: false,
+            has_set: false,
+        },
+    ))
 }
 
 fn descriptor_definition_is_empty(descriptor: &PropertyDescriptorDefinition) -> bool {
@@ -27,6 +142,393 @@ fn descriptor_definition_is_empty(descriptor: &PropertyDescriptorDefinition) -> 
 }
 
 impl<'a> FunctionCompiler<'a> {
+    fn expression_contains_generated_class_field_define_property(
+        expression: &Expression,
+        capture_name: &str,
+    ) -> bool {
+        match expression {
+            Expression::Call { callee, arguments } => {
+                let is_class_field_define = matches!(
+                    callee.as_ref(),
+                    Expression::Member { object, property }
+                        if matches!(object.as_ref(), Expression::Identifier(name) if name == "Object")
+                            && matches!(property.as_ref(), Expression::String(name) if name == "defineProperty")
+                ) && matches!(
+                    arguments.as_slice(),
+                    [
+                        CallArgument::Expression(Expression::This),
+                        CallArgument::Expression(Expression::Identifier(property_name)),
+                        ..
+                    ] if property_name == capture_name
+                );
+                is_class_field_define
+                    || Self::expression_contains_generated_class_field_define_property(
+                        callee,
+                        capture_name,
+                    )
+                    || arguments.iter().any(|argument| {
+                        Self::expression_contains_generated_class_field_define_property(
+                            argument.expression(),
+                            capture_name,
+                        )
+                    })
+            }
+            Expression::SuperCall { callee, arguments } | Expression::New { callee, arguments } => {
+                Self::expression_contains_generated_class_field_define_property(
+                    callee,
+                    capture_name,
+                ) || arguments.iter().any(|argument| {
+                    Self::expression_contains_generated_class_field_define_property(
+                        argument.expression(),
+                        capture_name,
+                    )
+                })
+            }
+            Expression::Member { object, property } => {
+                Self::expression_contains_generated_class_field_define_property(
+                    object,
+                    capture_name,
+                ) || Self::expression_contains_generated_class_field_define_property(
+                    property,
+                    capture_name,
+                )
+            }
+            Expression::Assign { value, .. } => {
+                Self::expression_contains_generated_class_field_define_property(value, capture_name)
+            }
+            Expression::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                Self::expression_contains_generated_class_field_define_property(
+                    object,
+                    capture_name,
+                ) || Self::expression_contains_generated_class_field_define_property(
+                    property,
+                    capture_name,
+                ) || Self::expression_contains_generated_class_field_define_property(
+                    value,
+                    capture_name,
+                )
+            }
+            Expression::AssignSuperMember { property, value } => {
+                Self::expression_contains_generated_class_field_define_property(
+                    property,
+                    capture_name,
+                ) || Self::expression_contains_generated_class_field_define_property(
+                    value,
+                    capture_name,
+                )
+            }
+            Expression::Await(value)
+            | Expression::EnumerateKeys(value)
+            | Expression::GetIterator(value)
+            | Expression::IteratorClose(value)
+            | Expression::Unary {
+                expression: value, ..
+            } => {
+                Self::expression_contains_generated_class_field_define_property(value, capture_name)
+            }
+            Expression::Binary { left, right, .. } => {
+                Self::expression_contains_generated_class_field_define_property(left, capture_name)
+                    || Self::expression_contains_generated_class_field_define_property(
+                        right,
+                        capture_name,
+                    )
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                Self::expression_contains_generated_class_field_define_property(
+                    condition,
+                    capture_name,
+                ) || Self::expression_contains_generated_class_field_define_property(
+                    then_expression,
+                    capture_name,
+                ) || Self::expression_contains_generated_class_field_define_property(
+                    else_expression,
+                    capture_name,
+                )
+            }
+            Expression::Sequence(expressions) => expressions.iter().any(|expression| {
+                Self::expression_contains_generated_class_field_define_property(
+                    expression,
+                    capture_name,
+                )
+            }),
+            Expression::Array(elements) => elements.iter().any(|element| match element {
+                ArrayElement::Expression(expression) | ArrayElement::Spread(expression) => {
+                    Self::expression_contains_generated_class_field_define_property(
+                        expression,
+                        capture_name,
+                    )
+                }
+            }),
+            Expression::Object(entries) => entries.iter().any(|entry| match entry {
+                ObjectEntry::Data { key, value } => {
+                    Self::expression_contains_generated_class_field_define_property(
+                        key,
+                        capture_name,
+                    ) || Self::expression_contains_generated_class_field_define_property(
+                        value,
+                        capture_name,
+                    )
+                }
+                ObjectEntry::Getter { key, getter } => {
+                    Self::expression_contains_generated_class_field_define_property(
+                        key,
+                        capture_name,
+                    ) || Self::expression_contains_generated_class_field_define_property(
+                        getter,
+                        capture_name,
+                    )
+                }
+                ObjectEntry::Setter { key, setter } => {
+                    Self::expression_contains_generated_class_field_define_property(
+                        key,
+                        capture_name,
+                    ) || Self::expression_contains_generated_class_field_define_property(
+                        setter,
+                        capture_name,
+                    )
+                }
+                ObjectEntry::Spread(expression) => {
+                    Self::expression_contains_generated_class_field_define_property(
+                        expression,
+                        capture_name,
+                    )
+                }
+            }),
+            Expression::SuperMember { property } => {
+                Self::expression_contains_generated_class_field_define_property(
+                    property,
+                    capture_name,
+                )
+            }
+            _ => false,
+        }
+    }
+
+    fn statement_contains_generated_class_field_define_property(
+        statement: &Statement,
+        capture_name: &str,
+    ) -> bool {
+        match statement {
+            Statement::Declaration { body }
+            | Statement::Block { body }
+            | Statement::Labeled { body, .. }
+            | Statement::With { body, .. }
+            | Statement::While { body, .. }
+            | Statement::DoWhile { body, .. } => {
+                Self::statements_contain_generated_class_field_define_property(body, capture_name)
+            }
+            Statement::Var { value, .. }
+            | Statement::Let { value, .. }
+            | Statement::Assign { value, .. } => {
+                Self::expression_contains_generated_class_field_define_property(value, capture_name)
+            }
+            Statement::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                Self::expression_contains_generated_class_field_define_property(
+                    object,
+                    capture_name,
+                ) || Self::expression_contains_generated_class_field_define_property(
+                    property,
+                    capture_name,
+                ) || Self::expression_contains_generated_class_field_define_property(
+                    value,
+                    capture_name,
+                )
+            }
+            Statement::Print { values } => values.iter().any(|expression| {
+                Self::expression_contains_generated_class_field_define_property(
+                    expression,
+                    capture_name,
+                )
+            }),
+            Statement::Expression(expression)
+            | Statement::Throw(expression)
+            | Statement::Return(expression)
+            | Statement::Yield { value: expression }
+            | Statement::YieldDelegate { value: expression } => {
+                Self::expression_contains_generated_class_field_define_property(
+                    expression,
+                    capture_name,
+                )
+            }
+            Statement::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                Self::expression_contains_generated_class_field_define_property(
+                    condition,
+                    capture_name,
+                ) || Self::statements_contain_generated_class_field_define_property(
+                    then_branch,
+                    capture_name,
+                ) || Self::statements_contain_generated_class_field_define_property(
+                    else_branch,
+                    capture_name,
+                )
+            }
+            Statement::Try {
+                body,
+                catch_setup,
+                catch_body,
+                ..
+            } => {
+                Self::statements_contain_generated_class_field_define_property(body, capture_name)
+                    || Self::statements_contain_generated_class_field_define_property(
+                        catch_setup,
+                        capture_name,
+                    )
+                    || Self::statements_contain_generated_class_field_define_property(
+                        catch_body,
+                        capture_name,
+                    )
+            }
+            Statement::Switch {
+                discriminant,
+                cases,
+                ..
+            } => {
+                Self::expression_contains_generated_class_field_define_property(
+                    discriminant,
+                    capture_name,
+                ) || cases.iter().any(|case| {
+                    Self::statements_contain_generated_class_field_define_property(
+                        &case.body,
+                        capture_name,
+                    )
+                })
+            }
+            Statement::For {
+                init,
+                condition,
+                update,
+                break_hook,
+                body,
+                ..
+            } => {
+                Self::statements_contain_generated_class_field_define_property(init, capture_name)
+                    || condition.as_ref().is_some_and(|expression| {
+                        Self::expression_contains_generated_class_field_define_property(
+                            expression,
+                            capture_name,
+                        )
+                    })
+                    || update.as_ref().is_some_and(|expression| {
+                        Self::expression_contains_generated_class_field_define_property(
+                            expression,
+                            capture_name,
+                        )
+                    })
+                    || break_hook.as_ref().is_some_and(|expression| {
+                        Self::expression_contains_generated_class_field_define_property(
+                            expression,
+                            capture_name,
+                        )
+                    })
+                    || Self::statements_contain_generated_class_field_define_property(
+                        body,
+                        capture_name,
+                    )
+            }
+            Statement::Break { .. } | Statement::Continue { .. } => false,
+        }
+    }
+
+    fn statements_contain_generated_class_field_define_property(
+        statements: &[Statement],
+        capture_name: &str,
+    ) -> bool {
+        statements.iter().any(|statement| {
+            Self::statement_contains_generated_class_field_define_property(statement, capture_name)
+        })
+    }
+
+    fn class_field_deferred_namespace_this_expression(
+        &self,
+        property: &Expression,
+    ) -> Option<Expression> {
+        let Expression::Identifier(capture_name) = property else {
+            return None;
+        };
+        if !capture_name.starts_with("__ayy_class_field_name_") {
+            return None;
+        }
+        self.backend
+            .function_registry
+            .catalog
+            .registered_function_declarations
+            .iter()
+            .filter(|function| function.derived_constructor)
+            .filter(|function| {
+                Self::statements_contain_generated_class_field_define_property(
+                    &function.body,
+                    capture_name,
+                )
+            })
+            .find_map(|function| {
+                let user_function = self.user_function(&function.name)?;
+                let arguments = user_function
+                    .params
+                    .iter()
+                    .cloned()
+                    .map(Expression::Identifier)
+                    .map(CallArgument::Expression)
+                    .collect::<Vec<_>>();
+                let replacement = self
+                    .resolve_derived_constructor_super_call_replacement_this_expression(
+                        user_function,
+                        &arguments,
+                    )?;
+                let materialized = self.materialize_static_expression(&replacement);
+                match materialized {
+                    Expression::Identifier(name)
+                        if name.starts_with("__ayy_module_deferred_namespace_") =>
+                    {
+                        Some(Expression::Identifier(name))
+                    }
+                    _ => None,
+                }
+            })
+    }
+
+    fn current_derived_constructor_deferred_namespace_this_expression(&self) -> Option<Expression> {
+        if !self.current_function_is_derived_constructor() {
+            return None;
+        }
+        let user_function = self.current_user_function()?;
+        let arguments = user_function
+            .params
+            .iter()
+            .cloned()
+            .map(Expression::Identifier)
+            .map(CallArgument::Expression)
+            .collect::<Vec<_>>();
+        let replacement = self.resolve_derived_constructor_super_call_replacement_this_expression(
+            user_function,
+            &arguments,
+        )?;
+        let materialized = self.materialize_static_expression(&replacement);
+        match materialized {
+            Expression::Identifier(name)
+                if name.starts_with("__ayy_module_deferred_namespace_") =>
+            {
+                Some(Expression::Identifier(name))
+            }
+            _ => None,
+        }
+    }
+
     fn static_define_property_target_binding(
         &self,
         target: &Expression,
@@ -46,6 +548,23 @@ impl<'a> FunctionCompiler<'a> {
         object_binding: &ObjectValueBinding,
         property: &Expression,
     ) -> Option<PropertyDescriptorBinding> {
+        if object_binding_is_module_namespace(object_binding)
+            && let Some(property_name) = static_property_name_from_expression(property)
+            && !property_name.starts_with("__ayy$")
+            && property_name != "then"
+            && let Some(value) = object_binding_lookup_value(object_binding, property).cloned()
+        {
+            return Some(PropertyDescriptorBinding {
+                value: Some(value),
+                configurable: false,
+                enumerable: true,
+                writable: Some(true),
+                getter: None,
+                setter: None,
+                has_get: false,
+                has_set: false,
+            });
+        }
         if let Some(descriptor) = object_binding_lookup_descriptor(object_binding, property) {
             return Some(descriptor.clone());
         }
@@ -99,15 +618,56 @@ impl<'a> FunctionCompiler<'a> {
         })
     }
 
+    fn materialize_deferred_namespace_define_property_target(
+        &self,
+        target: &Expression,
+        property: &Expression,
+    ) -> Expression {
+        if matches!(
+            target,
+            Expression::Identifier(name) if name.starts_with("__ayy_module_deferred_namespace_")
+        ) {
+            return target.clone();
+        }
+        self.resolve_bound_alias_expression(target)
+            .filter(|resolved| !static_expression_matches(resolved, target))
+            .or_else(|| match target {
+                Expression::This => self
+                    .class_field_deferred_namespace_this_expression(property)
+                    .or_else(|| {
+                        self.current_derived_constructor_deferred_namespace_this_expression()
+                    })
+                    .or_else(|| {
+                        self.state
+                            .speculation
+                            .static_semantics
+                            .local_value_binding("this")
+                            .cloned()
+                    }),
+                Expression::Identifier(name) => self
+                    .state
+                    .speculation
+                    .static_semantics
+                    .local_value_binding(name)
+                    .or_else(|| self.global_value_binding(name))
+                    .cloned(),
+                _ => None,
+            })
+            .map(|resolved| self.materialize_static_expression(&resolved))
+            .unwrap_or_else(|| self.materialize_static_expression(target))
+    }
+
     fn module_namespace_define_property_allowed(
         &self,
         object_binding: &ObjectValueBinding,
         property: &Expression,
         descriptor: &PropertyDescriptorDefinition,
     ) -> Option<bool> {
-        let Some(_) = static_property_name_from_expression(property) else {
+        if static_property_name_from_expression(property).is_none()
+            && !is_symbol_to_string_tag_expression(property)
+        {
             return None;
-        };
+        }
         let current = self.static_property_current_descriptor(object_binding, property);
         let Some(current) = current else {
             return Some(false);
@@ -126,6 +686,157 @@ impl<'a> FunctionCompiler<'a> {
             }
         }
         Some(true)
+    }
+
+    fn deferred_module_namespace_define_property_trigger_module_index(
+        &self,
+        target: &Expression,
+        property: &Expression,
+    ) -> Option<usize> {
+        let trace = std::env::var_os("AYY_TRACE_DEFINE_PROPERTY_DECISION").is_some();
+        let materialized_property = self.deferred_module_namespace_define_property_key(property)?;
+        let property_name = static_property_name_from_expression(&materialized_property);
+        if property_name
+            .as_deref()
+            .is_some_and(|name| name == "then" || name.starts_with("__ayy$"))
+        {
+            if trace {
+                eprintln!(
+                    "deferred_define_property_trigger:skip_property target={target:?} property={materialized_property:?}"
+                );
+            }
+            return None;
+        }
+        if property_name.is_none() && !is_symbol_to_string_tag_expression(&materialized_property) {
+            return None;
+        }
+
+        let materialized_target =
+            self.materialize_deferred_namespace_define_property_target(target, property);
+        let Expression::Identifier(target_name) = &materialized_target else {
+            if trace {
+                eprintln!(
+                    "deferred_define_property_trigger:skip_target target={target:?} materialized={materialized_target:?} property={materialized_property:?}"
+                );
+            }
+            return None;
+        };
+        let module_index = target_name
+            .starts_with("__ayy_module_deferred_namespace_")
+            .then(|| Self::module_index_from_namespace_like_identifier(target_name))
+            .flatten()?;
+        if self.current_function_name().is_some_and(|function_name| {
+            function_name == format!("__ayy_module_init_{module_index}")
+        }) {
+            if trace {
+                eprintln!(
+                    "deferred_define_property_trigger:skip_same_module target={target:?} materialized={materialized_target:?} property={materialized_property:?} module={module_index}"
+                );
+            }
+            return None;
+        }
+        if trace {
+            eprintln!(
+                "deferred_define_property_trigger:module target={target:?} materialized={materialized_target:?} property={materialized_property:?} module={module_index} fn={:?}",
+                self.current_function_name()
+            );
+        }
+        Some(module_index)
+    }
+
+    fn deferred_module_namespace_define_property_key(
+        &self,
+        property: &Expression,
+    ) -> Option<Expression> {
+        self.resolve_property_key_expression(property)
+            .or_else(|| {
+                let Expression::Identifier(name) = property else {
+                    return None;
+                };
+                let identifier = Expression::Identifier(name.clone());
+                let snapshot = self.snapshot_bound_capture_slot_expression(name);
+                (!static_expression_matches(&snapshot, &identifier))
+                    .then(|| self.resolve_property_key_expression(&snapshot))
+                    .flatten()
+                    .or_else(|| {
+                        self.state
+                            .speculation
+                            .static_semantics
+                            .local_value_binding(name)
+                            .or_else(|| self.global_value_binding(name))
+                            .cloned()
+                            .and_then(|value| self.resolve_property_key_expression(&value))
+                    })
+                    .or_else(|| {
+                        self.generated_class_field_source_expression(name)
+                            .and_then(|value| {
+                                self.resolve_property_key_expression(&value).or_else(|| {
+                                    let materialized = self.materialize_static_expression(&value);
+                                    self.resolve_property_key_expression(&materialized)
+                                })
+                            })
+                    })
+            })
+            .or_else(|| Some(self.canonical_object_property_expression(property)))
+    }
+
+    fn deferred_module_namespace_define_property_allowed_after_eval(
+        &self,
+        module_index: usize,
+        property: &Expression,
+        descriptor_expression: &Expression,
+    ) -> Option<bool> {
+        let descriptor = resolve_property_descriptor_definition(descriptor_expression)?;
+        let materialized_property = self.canonical_object_property_expression(property);
+        if static_property_name_from_expression(&materialized_property).is_none()
+            && !is_symbol_to_string_tag_expression(&materialized_property)
+        {
+            return None;
+        }
+        let current_value = self
+            .resolve_static_dynamic_import_namespace_live_binding_member_value(
+                module_index,
+                &materialized_property,
+            )
+            .or_else(|| {
+                self.resolve_static_dynamic_import_namespace_live_binding_member_initializer_value(
+                    module_index,
+                    &materialized_property,
+                )
+            });
+        let Some(current_value) = current_value else {
+            return Some(false);
+        };
+        if descriptor.configurable == Some(true)
+            || descriptor.enumerable == Some(false)
+            || descriptor.is_accessor()
+            || descriptor.writable == Some(false)
+        {
+            return Some(false);
+        }
+        if let Some(value) = descriptor.value.as_ref()
+            && !self.static_define_property_values_match(value, &current_value)?
+        {
+            return Some(false);
+        }
+        Some(true)
+    }
+
+    fn emit_deferred_module_namespace_define_property_arguments_and_init(
+        &mut self,
+        module_index: usize,
+        target: &Expression,
+        property: &Expression,
+        descriptor_expression: &Expression,
+    ) -> DirectResult<u32> {
+        let target_local = self.allocate_temp_local();
+        self.emit_numeric_expression(target)?;
+        self.push_local_set(target_local);
+        self.emit_property_key_expression_effects(property)?;
+        self.emit_numeric_expression(descriptor_expression)?;
+        self.state.emission.output.instructions.push(0x1a);
+        self.emit_sync_module_init_if_needed(module_index, &mut HashSet::new())?;
+        Ok(target_local)
     }
 
     fn ordinary_define_property_allowed(
@@ -262,12 +973,15 @@ impl<'a> FunctionCompiler<'a> {
         let descriptor = resolve_property_descriptor_definition(descriptor_expression)?;
         let materialized_property = self.canonical_object_property_expression(property);
         let object_binding = self.static_define_property_target_binding(target)?;
-        let target_is_module_init_exports =
-            target_is_module_init_exports_parameter(self.current_function_name(), target);
+        let target_is_module_init_namespace_construction =
+            target_is_module_init_namespace_construction_target(
+                self.current_function_name(),
+                target,
+            );
         let object_is_module_namespace = object_binding_is_module_namespace(&object_binding);
         let allowed = if object_is_module_namespace
             && static_property_name_from_expression(&materialized_property).is_some()
-            && !target_is_module_init_exports
+            && !target_is_module_init_namespace_construction
         {
             self.module_namespace_define_property_allowed(
                 &object_binding,
@@ -286,7 +1000,7 @@ impl<'a> FunctionCompiler<'a> {
                 eprintln!(
                     "define_property_decision reject target={target:?} property={materialized_property:?} descriptor={descriptor_expression:?} namespace={} module_init_exports={} extensible={}",
                     object_is_module_namespace,
-                    target_is_module_init_exports,
+                    target_is_module_init_namespace_construction,
                     object_binding.extensible
                 );
             }
@@ -302,7 +1016,7 @@ impl<'a> FunctionCompiler<'a> {
                 "define_property_decision allowed target={target:?} property={materialized_property:?} descriptor={descriptor_expression:?} current={:?} no_change={no_change} namespace={} module_init_exports={} extensible={}",
                 current.value,
                 object_is_module_namespace,
-                target_is_module_init_exports,
+                target_is_module_init_namespace_construction,
                 object_binding.extensible
             );
         }
@@ -407,6 +1121,259 @@ impl<'a> FunctionCompiler<'a> {
             self.pop_control_frame();
         } else {
             self.emit_numeric_expression(&descriptor_expression)?;
+        }
+
+        Ok(())
+    }
+
+    pub(in crate::backend::direct_wasm) fn dynamic_string_descriptor_property_names(
+        object_binding: &ObjectValueBinding,
+    ) -> Vec<String> {
+        let mut property_names = ordered_object_property_names(object_binding);
+        for (property, _) in &object_binding.property_descriptors {
+            let Some(property_name) = static_property_name_from_expression(property) else {
+                continue;
+            };
+            if !property_names
+                .iter()
+                .any(|existing_name| existing_name == &property_name)
+            {
+                property_names.push(property_name);
+            }
+        }
+        property_names
+    }
+
+    fn class_accessor_property_descriptor_binding(
+        &self,
+        receiver: &Expression,
+        property: &Expression,
+    ) -> Option<PropertyDescriptorBinding> {
+        let getter = self
+            .resolve_member_getter_binding(receiver, property)
+            .as_ref()
+            .map(Self::function_binding_to_expression);
+        let setter = self
+            .resolve_member_setter_binding(receiver, property)
+            .as_ref()
+            .map(Self::function_binding_to_expression);
+        if getter.is_none() && setter.is_none() {
+            return None;
+        }
+
+        Some(PropertyDescriptorBinding {
+            value: None,
+            configurable: true,
+            enumerable: false,
+            writable: None,
+            getter: getter.clone(),
+            setter: setter.clone(),
+            has_get: getter.is_some(),
+            has_set: setter.is_some(),
+        })
+    }
+
+    pub(in crate::backend::direct_wasm) fn dynamic_string_property_descriptor_binding(
+        &self,
+        receiver: &Expression,
+        resolved_receiver: Option<&Expression>,
+        materialized_receiver: &Expression,
+        property_name: &str,
+    ) -> Option<PropertyDescriptorBinding> {
+        let property = Expression::String(property_name.to_string());
+        self.class_accessor_property_descriptor_binding(receiver, &property)
+            .or_else(|| {
+                resolved_receiver.and_then(|resolved| {
+                    self.class_accessor_property_descriptor_binding(resolved, &property)
+                })
+            })
+            .or_else(|| {
+                (!static_expression_matches(materialized_receiver, receiver)).then(|| {
+                    self.class_accessor_property_descriptor_binding(
+                        materialized_receiver,
+                        &property,
+                    )
+                })?
+            })
+            .or_else(|| {
+                self.resolve_object_property_descriptor_binding(
+                    receiver,
+                    resolved_receiver,
+                    materialized_receiver,
+                    &property,
+                    Some(property_name),
+                )
+            })
+    }
+
+    fn emit_runtime_known_object_dynamic_property_descriptor_call(
+        &mut self,
+        receiver: &Expression,
+        property: &Expression,
+    ) -> DirectResult<bool> {
+        let trace_dynamic_descriptor = std::env::var_os("AYY_TRACE_DYNAMIC_DESCRIPTOR").is_some();
+        if trace_dynamic_descriptor {
+            eprintln!("dynamic_descriptor:start receiver={receiver:?} property={property:?}");
+        }
+        let materialized_property = self
+            .resolve_property_key_expression(property)
+            .unwrap_or_else(|| self.materialize_static_expression(property));
+        if static_property_name_from_expression(&materialized_property).is_some()
+            || !inline_summary_side_effect_free_expression(property)
+        {
+            if trace_dynamic_descriptor {
+                eprintln!(
+                    "dynamic_descriptor:skip materialized={materialized_property:?} side_effect_free={}",
+                    inline_summary_side_effect_free_expression(property)
+                );
+            }
+            return Ok(false);
+        }
+
+        let resolved_receiver = self
+            .resolve_bound_alias_expression(receiver)
+            .filter(|resolved| !static_expression_matches(resolved, receiver));
+        let materialized_receiver = self.materialize_static_expression(receiver);
+        let receiver_candidates = [
+            Some(receiver),
+            resolved_receiver.as_ref(),
+            (!static_expression_matches(&materialized_receiver, receiver))
+                .then_some(&materialized_receiver),
+        ];
+        let Some(object_binding) =
+            receiver_candidates
+                .into_iter()
+                .flatten()
+                .find_map(|candidate| {
+                    self.resolve_object_binding_from_expression(candidate)
+                        .or_else(|| match candidate {
+                            Expression::Identifier(name) => self
+                                .resolve_identifier_object_binding_fallback(name)
+                                .or_else(|| self.resolve_runtime_shadow_object_binding(name)),
+                            Expression::This => self.resolve_runtime_shadow_object_binding("this"),
+                            _ => None,
+                        })
+                })
+        else {
+            if trace_dynamic_descriptor {
+                eprintln!("dynamic_descriptor:no_object_binding");
+            }
+            return Ok(false);
+        };
+
+        if trace_dynamic_descriptor {
+            eprintln!(
+                "dynamic_descriptor:object_binding names={:?}",
+                Self::dynamic_string_descriptor_property_names(&object_binding)
+            );
+        }
+        let descriptors = Self::dynamic_string_descriptor_property_names(&object_binding)
+            .into_iter()
+            .filter_map(|property_name| {
+                if trace_dynamic_descriptor {
+                    eprintln!("dynamic_descriptor:resolve property={property_name}");
+                }
+                self.dynamic_string_property_descriptor_binding(
+                    receiver,
+                    resolved_receiver.as_ref(),
+                    &materialized_receiver,
+                    &property_name,
+                )
+                .map(|descriptor| (property_name, descriptor))
+            })
+            .collect::<Vec<_>>();
+        if descriptors.is_empty() {
+            if trace_dynamic_descriptor {
+                eprintln!("dynamic_descriptor:no_descriptors");
+            }
+            return Ok(false);
+        }
+        if trace_dynamic_descriptor {
+            eprintln!(
+                "dynamic_descriptor:emit descriptors={:?}",
+                descriptors
+                    .iter()
+                    .map(|(name, _)| name.clone())
+                    .collect::<Vec<_>>()
+            );
+        }
+
+        let property_local = self.allocate_temp_local();
+        let result_local = self.allocate_temp_local();
+        self.emit_numeric_expression(property)?;
+        self.push_local_set(property_local);
+        self.push_i32_const(JS_UNDEFINED_TAG);
+        self.push_local_set(result_local);
+
+        for (property_name, descriptor) in descriptors {
+            self.push_local_get(property_local);
+            self.emit_static_string_literal(&property_name)?;
+            self.push_binary_op(BinaryOp::Equal)?;
+            self.state.emission.output.instructions.push(0x04);
+            self.state
+                .emission
+                .output
+                .instructions
+                .push(EMPTY_BLOCK_TYPE);
+            self.push_control_frame();
+            self.emit_descriptor_or_deleted_undefined(
+                receiver,
+                &Expression::String(property_name),
+                &descriptor,
+            )?;
+            self.push_local_set(result_local);
+            self.state.emission.output.instructions.push(0x0b);
+            self.pop_control_frame();
+        }
+
+        self.push_local_get(result_local);
+        Ok(true)
+    }
+
+    fn emit_module_namespace_get_own_property_live_binding_read(
+        &mut self,
+        receiver: &Expression,
+        property: &Expression,
+    ) -> DirectResult<()> {
+        let Some(module_index) = self.module_namespace_index_from_expression(receiver) else {
+            return Ok(());
+        };
+        let property_key = self
+            .resolve_property_key_expression(property)
+            .unwrap_or_else(|| self.materialize_static_expression(property));
+        let property_key = static_property_name_from_expression(&property_key)
+            .map(Expression::String)
+            .unwrap_or(property_key);
+        if is_symbol_to_string_tag_expression(&property_key)
+            || !matches!(property_key, Expression::String(_))
+        {
+            return Ok(());
+        }
+
+        if let Some(live_value) = self
+            .resolve_static_dynamic_import_namespace_live_binding_member_value(
+                module_index,
+                &property_key,
+            )
+            .as_ref()
+            && self.module_namespace_live_value_is_readable_in_current_context(live_value)
+        {
+            self.emit_numeric_expression(live_value)?;
+            self.state.emission.output.instructions.push(0x1a);
+            return Ok(());
+        }
+
+        if let Some((binding_name, _)) = self
+            .resolve_static_dynamic_import_namespace_live_binding_member_binding_initializer_value(
+                module_index,
+                &property_key,
+            )
+        {
+            let binding = Expression::Identifier(binding_name);
+            if self.module_namespace_live_value_is_readable_in_current_context(&binding) {
+                self.emit_numeric_expression(&binding)?;
+                self.state.emission.output.instructions.push(0x1a);
+            }
         }
 
         Ok(())
@@ -698,7 +1665,14 @@ impl<'a> FunctionCompiler<'a> {
 
         if let Some(descriptor) = self.resolve_descriptor_binding_from_expression(&synthesized_call)
         {
+            self.emit_module_namespace_get_own_property_live_binding_read(
+                receiver,
+                &materialized_property,
+            )?;
             self.emit_descriptor_or_deleted_undefined(receiver, property, &descriptor)?;
+        } else if self
+            .emit_runtime_known_object_dynamic_property_descriptor_call(receiver, property)?
+        {
         } else if self.emit_runtime_known_symbol_property_descriptor_call(receiver, property)? {
         } else {
             self.push_i32_const(JS_UNDEFINED_TAG);
@@ -839,12 +1813,98 @@ impl<'a> FunctionCompiler<'a> {
             .is_some_and(|descriptor| descriptor.configurable && descriptor.writable == Some(false))
     }
 
+    fn class_prototype_owner_name(expression: &Expression) -> Option<&str> {
+        match expression {
+            Expression::Member { object, property } if matches!(property.as_ref(), Expression::String(name) if name == "prototype") => {
+                match object.as_ref() {
+                    Expression::Identifier(name) => Some(name),
+                    _ => None,
+                }
+            }
+            _ => None,
+        }
+    }
+
+    fn class_prototype_member_value<'b>(
+        expression: &'b Expression,
+    ) -> Option<(&'b str, &'b Expression)> {
+        match expression {
+            Expression::Member { object, property } => {
+                let owner_name = Self::class_prototype_owner_name(object)?;
+                Some((owner_name, property))
+            }
+            _ => None,
+        }
+    }
+
+    fn class_prototype_private_member_facade_value(
+        target: &Expression,
+        value: &Expression,
+    ) -> bool {
+        let Some(target_owner_name) = Self::class_prototype_owner_name(target) else {
+            return false;
+        };
+        let Some((value_owner_name, value_property)) = Self::class_prototype_member_value(value)
+        else {
+            return false;
+        };
+        target_owner_name == value_owner_name && is_private_property_name_expression(value_property)
+    }
+
+    fn class_static_private_member_facade_value(target: &Expression, value: &Expression) -> bool {
+        let Expression::Identifier(target_owner_name) = target else {
+            return false;
+        };
+        let Expression::Member { object, property } = value else {
+            return false;
+        };
+        matches!(object.as_ref(), Expression::Identifier(value_owner_name) if value_owner_name == target_owner_name)
+            && is_private_property_name_expression(property)
+    }
+
+    fn class_private_member_facade_value(target: &Expression, value: &Expression) -> bool {
+        Self::class_prototype_private_member_facade_value(target, value)
+            || Self::class_static_private_member_facade_value(target, value)
+    }
+
+    fn define_property_descriptor_value_is_class_private_member_facade(
+        target: &Expression,
+        descriptor_expression: &Expression,
+    ) -> bool {
+        let Some(descriptor) = resolve_property_descriptor_definition(descriptor_expression) else {
+            return false;
+        };
+        if descriptor.is_accessor() {
+            return false;
+        }
+        descriptor
+            .value
+            .as_ref()
+            .is_some_and(|value| Self::class_private_member_facade_value(target, value))
+    }
+
     fn define_property_data_value_can_emit_without_assignment(
         &self,
         target: &Expression,
         property: &Expression,
         value: &Expression,
     ) -> bool {
+        let materialized_property = self.canonical_object_property_expression(property);
+        if target_is_module_init_namespace_construction_target(self.current_function_name(), target)
+            && matches!(
+                materialized_property,
+                Expression::String(ref property_name)
+                    if property_name == "__ayy$module$namespace"
+            )
+            && matches!(value, Expression::Bool(true))
+        {
+            return true;
+        }
+
+        if Self::class_private_member_facade_value(target, value) {
+            return true;
+        }
+
         if self.define_property_can_update_without_assignment(target, property) {
             return true;
         }
@@ -856,7 +1916,6 @@ impl<'a> FunctionCompiler<'a> {
             return false;
         }
 
-        let materialized_property = self.canonical_object_property_expression(property);
         self.member_function_binding_key(target, &materialized_property)
             .is_some()
             && self
@@ -873,8 +1932,10 @@ impl<'a> FunctionCompiler<'a> {
         self.emit_numeric_expression(target)?;
         self.state.emission.output.instructions.push(0x1a);
         self.emit_property_key_expression_effects(property)?;
-        self.emit_numeric_expression(value)?;
-        self.state.emission.output.instructions.push(0x1a);
+        if !Self::class_private_member_facade_value(target, value) {
+            self.emit_numeric_expression(value)?;
+            self.state.emission.output.instructions.push(0x1a);
+        }
         Ok(())
     }
 
@@ -1081,10 +2142,31 @@ impl<'a> FunctionCompiler<'a> {
         property: &Expression,
         descriptor_expression: &Expression,
     ) {
-        let Some(descriptor) =
-            self.property_descriptor_binding_from_expression(descriptor_expression)
-        else {
-            return;
+        let descriptor = if Self::define_property_descriptor_value_is_class_private_member_facade(
+            target,
+            descriptor_expression,
+        ) {
+            let Some(descriptor) = resolve_property_descriptor_definition(descriptor_expression)
+            else {
+                return;
+            };
+            PropertyDescriptorBinding {
+                value: descriptor.value,
+                configurable: descriptor.configurable.unwrap_or(false),
+                enumerable: descriptor.enumerable.unwrap_or(false),
+                writable: Some(descriptor.writable.unwrap_or(false)),
+                getter: None,
+                setter: None,
+                has_get: false,
+                has_set: false,
+            }
+        } else {
+            let Some(descriptor) =
+                self.property_descriptor_binding_from_expression(descriptor_expression)
+            else {
+                return;
+            };
+            descriptor
         };
         let materialized_property = self.canonical_object_property_expression(property);
         let mut object_binding = self
@@ -1146,13 +2228,116 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    fn sync_generated_module_namespace_define_property_metadata(
+        &mut self,
+        target: &Expression,
+        property: Expression,
+        descriptor: PropertyDescriptorBinding,
+    ) {
+        let mut object_binding = self
+            .resolve_object_binding_from_expression(target)
+            .or_else(|| match target {
+                Expression::Identifier(name) => {
+                    self.resolve_identifier_object_binding_fallback(name)
+                }
+                _ => None,
+            })
+            .unwrap_or_else(empty_object_value_binding);
+        object_binding_define_property_descriptor(&mut object_binding, property, descriptor);
+
+        let Expression::Identifier(name) = target else {
+            return;
+        };
+        if self
+            .state
+            .speculation
+            .static_semantics
+            .has_local_object_binding(name)
+            || target_is_module_init_namespace_construction_target(
+                self.current_function_name(),
+                target,
+            )
+        {
+            self.state
+                .speculation
+                .static_semantics
+                .set_local_object_binding(name, object_binding.clone());
+            self.state
+                .speculation
+                .static_semantics
+                .set_local_kind(name, StaticValueKind::Object);
+        }
+        if self.binding_name_is_global(name)
+            || self
+                .backend
+                .global_semantics
+                .values
+                .object_bindings
+                .contains_key(name)
+        {
+            self.backend
+                .sync_global_object_binding(name, Some(object_binding.clone()));
+            self.backend
+                .shared_global_semantics
+                .values
+                .sync_object_binding(name, Some(object_binding));
+        }
+    }
+
+    fn emit_generated_module_namespace_define_property_fast(
+        &mut self,
+        target: &Expression,
+        property: &Expression,
+        descriptor_expression: &Expression,
+        return_boolean: bool,
+    ) -> DirectResult<bool> {
+        if !target_is_generated_module_namespace_define_property_target(
+            self.current_function_name(),
+            target,
+        ) {
+            return Ok(false);
+        }
+        let generated_descriptor =
+            generated_module_namespace_define_property_descriptor(property, descriptor_expression);
+        let module_export_descriptor = if generated_descriptor.is_none()
+            && target_is_module_init_namespace_construction_target(
+                self.current_function_name(),
+                target,
+            ) {
+            let materialized_property = self.canonical_object_property_expression(property);
+            static_property_name_from_expression(&materialized_property)
+                .filter(|name| !name.starts_with("__ayy$") && name != "then")
+                .and_then(|_| {
+                    self.property_descriptor_binding_from_expression(descriptor_expression)
+                        .map(|descriptor| (materialized_property, descriptor))
+                })
+        } else {
+            None
+        };
+
+        let Some((property, descriptor)) = generated_descriptor.or(module_export_descriptor) else {
+            return Ok(false);
+        };
+
+        self.sync_generated_module_namespace_define_property_metadata(target, property, descriptor);
+        if return_boolean {
+            self.push_i32_const(1);
+        } else {
+            self.emit_numeric_expression(target)?;
+        }
+        Ok(true)
+    }
+
     pub(in crate::backend::direct_wasm) fn emit_object_get_own_property_descriptor_call(
         &mut self,
         callee_object: &Expression,
         callee_property: &Expression,
         arguments: &[CallArgument],
     ) -> DirectResult<bool> {
-        if !matches!(callee_object, Expression::Identifier(name) if name == "Object") {
+        let reflect_call =
+            matches!(callee_object, Expression::Identifier(name) if name == "Reflect");
+        if !matches!(callee_object, Expression::Identifier(name) if name == "Object" || name == "Reflect")
+        {
             return Ok(false);
         }
         if !matches!(callee_property, Expression::String(name) if name == "getOwnPropertyDescriptor")
@@ -1173,7 +2358,14 @@ impl<'a> FunctionCompiler<'a> {
             ..,
         ] = arguments
         {
+            if let Some(module_index) = self
+                .deferred_module_namespace_define_property_trigger_module_index(receiver, property)
+            {
+                self.emit_sync_module_init_if_needed(module_index, &mut HashSet::new())?;
+            }
             self.emit_object_get_own_property_descriptor_result(receiver, property)?;
+        } else if reflect_call {
+            self.emit_named_error_throw("TypeError")?;
         } else {
             self.push_i32_const(JS_UNDEFINED_TAG);
         }
@@ -1206,7 +2398,45 @@ impl<'a> FunctionCompiler<'a> {
         };
 
         self.discard_call_arguments(rest)?;
-        self.emit_define_property_function_capture_initializers(descriptor_expression)?;
+        if self.emit_generated_module_namespace_define_property_fast(
+            target,
+            property,
+            descriptor_expression,
+            true,
+        )? {
+            return Ok(true);
+        }
+        if !Self::define_property_descriptor_value_is_class_private_member_facade(
+            target,
+            descriptor_expression,
+        ) {
+            self.emit_define_property_function_capture_initializers(descriptor_expression)?;
+        }
+
+        if let Some(module_index) =
+            self.deferred_module_namespace_define_property_trigger_module_index(target, property)
+        {
+            let accepted_after_eval = self
+                .deferred_module_namespace_define_property_allowed_after_eval(
+                    module_index,
+                    property,
+                    descriptor_expression,
+                )
+                .unwrap_or(false);
+            let _target_local = self
+                .emit_deferred_module_namespace_define_property_arguments_and_init(
+                    module_index,
+                    target,
+                    property,
+                    descriptor_expression,
+                )?;
+            if accepted_after_eval {
+                self.push_i32_const(1);
+            } else {
+                self.push_i32_const(0);
+            }
+            return Ok(true);
+        }
 
         if let Some(accepted_without_mutation) = self
             .static_define_property_accepts_without_mutation(
@@ -1285,7 +2515,45 @@ impl<'a> FunctionCompiler<'a> {
         };
 
         self.discard_call_arguments(rest)?;
-        self.emit_define_property_function_capture_initializers(descriptor_expression)?;
+        if self.emit_generated_module_namespace_define_property_fast(
+            target,
+            property,
+            descriptor_expression,
+            false,
+        )? {
+            return Ok(true);
+        }
+        if !Self::define_property_descriptor_value_is_class_private_member_facade(
+            target,
+            descriptor_expression,
+        ) {
+            self.emit_define_property_function_capture_initializers(descriptor_expression)?;
+        }
+
+        if let Some(module_index) =
+            self.deferred_module_namespace_define_property_trigger_module_index(target, property)
+        {
+            let accepted_after_eval = self
+                .deferred_module_namespace_define_property_allowed_after_eval(
+                    module_index,
+                    property,
+                    descriptor_expression,
+                )
+                .unwrap_or(false);
+            let target_local = self
+                .emit_deferred_module_namespace_define_property_arguments_and_init(
+                    module_index,
+                    target,
+                    property,
+                    descriptor_expression,
+                )?;
+            if accepted_after_eval {
+                self.push_local_get(target_local);
+            } else {
+                self.emit_named_error_throw("TypeError")?;
+            }
+            return Ok(true);
+        }
 
         if let Some(accepted_without_mutation) = self
             .static_define_property_accepts_without_mutation(
@@ -1321,6 +2589,7 @@ impl<'a> FunctionCompiler<'a> {
             let is_private_initializer_property =
                 is_private_property_name_expression(&materialized_property);
             let value = if !is_private_initializer_property
+                && !Self::class_private_member_facade_value(target, &value)
                 && inline_summary_side_effect_free_expression(&value)
             {
                 self.materialize_define_property_value_expression_with_this_binding(

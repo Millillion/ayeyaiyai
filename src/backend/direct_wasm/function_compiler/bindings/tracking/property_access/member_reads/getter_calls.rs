@@ -32,6 +32,38 @@ impl<'a> FunctionCompiler<'a> {
         object: &Expression,
         property: &Expression,
     ) -> DirectResult<bool> {
+        let trace_member_reads = std::env::var_os("AYY_TRACE_MEMBER_READS").is_some();
+        let dynamic_descriptor_member = if let (
+            Expression::Identifier(name),
+            Expression::String(property_name),
+        ) = (object, property)
+            && matches!(
+                property_name.as_str(),
+                "value" | "configurable" | "enumerable" | "writable" | "get" | "set"
+            ) {
+            if trace_member_reads {
+                eprintln!(
+                    "member_binding_read:dynamic_descriptor_check object={object:?} property={property:?}"
+                );
+            }
+            let is_dynamic = self.local_binding_is_dynamic_property_descriptor_result(name);
+            if trace_member_reads {
+                eprintln!(
+                    "member_binding_read:dynamic_descriptor_check result={is_dynamic} object={object:?} property={property:?}"
+                );
+            }
+            is_dynamic
+        } else {
+            false
+        };
+        if dynamic_descriptor_member {
+            if trace_member_reads {
+                eprintln!(
+                    "member_binding_read:dynamic_descriptor_skip object={object:?} property={property:?}"
+                );
+            }
+            return Ok(false);
+        }
         if !matches!(property, Expression::String(_) | Expression::Number(_))
             && self.resolve_property_key_expression(property).is_none()
         {

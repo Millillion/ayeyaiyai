@@ -7,6 +7,20 @@ impl<'a> FunctionCompiler<'a> {
         arguments: &[CallArgument],
     ) -> DirectResult<bool> {
         let trace_capture_bindings = std::env::var_os("AYY_TRACE_CAPTURE_BINDINGS").is_some();
+        if let Expression::Member { object, property } = callee
+            && matches!(
+                property.as_ref(),
+                Expression::String(name) if matches!(name.as_str(), "then" | "catch" | "finally")
+            )
+            && self.expression_is_direct_async_function_call(object)
+        {
+            if trace_capture_bindings {
+                eprintln!(
+                    "capture_bindings specialized_callee:skip_direct_async_promise callee={callee:?}"
+                );
+            }
+            return Ok(false);
+        }
         if let Some(specialized) = self.resolve_specialized_function_value_from_expression(callee) {
             if trace_capture_bindings {
                 eprintln!(

@@ -114,7 +114,6 @@ impl<'a> FunctionCompiler<'a> {
                 eval_function_name,
                 &argument_source,
             );
-
             if program
                 .functions
                 .iter()
@@ -171,11 +170,25 @@ impl<'a> FunctionCompiler<'a> {
                     &program.statements,
                     &eval_local_function_declarations,
                 )?;
-                if compiler.eval_program_declares_var_collision_with_global_lexical(&program) {
-                    compiler.emit_named_error_throw("SyntaxError")?;
-                    return Ok(());
-                }
-                if compiler.eval_program_declares_var_collision_with_active_lexical(&program) {
+                let var_collision_with_global_lexical = !program.strict
+                    && compiler
+                        .state
+                        .speculation
+                        .execution_context
+                        .top_level_function
+                    && collect_eval_var_names(&program).into_iter().any(|name| {
+                        compiler
+                            .backend
+                            .global_semantics
+                            .global_names()
+                            .has_exact_lexical_binding(&name)
+                            || compiler
+                                .backend
+                                .shared_global_semantics
+                                .global_names()
+                                .has_exact_lexical_binding(&name)
+                    });
+                if var_collision_with_global_lexical {
                     compiler.emit_named_error_throw("SyntaxError")?;
                     return Ok(());
                 }

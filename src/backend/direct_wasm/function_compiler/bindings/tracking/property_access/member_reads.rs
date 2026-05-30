@@ -5,6 +5,36 @@ mod runtime_reads;
 mod static_reads;
 
 impl<'a> FunctionCompiler<'a> {
+    fn resolve_non_thenable_awaited_object_binding(
+        &self,
+        expression: &Expression,
+    ) -> Option<ObjectValueBinding> {
+        match expression {
+            Expression::Await(value) => {
+                let binding = self.resolve_object_binding_from_expression(value)?;
+                let then_property = Expression::String("then".to_string());
+                (object_binding_lookup_value(&binding, &then_property).is_none()
+                    && object_binding_lookup_descriptor(&binding, &then_property).is_none())
+                .then_some(binding)
+            }
+            Expression::Member { object, property }
+                if Self::expression_contains_await_for_user_call_runtime(object) =>
+            {
+                let object_binding = self.resolve_non_thenable_awaited_object_binding(object)?;
+                let property = self
+                    .resolve_property_key_expression(property)
+                    .unwrap_or_else(|| self.materialize_static_expression(property));
+                let value =
+                    object_binding_lookup_value(&object_binding, &property).or_else(|| {
+                        object_binding_lookup_descriptor(&object_binding, &property)
+                            .and_then(|descriptor| descriptor.value.as_ref())
+                    })?;
+                self.resolve_object_binding_from_expression(value)
+            }
+            _ => None,
+        }
+    }
+
     fn internal_temp_static_value(&self, object: &Expression) -> Option<Expression> {
         if !Self::expression_references_internal_assignment_temp(object) {
             return None;
@@ -187,6 +217,7 @@ impl<'a> FunctionCompiler<'a> {
         }
         let object_uses_internal_assignment_temp =
             Self::expression_references_internal_assignment_temp(object);
+        let object_contains_await = Self::expression_contains_await_for_user_call_runtime(object);
         if self.emit_internal_temp_static_string_member_read(object, &static_array_property)? {
             if trace_member_reads {
                 eprintln!(
@@ -202,6 +233,7 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(());
         }
         if !skip_static_special_for_descriptor_member
+            && !object_contains_await
             && !object_uses_internal_assignment_temp
             && self.emit_special_member_read_without_prelude(
                 object,
@@ -222,20 +254,56 @@ impl<'a> FunctionCompiler<'a> {
         if trace_member_reads {
             eprintln!("member_read:before_binding object={object:?} property={property:?}");
         }
-        if argument_index_from_expression(&static_array_property).is_some()
+        let runtime_array_member_requires_runtime_read = !object_contains_await
+            && (argument_index_from_expression(&static_array_property).is_some()
+                || matches!(&static_array_property, Expression::String(name) if name == "length"))
             && self
                 .runtime_array_binding_name_for_expression(object)
-                .is_some_and(|name| self.runtime_array_binding_has_state(&name))
+                .is_some_and(|name| {
+                    self.runtime_array_binding_has_state(&name)
+                        || self.uses_global_runtime_array_state(&name)
+                        || self.expression_uses_runtime_array_state(object)
+                });
+        if runtime_array_member_requires_runtime_read
             && self.emit_runtime_array_member_read(object, &static_array_property)?
         {
             if trace_member_reads {
                 eprintln!(
-                    "member_read:runtime_array_index_hit object={object:?} property={property:?}"
+                    "member_read:runtime_array_member_hit object={object:?} property={property:?}"
                 );
             }
             return Ok(());
         }
+        if matches!(
+            object,
+            Expression::Identifier(name) if name.starts_with("__ayy_module_deferred_namespace_")
+        ) && matches!(&static_array_property, Expression::String(name) if name == "then")
+        {
+            self.push_i32_const(JS_UNDEFINED_TAG);
+            return Ok(());
+        }
+        let awaited_object_binding = if object_contains_await {
+            self.resolve_non_thenable_awaited_object_binding(object)
+        } else {
+            None
+        };
+        if let Some(object_binding) = awaited_object_binding.as_ref() {
+            if let Some(value) =
+                object_binding_lookup_value(&object_binding, &static_array_property)
+            {
+                self.emit_numeric_expression(value)?;
+                return Ok(());
+            }
+            if let Some(descriptor) =
+                object_binding_lookup_descriptor(&object_binding, &static_array_property)
+                && let Some(value) = descriptor.value.as_ref()
+            {
+                self.emit_numeric_expression(value)?;
+                return Ok(());
+            }
+        }
         if !object_uses_internal_assignment_temp
+            && !object_contains_await
             && let Some(value) = self
                 .resolve_module_namespace_live_binding_member_value(object, &static_array_property)
         {
@@ -248,6 +316,22 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(());
         }
         if !object_uses_internal_assignment_temp
+            && !object_contains_await
+            && static_property_name_from_expression(&static_array_property).is_some()
+            && self
+                .direct_module_namespace_object_binding(object)
+                .or_else(|| {
+                    self.resolve_object_binding_from_expression(object)
+                        .filter(Self::object_binding_has_module_namespace_marker)
+                })
+                .as_ref()
+                .is_some_and(Self::object_binding_has_module_namespace_marker)
+        {
+            self.push_i32_const(JS_UNDEFINED_TAG);
+            return Ok(());
+        }
+        if !object_uses_internal_assignment_temp
+            && !object_contains_await
             && self.runtime_object_property_shadow_deletion_may_affect_property(
                 object,
                 &static_array_property,
@@ -260,7 +344,30 @@ impl<'a> FunctionCompiler<'a> {
             }
             return Ok(());
         }
+        let dynamic_descriptor_member_read = matches!(
+            (object, property),
+            (Expression::Identifier(name), Expression::String(property_name))
+                if matches!(
+                    property_name.as_str(),
+                    "value" | "configurable" | "enumerable" | "writable" | "get" | "set"
+                ) && self.local_binding_is_dynamic_property_descriptor_result(name)
+        );
+        if trace_member_reads && dynamic_descriptor_member_read {
+            eprintln!(
+                "member_read:skip_binding_for_dynamic_descriptor object={object:?} property={property:?}"
+            );
+        }
+        let nested_assert_helper_member =
+            Self::expression_is_nested_assert_helper_member_parts(object, property);
+        if trace_member_reads && nested_assert_helper_member {
+            eprintln!(
+                "member_read:skip_binding_for_nested_assert_helper object={object:?} property={property:?}"
+            );
+        }
         if !object_uses_internal_assignment_temp
+            && !object_contains_await
+            && !dynamic_descriptor_member_read
+            && !nested_assert_helper_member
             && self.emit_member_binding_read_without_prelude(object, property)?
         {
             if trace_member_reads {

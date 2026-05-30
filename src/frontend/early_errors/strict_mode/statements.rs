@@ -1,7 +1,7 @@
 use super::super::*;
 use super::{
     bindings::{
-        validate_strict_mode_early_errors_in_for_head,
+        is_strict_mode_forbidden_binding_identifier, validate_strict_mode_early_errors_in_for_head,
         validate_strict_mode_early_errors_in_pattern,
         validate_strict_mode_early_errors_in_variable_declaration,
     },
@@ -19,6 +19,19 @@ pub(crate) fn validate_strict_mode_early_errors_in_module_items(
                 validate_strict_mode_early_errors_in_statement(statement, strict)?;
             }
             ModuleItem::ModuleDecl(module_declaration) => match module_declaration {
+                ModuleDecl::Import(import) => {
+                    for specifier in &import.specifiers {
+                        let local_name = match specifier {
+                            ImportSpecifier::Named(named) => named.local.sym.as_ref(),
+                            ImportSpecifier::Default(default) => default.local.sym.as_ref(),
+                            ImportSpecifier::Namespace(namespace) => namespace.local.sym.as_ref(),
+                        };
+                        ensure!(
+                            !strict || !is_strict_mode_forbidden_binding_identifier(local_name),
+                            "strict mode forbids import binding `{local_name}`"
+                        );
+                    }
+                }
                 ModuleDecl::ExportDecl(export) => {
                     validate_strict_mode_early_errors_in_declaration(&export.decl, strict)?;
                 }

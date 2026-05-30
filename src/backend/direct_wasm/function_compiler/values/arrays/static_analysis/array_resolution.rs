@@ -6,6 +6,36 @@ thread_local! {
 }
 
 impl<'a> FunctionCompiler<'a> {
+    pub(in crate::backend::direct_wasm) fn resolve_test262_to_numbers_call_binding(
+        &self,
+        callee: &Expression,
+        arguments: &[CallArgument],
+    ) -> Option<ArrayValueBinding> {
+        let LocalFunctionBinding::User(function_name) =
+            self.resolve_function_binding_from_expression(callee)?
+        else {
+            return None;
+        };
+        let declaration = self.prepared_function_declaration(&function_name)?;
+        if declaration.name != "ToNumbers" || declaration.params.len() != 1 {
+            return None;
+        }
+
+        let CallArgument::Expression(source) = arguments.first()? else {
+            return None;
+        };
+        let source_binding = self.resolve_array_binding_from_expression(source)?;
+        Some(ArrayValueBinding {
+            values: source_binding
+                .values
+                .into_iter()
+                .map(|value| {
+                    value.map(|expression| self.materialize_static_expression(&expression))
+                })
+                .collect(),
+        })
+    }
+
     fn push_for_in_key_candidate(
         values: &mut Vec<Option<Expression>>,
         seen: &mut std::collections::HashSet<String>,
@@ -96,6 +126,18 @@ impl<'a> FunctionCompiler<'a> {
         expression: &Expression,
     ) -> Option<ArrayValueBinding> {
         let trace_for_in_keys = std::env::var_os("AYY_TRACE_FOR_IN_KEYS").is_some();
+        if let Some(module_index) = self.module_namespace_index_from_expression(expression) {
+            let result = self
+                .resolve_static_dynamic_import_namespace_own_property_names_binding(module_index);
+            if trace_for_in_keys {
+                eprintln!(
+                    "for_in_keys:module_namespace expression={expression:?} module_index={module_index} values={:?}",
+                    result.as_ref().map(|binding| &binding.values)
+                );
+            }
+            return result;
+        }
+
         if let Some(array_binding) = self.resolve_array_binding_from_expression(expression) {
             if trace_for_in_keys {
                 eprintln!(
@@ -565,21 +607,9 @@ impl<'a> FunctionCompiler<'a> {
                 })
                 .or_else(|| {
                     let hidden_name = self.resolve_user_function_capture_hidden_name(name)?;
-                    self.backend
-                        .global_semantics
-                        .values
-                        .array_bindings
-                        .get(&hidden_name)
-                        .cloned()
+                    self.global_array_binding(&hidden_name).cloned()
                 })
-                .or_else(|| {
-                    self.backend
-                        .global_semantics
-                        .values
-                        .array_bindings
-                        .get(name)
-                        .cloned()
-                })
+                .or_else(|| self.global_array_binding(name).cloned())
             {
                 return Some(binding);
             }
@@ -628,26 +658,32 @@ impl<'a> FunctionCompiler<'a> {
                 })
                 .or_else(|| {
                     let hidden_name = self.resolve_user_function_capture_hidden_name(name)?;
-                    self.backend
-                        .global_semantics
-                        .values
-                        .array_bindings
-                        .get(&hidden_name)
-                        .cloned()
+                    self.global_array_binding(&hidden_name).cloned()
                 })
-                .or_else(|| {
-                    self.backend
-                        .global_semantics
-                        .values
-                        .array_bindings
-                        .get(name)
-                        .cloned()
-                }),
+                .or_else(|| self.global_array_binding(name).cloned()),
             Expression::EnumerateKeys(value) => self.static_for_in_enumerated_keys_binding(value),
             Expression::Member { object, property } => {
                 let property = self
                     .resolve_property_key_expression(property)
                     .unwrap_or_else(|| self.materialize_static_expression(property));
+                if let Some(value) =
+                    self.resolve_module_namespace_live_binding_member_value(object, &property)
+                {
+                    if let Some(binding) = self.resolve_array_binding_from_expression(&value) {
+                        return Some(binding);
+                    }
+                }
+                if let Expression::Identifier(name) = object.as_ref()
+                    && let Some(module_index) = Self::module_index_from_namespace_like_identifier(name)
+                    && let Some(initializer) = self
+                        .resolve_static_dynamic_import_namespace_live_binding_member_initializer_value(
+                            module_index,
+                            &property,
+                        )
+                    && let Some(binding) = self.resolve_array_binding_from_expression(&initializer)
+                {
+                    return Some(binding);
+                }
                 if self.runtime_object_property_shadow_deletion_is_statically_present(
                     object, &property,
                 ) {
@@ -698,8 +734,24 @@ impl<'a> FunctionCompiler<'a> {
                 {
                     return self.resolve_array_binding_from_expression(cooked);
                 }
+                if matches!(
+                    callee.as_ref(),
+                    Expression::Member { object, property }
+                        if matches!(object.as_ref(), Expression::Identifier(name) if name == "Array")
+                            && matches!(property.as_ref(), Expression::String(name) if name == "from")
+                ) && let Some(CallArgument::Expression(target) | CallArgument::Spread(target)) =
+                    arguments.first()
+                    && let Some(binding) = self.static_typed_array_values_from_expression(target)
+                {
+                    return Some(binding);
+                }
                 if let Some(binding) =
                     self.static_builtin_object_array_call_binding(callee, arguments)
+                {
+                    return Some(binding);
+                }
+                if let Some(binding) =
+                    self.resolve_test262_to_numbers_call_binding(callee, arguments)
                 {
                     return Some(binding);
                 }

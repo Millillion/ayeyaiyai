@@ -82,8 +82,22 @@ impl<'a> FunctionCompiler<'a> {
             }
         }
 
-        self.push_i32_const(JS_UNDEFINED_TAG);
-        Ok(true)
+        let property_expression = Expression::String(property_name.clone());
+        if self
+            .runtime_object_property_shadow_binding_name_for_expression(
+                object,
+                &property_expression,
+            )
+            .is_some_and(|shadow_name| self.global_has_implicit_binding(&shadow_name))
+            || self.runtime_object_property_shadow_deletion_may_affect_property(
+                object,
+                &property_expression,
+            )
+        {
+            return Ok(false);
+        }
+
+        Ok(false)
     }
 
     pub(super) fn emit_special_member_read_without_prelude(

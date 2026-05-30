@@ -44,6 +44,311 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    fn statement_contains_explicit_return(statement: &Statement) -> bool {
+        match statement {
+            Statement::Return(_) => true,
+            Statement::Declaration { body }
+            | Statement::Block { body }
+            | Statement::Labeled { body, .. }
+            | Statement::With { body, .. }
+            | Statement::While { body, .. }
+            | Statement::DoWhile { body, .. } => {
+                body.iter().any(Self::statement_contains_explicit_return)
+            }
+            Statement::If {
+                then_branch,
+                else_branch,
+                ..
+            } => then_branch
+                .iter()
+                .chain(else_branch)
+                .any(Self::statement_contains_explicit_return),
+            Statement::Try {
+                body,
+                catch_setup,
+                catch_body,
+                ..
+            } => body
+                .iter()
+                .chain(catch_setup)
+                .chain(catch_body)
+                .any(Self::statement_contains_explicit_return),
+            Statement::Switch { cases, .. } => cases.iter().any(|case| {
+                case.body
+                    .iter()
+                    .any(Self::statement_contains_explicit_return)
+            }),
+            Statement::For { init, body, .. } => init
+                .iter()
+                .chain(body)
+                .any(Self::statement_contains_explicit_return),
+            _ => false,
+        }
+    }
+
+    fn user_function_has_explicit_return(&self, user_function: &UserFunction) -> bool {
+        self.resolve_registered_function_declaration(&user_function.name)
+            .is_some_and(|function| {
+                function
+                    .body
+                    .iter()
+                    .any(Self::statement_contains_explicit_return)
+            })
+    }
+
+    fn member_call_object_for_property<'b>(
+        expression: &'b Expression,
+        expected_property: &str,
+    ) -> Option<&'b Expression> {
+        let Expression::Call { callee, .. } = expression else {
+            return None;
+        };
+        let Expression::Member { object, property } = callee.as_ref() else {
+            return None;
+        };
+        if matches!(property.as_ref(), Expression::String(property) if property == expected_property)
+        {
+            Some(object.as_ref())
+        } else {
+            None
+        }
+    }
+
+    fn expression_is_async_generator_call_candidate(&self, expression: &Expression) -> bool {
+        let Expression::Call { callee, .. } = expression else {
+            return false;
+        };
+        if self
+            .resolve_function_binding_from_expression(callee)
+            .and_then(|binding| match binding {
+                LocalFunctionBinding::User(function_name) => self.user_function(&function_name),
+                LocalFunctionBinding::Builtin(_) => None,
+            })
+            .is_some_and(|function| matches!(function.kind, FunctionKind::AsyncGenerator))
+        {
+            return true;
+        }
+        matches!(callee.as_ref(), Expression::Member { .. })
+    }
+
+    fn expression_contains_async_generator_next_then_chain(&self, expression: &Expression) -> bool {
+        if let Some(next_call) = Self::member_call_object_for_property(expression, "then")
+            && let Some(generator_call) = Self::member_call_object_for_property(next_call, "next")
+            && self.expression_is_async_generator_call_candidate(generator_call)
+        {
+            return true;
+        }
+        match expression {
+            Expression::Member { object, property } => {
+                self.expression_contains_async_generator_next_then_chain(object)
+                    || self.expression_contains_async_generator_next_then_chain(property)
+            }
+            Expression::SuperMember { property } => {
+                self.expression_contains_async_generator_next_then_chain(property)
+            }
+            Expression::Assign { value, .. }
+            | Expression::Await(value)
+            | Expression::EnumerateKeys(value)
+            | Expression::GetIterator(value)
+            | Expression::IteratorClose(value) => {
+                self.expression_contains_async_generator_next_then_chain(value)
+            }
+            Expression::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                self.expression_contains_async_generator_next_then_chain(object)
+                    || self.expression_contains_async_generator_next_then_chain(property)
+                    || self.expression_contains_async_generator_next_then_chain(value)
+            }
+            Expression::AssignSuperMember { property, value } => {
+                self.expression_contains_async_generator_next_then_chain(property)
+                    || self.expression_contains_async_generator_next_then_chain(value)
+            }
+            Expression::Unary { expression, .. } => {
+                self.expression_contains_async_generator_next_then_chain(expression)
+            }
+            Expression::Binary { left, right, .. } => {
+                self.expression_contains_async_generator_next_then_chain(left)
+                    || self.expression_contains_async_generator_next_then_chain(right)
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                self.expression_contains_async_generator_next_then_chain(condition)
+                    || self.expression_contains_async_generator_next_then_chain(then_expression)
+                    || self.expression_contains_async_generator_next_then_chain(else_expression)
+            }
+            Expression::Sequence(expressions) => expressions.iter().any(|expression| {
+                self.expression_contains_async_generator_next_then_chain(expression)
+            }),
+            Expression::Call { callee, arguments }
+            | Expression::SuperCall { callee, arguments }
+            | Expression::New { callee, arguments } => {
+                self.expression_contains_async_generator_next_then_chain(callee)
+                    || arguments.iter().any(|argument| {
+                        self.expression_contains_async_generator_next_then_chain(
+                            argument.expression(),
+                        )
+                    })
+            }
+            Expression::Array(elements) => elements.iter().any(|element| match element {
+                ArrayElement::Expression(value) | ArrayElement::Spread(value) => {
+                    self.expression_contains_async_generator_next_then_chain(value)
+                }
+            }),
+            Expression::Object(entries) => entries.iter().any(|entry| match entry {
+                ObjectEntry::Data { key, value } => {
+                    self.expression_contains_async_generator_next_then_chain(key)
+                        || self.expression_contains_async_generator_next_then_chain(value)
+                }
+                ObjectEntry::Getter { key, getter } => {
+                    self.expression_contains_async_generator_next_then_chain(key)
+                        || self.expression_contains_async_generator_next_then_chain(getter)
+                }
+                ObjectEntry::Setter { key, setter } => {
+                    self.expression_contains_async_generator_next_then_chain(key)
+                        || self.expression_contains_async_generator_next_then_chain(setter)
+                }
+                ObjectEntry::Spread(value) => {
+                    self.expression_contains_async_generator_next_then_chain(value)
+                }
+            }),
+            _ => false,
+        }
+    }
+
+    fn statement_contains_async_generator_next_then_chain(&self, statement: &Statement) -> bool {
+        match statement {
+            Statement::Var { value, .. }
+            | Statement::Let { value, .. }
+            | Statement::Assign { value, .. }
+            | Statement::Expression(value)
+            | Statement::Throw(value)
+            | Statement::Return(value)
+            | Statement::Yield { value }
+            | Statement::YieldDelegate { value } => {
+                self.expression_contains_async_generator_next_then_chain(value)
+            }
+            Statement::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                self.expression_contains_async_generator_next_then_chain(object)
+                    || self.expression_contains_async_generator_next_then_chain(property)
+                    || self.expression_contains_async_generator_next_then_chain(value)
+            }
+            Statement::Print { values } => values
+                .iter()
+                .any(|value| self.expression_contains_async_generator_next_then_chain(value)),
+            Statement::Declaration { body }
+            | Statement::Block { body }
+            | Statement::Labeled { body, .. }
+            | Statement::With { body, .. }
+            | Statement::While { body, .. }
+            | Statement::DoWhile { body, .. } => body.iter().any(|statement| {
+                self.statement_contains_async_generator_next_then_chain(statement)
+            }),
+            Statement::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                self.expression_contains_async_generator_next_then_chain(condition)
+                    || then_branch.iter().any(|statement| {
+                        self.statement_contains_async_generator_next_then_chain(statement)
+                    })
+                    || else_branch.iter().any(|statement| {
+                        self.statement_contains_async_generator_next_then_chain(statement)
+                    })
+            }
+            Statement::Try {
+                body,
+                catch_setup,
+                catch_body,
+                ..
+            } => body
+                .iter()
+                .chain(catch_setup)
+                .chain(catch_body)
+                .any(|statement| {
+                    self.statement_contains_async_generator_next_then_chain(statement)
+                }),
+            Statement::Switch {
+                discriminant,
+                cases,
+                ..
+            } => {
+                self.expression_contains_async_generator_next_then_chain(discriminant)
+                    || cases.iter().any(|case| {
+                        case.body.iter().any(|statement| {
+                            self.statement_contains_async_generator_next_then_chain(statement)
+                        })
+                    })
+            }
+            Statement::For {
+                init,
+                condition,
+                update,
+                break_hook,
+                body,
+                ..
+            } => {
+                init.iter().any(|statement| {
+                    self.statement_contains_async_generator_next_then_chain(statement)
+                }) || condition.as_ref().is_some_and(|expression| {
+                    self.expression_contains_async_generator_next_then_chain(expression)
+                }) || update.as_ref().is_some_and(|expression| {
+                    self.expression_contains_async_generator_next_then_chain(expression)
+                }) || break_hook.as_ref().is_some_and(|expression| {
+                    self.expression_contains_async_generator_next_then_chain(expression)
+                }) || body.iter().any(|statement| {
+                    self.statement_contains_async_generator_next_then_chain(statement)
+                })
+            }
+            Statement::Break { .. } | Statement::Continue { .. } => false,
+        }
+    }
+
+    fn user_function_contains_async_generator_next_then_chain(
+        &self,
+        user_function: &UserFunction,
+    ) -> bool {
+        self.resolve_registered_function_declaration(&user_function.name)
+            .is_some_and(|function| {
+                function.body.iter().any(|statement| {
+                    self.statement_contains_async_generator_next_then_chain(statement)
+                })
+            })
+    }
+
+    fn expression_is_deferred_module_namespace_reference(expression: &Expression) -> bool {
+        matches!(
+            expression,
+            Expression::Identifier(name) if name.starts_with("__ayy_module_deferred_namespace_")
+        )
+    }
+
+    fn derived_constructor_super_returns_deferred_module_namespace(
+        &self,
+        user_function: &UserFunction,
+        arguments: &[CallArgument],
+    ) -> bool {
+        self.user_function_is_derived_constructor(user_function)
+            && self
+                .resolve_derived_constructor_super_call_replacement_this_expression(
+                    user_function,
+                    arguments,
+                )
+                .is_some_and(|expression| {
+                    Self::expression_is_deferred_module_namespace_reference(&expression)
+                })
+    }
+
     fn emit_null_super_constructor_construct(
         &mut self,
         user_function: &UserFunction,
@@ -855,7 +1160,10 @@ impl<'a> FunctionCompiler<'a> {
             };
             !self.expression_depends_on_active_loop_assignment(expression)
                 && !self.expression_has_dynamic_member_property_access(expression)
-        });
+        }) && !self
+            .derived_constructor_super_returns_deferred_module_namespace(user_function, arguments)
+            && !self.registered_function_body_mentions_promise_like_chain(&user_function.name)
+            && !self.user_function_contains_async_generator_next_then_chain(user_function);
         let constructor_result_outcome = (!constructor_ordinary_direct_eval
             && constructor_static_resolution_allowed)
             .then(|| {
@@ -871,25 +1179,26 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(true);
         }
         let constructor_return_resolution = (!constructor_ordinary_direct_eval
-            && constructor_static_resolution_allowed)
-            .then(|| {
-                self.resolve_user_constructor_return_expression_with_explicit_status_for_function(
-                    user_function,
-                    arguments,
-                    capture_source_bindings.as_ref(),
-                )
-            })
-            .flatten()
-            .filter(|(expression, _)| {
-                self.resolve_object_binding_from_expression(expression)
+            && constructor_static_resolution_allowed
+            && self.user_function_has_explicit_return(user_function))
+        .then(|| {
+            self.resolve_user_constructor_return_expression_with_explicit_status_for_function(
+                user_function,
+                arguments,
+                capture_source_bindings.as_ref(),
+            )
+        })
+        .flatten()
+        .filter(|(expression, _)| {
+            self.resolve_object_binding_from_expression(expression)
+                .is_some()
+                || self
+                    .resolve_array_binding_from_expression(expression)
                     .is_some()
-                    || self
-                        .resolve_array_binding_from_expression(expression)
-                        .is_some()
-                    || self
-                        .resolve_function_binding_from_expression(expression)
-                        .is_some()
-            });
+                || self
+                    .resolve_function_binding_from_expression(expression)
+                    .is_some()
+        });
         let constructor_return_expression = constructor_return_resolution
             .as_ref()
             .map(|(expression, _)| expression.clone());
@@ -920,15 +1229,16 @@ impl<'a> FunctionCompiler<'a> {
                 .map(|binding| object_binding_to_expression(binding))
         });
         let constructor_updated_bindings = (!constructor_ordinary_direct_eval
-            && constructor_static_resolution_allowed)
-            .then(|| {
-                self.resolve_user_constructor_updated_bindings_for_function(
-                    user_function,
-                    arguments,
-                    capture_source_bindings.as_ref(),
-                )
-            })
-            .flatten();
+            && constructor_static_resolution_allowed
+            && capture_slots.is_none())
+        .then(|| {
+            self.resolve_user_constructor_updated_bindings_for_function(
+                user_function,
+                arguments,
+                capture_source_bindings.as_ref(),
+            )
+        })
+        .flatten();
         if std::env::var_os("AYY_TRACE_CONSTRUCT_CALLS").is_some() {
             eprintln!(
                 "construct_call:static_updates function={} direct_eval={} static_allowed={} updated={constructor_updated_bindings:?}",

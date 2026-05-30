@@ -1,6 +1,216 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn expression_mentions_promise_like_chain(expression: &Expression) -> bool {
+        match expression {
+            Expression::Call { callee, arguments }
+            | Expression::New { callee, arguments }
+            | Expression::SuperCall { callee, arguments } => {
+                Self::call_is_promise_like_chain(expression)
+                    || Self::expression_mentions_promise_like_chain(callee)
+                    || arguments.iter().any(|argument| match argument {
+                        CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                            Self::expression_mentions_promise_like_chain(expression)
+                        }
+                    })
+            }
+            Expression::Member { object, property } => {
+                Self::expression_mentions_promise_like_chain(object)
+                    || Self::expression_mentions_promise_like_chain(property)
+            }
+            Expression::Assign { value, .. }
+            | Expression::Await(value)
+            | Expression::EnumerateKeys(value)
+            | Expression::GetIterator(value)
+            | Expression::IteratorClose(value)
+            | Expression::Unary {
+                expression: value, ..
+            } => Self::expression_mentions_promise_like_chain(value),
+            Expression::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                Self::expression_mentions_promise_like_chain(object)
+                    || Self::expression_mentions_promise_like_chain(property)
+                    || Self::expression_mentions_promise_like_chain(value)
+            }
+            Expression::AssignSuperMember { property, value } => {
+                Self::expression_mentions_promise_like_chain(property)
+                    || Self::expression_mentions_promise_like_chain(value)
+            }
+            Expression::Binary { left, right, .. } => {
+                Self::expression_mentions_promise_like_chain(left)
+                    || Self::expression_mentions_promise_like_chain(right)
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                Self::expression_mentions_promise_like_chain(condition)
+                    || Self::expression_mentions_promise_like_chain(then_expression)
+                    || Self::expression_mentions_promise_like_chain(else_expression)
+            }
+            Expression::Sequence(expressions) => expressions
+                .iter()
+                .any(Self::expression_mentions_promise_like_chain),
+            Expression::Array(elements) => elements.iter().any(|element| match element {
+                ArrayElement::Expression(expression) | ArrayElement::Spread(expression) => {
+                    Self::expression_mentions_promise_like_chain(expression)
+                }
+            }),
+            Expression::Object(entries) => entries.iter().any(|entry| match entry {
+                ObjectEntry::Data { key, value } => {
+                    Self::expression_mentions_promise_like_chain(key)
+                        || Self::expression_mentions_promise_like_chain(value)
+                }
+                ObjectEntry::Getter { key, getter } => {
+                    Self::expression_mentions_promise_like_chain(key)
+                        || Self::expression_mentions_promise_like_chain(getter)
+                }
+                ObjectEntry::Setter { key, setter } => {
+                    Self::expression_mentions_promise_like_chain(key)
+                        || Self::expression_mentions_promise_like_chain(setter)
+                }
+                ObjectEntry::Spread(value) => Self::expression_mentions_promise_like_chain(value),
+            }),
+            _ => false,
+        }
+    }
+
+    fn statement_mentions_promise_like_chain(statement: &Statement) -> bool {
+        match statement {
+            Statement::Block { body }
+            | Statement::Declaration { body }
+            | Statement::Labeled { body, .. } => {
+                body.iter().any(Self::statement_mentions_promise_like_chain)
+            }
+            Statement::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                Self::expression_mentions_promise_like_chain(condition)
+                    || then_branch
+                        .iter()
+                        .any(Self::statement_mentions_promise_like_chain)
+                    || else_branch
+                        .iter()
+                        .any(Self::statement_mentions_promise_like_chain)
+            }
+            Statement::Var { value, .. }
+            | Statement::Let { value, .. }
+            | Statement::Assign { value, .. }
+            | Statement::Return(value)
+            | Statement::Throw(value)
+            | Statement::Yield { value }
+            | Statement::YieldDelegate { value }
+            | Statement::Expression(value) => Self::expression_mentions_promise_like_chain(value),
+            Statement::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                Self::expression_mentions_promise_like_chain(object)
+                    || Self::expression_mentions_promise_like_chain(property)
+                    || Self::expression_mentions_promise_like_chain(value)
+            }
+            Statement::Print { values } => values
+                .iter()
+                .any(Self::expression_mentions_promise_like_chain),
+            Statement::With { object, body } => {
+                Self::expression_mentions_promise_like_chain(object)
+                    || body.iter().any(Self::statement_mentions_promise_like_chain)
+            }
+            Statement::For {
+                init,
+                condition,
+                update,
+                break_hook,
+                body,
+                ..
+            } => {
+                init.iter().any(Self::statement_mentions_promise_like_chain)
+                    || condition
+                        .as_ref()
+                        .is_some_and(Self::expression_mentions_promise_like_chain)
+                    || update
+                        .as_ref()
+                        .is_some_and(Self::expression_mentions_promise_like_chain)
+                    || break_hook
+                        .as_ref()
+                        .is_some_and(Self::expression_mentions_promise_like_chain)
+                    || body.iter().any(Self::statement_mentions_promise_like_chain)
+            }
+            Statement::While {
+                condition,
+                break_hook,
+                body,
+                ..
+            }
+            | Statement::DoWhile {
+                condition,
+                break_hook,
+                body,
+                ..
+            } => {
+                Self::expression_mentions_promise_like_chain(condition)
+                    || break_hook
+                        .as_ref()
+                        .is_some_and(Self::expression_mentions_promise_like_chain)
+                    || body.iter().any(Self::statement_mentions_promise_like_chain)
+            }
+            Statement::Try {
+                body,
+                catch_setup,
+                catch_body,
+                ..
+            } => {
+                body.iter().any(Self::statement_mentions_promise_like_chain)
+                    || catch_setup
+                        .iter()
+                        .any(Self::statement_mentions_promise_like_chain)
+                    || catch_body
+                        .iter()
+                        .any(Self::statement_mentions_promise_like_chain)
+            }
+            Statement::Switch {
+                discriminant,
+                cases,
+                ..
+            } => {
+                Self::expression_mentions_promise_like_chain(discriminant)
+                    || cases.iter().any(|case| {
+                        case.test
+                            .as_ref()
+                            .is_some_and(Self::expression_mentions_promise_like_chain)
+                            || case
+                                .body
+                                .iter()
+                                .any(Self::statement_mentions_promise_like_chain)
+                    })
+            }
+            _ => false,
+        }
+    }
+
+    pub(in crate::backend::direct_wasm) fn registered_function_body_mentions_promise_like_chain(
+        &self,
+        function_name: &str,
+    ) -> bool {
+        self.backend
+            .function_registry
+            .registered_function(function_name)
+            .or_else(|| self.resolve_registered_function_declaration(function_name))
+            .is_some_and(|function| {
+                function
+                    .body
+                    .iter()
+                    .any(Self::statement_mentions_promise_like_chain)
+            })
+    }
+
     fn expression_mentions_direct_eval(expression: &Expression) -> bool {
         match expression {
             Expression::Identifier(_) => false,
@@ -1561,6 +1771,7 @@ impl<'a> FunctionCompiler<'a> {
                         .iter()
                         .any(Self::statement_mentions_private_member_access)
                 })
+            && !self.registered_function_body_mentions_promise_like_chain(&user_function.name)
             && !self.user_function_mentions_direct_eval(user_function)
             && !self.user_function_contains_identifier_callee_call(user_function)
             && !self

@@ -340,6 +340,122 @@ impl<'a> FunctionCompiler<'a> {
         Ok(())
     }
 
+    fn object_has_static_own_in_property(
+        &self,
+        object: &Expression,
+        property: &Expression,
+    ) -> bool {
+        let canonical_property = self.canonical_object_property_expression(property);
+        self.resolve_object_binding_from_expression(object)
+            .is_some_and(|binding| {
+                object_binding_has_property(&binding, &canonical_property)
+                    || object_binding_lookup_descriptor(&binding, &canonical_property).is_some()
+                    || object_binding_lookup_value(&binding, &canonical_property).is_some()
+                    || object_binding_lookup_value(&binding, property).is_some()
+            })
+    }
+
+    fn deferred_module_namespace_in_property_key(
+        &self,
+        property: &Expression,
+    ) -> Option<Expression> {
+        let property_name = self.static_property_name_for_in_query(property)?;
+        if property_name == "then" || property_name.starts_with("__ayy$") {
+            return None;
+        }
+        Some(Expression::String(property_name))
+    }
+
+    fn deferred_module_namespace_has_property_module_index(
+        &self,
+        object: &Expression,
+        property: &Expression,
+    ) -> Option<usize> {
+        let property_key = self.deferred_module_namespace_in_property_key(property)?;
+        if let Expression::Identifier(name) = object
+            && name.starts_with("__ayy_module_deferred_namespace_")
+        {
+            let module_index = Self::module_index_from_namespace_like_identifier(name)?;
+            if self.current_function_name().is_some_and(|function_name| {
+                function_name == format!("__ayy_module_init_{module_index}")
+            }) {
+                return None;
+            }
+            return Some(module_index);
+        }
+
+        if self.object_has_static_own_in_property(object, &property_key) {
+            return None;
+        }
+
+        let mut prototype = self.resolve_static_object_prototype_expression(object)?;
+        for _ in 0..32 {
+            let materialized_prototype = self.materialize_static_expression(&prototype);
+            for candidate in [&prototype, &materialized_prototype] {
+                if let Expression::Identifier(name) = candidate
+                    && name.starts_with("__ayy_module_deferred_namespace_")
+                {
+                    let module_index = Self::module_index_from_namespace_like_identifier(name)?;
+                    if self.current_function_name().is_some_and(|function_name| {
+                        function_name == format!("__ayy_module_init_{module_index}")
+                    }) {
+                        return None;
+                    }
+                    return Some(module_index);
+                }
+                if self.object_has_static_own_in_property(candidate, &property_key) {
+                    return None;
+                }
+            }
+            if matches!(materialized_prototype, Expression::Null) {
+                return None;
+            }
+
+            let next_prototype = self
+                .resolve_static_object_prototype_expression(&materialized_prototype)
+                .or_else(|| self.resolve_static_object_prototype_expression(&prototype))?;
+            if static_expression_matches(&next_prototype, &prototype)
+                || static_expression_matches(&next_prototype, &materialized_prototype)
+            {
+                return None;
+            }
+            prototype = next_prototype;
+        }
+        None
+    }
+
+    fn emit_deferred_module_namespace_has_property(
+        &mut self,
+        property: &Expression,
+        object: &Expression,
+    ) -> DirectResult<bool> {
+        let Some(property_key) = self.deferred_module_namespace_in_property_key(property) else {
+            return Ok(false);
+        };
+        let Some(module_index) =
+            self.deferred_module_namespace_has_property_module_index(object, &property_key)
+        else {
+            return Ok(false);
+        };
+
+        self.emit_static_in_operand_effects(property, object)?;
+        self.emit_sync_module_init_if_needed(module_index, &mut std::collections::HashSet::new())?;
+        let has_property = self
+            .resolve_static_dynamic_import_namespace_live_binding_member_value(
+                module_index,
+                &property_key,
+            )
+            .or_else(|| {
+                self.resolve_static_dynamic_import_namespace_live_binding_member_initializer_value(
+                    module_index,
+                    &property_key,
+                )
+            })
+            .is_some();
+        self.push_i32_const(i32::from(has_property));
+        Ok(true)
+    }
+
     pub(in crate::backend::direct_wasm) fn emit_loose_comparison(
         &mut self,
         left: &Expression,
@@ -384,6 +500,31 @@ impl<'a> FunctionCompiler<'a> {
         left: &Expression,
         right: &Expression,
     ) -> DirectResult<()> {
+        if matches!(
+            static_property_name_from_expression(left).as_deref(),
+            Some("prototype")
+        ) && matches!(
+            right,
+            Expression::Member { object, property }
+                if matches!(
+                    (object.as_ref(), property.as_ref()),
+                    (Expression::Identifier(name), Expression::String(property_name))
+                        if matches!(property_name.as_str(), "get" | "set")
+                            && self.local_binding_is_dynamic_property_descriptor_result(name)
+                )
+        ) {
+            if !inline_summary_side_effect_free_expression(left) {
+                self.emit_numeric_expression(left)?;
+                self.state.emission.output.instructions.push(0x1a);
+            }
+            self.push_i32_const(0);
+            return Ok(());
+        }
+
+        if self.emit_deferred_module_namespace_has_property(left, right)? {
+            return Ok(());
+        }
+
         if self.emit_static_top_level_global_object_in_expression(left, right)? {
             return Ok(());
         }

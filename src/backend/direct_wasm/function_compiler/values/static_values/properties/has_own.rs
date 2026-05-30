@@ -279,13 +279,13 @@ impl<'a> FunctionCompiler<'a> {
                 let requested_symbol = self
                     .resolve_symbol_identity_expression(&canonical_property)
                     .or_else(|| self.resolve_symbol_identity_expression(property_candidate));
-                if requested_well_known_symbol.is_some()
-                    && Self::object_binding_has_module_namespace_marker(&object_binding)
-                    && self
-                        .resolve_object_binding_property_value(&object_binding, property_candidate)
-                        .is_none()
+                if Self::object_binding_has_module_namespace_marker(&object_binding)
+                    && (requested_well_known_symbol.is_some() || requested_symbol.is_some())
                 {
-                    return Some(Some(false));
+                    return Some(Some(
+                        is_symbol_to_string_tag_expression(&canonical_property)
+                            || is_symbol_to_string_tag_expression(property_candidate),
+                    ));
                 }
                 if static_property_name_from_expression(&canonical_property).is_none()
                     && requested_symbol.is_none()

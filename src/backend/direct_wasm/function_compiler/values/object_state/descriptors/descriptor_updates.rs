@@ -1,5 +1,57 @@
 use super::*;
 
+fn expression_is_promise_resolve_undefined_call(expression: &Expression) -> bool {
+    let Expression::Call { callee, arguments } = expression else {
+        return false;
+    };
+    let Expression::Member { object, property } = callee.as_ref() else {
+        return false;
+    };
+    matches!(object.as_ref(), Expression::Identifier(name) if name == "Promise")
+        && matches!(property.as_ref(), Expression::String(name) if name == "resolve")
+        && matches!(
+            arguments.as_slice(),
+            [] | [CallArgument::Expression(Expression::Undefined)]
+        )
+}
+
+fn expression_is_static_promise_with_resolvers_record(expression: &Expression) -> bool {
+    let Expression::Object(entries) = expression else {
+        return false;
+    };
+    let mut has_promise = false;
+    let mut has_resolve = false;
+    let mut has_reject = false;
+    for entry in entries {
+        let ObjectEntry::Data {
+            key: Expression::String(key),
+            value,
+        } = entry
+        else {
+            continue;
+        };
+        match key.as_str() {
+            "promise" => has_promise = expression_is_promise_resolve_undefined_call(value),
+            "resolve" => {
+                has_resolve = matches!(
+                    value,
+                    Expression::Identifier(name)
+                        if name == "__ayy_promise_with_resolvers_resolve"
+                );
+            }
+            "reject" => {
+                has_reject = matches!(
+                    value,
+                    Expression::Identifier(name)
+                        if name == "__ayy_promise_with_resolvers_reject"
+                );
+            }
+            _ => {}
+        }
+    }
+    has_promise && has_resolve && has_reject
+}
+
 impl<'a> FunctionCompiler<'a> {
     pub(in crate::backend::direct_wasm) fn update_local_descriptor_binding(
         &mut self,
@@ -109,6 +161,13 @@ impl<'a> FunctionCompiler<'a> {
         name: &str,
         value: &Expression,
     ) {
+        if Self::expression_contains_await_for_user_call_runtime(value) {
+            self.state
+                .speculation
+                .static_semantics
+                .clear_local_value_binding(name);
+            return;
+        }
         let snapshot_value = self
             .state
             .speculation
@@ -131,6 +190,26 @@ impl<'a> FunctionCompiler<'a> {
         let metadata_source_value = template_object_identity_value
             .as_ref()
             .unwrap_or(&snapshot_value);
+        let module_error_identity_value = match metadata_source_value {
+            Expression::Identifier(alias) if alias.starts_with("__ayy_module_error_") => {
+                Some(metadata_source_value.clone())
+            }
+            Expression::Identifier(alias) => self
+                .state
+                .speculation
+                .static_semantics
+                .local_value_binding(alias)
+                .or_else(|| self.global_value_binding(alias))
+                .and_then(|value| match value {
+                    Expression::Identifier(module_error)
+                        if module_error.starts_with("__ayy_module_error_") =>
+                    {
+                        Some(value.clone())
+                    }
+                    _ => None,
+                }),
+            _ => None,
+        };
         let preserve_reference_alias =
             matches!(snapshot_value, Expression::Identifier(_) | Expression::This)
                 && (self
@@ -151,7 +230,18 @@ impl<'a> FunctionCompiler<'a> {
         let materialized_value =
             if let Some(template_object_identity_value) = template_object_identity_value {
                 template_object_identity_value
+            } else if let Some(module_error_identity_value) = module_error_identity_value {
+                module_error_identity_value
             } else if preserve_reference_alias || preserve_object_literal_member_function_alias {
+                snapshot_value.clone()
+            } else if matches!(
+                metadata_source_value,
+                Expression::Call { callee, .. }
+                    if matches!(callee.as_ref(), Expression::Identifier(name)
+                        if name == "__ayyDynamicImport")
+            ) {
+                snapshot_value.clone()
+            } else if expression_is_static_promise_with_resolvers_record(metadata_source_value) {
                 snapshot_value.clone()
             } else if matches!(
                 metadata_source_value,

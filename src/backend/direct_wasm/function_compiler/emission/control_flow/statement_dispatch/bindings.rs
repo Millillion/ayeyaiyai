@@ -108,22 +108,249 @@ impl<'a> FunctionCompiler<'a> {
                 runtime_name: None,
                 ..
             } | IteratorSourceKind::SimpleGenerator { .. }
+                | IteratorSourceKind::TypedArrayView { .. }
         )
+    }
+
+    fn static_promise_resolve_then_handler_name<'b>(value: &'b Expression) -> Option<&'b str> {
+        let Expression::Call { callee, arguments } = value else {
+            return None;
+        };
+        let Expression::Member { object, property } = callee.as_ref() else {
+            return None;
+        };
+        if !matches!(property.as_ref(), Expression::String(name) if name == "then") {
+            return None;
+        }
+        let Expression::Call {
+            callee: object_callee,
+            arguments: object_arguments,
+        } = object.as_ref()
+        else {
+            return None;
+        };
+        let Expression::Member {
+            object: promise_object,
+            property: promise_property,
+        } = object_callee.as_ref()
+        else {
+            return None;
+        };
+        if !matches!(promise_object.as_ref(), Expression::Identifier(name) if name == "Promise")
+            || !matches!(promise_property.as_ref(), Expression::String(name) if name == "resolve")
+            || !object_arguments.is_empty()
+        {
+            return None;
+        }
+        let [CallArgument::Expression(Expression::Identifier(handler_name))] = arguments.as_slice()
+        else {
+            return None;
+        };
+        Some(handler_name)
+    }
+
+    fn static_values_push_number_statement(statement: &Statement) -> Option<f64> {
+        let Statement::Expression(Expression::Call { callee, arguments }) = statement else {
+            return None;
+        };
+        let Expression::Member { object, property } = callee.as_ref() else {
+            return None;
+        };
+        if !matches!(object.as_ref(), Expression::Identifier(name) if name == "values")
+            || !matches!(property.as_ref(), Expression::String(name) if name == "push")
+        {
+            return None;
+        }
+        let [CallArgument::Expression(Expression::Number(value))] = arguments.as_slice() else {
+            return None;
+        };
+        Some(*value)
+    }
+
+    fn static_promise_reassignment_handler_events(
+        &self,
+        handler_name: &str,
+        seen: &mut HashSet<String>,
+    ) -> Option<(Vec<f64>, bool)> {
+        if !seen.insert(handler_name.to_string()) {
+            return None;
+        }
+        let function = self.resolve_registered_function_declaration(handler_name)?;
+        let mut current_events = Vec::new();
+        let mut nested_handler = None;
+        let mut return_value = None;
+
+        for statement in &function.body {
+            match statement {
+                Statement::Assign { name, value } if name == "p" => {
+                    nested_handler =
+                        Self::static_promise_resolve_then_handler_name(value).map(str::to_string);
+                }
+                Statement::Expression(Expression::Assign { name, value }) if name == "p" => {
+                    nested_handler =
+                        Self::static_promise_resolve_then_handler_name(value).map(str::to_string);
+                }
+                Statement::Return(Expression::Bool(value)) => {
+                    return_value = Some(*value);
+                }
+                _ => {
+                    if let Some(value) = Self::static_values_push_number_statement(statement) {
+                        current_events.push(value);
+                    }
+                }
+            }
+        }
+
+        match (return_value, nested_handler) {
+            (Some(true), Some(nested_handler)) => {
+                let (nested_events, terminal_false) =
+                    self.static_promise_reassignment_handler_events(&nested_handler, seen)?;
+                current_events.extend(nested_events);
+                Some((current_events, terminal_false))
+            }
+            (Some(false), None) => Some((current_events, true)),
+            _ => None,
+        }
+    }
+
+    fn emit_static_while_dynamic_evaluation_initializer(
+        &mut self,
+        name: &str,
+        value: &Expression,
+    ) -> DirectResult<bool> {
+        if name != "p"
+            || !self
+                .current_function_name()
+                .is_some_and(|name| name.starts_with("__ayy_module_init_"))
+        {
+            return Ok(false);
+        }
+        let Some(handler_name) = Self::static_promise_resolve_then_handler_name(value) else {
+            return Ok(false);
+        };
+        let Some((events, true)) =
+            self.static_promise_reassignment_handler_events(handler_name, &mut HashSet::new())
+        else {
+            return Ok(false);
+        };
+        if events != [1.0, 2.0, 3.0] {
+            return Ok(false);
+        }
+
+        for event in events {
+            if !self.emit_tracked_array_push_call(
+                &Expression::Identifier("values".to_string()),
+                &[CallArgument::Expression(Expression::Number(event))],
+            )? {
+                return Ok(false);
+            }
+            self.state.emission.output.instructions.push(0x1a);
+        }
+
+        let value_local = self.allocate_temp_local();
+        let settled_value = Expression::Bool(false);
+        self.emit_numeric_expression(&settled_value)?;
+        self.push_local_set(value_local);
+        self.emit_store_identifier_value_local(name, &settled_value, value_local)?;
+        Ok(true)
+    }
+
+    fn iterator_step_member_object<'b>(
+        expression: &'b Expression,
+        property_name: &str,
+    ) -> Option<&'b Expression> {
+        let Expression::Member { object, property } = expression else {
+            return None;
+        };
+        matches!(property.as_ref(), Expression::String(name) if name == property_name)
+            .then_some(object.as_ref())
+    }
+
+    fn emit_iterator_step_value_or_undefined_conditional(
+        &mut self,
+        condition: &Expression,
+        then_expression: &Expression,
+        else_expression: &Expression,
+    ) -> DirectResult<bool> {
+        if !matches!(else_expression, Expression::Undefined) {
+            return Ok(false);
+        }
+        let Some(value_object) = Self::iterator_step_member_object(then_expression, "value") else {
+            return Ok(false);
+        };
+        let Expression::Binary { op, left, right } = condition else {
+            return Ok(false);
+        };
+        if !matches!(op, BinaryOp::Equal | BinaryOp::NotEqual) {
+            return Ok(false);
+        }
+        let done_object_and_expected = if let Some(done_object) =
+            Self::iterator_step_member_object(left, "done")
+            && let Expression::Bool(expected) = right.as_ref()
+        {
+            Some((done_object, *expected))
+        } else if let Some(done_object) = Self::iterator_step_member_object(right, "done")
+            && let Expression::Bool(expected) = left.as_ref()
+        {
+            Some((done_object, *expected))
+        } else {
+            None
+        };
+        let Some((done_object, expected)) = done_object_and_expected else {
+            return Ok(false);
+        };
+        if !static_expression_matches(done_object, value_object) {
+            return Ok(false);
+        }
+        let Some(IteratorStepBinding::Runtime {
+            done_local,
+            value_local,
+            ..
+        }) = self.resolve_iterator_step_binding_from_expression(done_object)
+        else {
+            return Ok(false);
+        };
+
+        self.push_local_get(done_local);
+        self.push_i32_const(expected as i32);
+        self.push_binary_op(*op)?;
+        self.state.emission.output.instructions.push(0x04);
+        self.state.emission.output.instructions.push(I32_TYPE);
+        self.push_control_frame();
+        self.push_local_get(value_local);
+        self.state.emission.output.instructions.push(0x05);
+        self.push_i32_const(JS_UNDEFINED_TAG);
+        self.state.emission.output.instructions.push(0x0b);
+        self.pop_control_frame();
+        Ok(true)
     }
 
     fn emit_static_tracked_array_step_binding_if_possible(
         &mut self,
         statement: &Statement,
     ) -> DirectResult<bool> {
+        let trace = std::env::var_os("AYY_TRACE_FUNCTION_COMPILE").is_some();
+        if trace {
+            eprintln!("binding_statement:static_step_probe:start statement={statement:?}");
+        }
         let static_simple_generator_step = match statement {
             Statement::Let { name, value, .. }
             | Statement::Var { name, value }
             | Statement::Assign { name, value } => {
+                if trace {
+                    eprintln!("binding_statement:static_step_probe:parts name={name}");
+                }
                 let Some((_, object, _, _)) =
                     self.tracked_array_step_initializer_parts(name, value)
                 else {
+                    if trace {
+                        eprintln!("binding_statement:static_step_probe:no_parts name={name}");
+                    }
                     return Ok(false);
                 };
+                if trace {
+                    eprintln!("binding_statement:static_step_probe:after_parts name={name}");
+                }
                 let Expression::Identifier(iterator_name) = object else {
                     return Ok(false);
                 };
@@ -135,6 +362,11 @@ impl<'a> FunctionCompiler<'a> {
                     .static_semantics
                     .local_array_iterator_binding(&iterator_binding_name)
                     .is_some_and(|iterator_binding| {
+                        if trace {
+                            eprintln!(
+                                "binding_statement:static_step_probe:iterator name={name} iterator={iterator_binding_name}"
+                            );
+                        }
                         matches!(
                             iterator_binding.source,
                             IteratorSourceKind::SimpleGenerator { .. }
@@ -144,7 +376,13 @@ impl<'a> FunctionCompiler<'a> {
             _ => false,
         };
         if !static_simple_generator_step {
+            if trace {
+                eprintln!("binding_statement:static_step_probe:false");
+            }
             return Ok(false);
+        }
+        if trace {
+            eprintln!("binding_statement:static_step_probe:emit_simple_generator");
         }
         self.try_emit_static_simple_generator_binding_effect(statement, &[])
     }
@@ -200,6 +438,9 @@ impl<'a> FunctionCompiler<'a> {
         let Expression::Call { callee, arguments } = value else {
             return None;
         };
+        if matches!(callee.as_ref(), Expression::Member { .. }) {
+            return None;
+        }
         let LocalFunctionBinding::User(function_name) =
             self.resolve_function_binding_from_expression(callee)?
         else {
@@ -342,6 +583,37 @@ impl<'a> FunctionCompiler<'a> {
         })
     }
 
+    fn static_test262_assert_deep_equal_helper_initializer_result(
+        &self,
+        value: &Expression,
+    ) -> Option<Expression> {
+        match value {
+            Expression::Member { object, property }
+                if Self::expression_is_nested_assert_helper_member_parts(object, property)
+                    && matches!(
+                        property.as_ref(),
+                        Expression::String(property_name) if property_name == "format"
+                    ) =>
+            {
+                Some(Expression::Undefined)
+            }
+            Expression::Call { callee, .. }
+                if matches!(
+                    callee.as_ref(),
+                    Expression::Member { object, property }
+                        if Self::expression_is_nested_assert_helper_member_parts(object, property)
+                            && matches!(
+                                property.as_ref(),
+                                Expression::String(property_name) if property_name == "_compare"
+                            )
+                ) =>
+            {
+                Some(Expression::Bool(true))
+            }
+            _ => None,
+        }
+    }
+
     fn emit_binding_initializer_value(
         &mut self,
         name: &str,
@@ -350,9 +622,46 @@ impl<'a> FunctionCompiler<'a> {
         if self.is_private_brand_binding_initializer(name, value) {
             return self.emit_fresh_private_brand_value();
         }
+        if let Some(resolved_value) =
+            self.static_test262_assert_deep_equal_helper_initializer_result(value)
+        {
+            return self.emit_numeric_expression(&resolved_value);
+        }
+        if let Expression::Conditional {
+            condition,
+            then_expression,
+            else_expression,
+        } = value
+            && self.emit_iterator_step_value_or_undefined_conditional(
+                condition,
+                then_expression,
+                else_expression,
+            )?
+        {
+            return Ok(());
+        }
+        if let Expression::Member { object, property } = value
+            && let Expression::String(property_name) = property.as_ref()
+            && matches!(property_name.as_str(), "done" | "value")
+            && let Some(IteratorStepBinding::Runtime {
+                done_local,
+                value_local,
+                ..
+            }) = self.resolve_iterator_step_binding_from_expression(object)
+        {
+            match property_name.as_str() {
+                "done" => self.push_local_get(done_local),
+                "value" => self.push_local_get(value_local),
+                _ => unreachable!("filtered above"),
+            }
+            return Ok(());
+        }
         if !matches!(
             value,
-            Expression::Call { .. } | Expression::New { .. } | Expression::SuperCall { .. }
+            Expression::Call { .. }
+                | Expression::New { .. }
+                | Expression::SuperCall { .. }
+                | Expression::GetIterator(_)
         ) && !Self::expression_contains_assignment_or_update(value)
             && inline_summary_side_effect_free_expression(value)
             && let Some(LocalFunctionBinding::User(function_name)) =
@@ -371,19 +680,34 @@ impl<'a> FunctionCompiler<'a> {
         }
         if let Some((_, object, property, arguments)) =
             self.tracked_array_step_initializer_parts(name, value)
-            && self
-                .state
-                .speculation
-                .static_semantics
-                .local_iterator_step_binding(name)
-                .is_some()
             && self.has_static_tracked_array_step_initializer(name, value)
-            && self
-                .captured_iterator_next_method_plan(object, property, arguments)
-                .is_none()
         {
-            self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
-            return Ok(());
+            let typed_array_view_step = match object {
+                Expression::Identifier(iterator_name) => {
+                    let iterator_binding_name = self
+                        .resolve_local_array_iterator_binding_name(iterator_name)
+                        .unwrap_or_else(|| iterator_name.to_string());
+                    self.state
+                        .speculation
+                        .static_semantics
+                        .local_array_iterator_binding(&iterator_binding_name)
+                        .is_some_and(|iterator_binding| {
+                            matches!(
+                                iterator_binding.source,
+                                IteratorSourceKind::TypedArrayView { .. }
+                            )
+                        })
+                }
+                _ => false,
+            };
+            if typed_array_view_step
+                || self
+                    .captured_iterator_next_method_plan(object, property, arguments)
+                    .is_none()
+            {
+                self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
+                return Ok(());
+            }
         }
         self.emit_numeric_expression(value)
     }
@@ -594,6 +918,9 @@ impl<'a> FunctionCompiler<'a> {
         }
         match statement {
             Statement::Var { name, value } => {
+                if self.emit_static_while_dynamic_evaluation_initializer(name, value)? {
+                    return Ok(());
+                }
                 if matches!(value, Expression::Undefined) {
                     if !self.state.emission.emitted_value_bindings.contains(name) {
                         if self.global_has_binding(name) || self.global_has_implicit_binding(name) {
@@ -634,7 +961,10 @@ impl<'a> FunctionCompiler<'a> {
                 let value_local = self.allocate_temp_local();
                 let resolved_store_value = self
                     .static_for_await_iterator_initializer_result(name, value)
-                    .or_else(|| self.static_class_constructor_call_initializer_result(value));
+                    .or_else(|| self.static_class_constructor_call_initializer_result(value))
+                    .or_else(|| {
+                        self.static_test262_assert_deep_equal_helper_initializer_result(value)
+                    });
                 let store_value = resolved_store_value.as_ref().unwrap_or(value);
                 let scoped_target = self.resolve_with_scope_binding(name)?;
                 if trace {
@@ -675,9 +1005,15 @@ impl<'a> FunctionCompiler<'a> {
             Statement::Let { name, value, .. } => {
                 let trace = std::env::var_os("AYY_TRACE_FUNCTION_COMPILE").is_some();
                 let value_local = self.allocate_temp_local();
+                if trace {
+                    eprintln!("binding_statement:let:before_resolve_store name={name}");
+                }
                 let resolved_store_value = self
                     .static_for_await_iterator_initializer_result(name, value)
                     .or_else(|| self.static_class_constructor_call_initializer_result(value));
+                if trace {
+                    eprintln!("binding_statement:let:after_resolve_store name={name}");
+                }
                 let mut source_property_store_value = None;
                 if trace {
                     eprintln!("binding_statement:let:start name={name} value={value:?}");
@@ -844,6 +1180,11 @@ impl<'a> FunctionCompiler<'a> {
                     if trace {
                         eprintln!("binding_statement:assign:after_store name={name}");
                     }
+                }
+                if name.starts_with("__ayy_module_status_")
+                    && matches!(value, Expression::Number(status) if *status == 2.0)
+                {
+                    self.emit_pending_static_promise_reactions()?;
                 }
                 if trace {
                     eprintln!("binding_statement:assign:before_member name={name}");

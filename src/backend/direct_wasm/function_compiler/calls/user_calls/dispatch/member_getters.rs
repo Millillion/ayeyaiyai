@@ -543,6 +543,13 @@ impl<'a> FunctionCompiler<'a> {
         ) {
             return Ok(false);
         }
+        if matches!(
+            property,
+            Expression::String(name) if matches!(name.as_str(), "then" | "catch" | "finally")
+        ) && self.expression_is_direct_async_function_call(object)
+        {
+            return Ok(false);
+        }
         if self.promise_member_call_requires_runtime_fallback(object, property, arguments) {
             return Ok(false);
         }

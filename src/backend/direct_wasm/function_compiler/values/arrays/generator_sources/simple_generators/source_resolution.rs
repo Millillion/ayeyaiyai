@@ -2,33 +2,81 @@ use super::*;
 
 impl<'a> FunctionCompiler<'a> {
     fn simple_generator_source_environment_cache_key(&self) -> String {
+        const VALUE_DEBUG_LIMIT: usize = 96;
+        const OBJECT_DEBUG_LIMIT: usize = 256;
+
+        fn bounded_debug<T: std::fmt::Debug>(value: &T, limit: usize) -> String {
+            let mut text = format!("{value:?}");
+            if text.len() > limit {
+                text.truncate(limit);
+                text.push_str("...");
+            }
+            text
+        }
+
         fn descriptor_cache_value(descriptor: &PropertyDescriptorBinding) -> String {
             format!(
-                "value={:?};configurable={};enumerable={};writable={:?};getter={:?};setter={:?};has_get={};has_set={}",
-                descriptor.value,
+                "value={};configurable={};enumerable={};writable={};getter={};setter={};has_get={};has_set={}",
+                bounded_debug(&descriptor.value, VALUE_DEBUG_LIMIT),
                 descriptor.configurable,
                 descriptor.enumerable,
-                descriptor.writable,
-                descriptor.getter,
-                descriptor.setter,
+                bounded_debug(&descriptor.writable, VALUE_DEBUG_LIMIT),
+                bounded_debug(&descriptor.getter, VALUE_DEBUG_LIMIT),
+                bounded_debug(&descriptor.setter, VALUE_DEBUG_LIMIT),
                 descriptor.has_get,
                 descriptor.has_set
             )
         }
 
         fn object_cache_value(binding: &ObjectValueBinding) -> String {
+            let mut string_properties = binding
+                .string_properties
+                .iter()
+                .map(|(key, value)| {
+                    format!(
+                        "{}={}",
+                        bounded_debug(key, VALUE_DEBUG_LIMIT),
+                        bounded_debug(value, VALUE_DEBUG_LIMIT)
+                    )
+                })
+                .collect::<Vec<_>>();
+            let mut symbol_properties = binding
+                .symbol_properties
+                .iter()
+                .map(|(key, value)| {
+                    format!(
+                        "{}={}",
+                        bounded_debug(key, VALUE_DEBUG_LIMIT),
+                        bounded_debug(value, VALUE_DEBUG_LIMIT)
+                    )
+                })
+                .collect::<Vec<_>>();
             let mut descriptors = binding
                 .property_descriptors
                 .iter()
-                .map(|(key, descriptor)| format!("{key:?}:{}", descriptor_cache_value(descriptor)))
+                .map(|(key, descriptor)| {
+                    format!(
+                        "{}:{}",
+                        bounded_debug(key, VALUE_DEBUG_LIMIT),
+                        descriptor_cache_value(descriptor)
+                    )
+                })
                 .collect::<Vec<_>>();
+            let mut non_enumerable = binding
+                .non_enumerable_string_properties
+                .iter()
+                .map(|key| bounded_debug(key, VALUE_DEBUG_LIMIT))
+                .collect::<Vec<_>>();
+            string_properties.sort();
+            symbol_properties.sort();
             descriptors.sort();
+            non_enumerable.sort();
             format!(
                 "strings={:?};symbols={:?};descriptors={:?};non_enum={:?};runtime_symbols={};extensible={}",
-                binding.string_properties,
-                binding.symbol_properties,
-                descriptors,
-                binding.non_enumerable_string_properties,
+                bounded_debug(&string_properties, OBJECT_DEBUG_LIMIT),
+                bounded_debug(&symbol_properties, OBJECT_DEBUG_LIMIT),
+                bounded_debug(&descriptors, OBJECT_DEBUG_LIMIT),
+                bounded_debug(&non_enumerable, OBJECT_DEBUG_LIMIT),
                 binding.runtime_symbol_properties,
                 binding.extensible
             )
@@ -42,13 +90,22 @@ impl<'a> FunctionCompiler<'a> {
             .values
             .local_value_bindings
         {
-            parts.push(format!("local-value:{name}={value:?}"));
+            parts.push(format!(
+                "local-value:{name}={}",
+                bounded_debug(value, VALUE_DEBUG_LIMIT)
+            ));
         }
         for (name, value) in &self.backend.global_semantics.values.value_bindings {
-            parts.push(format!("global-value:{name}={value:?}"));
+            parts.push(format!(
+                "global-value:{name}={}",
+                bounded_debug(value, VALUE_DEBUG_LIMIT)
+            ));
         }
         for (name, value) in &self.backend.shared_global_semantics.values.value_bindings {
-            parts.push(format!("shared-global-value:{name}={value:?}"));
+            parts.push(format!(
+                "shared-global-value:{name}={}",
+                bounded_debug(value, VALUE_DEBUG_LIMIT)
+            ));
         }
         for (name, binding) in &self
             .state
@@ -81,13 +138,22 @@ impl<'a> FunctionCompiler<'a> {
             .arrays
             .local_array_bindings
         {
-            parts.push(format!("local-array:{name}={:?}", binding.values));
+            parts.push(format!(
+                "local-array:{name}={}",
+                bounded_debug(&binding.values, OBJECT_DEBUG_LIMIT)
+            ));
         }
         for (name, binding) in &self.backend.global_semantics.values.array_bindings {
-            parts.push(format!("global-array:{name}={:?}", binding.values));
+            parts.push(format!(
+                "global-array:{name}={}",
+                bounded_debug(&binding.values, OBJECT_DEBUG_LIMIT)
+            ));
         }
         for (name, binding) in &self.backend.shared_global_semantics.values.array_bindings {
-            parts.push(format!("shared-global-array:{name}={:?}", binding.values));
+            parts.push(format!(
+                "shared-global-array:{name}={}",
+                bounded_debug(&binding.values, OBJECT_DEBUG_LIMIT)
+            ));
         }
         parts.sort();
         parts.join("|")
@@ -176,11 +242,14 @@ impl<'a> FunctionCompiler<'a> {
         else {
             return None;
         };
-        if !self
-            .user_function(&function_name)
-            .is_some_and(|user_function| user_function.is_generator())
-        {
+        let Some(user_function) = self.user_function(&function_name) else {
             return None;
+        };
+        if !user_function.is_generator() {
+            return None;
+        }
+        if user_function.params.is_empty() && !user_function.has_lowered_pattern_parameters() {
+            return Some(Vec::new());
         }
         let (prefix_effects, _, _, _) = self.resolve_simple_generator_source_parts(expression)?;
         Some(prefix_effects)

@@ -54,13 +54,38 @@ impl<'a> FunctionCompiler<'a> {
                 continue;
             }
 
-            if preexisting_locals.contains(&name) {
-                continue;
-            }
             let Some((resolved_name, local_index)) = self.resolve_current_local_binding(&name)
             else {
                 continue;
             };
+            if self
+                .current_static_direct_eval_var_binding_source_name(&resolved_name)
+                .is_some()
+                && let Some(initialized_local) =
+                    self.local_lexical_initialized_local(&resolved_name)
+            {
+                self.state
+                    .clear_local_static_binding_metadata(&resolved_name);
+                self.push_local_get(initialized_local);
+                self.state.emission.output.instructions.push(0x45);
+                self.state.emission.output.instructions.push(0x04);
+                self.state
+                    .emission
+                    .output
+                    .instructions
+                    .push(EMPTY_BLOCK_TYPE);
+                self.push_control_frame();
+                self.push_i32_const(JS_UNDEFINED_TAG);
+                self.push_local_set(local_index);
+                self.push_i32_const(1);
+                self.push_local_set(initialized_local);
+                self.state.emission.output.instructions.push(0x0b);
+                self.pop_control_frame();
+                continue;
+            }
+            if preexisting_locals.contains(&name) {
+                continue;
+            }
             self.state
                 .speculation
                 .static_semantics
@@ -71,6 +96,10 @@ impl<'a> FunctionCompiler<'a> {
                 .set_local_kind(&resolved_name, StaticValueKind::Undefined);
             self.push_i32_const(JS_UNDEFINED_TAG);
             self.push_local_set(local_index);
+            if let Some(initialized_local) = self.local_lexical_initialized_local(&resolved_name) {
+                self.push_i32_const(1);
+                self.push_local_set(initialized_local);
+            }
         }
         Ok(())
     }

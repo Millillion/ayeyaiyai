@@ -32,6 +32,34 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    fn member_function_this_target_for_context(
+        &self,
+        current_function_name: Option<&str>,
+    ) -> Option<MemberFunctionBindingTarget> {
+        let current_function_name = current_function_name?;
+        if let Some(home_object_name) =
+            self.resolve_home_object_name_for_function(current_function_name)
+        {
+            return Some(
+                if let Some(class_name) = home_object_name.strip_suffix(".prototype") {
+                    MemberFunctionBindingTarget::Prototype(class_name.to_string())
+                } else {
+                    MemberFunctionBindingTarget::Identifier(home_object_name)
+                },
+            );
+        }
+        if current_function_name.starts_with("__ayy_class_ctor_")
+            && let Some(function) =
+                self.resolve_registered_function_declaration(current_function_name)
+            && let Some(self_binding) = function.self_binding.as_deref()
+        {
+            return Some(MemberFunctionBindingTarget::Prototype(
+                self_binding.to_string(),
+            ));
+        }
+        None
+    }
+
     fn collect_private_member_binding_targets(
         &self,
         property_name: &str,
@@ -272,14 +300,10 @@ impl<'a> FunctionCompiler<'a> {
                     {
                         return None;
                     }
-                    let current_function_name = current_function_name?;
-                    let home_object_name =
-                        self.resolve_home_object_name_for_function(current_function_name)?;
-                    if let Some(class_name) = home_object_name.strip_suffix(".prototype") {
-                        MemberFunctionBindingTarget::Prototype(class_name.to_string())
-                    } else {
-                        MemberFunctionBindingTarget::Identifier(home_object_name)
-                    }
+                    self.member_function_this_target_for_context(current_function_name)?
+                }
+                Expression::Identifier(name) if name == Self::STATIC_NEW_THIS_BINDING => {
+                    self.member_function_this_target_for_context(current_function_name)?
                 }
                 Expression::Identifier(name) => self
                     .resolve_member_function_binding_identifier_source(name)

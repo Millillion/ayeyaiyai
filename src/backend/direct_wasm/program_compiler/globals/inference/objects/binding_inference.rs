@@ -138,6 +138,17 @@ impl DirectWasmCompiler {
                 Some(binding)
             }
             Expression::Identifier(name) => {
+                if name.starts_with("__ayy_module_namespace_")
+                    || name.starts_with("__ayy_module_deferred_namespace_")
+                {
+                    let mut namespace_binding = empty_object_value_binding();
+                    object_binding_set_property(
+                        &mut namespace_binding,
+                        Expression::String("__ayy$module$namespace".to_string()),
+                        Expression::Bool(true),
+                    );
+                    return Some(namespace_binding);
+                }
                 if let Some(realm_id) = parse_test262_realm_identifier(name) {
                     let mut realm_binding = empty_object_value_binding();
                     object_binding_set_property(

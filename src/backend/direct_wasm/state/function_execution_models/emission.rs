@@ -20,4 +20,8 @@ pub(in crate::backend::direct_wasm) struct FunctionEmissionState {
     pub(in crate::backend::direct_wasm) control_flow: FunctionControlFlowState,
     pub(in crate::backend::direct_wasm) lexical_scopes: FunctionLexicalScopeState,
     pub(in crate::backend::direct_wasm) emitted_value_bindings: HashSet<String>,
+    pub(in crate::backend::direct_wasm) pending_static_promise_reactions:
+        Vec<(Expression, Expression)>,
+    pub(in crate::backend::direct_wasm) static_module_dependency_promise_outcomes:
+        HashMap<String, StaticEvalOutcome>,
 }

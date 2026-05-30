@@ -243,15 +243,24 @@ impl<'a> FunctionCompiler<'a> {
         else {
             unreachable!("filtered by caller")
         };
-        iterator_binding.static_index = None;
-        let view_length_local = self
+        if let Some(current_index) = iterator_binding.static_index {
+            iterator_binding.static_index = Some(current_index.saturating_add(1));
+        }
+        self.push_local_get(current_index_local);
+        if let Some(view_length_local) = self
             .state
             .speculation
             .static_semantics
             .runtime_array_length_local(view_name)
-            .expect("typed array views should have runtime length locals");
-        self.push_local_get(current_index_local);
-        self.push_local_get(view_length_local);
+        {
+            self.push_local_get(view_length_local);
+        } else {
+            let static_length = self
+                .typed_array_view_binding_for_name(view_name)
+                .and_then(|view| self.typed_array_view_static_length(&view))
+                .unwrap_or(0);
+            self.push_i32_const(static_length as i32);
+        }
         self.push_binary_op(BinaryOp::GreaterThanOrEqual)
             .expect("typed array iterator comparisons are supported");
         self.push_local_set(done_local);
@@ -267,8 +276,18 @@ impl<'a> FunctionCompiler<'a> {
         self.push_i32_const(JS_UNDEFINED_TAG);
         self.push_local_set(value_local);
         self.state.emission.output.instructions.push(0x05);
-        self.emit_dynamic_runtime_array_slot_read_from_local(view_name, current_index_local)
-            .expect("typed array iterator reads are supported");
+        if !self
+            .emit_dynamic_runtime_array_slot_read_from_local(view_name, current_index_local)
+            .expect("typed array iterator reads are supported")
+            && !self
+                .emit_dynamic_global_runtime_array_slot_read_from_local(
+                    view_name,
+                    current_index_local,
+                )
+                .expect("typed array iterator global reads are supported")
+        {
+            self.push_i32_const(JS_UNDEFINED_TAG);
+        }
         self.push_local_set(value_local);
         self.push_local_get(current_index_local);
         self.push_i32_const(1);

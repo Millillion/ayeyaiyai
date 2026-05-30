@@ -68,6 +68,15 @@ impl<'a> FunctionCompiler<'a> {
                 };
                 self.resolve_static_string_value_with_context(branch, current_function_name)
             }
+            Expression::Identifier(_)
+                if self
+                    .state
+                    .speculation
+                    .execution_context
+                    .isolated_indirect_eval =>
+            {
+                None
+            }
             Expression::Identifier(_) => self
                 .resolve_bound_alias_expression(expression)
                 .filter(|resolved| !static_expression_matches(resolved, expression))

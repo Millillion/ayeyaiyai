@@ -28,6 +28,17 @@ pub(in crate::backend::direct_wasm) fn is_symbol_iterator_expression(
     )
 }
 
+pub(in crate::backend::direct_wasm) fn is_symbol_to_string_tag_expression(
+    expression: &Expression,
+) -> bool {
+    matches!(
+        expression,
+        Expression::Member { object, property }
+            if matches!(object.as_ref(), Expression::Identifier(name) if name == "Symbol")
+                && matches!(property.as_ref(), Expression::String(name) if name == "toStringTag")
+    )
+}
+
 pub(in crate::backend::direct_wasm) fn symbol_iterator_expression() -> Expression {
     Expression::Member {
         object: Box::new(Expression::Identifier("Symbol".to_string())),

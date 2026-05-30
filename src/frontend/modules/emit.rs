@@ -48,7 +48,11 @@ impl ModuleLinker {
         }
     }
 
-    pub(super) fn build_module_namespace_prelude(&self, exports_param: &str) -> Vec<Statement> {
+    pub(super) fn build_module_namespace_prelude_with_tag(
+        &self,
+        exports_param: &str,
+        to_string_tag: &str,
+    ) -> Vec<Statement> {
         vec![
             define_property_statement(
                 Expression::Identifier(exports_param.to_string()),
@@ -59,7 +63,7 @@ impl ModuleLinker {
                 Expression::Object(vec![
                     ObjectEntry::Data {
                         key: Expression::String("value".to_string()),
-                        value: Expression::String("Module".to_string()),
+                        value: Expression::String(to_string_tag.to_string()),
                     },
                     ObjectEntry::Data {
                         key: Expression::String("writable".to_string()),
@@ -81,6 +85,26 @@ impl ModuleLinker {
                 data_property_descriptor(Expression::Bool(true), false, false, false),
             ),
         ]
+    }
+
+    pub(super) fn build_module_namespace_prelude(&self, exports_param: &str) -> Vec<Statement> {
+        self.build_module_namespace_prelude_with_tag(exports_param, "Module")
+    }
+
+    pub(super) fn module_status_assignment(&self, module_index: usize, status: f64) -> Statement {
+        Statement::Assign {
+            name: self.modules[module_index].status_name.clone(),
+            value: Expression::Number(status),
+        }
+    }
+
+    pub(super) fn mark_module_init_body_status(
+        &self,
+        module_index: usize,
+        body: &mut Vec<Statement>,
+    ) {
+        body.insert(0, self.module_status_assignment(module_index, 1.0));
+        body.push(self.module_status_assignment(module_index, 2.0));
     }
 
     pub(super) fn build_export_getter_statements(
@@ -183,6 +207,43 @@ impl ModuleLinker {
                 },
             });
             statements.push(Statement::Let {
+                name: module.deferred_namespace_name.clone(),
+                mutable: false,
+                value: Expression::Call {
+                    callee: Box::new(Expression::Member {
+                        object: Box::new(Expression::Identifier("Object".to_string())),
+                        property: Box::new(Expression::String("create".to_string())),
+                    }),
+                    arguments: vec![CallArgument::Expression(Expression::Null)],
+                },
+            });
+            statements.push(Statement::Let {
+                name: module.status_name.clone(),
+                mutable: true,
+                value: Expression::Number(0.0),
+            });
+            statements.push(Statement::Let {
+                name: module.error_name.clone(),
+                mutable: true,
+                value: Expression::Undefined,
+            });
+            for dependency in &module.dependency_params {
+                if dependency.eager {
+                    statements.push(Statement::Let {
+                        name: format!(
+                            "__ayy_module_eager_dependency_{}_{}",
+                            module_index, dependency.module_index
+                        ),
+                        mutable: false,
+                        value: Expression::Bool(true),
+                    });
+                }
+            }
+            statements.extend(self.build_module_namespace_prelude_with_tag(
+                &module.deferred_namespace_name,
+                "Deferred Module",
+            ));
+            statements.push(Statement::Let {
                 name: format!("__ayy_import_meta_{module_index}"),
                 mutable: true,
                 value: Expression::Call {
@@ -211,25 +272,154 @@ impl ModuleLinker {
         arguments
     }
 
-    pub(super) fn bundle_statements(&self, entry_index: usize) -> Result<Vec<Statement>> {
-        let mut statements = self.module_registry_statements();
+    fn module_eager_dependency_is_pending(
+        &self,
+        module_index: usize,
+        pending: &HashSet<usize>,
+        seen: &mut HashSet<usize>,
+    ) -> bool {
+        if !seen.insert(module_index) {
+            return false;
+        }
 
-        for &module_index in &self.load_order {
-            let module = &self.modules[module_index];
+        self.modules[module_index]
+            .dependency_params
+            .iter()
+            .filter(|dependency| dependency.eager)
+            .any(|dependency| {
+                pending.contains(&dependency.module_index)
+                    || self.module_eager_dependency_is_pending(
+                        dependency.module_index,
+                        pending,
+                        seen,
+                    )
+            })
+    }
+
+    fn push_pending_module_awaits(
+        &self,
+        statements: &mut Vec<Statement>,
+        pending: &mut Vec<usize>,
+    ) {
+        for module_index in pending.drain(..) {
+            self.push_module_async_completion(statements, module_index);
+        }
+    }
+
+    fn push_module_async_completion(&self, statements: &mut Vec<Statement>, module_index: usize) {
+        let module = &self.modules[module_index];
+        statements.push(Statement::Expression(Expression::Await(Box::new(
+            Expression::Identifier(module.promise_name.clone()),
+        ))));
+        if module.async_continuation_names.is_empty() {
+            return;
+        }
+
+        let arguments = self.module_init_call_arguments(module_index);
+        for continuation_name in &module.async_continuation_names {
+            let continuation_call = Expression::Call {
+                callee: Box::new(Expression::Identifier(continuation_name.clone())),
+                arguments: arguments.clone(),
+            };
+            let completion = if self.module_async_continuation_is_async(continuation_name) {
+                Expression::Await(Box::new(continuation_call))
+            } else {
+                continuation_call
+            };
+            statements.push(Statement::Expression(completion));
+        }
+    }
+
+    fn module_async_continuation_is_async(&self, continuation_name: &str) -> bool {
+        self.lowerer
+            .functions
+            .iter()
+            .rev()
+            .find(|function| function.name == continuation_name)
+            .is_some_and(|function| function.kind.is_async())
+    }
+
+    fn push_module_init_evaluation(
+        &self,
+        statements: &mut Vec<Statement>,
+        pending_deferred_async: &mut Vec<usize>,
+        module_index: usize,
+        defer_async_completion: bool,
+    ) {
+        let module = &self.modules[module_index];
+        let init_call = Expression::Call {
+            callee: Box::new(Expression::Identifier(module.init_name.clone())),
+            arguments: self.module_init_call_arguments(module_index),
+        };
+        if module.init_async {
             statements.push(Statement::Let {
                 name: module.promise_name.clone(),
                 mutable: false,
-                value: Expression::Call {
-                    callee: Box::new(Expression::Identifier(module.init_name.clone())),
-                    arguments: self.module_init_call_arguments(module_index),
-                },
+                value: init_call,
             });
+            if defer_async_completion {
+                pending_deferred_async.push(module_index);
+            } else {
+                self.push_module_async_completion(statements, module_index);
+            }
+        } else {
+            statements.push(Statement::Expression(init_call));
         }
+    }
 
-        if self.modules[entry_index].init_async {
-            statements.push(Statement::Expression(Expression::Await(Box::new(
-                Expression::Identifier(self.modules[entry_index].promise_name.clone()),
-            ))));
+    pub(super) fn bundle_statements(&self, entry_index: usize) -> Result<Vec<Statement>> {
+        let mut statements = self.module_registry_statements();
+        let mut pending_deferred_async = Vec::new();
+        let mut delayed_deferred_async = Vec::new();
+
+        for &module_index in &self.load_order {
+            if module_index == entry_index {
+                self.push_pending_module_awaits(&mut statements, &mut pending_deferred_async);
+                while !delayed_deferred_async.is_empty() {
+                    let delayed = std::mem::take(&mut delayed_deferred_async);
+                    for delayed_module_index in delayed {
+                        let pending_set = pending_deferred_async
+                            .iter()
+                            .copied()
+                            .collect::<HashSet<_>>();
+                        if self.module_eager_dependency_is_pending(
+                            delayed_module_index,
+                            &pending_set,
+                            &mut HashSet::new(),
+                        ) {
+                            delayed_deferred_async.push(delayed_module_index);
+                            continue;
+                        }
+                        self.push_module_init_evaluation(
+                            &mut statements,
+                            &mut pending_deferred_async,
+                            delayed_module_index,
+                            true,
+                        );
+                    }
+                    self.push_pending_module_awaits(&mut statements, &mut pending_deferred_async);
+                }
+            } else {
+                let pending_set = pending_deferred_async
+                    .iter()
+                    .copied()
+                    .collect::<HashSet<_>>();
+                if self.module_eager_dependency_is_pending(
+                    module_index,
+                    &pending_set,
+                    &mut HashSet::new(),
+                ) {
+                    delayed_deferred_async.push(module_index);
+                    continue;
+                }
+            }
+
+            self.push_module_init_evaluation(
+                &mut statements,
+                &mut pending_deferred_async,
+                module_index,
+                module_index != entry_index && self.modules[module_index].init_async,
+            );
         }
 
         Ok(statements)

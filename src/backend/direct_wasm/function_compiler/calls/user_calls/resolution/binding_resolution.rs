@@ -229,6 +229,73 @@ impl<'a> FunctionCompiler<'a> {
         ))
     }
 
+    fn resolve_capture_hidden_name_for_identifier_with_context(
+        &self,
+        name: &str,
+        current_function_name: Option<&str>,
+    ) -> Option<String> {
+        let bindings = self.user_function_capture_bindings(current_function_name?)?;
+        if let Some(hidden_name) = bindings.get(name) {
+            return Some(hidden_name.clone());
+        }
+
+        let source_name = scoped_binding_source_name(name);
+        if let Some(source_name) = source_name
+            && let Some(hidden_name) = bindings.get(source_name)
+        {
+            return Some(hidden_name.clone());
+        }
+
+        bindings.iter().find_map(|(capture_name, hidden_name)| {
+            self.resolve_registered_function_declaration(capture_name)
+                .or_else(|| self.prepared_function_declaration(capture_name))
+                .and_then(|function| function.self_binding.as_deref())
+                .filter(|self_binding| {
+                    *self_binding == name
+                        || source_name.is_some_and(|source_name| *self_binding == source_name)
+                })
+                .map(|_| hidden_name.clone())
+        })
+    }
+
+    fn resolve_captured_function_binding_for_identifier(
+        &self,
+        name: &str,
+        current_function_name: Option<&str>,
+    ) -> Option<LocalFunctionBinding> {
+        let hidden_name = self
+            .resolve_capture_hidden_name_for_identifier_with_context(name, current_function_name)?;
+        self.backend
+            .global_function_binding(&hidden_name)
+            .cloned()
+            .or_else(|| self.resolve_class_constructor_self_binding_for_identifier(name))
+    }
+
+    pub(in crate::backend::direct_wasm) fn resolve_class_constructor_self_binding_for_identifier(
+        &self,
+        name: &str,
+    ) -> Option<LocalFunctionBinding> {
+        let source_name = scoped_binding_source_name(name);
+        self.user_functions().into_iter().find_map(|function| {
+            if !function.name.starts_with("__ayy_class_ctor_") {
+                return None;
+            }
+            let declaration = self
+                .prepared_function_declaration(&function.name)
+                .or_else(|| self.resolve_registered_function_declaration(&function.name))?;
+            declaration
+                .self_binding
+                .as_deref()
+                .filter(|self_binding| {
+                    let self_binding_source_name = scoped_binding_source_name(self_binding);
+                    *self_binding == name
+                        || self_binding_source_name.is_some_and(|source_name| source_name == name)
+                        || source_name.is_some_and(|source_name| *self_binding == source_name)
+                })
+                .map(|_| LocalFunctionBinding::User(function.name))
+        })
+    }
+
     pub(in crate::backend::direct_wasm) fn resolve_function_binding_from_expression(
         &self,
         expression: &Expression,
@@ -359,6 +426,22 @@ impl<'a> FunctionCompiler<'a> {
                                 })
                                 .flatten()
                         })
+                        .or_else(|| {
+                            self.resolve_captured_function_binding_for_identifier(
+                                name,
+                                current_function_name,
+                            )
+                        })
+                        .or_else(|| {
+                            if resolved_name.as_str() != name.as_str() {
+                                self.resolve_captured_function_binding_for_identifier(
+                                    &resolved_name,
+                                    current_function_name,
+                                )
+                            } else {
+                                None
+                            }
+                        })
                 } else if let Some(function_binding) = self
                     .state
                     .speculation
@@ -375,6 +458,10 @@ impl<'a> FunctionCompiler<'a> {
                         .cloned()
                 } else if let Some(function_binding) = self
                     .resolve_scoped_function_declaration_alias_binding(name, current_function_name)
+                {
+                    Some(function_binding)
+                } else if let Some(function_binding) = self
+                    .resolve_captured_function_binding_for_identifier(name, current_function_name)
                 {
                     Some(function_binding)
                 } else if builtin_function_runtime_value(name).is_some() {
@@ -568,6 +655,16 @@ impl<'a> FunctionCompiler<'a> {
                         )
                 {
                     self.resolve_function_binding_from_expression(&value)
+                } else if let Some(binding) = self
+                    .member_function_binding_key_with_context(
+                        object,
+                        property,
+                        current_function_name,
+                    )
+                    .as_ref()
+                    .and_then(|key| self.member_function_binding_entry(key))
+                {
+                    Some(binding)
                 } else {
                     self.resolve_member_function_binding(object, property)
                 }

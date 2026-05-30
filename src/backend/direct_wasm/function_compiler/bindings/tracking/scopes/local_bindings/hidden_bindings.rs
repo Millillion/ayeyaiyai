@@ -99,7 +99,6 @@ impl<'a> FunctionCompiler<'a> {
         self.push_control_frame();
         self.push_global_get(binding.value_index);
         self.state.emission.output.instructions.push(0x05);
-        self.emit_print(&[Expression::String(format!("missing eval local {name}"))])?;
         self.emit_named_error_throw("ReferenceError")?;
         self.state.emission.output.instructions.push(0x0b);
         self.pop_control_frame();
@@ -130,12 +129,53 @@ impl<'a> FunctionCompiler<'a> {
         if let Some(source_name) = global_fallback_source {
             self.emit_global_capture_fallback_read(&source_name)?;
         } else {
-            self.emit_print(&[Expression::String(format!("missing user capture {name}"))])?;
             self.emit_named_error_throw("ReferenceError")?;
         }
         self.state.emission.output.instructions.push(0x0b);
         self.pop_control_frame();
         Ok(true)
+    }
+
+    pub(in crate::backend::direct_wasm) fn user_function_capture_read_would_throw_reference_error(
+        &self,
+        name: &str,
+    ) -> bool {
+        if !self
+            .current_function_name()
+            .is_some_and(|function_name| function_name.starts_with("__ayy_module_init_"))
+        {
+            return false;
+        }
+        if self.resolve_current_local_binding(name).is_some()
+            || self.resolve_active_global_lexical_binding(name).is_some()
+            || self.resolve_global_binding_index(name).is_some()
+            || self
+                .state
+                .speculation
+                .static_semantics
+                .has_local_function_binding(name)
+        {
+            return false;
+        }
+        let Some(hidden_name) = self.resolve_user_function_capture_hidden_name(name) else {
+            return false;
+        };
+        if self.hidden_implicit_global_binding(&hidden_name).is_none() {
+            return false;
+        }
+        self.user_function_capture_global_fallback_source(name, &hidden_name)
+            .is_none()
+    }
+
+    pub(in crate::backend::direct_wasm) fn user_function_capture_typeof_needs_runtime_check(
+        &self,
+        name: &str,
+    ) -> bool {
+        let Some(hidden_name) = self.resolve_user_function_capture_hidden_name(name) else {
+            return false;
+        };
+        self.user_function_capture_global_fallback_source(name, &hidden_name)
+            .is_none()
     }
 
     fn user_function_capture_global_fallback_source(
@@ -228,6 +268,9 @@ impl<'a> FunctionCompiler<'a> {
             self.push_global_set(binding.value_index);
             self.push_i32_const(1);
             self.push_global_set(binding.present_index);
+            if let Some(source_name) = global_fallback_source.as_deref() {
+                self.emit_global_capture_fallback_store_from_local(source_name, value_local)?;
+            }
         }
         self.state.emission.output.instructions.push(0x05);
         if let Some(source_name) = global_fallback_source {
@@ -313,6 +356,8 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(false);
         };
         let value_local = self.allocate_temp_local();
+        let global_fallback_source =
+            self.user_function_capture_global_fallback_source(name, &hidden_name);
 
         self.push_global_get(binding.present_index);
         self.state.emission.output.instructions.push(0x04);
@@ -322,7 +367,13 @@ impl<'a> FunctionCompiler<'a> {
         self.push_local_set(value_local);
         self.emit_runtime_typeof_tag_from_local(value_local)?;
         self.state.emission.output.instructions.push(0x05);
-        self.push_i32_const(JS_TYPEOF_UNDEFINED_TAG);
+        if let Some(source_name) = global_fallback_source {
+            self.emit_global_capture_fallback_read(&source_name)?;
+            self.push_local_set(value_local);
+            self.emit_runtime_typeof_tag_from_local(value_local)?;
+        } else {
+            self.emit_named_error_throw("ReferenceError")?;
+        }
         self.state.emission.output.instructions.push(0x0b);
         self.pop_control_frame();
         Ok(true)

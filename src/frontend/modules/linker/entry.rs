@@ -46,7 +46,10 @@ impl ModuleLinker {
 
     pub(crate) fn bundle_entry(&mut self, path: &Path) -> Result<Program> {
         let entry_index = self.load_module(path)?;
-        self.load_order = self.compute_static_load_order(entry_index);
+        let (load_order, deferred_async_modules) = self.compute_static_load_order(entry_index);
+        self.load_order = load_order;
+        self.deferred_async_modules = deferred_async_modules;
+        self.validate_loaded_module_export_resolutions()?;
         let statements = self.bundle_statements(entry_index)?;
         Ok(self.lowerer.finish_program(statements, true))
     }
@@ -57,7 +60,7 @@ impl ModuleLinker {
             self.dynamic_import_specifier_sources_for_script(&script, &lowered_source);
         for source in &dynamic_import_sources {
             if let Ok(dependency_path) = resolve_module_specifier(path, source) {
-                self.load_module(&dependency_path)?;
+                self.load_dynamic_module_with_type(&dependency_path, None)?;
             }
         }
 

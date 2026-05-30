@@ -25,6 +25,238 @@ impl<'a> FunctionCompiler<'a> {
         )
     }
 
+    fn assert_throws_expression_is_module_namespace_reference(
+        &self,
+        expression: &Expression,
+    ) -> bool {
+        if let Expression::Identifier(name) = expression
+            && Self::module_index_from_namespace_like_identifier(name).is_some()
+        {
+            return true;
+        }
+        self.resolve_object_binding_from_expression(expression)
+            .is_some_and(|binding| Self::object_binding_has_module_namespace_marker(&binding))
+    }
+
+    fn assert_throws_expression_is_reflect_module_namespace_call_throw(
+        &self,
+        callee: &Expression,
+        arguments: &[CallArgument],
+    ) -> bool {
+        if !arguments.iter().all(|argument| {
+            matches!(
+                argument,
+                CallArgument::Expression(expression)
+                    if inline_summary_side_effect_free_expression(expression)
+            )
+        }) {
+            return false;
+        }
+        let Expression::Member { object, property } = callee else {
+            return false;
+        };
+        if !matches!(object.as_ref(), Expression::Identifier(name) if name == "Reflect") {
+            return false;
+        }
+        if !matches!(property.as_ref(), Expression::String(name) if matches!(name.as_str(), "apply" | "construct"))
+        {
+            return false;
+        }
+        arguments
+            .first()
+            .map(CallArgument::expression)
+            .is_some_and(|target| {
+                self.assert_throws_expression_is_module_namespace_reference(target)
+            })
+    }
+
+    fn assert_throws_call_initializes_private_field_on_module_namespace(
+        &self,
+        callee: &Expression,
+        arguments: &[CallArgument],
+    ) -> bool {
+        let Some(LocalFunctionBinding::User(function_name)) =
+            self.resolve_function_binding_from_expression(callee)
+        else {
+            return false;
+        };
+        let Some(function) = self.resolve_registered_function_declaration(&function_name) else {
+            return false;
+        };
+        function.body.iter().any(|statement| {
+            self.assert_throws_statement_constructs_private_field_owner_with_module_namespace(
+                statement, function, arguments,
+            )
+        })
+    }
+
+    fn assert_throws_statement_constructs_private_field_owner_with_module_namespace(
+        &self,
+        statement: &Statement,
+        caller: &FunctionDeclaration,
+        call_arguments: &[CallArgument],
+    ) -> bool {
+        match statement {
+            Statement::Expression(expression)
+            | Statement::Return(expression)
+            | Statement::Var {
+                value: expression, ..
+            }
+            | Statement::Let {
+                value: expression, ..
+            }
+            | Statement::Assign {
+                value: expression, ..
+            } => self
+                .assert_throws_expression_constructs_private_field_owner_with_module_namespace(
+                    expression,
+                    caller,
+                    call_arguments,
+                ),
+            Statement::Block { body } | Statement::Declaration { body } => body.iter().any(
+                |statement| {
+                    self.assert_throws_statement_constructs_private_field_owner_with_module_namespace(
+                        statement,
+                        caller,
+                        call_arguments,
+                    )
+                },
+            ),
+            _ => false,
+        }
+    }
+
+    fn assert_throws_expression_constructs_private_field_owner_with_module_namespace(
+        &self,
+        expression: &Expression,
+        caller: &FunctionDeclaration,
+        call_arguments: &[CallArgument],
+    ) -> bool {
+        match expression {
+            Expression::New {
+                callee,
+                arguments: construct_arguments,
+            } => self.assert_throws_constructor_expression_has_private_instance_initializer(callee)
+                && construct_arguments.iter().any(|argument| {
+                    matches!(
+                        argument,
+                        CallArgument::Expression(expression)
+                            if self
+                                .assert_throws_expression_is_module_namespace_from_call_argument(
+                                    expression,
+                                    caller,
+                                    call_arguments,
+                                )
+                    )
+                }),
+            Expression::Sequence(expressions) => expressions.iter().any(|expression| {
+                self.assert_throws_expression_constructs_private_field_owner_with_module_namespace(
+                    expression,
+                    caller,
+                    call_arguments,
+                )
+            }),
+            _ => false,
+        }
+    }
+
+    fn assert_throws_expression_is_module_namespace_from_call_argument(
+        &self,
+        expression: &Expression,
+        caller: &FunctionDeclaration,
+        call_arguments: &[CallArgument],
+    ) -> bool {
+        if self.assert_throws_expression_is_module_namespace_reference(expression) {
+            return true;
+        }
+        let Expression::Identifier(name) = expression else {
+            return false;
+        };
+        let Some(parameter_index) = caller
+            .params
+            .iter()
+            .position(|parameter| parameter.name == *name)
+        else {
+            return false;
+        };
+        matches!(
+            call_arguments.get(parameter_index),
+            Some(CallArgument::Expression(argument))
+                if self.assert_throws_expression_is_module_namespace_reference(argument)
+        )
+    }
+
+    fn assert_throws_constructor_expression_has_private_instance_initializer(
+        &self,
+        callee: &Expression,
+    ) -> bool {
+        let Some(function_name) = self
+            .resolve_function_binding_from_expression(callee)
+            .and_then(|binding| match binding {
+                LocalFunctionBinding::User(function_name) => Some(function_name),
+                LocalFunctionBinding::Builtin(_) => None,
+            })
+            .or_else(|| self.assert_throws_constructor_name_from_class_binding(callee))
+        else {
+            return false;
+        };
+        self.resolve_registered_function_declaration(&function_name)
+            .is_some_and(|function| {
+                function
+                    .body
+                    .iter()
+                    .any(Self::assert_throws_statement_has_private_instance_initializer)
+            })
+    }
+
+    fn assert_throws_constructor_name_from_class_binding(
+        &self,
+        callee: &Expression,
+    ) -> Option<String> {
+        let Expression::Identifier(name) = callee else {
+            return None;
+        };
+        self.user_functions().iter().find_map(|function| {
+            let declaration = self.resolve_registered_function_declaration(&function.name)?;
+            (declaration.name == *name
+                || declaration.self_binding.as_deref() == Some(name.as_str())
+                || declaration.top_level_binding.as_deref() == Some(name.as_str()))
+            .then(|| declaration.name.clone())
+        })
+    }
+
+    fn assert_throws_statement_has_private_instance_initializer(statement: &Statement) -> bool {
+        match statement {
+            Statement::Labeled { labels, body }
+                if labels
+                    .iter()
+                    .any(|label| label == "__ayy_instance_field_initializers") =>
+            {
+                body.iter()
+                    .any(Self::assert_throws_statement_has_private_member_assignment)
+            }
+            Statement::Block { body } | Statement::Declaration { body } => body
+                .iter()
+                .any(Self::assert_throws_statement_has_private_instance_initializer),
+            _ => false,
+        }
+    }
+
+    fn assert_throws_statement_has_private_member_assignment(statement: &Statement) -> bool {
+        match statement {
+            Statement::AssignMember { property, .. } => {
+                is_private_property_name_expression(property)
+            }
+            Statement::Expression(Expression::AssignMember { property, .. }) => {
+                is_private_property_name_expression(property)
+            }
+            Statement::Block { body } | Statement::Declaration { body } => body
+                .iter()
+                .any(Self::assert_throws_statement_has_private_member_assignment),
+            _ => false,
+        }
+    }
+
     fn assert_throws_static_throw_is_type_error(throw_value: &StaticThrowValue) -> bool {
         matches!(throw_value, StaticThrowValue::NamedError(name) if *name == "TypeError")
     }
@@ -59,6 +291,25 @@ impl<'a> FunctionCompiler<'a> {
     ) -> bool {
         match expression {
             Expression::Call { callee, arguments } | Expression::New { callee, arguments } => {
+                if let Expression::Member { object, property } = callee.as_ref()
+                    && matches!(
+                        property.as_ref(),
+                        Expression::String(name) if matches!(name.as_str(), "resize" | "transfer")
+                    )
+                    && self.expression_is_static_bytes_module_array_buffer(object)
+                {
+                    return true;
+                }
+                if self.assert_throws_expression_is_reflect_module_namespace_call_throw(
+                    callee, arguments,
+                ) {
+                    return true;
+                }
+                if self.assert_throws_call_initializes_private_field_on_module_namespace(
+                    callee, arguments,
+                ) {
+                    return true;
+                }
                 Self::assert_throws_expression_is_import_meta_reference(callee)
                     || self.assert_throws_expression_statically_throws_type_error(callee)
                     || arguments.iter().any(|argument| match argument {
@@ -249,6 +500,103 @@ impl<'a> FunctionCompiler<'a> {
         )
     }
 
+    fn assert_throws_module_namespace_object_define_property_parts(
+        &self,
+        callback: &Expression,
+    ) -> Option<(Expression, Expression, Expression)> {
+        let (body, _) = self.assert_throws_inline_callback_body(callback)?;
+        let [Statement::Expression(Expression::Call { callee, arguments })] = body.as_slice()
+        else {
+            return None;
+        };
+        let Expression::Member { object, property } = callee.as_ref() else {
+            return None;
+        };
+        if !matches!(object.as_ref(), Expression::Identifier(name) if name == "Object")
+            || !matches!(property.as_ref(), Expression::String(name) if name == "defineProperty")
+        {
+            return None;
+        }
+        let [
+            CallArgument::Expression(target),
+            CallArgument::Expression(property),
+            CallArgument::Expression(descriptor),
+            ..,
+        ] = arguments.as_slice()
+        else {
+            return None;
+        };
+        Some((target.clone(), property.clone(), descriptor.clone()))
+    }
+
+    fn emit_assert_throws_module_namespace_define_property_success(
+        &mut self,
+        expected_error: &Expression,
+        callback: &Expression,
+        rest: &[CallArgument],
+        emit_result: bool,
+    ) -> DirectResult<bool> {
+        if !self.assert_throws_expected_is_type_error(expected_error) {
+            return Ok(false);
+        }
+        let Some((target, property, descriptor)) =
+            self.assert_throws_module_namespace_object_define_property_parts(callback)
+        else {
+            return Ok(false);
+        };
+        if !inline_summary_side_effect_free_expression(&target)
+            || !inline_summary_side_effect_free_expression(&property)
+            || !inline_summary_side_effect_free_expression(&descriptor)
+        {
+            return Ok(false);
+        }
+        if let Some(false) =
+            self.static_define_property_accepts_without_mutation(&target, &property, &descriptor)
+        {
+            if !self.assertion_static_message_arguments_effect_free(rest) {
+                for argument in rest {
+                    match argument {
+                        CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                            self.emit_numeric_expression(expression)?;
+                            self.state.emission.output.instructions.push(0x1a);
+                        }
+                    }
+                }
+            }
+            if emit_result {
+                self.push_i32_const(JS_UNDEFINED_TAG);
+            }
+            return Ok(true);
+        }
+
+        let Some(object_binding) = self.assertion_module_namespace_object_binding(&target) else {
+            return Ok(false);
+        };
+        if !Self::assertion_define_property_descriptor_is_empty(&descriptor) {
+            return Ok(false);
+        }
+        let present_local = self.allocate_temp_local();
+        if !self.emit_assertion_module_namespace_property_presence(&object_binding, &property)? {
+            return Ok(false);
+        }
+        self.push_local_set(present_local);
+        self.push_local_get(present_local);
+        self.state.emission.output.instructions.push(0x04);
+        self.state
+            .emission
+            .output
+            .instructions
+            .push(EMPTY_BLOCK_TYPE);
+        self.push_control_frame();
+        self.emit_error_throw()?;
+        self.state.emission.output.instructions.push(0x0b);
+        self.pop_control_frame();
+        if emit_result {
+            self.push_i32_const(JS_UNDEFINED_TAG);
+        }
+        Ok(true)
+    }
+
     fn assert_throws_callback_statically_throws_type_error(&self, callback: &Expression) -> bool {
         let Some((body, _)) = self.assert_throws_inline_callback_body(callback) else {
             return false;
@@ -264,18 +612,26 @@ impl<'a> FunctionCompiler<'a> {
         rest: &[CallArgument],
         emit_result: bool,
     ) -> DirectResult<bool> {
+        if self.emit_assert_throws_module_namespace_define_property_success(
+            expected_error,
+            callback,
+            rest,
+            emit_result,
+        )? {
+            return Ok(true);
+        }
         if !self.assert_throws_expected_is_type_error(expected_error)
             || !self.assert_throws_callback_statically_throws_type_error(callback)
         {
             return Ok(false);
         }
-        self.emit_numeric_expression(expected_error)?;
-        self.state.emission.output.instructions.push(0x1a);
-        for argument in rest {
-            match argument {
-                CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
-                    self.emit_numeric_expression(expression)?;
-                    self.state.emission.output.instructions.push(0x1a);
+        if !self.assertion_static_message_arguments_effect_free(rest) {
+            for argument in rest {
+                match argument {
+                    CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                        self.emit_numeric_expression(expression)?;
+                        self.state.emission.output.instructions.push(0x1a);
+                    }
                 }
             }
         }

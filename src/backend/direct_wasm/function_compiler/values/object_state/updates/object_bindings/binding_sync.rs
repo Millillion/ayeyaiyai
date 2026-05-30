@@ -1,5 +1,83 @@
 use super::super::super::*;
 
+fn expression_is_promise_resolve_undefined_call(expression: &Expression) -> bool {
+    let Expression::Call { callee, arguments } = expression else {
+        return false;
+    };
+    let Expression::Member { object, property } = callee.as_ref() else {
+        return false;
+    };
+    matches!(object.as_ref(), Expression::Identifier(name) if name == "Promise")
+        && matches!(property.as_ref(), Expression::String(name) if name == "resolve")
+        && matches!(
+            arguments.as_slice(),
+            [] | [CallArgument::Expression(Expression::Undefined)]
+        )
+}
+
+fn expression_is_promise_with_resolvers_call(expression: &Expression) -> bool {
+    let Expression::Call { callee, arguments } = expression else {
+        return false;
+    };
+    let Expression::Member { object, property } = callee.as_ref() else {
+        return false;
+    };
+    arguments.is_empty()
+        && matches!(object.as_ref(), Expression::Identifier(name) if name == "Promise")
+        && matches!(property.as_ref(), Expression::String(name) if name == "withResolvers")
+}
+
+fn expression_is_promise_all_call(expression: &Expression) -> bool {
+    let Expression::Call { callee, arguments } = expression else {
+        return false;
+    };
+    if arguments.len() != 1 {
+        return false;
+    }
+    let Expression::Member { object, property } = callee.as_ref() else {
+        return false;
+    };
+    matches!(object.as_ref(), Expression::Identifier(name) if name == "Promise")
+        && matches!(property.as_ref(), Expression::String(name) if name == "all")
+}
+
+fn expression_is_static_promise_with_resolvers_record(expression: &Expression) -> bool {
+    let Expression::Object(entries) = expression else {
+        return false;
+    };
+    let mut has_promise = false;
+    let mut has_resolve = false;
+    let mut has_reject = false;
+    for entry in entries {
+        let ObjectEntry::Data {
+            key: Expression::String(key),
+            value,
+        } = entry
+        else {
+            continue;
+        };
+        match key.as_str() {
+            "promise" => has_promise = expression_is_promise_resolve_undefined_call(value),
+            "resolve" => {
+                has_resolve = matches!(
+                    value,
+                    Expression::Identifier(name)
+                        if name == "__ayy_promise_with_resolvers_resolve"
+                );
+            }
+            "reject" => {
+                has_reject = matches!(
+                    value,
+                    Expression::Identifier(name)
+                        if name == "__ayy_promise_with_resolvers_reject"
+                );
+            }
+            _ => {}
+        }
+    }
+    has_promise && has_resolve && has_reject
+}
+
 impl<'a> FunctionCompiler<'a> {
     fn rewrite_static_new_this_call_argument(&self, argument: &CallArgument) -> CallArgument {
         match argument {
@@ -458,6 +536,14 @@ impl<'a> FunctionCompiler<'a> {
         name: &str,
         value: &Expression,
     ) {
+        if expression_is_promise_all_call(value)
+            || expression_is_promise_with_resolvers_call(value)
+            || expression_is_static_promise_with_resolvers_record(value)
+        {
+            self.backend
+                .sync_global_object_prototype_expression(name, None);
+            return;
+        }
         let prototype_from_value = |compiler: &Self, expression: &Expression| {
             object_literal_prototype_expression(expression)
                 .or_else(|| {
@@ -492,6 +578,9 @@ impl<'a> FunctionCompiler<'a> {
                 })
         };
         let prototype = prototype_from_value(self, value).or_else(|| {
+            if matches!(value, Expression::Object(_)) {
+                return None;
+            }
             let materialized = self.materialize_static_expression(value);
             if static_expression_matches(&materialized, value) {
                 return None;
@@ -606,7 +695,10 @@ impl<'a> FunctionCompiler<'a> {
                         if function_name.starts_with("__ayy_class_ctor_")
                 )
         );
-        if !resolved_class_instance {
+        let resolved_typed_array_instance = self
+            .static_typed_array_name_from_binding(&object_binding)
+            .is_some();
+        if !resolved_class_instance && !resolved_typed_array_instance {
             self.seed_boxed_primitive_value_property(value, &mut object_binding);
             self.seed_date_value_property(value, &mut object_binding);
             self.seed_native_error_object_binding(value, &mut object_binding);

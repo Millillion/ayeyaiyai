@@ -159,7 +159,46 @@ pub(crate) fn ensure_module_lexical_names_are_unique(module: &Module) -> Result<
         }
     }
 
+    for var_name in collect_module_var_declared_names(module)? {
+        ensure!(
+            !seen.contains(&var_name),
+            "duplicate lexical name `{var_name}`"
+        );
+    }
+
     Ok(())
+}
+
+fn collect_module_var_declared_names(module: &Module) -> Result<Vec<String>> {
+    let mut names = Vec::new();
+
+    for item in &module.body {
+        match item {
+            ModuleItem::Stmt(statement) => {
+                for name in
+                    super::blocks::collect_var_declared_names_from_statement(statement, false)?
+                {
+                    if !names.contains(&name) {
+                        names.push(name);
+                    }
+                }
+            }
+            ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(export)) => {
+                if let Decl::Var(variable_declaration) = &export.decl
+                    && matches!(variable_declaration.kind, VarDeclKind::Var)
+                {
+                    for name in collect_var_decl_bound_names(variable_declaration)? {
+                        if !names.contains(&name) {
+                            names.push(name);
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    Ok(names)
 }
 
 pub(crate) fn collect_pattern_binding_names(pattern: &Pat, names: &mut Vec<String>) -> Result<()> {

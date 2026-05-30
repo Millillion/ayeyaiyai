@@ -11,6 +11,44 @@ fn static_array_property_is_known_non_index(property: &Expression) -> bool {
 }
 
 impl<'a> FunctionCompiler<'a> {
+    fn emit_runtime_array_length_from_slots(&mut self, binding_name: &str) -> DirectResult<bool> {
+        let mut indices = self
+            .state
+            .speculation
+            .static_semantics
+            .runtime_array_slot_indices(binding_name);
+        if indices.is_empty() {
+            return Ok(false);
+        }
+        indices.sort_unstable();
+        indices.dedup();
+
+        let length_local = self.allocate_temp_local();
+        self.push_i32_const(0);
+        self.push_local_set(length_local);
+
+        for index in indices {
+            let Some(slot) = self.runtime_array_slot(binding_name, index) else {
+                continue;
+            };
+            self.push_local_get(slot.present_local);
+            self.state.emission.output.instructions.push(0x04);
+            self.state
+                .emission
+                .output
+                .instructions
+                .push(EMPTY_BLOCK_TYPE);
+            self.push_control_frame();
+            self.push_i32_const(index as i32 + 1);
+            self.push_local_set(length_local);
+            self.state.emission.output.instructions.push(0x0b);
+            self.pop_control_frame();
+        }
+
+        self.push_local_get(length_local);
+        Ok(true)
+    }
+
     fn emit_dynamic_static_array_member_read(
         &mut self,
         object: &Expression,
@@ -97,6 +135,26 @@ impl<'a> FunctionCompiler<'a> {
                 if std::env::var_os("AYY_TRACE_MEMBER_READS").is_some() {
                     eprintln!(
                         "runtime_array_read:length_global object={object:?} binding={binding_name}"
+                    );
+                }
+                return Ok(true);
+            }
+            if let Some(length_local) = self.runtime_array_length_local_for_expression(object) {
+                if std::env::var_os("AYY_TRACE_MEMBER_READS").is_some() {
+                    let binding_name = self.runtime_array_binding_name_for_expression(object);
+                    eprintln!(
+                        "runtime_array_read:length_local_early object={object:?} binding={binding_name:?} local={length_local}"
+                    );
+                }
+                self.push_local_get(length_local);
+                return Ok(true);
+            }
+            if let Some(binding_name) = self.runtime_array_binding_name_for_expression(object)
+                && self.emit_runtime_array_length_from_slots(&binding_name)?
+            {
+                if std::env::var_os("AYY_TRACE_MEMBER_READS").is_some() {
+                    eprintln!(
+                        "runtime_array_read:length_slots object={object:?} binding={binding_name}"
                     );
                 }
                 return Ok(true);

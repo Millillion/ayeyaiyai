@@ -115,6 +115,144 @@ fn member_assignment_expression_references_internal_iterator_step(expression: &E
     }
 }
 
+fn member_assignment_expression_contains_known_promise_factory_call(
+    expression: &Expression,
+) -> bool {
+    match expression {
+        Expression::Call { callee, arguments } => {
+            let is_promise_factory = matches!(
+                callee.as_ref(),
+                Expression::Member { object, property }
+                    if matches!(object.as_ref(), Expression::Identifier(name) if name == "Promise")
+                        && matches!(
+                            property.as_ref(),
+                            Expression::String(name)
+                                if matches!(
+                                    name.as_str(),
+                                    "resolve" | "reject" | "all" | "allSettled" | "any" | "race"
+                                        | "withResolvers"
+                                )
+                        )
+            );
+            is_promise_factory
+                || member_assignment_expression_contains_known_promise_factory_call(callee)
+                || arguments.iter().any(|argument| {
+                    member_assignment_expression_contains_known_promise_factory_call(
+                        argument.expression(),
+                    )
+                })
+        }
+        Expression::Object(entries) => entries.iter().any(|entry| match entry {
+            ObjectEntry::Data { key, value } => {
+                member_assignment_expression_contains_known_promise_factory_call(key)
+                    || member_assignment_expression_contains_known_promise_factory_call(value)
+            }
+            ObjectEntry::Getter { key, getter } => {
+                member_assignment_expression_contains_known_promise_factory_call(key)
+                    || member_assignment_expression_contains_known_promise_factory_call(getter)
+            }
+            ObjectEntry::Setter { key, setter } => {
+                member_assignment_expression_contains_known_promise_factory_call(key)
+                    || member_assignment_expression_contains_known_promise_factory_call(setter)
+            }
+            ObjectEntry::Spread(value) => {
+                member_assignment_expression_contains_known_promise_factory_call(value)
+            }
+        }),
+        Expression::Array(elements) => elements.iter().any(|element| match element {
+            ArrayElement::Expression(value) | ArrayElement::Spread(value) => {
+                member_assignment_expression_contains_known_promise_factory_call(value)
+            }
+        }),
+        Expression::Member { object, property } => {
+            member_assignment_expression_contains_known_promise_factory_call(object)
+                || member_assignment_expression_contains_known_promise_factory_call(property)
+        }
+        Expression::SuperMember { property } => {
+            member_assignment_expression_contains_known_promise_factory_call(property)
+        }
+        Expression::Assign { value, .. }
+        | Expression::AssignSuperMember { value, .. }
+        | Expression::Await(value)
+        | Expression::EnumerateKeys(value)
+        | Expression::GetIterator(value)
+        | Expression::IteratorClose(value)
+        | Expression::Unary {
+            expression: value, ..
+        } => member_assignment_expression_contains_known_promise_factory_call(value),
+        Expression::AssignMember {
+            object,
+            property,
+            value,
+        } => {
+            member_assignment_expression_contains_known_promise_factory_call(object)
+                || member_assignment_expression_contains_known_promise_factory_call(property)
+                || member_assignment_expression_contains_known_promise_factory_call(value)
+        }
+        Expression::Binary { left, right, .. } => {
+            member_assignment_expression_contains_known_promise_factory_call(left)
+                || member_assignment_expression_contains_known_promise_factory_call(right)
+        }
+        Expression::Conditional {
+            condition,
+            then_expression,
+            else_expression,
+        } => {
+            member_assignment_expression_contains_known_promise_factory_call(condition)
+                || member_assignment_expression_contains_known_promise_factory_call(then_expression)
+                || member_assignment_expression_contains_known_promise_factory_call(else_expression)
+        }
+        Expression::Sequence(expressions) => expressions
+            .iter()
+            .any(member_assignment_expression_contains_known_promise_factory_call),
+        Expression::SuperCall { callee, arguments } | Expression::New { callee, arguments } => {
+            member_assignment_expression_contains_known_promise_factory_call(callee)
+                || arguments.iter().any(|argument| {
+                    member_assignment_expression_contains_known_promise_factory_call(
+                        argument.expression(),
+                    )
+                })
+        }
+        Expression::Number(_)
+        | Expression::BigInt(_)
+        | Expression::String(_)
+        | Expression::Bool(_)
+        | Expression::Null
+        | Expression::Undefined
+        | Expression::NewTarget
+        | Expression::Identifier(_)
+        | Expression::This
+        | Expression::Sent
+        | Expression::Update { .. } => false,
+    }
+}
+
+fn object_binding_contains_known_promise_factory_call(binding: &ObjectValueBinding) -> bool {
+    binding
+        .string_properties
+        .iter()
+        .any(|(_, value)| member_assignment_expression_contains_known_promise_factory_call(value))
+        || binding.symbol_properties.iter().any(|(key, value)| {
+            member_assignment_expression_contains_known_promise_factory_call(key)
+                || member_assignment_expression_contains_known_promise_factory_call(value)
+        })
+        || binding
+            .property_descriptors
+            .iter()
+            .any(|(property, descriptor)| {
+                member_assignment_expression_contains_known_promise_factory_call(property)
+                    || descriptor.value.as_ref().is_some_and(|value| {
+                        member_assignment_expression_contains_known_promise_factory_call(value)
+                    })
+                    || descriptor.getter.as_ref().is_some_and(|getter| {
+                        member_assignment_expression_contains_known_promise_factory_call(getter)
+                    })
+                    || descriptor.setter.as_ref().is_some_and(|setter| {
+                        member_assignment_expression_contains_known_promise_factory_call(setter)
+                    })
+            })
+}
+
 impl<'a> FunctionCompiler<'a> {
     pub(in crate::backend::direct_wasm) fn test262_realm_constructor_member(
         &self,
@@ -379,6 +517,12 @@ impl<'a> FunctionCompiler<'a> {
                 capture_slots.insert(capture_name.clone(), slot_name.clone());
             }
             if !capture_slots.is_empty() {
+                let capture_slots = self
+                    .merge_member_function_assignment_capture_slots_with_existing(
+                        &key,
+                        &function_name,
+                        capture_slots,
+                    );
                 self.state
                     .speculation
                     .static_semantics
@@ -473,6 +617,11 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(());
         }
 
+        let capture_slots = self.merge_member_function_assignment_capture_slots_with_existing(
+            &key,
+            &function_name,
+            capture_slots,
+        );
         self.state
             .speculation
             .static_semantics
@@ -488,6 +637,41 @@ impl<'a> FunctionCompiler<'a> {
         }
 
         Ok(())
+    }
+
+    fn merge_member_function_assignment_capture_slots_with_existing(
+        &self,
+        key: &MemberFunctionBindingKey,
+        function_name: &str,
+        mut capture_slots: BTreeMap<String, String>,
+    ) -> BTreeMap<String, String> {
+        if self
+            .member_function_binding_entry(key)
+            .is_some_and(|binding| binding != LocalFunctionBinding::User(function_name.to_string()))
+        {
+            return capture_slots;
+        }
+
+        let existing_capture_slots = self
+            .state
+            .speculation
+            .static_semantics
+            .objects
+            .member_function_capture_slots
+            .get(key)
+            .cloned()
+            .or_else(|| {
+                self.backend
+                    .global_member_function_capture_slots(key)
+                    .cloned()
+            });
+        if let Some(existing_capture_slots) = existing_capture_slots {
+            for (capture_name, slot_name) in existing_capture_slots {
+                capture_slots.entry(capture_name).or_insert(slot_name);
+            }
+        }
+
+        capture_slots
     }
 
     fn push_dynamic_for_in_key_property_candidates(
@@ -802,6 +986,59 @@ impl<'a> FunctionCompiler<'a> {
             return value;
         }
         self.reference_preserving_static_value_expression(value)
+    }
+
+    fn scoped_shadow_string_update_value(
+        &self,
+        object: &Expression,
+        property: &Expression,
+        value: &Expression,
+    ) -> Option<Expression> {
+        let Expression::Binary {
+            op: BinaryOp::Add,
+            left,
+            right,
+        } = value
+        else {
+            return None;
+        };
+        let Expression::Member {
+            object: left_object,
+            property: left_property,
+        } = left.as_ref()
+        else {
+            return None;
+        };
+
+        let materialized_left_object = if matches!(
+            left_object.as_ref(),
+            Expression::Identifier(name) if name.starts_with("__ayy_target_object_")
+        ) {
+            self.materialize_static_expression(left_object)
+        } else {
+            left_object.as_ref().clone()
+        };
+        let materialized_left_property = self
+            .resolve_property_key_expression(left_property)
+            .unwrap_or_else(|| self.materialize_static_expression(left_property));
+        let materialized_property = self
+            .resolve_property_key_expression(property)
+            .unwrap_or_else(|| self.materialize_static_expression(property));
+        if !static_expression_matches(&materialized_left_object, object)
+            || !static_expression_matches(&materialized_left_property, &materialized_property)
+        {
+            return None;
+        }
+
+        let shadow_binding_name =
+            self.runtime_object_property_shadow_binding_name_for_expression(object, property)?;
+        let previous_value = self.global_value_binding(&shadow_binding_name)?;
+        self.resolve_static_string_addition_value_with_context(
+            previous_value,
+            right,
+            self.current_function_name(),
+        )
+        .map(Expression::String)
     }
 
     fn sync_internal_target_array_source_binding(
@@ -1410,9 +1647,20 @@ impl<'a> FunctionCompiler<'a> {
         if self
             .current_function_name()
             .is_some_and(|function_name| function_name.starts_with("__ayy_module_init_"))
-            && matches!(object, Expression::Identifier(identifier) if identifier == "exports")
+            && matches!(
+                object,
+                Expression::Identifier(identifier)
+                    if identifier == "exports"
+                        || identifier.starts_with("__ayy_module_deferred_namespace_")
+            )
         {
             return false;
+        }
+
+        if let Expression::Identifier(identifier) = object
+            && Self::module_index_from_namespace_like_identifier(identifier).is_some()
+        {
+            return true;
         }
 
         if self
@@ -1452,6 +1700,26 @@ impl<'a> FunctionCompiler<'a> {
             }
     }
 
+    fn private_field_initializer_owner_is_module_namespace(
+        &self,
+        name: &str,
+        object: &Expression,
+        owner_name: &str,
+    ) -> bool {
+        if self.named_assignment_target_is_module_namespace(name, object) {
+            return true;
+        }
+
+        let owner_expression = Expression::Identifier(owner_name.to_string());
+        self.resolve_object_binding_from_expression(&owner_expression)
+            .as_ref()
+            .is_some_and(Self::object_binding_has_module_namespace_marker)
+            || self
+                .resolve_identifier_object_binding_fallback(owner_name)
+                .as_ref()
+                .is_some_and(Self::object_binding_has_module_namespace_marker)
+    }
+
     fn emit_module_namespace_named_property_assignment_result(
         &mut self,
         name: &str,
@@ -1489,6 +1757,29 @@ impl<'a> FunctionCompiler<'a> {
         else {
             return Ok(false);
         };
+        if let Expression::Identifier(name) = object {
+            let direct_binding = self
+                .state
+                .speculation
+                .static_semantics
+                .local_object_binding(name)
+                .cloned()
+                .or_else(|| self.resolve_identifier_object_binding_fallback(name))
+                .or_else(|| self.resolve_runtime_shadow_object_binding(name));
+            if let Some(binding) = direct_binding
+                && binding.extensible
+                && object_binding_lookup_descriptor(&binding, &materialized_property).is_none()
+                && (member_assignment_expression_contains_known_promise_factory_call(value)
+                    || object_binding_contains_known_promise_factory_call(&binding))
+            {
+                if std::env::var_os("AYY_TRACE_MEMBER_ASSIGNMENT").is_some() {
+                    eprintln!(
+                        "named_member_assignment:nonwritable:skip_promise_static_materialization name={name} property={property_name}"
+                    );
+                }
+                return Ok(false);
+            }
+        }
         let resolved_object = self
             .resolve_bound_alias_expression(object)
             .filter(|resolved| !static_expression_matches(resolved, object));
@@ -1576,6 +1867,8 @@ impl<'a> FunctionCompiler<'a> {
         let Some(owner_name) = self.private_field_initializer_owner_name(name) else {
             return Ok(false);
         };
+        let owner_is_module_namespace =
+            self.private_field_initializer_owner_is_module_namespace(name, object, &owner_name);
         let binding = self.runtime_object_property_shadow_binding_by_property(
             &owner_name,
             &materialized_property,
@@ -1694,7 +1987,7 @@ impl<'a> FunctionCompiler<'a> {
         };
         if std::env::var_os("AYY_TRACE_PRIVATE_FIELD_INIT_VALUES").is_some() {
             eprintln!(
-                "private_field_init_compile current_fn={:?} owner={owner_name} property={materialized_property:?} marker_property={marker_property:?} marker_brand={marker_brand_binding:?} binding=({}, {}) marker_binding={:?}",
+                "private_field_init_compile current_fn={:?} owner={owner_name} module_namespace={owner_is_module_namespace} property={materialized_property:?} marker_property={marker_property:?} marker_brand={marker_brand_binding:?} binding=({}, {}) marker_binding={:?}",
                 self.current_function_name(),
                 binding.value_index,
                 binding.present_index,
@@ -1732,6 +2025,11 @@ impl<'a> FunctionCompiler<'a> {
                     marker_local,
                 )?;
             }
+        }
+        if owner_is_module_namespace {
+            self.emit_named_error_throw("TypeError")?;
+            self.push_local_get(value_local);
+            return Ok(true);
         }
         self.push_global_get(binding.present_index);
         self.state.emission.output.instructions.push(0x04);
@@ -1985,6 +2283,38 @@ impl<'a> FunctionCompiler<'a> {
         Ok(())
     }
 
+    fn emit_static_named_object_property_shadow_store_if_needed(
+        &mut self,
+        name: &str,
+        resolved_property: &Expression,
+        value_local: u32,
+    ) {
+        if !matches!(
+            resolved_property,
+            Expression::String(_) | Expression::Number(_)
+        ) {
+            return;
+        }
+        let Some(owner_name) = self.runtime_object_property_shadow_owner_name_for_identifier(name)
+        else {
+            return;
+        };
+        let binding =
+            self.runtime_object_property_shadow_binding_by_property(&owner_name, resolved_property);
+        let deleted_binding = self.runtime_object_property_shadow_deleted_binding_by_property(
+            &owner_name,
+            resolved_property,
+        );
+        self.push_local_get(value_local);
+        self.push_global_set(binding.value_index);
+        self.push_i32_const(JS_UNDEFINED_TAG);
+        self.push_global_set(deleted_binding.value_index);
+        self.push_i32_const(0);
+        self.push_global_set(deleted_binding.present_index);
+        self.push_i32_const(1);
+        self.push_global_set(binding.present_index);
+    }
+
     fn emit_private_parameter_member_assignment(
         &mut self,
         name: &str,
@@ -2065,6 +2395,76 @@ impl<'a> FunctionCompiler<'a> {
 
         self.clear_runtime_object_property_shadow_deleted_binding(object, &materialized_property);
         self.push_local_get(value_local);
+        Ok(true)
+    }
+
+    fn module_namespace_member_resolves_to_materialized_expression(
+        &self,
+        source: &Expression,
+        materialized: &Expression,
+    ) -> bool {
+        let Expression::Member { object, property } = source else {
+            return false;
+        };
+        let property = self
+            .resolve_property_key_expression(property)
+            .unwrap_or_else(|| self.materialize_static_expression(property));
+        let Some(value) =
+            self.resolve_module_namespace_live_binding_member_value(object, &property)
+        else {
+            return false;
+        };
+        static_expression_matches(&value, materialized)
+            || static_expression_matches(&self.materialize_static_expression(&value), materialized)
+    }
+
+    pub(in crate::backend::direct_wasm) fn emit_materialized_module_capture_member_assignment(
+        &mut self,
+        source_object: &Expression,
+        materialized_object: &Expression,
+        property: &Expression,
+        value: &Expression,
+    ) -> DirectResult<bool> {
+        let Expression::Identifier(object_name) = materialized_object else {
+            return Ok(false);
+        };
+        if !object_name.starts_with("__ayy_capture_binding__")
+            || !self.module_namespace_member_resolves_to_materialized_expression(
+                source_object,
+                materialized_object,
+            )
+        {
+            return Ok(false);
+        }
+
+        let resolved_property = self
+            .resolve_property_key_expression(property)
+            .unwrap_or_else(|| self.materialize_static_expression(property));
+        let resolved_property = self.canonical_object_property_expression(&resolved_property);
+        let materialized_value = self.member_assignment_static_property_value(value);
+        let object_binding = self
+            .backend
+            .global_semantics
+            .values
+            .object_bindings
+            .entry(object_name.clone())
+            .or_insert_with(empty_object_value_binding);
+        object_binding_set_property(
+            object_binding,
+            resolved_property.clone(),
+            materialized_value,
+        );
+        self.clear_runtime_object_property_shadow_deleted_binding(
+            materialized_object,
+            &resolved_property,
+        );
+        if self
+            .resolve_property_key_coercion_binding(property)
+            .is_some()
+        {
+            self.emit_property_key_expression_effects(property)?;
+        }
+        self.emit_numeric_expression(value)?;
         Ok(true)
     }
 
@@ -2617,7 +3017,7 @@ impl<'a> FunctionCompiler<'a> {
             {
                 self.update_prototype_object_binding(name, value);
             }
-            if self.binding_name_is_global(name) {
+            let updated_object_binding = if self.binding_name_is_global(name) {
                 let object_binding = self
                     .backend
                     .global_semantics
@@ -2630,6 +3030,7 @@ impl<'a> FunctionCompiler<'a> {
                     resolved_property.clone(),
                     materialized.clone(),
                 );
+                object_binding.clone()
             } else {
                 let object_binding = self
                     .state
@@ -2641,9 +3042,40 @@ impl<'a> FunctionCompiler<'a> {
                     resolved_property.clone(),
                     materialized.clone(),
                 );
-            }
+                object_binding.clone()
+            };
             self.clear_runtime_object_property_shadow_deleted_binding(object, &resolved_property);
             self.update_member_function_assignment_binding(object, property, value);
+            if let Some(owner_name) =
+                self.runtime_object_property_shadow_owner_name_for_identifier(name)
+            {
+                self.sync_runtime_object_property_shadow_static_metadata_from_binding(
+                    &owner_name,
+                    &updated_object_binding,
+                );
+                let binding = self.runtime_object_property_shadow_binding_by_property(
+                    &owner_name,
+                    &resolved_property,
+                );
+                let deleted_binding = self
+                    .runtime_object_property_shadow_deleted_binding_by_property(
+                        &owner_name,
+                        &resolved_property,
+                    );
+                let value_local = self.allocate_temp_local();
+                self.emit_numeric_expression(value)?;
+                self.push_local_set(value_local);
+                self.push_local_get(value_local);
+                self.push_global_set(binding.value_index);
+                self.push_i32_const(JS_UNDEFINED_TAG);
+                self.push_global_set(deleted_binding.value_index);
+                self.push_i32_const(0);
+                self.push_global_set(deleted_binding.present_index);
+                self.push_i32_const(1);
+                self.push_global_set(binding.present_index);
+                self.push_local_get(value_local);
+                return Ok(true);
+            }
             if name.starts_with("__ayy_class_expr_") || name.starts_with("__ayy_class_ctor_") {
                 let owner_name = name.to_string();
                 let binding = self.runtime_object_property_shadow_binding_by_property(
@@ -2678,25 +3110,23 @@ impl<'a> FunctionCompiler<'a> {
         if trace_member_assignment {
             eprintln!("named_member_assignment:array_object:start");
         }
-        if self
+        let has_local_array_binding = self
             .state
             .speculation
             .static_semantics
-            .has_local_array_binding(name)
-            || self
-                .backend
-                .global_semantics
-                .values
-                .array_bindings
-                .contains_key(name)
-        {
+            .has_local_array_binding(name);
+        let has_global_array_binding = self
+            .backend
+            .global_semantics
+            .values
+            .array_bindings
+            .contains_key(name);
+        let has_resolved_array_binding = !has_local_array_binding
+            && !has_global_array_binding
+            && self.resolve_array_binding_from_expression(object).is_some();
+        if has_local_array_binding || has_global_array_binding || has_resolved_array_binding {
             let materialized = self.materialize_static_expression(value);
-            if self
-                .state
-                .speculation
-                .static_semantics
-                .has_local_array_binding(name)
-            {
+            if has_local_array_binding {
                 let object_binding = self
                     .state
                     .speculation
@@ -2708,13 +3138,7 @@ impl<'a> FunctionCompiler<'a> {
                     materialized.clone(),
                 );
             }
-            if self
-                .backend
-                .global_semantics
-                .values
-                .array_bindings
-                .contains_key(name)
-            {
+            if has_global_array_binding || has_resolved_array_binding {
                 let object_binding = self
                     .backend
                     .global_semantics
@@ -2810,7 +3234,10 @@ impl<'a> FunctionCompiler<'a> {
                 .runtime_object_property_shadow_owner_name_for_identifier(name)
                 .is_some()
         {
-            let emitted_value = self.member_assignment_emission_value(value);
+            let property_expression = Expression::String(property_name.clone());
+            let emitted_value = self
+                .scoped_shadow_string_update_value(object, &property_expression, value)
+                .unwrap_or_else(|| self.member_assignment_emission_value(value));
             let value_local = self.allocate_temp_local();
             if self
                 .resolve_property_key_coercion_binding(property)
@@ -2953,6 +3380,11 @@ impl<'a> FunctionCompiler<'a> {
                     value_local,
                     value,
                 )?;
+                self.emit_static_named_object_property_shadow_store_if_needed(
+                    name,
+                    &resolved_property,
+                    value_local,
+                );
                 self.emit_dynamic_named_object_property_shadow_store_if_needed(
                     name,
                     property,
@@ -2988,7 +3420,7 @@ impl<'a> FunctionCompiler<'a> {
                 object_binding_set_property(
                     object_binding,
                     resolved_property.clone(),
-                    materialized,
+                    materialized.clone(),
                 );
             } else {
                 for property_name in &dynamic_property_candidates {
@@ -3037,6 +3469,11 @@ impl<'a> FunctionCompiler<'a> {
                     value_local,
                     value,
                 )?;
+                self.emit_static_named_object_property_shadow_store_if_needed(
+                    name,
+                    &resolved_property,
+                    value_local,
+                );
                 self.emit_dynamic_named_object_property_shadow_store_if_needed(
                     name,
                     property,

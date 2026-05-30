@@ -245,6 +245,23 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         expression: &Expression,
     ) -> Option<Expression> {
+        if matches!(
+            expression,
+            Expression::Member { object, .. }
+                if matches!(
+                    object.as_ref(),
+                    Expression::Identifier(name)
+                        if name.starts_with("__ayy_module_dep_")
+                            || name.starts_with("__ayy_module_namespace_")
+                )
+        ) {
+            return None;
+        }
+
+        if self.expression_is_static_function_constructor_global_this_call(expression) {
+            return Some(Expression::Identifier("globalThis".to_string()));
+        }
+
         let materialized = self.materialize_static_expression(expression);
         match materialized {
             Expression::Identifier(name) if name == "globalThis" => {
@@ -257,6 +274,104 @@ impl<'a> FunctionCompiler<'a> {
             }
             _ => None,
         }
+    }
+
+    fn static_function_constructor_global_this_update_value(
+        &self,
+        property: &Expression,
+        value: &Expression,
+    ) -> Option<Expression> {
+        let Expression::Binary {
+            op: BinaryOp::Add,
+            left,
+            right,
+        } = value
+        else {
+            return None;
+        };
+        let Expression::Member {
+            object: left_object,
+            property: left_property,
+        } = left.as_ref()
+        else {
+            return None;
+        };
+        if !self.expression_is_static_function_constructor_global_this_call(left_object) {
+            return None;
+        }
+        let left_property = self.canonical_object_property_expression(left_property);
+        if !static_expression_matches(&left_property, property) {
+            return None;
+        }
+
+        let global_this = Expression::Identifier("globalThis".to_string());
+        let previous_value = self
+            .runtime_object_property_shadow_binding_name_for_expression(&global_this, property)
+            .and_then(|shadow_binding_name| self.global_value_binding(&shadow_binding_name))
+            .or_else(|| {
+                self.backend
+                    .global_object_binding("globalThis")
+                    .and_then(|binding| object_binding_lookup_value(binding, property))
+            })?;
+        let resolved = self.resolve_static_string_addition_value_with_context(
+            previous_value,
+            right,
+            self.current_function_name(),
+        );
+        if std::env::var_os("AYY_TRACE_MEMBER_ASSIGNMENT").is_some() {
+            eprintln!(
+                "function_constructor_global_this_update property={property:?} previous={previous_value:?} right={right:?} resolved={resolved:?}"
+            );
+        }
+        resolved.map(Expression::String)
+    }
+
+    fn emit_static_function_constructor_global_this_member_assignment(
+        &mut self,
+        object: &Expression,
+        property: &Expression,
+        value: &Expression,
+    ) -> DirectResult<bool> {
+        if !self.expression_is_static_function_constructor_global_this_call(object) {
+            return Ok(false);
+        }
+        let materialized_property = self.canonical_object_property_expression(property);
+        let Expression::String(property_name) = &materialized_property else {
+            return Ok(false);
+        };
+
+        let global_this = Expression::Identifier("globalThis".to_string());
+        if self.global_object_binding("globalThis").is_none() {
+            self.backend
+                .sync_global_object_binding("globalThis", Some(empty_object_value_binding()));
+            self.backend
+                .set_global_binding_kind("globalThis", StaticValueKind::Object);
+        }
+
+        let emitted_value = self
+            .static_function_constructor_global_this_update_value(&materialized_property, value)
+            .unwrap_or_else(|| self.member_assignment_emission_value(value));
+        if std::env::var_os("AYY_TRACE_MEMBER_ASSIGNMENT").is_some() {
+            eprintln!(
+                "function_constructor_global_this_emit property={materialized_property:?} value={value:?} emitted={emitted_value:?}"
+            );
+        }
+        let value_local = self.allocate_temp_local();
+        if self
+            .resolve_property_key_coercion_binding(property)
+            .is_some()
+        {
+            self.emit_property_key_expression_effects(property)?;
+        }
+        self.emit_numeric_expression(&emitted_value)?;
+        self.push_local_set(value_local);
+        self.emit_scoped_property_store_from_local(
+            &global_this,
+            property_name,
+            value_local,
+            &emitted_value,
+        )?;
+        Ok(true)
     }
 
     fn primitive_assignment_constructor_name(&self, object: &Expression) -> Option<&'static str> {
@@ -592,6 +707,15 @@ impl<'a> FunctionCompiler<'a> {
             eprintln!("member_assignment:named:done");
         }
 
+        if self.emit_static_function_constructor_global_this_member_assignment(
+            object, property, value,
+        )? {
+            if trace_member_assignment {
+                eprintln!("member_assignment:function_constructor_global_this:hit");
+            }
+            return Ok(());
+        }
+
         if let Some(global_alias) = self.resolve_static_global_object_alias_expression(object)
             && !static_expression_matches(&global_alias, object)
         {
@@ -669,6 +793,16 @@ impl<'a> FunctionCompiler<'a> {
             }
             if !static_expression_matches(&materialized_object, object)
                 && self.emit_named_object_member_assignment(
+                    &materialized_object,
+                    property,
+                    value,
+                )?
+            {
+                return Ok(());
+            }
+            if !static_expression_matches(&materialized_object, object)
+                && self.emit_materialized_module_capture_member_assignment(
+                    object,
                     &materialized_object,
                     property,
                     value,

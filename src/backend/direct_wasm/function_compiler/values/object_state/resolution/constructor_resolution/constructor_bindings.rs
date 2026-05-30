@@ -1931,7 +1931,6 @@ impl<'a> FunctionCompiler<'a> {
             extra_local_bindings,
             |statement| Self::substitute_static_constructor_new_target_statement(&statement),
         )?;
-
         let direct_eval_in_class_field_initializer = self
             .resolve_registered_function_declaration(&user_function.name)
             .is_some_and(|declaration| declaration.direct_eval_in_class_field_initializer);
@@ -1972,11 +1971,8 @@ impl<'a> FunctionCompiler<'a> {
         {
             return None;
         }
-
         let mut updated_bindings = HashMap::new();
-        let mut updated_names = self.collect_user_function_updated_nonlocal_bindings(user_function);
-        updated_names
-            .extend(self.collect_user_function_call_effect_nonlocal_bindings(user_function));
+        let updated_names = self.collect_user_function_updated_nonlocal_bindings(user_function);
         for name in updated_names {
             let source_name = scoped_binding_source_name(&name)
                 .unwrap_or(&name)

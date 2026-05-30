@@ -78,6 +78,110 @@ fn expression_contains_object_spread(expression: &Expression) -> bool {
     }
 }
 
+fn expression_contains_known_promise_factory_call(expression: &Expression) -> bool {
+    match expression {
+        Expression::Call { callee, arguments } => {
+            let is_promise_factory = matches!(
+                callee.as_ref(),
+                Expression::Member { object, property }
+                    if matches!(object.as_ref(), Expression::Identifier(name) if name == "Promise")
+                        && matches!(
+                            property.as_ref(),
+                            Expression::String(name)
+                                if matches!(
+                                    name.as_str(),
+                                    "resolve" | "reject" | "all" | "allSettled" | "any" | "race"
+                                        | "withResolvers"
+                                )
+                        )
+            );
+            is_promise_factory
+                || expression_contains_known_promise_factory_call(callee)
+                || arguments.iter().any(|argument| {
+                    expression_contains_known_promise_factory_call(argument.expression())
+                })
+        }
+        Expression::Object(entries) => entries.iter().any(|entry| match entry {
+            ObjectEntry::Data { key, value } => {
+                expression_contains_known_promise_factory_call(key)
+                    || expression_contains_known_promise_factory_call(value)
+            }
+            ObjectEntry::Getter { key, getter } => {
+                expression_contains_known_promise_factory_call(key)
+                    || expression_contains_known_promise_factory_call(getter)
+            }
+            ObjectEntry::Setter { key, setter } => {
+                expression_contains_known_promise_factory_call(key)
+                    || expression_contains_known_promise_factory_call(setter)
+            }
+            ObjectEntry::Spread(value) => expression_contains_known_promise_factory_call(value),
+        }),
+        Expression::Array(elements) => elements.iter().any(|element| match element {
+            ArrayElement::Expression(value) | ArrayElement::Spread(value) => {
+                expression_contains_known_promise_factory_call(value)
+            }
+        }),
+        Expression::Member { object, property } => {
+            expression_contains_known_promise_factory_call(object)
+                || expression_contains_known_promise_factory_call(property)
+        }
+        Expression::SuperMember { property } => {
+            expression_contains_known_promise_factory_call(property)
+        }
+        Expression::Assign { value, .. }
+        | Expression::AssignSuperMember { value, .. }
+        | Expression::Await(value)
+        | Expression::EnumerateKeys(value)
+        | Expression::GetIterator(value)
+        | Expression::IteratorClose(value)
+        | Expression::Unary {
+            expression: value, ..
+        } => expression_contains_known_promise_factory_call(value),
+        Expression::AssignMember {
+            object,
+            property,
+            value,
+        } => {
+            expression_contains_known_promise_factory_call(object)
+                || expression_contains_known_promise_factory_call(property)
+                || expression_contains_known_promise_factory_call(value)
+        }
+        Expression::Binary { left, right, .. } => {
+            expression_contains_known_promise_factory_call(left)
+                || expression_contains_known_promise_factory_call(right)
+        }
+        Expression::Conditional {
+            condition,
+            then_expression,
+            else_expression,
+        } => {
+            expression_contains_known_promise_factory_call(condition)
+                || expression_contains_known_promise_factory_call(then_expression)
+                || expression_contains_known_promise_factory_call(else_expression)
+        }
+        Expression::Sequence(expressions) => expressions
+            .iter()
+            .any(expression_contains_known_promise_factory_call),
+        Expression::SuperCall { callee, arguments } | Expression::New { callee, arguments } => {
+            expression_contains_known_promise_factory_call(callee)
+                || arguments.iter().any(|argument| {
+                    expression_contains_known_promise_factory_call(argument.expression())
+                })
+        }
+        Expression::Number(_)
+        | Expression::BigInt(_)
+        | Expression::String(_)
+        | Expression::Bool(_)
+        | Expression::Null
+        | Expression::Undefined
+        | Expression::NewTarget
+        | Expression::Identifier(_)
+        | Expression::This
+        | Expression::Sent
+        | Expression::Update { .. } => false,
+    }
+}
+
 fn expression_is_identifier_iterator_method_call(expression: &Expression) -> bool {
     matches!(
         expression,
@@ -250,7 +354,49 @@ fn state_stores_function_constructor_alias(state: &PreparedIdentifierStoreState)
     )
 }
 
+fn expression_is_unresolved_constructor_instance(expression: &Expression) -> bool {
+    matches!(
+        expression,
+        Expression::New { callee, .. }
+            if matches!(
+                callee.as_ref(),
+                Expression::Identifier(name) if !name.starts_with("__ayy_class_ctor_")
+            )
+    )
+}
+
+fn state_stores_unresolved_constructor_instance(state: &PreparedIdentifierStoreState) -> bool {
+    expression_is_unresolved_constructor_instance(&state.canonical_value_expression)
+        || expression_is_unresolved_constructor_instance(&state.tracked_value_expression)
+        || expression_is_unresolved_constructor_instance(&state.module_assignment_expression)
+}
+
 impl<'a> FunctionCompiler<'a> {
+    fn preserve_internal_iterator_temp_global_metadata(
+        &mut self,
+        name: &str,
+        state: &PreparedIdentifierStoreState,
+    ) {
+        let kind = state.kind.unwrap_or(StaticValueKind::Unknown);
+        self.backend.set_global_binding_kind(name, kind);
+        self.backend
+            .shared_global_semantics
+            .set_global_binding_kind(name, kind);
+        self.backend
+            .sync_global_expression_binding(name, Some(state.module_assignment_expression.clone()));
+        self.backend
+            .shared_global_semantics
+            .values
+            .set_value_binding(name.to_string(), state.module_assignment_expression.clone());
+    }
+
+    fn clear_global_iterator_step_target_metadata(&mut self, name: &str) {
+        self.clear_global_binding_state(name);
+        self.backend
+            .shared_global_semantics
+            .clear_global_binding_state(name);
+    }
+
     fn identifier_store_preserves_runtime_array_alias(
         &self,
         name: &str,
@@ -390,7 +536,7 @@ impl<'a> FunctionCompiler<'a> {
                 })
     }
 
-    pub(super) fn current_static_direct_eval_var_binding_source_name(
+    pub(in crate::backend::direct_wasm) fn current_static_direct_eval_var_binding_source_name(
         &self,
         capture_name: &str,
     ) -> Option<String> {
@@ -425,6 +571,41 @@ impl<'a> FunctionCompiler<'a> {
             .expect("current direct eval closure slot requires a current function");
         let hidden_binding = self.ensure_implicit_global_binding(&hidden_name);
         let source_expression = Expression::Identifier(source_name.to_string());
+
+        if let Some((resolved_name, _)) = self.resolve_current_local_binding(source_name)
+            && self
+                .current_static_direct_eval_var_binding_source_name(&resolved_name)
+                .is_some()
+            && let Some(initialized_local) = self.local_lexical_initialized_local(&resolved_name)
+        {
+            self.push_local_get(initialized_local);
+            self.state.emission.output.instructions.push(0x04);
+            self.state
+                .emission
+                .output
+                .instructions
+                .push(EMPTY_BLOCK_TYPE);
+            self.push_control_frame();
+            self.emit_numeric_expression(&source_expression)?;
+            self.push_global_set(hidden_binding.value_index);
+            self.push_i32_const(1);
+            self.push_global_set(hidden_binding.present_index);
+            self.state.emission.output.instructions.push(0x05);
+            self.push_i32_const(JS_UNDEFINED_TAG);
+            self.push_global_set(hidden_binding.value_index);
+            self.push_i32_const(0);
+            self.push_global_set(hidden_binding.present_index);
+            self.state.emission.output.instructions.push(0x0b);
+            self.pop_control_frame();
+
+            self.state
+                .speculation
+                .static_semantics
+                .capture_slot_source_bindings
+                .insert(hidden_name.clone(), source_name.to_string());
+
+            return Ok(hidden_name);
+        }
 
         if self.resolve_current_local_binding(source_name).is_some()
             || self
@@ -1073,6 +1254,7 @@ impl<'a> FunctionCompiler<'a> {
 
     fn emit_store_declared_lexical_global_from_local(
         &mut self,
+        _name: &str,
         global_index: u32,
         binding: LexicalGlobalBinding,
         value_local: u32,
@@ -1143,6 +1325,8 @@ impl<'a> FunctionCompiler<'a> {
         }
         let stores_bind_call = state_stores_function_prototype_bind_call(state)
             || state_stores_function_constructor_alias(state);
+        let stores_unresolved_constructor_instance =
+            state_stores_unresolved_constructor_instance(state);
         let stores_runtime_array_alias =
             matches!(state.tracked_value_expression, Expression::Identifier(_))
                 && (self
@@ -1155,7 +1339,7 @@ impl<'a> FunctionCompiler<'a> {
                     || self.backend.global_binding_index(name).is_some()
                     || self.backend.global_has_implicit_binding(name));
         trace_step("object_binding:start");
-        let object_binding = if stores_bind_call {
+        let object_binding = if stores_bind_call || stores_unresolved_constructor_instance {
             None
         } else {
             self.resolve_object_binding_from_expression(&state.object_binding_expression)
@@ -1184,8 +1368,41 @@ impl<'a> FunctionCompiler<'a> {
             );
         }
         trace_step("prototype:done");
+        let skip_recursive_promise_object_static_metadata =
+            matches!(metadata_assignment_expression, Expression::Object(_))
+                && expression_contains_known_promise_factory_call(&metadata_assignment_expression);
         trace_step("static_global:start");
-        if stores_bind_call {
+        if stores_unresolved_constructor_instance {
+            let kind = StaticValueKind::Object;
+            self.backend.set_global_binding_kind(name, kind);
+            self.backend
+                .shared_global_semantics
+                .set_global_binding_kind(name, kind);
+            self.backend.sync_global_expression_binding(name, None);
+            self.backend
+                .shared_global_semantics
+                .values
+                .clear_value_binding(name);
+            self.backend.sync_global_array_binding(name, None);
+            self.backend
+                .shared_global_semantics
+                .values
+                .sync_array_binding(name, None);
+            self.backend.sync_global_object_binding(name, None);
+            self.backend
+                .shared_global_semantics
+                .values
+                .sync_object_binding(name, None);
+            self.backend.sync_global_arguments_binding(name, None);
+            self.backend
+                .shared_global_semantics
+                .values
+                .sync_arguments_binding(name, None);
+            self.backend.sync_global_function_binding(name, None);
+            self.backend
+                .shared_global_semantics
+                .clear_global_function_binding(name);
+        } else if stores_bind_call {
             let kind = StaticValueKind::Function;
             self.backend.set_global_binding_kind(name, kind);
             self.backend
@@ -1212,6 +1429,38 @@ impl<'a> FunctionCompiler<'a> {
                     .shared_global_semantics
                     .clear_global_function_binding(name);
             }
+        } else if skip_recursive_promise_object_static_metadata {
+            let kind = StaticValueKind::Object;
+            let static_object_marker = Expression::Object(Vec::new());
+            self.backend.set_global_binding_kind(name, kind);
+            self.backend
+                .shared_global_semantics
+                .set_global_binding_kind(name, kind);
+            self.backend
+                .sync_global_expression_binding(name, Some(static_object_marker.clone()));
+            self.backend
+                .shared_global_semantics
+                .values
+                .set_value_binding(name.to_string(), static_object_marker);
+            self.backend.sync_global_array_binding(name, None);
+            self.backend
+                .shared_global_semantics
+                .values
+                .sync_array_binding(name, None);
+            self.backend.sync_global_object_binding(name, None);
+            self.backend
+                .shared_global_semantics
+                .values
+                .sync_object_binding(name, None);
+            self.backend.sync_global_arguments_binding(name, None);
+            self.backend
+                .shared_global_semantics
+                .values
+                .sync_arguments_binding(name, None);
+            self.backend.sync_global_function_binding(name, None);
+            self.backend
+                .shared_global_semantics
+                .clear_global_function_binding(name);
         } else {
             self.update_static_global_assignment_metadata(name, &metadata_assignment_expression);
         }
@@ -1244,10 +1493,14 @@ impl<'a> FunctionCompiler<'a> {
         if let Some(object_binding) = object_binding {
             trace_step("sync_object:start");
             self.backend
-                .sync_global_object_binding(name, Some(object_binding));
+                .sync_global_object_binding(name, Some(object_binding.clone()));
+            self.backend
+                .shared_global_semantics
+                .values
+                .sync_object_binding(name, Some(object_binding));
             trace_step("sync_object:done");
         }
-        if !stores_bind_call {
+        if !stores_bind_call && !stores_unresolved_constructor_instance {
             trace_step("seed_boxed:start");
             self.seed_global_boxed_primitive_object_binding(
                 name,
@@ -1273,6 +1526,7 @@ impl<'a> FunctionCompiler<'a> {
             );
             trace_step("seed_array_buffer:done");
             trace_step("seed_typed_array:start");
+            self.seed_global_typed_array_object_binding(name, &state.tracked_value_expression);
             self.seed_global_typed_array_object_binding(name, state.prototype_source_expression());
             trace_step("seed_typed_array:done");
         }
@@ -1305,13 +1559,13 @@ impl<'a> FunctionCompiler<'a> {
         self.preserve_exact_static_global_number_binding(name, &metadata_assignment_expression);
         trace_step("number:done");
         trace_step("specialized:start");
-        if !stores_bind_call {
+        if !stores_bind_call && !stores_unresolved_constructor_instance {
             self.update_global_specialized_function_value(name, &metadata_assignment_expression)?;
         }
         trace_step("specialized:done");
         if ensure_descriptor {
             trace_step("descriptor_ensure:start");
-            if !stores_bind_call {
+            if !stores_bind_call && !stores_unresolved_constructor_instance {
                 self.ensure_global_property_descriptor_value(
                     name,
                     &metadata_assignment_expression,
@@ -1321,7 +1575,7 @@ impl<'a> FunctionCompiler<'a> {
             trace_step("descriptor_ensure:done");
         } else {
             trace_step("descriptor_update:start");
-            if !stores_bind_call {
+            if !stores_bind_call && !stores_unresolved_constructor_instance {
                 self.update_global_property_descriptor_value(name, &metadata_assignment_expression);
             }
             trace_step("descriptor_update:done");
@@ -1372,17 +1626,16 @@ impl<'a> FunctionCompiler<'a> {
         }
 
         let source_value = self.global_value_binding(name).cloned();
-        let source_expression = source_value
-            .as_ref()
-            .unwrap_or(&state.module_assignment_expression);
-        let array_binding = self
-            .global_array_binding(name)
-            .cloned()
-            .or_else(|| self.resolve_array_binding_from_expression(source_expression));
-        let object_binding = self
-            .global_object_binding(name)
-            .cloned()
-            .or_else(|| self.resolve_object_binding_from_expression(source_expression));
+        let mut array_binding = self.global_array_binding(name).cloned();
+        let mut object_binding = self.global_object_binding(name).cloned();
+        if let Some(source_expression) = source_value.as_ref() {
+            if array_binding.is_none() {
+                array_binding = self.resolve_array_binding_from_expression(source_expression);
+            }
+            if object_binding.is_none() {
+                object_binding = self.resolve_object_binding_from_expression(source_expression);
+            }
+        }
         if array_binding.is_none() && object_binding.is_none() {
             return;
         }
@@ -1620,11 +1873,12 @@ impl<'a> FunctionCompiler<'a> {
         global_index: u32,
         state: &PreparedIdentifierStoreState,
     ) -> DirectResult<()> {
-        if (state.is_internal_array_step_binding
-            || state_stores_internal_iterator_step_value(state))
+        if (state.is_internal_iterator_temp || state_stores_internal_iterator_step_value(state))
             && (name.starts_with("__ayy_") || self.backend.lexical_global_binding(name).is_none())
         {
-            if state_stores_internal_iterator_value_temp(state) {
+            if state.is_internal_iterator_temp {
+                self.preserve_internal_iterator_temp_global_metadata(name, state);
+            } else if state_stores_internal_iterator_value_temp(state) {
                 let kind = state.kind.unwrap_or(StaticValueKind::Unknown);
                 self.backend.set_global_binding_kind(name, kind);
                 self.backend
@@ -1641,6 +1895,8 @@ impl<'a> FunctionCompiler<'a> {
                         name.to_string(),
                         state.module_assignment_expression.clone(),
                     );
+            } else {
+                self.clear_global_iterator_step_target_metadata(name);
             }
             self.push_local_get(value_local);
             self.push_global_set(global_index);
@@ -1657,6 +1913,7 @@ impl<'a> FunctionCompiler<'a> {
                 );
                 if static_self_store {
                     self.emit_store_declared_lexical_global_from_local(
+                        name,
                         global_index,
                         binding,
                         value_local,
@@ -1693,7 +1950,12 @@ impl<'a> FunctionCompiler<'a> {
                     self.preserve_identifier_store_global_metadata(name, state, false)?;
                 }
             }
-            self.emit_store_declared_lexical_global_from_local(global_index, binding, value_local)?;
+            self.emit_store_declared_lexical_global_from_local(
+                name,
+                global_index,
+                binding,
+                value_local,
+            )?;
             self.sync_identifier_store_runtime_object_shadows(name, name, state)?;
             if self.emit_force_global_runtime_array_state_from_internal_rest_source(
                 name,
@@ -1746,9 +2008,10 @@ impl<'a> FunctionCompiler<'a> {
         global_index: u32,
         state: &PreparedIdentifierStoreState,
     ) -> DirectResult<()> {
-        if state.is_internal_array_step_binding || state_stores_internal_iterator_step_value(state)
-        {
-            if state_stores_internal_iterator_value_temp(state) {
+        if state.is_internal_iterator_temp || state_stores_internal_iterator_step_value(state) {
+            if state.is_internal_iterator_temp {
+                self.preserve_internal_iterator_temp_global_metadata(name, state);
+            } else if state_stores_internal_iterator_value_temp(state) {
                 let kind = state.kind.unwrap_or(StaticValueKind::Unknown);
                 self.backend.set_global_binding_kind(name, kind);
                 self.backend
@@ -1765,6 +2028,8 @@ impl<'a> FunctionCompiler<'a> {
                         name.to_string(),
                         state.module_assignment_expression.clone(),
                     );
+            } else {
+                self.clear_global_iterator_step_target_metadata(name);
             }
             self.push_local_get(value_local);
             self.push_global_set(global_index);
@@ -1812,8 +2077,12 @@ impl<'a> FunctionCompiler<'a> {
         binding: ImplicitGlobalBinding,
         state: &PreparedIdentifierStoreState,
     ) -> DirectResult<()> {
-        if state.is_internal_array_step_binding || state_stores_internal_iterator_step_value(state)
-        {
+        if state.is_internal_iterator_temp || state_stores_internal_iterator_step_value(state) {
+            if state.is_internal_iterator_temp {
+                self.preserve_internal_iterator_temp_global_metadata(name, state);
+            } else if !state_stores_internal_iterator_value_temp(state) {
+                self.clear_global_iterator_step_target_metadata(name);
+            }
             self.emit_store_implicit_global_from_local(binding, value_local)?;
             self.sync_identifier_store_runtime_object_shadows(name, name, state)?;
             return Ok(());

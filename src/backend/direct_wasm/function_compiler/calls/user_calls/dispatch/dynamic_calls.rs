@@ -5,6 +5,84 @@ impl<'a> FunctionCompiler<'a> {
         user_function.name.starts_with("__ayy_class_ctor_")
     }
 
+    fn binding_is_test262_create_realm_builtin(binding: &LocalFunctionBinding) -> bool {
+        matches!(
+            binding,
+            LocalFunctionBinding::Builtin(function_name)
+                if function_name == TEST262_CREATE_REALM_BUILTIN
+        )
+    }
+
+    fn expression_resolves_to_test262_create_realm_builtin(
+        &self,
+        expression: &Expression,
+        depth: usize,
+    ) -> bool {
+        if depth > 3 {
+            return false;
+        }
+        if self
+            .resolve_function_binding_from_expression(expression)
+            .as_ref()
+            .is_some_and(Self::binding_is_test262_create_realm_builtin)
+        {
+            return true;
+        }
+        if let Expression::Identifier(name) = expression {
+            if self
+                .backend
+                .global_function_binding(name)
+                .as_ref()
+                .is_some_and(|binding| Self::binding_is_test262_create_realm_builtin(binding))
+            {
+                return true;
+            }
+            if let Some((resolved_name, _)) = self.resolve_current_local_binding(name) {
+                if self
+                    .state
+                    .speculation
+                    .static_semantics
+                    .local_function_binding(&resolved_name)
+                    .as_ref()
+                    .is_some_and(|binding| Self::binding_is_test262_create_realm_builtin(binding))
+                {
+                    return true;
+                }
+                if let Some(value) = self
+                    .state
+                    .speculation
+                    .static_semantics
+                    .local_value_binding(&resolved_name)
+                    .filter(|value| !static_expression_matches(value, expression))
+                    && self.expression_resolves_to_test262_create_realm_builtin(value, depth + 1)
+                {
+                    return true;
+                }
+            }
+            if let Some(value) = self
+                .state
+                .speculation
+                .static_semantics
+                .local_value_binding(name)
+                .or_else(|| self.global_value_binding(name))
+                .filter(|value| !static_expression_matches(value, expression))
+                && self.expression_resolves_to_test262_create_realm_builtin(value, depth + 1)
+            {
+                return true;
+            }
+        }
+        if let Some(resolved) = self
+            .resolve_bound_alias_expression(expression)
+            .filter(|resolved| !static_expression_matches(resolved, expression))
+            && self.expression_resolves_to_test262_create_realm_builtin(&resolved, depth + 1)
+        {
+            return true;
+        }
+        let materialized = self.materialize_static_expression(expression);
+        !static_expression_matches(&materialized, expression)
+            && self.expression_resolves_to_test262_create_realm_builtin(&materialized, depth + 1)
+    }
+
     fn dynamic_call_user_functions(&self) -> Vec<UserFunction> {
         self.user_functions()
             .into_iter()
@@ -14,6 +92,25 @@ impl<'a> FunctionCompiler<'a> {
 
     fn is_done_callback_name(name: &str) -> bool {
         name == "$DONE" || name.contains("$DONE")
+    }
+
+    fn expression_is_known_promise_resolver_callee(callee: &Expression) -> bool {
+        matches!(
+            callee,
+            Expression::Identifier(name)
+                if name == "continueExecution"
+                    || name.ends_with("$continueExecution")
+                    || name == "__ayy_promise_with_resolvers_resolve"
+                    || name == "__ayy_promise_with_resolvers_reject"
+        ) || matches!(
+            callee,
+            Expression::Member { property, .. }
+                if matches!(
+                    property.as_ref(),
+                    Expression::String(name)
+                        if name.starts_with("resolve") || name.starts_with("reject")
+                )
+        )
     }
 
     fn expression_is_done_callback_callee(&self, callee: &Expression) -> bool {
@@ -536,6 +633,50 @@ impl<'a> FunctionCompiler<'a> {
             self.emit_done_callback_dynamic_call(arguments)?;
             return Ok(true);
         }
+        if Self::expression_is_known_promise_resolver_callee(callee) {
+            for argument in arguments {
+                match argument {
+                    CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                        self.emit_numeric_expression(expression)?;
+                    }
+                }
+                self.state.emission.output.instructions.push(0x1a);
+            }
+            if self
+                .record_static_module_dependency_promise_resolution_for_resolver(callee, arguments)
+            {
+                self.queue_static_module_dependency_promise_reactions_for_resolver(callee);
+            }
+            self.push_i32_const(JS_UNDEFINED_TAG);
+            return Ok(true);
+        }
+        if self.expression_resolves_to_test262_create_realm_builtin(callee, 0)
+            && self.emit_builtin_call_for_callee(
+                callee,
+                TEST262_CREATE_REALM_BUILTIN,
+                arguments,
+                false,
+            )?
+        {
+            return Ok(true);
+        }
+        if let Expression::Member { object, property } = callee
+            && let Expression::String(property_name) = property.as_ref()
+            && matches!(property_name.as_str(), "then" | "catch" | "finally")
+            && self
+                .resolve_function_binding_from_expression(callee)
+                .as_ref()
+                .is_some_and(|binding| {
+                    matches!(
+                        binding,
+                        LocalFunctionBinding::Builtin(function_name)
+                            if function_name == &format!("Promise.prototype.{property_name}")
+                    )
+                })
+            && self.emit_fulfilled_promise_protocol_member_call(object, property_name, arguments)?
+        {
+            return Ok(true);
+        }
         if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
             eprintln!(
                 "emit_dynamic_user_function_call:start callee={callee:?} arguments={arguments:?}"
@@ -846,16 +987,6 @@ impl<'a> FunctionCompiler<'a> {
         self.emit_numeric_expression(callee)?;
         self.push_local_set(callee_local);
 
-        if self
-            .backend
-            .function_registry
-            .catalog
-            .user_functions
-            .is_empty()
-        {
-            return Ok(false);
-        }
-
         let expanded_arguments = self.expand_call_arguments(arguments);
         let mut call_arguments = Vec::with_capacity(expanded_arguments.len());
         let mut argument_shadow_writebacks = Vec::new();
@@ -895,6 +1026,9 @@ impl<'a> FunctionCompiler<'a> {
             )));
         }
 
+        let constructible_builtin_functions = builtin_function_runtime_entries()
+            .filter(|(function_name, _)| Self::builtin_function_is_constructible(function_name))
+            .collect::<Vec<_>>();
         let constructible_user_functions = self
             .backend
             .function_registry
@@ -904,8 +1038,31 @@ impl<'a> FunctionCompiler<'a> {
             .filter(|user_function| user_function.is_constructible())
             .cloned()
             .collect::<Vec<_>>();
-        if constructible_user_functions.is_empty() {
+        let dispatch_branch_count =
+            constructible_builtin_functions.len() + constructible_user_functions.len();
+        if dispatch_branch_count == 0 {
             return Ok(false);
+        }
+        let derived_super_context = self.current_function_is_derived_constructor()
+            || self.current_lexical_function_captures_this();
+
+        for (function_name, runtime_value) in &constructible_builtin_functions {
+            self.push_local_get(callee_local);
+            self.push_i32_const(*runtime_value);
+            self.push_binary_op(BinaryOp::Equal)?;
+            self.state.emission.output.instructions.push(0x04);
+            self.state.emission.output.instructions.push(I32_TYPE);
+            self.push_control_frame();
+            if derived_super_context {
+                if !self
+                    .emit_derived_constructor_builtin_super_call(function_name, &call_arguments)?
+                {
+                    self.emit_named_error_throw("TypeError")?;
+                }
+            } else if !self.emit_builtin_call(function_name, &call_arguments)? {
+                self.emit_named_error_throw("TypeError")?;
+            }
+            self.state.emission.output.instructions.push(0x05);
         }
 
         for (index, user_function) in constructible_user_functions.iter().enumerate() {
@@ -915,7 +1072,7 @@ impl<'a> FunctionCompiler<'a> {
             self.state.emission.output.instructions.push(0x04);
             self.state.emission.output.instructions.push(I32_TYPE);
             self.push_control_frame();
-            if self.current_function_is_derived_constructor() {
+            if derived_super_context {
                 self.emit_derived_constructor_super_call(user_function, &call_arguments)?;
             } else {
                 self.emit_user_function_call_with_current_new_target_and_this_expression(
@@ -929,7 +1086,10 @@ impl<'a> FunctionCompiler<'a> {
                 self.push_i32_const(JS_UNDEFINED_TAG);
             }
         }
-        for _ in 0..constructible_user_functions.len() {
+        if constructible_user_functions.is_empty() {
+            self.push_i32_const(JS_UNDEFINED_TAG);
+        }
+        for _ in 0..dispatch_branch_count {
             self.state.emission.output.instructions.push(0x0b);
             self.pop_control_frame();
         }

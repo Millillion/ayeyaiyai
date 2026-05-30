@@ -9,6 +9,11 @@ pub(in crate::backend::direct_wasm) fn infer_enumerated_keys_binding_from_expres
         return Some(enumerated_keys_from_array_binding(&array_binding));
     }
     if let Some(object_binding) = resolve_object_binding(expression) {
+        if object_binding_has_module_namespace_marker(&object_binding) {
+            return Some(module_namespace_own_property_names_from_object_binding(
+                &object_binding,
+            ));
+        }
         return Some(enumerated_keys_from_object_binding(&object_binding));
     }
     None
@@ -34,6 +39,13 @@ pub(in crate::backend::direct_wasm) fn infer_own_property_names_binding_from_exp
                 .unwrap_or_default()
         );
     }
+    if let Some(object_binding) = object_binding.as_ref()
+        && object_binding_has_module_namespace_marker(object_binding)
+    {
+        return Some(module_namespace_own_property_names_from_object_binding(
+            object_binding,
+        ));
+    }
     if has_function_property_shape(expression) {
         return Some(own_property_names_from_function_binding(
             object_binding.as_ref(),
@@ -43,6 +55,32 @@ pub(in crate::backend::direct_wasm) fn infer_own_property_names_binding_from_exp
         return Some(own_property_names_from_object_binding(&object_binding));
     }
     None
+}
+
+fn object_binding_has_module_namespace_marker(object_binding: &ObjectValueBinding) -> bool {
+    object_binding
+        .string_properties
+        .iter()
+        .any(|(name, value)| {
+            name == "__ayy$module$namespace" && matches!(value, Expression::Bool(true))
+        })
+}
+
+fn module_namespace_own_property_names_from_object_binding(
+    object_binding: &ObjectValueBinding,
+) -> ArrayValueBinding {
+    let mut names = ordered_object_property_names(object_binding)
+        .into_iter()
+        .filter(|name| !name.starts_with("__ayy$"))
+        .collect::<Vec<_>>();
+    names.sort();
+    names.dedup();
+    ArrayValueBinding {
+        values: names
+            .into_iter()
+            .map(|name| Some(Expression::String(name)))
+            .collect(),
+    }
 }
 
 pub(in crate::backend::direct_wasm) fn infer_own_property_symbols_binding_from_expression(

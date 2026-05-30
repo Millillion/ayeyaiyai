@@ -49,6 +49,392 @@ impl Drop for StaticThisMemberWriteExpressionRootGuard {
 }
 
 impl<'a> FunctionCompiler<'a> {
+    pub(in crate::backend::direct_wasm) fn predeclare_user_function_this_private_initializer_shadow_properties(
+        &mut self,
+        user_function: &UserFunction,
+    ) {
+        let Some(body) = self
+            .resolve_registered_function_declaration(&user_function.name)
+            .map(|function| function.body.clone())
+        else {
+            return;
+        };
+        let mut properties = BTreeSet::new();
+        Self::collect_this_private_initializer_shadow_properties_from_statements(
+            &body,
+            &mut properties,
+        );
+        for property_name in properties {
+            self.predeclare_runtime_shadow_property("this", &property_name);
+            if let Some(Expression::String(marker_name)) =
+                private_brand_marker_property_expression(&Expression::String(property_name))
+            {
+                self.predeclare_runtime_shadow_property("this", &marker_name);
+            }
+        }
+    }
+
+    fn collect_this_private_initializer_shadow_properties_from_statements(
+        statements: &[Statement],
+        properties: &mut BTreeSet<String>,
+    ) {
+        for statement in statements {
+            match statement {
+                Statement::Declaration { body }
+                | Statement::Block { body }
+                | Statement::Labeled { body, .. }
+                | Statement::With { body, .. } => {
+                    Self::collect_this_private_initializer_shadow_properties_from_statements(
+                        body, properties,
+                    );
+                }
+                Statement::If {
+                    condition,
+                    then_branch,
+                    else_branch,
+                } => {
+                    Self::collect_this_private_initializer_shadow_properties_from_expression(
+                        condition, properties,
+                    );
+                    Self::collect_this_private_initializer_shadow_properties_from_statements(
+                        then_branch,
+                        properties,
+                    );
+                    Self::collect_this_private_initializer_shadow_properties_from_statements(
+                        else_branch,
+                        properties,
+                    );
+                }
+                Statement::Try {
+                    body,
+                    catch_setup,
+                    catch_body,
+                    ..
+                } => {
+                    Self::collect_this_private_initializer_shadow_properties_from_statements(
+                        body, properties,
+                    );
+                    Self::collect_this_private_initializer_shadow_properties_from_statements(
+                        catch_setup,
+                        properties,
+                    );
+                    Self::collect_this_private_initializer_shadow_properties_from_statements(
+                        catch_body, properties,
+                    );
+                }
+                Statement::Switch {
+                    discriminant,
+                    cases,
+                    ..
+                } => {
+                    Self::collect_this_private_initializer_shadow_properties_from_expression(
+                        discriminant,
+                        properties,
+                    );
+                    for case in cases {
+                        if let Some(test) = case.test.as_ref() {
+                            Self::collect_this_private_initializer_shadow_properties_from_expression(
+                                test, properties,
+                            );
+                        }
+                        Self::collect_this_private_initializer_shadow_properties_from_statements(
+                            &case.body, properties,
+                        );
+                    }
+                }
+                Statement::For {
+                    init,
+                    condition,
+                    update,
+                    break_hook,
+                    body,
+                    ..
+                } => {
+                    Self::collect_this_private_initializer_shadow_properties_from_statements(
+                        init, properties,
+                    );
+                    for expression in condition
+                        .iter()
+                        .chain(update.iter())
+                        .chain(break_hook.iter())
+                    {
+                        Self::collect_this_private_initializer_shadow_properties_from_expression(
+                            expression, properties,
+                        );
+                    }
+                    Self::collect_this_private_initializer_shadow_properties_from_statements(
+                        body, properties,
+                    );
+                }
+                Statement::While {
+                    condition,
+                    break_hook,
+                    body,
+                    ..
+                }
+                | Statement::DoWhile {
+                    condition,
+                    break_hook,
+                    body,
+                    ..
+                } => {
+                    Self::collect_this_private_initializer_shadow_properties_from_expression(
+                        condition, properties,
+                    );
+                    if let Some(break_hook) = break_hook {
+                        Self::collect_this_private_initializer_shadow_properties_from_expression(
+                            break_hook, properties,
+                        );
+                    }
+                    Self::collect_this_private_initializer_shadow_properties_from_statements(
+                        body, properties,
+                    );
+                }
+                Statement::Var { value, .. }
+                | Statement::Let { value, .. }
+                | Statement::Assign { value, .. }
+                | Statement::Throw(value)
+                | Statement::Return(value)
+                | Statement::Yield { value }
+                | Statement::YieldDelegate { value }
+                | Statement::Expression(value) => {
+                    Self::collect_this_private_initializer_shadow_properties_from_expression(
+                        value, properties,
+                    );
+                }
+                Statement::Print { values } => {
+                    for value in values {
+                        Self::collect_this_private_initializer_shadow_properties_from_expression(
+                            value, properties,
+                        );
+                    }
+                }
+                Statement::AssignMember {
+                    object,
+                    property,
+                    value,
+                } => {
+                    Self::collect_this_private_initializer_shadow_property(
+                        object, property, properties,
+                    );
+                    Self::collect_this_private_initializer_shadow_properties_from_expression(
+                        object, properties,
+                    );
+                    Self::collect_this_private_initializer_shadow_properties_from_expression(
+                        property, properties,
+                    );
+                    Self::collect_this_private_initializer_shadow_properties_from_expression(
+                        value, properties,
+                    );
+                }
+                Statement::Break { .. } | Statement::Continue { .. } => {}
+            }
+        }
+    }
+
+    fn collect_this_private_initializer_shadow_properties_from_expression(
+        expression: &Expression,
+        properties: &mut BTreeSet<String>,
+    ) {
+        match expression {
+            Expression::Array(elements) => {
+                for element in elements {
+                    match element {
+                        ArrayElement::Expression(expression) | ArrayElement::Spread(expression) => {
+                            Self::collect_this_private_initializer_shadow_properties_from_expression(
+                                expression, properties,
+                            );
+                        }
+                    }
+                }
+            }
+            Expression::Object(entries) => {
+                for entry in entries {
+                    match entry {
+                        ObjectEntry::Data { key, value } => {
+                            Self::collect_this_private_initializer_shadow_properties_from_expression(
+                                key, properties,
+                            );
+                            Self::collect_this_private_initializer_shadow_properties_from_expression(
+                                value, properties,
+                            );
+                        }
+                        ObjectEntry::Getter { key, getter } => {
+                            Self::collect_this_private_initializer_shadow_properties_from_expression(
+                                key, properties,
+                            );
+                            Self::collect_this_private_initializer_shadow_properties_from_expression(
+                                getter, properties,
+                            );
+                        }
+                        ObjectEntry::Setter { key, setter } => {
+                            Self::collect_this_private_initializer_shadow_properties_from_expression(
+                                key, properties,
+                            );
+                            Self::collect_this_private_initializer_shadow_properties_from_expression(
+                                setter, properties,
+                            );
+                        }
+                        ObjectEntry::Spread(expression) => {
+                            Self::collect_this_private_initializer_shadow_properties_from_expression(
+                                expression, properties,
+                            );
+                        }
+                    }
+                }
+            }
+            Expression::Member { object, property } => {
+                Self::collect_this_private_initializer_shadow_properties_from_expression(
+                    object, properties,
+                );
+                Self::collect_this_private_initializer_shadow_properties_from_expression(
+                    property, properties,
+                );
+            }
+            Expression::SuperMember { property } => {
+                Self::collect_this_private_initializer_shadow_properties_from_expression(
+                    property, properties,
+                );
+            }
+            Expression::Assign { value, .. }
+            | Expression::Await(value)
+            | Expression::EnumerateKeys(value)
+            | Expression::GetIterator(value)
+            | Expression::IteratorClose(value)
+            | Expression::Unary {
+                expression: value, ..
+            } => {
+                Self::collect_this_private_initializer_shadow_properties_from_expression(
+                    value, properties,
+                );
+            }
+            Expression::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                Self::collect_this_private_initializer_shadow_property(
+                    object, property, properties,
+                );
+                Self::collect_this_private_initializer_shadow_properties_from_expression(
+                    object, properties,
+                );
+                Self::collect_this_private_initializer_shadow_properties_from_expression(
+                    property, properties,
+                );
+                Self::collect_this_private_initializer_shadow_properties_from_expression(
+                    value, properties,
+                );
+            }
+            Expression::AssignSuperMember { property, value } => {
+                Self::collect_this_private_initializer_shadow_properties_from_expression(
+                    property, properties,
+                );
+                Self::collect_this_private_initializer_shadow_properties_from_expression(
+                    value, properties,
+                );
+            }
+            Expression::Binary { left, right, .. } => {
+                Self::collect_this_private_initializer_shadow_properties_from_expression(
+                    left, properties,
+                );
+                Self::collect_this_private_initializer_shadow_properties_from_expression(
+                    right, properties,
+                );
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                Self::collect_this_private_initializer_shadow_properties_from_expression(
+                    condition, properties,
+                );
+                Self::collect_this_private_initializer_shadow_properties_from_expression(
+                    then_expression,
+                    properties,
+                );
+                Self::collect_this_private_initializer_shadow_properties_from_expression(
+                    else_expression,
+                    properties,
+                );
+            }
+            Expression::Sequence(expressions) => {
+                for expression in expressions {
+                    Self::collect_this_private_initializer_shadow_properties_from_expression(
+                        expression, properties,
+                    );
+                }
+            }
+            Expression::Call { callee, arguments }
+            | Expression::SuperCall { callee, arguments }
+            | Expression::New { callee, arguments } => {
+                Self::collect_this_private_initializer_define_property_shadow_property(
+                    callee, arguments, properties,
+                );
+                Self::collect_this_private_initializer_shadow_properties_from_expression(
+                    callee, properties,
+                );
+                for argument in arguments {
+                    Self::collect_this_private_initializer_shadow_properties_from_expression(
+                        argument.expression(),
+                        properties,
+                    );
+                }
+            }
+            Expression::Update { .. }
+            | Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined
+            | Expression::NewTarget
+            | Expression::Identifier(_)
+            | Expression::This
+            | Expression::Sent => {}
+        }
+    }
+
+    fn collect_this_private_initializer_define_property_shadow_property(
+        callee: &Expression,
+        arguments: &[CallArgument],
+        properties: &mut BTreeSet<String>,
+    ) {
+        let Expression::Member { object, property } = callee else {
+            return;
+        };
+        if !matches!(object.as_ref(), Expression::Identifier(name) if name == "Object")
+            || !matches!(property.as_ref(), Expression::String(name) if name == "defineProperty")
+        {
+            return;
+        }
+        let [
+            CallArgument::Expression(target),
+            CallArgument::Expression(property),
+            ..,
+        ] = arguments
+        else {
+            return;
+        };
+        Self::collect_this_private_initializer_shadow_property(target, property, properties);
+    }
+
+    fn collect_this_private_initializer_shadow_property(
+        object: &Expression,
+        property: &Expression,
+        properties: &mut BTreeSet<String>,
+    ) {
+        let target_is_this = matches!(object, Expression::This)
+            || matches!(object, Expression::Identifier(name) if name == "this");
+        let Expression::String(property_name) = property else {
+            return;
+        };
+        if target_is_this && property_name.starts_with("__ayy$private$") {
+            properties.insert(property_name.clone());
+        }
+    }
+
     fn receiver_value_is_class_object(value: &Expression) -> bool {
         match value {
             Expression::Identifier(name) => {

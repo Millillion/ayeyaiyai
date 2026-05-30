@@ -121,6 +121,23 @@ fn accepts_classic_for_headers_with_two_semicolons_across_newlines() {
 }
 
 #[test]
+fn parse_module_goal_rejects_named_export_without_statement_boundary() {
+    let source = "export {} null;";
+
+    assert!(
+        frontend::parse_module_goal(source).is_err(),
+        "source should fail to parse:\n{source}"
+    );
+}
+
+#[test]
+fn parse_module_goal_accepts_named_export_with_asi_boundary() {
+    for source in ["export {}\nnull;", "export {}; null;"] {
+        frontend::parse_module_goal(source).expect("source should parse");
+    }
+}
+
+#[test]
 fn parses_top_level_global_this_update_as_binding_update() {
     let program = frontend::parse(
         r#"

@@ -99,15 +99,8 @@ impl DirectWasmCompiler {
         object_state: &HashMap<String, ObjectValueBinding>,
         overwrite_existing: bool,
     ) {
-        let constructor_binding = self
-            .resolve_function_binding_from_expression_with_aliases(callee, aliases)
-            .or_else(|| {
-                let Expression::Identifier(name) = callee else {
-                    return None;
-                };
-                let resolved = self.resolve_static_class_init_local_alias_expression(name)?;
-                self.resolve_function_binding_from_expression_with_aliases(&resolved, aliases)
-            });
+        let constructor_binding =
+            self.resolve_parameter_analysis_constructor_binding(callee, aliases);
         let Some(LocalFunctionBinding::User(called_function_name)) = constructor_binding else {
             return;
         };

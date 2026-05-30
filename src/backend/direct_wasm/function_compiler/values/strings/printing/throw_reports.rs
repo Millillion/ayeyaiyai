@@ -8,6 +8,22 @@ impl<'a> FunctionCompiler<'a> {
         self.push_i32_const(0);
         self.push_local_set(matched_local);
 
+        self.push_local_get(self.state.runtime.throws.throw_value_local);
+        self.push_i32_const(TEST262_ERROR_RUNTIME_VALUE);
+        self.push_binary_op(BinaryOp::Equal)?;
+        self.state.emission.output.instructions.push(0x04);
+        self.state
+            .emission
+            .output
+            .instructions
+            .push(EMPTY_BLOCK_TYPE);
+        self.push_control_frame();
+        self.emit_stderr_string("Test262Error\n")?;
+        self.push_i32_const(1);
+        self.push_local_set(matched_local);
+        self.state.emission.output.instructions.push(0x0b);
+        self.pop_control_frame();
+
         for name in NATIVE_ERROR_NAMES {
             let Some(value) = native_error_runtime_value(name) else {
                 continue;

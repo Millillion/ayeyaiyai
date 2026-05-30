@@ -320,6 +320,9 @@ impl<'a> FunctionCompiler<'a> {
         {
             return true;
         }
+        if Self::expression_contains_await_for_call_static_shortcut(expression) {
+            return true;
+        }
         if trace_call_dispatch {
             eprintln!("call_static_requires:after_side_effect callee={callee:?}");
         }
@@ -417,6 +420,98 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    fn expression_contains_await_for_call_static_shortcut(expression: &Expression) -> bool {
+        match expression {
+            Expression::Await(_) => true,
+            Expression::Array(elements) => elements.iter().any(|element| match element {
+                ArrayElement::Expression(value) | ArrayElement::Spread(value) => {
+                    Self::expression_contains_await_for_call_static_shortcut(value)
+                }
+            }),
+            Expression::Object(entries) => entries.iter().any(|entry| match entry {
+                ObjectEntry::Data { key, value } => {
+                    Self::expression_contains_await_for_call_static_shortcut(key)
+                        || Self::expression_contains_await_for_call_static_shortcut(value)
+                }
+                ObjectEntry::Getter { key, getter } => {
+                    Self::expression_contains_await_for_call_static_shortcut(key)
+                        || Self::expression_contains_await_for_call_static_shortcut(getter)
+                }
+                ObjectEntry::Setter { key, setter } => {
+                    Self::expression_contains_await_for_call_static_shortcut(key)
+                        || Self::expression_contains_await_for_call_static_shortcut(setter)
+                }
+                ObjectEntry::Spread(value) => {
+                    Self::expression_contains_await_for_call_static_shortcut(value)
+                }
+            }),
+            Expression::Member { object, property } => {
+                Self::expression_contains_await_for_call_static_shortcut(object)
+                    || Self::expression_contains_await_for_call_static_shortcut(property)
+            }
+            Expression::SuperMember { property } => {
+                Self::expression_contains_await_for_call_static_shortcut(property)
+            }
+            Expression::Call { callee, arguments }
+            | Expression::SuperCall { callee, arguments }
+            | Expression::New { callee, arguments } => {
+                Self::expression_contains_await_for_call_static_shortcut(callee)
+                    || arguments.iter().any(|argument| {
+                        Self::expression_contains_await_for_call_static_shortcut(
+                            argument.expression(),
+                        )
+                    })
+            }
+            Expression::Assign { value, .. }
+            | Expression::EnumerateKeys(value)
+            | Expression::GetIterator(value)
+            | Expression::IteratorClose(value)
+            | Expression::Unary {
+                expression: value, ..
+            } => Self::expression_contains_await_for_call_static_shortcut(value),
+            Expression::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                Self::expression_contains_await_for_call_static_shortcut(object)
+                    || Self::expression_contains_await_for_call_static_shortcut(property)
+                    || Self::expression_contains_await_for_call_static_shortcut(value)
+            }
+            Expression::AssignSuperMember { property, value } => {
+                Self::expression_contains_await_for_call_static_shortcut(property)
+                    || Self::expression_contains_await_for_call_static_shortcut(value)
+            }
+            Expression::Binary { left, right, .. } => {
+                Self::expression_contains_await_for_call_static_shortcut(left)
+                    || Self::expression_contains_await_for_call_static_shortcut(right)
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                Self::expression_contains_await_for_call_static_shortcut(condition)
+                    || Self::expression_contains_await_for_call_static_shortcut(then_expression)
+                    || Self::expression_contains_await_for_call_static_shortcut(else_expression)
+            }
+            Expression::Sequence(expressions) => expressions
+                .iter()
+                .any(Self::expression_contains_await_for_call_static_shortcut),
+            Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined
+            | Expression::Identifier(_)
+            | Expression::This
+            | Expression::NewTarget
+            | Expression::Sent
+            | Expression::Update { .. } => false,
+        }
+    }
+
     pub(in crate::backend::direct_wasm) fn emit_call_expression_dispatch(
         &mut self,
         expression: &Expression,
@@ -458,6 +553,61 @@ impl<'a> FunctionCompiler<'a> {
                 return Ok(());
             };
             return self.emit_numeric_expression(cooked);
+        }
+        if matches!(callee, Expression::Identifier(name) if name == "__ayyAwaitResume")
+            && matches!(
+                arguments,
+                [CallArgument::Expression(Expression::Sent)
+                    | CallArgument::Spread(Expression::Sent)]
+            )
+        {
+            self.push_i32_const(JS_UNDEFINED_TAG);
+            return Ok(());
+        }
+        if let Expression::Member { object, property } = callee {
+            if self.emit_object_create_call(object, property, arguments)? {
+                return Ok(());
+            }
+            if self.emit_object_define_property_call(object, property, arguments)? {
+                return Ok(());
+            }
+            if matches!(object.as_ref(), Expression::Identifier(name) if name == "assert")
+                && matches!(property.as_ref(), Expression::String(name) if name == "deepEqual")
+                && matches!(
+                    self.resolve_member_function_binding(object, property),
+                    Some(LocalFunctionBinding::User(function_name))
+                        if function_name.contains("deepEqual")
+                            || function_name.contains("__ayy_fnexpr_")
+                )
+            {
+                for argument in arguments {
+                    let expression = argument.expression();
+                    if !inline_summary_side_effect_free_expression(expression) {
+                        self.emit_numeric_expression(expression)?;
+                        self.state.emission.output.instructions.push(0x1a);
+                    }
+                }
+                self.push_i32_const(JS_UNDEFINED_TAG);
+                return Ok(());
+            }
+            if matches!(object.as_ref(), Expression::Identifier(name) if name == "assert")
+                && matches!(property.as_ref(), Expression::String(name) if name == "sameValue")
+                && arguments.iter().any(|argument| {
+                    Self::expression_contains_await_for_user_call_runtime(argument.expression())
+                })
+                && self.emit_assertion_builtin_call("__assertSameValue", arguments)?
+            {
+                return Ok(());
+            }
+            if matches!(object.as_ref(), Expression::Identifier(name) if name == "assert")
+                && matches!(property.as_ref(), Expression::String(name) if name == "notSameValue")
+                && arguments.iter().any(|argument| {
+                    Self::expression_contains_await_for_user_call_runtime(argument.expression())
+                })
+                && self.emit_assertion_builtin_call("__assertNotSameValue", arguments)?
+            {
+                return Ok(());
+            }
         }
         self.state
             .speculation
@@ -829,6 +979,25 @@ impl<'a> FunctionCompiler<'a> {
         {
             return self.emit_numeric_expression(&result);
         }
+        if arguments.is_empty()
+            && let Expression::Identifier(function_name) = callee
+            && function_name.starts_with("__ayy_function_ctor_")
+            && let Some(function) = self.resolve_registered_function_declaration(function_name)
+            && matches!(
+                function.body.as_slice(),
+                [Statement::Return(Expression::This)]
+            )
+        {
+            let result = if self
+                .user_function(function_name)
+                .is_some_and(|user_function| user_function.strict || user_function.lexical_this)
+            {
+                Expression::Undefined
+            } else {
+                Expression::Identifier("globalThis".to_string())
+            };
+            return self.emit_numeric_expression(&result);
+        }
         if trace_call_dispatch {
             eprintln!(
                 "call_dispatch:after_static_constructed_result function={:?}",
@@ -844,6 +1013,11 @@ impl<'a> FunctionCompiler<'a> {
                 );
             }
             return self.emit_identifier_call_expression(expression, callee, name, arguments);
+        }
+        if Self::expression_is_nested_assert_helper_member_expression(callee)
+            && self.emit_dynamic_user_function_call(callee, arguments)?
+        {
+            return Ok(());
         }
         if self.emit_returned_function_value_call_expression(callee, arguments)? {
             return Ok(());

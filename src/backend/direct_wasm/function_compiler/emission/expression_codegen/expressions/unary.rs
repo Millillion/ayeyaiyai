@@ -445,7 +445,7 @@ impl<'a> FunctionCompiler<'a> {
         expression: &Expression,
     ) -> DirectResult<()> {
         match op {
-            UnaryOp::TypeOf => self.emit_typeof_expression(expression),
+            UnaryOp::TypeOf => self.emit_typeof_value_expression(expression),
             UnaryOp::Not => {
                 self.emit_truthy_expression(expression)?;
                 self.state.emission.output.instructions.push(0x45);

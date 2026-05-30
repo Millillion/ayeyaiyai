@@ -1,6 +1,50 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn module_index_from_init_function_name(name: &str) -> Option<usize> {
+        name.strip_prefix("__ayy_module_init_")?.parse().ok()
+    }
+
+    fn emit_cache_sync_module_init_throw_if_pending(
+        &mut self,
+        user_function: &UserFunction,
+    ) -> DirectResult<()> {
+        let Some(module_index) = Self::module_index_from_init_function_name(&user_function.name)
+        else {
+            return Ok(());
+        };
+        self.push_global_get(THROW_TAG_GLOBAL_INDEX);
+        self.push_i32_const(0);
+        self.push_binary_op(BinaryOp::NotEqual)?;
+        self.state.emission.output.instructions.push(0x04);
+        self.state
+            .emission
+            .output
+            .instructions
+            .push(EMPTY_BLOCK_TYPE);
+        self.push_control_frame();
+
+        let error_local = self.allocate_temp_local();
+        self.push_global_get(THROW_VALUE_GLOBAL_INDEX);
+        self.push_local_set(error_local);
+        self.emit_store_identifier_from_local(
+            &format!("__ayy_module_error_{module_index}"),
+            error_local,
+        )?;
+
+        let status_local = self.allocate_temp_local();
+        self.push_i32_const(3);
+        self.push_local_set(status_local);
+        self.emit_store_identifier_from_local(
+            &format!("__ayy_module_status_{module_index}"),
+            status_local,
+        )?;
+
+        self.state.emission.output.instructions.push(0x0b);
+        self.pop_control_frame();
+        Ok(())
+    }
+
     pub(in crate::backend::direct_wasm) fn emit_prepared_user_function_call_with_new_target_and_this(
         &mut self,
         user_function: &UserFunction,
@@ -55,15 +99,27 @@ impl<'a> FunctionCompiler<'a> {
                 enable_static_snapshot
             );
         }
+        let module_init_call = user_function.name.starts_with("__ayy_module_init_");
         self.sync_static_with_scope_member_assignment_effects(user_function);
         let runtime_only_parameter_iterator_call = user_function.has_lowered_pattern_parameters()
             || !self
                 .user_function_parameter_iterator_consumption_indices(user_function)
                 .is_empty();
+        let arguments_contain_await = expanded_arguments
+            .iter()
+            .any(Self::expression_contains_await_for_user_call_runtime);
+        let runtime_only_promise_chain_call = !enable_static_snapshot
+            && self.registered_function_body_mentions_promise_like_chain(&user_function.name);
+        let skip_static_call_effect_analysis =
+            runtime_only_parameter_iterator_call || module_init_call || arguments_contain_await;
         if trace_user_calls {
             eprintln!(
-                "prepared_user_call:after_runtime_only target={} runtime_only={}",
-                user_function.name, runtime_only_parameter_iterator_call
+                "prepared_user_call:after_runtime_only target={} runtime_only={} promise_chain_runtime_only={} await_args={} skip_static_effects={}",
+                user_function.name,
+                runtime_only_parameter_iterator_call,
+                runtime_only_promise_chain_call,
+                arguments_contain_await,
+                skip_static_call_effect_analysis
             );
         }
         let allow_static_snapshot = !self
@@ -107,6 +163,7 @@ impl<'a> FunctionCompiler<'a> {
         }
         let static_result = if enable_static_snapshot
             && !runtime_only_parameter_iterator_call
+            && !arguments_contain_await
             && allow_static_snapshot
             && new_target_value == JS_UNDEFINED_TAG
         {
@@ -134,6 +191,7 @@ impl<'a> FunctionCompiler<'a> {
             .static_semantics
             .last_bound_user_function_call = (enable_static_snapshot
             && !runtime_only_parameter_iterator_call
+            && !arguments_contain_await
             && allow_static_snapshot)
             .then(|| BoundUserFunctionCallSnapshot {
                 function_name: user_function.name.clone(),
@@ -144,7 +202,7 @@ impl<'a> FunctionCompiler<'a> {
                     .clone()
                     .unwrap_or_else(|| capture_snapshot.clone()),
             });
-        let assigned_nonlocal_bindings = if runtime_only_parameter_iterator_call {
+        let assigned_nonlocal_bindings = if skip_static_call_effect_analysis {
             HashSet::new()
         } else {
             self.collect_user_function_assigned_nonlocal_bindings(user_function)
@@ -156,7 +214,7 @@ impl<'a> FunctionCompiler<'a> {
                 assigned_nonlocal_bindings.len()
             );
         }
-        let mut call_effect_nonlocal_bindings = if runtime_only_parameter_iterator_call {
+        let mut call_effect_nonlocal_bindings = if skip_static_call_effect_analysis {
             HashSet::new()
         } else {
             self.collect_user_function_call_effect_nonlocal_bindings(user_function)
@@ -168,7 +226,7 @@ impl<'a> FunctionCompiler<'a> {
                 call_effect_nonlocal_bindings.len()
             );
         }
-        if !runtime_only_parameter_iterator_call {
+        if !skip_static_call_effect_analysis {
             call_effect_nonlocal_bindings.extend(
                 self.collect_user_function_argument_call_effect_nonlocal_bindings(
                     user_function,
@@ -183,13 +241,13 @@ impl<'a> FunctionCompiler<'a> {
                 call_effect_nonlocal_bindings.len()
             );
         }
-        let assigned_nonlocal_binding_results = if runtime_only_parameter_iterator_call {
+        let assigned_nonlocal_binding_results = if skip_static_call_effect_analysis {
             None
         } else {
             self.assigned_nonlocal_binding_results(&user_function.name)
                 .cloned()
         };
-        let additional_call_effect_nonlocal_bindings = if runtime_only_parameter_iterator_call {
+        let additional_call_effect_nonlocal_bindings = if skip_static_call_effect_analysis {
             HashSet::new()
         } else {
             let mut names = call_effect_nonlocal_bindings
@@ -203,7 +261,7 @@ impl<'a> FunctionCompiler<'a> {
             ));
             names
         };
-        let updated_nonlocal_bindings = if runtime_only_parameter_iterator_call {
+        let updated_nonlocal_bindings = if skip_static_call_effect_analysis {
             HashSet::new()
         } else {
             self.collect_user_function_updated_nonlocal_bindings(user_function)
@@ -235,7 +293,7 @@ impl<'a> FunctionCompiler<'a> {
             self.push_global_set(CURRENT_THIS_GLOBAL_INDEX);
             Some(saved_local)
         };
-        let saved_this_shadow_owner = if user_function.lexical_this {
+        let saved_this_shadow_owner = if user_function.lexical_this || module_init_call {
             None
         } else {
             self.prepare_user_function_runtime_this_shadow_state(&this_expression)?
@@ -256,12 +314,45 @@ impl<'a> FunctionCompiler<'a> {
             user_function,
             expanded_arguments,
             updated_bindings.as_ref(),
+            runtime_only_promise_chain_call,
         )?;
         if trace_user_calls {
             eprintln!(
                 "prepared_user_call:after_runtime_call target={} return_local={}",
                 user_function.name, return_value_local
             );
+        }
+        if module_init_call {
+            self.restore_user_function_capture_bindings(&prepared_capture_bindings);
+            if let Some(saved_new_target_local) = saved_new_target_local {
+                self.push_local_get(saved_new_target_local);
+                self.push_global_set(CURRENT_NEW_TARGET_GLOBAL_INDEX);
+            }
+            if let Some(saved_this_local) = saved_this_local {
+                self.push_local_get(saved_this_local);
+                self.push_global_set(CURRENT_THIS_GLOBAL_INDEX);
+            }
+            if user_function.is_async() {
+                self.push_global_get(THROW_TAG_GLOBAL_INDEX);
+                self.push_i32_const(0);
+                self.push_binary_op(BinaryOp::NotEqual)?;
+                self.state.emission.output.instructions.push(0x04);
+                self.state
+                    .emission
+                    .output
+                    .instructions
+                    .push(EMPTY_BLOCK_TYPE);
+                self.push_control_frame();
+                self.clear_global_throw_state();
+                self.state.emission.output.instructions.push(0x0b);
+                self.pop_control_frame();
+                self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
+            } else {
+                self.emit_cache_sync_module_init_throw_if_pending(user_function)?;
+                self.emit_check_global_throw_for_user_call()?;
+                self.push_local_get(return_value_local);
+            }
+            return Ok(());
         }
         let receiver_updated_via_parameter_writeback = self
             .receiver_shadow_updated_via_parameter_writebacks(

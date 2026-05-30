@@ -357,6 +357,14 @@ impl<'a> FunctionCompiler<'a> {
                     &shadow_binding_name,
                     &materialized_value,
                 );
+                if let Some(array_binding) =
+                    self.resolve_array_binding_from_expression(&materialized_value)
+                {
+                    self.emit_force_global_runtime_array_state_from_binding(
+                        &shadow_binding_name,
+                        &array_binding,
+                    )?;
+                }
                 self.backend
                     .shared_global_semantics
                     .values

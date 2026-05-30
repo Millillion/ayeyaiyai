@@ -439,6 +439,7 @@ impl Lowerer {
     pub(crate) fn lower_dynamic_import_expression(
         &mut self,
         call: &swc_ecma_ast::CallExpr,
+        phase: swc_ecma_ast::ImportPhase,
     ) -> Result<Expression> {
         ensure!(
             matches!(call.args.len(), 1 | 2),
@@ -483,6 +484,14 @@ impl Lowerer {
                         value: Expression::Number(*module_index as f64),
                     })
                     .collect(),
+            )));
+        }
+        if phase == swc_ecma_ast::ImportPhase::Defer {
+            while arguments.len() < 3 {
+                arguments.push(CallArgument::Expression(Expression::Undefined));
+            }
+            arguments.push(CallArgument::Expression(Expression::String(
+                "__ayy$importPhase$defer".to_string(),
             )));
         }
 

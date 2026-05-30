@@ -149,6 +149,21 @@ impl<'a> FunctionCompiler<'a> {
         None
     }
 
+    fn resolve_module_namespace_live_binding_member_initializer(
+        &self,
+        object: &Expression,
+        property: &Expression,
+    ) -> Option<(String, Expression)> {
+        let Expression::Identifier(name) = object else {
+            return None;
+        };
+        let module_index = Self::module_index_from_namespace_like_identifier(name)?;
+        self.resolve_static_dynamic_import_namespace_live_binding_member_binding_initializer_value(
+            module_index,
+            property,
+        )
+    }
+
     fn expression_is_static_script_global_object_reference(&self, object: &Expression) -> bool {
         matches!(object, Expression::Identifier(name) if name == "globalThis" && self.is_unshadowed_builtin_identifier(name))
             || (self.state.speculation.execution_context.top_level_function
@@ -370,6 +385,29 @@ impl<'a> FunctionCompiler<'a> {
             &materialized_property,
         ) {
             return None;
+        }
+        if let Some(live_value) =
+            self.resolve_module_namespace_live_binding_member_value(object, &materialized_property)
+        {
+            let binding = self
+                .resolve_function_binding_from_expression(&live_value)
+                .or_else(|| {
+                    self.resolve_module_namespace_live_binding_member_initializer(
+                        object,
+                        &materialized_property,
+                    )
+                    .and_then(|(_, initializer)| {
+                        self.resolve_function_binding_from_expression(&initializer)
+                    })
+                });
+            if trace_member_bindings {
+                eprintln!(
+                    "member_binding:module_namespace_live object={object:?} property={materialized_property:?} value={live_value:?} binding={binding:?}"
+                );
+            }
+            if let Some(binding) = binding {
+                return Some(binding);
+            }
         }
         if let Some(binding) = self
             .resolve_script_global_object_member_function_binding(object, &materialized_property)
@@ -726,6 +764,34 @@ impl<'a> FunctionCompiler<'a> {
         {
             return Some(capture_slots);
         }
+        let materialized_property = self.materialize_static_expression(property);
+        if let Some(live_value) =
+            self.resolve_module_namespace_live_binding_member_value(object, &materialized_property)
+        {
+            let capture_slots = self
+                .resolve_function_expression_capture_slots(&live_value)
+                .or_else(|| {
+                    self.resolve_module_namespace_live_binding_member_initializer(
+                        object,
+                        &materialized_property,
+                    )
+                    .and_then(|(binding_name, initializer)| {
+                        self.resolve_module_namespace_live_function_capture_slots(
+                            &binding_name,
+                            &initializer,
+                            &live_value,
+                        )
+                    })
+                });
+            if trace_capture_bindings {
+                eprintln!(
+                    "capture_slots module_namespace_live object={object:?} property={materialized_property:?} value={live_value:?} slots={capture_slots:?}"
+                );
+            }
+            if let Some(capture_slots) = capture_slots {
+                return Some(capture_slots);
+            }
+        }
         if let Expression::Identifier(name) = object
             && let Some(key) = self.identifier_own_member_function_binding_key(name, property)
         {
@@ -738,6 +804,11 @@ impl<'a> FunctionCompiler<'a> {
                 }
                 let capture_slots =
                     self.complete_member_function_capture_slots_from_binding(&key, capture_slots);
+                let capture_slots = self.merge_member_function_capture_slots_from_alias_keys(
+                    object,
+                    &key,
+                    capture_slots,
+                );
                 return Some(self.resolve_member_function_capture_slot_names(capture_slots));
             }
         }
@@ -763,6 +834,11 @@ impl<'a> FunctionCompiler<'a> {
             }
             let capture_slots =
                 self.complete_member_function_capture_slots_from_binding(&key, capture_slots);
+            let capture_slots = self.merge_member_function_capture_slots_from_alias_keys(
+                object,
+                &key,
+                capture_slots,
+            );
             return Some(self.resolve_member_function_capture_slot_names(capture_slots));
         }
         if let Expression::Member {
@@ -786,11 +862,15 @@ impl<'a> FunctionCompiler<'a> {
                 }
                 let capture_slots = self
                     .complete_member_function_capture_slots_from_binding(&alias_key, capture_slots);
+                let capture_slots = self.merge_member_function_capture_slots_from_alias_keys(
+                    object,
+                    &alias_key,
+                    capture_slots,
+                );
                 return Some(self.resolve_member_function_capture_slot_names(capture_slots));
             }
         }
 
-        let materialized_property = self.materialize_static_expression(property);
         if let Some(capture_slots) = self.resolve_static_object_member_function_value_capture_slots(
             object,
             &materialized_property,
@@ -830,6 +910,114 @@ impl<'a> FunctionCompiler<'a> {
             eprintln!("capture_slots member_miss key={key:?}");
         }
         None
+    }
+
+    fn member_function_capture_slot_alias_keys(
+        &self,
+        object: &Expression,
+        key: &MemberFunctionBindingKey,
+    ) -> Vec<MemberFunctionBindingKey> {
+        let mut keys = Vec::new();
+        let mut push_key = |target: MemberFunctionBindingTarget| {
+            let alias_key = MemberFunctionBindingKey {
+                target,
+                property: key.property.clone(),
+            };
+            if alias_key != *key && !keys.iter().any(|existing| existing == &alias_key) {
+                keys.push(alias_key);
+            }
+        };
+
+        match object {
+            Expression::New { callee, .. } => {
+                if let Expression::Identifier(name) = callee.as_ref() {
+                    push_key(MemberFunctionBindingTarget::Prototype(name.clone()));
+                    push_key(MemberFunctionBindingTarget::Identifier(name.clone()));
+                }
+            }
+            Expression::Member { object, property } if matches!(property.as_ref(), Expression::String(name) if name == "prototype") => {
+                if let Expression::Identifier(name) = object.as_ref() {
+                    push_key(MemberFunctionBindingTarget::Prototype(name.clone()));
+                    push_key(MemberFunctionBindingTarget::Identifier(name.clone()));
+                }
+            }
+            Expression::Identifier(name) => {
+                push_key(MemberFunctionBindingTarget::Identifier(name.clone()));
+            }
+            _ => {}
+        }
+
+        keys
+    }
+
+    fn merge_member_function_capture_slots_from_alias_keys(
+        &self,
+        object: &Expression,
+        key: &MemberFunctionBindingKey,
+        mut capture_slots: BTreeMap<String, String>,
+    ) -> BTreeMap<String, String> {
+        let trace_capture_bindings = std::env::var_os("AYY_TRACE_CAPTURE_BINDINGS").is_some();
+        let key_binding = self.member_function_binding_entry(key);
+        for alias_key in self.member_function_capture_slot_alias_keys(object, key) {
+            let alias_binding = self.member_function_binding_entry(&alias_key);
+            if let (Some(key_binding), Some(alias_binding)) =
+                (key_binding.as_ref(), alias_binding.as_ref())
+                && key_binding != alias_binding
+            {
+                if trace_capture_bindings {
+                    eprintln!(
+                        "capture_slots member_alias_skip key={alias_key:?} binding={alias_binding:?} target_binding={key_binding:?}"
+                    );
+                }
+                continue;
+            }
+            let Some(alias_slots) = self.member_function_capture_slots_entry(&alias_key) else {
+                if trace_capture_bindings {
+                    eprintln!("capture_slots member_alias_miss key={alias_key:?}");
+                }
+                continue;
+            };
+            if trace_capture_bindings {
+                eprintln!(
+                    "capture_slots member_alias_merge key={alias_key:?} slots={alias_slots:?}"
+                );
+            }
+            for (capture_name, slot_name) in alias_slots {
+                capture_slots.entry(capture_name).or_insert(slot_name);
+            }
+        }
+        capture_slots
+    }
+
+    fn resolve_module_namespace_live_function_capture_slots(
+        &self,
+        binding_name: &str,
+        initializer: &Expression,
+        live_value: &Expression,
+    ) -> Option<BTreeMap<String, String>> {
+        let Expression::Identifier(live_slot_name) = live_value else {
+            return self.resolve_function_expression_capture_slots(initializer);
+        };
+        let Some(LocalFunctionBinding::User(function_name)) =
+            self.resolve_function_binding_from_expression(initializer)
+        else {
+            return self.resolve_function_expression_capture_slots(initializer);
+        };
+        let capture_bindings = self.user_function_capture_bindings(&function_name)?;
+        let mut capture_slots = self
+            .resolve_function_expression_capture_slots(initializer)
+            .unwrap_or_default();
+        for capture_name in capture_bindings.keys() {
+            if capture_name == binding_name
+                || scoped_binding_source_name(capture_name)
+                    .is_some_and(|source_name| source_name == binding_name)
+                || scoped_binding_source_name(binding_name)
+                    .is_some_and(|source_name| source_name == capture_name)
+            {
+                capture_slots.insert(capture_name.clone(), live_slot_name.clone());
+            }
+        }
+        (!capture_slots.is_empty()).then_some(capture_slots)
     }
 
     fn complete_member_function_capture_slots_from_binding(

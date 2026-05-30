@@ -17,6 +17,40 @@ impl<'b, 'a> FunctionStaticEvalContext<'b, 'a> {
             .resolve_array_binding_from_expression(expression)
     }
 
+    pub(in crate::backend::direct_wasm) fn resolve_static_typed_array_values(
+        &self,
+        expression: &Expression,
+    ) -> Option<ArrayValueBinding> {
+        self.compiler
+            .static_typed_array_values_from_expression(expression)
+    }
+
+    pub(in crate::backend::direct_wasm) fn namespace_like_module_index(
+        &self,
+        expression: &Expression,
+    ) -> Option<usize> {
+        let Expression::Identifier(name) = expression else {
+            return None;
+        };
+        FunctionCompiler::module_index_from_namespace_like_identifier(name)
+    }
+
+    pub(in crate::backend::direct_wasm) fn resolve_static_dynamic_import_namespace_own_property_names_binding(
+        &self,
+        module_index: usize,
+    ) -> Option<ArrayValueBinding> {
+        self.compiler
+            .resolve_static_dynamic_import_namespace_own_property_names_binding(module_index)
+    }
+
+    pub(in crate::backend::direct_wasm) fn resolve_static_dynamic_import_namespace_own_property_symbols_binding(
+        &self,
+        module_index: usize,
+    ) -> ArrayValueBinding {
+        self.compiler
+            .resolve_static_dynamic_import_namespace_own_property_symbols_binding(module_index)
+    }
+
     pub(in crate::backend::direct_wasm) fn resolve_object_binding(
         &self,
         expression: &Expression,

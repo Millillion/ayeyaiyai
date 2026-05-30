@@ -40,6 +40,11 @@ impl<'a> FunctionCompiler<'a> {
         callee: &Expression,
         arguments: &[CallArgument],
     ) -> DirectResult<()> {
+        if std::env::var_os("AYY_TRACE_CONSTRUCT_CALLS").is_some() {
+            eprintln!(
+                "construct_call:non_constructible_throw callee={callee:?} arguments={arguments:?}"
+            );
+        }
         self.emit_numeric_expression(callee)?;
         self.state.emission.output.instructions.push(0x1a);
         for argument in arguments {
@@ -167,21 +172,6 @@ impl<'a> FunctionCompiler<'a> {
             self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
             return Ok(());
         }
-        if self.expression_is_dynamic_import_promise_new_callee(callee, 0)
-            || self.expression_is_known_promise_instance_for_instanceof(callee)
-            || self
-                .resolve_static_primitive_expression_with_context(
-                    callee,
-                    self.current_function_name(),
-                )
-                .is_some()
-            || self.resolve_static_boxed_primitive_value(callee).is_some()
-            || self.expression_is_known_non_constructible_object_new_callee(callee)
-        {
-            self.emit_non_constructible_new_expression_throw(callee, arguments)?;
-            return Ok(());
-        }
-
         let new_expression = Expression::New {
             callee: Box::new(callee.clone()),
             arguments: arguments.to_vec(),
@@ -202,6 +192,20 @@ impl<'a> FunctionCompiler<'a> {
                 }
             }
             self.push_i32_const(JS_TYPEOF_FUNCTION_TAG);
+            return Ok(());
+        }
+        if self.expression_is_dynamic_import_promise_new_callee(callee, 0)
+            || self.expression_is_known_promise_instance_for_instanceof(callee)
+            || self
+                .resolve_static_primitive_expression_with_context(
+                    callee,
+                    self.current_function_name(),
+                )
+                .is_some()
+            || self.resolve_static_boxed_primitive_value(callee).is_some()
+            || self.expression_is_known_non_constructible_object_new_callee(callee)
+        {
+            self.emit_non_constructible_new_expression_throw(callee, arguments)?;
             return Ok(());
         }
 

@@ -1423,11 +1423,20 @@ impl<'a> FunctionCompiler<'a> {
                 self.push_global_set(binding.binding.present_index);
                 continue;
             }
+            let metadata_source_name = binding
+                .source_binding_name
+                .as_deref()
+                .unwrap_or(&binding.slot_name);
             self.sync_user_function_capture_static_metadata(
-                &binding.slot_name,
+                metadata_source_name,
                 &binding.capture_hidden_name,
             );
+            self.alias_runtime_binding_metadata(&binding.capture_hidden_name, &binding.slot_name);
             if let Some(source_binding_name) = binding.source_binding_name.as_ref() {
+                self.alias_runtime_binding_metadata(
+                    &binding.capture_hidden_name,
+                    source_binding_name,
+                );
                 self.state
                     .speculation
                     .static_semantics
@@ -1752,7 +1761,11 @@ impl<'a> FunctionCompiler<'a> {
                             self.local_binding_is_immutable(&resolved_name)
                         })
                         || self
-                            .binding_is_immutable_function_self_binding_source(source_binding_name);
+                            .binding_is_immutable_function_self_binding_source(source_binding_name)
+                        || self
+                            .backend
+                            .lexical_global_binding(source_binding_name)
+                            .is_some_and(|global_binding| !global_binding.mutable);
                     if !source_is_immutable_local {
                         self.emit_sync_identifier_runtime_value_from_local(
                             source_binding_name,

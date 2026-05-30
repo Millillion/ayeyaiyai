@@ -1,5 +1,21 @@
 use super::*;
 
+fn type_error_expression() -> Expression {
+    Expression::Call {
+        callee: Box::new(Expression::Identifier("TypeError".to_string())),
+        arguments: Vec::new(),
+    }
+}
+
+fn imported_assignment_throw_statement(value: Expression) -> Statement {
+    Statement::Block {
+        body: vec![
+            Statement::Expression(value),
+            Statement::Throw(type_error_expression()),
+        ],
+    }
+}
+
 pub(super) struct ImportBindingRewriter<'a> {
     import_bindings: &'a HashMap<String, ImportBinding>,
     module_index: Option<usize>,
@@ -46,34 +62,28 @@ impl<'a> ImportBindingRewriter<'a> {
             | Statement::Labeled { body, .. } => self.rewrite_statement_list(body),
             Statement::Var { value, .. }
             | Statement::Let { value, .. }
-            | Statement::Expression(value)
             | Statement::Throw(value)
             | Statement::Return(value)
             | Statement::Yield { value }
             | Statement::YieldDelegate { value } => self.rewrite_expression(value),
-            Statement::Assign { name, value } => {
-                if !self.is_shadowed(name)
-                    && let Some(binding) = self.import_bindings.get(name)
+            Statement::Expression(expression) => {
+                if let Expression::Assign { name, value } = expression
+                    && !self.is_shadowed(name)
+                    && self.import_bindings.contains_key(name)
                 {
-                    return match binding {
-                        ImportBinding::Named {
-                            namespace_param,
-                            export_name,
-                            ..
-                        } => {
-                            self.rewrite_expression(value)?;
-                            let value = value.clone();
-                            *statement = Statement::AssignMember {
-                                object: Expression::Identifier(namespace_param.clone()),
-                                property: Expression::String(export_name.clone()),
-                                value,
-                            };
-                            Ok(())
-                        }
-                        ImportBinding::Namespace { .. } => {
-                            bail!("assignment to namespace import `{name}` is not supported yet")
-                        }
-                    };
+                    self.rewrite_expression(value)?;
+                    let value = value.as_ref().clone();
+                    *statement = imported_assignment_throw_statement(value);
+                    return Ok(());
+                }
+                self.rewrite_expression(expression)
+            }
+            Statement::Assign { name, value } => {
+                if !self.is_shadowed(name) && self.import_bindings.contains_key(name) {
+                    self.rewrite_expression(value)?;
+                    let value = value.clone();
+                    *statement = imported_assignment_throw_statement(value);
+                    return Ok(());
                 }
                 self.rewrite_expression(value)
             }
@@ -389,16 +399,28 @@ pub(super) fn rewrite_module_import_bindings_in_function(
 fn import_binding_expression(binding: &ImportBinding) -> Expression {
     match binding {
         ImportBinding::Namespace {
-            namespace_param, ..
-        } => Expression::Identifier(namespace_param.clone()),
+            module_index,
+            namespace_param,
+            deferred,
+        } => {
+            if *deferred {
+                Expression::Identifier(format!("__ayy_module_deferred_namespace_{module_index}"))
+            } else {
+                Expression::Identifier(namespace_param.clone())
+            }
+        }
         ImportBinding::Named {
             namespace_param,
             export_name,
+            self_local_binding,
             ..
-        } => Expression::Member {
-            object: Box::new(Expression::Identifier(namespace_param.clone())),
-            property: Box::new(Expression::String(export_name.clone())),
-        },
+        } => self_local_binding
+            .as_ref()
+            .map(|binding_name| Expression::Identifier(binding_name.clone()))
+            .unwrap_or_else(|| Expression::Member {
+                object: Box::new(Expression::Identifier(namespace_param.clone())),
+                property: Box::new(Expression::String(export_name.clone())),
+            }),
     }
 }
 

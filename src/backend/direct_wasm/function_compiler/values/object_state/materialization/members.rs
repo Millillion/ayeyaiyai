@@ -65,6 +65,12 @@ impl<'a> FunctionCompiler<'a> {
         object: &Expression,
         property: &Expression,
     ) -> Expression {
+        if let Some(value) =
+            self.resolve_module_namespace_live_binding_member_value(object, property)
+        {
+            return self.materialize_static_expression(&value);
+        }
+
         if let Some(constructor) =
             self.materialize_get_prototype_of_constructor_member(object, property)
         {
@@ -189,6 +195,25 @@ impl<'a> FunctionCompiler<'a> {
         }
         let materialized_object = self.materialize_static_expression(object);
         let materialized_property = self.materialize_static_expression(property);
+        if let Some(realm_id) = self
+            .resolve_test262_realm_global_id_from_expression(object)
+            .or_else(|| {
+                resolved_object.as_ref().and_then(|resolved_object| {
+                    self.resolve_test262_realm_global_id_from_expression(resolved_object)
+                })
+            })
+            .or_else(|| self.resolve_test262_realm_global_id_from_expression(&materialized_object))
+            && let Some(object_binding) = self.test262_realm_global_object_binding(realm_id)
+        {
+            if let Some(value) =
+                object_binding_lookup_value(&object_binding, &materialized_property)
+            {
+                return self.materialize_static_expression(value);
+            }
+            if static_property_name_from_expression(&materialized_property).is_some() {
+                return Expression::Undefined;
+            }
+        }
         let original_shadow_binding_name =
             self.runtime_object_property_shadow_binding_name_for_expression(object, property);
         let original_shadow_should_defer =
@@ -358,10 +383,7 @@ impl<'a> FunctionCompiler<'a> {
             };
         }
         if let Some(array_binding) = self.resolve_array_binding_from_expression(object) {
-            let runtime_array_binding_name = self.runtime_array_binding_name_for_expression(object);
-            let has_runtime_array_state = runtime_array_binding_name
-                .as_ref()
-                .is_some_and(|name| self.runtime_array_binding_has_state(name));
+            let has_runtime_array_state = self.expression_uses_runtime_array_state(object);
             if matches!(property, Expression::String(text) if text == "length") {
                 if has_runtime_array_state {
                     return Expression::Member {

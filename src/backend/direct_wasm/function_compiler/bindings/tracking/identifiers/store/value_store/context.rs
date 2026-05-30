@@ -91,6 +91,145 @@ fn context_expression_references_internal_iterator_step(expression: &Expression)
     }
 }
 
+fn expression_is_dynamic_import_call(expression: &Expression) -> bool {
+    matches!(
+        expression,
+        Expression::Call { callee, .. }
+            if matches!(callee.as_ref(), Expression::Identifier(name) if name == "__ayyDynamicImport")
+    )
+}
+
+fn expression_is_promise_all_call(expression: &Expression) -> bool {
+    matches!(
+        expression,
+        Expression::Call { callee, .. }
+            if matches!(
+                callee.as_ref(),
+                Expression::Member { object, property }
+                    if matches!(object.as_ref(), Expression::Identifier(name) if name == "Promise")
+                        && matches!(property.as_ref(), Expression::String(name) if name == "all")
+            )
+    )
+}
+
+fn promise_resolve_array_placeholder() -> Expression {
+    Expression::Call {
+        callee: Box::new(Expression::Member {
+            object: Box::new(Expression::Identifier("Promise".to_string())),
+            property: Box::new(Expression::String("resolve".to_string())),
+        }),
+        arguments: vec![CallArgument::Expression(Expression::Array(Vec::new()))],
+    }
+}
+
+fn expression_is_promise_resolve_undefined_call(expression: &Expression) -> bool {
+    let Expression::Call { callee, arguments } = expression else {
+        return false;
+    };
+    let Expression::Member { object, property } = callee.as_ref() else {
+        return false;
+    };
+    matches!(object.as_ref(), Expression::Identifier(name) if name == "Promise")
+        && matches!(property.as_ref(), Expression::String(name) if name == "resolve")
+        && matches!(
+            arguments.as_slice(),
+            [] | [CallArgument::Expression(Expression::Undefined)]
+        )
+}
+
+fn expression_is_static_promise_with_resolvers_record(expression: &Expression) -> bool {
+    let Expression::Object(entries) = expression else {
+        return false;
+    };
+    let mut has_promise = false;
+    let mut has_resolve = false;
+    let mut has_reject = false;
+    for entry in entries {
+        let ObjectEntry::Data {
+            key: Expression::String(key),
+            value,
+        } = entry
+        else {
+            continue;
+        };
+        match key.as_str() {
+            "promise" => has_promise = expression_is_promise_resolve_undefined_call(value),
+            "resolve" => {
+                has_resolve = matches!(
+                    value,
+                    Expression::Identifier(name)
+                        if name == "__ayy_promise_with_resolvers_resolve"
+                );
+            }
+            "reject" => {
+                has_reject = matches!(
+                    value,
+                    Expression::Identifier(name)
+                        if name == "__ayy_promise_with_resolvers_reject"
+                );
+            }
+            _ => {}
+        }
+    }
+    has_promise && has_resolve && has_reject
+}
+
+fn expression_is_non_prototype_nested_member(expression: &Expression) -> bool {
+    matches!(
+        expression,
+        Expression::Member { object, .. }
+            if matches!(
+                object.as_ref(),
+                Expression::Member { property, .. }
+                    if !matches!(property.as_ref(), Expression::String(name) if name == "prototype")
+            )
+    )
+}
+
+fn expression_is_nested_assert_helper_member(expression: &Expression) -> bool {
+    matches!(
+        expression,
+        Expression::Member { object, .. }
+            if matches!(
+                object.as_ref(),
+                Expression::Member { object: root, .. }
+                    if matches!(root.as_ref(), Expression::Identifier(name) if name == "assert")
+            )
+    )
+}
+
+fn expression_is_nested_assert_helper_runtime_value(expression: &Expression) -> bool {
+    expression_is_nested_assert_helper_member(expression)
+        || matches!(
+            expression,
+            Expression::Call { callee, .. }
+                if expression_is_nested_assert_helper_member(callee)
+        )
+}
+
+fn static_promise_with_resolvers_object_binding() -> ObjectValueBinding {
+    let mut binding = empty_object_value_binding();
+    binding.string_properties.push((
+        "promise".to_string(),
+        Expression::Call {
+            callee: Box::new(Expression::Member {
+                object: Box::new(Expression::Identifier("Promise".to_string())),
+                property: Box::new(Expression::String("resolve".to_string())),
+            }),
+            arguments: vec![CallArgument::Expression(Expression::Undefined)],
+        },
+    ));
+    binding.string_properties.push((
+        "resolve".to_string(),
+        Expression::Identifier("__ayy_promise_with_resolvers_resolve".to_string()),
+    ));
+    binding.string_properties.push((
+        "reject".to_string(),
+        Expression::Identifier("__ayy_promise_with_resolvers_reject".to_string()),
+    ));
+    binding
+}
+
 impl<'a> FunctionCompiler<'a> {
     fn is_direct_local_array_iterator_method_call_expression(
         &mut self,
@@ -922,6 +1061,7 @@ impl<'a> FunctionCompiler<'a> {
                 resolved_local_binding,
                 returned_descriptor_binding: None,
                 runtime_value_override: None,
+                opaque_runtime_value: false,
             };
         }
         let with_scoped_value_expression = if let Expression::Identifier(value_name) =
@@ -972,10 +1112,61 @@ impl<'a> FunctionCompiler<'a> {
                 resolved_local_binding,
                 returned_descriptor_binding: None,
                 runtime_value_override: None,
+                opaque_runtime_value: false,
+            };
+        }
+        if expression_is_object_create_null_call(&canonical_value_expression) {
+            let object_expression = Expression::Object(Vec::new());
+            return PreparedIdentifierValueStore {
+                canonical_value_expression: canonical_value_expression.clone(),
+                tracked_value_expression: object_expression.clone(),
+                descriptor_binding_expression: Expression::Undefined,
+                tracked_object_expression: object_expression.clone(),
+                call_source_snapshot_expression: None,
+                prototype_source_snapshot_expression: Some(Expression::Null),
+                function_binding_expression: Expression::Undefined,
+                function_binding: None,
+                object_binding_expression: object_expression,
+                object_binding: Some(empty_object_value_binding()),
+                kind: Some(StaticValueKind::Object),
+                static_string_value: None,
+                exact_static_number: None,
+                array_binding: None,
+                module_assignment_expression: canonical_value_expression.clone(),
+                resolved_local_binding,
+                returned_descriptor_binding: None,
+                runtime_value_override: None,
+                opaque_runtime_value: false,
             };
         }
         if trace_identifier_store {
             eprintln!("identifier_store:{name}:canonical {canonical_value_expression:?}");
+        }
+        if expression_is_nested_assert_helper_runtime_value(&canonical_value_expression) {
+            if trace_identifier_store {
+                eprintln!("identifier_store:{name}:nested_assert_helper_runtime_fast_path");
+            }
+            return PreparedIdentifierValueStore {
+                canonical_value_expression: canonical_value_expression.clone(),
+                tracked_value_expression: canonical_value_expression.clone(),
+                descriptor_binding_expression: Expression::Undefined,
+                tracked_object_expression: Expression::Undefined,
+                call_source_snapshot_expression: None,
+                prototype_source_snapshot_expression: None,
+                function_binding_expression: Expression::Undefined,
+                function_binding: None,
+                object_binding_expression: Expression::Undefined,
+                object_binding: None,
+                kind: Some(StaticValueKind::Unknown),
+                static_string_value: None,
+                exact_static_number: None,
+                array_binding: None,
+                module_assignment_expression: canonical_value_expression,
+                resolved_local_binding,
+                returned_descriptor_binding: None,
+                runtime_value_override: None,
+                opaque_runtime_value: true,
+            };
         }
         if let Expression::Member { object, property } = &canonical_value_expression
             && matches!(property.as_ref(), Expression::String(property_name) if property_name == "constructor")
@@ -1021,6 +1212,7 @@ impl<'a> FunctionCompiler<'a> {
                     resolved_local_binding,
                     returned_descriptor_binding: None,
                     runtime_value_override: None,
+                    opaque_runtime_value: false,
                 };
             }
         }
@@ -1113,6 +1305,7 @@ impl<'a> FunctionCompiler<'a> {
                     resolved_local_binding,
                     returned_descriptor_binding: None,
                     runtime_value_override: None,
+                    opaque_runtime_value: false,
                 };
             }
         }
@@ -1163,8 +1356,7 @@ impl<'a> FunctionCompiler<'a> {
                 eprintln!("identifier_store:{name}:direct_iterator_method_call:kind:done");
                 eprintln!("identifier_store:{name}:direct_iterator_method_call:array:start");
             }
-            let array_binding =
-                self.resolve_array_binding_from_expression(metadata_value_expression);
+            let array_binding = None;
             if trace_identifier_store {
                 eprintln!("identifier_store:{name}:direct_iterator_method_call:array:done");
             }
@@ -1188,6 +1380,7 @@ impl<'a> FunctionCompiler<'a> {
                 resolved_local_binding,
                 returned_descriptor_binding: None,
                 runtime_value_override: None,
+                opaque_runtime_value: false,
             };
         }
         let iterator_step_member_kind = if let Expression::Member { object, property } =
@@ -1229,6 +1422,7 @@ impl<'a> FunctionCompiler<'a> {
                 resolved_local_binding,
                 returned_descriptor_binding: None,
                 runtime_value_override: None,
+                opaque_runtime_value: false,
             };
         }
         let local_array_iterator_next_call =
@@ -1317,6 +1511,61 @@ impl<'a> FunctionCompiler<'a> {
         if trace_identifier_store {
             eprintln!("identifier_store:{name}:tracked {tracked_value_expression:?}");
         }
+        if static_expression_matches(&tracked_value_expression, &canonical_value_expression)
+            && expression_is_non_prototype_nested_member(&canonical_value_expression)
+        {
+            if trace_identifier_store {
+                eprintln!("identifier_store:{name}:nested_member_unknown_fast_path");
+            }
+            return PreparedIdentifierValueStore {
+                canonical_value_expression: canonical_value_expression.clone(),
+                tracked_value_expression: tracked_value_expression.clone(),
+                descriptor_binding_expression: Expression::Undefined,
+                tracked_object_expression: Expression::Undefined,
+                call_source_snapshot_expression: None,
+                prototype_source_snapshot_expression: None,
+                function_binding_expression: Expression::Undefined,
+                function_binding: None,
+                object_binding_expression: Expression::Undefined,
+                object_binding: None,
+                kind: Some(StaticValueKind::Unknown),
+                static_string_value: None,
+                exact_static_number: None,
+                array_binding: None,
+                module_assignment_expression: canonical_value_expression.clone(),
+                resolved_local_binding,
+                returned_descriptor_binding: None,
+                runtime_value_override: None,
+                opaque_runtime_value: true,
+            };
+        }
+        if expression_is_promise_all_call(&canonical_value_expression) {
+            let resolved_promise = promise_resolve_array_placeholder();
+            if trace_identifier_store {
+                eprintln!("identifier_store:{name}:promise_all_static_placeholder");
+            }
+            return PreparedIdentifierValueStore {
+                canonical_value_expression: canonical_value_expression.clone(),
+                tracked_value_expression: resolved_promise.clone(),
+                descriptor_binding_expression: Expression::Undefined,
+                tracked_object_expression: Expression::Undefined,
+                call_source_snapshot_expression: None,
+                prototype_source_snapshot_expression: None,
+                function_binding_expression: Expression::Undefined,
+                function_binding: None,
+                object_binding_expression: Expression::Undefined,
+                object_binding: None,
+                kind: Some(StaticValueKind::Object),
+                static_string_value: None,
+                exact_static_number: None,
+                array_binding: None,
+                module_assignment_expression: resolved_promise,
+                resolved_local_binding,
+                returned_descriptor_binding: None,
+                runtime_value_override: None,
+                opaque_runtime_value: false,
+            };
+        }
         if local_array_iterator_next_call || internal_iterator_step_next_call {
             if trace_identifier_store {
                 eprintln!("identifier_store:{name}:local_iterator_next");
@@ -1340,6 +1589,7 @@ impl<'a> FunctionCompiler<'a> {
                 resolved_local_binding,
                 returned_descriptor_binding: None,
                 runtime_value_override: None,
+                opaque_runtime_value: false,
             };
         }
         if context_expression_references_internal_iterator_step(&canonical_value_expression)
@@ -1367,6 +1617,33 @@ impl<'a> FunctionCompiler<'a> {
                 resolved_local_binding,
                 returned_descriptor_binding: None,
                 runtime_value_override: None,
+                opaque_runtime_value: false,
+            };
+        }
+        if expression_is_static_promise_with_resolvers_record(&tracked_value_expression) {
+            if trace_identifier_store {
+                eprintln!("identifier_store:{name}:promise_with_resolvers_static_record");
+            }
+            return PreparedIdentifierValueStore {
+                canonical_value_expression: canonical_value_expression.clone(),
+                tracked_value_expression: tracked_value_expression.clone(),
+                descriptor_binding_expression: tracked_value_expression.clone(),
+                tracked_object_expression: tracked_value_expression.clone(),
+                call_source_snapshot_expression: None,
+                prototype_source_snapshot_expression: None,
+                function_binding_expression: Expression::Undefined,
+                function_binding: None,
+                object_binding_expression: tracked_value_expression.clone(),
+                object_binding: Some(static_promise_with_resolvers_object_binding()),
+                kind: Some(StaticValueKind::Object),
+                static_string_value: None,
+                exact_static_number: None,
+                array_binding: None,
+                module_assignment_expression: tracked_value_expression,
+                resolved_local_binding,
+                returned_descriptor_binding: None,
+                runtime_value_override: None,
+                opaque_runtime_value: false,
             };
         }
         if let Some(function_binding) =
@@ -1399,6 +1676,7 @@ impl<'a> FunctionCompiler<'a> {
                 resolved_local_binding,
                 returned_descriptor_binding: None,
                 runtime_value_override: None,
+                opaque_runtime_value: false,
             };
         }
         let resolved_descriptor_binding =
@@ -1543,6 +1821,35 @@ impl<'a> FunctionCompiler<'a> {
                 "identifier_store:{name}:function_binding snapshot_context={call_snapshot_function_context:?} call_result={call_result_snapshot_expression:?} raw={raw_function_binding_expression:?} expr={function_binding_expression:?} binding={function_binding:?}"
             );
         }
+        if matches!(canonical_value_expression, Expression::New { .. })
+            && matched_call_snapshot.is_some_and(|snapshot| snapshot.result_expression.is_none())
+        {
+            if trace_identifier_store {
+                eprintln!("identifier_store:{name}:deferred_construct_snapshot");
+            }
+            let module_assignment_expression = canonical_value_expression.clone();
+            return PreparedIdentifierValueStore {
+                canonical_value_expression,
+                tracked_value_expression,
+                descriptor_binding_expression: Expression::Undefined,
+                tracked_object_expression: Expression::Undefined,
+                call_source_snapshot_expression,
+                prototype_source_snapshot_expression,
+                function_binding_expression,
+                function_binding,
+                object_binding_expression: Expression::Undefined,
+                object_binding: None,
+                kind: Some(StaticValueKind::Object),
+                static_string_value: None,
+                exact_static_number: None,
+                array_binding: None,
+                module_assignment_expression,
+                resolved_local_binding,
+                returned_descriptor_binding: None,
+                runtime_value_override: None,
+                opaque_runtime_value: false,
+            };
+        }
         let canonical_object_binding = if local_simple_async_generator_next_call {
             None
         } else {
@@ -1637,29 +1944,36 @@ impl<'a> FunctionCompiler<'a> {
         if trace_identifier_store {
             eprintln!("identifier_store:{name}:string");
         }
-        let exact_static_number = matches!(
-            kind,
-            Some(
-                StaticValueKind::Number
-                    | StaticValueKind::BigInt
-                    | StaticValueKind::Bool
-                    | StaticValueKind::String
-                    | StaticValueKind::Null
-                    | StaticValueKind::Undefined
-            )
-        )
-        .then(|| self.resolve_static_number_value(metadata_value_expression))
-        .flatten()
-        .filter(|number| {
-            number.is_nan()
-                || !number.is_finite()
-                || number.fract() != 0.0
-                || (*number == 0.0 && number.is_sign_negative())
-        });
+        let exact_static_number =
+            (!Self::expression_contains_await_for_user_call_runtime(metadata_value_expression)
+                && matches!(
+                    kind,
+                    Some(
+                        StaticValueKind::Number
+                            | StaticValueKind::BigInt
+                            | StaticValueKind::Bool
+                            | StaticValueKind::String
+                            | StaticValueKind::Null
+                            | StaticValueKind::Undefined
+                    )
+                ))
+            .then(|| self.resolve_static_number_value(metadata_value_expression))
+            .flatten()
+            .filter(|number| {
+                number.is_nan()
+                    || !number.is_finite()
+                    || number.fract() != 0.0
+                    || (*number == 0.0 && number.is_sign_negative())
+            });
         if trace_identifier_store {
             eprintln!("identifier_store:{name}:number");
         }
-        let array_binding = self.resolve_array_binding_from_expression(metadata_value_expression);
+        let array_binding =
+            if Self::expression_contains_await_for_user_call_runtime(metadata_value_expression) {
+                None
+            } else {
+                self.resolve_array_binding_from_expression(metadata_value_expression)
+            };
         if trace_identifier_store {
             eprintln!("identifier_store:{name}:array");
         }
@@ -1679,6 +1993,10 @@ impl<'a> FunctionCompiler<'a> {
             function_binding_expression.clone()
         } else if preserve_tracked_member_expression {
             tracked_value_expression.clone()
+        } else if expression_is_dynamic_import_call(&tracked_value_expression) {
+            tracked_value_expression.clone()
+        } else if expression_is_dynamic_import_call(metadata_value_expression) {
+            metadata_value_expression.clone()
         } else if matches!(
             call_result_snapshot_expression,
             Some(Expression::Identifier(_) | Expression::This)
@@ -1687,6 +2005,8 @@ impl<'a> FunctionCompiler<'a> {
                 .as_ref()
                 .expect("matched above")
                 .clone()
+        } else if Self::expression_contains_await_for_user_call_runtime(metadata_value_expression) {
+            metadata_value_expression.clone()
         } else {
             self.materialize_static_expression(metadata_value_expression)
         };
@@ -1712,6 +2032,7 @@ impl<'a> FunctionCompiler<'a> {
             resolved_local_binding,
             returned_descriptor_binding,
             runtime_value_override: None,
+            opaque_runtime_value: false,
         }
     }
 }

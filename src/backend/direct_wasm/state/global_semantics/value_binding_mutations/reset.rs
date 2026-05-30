@@ -5,6 +5,8 @@ impl GlobalValueService {
         self.value_bindings.clear();
         self.array_bindings.clear();
         self.arrays_with_runtime_state.clear();
+        self.resizable_array_buffer_bindings.clear();
+        self.typed_array_view_bindings.clear();
         self.object_bindings.clear();
         self.property_descriptors.clear();
         self.object_prototype_bindings.clear();

@@ -410,7 +410,7 @@ impl<'a> FunctionCompiler<'a> {
                     self.emit_named_error_throw("TypeError")?;
                 } else {
                     self.push_local_get(local_index);
-                    self.push_local_tee(previous_local);
+                    self.push_local_set(previous_local);
                     let numeric_previous_local = self.emit_runtime_update_from_previous_local(
                         previous_local,
                         next_local,
@@ -473,7 +473,7 @@ impl<'a> FunctionCompiler<'a> {
                 self.push_control_frame();
                 if binding.mutable {
                     self.push_global_get(global_index);
-                    self.push_local_tee(previous_local);
+                    self.push_local_set(previous_local);
                     let numeric_previous_local = self.emit_runtime_update_from_previous_local(
                         previous_local,
                         next_local,
@@ -531,7 +531,7 @@ impl<'a> FunctionCompiler<'a> {
                 .push(EMPTY_BLOCK_TYPE);
             self.push_control_frame();
             self.push_global_get(binding.value_index);
-            self.push_local_tee(previous_local);
+            self.push_local_set(previous_local);
             let numeric_previous_local =
                 self.emit_runtime_update_from_previous_local(previous_local, next_local, opcode)?;
             self.push_local_get(next_local);
@@ -559,7 +559,7 @@ impl<'a> FunctionCompiler<'a> {
                 .push(EMPTY_BLOCK_TYPE);
             self.push_control_frame();
             self.push_global_get(binding.value_index);
-            self.push_local_tee(previous_local);
+            self.push_local_set(previous_local);
             let numeric_previous_local =
                 self.emit_runtime_update_from_previous_local(previous_local, next_local, opcode)?;
             self.push_local_get(next_local);

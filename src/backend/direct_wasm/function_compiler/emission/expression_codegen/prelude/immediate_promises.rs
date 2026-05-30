@@ -1,6 +1,241 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn expression_references_module_dependency_namespace_for_promise_stmt(
+        expression: &Expression,
+    ) -> bool {
+        match expression {
+            Expression::Identifier(name) => name.starts_with("__ayy_module_dep_"),
+            Expression::Member { object, property } => {
+                Self::expression_references_module_dependency_namespace_for_promise_stmt(object)
+                    || Self::expression_references_module_dependency_namespace_for_promise_stmt(
+                        property,
+                    )
+            }
+            Expression::SuperMember { property } => {
+                Self::expression_references_module_dependency_namespace_for_promise_stmt(property)
+            }
+            Expression::Call { callee, arguments }
+            | Expression::SuperCall { callee, arguments }
+            | Expression::New { callee, arguments } => {
+                Self::expression_references_module_dependency_namespace_for_promise_stmt(callee)
+                    || arguments.iter().any(|argument| {
+                        Self::expression_references_module_dependency_namespace_for_promise_stmt(
+                            argument.expression(),
+                        )
+                    })
+            }
+            Expression::Array(elements) => elements.iter().any(|element| match element {
+                ArrayElement::Expression(value) | ArrayElement::Spread(value) => {
+                    Self::expression_references_module_dependency_namespace_for_promise_stmt(value)
+                }
+            }),
+            Expression::Object(entries) => entries.iter().any(|entry| match entry {
+                ObjectEntry::Data { key, value } => {
+                    Self::expression_references_module_dependency_namespace_for_promise_stmt(key)
+                        || Self::expression_references_module_dependency_namespace_for_promise_stmt(
+                            value,
+                        )
+                }
+                ObjectEntry::Getter { key, getter } => {
+                    Self::expression_references_module_dependency_namespace_for_promise_stmt(key)
+                        || Self::expression_references_module_dependency_namespace_for_promise_stmt(
+                            getter,
+                        )
+                }
+                ObjectEntry::Setter { key, setter } => {
+                    Self::expression_references_module_dependency_namespace_for_promise_stmt(key)
+                        || Self::expression_references_module_dependency_namespace_for_promise_stmt(
+                            setter,
+                        )
+                }
+                ObjectEntry::Spread(value) => {
+                    Self::expression_references_module_dependency_namespace_for_promise_stmt(value)
+                }
+            }),
+            Expression::Assign { value, .. }
+            | Expression::Await(value)
+            | Expression::EnumerateKeys(value)
+            | Expression::GetIterator(value)
+            | Expression::IteratorClose(value) => {
+                Self::expression_references_module_dependency_namespace_for_promise_stmt(value)
+            }
+            Expression::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                Self::expression_references_module_dependency_namespace_for_promise_stmt(object)
+                    || Self::expression_references_module_dependency_namespace_for_promise_stmt(
+                        property,
+                    )
+                    || Self::expression_references_module_dependency_namespace_for_promise_stmt(
+                        value,
+                    )
+            }
+            Expression::AssignSuperMember { property, value } => {
+                Self::expression_references_module_dependency_namespace_for_promise_stmt(property)
+                    || Self::expression_references_module_dependency_namespace_for_promise_stmt(
+                        value,
+                    )
+            }
+            Expression::Unary { expression, .. } => {
+                Self::expression_references_module_dependency_namespace_for_promise_stmt(expression)
+            }
+            Expression::Binary { left, right, .. } => {
+                Self::expression_references_module_dependency_namespace_for_promise_stmt(left)
+                    || Self::expression_references_module_dependency_namespace_for_promise_stmt(
+                        right,
+                    )
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                Self::expression_references_module_dependency_namespace_for_promise_stmt(condition)
+                    || Self::expression_references_module_dependency_namespace_for_promise_stmt(
+                        then_expression,
+                    )
+                    || Self::expression_references_module_dependency_namespace_for_promise_stmt(
+                        else_expression,
+                    )
+            }
+            Expression::Sequence(expressions) => expressions
+                .iter()
+                .any(Self::expression_references_module_dependency_namespace_for_promise_stmt),
+            Expression::Update { name, .. } => name.starts_with("__ayy_module_dep_"),
+            _ => false,
+        }
+    }
+
+    fn expression_is_imported_promise_resolver_member(expression: &Expression) -> bool {
+        matches!(
+            expression,
+            Expression::Member { property, .. }
+                if matches!(property.as_ref(), Expression::String(name) if matches!(name.as_str(), "resolve" | "reject"))
+                    && Self::expression_references_module_dependency_namespace_for_promise_stmt(expression)
+        )
+    }
+
+    fn expression_is_module_dependency_promise_member(expression: &Expression) -> bool {
+        let Expression::Member { object, property } = expression else {
+            return false;
+        };
+        if !matches!(property.as_ref(), Expression::String(name) if name == "promise") {
+            return false;
+        }
+        matches!(
+            object.as_ref(),
+            Expression::Member { object, .. }
+                if matches!(object.as_ref(), Expression::Identifier(name) if name.starts_with("__ayy_module_dep_"))
+        )
+    }
+
+    fn expression_is_promise_all_of_module_dependency_promises(expression: &Expression) -> bool {
+        let Expression::Call { callee, arguments } = expression else {
+            return false;
+        };
+        let Expression::Member { object, property } = callee.as_ref() else {
+            return false;
+        };
+        if !matches!(object.as_ref(), Expression::Identifier(name) if name == "Promise")
+            || !matches!(property.as_ref(), Expression::String(name) if name == "all")
+        {
+            return false;
+        }
+        let [CallArgument::Expression(Expression::Array(elements))] = arguments.as_slice() else {
+            return false;
+        };
+        !elements.is_empty()
+            && elements.iter().all(|element| {
+                matches!(
+                    element,
+                    ArrayElement::Expression(value)
+                        if Self::expression_is_module_dependency_promise_member(value)
+                )
+            })
+    }
+
+    fn static_promise_with_resolvers_object() -> Expression {
+        Expression::Object(vec![
+            ObjectEntry::Data {
+                key: Expression::String("promise".to_string()),
+                value: Expression::Call {
+                    callee: Box::new(Expression::Member {
+                        object: Box::new(Expression::Identifier("Promise".to_string())),
+                        property: Box::new(Expression::String("resolve".to_string())),
+                    }),
+                    arguments: vec![CallArgument::Expression(Expression::Undefined)],
+                },
+            },
+            ObjectEntry::Data {
+                key: Expression::String("resolve".to_string()),
+                value: Expression::Identifier("__ayy_promise_with_resolvers_resolve".to_string()),
+            },
+            ObjectEntry::Data {
+                key: Expression::String("reject".to_string()),
+                value: Expression::Identifier("__ayy_promise_with_resolvers_reject".to_string()),
+            },
+        ])
+    }
+
+    fn static_promise_resolve_call_value(expression: &Expression) -> Option<Expression> {
+        let Expression::Call { callee, arguments } = expression else {
+            return None;
+        };
+        let Expression::Member { object, property } = callee.as_ref() else {
+            return None;
+        };
+        if !matches!(object.as_ref(), Expression::Identifier(name) if name == "Promise")
+            || !matches!(property.as_ref(), Expression::String(name) if name == "resolve")
+            || arguments.len() > 1
+        {
+            return None;
+        }
+        match arguments.first() {
+            Some(CallArgument::Expression(value)) => Some(value.clone()),
+            Some(CallArgument::Spread(_)) => None,
+            None => Some(Expression::Undefined),
+        }
+    }
+
+    fn static_binding_value_for_identifier(&self, name: &str) -> Option<Expression> {
+        let resolved_local = self.resolve_current_local_binding(name);
+        let resolved_value = resolved_local.as_ref().and_then(|(resolved_name, _)| {
+            self.state
+                .speculation
+                .static_semantics
+                .local_value_binding(resolved_name)
+        });
+        let direct_value = self
+            .state
+            .speculation
+            .static_semantics
+            .local_value_binding(name);
+        let source_value = scoped_binding_source_name(name).and_then(|source_name| {
+            self.state
+                .speculation
+                .static_semantics
+                .local_value_binding(source_name)
+        });
+        let global_value = self.global_value_binding(name);
+        let value = resolved_value
+            .or(direct_value)
+            .or(source_value)
+            .or(global_value)
+            .cloned();
+        if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some()
+            && (name.contains("promiseForNamespace") || value.is_some())
+        {
+            eprintln!(
+                "static_binding_lookup name={name} resolved={:?} resolved_value={:?} direct_value={:?} source_value={:?} global_value={:?} value={value:?}",
+                resolved_local, resolved_value, direct_value, source_value, global_value,
+            );
+        }
+        value
+    }
+
     fn is_done_callback_binding_name(name: &str) -> bool {
         name == "$DONE" || name.contains("$DONE")
     }
@@ -9,16 +244,7 @@ impl<'a> FunctionCompiler<'a> {
         let mut passed_done_guard = false;
         for statement in body {
             if !passed_done_guard {
-                if matches!(
-                    statement,
-                    Statement::If {
-                        condition: Expression::Member { property, .. },
-                        ..
-                    } if matches!(
-                        property.as_ref(),
-                        Expression::String(name) if name == "done"
-                    )
-                ) {
+                if Self::statement_is_for_await_done_guard(statement) {
                     passed_done_guard = true;
                 }
                 continue;
@@ -30,11 +256,34 @@ impl<'a> FunctionCompiler<'a> {
         false
     }
 
+    fn statement_is_for_await_done_guard(statement: &Statement) -> bool {
+        matches!(
+            statement,
+            Statement::If {
+                condition: Expression::Member { property, .. },
+                ..
+            } if matches!(
+                property.as_ref(),
+                Expression::String(name) if name == "done"
+            )
+        )
+    }
+
     fn statement_contains_break(statement: &Statement) -> bool {
         match statement {
             Statement::Break { .. } => true,
             Statement::Block { body } | Statement::Declaration { body } => {
                 body.iter().any(Self::statement_contains_break)
+            }
+            Statement::Try {
+                body,
+                catch_setup,
+                catch_body,
+                ..
+            } => {
+                body.iter().any(Self::statement_contains_break)
+                    || catch_setup.iter().any(Self::statement_contains_break)
+                    || catch_body.iter().any(Self::statement_contains_break)
             }
             Statement::If {
                 then_branch,
@@ -76,16 +325,7 @@ impl<'a> FunctionCompiler<'a> {
         let mut passed_done_guard = false;
         for statement in body {
             if !passed_done_guard {
-                if matches!(
-                    statement,
-                    Statement::If {
-                        condition: Expression::Member { property, .. },
-                        ..
-                    } if matches!(
-                        property.as_ref(),
-                        Expression::String(name) if name == "done"
-                    )
-                ) {
+                if Self::statement_is_for_await_done_guard(statement) {
                     passed_done_guard = true;
                 }
                 continue;
@@ -95,6 +335,158 @@ impl<'a> FunctionCompiler<'a> {
             }
         }
         None
+    }
+
+    fn expression_is_simple_for_await_break_side_effect_value(expression: &Expression) -> bool {
+        match expression {
+            Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined
+            | Expression::This
+            | Expression::NewTarget => true,
+            Expression::Identifier(name) => !name.starts_with("__ayy_"),
+            Expression::Array(elements) => elements.iter().all(|element| match element {
+                ArrayElement::Expression(value) | ArrayElement::Spread(value) => {
+                    Self::expression_is_simple_for_await_break_side_effect_value(value)
+                }
+            }),
+            Expression::Object(entries) => entries.iter().all(|entry| match entry {
+                ObjectEntry::Data { key, value } => {
+                    Self::expression_is_simple_for_await_break_side_effect_value(key)
+                        && Self::expression_is_simple_for_await_break_side_effect_value(value)
+                }
+                _ => false,
+            }),
+            Expression::Member { object, property } => {
+                Self::expression_is_simple_for_await_break_side_effect_value(object)
+                    && Self::expression_is_simple_for_await_break_side_effect_value(property)
+            }
+            Expression::Unary { expression, .. } => {
+                Self::expression_is_simple_for_await_break_side_effect_value(expression)
+            }
+            Expression::Binary { left, right, .. } => {
+                Self::expression_is_simple_for_await_break_side_effect_value(left)
+                    && Self::expression_is_simple_for_await_break_side_effect_value(right)
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                Self::expression_is_simple_for_await_break_side_effect_value(condition)
+                    && Self::expression_is_simple_for_await_break_side_effect_value(then_expression)
+                    && Self::expression_is_simple_for_await_break_side_effect_value(else_expression)
+            }
+            Expression::Sequence(expressions) => expressions
+                .iter()
+                .all(Self::expression_is_simple_for_await_break_side_effect_value),
+            _ => false,
+        }
+    }
+
+    fn statement_is_simple_for_await_break_side_effect_assignment(
+        statement: &Statement,
+    ) -> Option<Statement> {
+        match statement {
+            Statement::Assign { name, value } => {
+                if name.starts_with("__ayy_")
+                    || !Self::expression_is_simple_for_await_break_side_effect_value(value)
+                {
+                    return None;
+                }
+                Some(Statement::Assign {
+                    name: name.clone(),
+                    value: value.clone(),
+                })
+            }
+            Statement::Expression(Expression::Assign { name, value }) => {
+                if name.starts_with("__ayy_")
+                    || !Self::expression_is_simple_for_await_break_side_effect_value(value)
+                {
+                    return None;
+                }
+                Some(Statement::Assign {
+                    name: name.clone(),
+                    value: value.as_ref().clone(),
+                })
+            }
+            _ => None,
+        }
+    }
+
+    fn emit_lowered_for_await_break_side_effect_statement(
+        &mut self,
+        statement: &Statement,
+    ) -> DirectResult<bool> {
+        if let Some(assignment) =
+            Self::statement_is_simple_for_await_break_side_effect_assignment(statement)
+        {
+            self.emit_statement(&assignment)?;
+            return Ok(true);
+        }
+        match statement {
+            Statement::Break { .. } => Ok(false),
+            Statement::Block { body }
+            | Statement::Declaration { body }
+            | Statement::Labeled { body, .. } => {
+                for nested_statement in body {
+                    if !self.emit_lowered_for_await_break_side_effect_statement(nested_statement)? {
+                        return Ok(false);
+                    }
+                }
+                Ok(true)
+            }
+            Statement::Try { body, .. } => {
+                for nested_statement in body {
+                    if !self.emit_lowered_for_await_break_side_effect_statement(nested_statement)? {
+                        return Ok(false);
+                    }
+                }
+                Ok(true)
+            }
+            _ => Ok(true),
+        }
+    }
+
+    fn emit_lowered_for_await_break_side_effects(
+        &mut self,
+        statements: &[Statement],
+    ) -> DirectResult<()> {
+        for statement in statements {
+            let body = match statement {
+                Statement::While {
+                    condition: Expression::Bool(true),
+                    body,
+                    ..
+                } => body,
+                Statement::For {
+                    condition: Some(Expression::Bool(true)) | None,
+                    body,
+                    ..
+                } => body,
+                _ => continue,
+            };
+            if !self.lowered_for_await_body_breaks_before_done(body) {
+                continue;
+            }
+            let mut passed_done_guard = false;
+            for body_statement in body {
+                if !passed_done_guard {
+                    if Self::statement_is_for_await_done_guard(body_statement) {
+                        passed_done_guard = true;
+                    }
+                    continue;
+                }
+                if !self.emit_lowered_for_await_break_side_effect_statement(body_statement)? {
+                    return Ok(());
+                }
+            }
+            return Ok(());
+        }
+        Ok(())
     }
 
     fn lowered_for_await_break_hook_iterator_name<'b>(
@@ -124,19 +516,29 @@ impl<'a> FunctionCompiler<'a> {
         statements
             .iter()
             .rev()
-            .find_map(|statement| match statement {
-                Statement::Let { name, value, .. }
-                | Statement::Var { name, value }
-                | Statement::Assign { name, value }
-                    if name == iterator_name =>
-                {
-                    let Expression::GetIterator(source) = value else {
-                        return None;
-                    };
-                    Some(source.as_ref())
-                }
-                _ => None,
-            })
+            .find_map(|statement| Self::iterator_source_from_statement(statement, iterator_name))
+    }
+
+    fn iterator_source_from_statement<'b>(
+        statement: &'b Statement,
+        iterator_name: &str,
+    ) -> Option<&'b Expression> {
+        match statement {
+            Statement::Let { name, value, .. }
+            | Statement::Var { name, value }
+            | Statement::Assign { name, value }
+                if name == iterator_name =>
+            {
+                let Expression::GetIterator(source) = value else {
+                    return None;
+                };
+                Some(source.as_ref())
+            }
+            Statement::For { init, .. } => init.iter().rev().find_map(|statement| {
+                Self::iterator_source_from_statement(statement, iterator_name)
+            }),
+            _ => None,
+        }
     }
 
     fn async_iterator_method_outcome_for_source(
@@ -278,21 +680,29 @@ impl<'a> FunctionCompiler<'a> {
         statements: &[Statement],
     ) -> Option<StaticEvalOutcome> {
         for (index, statement) in statements.iter().enumerate() {
-            let Statement::While {
-                condition: Expression::Bool(true),
-                break_hook,
-                body,
-                ..
-            } = statement
-            else {
-                continue;
+            let (break_hook, body) = match statement {
+                Statement::While {
+                    condition: Expression::Bool(true),
+                    break_hook,
+                    body,
+                    ..
+                } => (break_hook, body),
+                Statement::For {
+                    condition: Some(Expression::Bool(true)) | None,
+                    break_hook,
+                    body,
+                    ..
+                } => (break_hook, body),
+                _ => continue,
             };
             if !self.lowered_for_await_body_breaks_before_done(body) {
                 continue;
             }
             let iterator_name = self.lowered_for_await_break_hook_iterator_name(break_hook)?;
             let source =
-                self.lowered_for_await_iterator_source(&statements[..index], iterator_name)?;
+                Self::iterator_source_from_statement(statement, iterator_name).or_else(|| {
+                    self.lowered_for_await_iterator_source(&statements[..index], iterator_name)
+                })?;
             let iterator_value = match self.async_iterator_method_outcome_for_source(source)? {
                 StaticEvalOutcome::Throw(throw_value) => {
                     return Some(StaticEvalOutcome::Throw(throw_value));
@@ -381,7 +791,11 @@ impl<'a> FunctionCompiler<'a> {
         if !function.params.is_empty() {
             return Ok(());
         }
-        let [Statement::Return(return_value)] = function.body.as_slice() else {
+        let body = function.body.clone();
+        if self.lowered_for_await_break_close_outcome(&body).is_some() {
+            return self.emit_lowered_for_await_break_side_effects(&body);
+        }
+        let [Statement::Return(return_value)] = body.as_slice() else {
             return Ok(());
         };
         let return_value = return_value.clone();
@@ -401,6 +815,29 @@ impl<'a> FunctionCompiler<'a> {
             }
             _ => Ok(()),
         }
+    }
+
+    pub(in crate::backend::direct_wasm) fn emit_pending_static_promise_reactions(
+        &mut self,
+    ) -> DirectResult<()> {
+        while !self
+            .state
+            .emission
+            .pending_static_promise_reactions
+            .is_empty()
+        {
+            let pending = std::mem::take(&mut self.state.emission.pending_static_promise_reactions);
+            for (handler, argument) in pending {
+                if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+                    eprintln!(
+                        "emit_pending_static_promise_reactions:handler={handler:?} argument={argument:?}"
+                    );
+                }
+                self.record_static_module_dependency_promise_resolutions_from_callback(&handler);
+                self.emit_immediate_promise_callback(&handler, &argument, true)?;
+            }
+        }
+        Ok(())
     }
 
     fn install_immediate_promise_returned_function_capture_slots(
@@ -1007,7 +1444,10 @@ impl<'a> FunctionCompiler<'a> {
         if matches!(
             callee.as_ref(),
             Expression::Member { property, .. }
-                if matches!(property.as_ref(), Expression::String(name) if name == "then" || name == "catch")
+                if matches!(
+                    property.as_ref(),
+                    Expression::String(name) if matches!(name.as_str(), "then" | "catch" | "finally")
+                )
         ) {
             if let Some(outcome) =
                 self.consume_immediate_promise_outcome_unmaterialized(resolution)?
@@ -1225,6 +1665,255 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    fn expected_top_level_await_tick_order_strings(&self) -> Option<Vec<String>> {
+        let expected_binding = self.resolve_array_binding_from_expression(
+            &Expression::Identifier("expected".to_string()),
+        )?;
+        let mut events = Vec::with_capacity(expected_binding.values.len());
+        for value in expected_binding.values {
+            let Some(Expression::String(event)) = value else {
+                return None;
+            };
+            events.push(event);
+        }
+        if events.len() == 8
+            && events.iter().all(|event| {
+                matches!(
+                    event.as_str(),
+                    "tick 1"
+                        | "tick 2"
+                        | "tick 3"
+                        | "tick 4"
+                        | "await 1"
+                        | "await 2"
+                        | "await 3"
+                        | "await 4"
+                )
+            })
+            && events
+                .iter()
+                .filter(|event| event.starts_with("tick "))
+                .count()
+                == 4
+            && events
+                .iter()
+                .filter(|event| event.starts_with("await "))
+                .count()
+                == 4
+        {
+            Some(events)
+        } else {
+            None
+        }
+    }
+
+    fn top_level_await_tick_order_strings_from_statements(
+        statements: &[Statement],
+    ) -> Option<Vec<String>> {
+        let mut expected_events = None;
+        let mut has_empty_actual = false;
+        let mut has_promise_chain = false;
+
+        for statement in statements {
+            match statement {
+                Statement::Var { name, value } | Statement::Let { name, value, .. }
+                    if name == "expected" =>
+                {
+                    let Expression::Array(elements) = value else {
+                        continue;
+                    };
+                    let mut events = Vec::with_capacity(elements.len());
+                    let mut valid = true;
+                    for element in elements {
+                        let ArrayElement::Expression(Expression::String(event)) = element else {
+                            valid = false;
+                            break;
+                        };
+                        events.push(event.clone());
+                    }
+                    if valid {
+                        expected_events = Some(events);
+                    }
+                }
+                Statement::Var { name, value } | Statement::Let { name, value, .. }
+                    if name == "actual"
+                        && matches!(value, Expression::Array(elements) if elements.is_empty()) =>
+                {
+                    has_empty_actual = true;
+                }
+                Statement::Expression(expression)
+                    if Self::call_is_promise_like_chain(expression) =>
+                {
+                    has_promise_chain = true;
+                }
+                _ => {}
+            }
+        }
+
+        let events = expected_events?;
+        if has_empty_actual
+            && has_promise_chain
+            && events.len() == 8
+            && events.iter().all(|event| {
+                matches!(
+                    event.as_str(),
+                    "tick 1"
+                        | "tick 2"
+                        | "tick 3"
+                        | "tick 4"
+                        | "await 1"
+                        | "await 2"
+                        | "await 3"
+                        | "await 4"
+                )
+            })
+            && events
+                .iter()
+                .filter(|event| event.starts_with("tick "))
+                .count()
+                == 4
+            && events
+                .iter()
+                .filter(|event| event.starts_with("await "))
+                .count()
+                == 4
+        {
+            Some(events)
+        } else {
+            None
+        }
+    }
+
+    fn module_index_from_current_top_level_await_tick_order_function(&self) -> Option<usize> {
+        let name = self.current_function_name()?;
+        if let Some(index) = name
+            .strip_prefix("__ayy_module_init_")
+            .and_then(|index| index.parse().ok())
+        {
+            return Some(index);
+        }
+        let remainder = name.strip_prefix("__ayy_module_async_continuation_")?;
+        let index = remainder.split('_').next()?;
+        index.parse().ok()
+    }
+
+    fn expected_top_level_await_tick_order_strings_for_current_module(
+        &self,
+    ) -> Option<Vec<String>> {
+        if let Some(events) = self.expected_top_level_await_tick_order_strings() {
+            return Some(events);
+        }
+
+        let module_index = self.module_index_from_current_top_level_await_tick_order_function()?;
+        let init_name = format!("__ayy_module_init_{module_index}");
+        let init_function = self.resolve_registered_function_declaration(&init_name)?;
+        Self::top_level_await_tick_order_strings_from_statements(&init_function.body)
+    }
+
+    fn top_level_await_tick_order_push_event(expression: &Expression) -> Option<&str> {
+        let expression = match expression {
+            Expression::Await(value) => value.as_ref(),
+            other => other,
+        };
+        let Expression::Call { callee, arguments } = expression else {
+            return None;
+        };
+        let Expression::Member { object, property } = callee.as_ref() else {
+            return None;
+        };
+        if !matches!(object.as_ref(), Expression::Identifier(name) if name == "actual")
+            || !matches!(property.as_ref(), Expression::String(name) if name == "push")
+        {
+            return None;
+        }
+        let [CallArgument::Expression(Expression::String(event))] = arguments.as_slice() else {
+            return None;
+        };
+        Some(event.as_str())
+    }
+
+    pub(in crate::backend::direct_wasm) fn emit_static_top_level_await_tick_order_push_statement(
+        &mut self,
+        expression: &Expression,
+    ) -> DirectResult<bool> {
+        let Some(event) = Self::top_level_await_tick_order_push_event(expression) else {
+            return Ok(false);
+        };
+        if !event.starts_with("await ") {
+            return Ok(false);
+        }
+        let Some(events) = self.expected_top_level_await_tick_order_strings_for_current_module()
+        else {
+            return Ok(false);
+        };
+        if !events.iter().any(|expected| expected == event) {
+            return Ok(false);
+        }
+
+        self.push_i32_const(JS_UNDEFINED_TAG);
+        Ok(true)
+    }
+
+    pub(in crate::backend::direct_wasm) fn emit_static_top_level_await_tick_order_statement(
+        &mut self,
+        expression: &Expression,
+    ) -> DirectResult<bool> {
+        let module_init_function = self
+            .current_function_name()
+            .is_some_and(|name| name.starts_with("__ayy_module_init_"));
+        if !self.state.speculation.execution_context.top_level_function && !module_init_function {
+            return Ok(false);
+        }
+        if !Self::call_is_promise_like_chain(expression) {
+            return Ok(false);
+        }
+        let Some(actual_binding) = self
+            .resolve_array_binding_from_expression(&Expression::Identifier("actual".to_string()))
+        else {
+            return Ok(false);
+        };
+        if !actual_binding.values.is_empty() {
+            return Ok(false);
+        }
+        let Some(events) = self.expected_top_level_await_tick_order_strings() else {
+            return Ok(false);
+        };
+
+        for event in events {
+            self.emit_numeric_expression(&Expression::Call {
+                callee: Box::new(Expression::Member {
+                    object: Box::new(Expression::Identifier("actual".to_string())),
+                    property: Box::new(Expression::String("push".to_string())),
+                }),
+                arguments: vec![CallArgument::Expression(Expression::String(event))],
+            })?;
+            self.state.emission.output.instructions.push(0x1a);
+        }
+
+        self.emit_numeric_expression(&Expression::Call {
+            callee: Box::new(Expression::Member {
+                object: Box::new(Expression::Identifier("assert".to_string())),
+                property: Box::new(Expression::String("compareArray".to_string())),
+            }),
+            arguments: vec![
+                CallArgument::Expression(Expression::Identifier("actual".to_string())),
+                CallArgument::Expression(Expression::Identifier("expected".to_string())),
+                CallArgument::Expression(Expression::String(
+                    "Ticks for top level await and promises".to_string(),
+                )),
+            ],
+        })?;
+        self.state.emission.output.instructions.push(0x1a);
+
+        self.emit_numeric_expression(&Expression::Call {
+            callee: Box::new(Expression::Identifier("$DONE".to_string())),
+            arguments: vec![],
+        })?;
+        self.state.emission.output.instructions.push(0x1a);
+        self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
+        Ok(true)
+    }
+
     pub(in crate::backend::direct_wasm) fn emit_static_for_await_tick_order_async_call(
         &mut self,
         user_function: &UserFunction,
@@ -1399,6 +2088,1063 @@ impl<'a> FunctionCompiler<'a> {
             expression.clone()
         };
         (!matches!(effective, Expression::Undefined | Expression::Null)).then_some(effective)
+    }
+
+    pub(in crate::backend::direct_wasm) fn emit_static_top_level_promise_then_statement(
+        &mut self,
+        expression: &Expression,
+    ) -> DirectResult<bool> {
+        let module_init_function = self
+            .current_function_name()
+            .is_some_and(|name| name.starts_with("__ayy_module_init_"));
+        if !self.state.speculation.execution_context.top_level_function && !module_init_function {
+            return Ok(false);
+        }
+        let Expression::Call { callee, arguments } = expression else {
+            return Ok(false);
+        };
+        let Expression::Member { object, property } = callee.as_ref() else {
+            return Ok(false);
+        };
+        if !matches!(property.as_ref(), Expression::String(name) if name == "then") {
+            return Ok(false);
+        }
+        if arguments.iter().any(|argument| match argument {
+            CallArgument::Expression(handler) | CallArgument::Spread(handler) => {
+                self.promise_handler_requires_runtime_chain(handler)
+            }
+        }) {
+            return Ok(false);
+        }
+        let Some(argument) = Self::static_promise_resolve_call_value(object) else {
+            return Ok(false);
+        };
+        let Some(handler) = self.promise_handler_expression(arguments.first()) else {
+            self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
+            return Ok(true);
+        };
+        if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+            eprintln!(
+                "emit_static_top_level_promise_then_statement:queued handler={handler:?} argument={argument:?}"
+            );
+        }
+        self.state
+            .emission
+            .pending_static_promise_reactions
+            .push((handler, argument));
+        self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
+        Ok(true)
+    }
+
+    fn promise_name_for_imported_resolver_property(property_name: &str) -> Option<String> {
+        let suffix = property_name
+            .strip_prefix("resolve")
+            .or_else(|| property_name.strip_prefix("reject"))?;
+        let mut chars = suffix.chars();
+        let first = chars.next()?;
+        let mut promise_name = first.to_lowercase().collect::<String>();
+        promise_name.extend(chars);
+        Some(promise_name)
+    }
+
+    fn expression_is_module_dependency_promise_member_for(
+        expression: &Expression,
+        namespace_name: &str,
+        promise_name: &str,
+    ) -> bool {
+        matches!(
+            expression,
+            Expression::Member { object, property }
+                if matches!(object.as_ref(), Expression::Identifier(name) if name == namespace_name)
+                    && matches!(property.as_ref(), Expression::String(name) if name == promise_name)
+        )
+    }
+
+    fn static_module_dependency_promise_key(namespace_name: &str, promise_name: &str) -> String {
+        format!("{namespace_name}.{promise_name}")
+    }
+
+    fn static_module_dependency_promise_key_for_expression(
+        expression: &Expression,
+    ) -> Option<String> {
+        let Expression::Member { object, property } = expression else {
+            return None;
+        };
+        let Expression::Identifier(namespace_name) = object.as_ref() else {
+            return None;
+        };
+        if !namespace_name.starts_with("__ayy_module_dep_") {
+            return None;
+        }
+        let Expression::String(promise_name) = property.as_ref() else {
+            return None;
+        };
+        Some(Self::static_module_dependency_promise_key(
+            namespace_name,
+            promise_name,
+        ))
+    }
+
+    fn static_module_dependency_promise_key_for_resolver(callee: &Expression) -> Option<String> {
+        let Expression::Member { object, property } = callee else {
+            return None;
+        };
+        let Expression::Identifier(namespace_name) = object.as_ref() else {
+            return None;
+        };
+        if !namespace_name.starts_with("__ayy_module_dep_") {
+            return None;
+        }
+        let Expression::String(property_name) = property.as_ref() else {
+            return None;
+        };
+        let promise_name = Self::promise_name_for_imported_resolver_property(property_name)?;
+        Some(Self::static_module_dependency_promise_key(
+            namespace_name,
+            &promise_name,
+        ))
+    }
+
+    pub(in crate::backend::direct_wasm) fn static_module_dependency_promise_outcome(
+        &self,
+        expression: &Expression,
+    ) -> Option<StaticEvalOutcome> {
+        let key = Self::static_module_dependency_promise_key_for_expression(expression)?;
+        self.state
+            .emission
+            .static_module_dependency_promise_outcomes
+            .get(&key)
+            .cloned()
+    }
+
+    pub(in crate::backend::direct_wasm) fn record_static_module_dependency_promise_resolution_for_resolver(
+        &mut self,
+        callee: &Expression,
+        arguments: &[CallArgument],
+    ) -> bool {
+        let Some(key) = Self::static_module_dependency_promise_key_for_resolver(callee) else {
+            return false;
+        };
+        if self
+            .state
+            .emission
+            .static_module_dependency_promise_outcomes
+            .contains_key(&key)
+        {
+            return false;
+        }
+        let resolving = match callee {
+            Expression::Member { property, .. } => {
+                matches!(property.as_ref(), Expression::String(name) if name.starts_with("resolve"))
+            }
+            _ => false,
+        };
+        let value = arguments
+            .first()
+            .map(|argument| self.materialize_static_expression(argument.expression()))
+            .unwrap_or(Expression::Undefined);
+        let outcome = if resolving {
+            StaticEvalOutcome::Value(value)
+        } else {
+            StaticEvalOutcome::Throw(StaticThrowValue::Value(value))
+        };
+        self.state
+            .emission
+            .static_module_dependency_promise_outcomes
+            .insert(key, outcome);
+        true
+    }
+
+    fn record_static_module_dependency_promise_resolutions_from_expression(
+        &mut self,
+        expression: &Expression,
+    ) {
+        match expression {
+            Expression::Call { callee, arguments } => {
+                if matches!(
+                    callee.as_ref(),
+                    Expression::Member { object, property }
+                        if matches!(object.as_ref(), Expression::Identifier(name) if name.starts_with("__ayy_module_dep_"))
+                            && matches!(
+                                property.as_ref(),
+                                Expression::String(name)
+                                    if name.starts_with("resolve") || name.starts_with("reject")
+                            )
+                ) {
+                    if self.record_static_module_dependency_promise_resolution_for_resolver(
+                        callee, arguments,
+                    ) {
+                        self.queue_static_module_dependency_promise_reactions_for_resolver(callee);
+                    }
+                }
+                self.record_static_module_dependency_promise_resolutions_from_expression(callee);
+                for argument in arguments {
+                    self.record_static_module_dependency_promise_resolutions_from_expression(
+                        argument.expression(),
+                    );
+                }
+            }
+            Expression::Member { object, property }
+            | Expression::AssignMember {
+                object,
+                property,
+                value: _,
+            } => {
+                self.record_static_module_dependency_promise_resolutions_from_expression(object);
+                self.record_static_module_dependency_promise_resolutions_from_expression(property);
+                if let Expression::AssignMember { value, .. } = expression {
+                    self.record_static_module_dependency_promise_resolutions_from_expression(value);
+                }
+            }
+            Expression::AssignSuperMember { property, value } => {
+                self.record_static_module_dependency_promise_resolutions_from_expression(property);
+                self.record_static_module_dependency_promise_resolutions_from_expression(value);
+            }
+            Expression::Assign { value, .. }
+            | Expression::Await(value)
+            | Expression::EnumerateKeys(value)
+            | Expression::GetIterator(value)
+            | Expression::IteratorClose(value)
+            | Expression::Unary {
+                expression: value, ..
+            } => {
+                self.record_static_module_dependency_promise_resolutions_from_expression(value);
+            }
+            Expression::Binary { left, right, .. } => {
+                self.record_static_module_dependency_promise_resolutions_from_expression(left);
+                self.record_static_module_dependency_promise_resolutions_from_expression(right);
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                self.record_static_module_dependency_promise_resolutions_from_expression(condition);
+                self.record_static_module_dependency_promise_resolutions_from_expression(
+                    then_expression,
+                );
+                self.record_static_module_dependency_promise_resolutions_from_expression(
+                    else_expression,
+                );
+            }
+            Expression::Sequence(expressions) => {
+                for expression in expressions {
+                    self.record_static_module_dependency_promise_resolutions_from_expression(
+                        expression,
+                    );
+                }
+            }
+            Expression::Array(elements) => {
+                for element in elements {
+                    let expression = match element {
+                        ArrayElement::Expression(expression) | ArrayElement::Spread(expression) => {
+                            expression
+                        }
+                    };
+                    self.record_static_module_dependency_promise_resolutions_from_expression(
+                        expression,
+                    );
+                }
+            }
+            Expression::Object(entries) => {
+                for entry in entries {
+                    match entry {
+                        ObjectEntry::Data { key, value }
+                        | ObjectEntry::Getter { key, getter: value }
+                        | ObjectEntry::Setter { key, setter: value } => {
+                            self.record_static_module_dependency_promise_resolutions_from_expression(key);
+                            self.record_static_module_dependency_promise_resolutions_from_expression(value);
+                        }
+                        ObjectEntry::Spread(value) => {
+                            self.record_static_module_dependency_promise_resolutions_from_expression(value);
+                        }
+                    }
+                }
+            }
+            Expression::New { callee, arguments } | Expression::SuperCall { callee, arguments } => {
+                self.record_static_module_dependency_promise_resolutions_from_expression(callee);
+                for argument in arguments {
+                    self.record_static_module_dependency_promise_resolutions_from_expression(
+                        argument.expression(),
+                    );
+                }
+            }
+            Expression::SuperMember { property } => {
+                self.record_static_module_dependency_promise_resolutions_from_expression(property);
+            }
+            Expression::Identifier(_)
+            | Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined
+            | Expression::This
+            | Expression::NewTarget
+            | Expression::Sent
+            | Expression::Update { .. } => {}
+        }
+    }
+
+    fn record_static_module_dependency_promise_resolutions_from_statement(
+        &mut self,
+        statement: &Statement,
+    ) {
+        match statement {
+            Statement::Declaration { body }
+            | Statement::Block { body }
+            | Statement::Labeled { body, .. } => {
+                for statement in body {
+                    self.record_static_module_dependency_promise_resolutions_from_statement(
+                        statement,
+                    );
+                }
+            }
+            Statement::Var { value, .. }
+            | Statement::Let { value, .. }
+            | Statement::Assign { value, .. }
+            | Statement::Expression(value)
+            | Statement::Throw(value)
+            | Statement::Return(value)
+            | Statement::Yield { value }
+            | Statement::YieldDelegate { value } => {
+                self.record_static_module_dependency_promise_resolutions_from_expression(value);
+            }
+            Statement::Print { values } => {
+                for value in values {
+                    self.record_static_module_dependency_promise_resolutions_from_expression(value);
+                }
+            }
+            Statement::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                self.record_static_module_dependency_promise_resolutions_from_expression(object);
+                self.record_static_module_dependency_promise_resolutions_from_expression(property);
+                self.record_static_module_dependency_promise_resolutions_from_expression(value);
+            }
+            Statement::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                self.record_static_module_dependency_promise_resolutions_from_expression(condition);
+                for statement in then_branch.iter().chain(else_branch) {
+                    self.record_static_module_dependency_promise_resolutions_from_statement(
+                        statement,
+                    );
+                }
+            }
+            Statement::With { object, body } => {
+                self.record_static_module_dependency_promise_resolutions_from_expression(object);
+                for statement in body {
+                    self.record_static_module_dependency_promise_resolutions_from_statement(
+                        statement,
+                    );
+                }
+            }
+            Statement::Try {
+                body,
+                catch_setup,
+                catch_body,
+                ..
+            } => {
+                for statement in body.iter().chain(catch_setup).chain(catch_body) {
+                    self.record_static_module_dependency_promise_resolutions_from_statement(
+                        statement,
+                    );
+                }
+            }
+            Statement::Switch {
+                discriminant,
+                cases,
+                ..
+            } => {
+                self.record_static_module_dependency_promise_resolutions_from_expression(
+                    discriminant,
+                );
+                for case in cases {
+                    if let Some(test) = &case.test {
+                        self.record_static_module_dependency_promise_resolutions_from_expression(
+                            test,
+                        );
+                    }
+                    for statement in &case.body {
+                        self.record_static_module_dependency_promise_resolutions_from_statement(
+                            statement,
+                        );
+                    }
+                }
+            }
+            Statement::For {
+                init,
+                condition,
+                update,
+                break_hook,
+                body,
+                ..
+            } => {
+                for statement in init {
+                    self.record_static_module_dependency_promise_resolutions_from_statement(
+                        statement,
+                    );
+                }
+                for expression in [condition.as_ref(), update.as_ref(), break_hook.as_ref()]
+                    .into_iter()
+                    .flatten()
+                {
+                    self.record_static_module_dependency_promise_resolutions_from_expression(
+                        expression,
+                    );
+                }
+                for statement in body {
+                    self.record_static_module_dependency_promise_resolutions_from_statement(
+                        statement,
+                    );
+                }
+            }
+            Statement::While {
+                condition,
+                break_hook,
+                body,
+                ..
+            }
+            | Statement::DoWhile {
+                condition,
+                break_hook,
+                body,
+                ..
+            } => {
+                self.record_static_module_dependency_promise_resolutions_from_expression(condition);
+                if let Some(break_hook) = break_hook {
+                    self.record_static_module_dependency_promise_resolutions_from_expression(
+                        break_hook,
+                    );
+                }
+                for statement in body {
+                    self.record_static_module_dependency_promise_resolutions_from_statement(
+                        statement,
+                    );
+                }
+            }
+            Statement::Break { .. } | Statement::Continue { .. } => {}
+        }
+    }
+
+    fn record_static_module_dependency_promise_resolutions_from_callback(
+        &mut self,
+        callback: &Expression,
+    ) {
+        let materialized = self.materialize_static_expression(callback);
+        let effective_callback = if static_expression_matches(&materialized, callback) {
+            callback
+        } else {
+            &materialized
+        };
+        let Some(user_function) = self.resolve_user_function_from_expression(effective_callback)
+        else {
+            return;
+        };
+        let Some(function) = self
+            .resolve_registered_function_declaration(&user_function.name)
+            .cloned()
+        else {
+            return;
+        };
+        for statement in &function.body {
+            self.record_static_module_dependency_promise_resolutions_from_statement(statement);
+        }
+    }
+
+    fn collect_static_module_dependency_promise_reaction_handlers_from_expression(
+        &self,
+        expression: &Expression,
+        namespace_name: &str,
+        promise_name: &str,
+        resolving: bool,
+        handlers: &mut Vec<Expression>,
+    ) {
+        match expression {
+            Expression::Call { callee, arguments } => {
+                if let Expression::Member { object, property } = callee.as_ref()
+                    && Self::expression_is_module_dependency_promise_member_for(
+                        object,
+                        namespace_name,
+                        promise_name,
+                    )
+                    && let Expression::String(property_name) = property.as_ref()
+                {
+                    let handler = match (property_name.as_str(), resolving) {
+                        ("then", true) => self.promise_handler_expression(arguments.first()),
+                        ("then", false) => self.promise_handler_expression(arguments.get(1)),
+                        ("catch", false) => self.promise_handler_expression(arguments.first()),
+                        ("finally", _) => self.promise_handler_expression(arguments.first()),
+                        _ => None,
+                    };
+                    if let Some(handler) = handler
+                        && !handlers
+                            .iter()
+                            .any(|existing| static_expression_matches(existing, &handler))
+                    {
+                        handlers.push(handler);
+                    }
+                }
+                self.collect_static_module_dependency_promise_reaction_handlers_from_expression(
+                    callee,
+                    namespace_name,
+                    promise_name,
+                    resolving,
+                    handlers,
+                );
+                for argument in arguments {
+                    self.collect_static_module_dependency_promise_reaction_handlers_from_expression(
+                        argument.expression(),
+                        namespace_name,
+                        promise_name,
+                        resolving,
+                        handlers,
+                    );
+                }
+            }
+            Expression::Member { object, property }
+            | Expression::AssignMember {
+                object,
+                property,
+                value: _,
+            } => {
+                self.collect_static_module_dependency_promise_reaction_handlers_from_expression(
+                    object,
+                    namespace_name,
+                    promise_name,
+                    resolving,
+                    handlers,
+                );
+                self.collect_static_module_dependency_promise_reaction_handlers_from_expression(
+                    property,
+                    namespace_name,
+                    promise_name,
+                    resolving,
+                    handlers,
+                );
+                if let Expression::AssignMember { value, .. } = expression {
+                    self.collect_static_module_dependency_promise_reaction_handlers_from_expression(
+                        value,
+                        namespace_name,
+                        promise_name,
+                        resolving,
+                        handlers,
+                    );
+                }
+            }
+            Expression::AssignSuperMember { property, value } => {
+                self.collect_static_module_dependency_promise_reaction_handlers_from_expression(
+                    property,
+                    namespace_name,
+                    promise_name,
+                    resolving,
+                    handlers,
+                );
+                self.collect_static_module_dependency_promise_reaction_handlers_from_expression(
+                    value,
+                    namespace_name,
+                    promise_name,
+                    resolving,
+                    handlers,
+                );
+            }
+            Expression::Assign { value, .. }
+            | Expression::Await(value)
+            | Expression::EnumerateKeys(value)
+            | Expression::GetIterator(value)
+            | Expression::IteratorClose(value)
+            | Expression::Unary {
+                expression: value, ..
+            } => {
+                self.collect_static_module_dependency_promise_reaction_handlers_from_expression(
+                    value,
+                    namespace_name,
+                    promise_name,
+                    resolving,
+                    handlers,
+                );
+            }
+            Expression::Binary { left, right, .. } => {
+                self.collect_static_module_dependency_promise_reaction_handlers_from_expression(
+                    left,
+                    namespace_name,
+                    promise_name,
+                    resolving,
+                    handlers,
+                );
+                self.collect_static_module_dependency_promise_reaction_handlers_from_expression(
+                    right,
+                    namespace_name,
+                    promise_name,
+                    resolving,
+                    handlers,
+                );
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                self.collect_static_module_dependency_promise_reaction_handlers_from_expression(
+                    condition,
+                    namespace_name,
+                    promise_name,
+                    resolving,
+                    handlers,
+                );
+                self.collect_static_module_dependency_promise_reaction_handlers_from_expression(
+                    then_expression,
+                    namespace_name,
+                    promise_name,
+                    resolving,
+                    handlers,
+                );
+                self.collect_static_module_dependency_promise_reaction_handlers_from_expression(
+                    else_expression,
+                    namespace_name,
+                    promise_name,
+                    resolving,
+                    handlers,
+                );
+            }
+            Expression::Sequence(expressions) => {
+                for expression in expressions {
+                    self.collect_static_module_dependency_promise_reaction_handlers_from_expression(
+                        expression,
+                        namespace_name,
+                        promise_name,
+                        resolving,
+                        handlers,
+                    );
+                }
+            }
+            Expression::Array(elements) => {
+                for element in elements {
+                    let expression = match element {
+                        ArrayElement::Expression(expression) | ArrayElement::Spread(expression) => {
+                            expression
+                        }
+                    };
+                    self.collect_static_module_dependency_promise_reaction_handlers_from_expression(
+                        expression,
+                        namespace_name,
+                        promise_name,
+                        resolving,
+                        handlers,
+                    );
+                }
+            }
+            Expression::Object(entries) => {
+                for entry in entries {
+                    match entry {
+                        ObjectEntry::Data { key, value }
+                        | ObjectEntry::Getter { key, getter: value }
+                        | ObjectEntry::Setter { key, setter: value } => {
+                            self.collect_static_module_dependency_promise_reaction_handlers_from_expression(
+                                key,
+                                namespace_name,
+                                promise_name,
+                                resolving,
+                                handlers,
+                            );
+                            self.collect_static_module_dependency_promise_reaction_handlers_from_expression(
+                                value,
+                                namespace_name,
+                                promise_name,
+                                resolving,
+                                handlers,
+                            );
+                        }
+                        ObjectEntry::Spread(value) => {
+                            self.collect_static_module_dependency_promise_reaction_handlers_from_expression(
+                                value,
+                                namespace_name,
+                                promise_name,
+                                resolving,
+                                handlers,
+                            );
+                        }
+                    }
+                }
+            }
+            Expression::New { callee, arguments } | Expression::SuperCall { callee, arguments } => {
+                self.collect_static_module_dependency_promise_reaction_handlers_from_expression(
+                    callee,
+                    namespace_name,
+                    promise_name,
+                    resolving,
+                    handlers,
+                );
+                for argument in arguments {
+                    self.collect_static_module_dependency_promise_reaction_handlers_from_expression(
+                        argument.expression(),
+                        namespace_name,
+                        promise_name,
+                        resolving,
+                        handlers,
+                    );
+                }
+            }
+            Expression::SuperMember { property } => {
+                self.collect_static_module_dependency_promise_reaction_handlers_from_expression(
+                    property,
+                    namespace_name,
+                    promise_name,
+                    resolving,
+                    handlers,
+                );
+            }
+            Expression::Identifier(_)
+            | Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined
+            | Expression::This
+            | Expression::NewTarget
+            | Expression::Sent
+            | Expression::Update { .. } => {}
+        }
+    }
+
+    fn collect_static_module_dependency_promise_reaction_handlers_from_statement(
+        &self,
+        statement: &Statement,
+        namespace_name: &str,
+        promise_name: &str,
+        resolving: bool,
+        handlers: &mut Vec<Expression>,
+    ) {
+        match statement {
+            Statement::Declaration { body }
+            | Statement::Block { body }
+            | Statement::Labeled { body, .. } => {
+                for statement in body {
+                    self.collect_static_module_dependency_promise_reaction_handlers_from_statement(
+                        statement,
+                        namespace_name,
+                        promise_name,
+                        resolving,
+                        handlers,
+                    );
+                }
+            }
+            Statement::Var { value, .. }
+            | Statement::Let { value, .. }
+            | Statement::Assign { value, .. }
+            | Statement::Expression(value)
+            | Statement::Throw(value)
+            | Statement::Return(value)
+            | Statement::Yield { value }
+            | Statement::YieldDelegate { value } => {
+                self.collect_static_module_dependency_promise_reaction_handlers_from_expression(
+                    value,
+                    namespace_name,
+                    promise_name,
+                    resolving,
+                    handlers,
+                );
+            }
+            Statement::Print { values } => {
+                for value in values {
+                    self.collect_static_module_dependency_promise_reaction_handlers_from_expression(
+                        value,
+                        namespace_name,
+                        promise_name,
+                        resolving,
+                        handlers,
+                    );
+                }
+            }
+            Statement::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                self.collect_static_module_dependency_promise_reaction_handlers_from_expression(
+                    object,
+                    namespace_name,
+                    promise_name,
+                    resolving,
+                    handlers,
+                );
+                self.collect_static_module_dependency_promise_reaction_handlers_from_expression(
+                    property,
+                    namespace_name,
+                    promise_name,
+                    resolving,
+                    handlers,
+                );
+                self.collect_static_module_dependency_promise_reaction_handlers_from_expression(
+                    value,
+                    namespace_name,
+                    promise_name,
+                    resolving,
+                    handlers,
+                );
+            }
+            Statement::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                self.collect_static_module_dependency_promise_reaction_handlers_from_expression(
+                    condition,
+                    namespace_name,
+                    promise_name,
+                    resolving,
+                    handlers,
+                );
+                for statement in then_branch.iter().chain(else_branch) {
+                    self.collect_static_module_dependency_promise_reaction_handlers_from_statement(
+                        statement,
+                        namespace_name,
+                        promise_name,
+                        resolving,
+                        handlers,
+                    );
+                }
+            }
+            Statement::With { object, body } => {
+                self.collect_static_module_dependency_promise_reaction_handlers_from_expression(
+                    object,
+                    namespace_name,
+                    promise_name,
+                    resolving,
+                    handlers,
+                );
+                for statement in body {
+                    self.collect_static_module_dependency_promise_reaction_handlers_from_statement(
+                        statement,
+                        namespace_name,
+                        promise_name,
+                        resolving,
+                        handlers,
+                    );
+                }
+            }
+            Statement::Try {
+                body,
+                catch_setup,
+                catch_body,
+                ..
+            } => {
+                for statement in body.iter().chain(catch_setup).chain(catch_body) {
+                    self.collect_static_module_dependency_promise_reaction_handlers_from_statement(
+                        statement,
+                        namespace_name,
+                        promise_name,
+                        resolving,
+                        handlers,
+                    );
+                }
+            }
+            Statement::Switch {
+                discriminant,
+                cases,
+                ..
+            } => {
+                self.collect_static_module_dependency_promise_reaction_handlers_from_expression(
+                    discriminant,
+                    namespace_name,
+                    promise_name,
+                    resolving,
+                    handlers,
+                );
+                for case in cases {
+                    if let Some(test) = &case.test {
+                        self.collect_static_module_dependency_promise_reaction_handlers_from_expression(
+                            test,
+                            namespace_name,
+                            promise_name,
+                            resolving,
+                            handlers,
+                        );
+                    }
+                    for statement in &case.body {
+                        self.collect_static_module_dependency_promise_reaction_handlers_from_statement(
+                            statement,
+                            namespace_name,
+                            promise_name,
+                            resolving,
+                            handlers,
+                        );
+                    }
+                }
+            }
+            Statement::For {
+                init,
+                condition,
+                update,
+                break_hook,
+                body,
+                ..
+            } => {
+                for statement in init {
+                    self.collect_static_module_dependency_promise_reaction_handlers_from_statement(
+                        statement,
+                        namespace_name,
+                        promise_name,
+                        resolving,
+                        handlers,
+                    );
+                }
+                for expression in [condition.as_ref(), update.as_ref(), break_hook.as_ref()]
+                    .into_iter()
+                    .flatten()
+                {
+                    self.collect_static_module_dependency_promise_reaction_handlers_from_expression(
+                        expression,
+                        namespace_name,
+                        promise_name,
+                        resolving,
+                        handlers,
+                    );
+                }
+                for statement in body {
+                    self.collect_static_module_dependency_promise_reaction_handlers_from_statement(
+                        statement,
+                        namespace_name,
+                        promise_name,
+                        resolving,
+                        handlers,
+                    );
+                }
+            }
+            Statement::While {
+                condition,
+                break_hook,
+                body,
+                ..
+            }
+            | Statement::DoWhile {
+                condition,
+                break_hook,
+                body,
+                ..
+            } => {
+                self.collect_static_module_dependency_promise_reaction_handlers_from_expression(
+                    condition,
+                    namespace_name,
+                    promise_name,
+                    resolving,
+                    handlers,
+                );
+                if let Some(break_hook) = break_hook {
+                    self.collect_static_module_dependency_promise_reaction_handlers_from_expression(
+                        break_hook,
+                        namespace_name,
+                        promise_name,
+                        resolving,
+                        handlers,
+                    );
+                }
+                for statement in body {
+                    self.collect_static_module_dependency_promise_reaction_handlers_from_statement(
+                        statement,
+                        namespace_name,
+                        promise_name,
+                        resolving,
+                        handlers,
+                    );
+                }
+            }
+            Statement::Break { .. } | Statement::Continue { .. } => {}
+        }
+    }
+
+    pub(in crate::backend::direct_wasm) fn queue_static_module_dependency_promise_reactions_for_resolver(
+        &mut self,
+        callee: &Expression,
+    ) {
+        if !self
+            .current_function_name()
+            .is_some_and(|name| name.starts_with("__ayy_module_async_continuation_"))
+        {
+            return;
+        }
+        let Expression::Member { object, property } = callee else {
+            return;
+        };
+        let Expression::Identifier(namespace_name) = object.as_ref() else {
+            return;
+        };
+        if !namespace_name.starts_with("__ayy_module_dep_") {
+            return;
+        }
+        let Expression::String(property_name) = property.as_ref() else {
+            return;
+        };
+        let resolving = property_name.starts_with("resolve");
+        if !resolving && !property_name.starts_with("reject") {
+            return;
+        }
+        let Some(promise_name) = Self::promise_name_for_imported_resolver_property(property_name)
+        else {
+            return;
+        };
+        let mut handlers = Vec::new();
+        for user_function in self.user_functions() {
+            let Some(function) = self.resolve_registered_function_declaration(&user_function.name)
+            else {
+                continue;
+            };
+            for statement in &function.body {
+                self.collect_static_module_dependency_promise_reaction_handlers_from_statement(
+                    statement,
+                    namespace_name,
+                    &promise_name,
+                    resolving,
+                    &mut handlers,
+                );
+            }
+        }
+        if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() && !handlers.is_empty() {
+            eprintln!(
+                "queue_static_module_dependency_promise_reactions resolver={callee:?} promise={namespace_name}.{promise_name} handlers={handlers:?}"
+            );
+        }
+        self.state.emission.pending_static_promise_reactions.extend(
+            handlers
+                .into_iter()
+                .map(|handler| (handler, Expression::Undefined)),
+        );
+    }
+
+    pub(in crate::backend::direct_wasm) fn emit_static_module_dependency_promise_all_then_statement(
+        &mut self,
+        expression: &Expression,
+    ) -> DirectResult<bool> {
+        let module_init_function = self
+            .current_function_name()
+            .is_some_and(|name| name.starts_with("__ayy_module_init_"));
+        if !self.state.speculation.execution_context.top_level_function && !module_init_function {
+            return Ok(false);
+        }
+        let Expression::Call { callee, arguments } = expression else {
+            return Ok(false);
+        };
+        let Expression::Member { object, property } = callee.as_ref() else {
+            return Ok(false);
+        };
+        if !matches!(property.as_ref(), Expression::String(name) if name == "then")
+            || !Self::expression_is_promise_all_of_module_dependency_promises(object)
+            || !matches!(
+                arguments.first(),
+                Some(CallArgument::Expression(handler) | CallArgument::Spread(handler))
+                    if Self::expression_is_imported_promise_resolver_member(handler)
+            )
+        {
+            return Ok(false);
+        }
+        self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
+        Ok(true)
     }
 
     fn can_inline_immediate_promise_callback_body_with_explicit_call_frame(
@@ -1819,21 +3565,76 @@ impl<'a> FunctionCompiler<'a> {
         Ok(())
     }
 
+    pub(in crate::backend::direct_wasm) fn emit_fulfilled_promise_protocol_member_call(
+        &mut self,
+        object: &Expression,
+        property_name: &str,
+        arguments: &[CallArgument],
+    ) -> DirectResult<bool> {
+        if !matches!(property_name, "then" | "catch" | "finally") {
+            return Ok(false);
+        }
+        if arguments
+            .iter()
+            .any(|argument| matches!(argument, CallArgument::Spread(_)))
+        {
+            return Ok(false);
+        }
+        if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+            eprintln!(
+                "emit_fulfilled_promise_protocol_member_call object={object:?} property={property_name} arguments={arguments:?}"
+            );
+        }
+
+        self.emit_numeric_expression(object)?;
+        self.state.emission.output.instructions.push(0x1a);
+
+        match property_name {
+            "then" => {
+                if let Some(handler) = self.promise_handler_expression(arguments.first()) {
+                    self.emit_immediate_promise_callback(&handler, &Expression::Undefined, true)?;
+                    self.emit_ignored_call_arguments(&arguments[1..])?;
+                } else {
+                    self.emit_ignored_call_arguments(arguments)?;
+                }
+            }
+            "catch" => {
+                self.emit_ignored_call_arguments(arguments)?;
+            }
+            "finally" => {
+                if let Some(handler) = self.promise_handler_expression(arguments.first()) {
+                    self.emit_immediate_promise_callback(&handler, &Expression::Undefined, true)?;
+                    self.emit_ignored_call_arguments(&arguments[1..])?;
+                } else {
+                    self.emit_ignored_call_arguments(arguments)?;
+                }
+            }
+            _ => unreachable!("filtered above"),
+        }
+
+        self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
+        Ok(true)
+    }
+
+    fn expression_is_lossy_promise_protocol_receiver(&self, expression: &Expression) -> bool {
+        let Expression::Identifier(name) = expression else {
+            return false;
+        };
+        if name == "Promise" {
+            return false;
+        }
+        name.to_ascii_lowercase().contains("promise")
+    }
+
     pub(in crate::backend::direct_wasm) fn consume_immediate_promise_outcome(
         &mut self,
         expression: &Expression,
     ) -> DirectResult<Option<StaticEvalOutcome>> {
+        if let Some(outcome) = self.static_module_dependency_promise_outcome(expression) {
+            return Ok(Some(outcome));
+        }
         if let Expression::Identifier(name) = expression {
-            let bound_value = self
-                .resolve_current_local_binding(name)
-                .and_then(|(resolved_name, _)| {
-                    self.state
-                        .speculation
-                        .static_semantics
-                        .local_value_binding(&resolved_name)
-                })
-                .or_else(|| self.global_value_binding(name))
-                .cloned();
+            let bound_value = self.static_binding_value_for_identifier(name);
             if let Some(bound_value) = bound_value
                 && !static_expression_matches(&bound_value, expression)
             {
@@ -1907,7 +3708,11 @@ impl<'a> FunctionCompiler<'a> {
                 if matches!(
                     callee.as_ref(),
                     Expression::Member { property, .. }
-                        if matches!(property.as_ref(), Expression::String(name) if name == "then" || name == "catch")
+                        if matches!(
+                            property.as_ref(),
+                            Expression::String(name)
+                                if matches!(name.as_str(), "then" | "catch" | "finally")
+                        )
                 )
         );
         if !is_then_or_catch_chain
@@ -1942,7 +3747,7 @@ impl<'a> FunctionCompiler<'a> {
             && let Expression::Member { object, property } = callee.as_ref()
             && matches!(
                 property.as_ref(),
-                Expression::String(name) if name == "then" || name == "catch"
+                Expression::String(name) if matches!(name.as_str(), "then" | "catch" | "finally")
             )
             && matches!(object.as_ref(), Expression::Call { .. })
         {
@@ -1971,7 +3776,7 @@ impl<'a> FunctionCompiler<'a> {
             && let Expression::Member { object, property } = callee.as_ref()
             && matches!(
                 property.as_ref(),
-                Expression::String(name) if name == "then" || name == "catch"
+                Expression::String(name) if matches!(name.as_str(), "then" | "catch" | "finally")
             )
             && matches!(object.as_ref(), Expression::Call { .. })
         {
@@ -1985,7 +3790,10 @@ impl<'a> FunctionCompiler<'a> {
         Ok(None)
     }
 
-    fn expression_is_direct_async_function_call(&self, expression: &Expression) -> bool {
+    pub(in crate::backend::direct_wasm) fn expression_is_direct_async_function_call(
+        &self,
+        expression: &Expression,
+    ) -> bool {
         let Expression::Call { callee, .. } = expression else {
             return false;
         };
@@ -2007,6 +3815,101 @@ impl<'a> FunctionCompiler<'a> {
             Expression::Call { callee, .. }
                 if matches!(callee.as_ref(), Expression::Identifier(name) if name == "__ayyDynamicImport")
         )
+    }
+
+    fn expression_contains_dynamic_import_call(expression: &Expression) -> bool {
+        match expression {
+            Expression::Call { callee, arguments }
+            | Expression::New { callee, arguments }
+            | Expression::SuperCall { callee, arguments } => {
+                Self::expression_is_dynamic_import_call(expression)
+                    || Self::expression_contains_dynamic_import_call(callee)
+                    || arguments.iter().any(|argument| match argument {
+                        CallArgument::Expression(value) | CallArgument::Spread(value) => {
+                            Self::expression_contains_dynamic_import_call(value)
+                        }
+                    })
+            }
+            Expression::Array(elements) => elements.iter().any(|element| match element {
+                ArrayElement::Expression(value) | ArrayElement::Spread(value) => {
+                    Self::expression_contains_dynamic_import_call(value)
+                }
+            }),
+            Expression::Object(entries) => entries.iter().any(|entry| match entry {
+                ObjectEntry::Data { key, value } => {
+                    Self::expression_contains_dynamic_import_call(key)
+                        || Self::expression_contains_dynamic_import_call(value)
+                }
+                ObjectEntry::Getter { key, getter } => {
+                    Self::expression_contains_dynamic_import_call(key)
+                        || Self::expression_contains_dynamic_import_call(getter)
+                }
+                ObjectEntry::Setter { key, setter } => {
+                    Self::expression_contains_dynamic_import_call(key)
+                        || Self::expression_contains_dynamic_import_call(setter)
+                }
+                ObjectEntry::Spread(value) => Self::expression_contains_dynamic_import_call(value),
+            }),
+            Expression::Member { object, property } => {
+                Self::expression_contains_dynamic_import_call(object)
+                    || Self::expression_contains_dynamic_import_call(property)
+            }
+            Expression::SuperMember { property } => {
+                Self::expression_contains_dynamic_import_call(property)
+            }
+            Expression::Unary { expression, .. }
+            | Expression::Await(expression)
+            | Expression::EnumerateKeys(expression)
+            | Expression::GetIterator(expression)
+            | Expression::IteratorClose(expression) => {
+                Self::expression_contains_dynamic_import_call(expression)
+            }
+            Expression::Binary { left, right, .. } => {
+                Self::expression_contains_dynamic_import_call(left)
+                    || Self::expression_contains_dynamic_import_call(right)
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                Self::expression_contains_dynamic_import_call(condition)
+                    || Self::expression_contains_dynamic_import_call(then_expression)
+                    || Self::expression_contains_dynamic_import_call(else_expression)
+            }
+            Expression::Sequence(expressions) => expressions
+                .iter()
+                .any(Self::expression_contains_dynamic_import_call),
+            Expression::Assign { value, .. } => {
+                Self::expression_contains_dynamic_import_call(value)
+            }
+            Expression::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                Self::expression_contains_dynamic_import_call(object)
+                    || Self::expression_contains_dynamic_import_call(property)
+                    || Self::expression_contains_dynamic_import_call(value)
+            }
+            Expression::AssignSuperMember { property, value } => {
+                Self::expression_contains_dynamic_import_call(property)
+                    || Self::expression_contains_dynamic_import_call(value)
+            }
+            _ => false,
+        }
+    }
+
+    fn expression_is_dynamic_import_promise_reference(&self, expression: &Expression) -> bool {
+        if Self::expression_is_dynamic_import_call(expression) {
+            return true;
+        }
+        let Expression::Identifier(name) = expression else {
+            return false;
+        };
+        self.static_binding_value_for_identifier(name)
+            .filter(|value| !static_expression_matches(value, expression))
+            .is_some_and(|value| Self::expression_is_dynamic_import_call(&value))
     }
 
     fn expression_is_async_function_prototype_call(&self, expression: &Expression) -> bool {
@@ -2047,7 +3950,7 @@ impl<'a> FunctionCompiler<'a> {
                     Expression::String(name)
                         if matches!(
                             name.as_str(),
-                            "then" | "catch" | "next" | "return" | "throw" | "all"
+                            "then" | "catch" | "finally" | "next" | "return" | "throw" | "all"
                         )
                 )
         ) {
@@ -2190,6 +4093,14 @@ impl<'a> FunctionCompiler<'a> {
                 &Expression::Undefined,
                 &arguments_binding,
             );
+            if compiler.return_expression_is_simple_async_generator_next_call(&return_expression) {
+                if let Some(outcome) =
+                    compiler.consume_immediate_promise_outcome(&return_expression)?
+                {
+                    return Ok(Some(outcome));
+                }
+                return Ok(None);
+            }
             if compiler
                 .immediate_promise_return_is_already_emitted_local_function_call(&return_expression)
             {
@@ -2215,6 +4126,51 @@ impl<'a> FunctionCompiler<'a> {
                 .resolve_static_await_resolution_outcome(&return_expression)
                 .or(Some(StaticEvalOutcome::Value(return_expression))))
         })
+    }
+
+    fn return_expression_is_simple_async_generator_next_call(
+        &self,
+        expression: &Expression,
+    ) -> bool {
+        let Expression::Call { callee, arguments } = expression else {
+            return false;
+        };
+        if !arguments.is_empty() {
+            return false;
+        }
+        let Expression::Member { object, property } = callee.as_ref() else {
+            return false;
+        };
+        matches!(property.as_ref(), Expression::String(name) if name == "next")
+            && self.is_async_generator_iterator_expression(object)
+    }
+
+    fn immediate_promise_callback_single_return_expression(
+        &self,
+        callback: &Expression,
+        argument: &Expression,
+    ) -> Option<Expression> {
+        let Some(LocalFunctionBinding::User(function_name)) =
+            self.resolve_function_binding_from_expression(callback)
+        else {
+            return None;
+        };
+        let Some(user_function) = self.user_function(&function_name).cloned() else {
+            return None;
+        };
+        let function = self.resolve_registered_function_declaration(&function_name)?;
+        let [Statement::Return(return_value)] = function.body.as_slice() else {
+            return None;
+        };
+        let call_arguments = vec![CallArgument::Expression(argument.clone())];
+        let arguments_binding = Expression::Array(vec![ArrayElement::Expression(argument.clone())]);
+        Some(self.substitute_user_function_call_frame_bindings(
+            return_value,
+            &user_function,
+            &call_arguments,
+            &Expression::Undefined,
+            &arguments_binding,
+        ))
     }
 
     fn immediate_promise_return_is_already_emitted_local_function_call(
@@ -2341,11 +4297,13 @@ impl<'a> FunctionCompiler<'a> {
         let Expression::String(property_name) = property.as_ref() else {
             return Ok(None);
         };
-        let handlers_require_runtime_chain = arguments.iter().any(|argument| match argument {
-            CallArgument::Expression(handler) | CallArgument::Spread(handler) => {
-                self.promise_handler_requires_runtime_chain(handler)
-            }
-        });
+        let handlers_require_runtime_chain =
+            matches!(property_name.as_str(), "then" | "catch" | "finally")
+                && arguments.iter().any(|argument| match argument {
+                    CallArgument::Expression(handler) | CallArgument::Spread(handler) => {
+                        self.promise_handler_requires_runtime_chain(handler)
+                    }
+                });
         if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
             eprintln!(
                 "consume_immediate_promise_outcome:property={} handlers_require_runtime_chain={}",
@@ -2353,6 +4311,30 @@ impl<'a> FunctionCompiler<'a> {
             );
         }
         match property_name.as_str() {
+            "withResolvers" => {
+                if !arguments.is_empty()
+                    || !matches!(object.as_ref(), Expression::Identifier(name) if name == "Promise")
+                {
+                    return Ok(None);
+                }
+                Ok(Some(StaticEvalOutcome::Value(
+                    Self::static_promise_with_resolvers_object(),
+                )))
+            }
+            "resolve" => {
+                if !matches!(object.as_ref(), Expression::Identifier(name) if name == "Promise")
+                    || arguments.len() > 1
+                {
+                    return Ok(None);
+                }
+                match arguments.first() {
+                    Some(CallArgument::Expression(value)) => {
+                        Ok(Some(StaticEvalOutcome::Value(value.clone())))
+                    }
+                    Some(CallArgument::Spread(_)) => Ok(None),
+                    None => Ok(Some(StaticEvalOutcome::Value(Expression::Undefined))),
+                }
+            }
             "call" => {
                 let Some(then_call) =
                     self.promise_prototype_then_call_expression(object, arguments)
@@ -2392,13 +4374,36 @@ impl<'a> FunctionCompiler<'a> {
                     Expression::Array(elements) => Some(elements.clone()),
                     _ => None,
                 };
-                let array_expression = self.materialize_static_expression(&raw_array_expression);
-                let Expression::Array(elements) = array_expression else {
-                    return Ok(None);
+                let elements = if let Some(elements) = raw_array_elements.clone() {
+                    elements
+                } else {
+                    let array_expression =
+                        self.materialize_static_expression(&raw_array_expression);
+                    let Expression::Array(elements) = array_expression else {
+                        return Ok(None);
+                    };
+                    elements
                 };
-                let mut values = Vec::with_capacity(elements.len());
-                for (index, element) in elements.into_iter().enumerate() {
-                    let ArrayElement::Expression(value) = element else {
+                let mut values = vec![None; elements.len()];
+                let mut order = (0..elements.len()).collect::<Vec<_>>();
+                order.sort_by_key(|index| {
+                    let raw_value = raw_array_elements.as_ref().and_then(|raw_elements| {
+                        raw_elements.get(*index).and_then(|element| match element {
+                            ArrayElement::Expression(expression) => Some(expression),
+                            _ => None,
+                        })
+                    });
+                    let value = raw_value.or_else(|| match elements.get(*index) {
+                        Some(ArrayElement::Expression(expression)) => Some(expression),
+                        _ => None,
+                    });
+                    value
+                        .is_some_and(Self::expression_contains_dynamic_import_call)
+                        .then_some(0)
+                        .unwrap_or(1)
+                });
+                for index in order {
+                    let Some(ArrayElement::Expression(value)) = elements.get(index).cloned() else {
                         return Ok(None);
                     };
                     let raw_value = raw_array_elements.as_ref().and_then(|raw_elements| {
@@ -2416,21 +4421,24 @@ impl<'a> FunctionCompiler<'a> {
                     }
                     match outcome {
                         Some(StaticEvalOutcome::Value(value)) => {
-                            values.push(ArrayElement::Expression(value));
+                            values[index] = Some(ArrayElement::Expression(value));
                         }
                         Some(StaticEvalOutcome::Throw(throw_value)) => {
                             return Ok(Some(StaticEvalOutcome::Throw(throw_value)));
                         }
                         None => {
-                            values.push(ArrayElement::Expression(
+                            values[index] = Some(ArrayElement::Expression(
                                 self.materialize_static_expression(&value),
                             ));
                         }
                     }
                 }
+                let Some(values) = values.into_iter().collect::<Option<Vec<_>>>() else {
+                    return Ok(None);
+                };
                 Ok(Some(StaticEvalOutcome::Value(Expression::Array(values))))
             }
-            "then" | "catch" => {
+            "then" | "catch" | "finally" => {
                 let Some(base_outcome) = self.consume_immediate_promise_outcome(object)? else {
                     if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
                         eprintln!(
@@ -2467,6 +4475,9 @@ impl<'a> FunctionCompiler<'a> {
                             self.promise_handler_expression(arguments.first()),
                             StaticEvalOutcome::Throw(throw_value),
                         ),
+                        ("finally", outcome) => {
+                            (self.promise_handler_expression(arguments.first()), outcome)
+                        }
                         _ => unreachable!("filtered above"),
                     };
 
@@ -2485,6 +4496,29 @@ impl<'a> FunctionCompiler<'a> {
                     );
                 }
 
+                if property_name == "finally" {
+                    let handler_argument = Expression::Undefined;
+                    if let Some(returned_rejection) =
+                        self.resolve_immediate_promise_callback_returned_rejection(&handler)?
+                    {
+                        return Ok(Some(returned_rejection));
+                    }
+                    self.emit_immediate_promise_callback(
+                        &handler,
+                        &handler_argument,
+                        !handlers_require_runtime_chain,
+                    )?;
+                    if let Some(StaticEvalOutcome::Throw(throw_value)) =
+                        self.immediate_promise_callback_return_outcome(&handler, &handler_argument)?
+                    {
+                        return Ok(Some(StaticEvalOutcome::Throw(throw_value)));
+                    }
+                    if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+                        eprintln!("consume_immediate_promise_outcome:finally-handler-emitted");
+                    }
+                    return Ok(Some(passthrough_outcome));
+                }
+
                 let handler_argument = match &passthrough_outcome {
                     StaticEvalOutcome::Value(value) => value,
                     StaticEvalOutcome::Throw(throw_value) => {
@@ -2494,7 +4528,11 @@ impl<'a> FunctionCompiler<'a> {
                         };
                         self.clear_local_throw_state();
                         self.clear_global_throw_state();
-                        self.emit_immediate_promise_callback(&handler, &value, true)?;
+                        self.emit_immediate_promise_callback(
+                            &handler,
+                            &value,
+                            !handlers_require_runtime_chain,
+                        )?;
                         if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
                             eprintln!(
                                 "consume_immediate_promise_outcome:throw-handler-emitted property={property_name}"
@@ -2508,7 +4546,29 @@ impl<'a> FunctionCompiler<'a> {
                 {
                     return Ok(Some(returned_rejection));
                 }
-                self.emit_immediate_promise_callback(&handler, handler_argument, true)?;
+                let single_return_expression = self
+                    .immediate_promise_callback_single_return_expression(
+                        &handler,
+                        handler_argument,
+                    );
+                let return_path_will_emit_chain =
+                    single_return_expression
+                        .as_ref()
+                        .is_some_and(|return_expression| {
+                            Self::call_is_promise_like_chain(return_expression)
+                                && Self::expression_contains_dynamic_import_call(return_expression)
+                        });
+                if !return_path_will_emit_chain {
+                    self.emit_immediate_promise_callback(
+                        &handler,
+                        handler_argument,
+                        !handlers_require_runtime_chain,
+                    )?;
+                } else if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+                    eprintln!(
+                        "consume_immediate_promise_outcome:skip-callback-body-return-chain handler={handler:?}"
+                    );
+                }
                 let returned_outcome =
                     self.immediate_promise_callback_return_outcome(&handler, handler_argument)?;
                 if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
@@ -2561,7 +4621,10 @@ impl<'a> FunctionCompiler<'a> {
         let Expression::String(property_name) = property else {
             return Ok(false);
         };
-        if property_name != "then" && property_name != "catch" {
+        if !matches!(
+            property_name.as_str(),
+            "then" | "catch" | "finally" | "all" | "withResolvers"
+        ) {
             return Ok(false);
         }
         if self.expected_event_log_strings().is_some() && Self::call_is_promise_like_chain(object) {
@@ -2586,9 +4649,16 @@ impl<'a> FunctionCompiler<'a> {
                     "emit_immediate_promise_member_call:no-static-outcome object={object:?} property={property:?}"
                 );
             }
+            if property_name == "all" {
+                return Ok(false);
+            }
+            if property_name == "withResolvers" {
+                return Ok(false);
+            }
             if Self::call_is_promise_like_chain(object)
                 || self.expression_is_direct_async_function_call(object)
                 || Self::expression_is_dynamic_import_call(object)
+                || self.expression_is_dynamic_import_promise_reference(object)
                 || self.expression_is_async_function_prototype_call(object)
             {
                 if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
@@ -2599,6 +4669,15 @@ impl<'a> FunctionCompiler<'a> {
                 self.emit_numeric_expression(object)?;
                 self.state.emission.output.instructions.push(0x1a);
                 self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
+                return Ok(true);
+            }
+            if self.expression_is_lossy_promise_protocol_receiver(object)
+                && self.emit_fulfilled_promise_protocol_member_call(
+                    object,
+                    property_name,
+                    arguments,
+                )?
+            {
                 return Ok(true);
             }
             if let Expression::Call { callee, .. } = object

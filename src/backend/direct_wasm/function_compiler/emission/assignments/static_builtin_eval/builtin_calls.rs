@@ -40,10 +40,7 @@ impl<'a> FunctionCompiler<'a> {
         }
 
         if parse_test262_realm_eval_builtin(function_name).is_some() {
-            return self.resolve_static_indirect_eval_completion_outcome_with_context(
-                arguments,
-                Some(function_name),
-            );
+            return None;
         }
 
         match function_name {

@@ -1,14 +1,23 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
-    fn static_typed_array_values_from_expression(
+    pub(in crate::backend::direct_wasm) fn static_typed_array_values_from_expression(
         &self,
         source_expression: &Expression,
     ) -> Option<ArrayValueBinding> {
+        if let Some(values) = self.static_bytes_module_default_values(source_expression) {
+            return Some(values);
+        }
+        let typed_array_source = self
+            .resolve_static_typed_array_source_expression(source_expression)
+            .unwrap_or_else(|| source_expression.clone());
+        if !matches!(typed_array_source, Expression::New { .. }) {
+            return None;
+        }
         let mut object_binding =
-            self.resolve_static_typed_array_object_binding_from_expression(source_expression)?;
+            self.resolve_static_typed_array_object_binding_from_expression(&typed_array_source)?;
         let length = self.static_typed_array_length_from_binding(&object_binding)?;
-        let source_values = match source_expression {
+        let source_values = match &typed_array_source {
             Expression::New { arguments, .. } => {
                 let expanded_arguments = self.expand_call_arguments(arguments);
                 expanded_arguments

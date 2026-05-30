@@ -39,7 +39,7 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(true);
         };
 
-        let array_like = match first_argument {
+        let (array_like, argument_side_effect_free) = match first_argument {
             CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
                 let typed_array = matches!(expression, Expression::Identifier(name) if self.state.speculation.static_semantics.has_local_typed_array_view_binding(name));
                 let static_array = self
@@ -53,15 +53,20 @@ impl<'a> FunctionCompiler<'a> {
                         "array_is_array:emit expression={expression:?} typed_array={typed_array} static_array={static_array} runtime_array={runtime_array:?} template_raw_array={template_raw_array}"
                     );
                 }
-                !typed_array && (static_array || runtime_array.is_some() || template_raw_array)
+                (
+                    !typed_array && (static_array || runtime_array.is_some() || template_raw_array),
+                    inline_summary_side_effect_free_expression(expression),
+                )
             }
         };
 
-        for argument in arguments {
-            match argument {
-                CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
-                    self.emit_numeric_expression(expression)?;
-                    self.state.emission.output.instructions.push(0x1a);
+        if !array_like || !argument_side_effect_free || arguments.len() > 1 {
+            for argument in arguments {
+                match argument {
+                    CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                        self.emit_numeric_expression(expression)?;
+                        self.state.emission.output.instructions.push(0x1a);
+                    }
                 }
             }
         }

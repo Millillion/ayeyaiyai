@@ -89,6 +89,10 @@ impl<'a> FunctionCompiler<'a> {
         target: &Expression,
         property: &Expression,
     ) -> Option<bool> {
+        if let Some(result) = self.module_namespace_static_delete_result(target, property) {
+            return Some(result);
+        }
+
         let object_binding = self.resolve_object_binding_from_expression(target)?;
         let materialized_property = self.canonical_object_property_expression(property);
         self.object_binding_static_delete_result(&object_binding, &materialized_property)
@@ -413,6 +417,170 @@ impl<'a> FunctionCompiler<'a> {
         Ok(true)
     }
 
+    fn deferred_module_namespace_delete_property_key(
+        &self,
+        property: &Expression,
+    ) -> Option<Expression> {
+        self.resolve_property_key_expression(property)
+            .or_else(|| {
+                if let Expression::Identifier(name) = property {
+                    self.state
+                        .speculation
+                        .static_semantics
+                        .local_value_binding(name)
+                        .or_else(|| self.global_value_binding(name))
+                        .cloned()
+                        .and_then(|value| self.resolve_property_key_expression(&value))
+                } else {
+                    None
+                }
+            })
+            .map(|property| self.canonical_object_property_expression(&property))
+    }
+
+    fn deferred_module_namespace_delete_module_index_and_property(
+        &self,
+        object: &Expression,
+        property: &Expression,
+    ) -> Option<(usize, Expression)> {
+        let Expression::Identifier(target_name) = object else {
+            return None;
+        };
+        let module_index = target_name
+            .starts_with("__ayy_module_deferred_namespace_")
+            .then(|| Self::module_index_from_namespace_like_identifier(target_name))
+            .flatten()?;
+        if self.current_function_name().is_some_and(|function_name| {
+            function_name == format!("__ayy_module_init_{module_index}")
+        }) {
+            return None;
+        }
+
+        let property_key = self.deferred_module_namespace_delete_property_key(property)?;
+        let property_name = static_property_name_from_expression(&property_key)?;
+        if property_name == "then" || property_name.starts_with("__ayy$") {
+            return None;
+        }
+        Some((module_index, property_key))
+    }
+
+    fn deferred_module_namespace_delete_result_after_eval(
+        &self,
+        module_index: usize,
+        property: &Expression,
+    ) -> bool {
+        self.resolve_static_dynamic_import_namespace_live_binding_member_value(
+            module_index,
+            property,
+        )
+        .or_else(|| {
+            self.resolve_static_dynamic_import_namespace_live_binding_member_initializer_value(
+                module_index,
+                property,
+            )
+        })
+        .is_none()
+    }
+
+    fn emit_deferred_module_namespace_member_delete(
+        &mut self,
+        object: &Expression,
+        property: &Expression,
+    ) -> DirectResult<bool> {
+        let Some((module_index, property_key)) =
+            self.deferred_module_namespace_delete_module_index_and_property(object, property)
+        else {
+            return Ok(false);
+        };
+
+        self.emit_numeric_expression(object)?;
+        self.state.emission.output.instructions.push(0x1a);
+        self.emit_property_key_expression_effects(property)?;
+        self.emit_sync_module_init_if_needed(module_index, &mut std::collections::HashSet::new())?;
+        let result =
+            self.deferred_module_namespace_delete_result_after_eval(module_index, &property_key);
+        self.push_i32_const(result as i32);
+        self.emit_delete_result_or_throw_if_strict()?;
+        Ok(true)
+    }
+
+    fn module_namespace_static_delete_result(
+        &self,
+        target: &Expression,
+        property: &Expression,
+    ) -> Option<bool> {
+        let property_key = self.deferred_module_namespace_delete_property_key(property)?;
+        let property_key = static_property_name_from_expression(&property_key)
+            .map(Expression::String)
+            .unwrap_or(property_key);
+        let object_binding = self
+            .direct_module_namespace_object_binding(target)
+            .or_else(|| {
+                self.resolve_object_binding_from_expression(target)
+                    .filter(|binding| Self::object_binding_has_module_namespace_marker(binding))
+            });
+        let module_index = match target {
+            Expression::Identifier(name) => Self::module_index_from_namespace_like_identifier(name),
+            _ => None,
+        }
+        .or_else(|| {
+            object_binding
+                .as_ref()
+                .and_then(|binding| {
+                    object_binding_lookup_value(
+                        binding,
+                        &Expression::String("__ayy$module$namespace$moduleIndex".to_string()),
+                    )
+                })
+                .and_then(|value| match value {
+                    Expression::Number(index)
+                        if index.is_finite() && *index >= 0.0 && index.fract() == 0.0 =>
+                    {
+                        Some(*index as usize)
+                    }
+                    _ => None,
+                })
+        });
+
+        if module_index.is_none()
+            && !object_binding
+                .as_ref()
+                .is_some_and(Self::object_binding_has_module_namespace_marker)
+        {
+            return None;
+        }
+
+        if is_symbol_to_string_tag_expression(&property_key) {
+            return Some(false);
+        }
+        if self.well_known_symbol_name(&property_key).is_some()
+            || self
+                .resolve_symbol_identity_expression(&property_key)
+                .is_some()
+        {
+            return Some(true);
+        }
+        static_property_name_from_expression(&property_key)?;
+
+        if let Some(module_index) = module_index {
+            let has_export = self
+                .resolve_static_dynamic_import_namespace_live_binding_member_value(
+                    module_index,
+                    &property_key,
+                )
+                .or_else(|| {
+                    self.resolve_static_dynamic_import_namespace_live_binding_member_initializer_value(
+                        module_index,
+                        &property_key,
+                    )
+                })
+                .is_some();
+            return Some(!has_export);
+        }
+
+        object_binding.map(|binding| object_binding_lookup_value(&binding, &property_key).is_none())
+    }
+
     pub(in crate::backend::direct_wasm) fn emit_delete_expression(
         &mut self,
         expression: &Expression,
@@ -476,15 +644,30 @@ impl<'a> FunctionCompiler<'a> {
             {
                 self.push_i32_const(0);
             }
-            Expression::Identifier(name)
-                if self
+            Expression::Identifier(name) => {
+                let direct_eval_var_binding =
+                    self.resolve_current_local_binding(name)
+                        .and_then(|(resolved_name, _)| {
+                            self.current_static_direct_eval_var_binding_source_name(&resolved_name)
+                                .and_then(|_| {
+                                    self.local_lexical_initialized_local(&resolved_name)
+                                        .map(|initialized_local| (resolved_name, initialized_local))
+                                })
+                        });
+                if let Some((resolved_name, initialized_local)) = direct_eval_var_binding {
+                    self.state
+                        .clear_local_static_binding_metadata(&resolved_name);
+                    self.push_i32_const(0);
+                    self.push_local_set(initialized_local);
+                    self.push_i32_const(1);
+                } else if self
                     .lookup_identifier_kind_ignoring_with_scopes(name)
-                    .is_some() =>
-            {
-                self.push_i32_const(0);
-            }
-            Expression::Identifier(_) => {
-                self.push_i32_const(1);
+                    .is_some()
+                {
+                    self.push_i32_const(0);
+                } else {
+                    self.push_i32_const(1);
+                }
             }
             Expression::Member { object, property } if matches!(property.as_ref(), Expression::String(property_name) if property_name == "callee" || property_name == "length") =>
             {
@@ -563,6 +746,14 @@ impl<'a> FunctionCompiler<'a> {
             Expression::Member { object, property }
                 if argument_index_from_expression(property).is_some() =>
             {
+                if let Some(result) = self.module_namespace_static_delete_result(object, property) {
+                    self.emit_numeric_expression(object)?;
+                    self.state.emission.output.instructions.push(0x1a);
+                    self.emit_property_key_expression_effects(property)?;
+                    self.push_i32_const(result as i32);
+                    self.emit_delete_result_or_throw_if_strict()?;
+                    return Ok(());
+                }
                 let index = argument_index_from_expression(property).expect("checked above");
                 if let Expression::Identifier(name) = object.as_ref() {
                     if let Some(array_binding) = self
@@ -627,6 +818,17 @@ impl<'a> FunctionCompiler<'a> {
                 return Ok(());
             }
             Expression::Member { object, property } => {
+                if let Some(result) = self.module_namespace_static_delete_result(object, property) {
+                    self.emit_numeric_expression(object)?;
+                    self.state.emission.output.instructions.push(0x1a);
+                    self.emit_property_key_expression_effects(property)?;
+                    self.push_i32_const(result as i32);
+                    self.emit_delete_result_or_throw_if_strict()?;
+                    return Ok(());
+                }
+                if self.emit_deferred_module_namespace_member_delete(object, property)? {
+                    return Ok(());
+                }
                 if self.emit_top_level_global_object_member_delete(object, property)? {
                     return Ok(());
                 }

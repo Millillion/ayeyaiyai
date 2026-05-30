@@ -50,6 +50,7 @@ impl<'a> FunctionCompiler<'a> {
         let saved_this_shadow_owner = if user_function.lexical_this {
             None
         } else {
+            self.predeclare_user_function_this_private_initializer_shadow_properties(user_function);
             self.with_suspended_with_scopes_if_active_scope_object(this_expression, |compiler| {
                 compiler.prepare_user_function_runtime_this_shadow_state(this_expression)
             })?

@@ -258,7 +258,7 @@ function $DONE(error) {
 const ASYNC_HELPERS_PRELUDE: &str = r#"
 function asyncTest(testFunc) {
   if (typeof testFunc !== "function") {
-    $DONE(new Test262Error("asyncTest called with non-function argument"));
+    $DONE("asyncTest called with non-function argument");
     return;
   }
   try {
@@ -414,6 +414,27 @@ function decimalToHexString(n) {
 function decimalToPercentHexString(n) {
   var hex = "0123456789ABCDEF";
   return "%" + hex[(n >> 4) & 0xf] + hex[n & 0xf];
+}
+"#;
+
+const SIMPLE_TEST_TYPED_ARRAY_PRELUDE: &str = r#"
+var typedArrayConstructors = [
+  Float64Array,
+  Float32Array,
+  Int32Array,
+  Int16Array,
+  Int8Array,
+  Uint32Array,
+  Uint16Array,
+  Uint8Array,
+  Uint8ClampedArray
+];
+
+function testWithTypedArrayConstructors(f, constructors) {
+  var ctors = constructors || typedArrayConstructors;
+  for (var i = 0; i < ctors.length; ++i) {
+    f(ctors[i]);
+  }
 }
 "#;
 
@@ -681,6 +702,12 @@ fn run_single_test(
         target: target.to_string(),
     };
 
+    let keep_tempdir = std::env::var_os("AYY_KEEP_TEST262_TEMP").is_some()
+        || std::env::var_os("AYY_KEEP_TEST262_TEMP_PRECOMPILE").is_some();
+    if std::env::var_os("AYY_KEEP_TEST262_TEMP_PRECOMPILE").is_some() {
+        eprintln!("kept test262 tempdir: {}", tempdir.path().display());
+    }
+
     let compile_result = if module {
         compile_file_with_goal(&entry_path, &options, true)
     } else {
@@ -750,7 +777,7 @@ fn run_single_test(
             String::from_utf8_lossy(&output.stderr),
         )))
     };
-    if std::env::var_os("AYY_KEEP_TEST262_TEMP").is_some() {
+    if keep_tempdir {
         eprintln!("kept test262 tempdir: {}", tempdir.path().display());
         std::mem::forget(tempdir);
     }
@@ -765,10 +792,7 @@ fn stage_module_siblings(source_path: &Path, target_dir: &Path) -> Result<()> {
     for entry in fs::read_dir(parent)? {
         let entry = entry?;
         let path = entry.path();
-        let extension = path.extension();
-        if path == source_path
-            || (extension != Some(OsStr::new("js")) && extension != Some(OsStr::new("json")))
-        {
+        if path == source_path || !path.is_file() {
             continue;
         }
 
@@ -942,7 +966,36 @@ fn apply_negative_expectation(
     }
 }
 
-fn include_prelude(include: &str, harness_dir: &Path) -> Option<String> {
+fn source_can_use_simple_typed_array_prelude(body: &str) -> bool {
+    let regular_subclassing_shape = body.contains("class Typed extends Constructor")
+        && body.contains("new Typed(2)")
+        && body.contains("assert.sameValue(arr.length, 2)");
+    let super_must_be_called_shape = body.contains("class Typed extends Constructor")
+        && body.contains("constructor() {}")
+        && body.contains("assert.throws(ReferenceError")
+        && body.contains("new Typed();")
+        && body.contains("class TypedWithSuper extends Constructor")
+        && body.contains("super();")
+        && body.contains("new TypedWithSuper();");
+
+    body.contains("testWithTypedArrayConstructors(function(Constructor)")
+        && (regular_subclassing_shape || super_must_be_called_shape)
+        && !body.contains("testWithAllTypedArrayConstructors")
+        && !body.contains("testWithBigIntTypedArrayConstructors")
+        && !body.contains("testWithAtomicsFriendlyTypedArrayConstructors")
+        && !body.contains("testWithNonAtomicsFriendlyTypedArrayConstructors")
+        && !body.contains("typedArrayCtorArgFactories")
+        && !body.contains("makePassthrough")
+        && !body.contains("makeArray")
+        && !body.contains("makeArrayLike")
+        && !body.contains("makeArrayBuffer")
+        && !body.contains("testTypedArrayConversions")
+        && !body.contains("floatArrayConstructors")
+        && !body.contains("intArrayConstructors")
+        && !body.contains("nonClampedIntArrayConstructors")
+}
+
+fn include_prelude(include: &str, harness_dir: &Path, body: &str) -> Option<String> {
     match include {
         "assert.js" | "sta.js" => Some(String::new()),
         "compareArray.js" => Some(String::new()),
@@ -952,6 +1005,9 @@ fn include_prelude(include: &str, harness_dir: &Path) -> Option<String> {
         "asyncHelpers.js" => Some(ASYNC_HELPERS_PRELUDE.to_string()),
         "decimalToHexString.js" => Some(DECIMAL_TO_HEX_STRING_PRELUDE.to_string()),
         "resizableArrayBufferUtils.js" => Some(RESIZABLE_ARRAYBUFFER_UTILS_PRELUDE.to_string()),
+        "testTypedArray.js" if source_can_use_simple_typed_array_prelude(body) => {
+            Some(SIMPLE_TEST_TYPED_ARRAY_PRELUDE.to_string())
+        }
         _ => fs::read_to_string(harness_dir.join(include)).ok(),
     }
 }
@@ -1084,7 +1140,7 @@ fn rewrite_for_supported_subset(
     let include_prelude = metadata
         .includes
         .iter()
-        .map(|include| include_prelude(include, harness_dir))
+        .map(|include| include_prelude(include, harness_dir, body))
         .collect::<Option<Vec<_>>>()?
         .join("\n");
 

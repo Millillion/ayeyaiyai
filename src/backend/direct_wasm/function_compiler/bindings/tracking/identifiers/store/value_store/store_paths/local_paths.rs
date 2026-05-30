@@ -5,6 +5,19 @@ fn is_internal_iterator_value_binding_name(name: &str) -> bool {
 }
 
 impl<'a> FunctionCompiler<'a> {
+    fn identifier_store_state_contains_await(state: &PreparedIdentifierStoreState) -> bool {
+        if state.opaque_runtime_value {
+            return true;
+        }
+        Self::expression_contains_await_for_user_call_runtime(&state.canonical_value_expression)
+            || Self::expression_contains_await_for_user_call_runtime(
+                &state.tracked_value_expression,
+            )
+            || Self::expression_contains_await_for_user_call_runtime(
+                &state.module_assignment_expression,
+            )
+    }
+
     fn local_store_static_value_expression<'b>(
         &self,
         resolved_name: &str,
@@ -24,6 +37,9 @@ impl<'a> FunctionCompiler<'a> {
         resolved_name: &str,
         state: &PreparedIdentifierStoreState,
     ) -> StaticValueKind {
+        if Self::identifier_store_state_contains_await(state) {
+            return StaticValueKind::Unknown;
+        }
         let static_value = self.local_store_static_value_expression(resolved_name, state);
         self.infer_value_kind(static_value)
             .or(state.kind)
@@ -35,6 +51,13 @@ impl<'a> FunctionCompiler<'a> {
         resolved_name: &str,
         state: &PreparedIdentifierStoreState,
     ) {
+        if Self::identifier_store_state_contains_await(state) {
+            self.state
+                .speculation
+                .static_semantics
+                .clear_local_value_binding(resolved_name);
+            return;
+        }
         let static_value_expression =
             self.local_store_static_value_expression(resolved_name, state);
         if is_internal_iterator_value_binding_name(resolved_name)
@@ -167,40 +190,97 @@ impl<'a> FunctionCompiler<'a> {
         local_index: u32,
         state: &PreparedIdentifierStoreState,
     ) -> DirectResult<()> {
+        let trace_identifier_store = std::env::var_os("AYY_TRACE_IDENTIFIER_STORE").is_some();
         if is_internal_assignment_temp(name) {
+            if trace_identifier_store {
+                eprintln!("identifier_store:{name}:local_init:update_internal:start");
+            }
             self.update_internal_assignment_temp_static_metadata(resolved_name, state);
+            if trace_identifier_store {
+                eprintln!("identifier_store:{name}:local_init:update_internal:done");
+            }
         } else if !state.is_internal_iterator_temp {
+            if trace_identifier_store {
+                eprintln!("identifier_store:{name}:local_init:update_value:start");
+            }
             self.update_local_store_value_binding(resolved_name, state);
-            self.update_object_prototype_binding_from_value(
-                resolved_name,
-                state.prototype_binding_expression(),
-            );
+            if trace_identifier_store {
+                eprintln!("identifier_store:{name}:local_init:update_value:done");
+                eprintln!("identifier_store:{name}:local_init:update_prototype:start");
+            }
+            if !Self::identifier_store_state_contains_await(state) {
+                self.update_object_prototype_binding_from_value(
+                    resolved_name,
+                    state.prototype_binding_expression(),
+                );
+            }
+            if trace_identifier_store {
+                eprintln!("identifier_store:{name}:local_init:update_prototype:done");
+                eprintln!("identifier_store:{name}:local_init:kind:start");
+            }
             let static_kind = self.local_store_static_value_kind(resolved_name, state);
             self.state
                 .speculation
                 .static_semantics
                 .set_local_kind(resolved_name, static_kind);
+            if trace_identifier_store {
+                eprintln!("identifier_store:{name}:local_init:kind:done");
+            }
+        }
+        if trace_identifier_store {
+            eprintln!("identifier_store:{name}:local_init:emit_store:start");
         }
         self.push_local_get(value_local);
         self.push_local_set(local_index);
+        if trace_identifier_store {
+            eprintln!("identifier_store:{name}:local_init:emit_store:done");
+            eprintln!("identifier_store:{name}:local_init:direct_eval_capture:start");
+        }
         self.sync_static_direct_eval_closure_capture_slot_from_local(
             resolved_name,
             value_local,
             state,
         )?;
+        if trace_identifier_store {
+            eprintln!("identifier_store:{name}:local_init:direct_eval_capture:done");
+            eprintln!("identifier_store:{name}:local_init:runtime_shadows:start");
+        }
         self.sync_local_store_runtime_object_shadows(name, resolved_name, state)?;
+        if trace_identifier_store {
+            eprintln!("identifier_store:{name}:local_init:runtime_shadows:done");
+            eprintln!("identifier_store:{name}:local_init:module_export_capture:start");
+        }
+        self.sync_module_export_capture_globals_from_local_store(
+            resolved_name,
+            value_local,
+            &state.module_assignment_expression,
+        )?;
+        if trace_identifier_store {
+            eprintln!("identifier_store:{name}:local_init:module_export_capture:done");
+            eprintln!("identifier_store:{name}:local_init:closure_capture:start");
+        }
         self.sync_closure_capture_slots_from_local_store(
             resolved_name,
             value_local,
             &state.module_assignment_expression,
         )?;
+        if trace_identifier_store {
+            eprintln!("identifier_store:{name}:local_init:closure_capture:done");
+        }
         if !state.is_internal_iterator_temp
             && let Some(source_name) = scoped_binding_source_name(name)
             && self
                 .resolve_eval_local_function_hidden_name(source_name)
                 .is_some()
         {
-            self.update_local_value_binding(source_name, &state.module_assignment_expression);
+            if Self::identifier_store_state_contains_await(state) {
+                self.state
+                    .speculation
+                    .static_semantics
+                    .clear_local_value_binding(source_name);
+            } else {
+                self.update_local_value_binding(source_name, &state.module_assignment_expression);
+            }
             if let Some(function_binding) = state.function_binding.clone() {
                 self.state
                     .speculation
@@ -212,10 +292,14 @@ impl<'a> FunctionCompiler<'a> {
                     .static_semantics
                     .clear_local_function_binding(source_name);
             }
-            self.state
-                .speculation
-                .static_semantics
-                .set_local_kind(source_name, state.kind.unwrap_or(StaticValueKind::Unknown));
+            self.state.speculation.static_semantics.set_local_kind(
+                source_name,
+                if Self::identifier_store_state_contains_await(state) {
+                    StaticValueKind::Unknown
+                } else {
+                    state.kind.unwrap_or(StaticValueKind::Unknown)
+                },
+            );
             self.emit_store_eval_local_function_binding_from_local(source_name, value_local)?;
             self.sync_identifier_store_runtime_object_shadows(source_name, source_name, state)?;
         }
@@ -263,6 +347,7 @@ impl<'a> FunctionCompiler<'a> {
         local_index: u32,
         state: &PreparedIdentifierStoreState,
     ) -> DirectResult<()> {
+        let trace_identifier_store = std::env::var_os("AYY_TRACE_IDENTIFIER_STORE").is_some();
         if self
             .local_lexical_initialized_local(resolved_name)
             .is_some()
@@ -271,38 +356,94 @@ impl<'a> FunctionCompiler<'a> {
             self.state
                 .clear_local_static_binding_metadata(resolved_name);
         } else if is_internal_assignment_temp(name) {
+            if trace_identifier_store {
+                eprintln!("identifier_store:{name}:local:update_internal:start");
+            }
             self.update_internal_assignment_temp_static_metadata(resolved_name, state);
+            if trace_identifier_store {
+                eprintln!("identifier_store:{name}:local:update_internal:done");
+            }
         } else if !state.is_internal_iterator_temp {
+            if trace_identifier_store {
+                eprintln!("identifier_store:{name}:local:update_value:start");
+            }
             self.update_local_store_value_binding(resolved_name, state);
-            self.update_object_prototype_binding_from_value(
-                resolved_name,
-                state.prototype_binding_expression(),
-            );
+            if trace_identifier_store {
+                eprintln!("identifier_store:{name}:local:update_value:done");
+                eprintln!("identifier_store:{name}:local:update_prototype:start");
+            }
+            if !Self::identifier_store_state_contains_await(state) {
+                self.update_object_prototype_binding_from_value(
+                    resolved_name,
+                    state.prototype_binding_expression(),
+                );
+            }
+            if trace_identifier_store {
+                eprintln!("identifier_store:{name}:local:update_prototype:done");
+                eprintln!("identifier_store:{name}:local:kind:start");
+            }
             let static_kind = self.local_store_static_value_kind(resolved_name, state);
             self.state
                 .speculation
                 .static_semantics
                 .set_local_kind(resolved_name, static_kind);
+            if trace_identifier_store {
+                eprintln!("identifier_store:{name}:local:kind:done");
+            }
+        }
+        if trace_identifier_store {
+            eprintln!("identifier_store:{name}:local:emit_store:start");
         }
         self.emit_store_resolved_local_from_local(resolved_name, local_index, value_local)?;
+        if trace_identifier_store {
+            eprintln!("identifier_store:{name}:local:emit_store:done");
+            eprintln!("identifier_store:{name}:local:direct_eval_capture:start");
+        }
         self.sync_static_direct_eval_closure_capture_slot_from_local(
             resolved_name,
             value_local,
             state,
         )?;
+        if trace_identifier_store {
+            eprintln!("identifier_store:{name}:local:direct_eval_capture:done");
+            eprintln!("identifier_store:{name}:local:runtime_shadows:start");
+        }
         self.sync_local_store_runtime_object_shadows(name, resolved_name, state)?;
+        if trace_identifier_store {
+            eprintln!("identifier_store:{name}:local:runtime_shadows:done");
+            eprintln!("identifier_store:{name}:local:module_export_capture:start");
+        }
+        self.sync_module_export_capture_globals_from_local_store(
+            resolved_name,
+            value_local,
+            &state.module_assignment_expression,
+        )?;
+        if trace_identifier_store {
+            eprintln!("identifier_store:{name}:local:module_export_capture:done");
+            eprintln!("identifier_store:{name}:local:closure_capture:start");
+        }
         self.sync_closure_capture_slots_from_local_store(
             resolved_name,
             value_local,
             &state.module_assignment_expression,
         )?;
+        if trace_identifier_store {
+            eprintln!("identifier_store:{name}:local:closure_capture:done");
+        }
         if !state.is_internal_iterator_temp
             && let Some(source_name) = scoped_binding_source_name(name)
             && self
                 .resolve_eval_local_function_hidden_name(source_name)
                 .is_some()
         {
-            self.update_local_value_binding(source_name, &state.module_assignment_expression);
+            if Self::identifier_store_state_contains_await(state) {
+                self.state
+                    .speculation
+                    .static_semantics
+                    .clear_local_value_binding(source_name);
+            } else {
+                self.update_local_value_binding(source_name, &state.module_assignment_expression);
+            }
             if let Some(function_binding) = state.function_binding.clone() {
                 self.state
                     .speculation
@@ -314,10 +455,14 @@ impl<'a> FunctionCompiler<'a> {
                     .static_semantics
                     .clear_local_function_binding(source_name);
             }
-            self.state
-                .speculation
-                .static_semantics
-                .set_local_kind(source_name, state.kind.unwrap_or(StaticValueKind::Unknown));
+            self.state.speculation.static_semantics.set_local_kind(
+                source_name,
+                if Self::identifier_store_state_contains_await(state) {
+                    StaticValueKind::Unknown
+                } else {
+                    state.kind.unwrap_or(StaticValueKind::Unknown)
+                },
+            );
             self.emit_store_eval_local_function_binding_from_local(source_name, value_local)?;
             self.sync_identifier_store_runtime_object_shadows(source_name, source_name, state)?;
         }
@@ -330,8 +475,18 @@ impl<'a> FunctionCompiler<'a> {
         value_local: u32,
         state: &PreparedIdentifierStoreState,
     ) -> DirectResult<()> {
-        self.update_local_value_binding(name, &state.module_assignment_expression);
-        self.update_object_prototype_binding_from_value(name, state.prototype_binding_expression());
+        if Self::identifier_store_state_contains_await(state) {
+            self.state
+                .speculation
+                .static_semantics
+                .clear_local_value_binding(name);
+        } else {
+            self.update_local_value_binding(name, &state.module_assignment_expression);
+            self.update_object_prototype_binding_from_value(
+                name,
+                state.prototype_binding_expression(),
+            );
+        }
         if let Some(function_binding) = state.function_binding.clone() {
             self.state
                 .speculation
@@ -343,16 +498,27 @@ impl<'a> FunctionCompiler<'a> {
                 .static_semantics
                 .clear_local_function_binding(name);
         }
-        self.state
-            .speculation
-            .static_semantics
-            .set_local_kind(name, state.kind.unwrap_or(StaticValueKind::Unknown));
+        self.state.speculation.static_semantics.set_local_kind(
+            name,
+            if Self::identifier_store_state_contains_await(state) {
+                StaticValueKind::Unknown
+            } else {
+                state.kind.unwrap_or(StaticValueKind::Unknown)
+            },
+        );
         if let Some(source_name) = scoped_binding_source_name(name) {
-            self.update_local_value_binding(source_name, &state.module_assignment_expression);
-            self.update_object_prototype_binding_from_value(
-                source_name,
-                state.prototype_binding_expression(),
-            );
+            if Self::identifier_store_state_contains_await(state) {
+                self.state
+                    .speculation
+                    .static_semantics
+                    .clear_local_value_binding(source_name);
+            } else {
+                self.update_local_value_binding(source_name, &state.module_assignment_expression);
+                self.update_object_prototype_binding_from_value(
+                    source_name,
+                    state.prototype_binding_expression(),
+                );
+            }
             if let Some(function_binding) = self
                 .state
                 .speculation
@@ -370,10 +536,14 @@ impl<'a> FunctionCompiler<'a> {
                     .static_semantics
                     .clear_local_function_binding(source_name);
             }
-            self.state
-                .speculation
-                .static_semantics
-                .set_local_kind(source_name, state.kind.unwrap_or(StaticValueKind::Unknown));
+            self.state.speculation.static_semantics.set_local_kind(
+                source_name,
+                if Self::identifier_store_state_contains_await(state) {
+                    StaticValueKind::Unknown
+                } else {
+                    state.kind.unwrap_or(StaticValueKind::Unknown)
+                },
+            );
         }
         self.emit_store_eval_local_function_binding_from_local(name, value_local)?;
         self.sync_identifier_store_runtime_object_shadows(name, name, state)?;

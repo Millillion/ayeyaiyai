@@ -27,6 +27,20 @@ impl GlobalValueService {
         self.array_bindings.get(name)
     }
 
+    pub(in crate::backend::direct_wasm) fn resizable_array_buffer_binding(
+        &self,
+        name: &str,
+    ) -> Option<&ResizableArrayBufferBinding> {
+        self.resizable_array_buffer_bindings.get(name)
+    }
+
+    pub(in crate::backend::direct_wasm) fn typed_array_view_binding(
+        &self,
+        name: &str,
+    ) -> Option<&TypedArrayViewBinding> {
+        self.typed_array_view_bindings.get(name)
+    }
+
     pub(in crate::backend::direct_wasm) fn array_bindings(
         &self,
     ) -> &HashMap<String, ArrayValueBinding> {

@@ -26,6 +26,8 @@ impl GlobalStaticSemanticsWriteServices for GlobalSemanticState {
     fn clear_global_static_binding_metadata(&mut self, name: &str) {
         self.values.clear_value_binding(name);
         self.values.sync_array_binding(name, None);
+        self.values.sync_resizable_array_buffer_binding(name, None);
+        self.values.sync_typed_array_view_binding(name, None);
         self.values.sync_object_binding(name, None);
         self.values.sync_arguments_binding(name, None);
         self.values.sync_object_prototype_expression(name, None);
@@ -64,6 +66,8 @@ impl GlobalStaticSemanticsWriteServices for GlobalStaticSemanticsSnapshot {
     fn clear_global_static_binding_metadata(&mut self, name: &str) {
         self.values.clear_value_binding(name);
         self.values.sync_array_binding(name, None);
+        self.values.sync_resizable_array_buffer_binding(name, None);
+        self.values.sync_typed_array_view_binding(name, None);
         self.values.sync_object_binding(name, None);
         self.values.sync_arguments_binding(name, None);
         self.values.sync_object_prototype_expression(name, None);

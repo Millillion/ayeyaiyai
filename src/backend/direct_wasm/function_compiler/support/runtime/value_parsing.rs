@@ -12,6 +12,7 @@ pub(in crate::backend::direct_wasm) fn is_reserved_js_runtime_value(integer: i64
         || integer == JS_TYPEOF_SYMBOL_TAG as i64
         || integer == JS_TYPEOF_BIGINT_TAG as i64
         || integer == JS_BUILTIN_EVAL_VALUE as i64
+        || integer == TEST262_ERROR_RUNTIME_VALUE as i64
         || (integer >= JS_BUILTIN_FUNCTION_VALUE_BASE as i64
             && integer < (JS_BUILTIN_FUNCTION_VALUE_BASE + JS_BUILTIN_FUNCTION_VALUE_LIMIT) as i64)
         || (integer >= JS_NATIVE_ERROR_VALUE_BASE as i64

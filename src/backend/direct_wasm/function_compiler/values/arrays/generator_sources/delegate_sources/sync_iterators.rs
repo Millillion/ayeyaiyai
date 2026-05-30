@@ -32,14 +32,6 @@ impl<'a> FunctionCompiler<'a> {
                 }
             };
         }
-        if let Some(source) = self.resolve_iterator_source_kind(expression) {
-            if let Some(flattened) =
-                self.flatten_simple_yield_delegate_iterator_source_with_completion(&source)
-            {
-                return Some(flattened);
-            }
-        }
-
         if async_generator
             && let Some(source) = self.resolve_simple_async_yield_delegate_source(expression)
         {
@@ -47,6 +39,14 @@ impl<'a> FunctionCompiler<'a> {
         }
         if async_generator && self.expression_has_async_iterator_entry(expression) {
             return None;
+        }
+
+        if let Some(source) = self.resolve_iterator_source_kind(expression) {
+            if let Some(flattened) =
+                self.flatten_simple_yield_delegate_iterator_source_with_completion(&source)
+            {
+                return Some(flattened);
+            }
         }
 
         if let Some(primitive) = self.resolve_static_primitive_expression_with_context(

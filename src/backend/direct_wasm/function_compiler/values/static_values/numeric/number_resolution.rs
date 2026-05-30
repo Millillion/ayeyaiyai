@@ -230,18 +230,15 @@ impl<'a> FunctionCompiler<'a> {
             {
                 return Some(bytes_per_element as f64);
             }
+            if let Some(Expression::Number(number)) =
+                self.resolve_static_typed_array_or_array_buffer_member_value(object, property)
+            {
+                return Some(number);
+            }
             if matches!(property.as_ref(), Expression::String(property_name) if property_name == "length")
                 && let Some(array_binding) = self.resolve_array_binding_from_expression(object)
             {
-                let has_runtime_array_state = self
-                    .runtime_array_length_local_for_expression(object)
-                    .is_some()
-                    || matches!(
-                        object.as_ref(),
-                        Expression::Identifier(name)
-                            if self.is_named_global_array_binding(name)
-                                && self.uses_global_runtime_array_state(name)
-                    );
+                let has_runtime_array_state = self.expression_uses_runtime_array_state(object);
                 if !has_runtime_array_state {
                     return Some(array_binding.values.len() as f64);
                 }

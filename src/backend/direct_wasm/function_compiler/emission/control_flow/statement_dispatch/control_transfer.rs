@@ -113,6 +113,9 @@ impl<'a> FunctionCompiler<'a> {
                 Ok(())
             }
             Statement::Throw(expression) => {
+                if self.emit_direct_test262_error_throw(expression)? {
+                    return Ok(());
+                }
                 self.emit_numeric_expression(expression)?;
                 self.push_local_set(self.state.runtime.throws.throw_value_local);
                 self.push_i32_const(1);
@@ -131,6 +134,26 @@ impl<'a> FunctionCompiler<'a> {
             }
             _ => unreachable!("emit_control_transfer_statement called with non-control statement"),
         }
+    }
+
+    fn emit_direct_test262_error_throw(&mut self, expression: &Expression) -> DirectResult<bool> {
+        let Expression::New { callee, arguments } = expression else {
+            return Ok(false);
+        };
+        if !matches!(callee.as_ref(), Expression::Identifier(name) if name == "Test262Error") {
+            return Ok(false);
+        }
+
+        for argument in arguments {
+            match argument {
+                CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                    self.emit_numeric_expression(expression)?;
+                    self.state.emission.output.instructions.push(0x1a);
+                }
+            }
+        }
+        self.emit_named_error_throw("Test262Error")?;
+        Ok(true)
     }
 
     fn emit_self_tail_call_restart(&mut self, expression: &Expression) -> DirectResult<bool> {

@@ -252,7 +252,7 @@ impl<'a> FunctionCompiler<'a> {
                     callee.as_ref(),
                     Expression::Member { object, property }
                         if matches!(object.as_ref(), Expression::Identifier(name) if name == "Promise")
-                            && matches!(property.as_ref(), Expression::String(name) if name == "resolve")
+                            && matches!(property.as_ref(), Expression::String(name) if matches!(name.as_str(), "resolve" | "reject"))
                 ) {
                     return true;
                 }
@@ -285,7 +285,7 @@ impl<'a> FunctionCompiler<'a> {
                     callee.as_ref(),
                     Expression::Member { object, property }
                         if matches!(object.as_ref(), Expression::Identifier(name) if name == "Promise")
-                            && matches!(property.as_ref(), Expression::String(name) if name == "resolve")
+                            && matches!(property.as_ref(), Expression::String(name) if matches!(name.as_str(), "resolve" | "reject"))
                 ) {
                     return true;
                 }

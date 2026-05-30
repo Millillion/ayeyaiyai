@@ -4,10 +4,29 @@ const NULL_SUPER_CONSTRUCTOR_BINDING: &str = "__ayy_null_super_constructor";
 
 impl<'a> FunctionCompiler<'a> {
     fn should_prepare_identifier_function_captures_on_read(&self, name: &str) -> bool {
-        !(name.starts_with("__ayy_module_export_getter_")
+        if name.starts_with("__ayy_module_export_getter_")
             && self
                 .current_function_name()
-                .is_some_and(|function_name| function_name.starts_with("__ayy_module_init_")))
+                .is_some_and(|function_name| function_name.starts_with("__ayy_module_init_"))
+        {
+            return self
+                .user_function_capture_bindings(name)
+                .is_some_and(|capture_bindings| {
+                    capture_bindings.keys().any(|source_name| {
+                        self.resolve_current_local_binding(source_name).is_some_and(
+                            |(resolved_name, _)| {
+                                !self.local_lexical_capture_source_is_statically_uninitialized(
+                                    &resolved_name,
+                                )
+                            },
+                        ) || self.resolve_global_binding_index(source_name).is_some()
+                            || self.backend.global_has_lexical_binding(source_name)
+                            || self.global_has_implicit_binding(source_name)
+                            || self.backend.global_function_binding(source_name).is_some()
+                    })
+                });
+        }
+        true
     }
 
     pub(in crate::backend::direct_wasm) fn emit_declared_global_binding_read(
@@ -81,6 +100,12 @@ impl<'a> FunctionCompiler<'a> {
                 );
             }
             if let Some(initialized_local) = self.local_lexical_initialized_local(name) {
+                if trace_identifier_reads {
+                    eprintln!(
+                        "identifier_read:fallback:local_tdz_guard name={name} value_local={local_index} initialized_local={initialized_local} instruction={}",
+                        self.state.emission.output.instructions.len()
+                    );
+                }
                 self.push_local_get(initialized_local);
                 self.state.emission.output.instructions.push(0x04);
                 self.state.emission.output.instructions.push(I32_TYPE);

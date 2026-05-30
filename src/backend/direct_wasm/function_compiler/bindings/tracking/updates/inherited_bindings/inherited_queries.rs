@@ -203,6 +203,51 @@ impl<'a> FunctionCompiler<'a> {
                 else {
                     return Vec::new();
                 };
+                let constructor_is_runtime_alias = matches!(
+                    callee.as_ref(),
+                    Expression::Identifier(alias)
+                        if alias == &constructor_name && !alias.starts_with("__ayy_class_ctor_")
+                );
+                let normalized_target = (!constructor_is_runtime_alias)
+                    .then(|| {
+                        self.resolve_function_binding_from_expression(&Expression::Identifier(
+                            constructor_name.clone(),
+                        ))
+                        .and_then(|binding| self.function_prototype_binding_owner_name(&binding))
+                    })
+                    .flatten();
+                let local_bindings = self
+                    .state
+                    .speculation
+                    .static_semantics
+                    .objects
+                    .member_function_bindings
+                    .iter()
+                    .map(|(key, binding)| (key.clone(), binding.clone()));
+                let global_bindings = self.backend.global_member_function_binding_entries();
+                let prototype_bindings = local_bindings
+                    .chain(global_bindings)
+                    .filter_map(|(key, binding)| match (&key.target, &key.property) {
+                        (
+                            MemberFunctionBindingTarget::Prototype(target),
+                            MemberFunctionBindingProperty::String(property),
+                        ) if target == &constructor_name
+                            || normalized_target
+                                .as_ref()
+                                .is_some_and(|normalized| target == normalized) =>
+                        {
+                            Some(ReturnedMemberFunctionBinding {
+                                target: ReturnedMemberFunctionBindingTarget::Value,
+                                property: property.clone(),
+                                binding,
+                            })
+                        }
+                        _ => None,
+                    })
+                    .collect::<Vec<_>>();
+                if constructor_is_runtime_alias {
+                    return prototype_bindings;
+                }
                 let mut bindings = self
                     .resolve_object_binding_from_expression(value)
                     .map(|object_binding| {
@@ -221,44 +266,17 @@ impl<'a> FunctionCompiler<'a> {
                             .collect::<Vec<_>>()
                     })
                     .unwrap_or_default();
-                let normalized_target = self
-                    .resolve_function_binding_from_expression(&Expression::Identifier(
-                        constructor_name.clone(),
-                    ))
-                    .and_then(|binding| self.function_prototype_binding_owner_name(&binding))
-                    .unwrap_or_else(|| constructor_name.clone());
-                let local_bindings = self
-                    .state
-                    .speculation
-                    .static_semantics
-                    .objects
-                    .member_function_bindings
-                    .iter()
-                    .map(|(key, binding)| (key.clone(), binding.clone()));
-                let global_bindings = self.backend.global_member_function_binding_entries();
-                let prototype_bindings = local_bindings
-                    .chain(global_bindings)
-                    .filter_map(|(key, binding)| match (&key.target, &key.property) {
-                        (
-                            MemberFunctionBindingTarget::Prototype(target),
-                            MemberFunctionBindingProperty::String(property),
-                        ) if target == &constructor_name || target == &normalized_target => {
-                            Some(ReturnedMemberFunctionBinding {
-                                target: ReturnedMemberFunctionBindingTarget::Value,
-                                property: property.clone(),
-                                binding,
-                            })
-                        }
-                        _ => None,
-                    })
-                    .collect::<Vec<_>>();
                 bindings.extend(prototype_bindings);
                 if !bindings.is_empty() {
                     return bindings;
                 }
                 let Some(prototype_binding) = self
                     .resolve_function_prototype_object_binding(&constructor_name)
-                    .or_else(|| self.resolve_function_prototype_object_binding(&normalized_target))
+                    .or_else(|| {
+                        normalized_target.as_ref().and_then(|normalized_target| {
+                            self.resolve_function_prototype_object_binding(normalized_target)
+                        })
+                    })
                 else {
                     return Vec::new();
                 };
@@ -425,12 +443,19 @@ impl<'a> FunctionCompiler<'a> {
                 else {
                     return Vec::new();
                 };
-                let normalized_target = self
-                    .resolve_function_binding_from_expression(&Expression::Identifier(
-                        constructor_name.clone(),
-                    ))
-                    .and_then(|binding| self.function_prototype_binding_owner_name(&binding))
-                    .unwrap_or_else(|| constructor_name.clone());
+                let constructor_is_runtime_alias = matches!(
+                    callee.as_ref(),
+                    Expression::Identifier(alias)
+                        if alias == &constructor_name && !alias.starts_with("__ayy_class_ctor_")
+                );
+                let normalized_target = (!constructor_is_runtime_alias)
+                    .then(|| {
+                        self.resolve_function_binding_from_expression(&Expression::Identifier(
+                            constructor_name.clone(),
+                        ))
+                        .and_then(|binding| self.function_prototype_binding_owner_name(&binding))
+                    })
+                    .flatten();
                 let local_bindings = self
                     .state
                     .speculation
@@ -446,7 +471,11 @@ impl<'a> FunctionCompiler<'a> {
                         (
                             MemberFunctionBindingTarget::Prototype(target),
                             MemberFunctionBindingProperty::String(property),
-                        ) if target == &constructor_name || target == &normalized_target => {
+                        ) if target == &constructor_name
+                            || normalized_target
+                                .as_ref()
+                                .is_some_and(|normalized| target == normalized) =>
+                        {
                             Some(ReturnedMemberFunctionBinding {
                                 target: ReturnedMemberFunctionBindingTarget::Value,
                                 property: property.clone(),
@@ -532,12 +561,19 @@ impl<'a> FunctionCompiler<'a> {
                 else {
                     return Vec::new();
                 };
-                let normalized_target = self
-                    .resolve_function_binding_from_expression(&Expression::Identifier(
-                        constructor_name.clone(),
-                    ))
-                    .and_then(|binding| self.function_prototype_binding_owner_name(&binding))
-                    .unwrap_or_else(|| constructor_name.clone());
+                let constructor_is_runtime_alias = matches!(
+                    callee.as_ref(),
+                    Expression::Identifier(alias)
+                        if alias == &constructor_name && !alias.starts_with("__ayy_class_ctor_")
+                );
+                let normalized_target = (!constructor_is_runtime_alias)
+                    .then(|| {
+                        self.resolve_function_binding_from_expression(&Expression::Identifier(
+                            constructor_name.clone(),
+                        ))
+                        .and_then(|binding| self.function_prototype_binding_owner_name(&binding))
+                    })
+                    .flatten();
                 let local_bindings = self
                     .state
                     .speculation
@@ -553,7 +589,11 @@ impl<'a> FunctionCompiler<'a> {
                         (
                             MemberFunctionBindingTarget::Prototype(target),
                             MemberFunctionBindingProperty::String(property),
-                        ) if target == &constructor_name || target == &normalized_target => {
+                        ) if target == &constructor_name
+                            || normalized_target
+                                .as_ref()
+                                .is_some_and(|normalized| target == normalized) =>
+                        {
                             Some(ReturnedMemberFunctionBinding {
                                 target: ReturnedMemberFunctionBindingTarget::Value,
                                 property: property.clone(),

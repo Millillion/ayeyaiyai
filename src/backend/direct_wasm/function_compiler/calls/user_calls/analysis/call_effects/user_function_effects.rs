@@ -1,6 +1,40 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn argument_expression_cannot_introduce_call_effects(expression: &Expression) -> bool {
+        match expression {
+            Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined => true,
+            Expression::Array(elements) => elements.iter().all(|element| match element {
+                ArrayElement::Expression(expression) | ArrayElement::Spread(expression) => {
+                    Self::argument_expression_cannot_introduce_call_effects(expression)
+                }
+            }),
+            Expression::Object(entries) => entries.iter().all(|entry| match entry {
+                ObjectEntry::Data { key, value } => {
+                    Self::argument_expression_cannot_introduce_call_effects(key)
+                        && Self::argument_expression_cannot_introduce_call_effects(value)
+                }
+                ObjectEntry::Getter { key, getter } => {
+                    Self::argument_expression_cannot_introduce_call_effects(key)
+                        && Self::argument_expression_cannot_introduce_call_effects(getter)
+                }
+                ObjectEntry::Setter { key, setter } => {
+                    Self::argument_expression_cannot_introduce_call_effects(key)
+                        && Self::argument_expression_cannot_introduce_call_effects(setter)
+                }
+                ObjectEntry::Spread(expression) => {
+                    Self::argument_expression_cannot_introduce_call_effects(expression)
+                }
+            }),
+            _ => false,
+        }
+    }
+
     fn sync_static_with_scope_member_assignment_effect(
         &mut self,
         object: &Expression,
@@ -256,6 +290,13 @@ impl<'a> FunctionCompiler<'a> {
             &function.body,
             &mut iterator_names,
         );
+        if iterator_names.is_empty()
+            && arguments
+                .iter()
+                .all(Self::argument_expression_cannot_introduce_call_effects)
+        {
+            return HashSet::new();
+        }
         let mut names = HashSet::new();
         let mut visited = HashSet::new();
         let mut argument_bindings = HashMap::new();

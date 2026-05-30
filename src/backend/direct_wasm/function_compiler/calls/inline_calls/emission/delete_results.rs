@@ -18,7 +18,7 @@ impl<'a> FunctionCompiler<'a> {
             .instructions
             .push(EMPTY_BLOCK_TYPE);
         self.push_control_frame();
-        self.emit_error_throw()?;
+        self.emit_named_error_throw("TypeError")?;
         self.state.emission.output.instructions.push(0x0b);
         self.pop_control_frame();
         self.push_local_get(result_local);

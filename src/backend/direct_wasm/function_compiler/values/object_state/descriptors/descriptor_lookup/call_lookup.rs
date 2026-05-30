@@ -9,7 +9,7 @@ impl<'a> FunctionCompiler<'a> {
         let direct_member_is_get_own_property_descriptor = matches!(
             callee,
             Expression::Member { object, property }
-                if matches!(object.as_ref(), Expression::Identifier(name) if name == "Object")
+                if matches!(object.as_ref(), Expression::Identifier(name) if name == "Object" || name == "Reflect")
                     && matches!(
                         property.as_ref(),
                         Expression::String(name) if name == "getOwnPropertyDescriptor"
@@ -32,7 +32,7 @@ impl<'a> FunctionCompiler<'a> {
         let is_get_own_property_descriptor_member = matches!(
             &resolved_callee,
             Expression::Member { object, property }
-                if matches!(object.as_ref(), Expression::Identifier(name) if name == "Object")
+                if matches!(object.as_ref(), Expression::Identifier(name) if name == "Object" || name == "Reflect")
                     && matches!(
                         property.as_ref(),
                         Expression::String(name) if name == "getOwnPropertyDescriptor"

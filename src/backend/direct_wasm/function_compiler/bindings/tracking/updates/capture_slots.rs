@@ -1,5 +1,124 @@
 use super::*;
 
+fn expression_is_promise_resolve_undefined_call(expression: &Expression) -> bool {
+    let Expression::Call { callee, arguments } = expression else {
+        return false;
+    };
+    let Expression::Member { object, property } = callee.as_ref() else {
+        return false;
+    };
+    matches!(object.as_ref(), Expression::Identifier(name) if name == "Promise")
+        && matches!(property.as_ref(), Expression::String(name) if name == "resolve")
+        && matches!(
+            arguments.as_slice(),
+            [] | [CallArgument::Expression(Expression::Undefined)]
+        )
+}
+
+fn static_promise_resolve_undefined_expression() -> Expression {
+    Expression::Call {
+        callee: Box::new(Expression::Member {
+            object: Box::new(Expression::Identifier("Promise".to_string())),
+            property: Box::new(Expression::String("resolve".to_string())),
+        }),
+        arguments: vec![CallArgument::Expression(Expression::Undefined)],
+    }
+}
+
+fn static_promise_with_resolvers_record_expression() -> Expression {
+    Expression::Object(vec![
+        ObjectEntry::Data {
+            key: Expression::String("promise".to_string()),
+            value: static_promise_resolve_undefined_expression(),
+        },
+        ObjectEntry::Data {
+            key: Expression::String("resolve".to_string()),
+            value: Expression::Identifier("__ayy_promise_with_resolvers_resolve".to_string()),
+        },
+        ObjectEntry::Data {
+            key: Expression::String("reject".to_string()),
+            value: Expression::Identifier("__ayy_promise_with_resolvers_reject".to_string()),
+        },
+    ])
+}
+
+fn static_promise_with_resolvers_object_binding() -> ObjectValueBinding {
+    let mut binding = empty_object_value_binding();
+    binding.string_properties.push((
+        "promise".to_string(),
+        static_promise_resolve_undefined_expression(),
+    ));
+    binding.string_properties.push((
+        "resolve".to_string(),
+        Expression::Identifier("__ayy_promise_with_resolvers_resolve".to_string()),
+    ));
+    binding.string_properties.push((
+        "reject".to_string(),
+        Expression::Identifier("__ayy_promise_with_resolvers_reject".to_string()),
+    ));
+    binding
+}
+
+fn expression_is_promise_with_resolvers_call(expression: &Expression) -> bool {
+    let Expression::Call { callee, arguments } = expression else {
+        return false;
+    };
+    let Expression::Member { object, property } = callee.as_ref() else {
+        return false;
+    };
+    arguments.is_empty()
+        && matches!(object.as_ref(), Expression::Identifier(name) if name == "Promise")
+        && matches!(property.as_ref(), Expression::String(name) if name == "withResolvers")
+}
+
+fn expression_is_static_promise_with_resolvers_record(expression: &Expression) -> bool {
+    let Expression::Object(entries) = expression else {
+        return false;
+    };
+    let mut has_promise = false;
+    let mut has_resolve = false;
+    let mut has_reject = false;
+    for entry in entries {
+        let ObjectEntry::Data {
+            key: Expression::String(key),
+            value,
+        } = entry
+        else {
+            continue;
+        };
+        match key.as_str() {
+            "promise" => has_promise = expression_is_promise_resolve_undefined_call(value),
+            "resolve" => {
+                has_resolve = matches!(
+                    value,
+                    Expression::Identifier(name)
+                        if name == "__ayy_promise_with_resolvers_resolve"
+                );
+            }
+            "reject" => {
+                has_reject = matches!(
+                    value,
+                    Expression::Identifier(name)
+                        if name == "__ayy_promise_with_resolvers_reject"
+                );
+            }
+            _ => {}
+        }
+    }
+    has_promise && has_resolve && has_reject
+}
+
+fn expression_is_unresolved_constructor_instance(expression: &Expression) -> bool {
+    matches!(
+        expression,
+        Expression::New { callee, .. }
+            if matches!(
+                callee.as_ref(),
+                Expression::Identifier(name) if !name.starts_with("__ayy_class_ctor_")
+            )
+    )
+}
+
 impl<'a> FunctionCompiler<'a> {
     fn private_brand_marker_value_from_object_binding(
         object_binding: &ObjectValueBinding,
@@ -61,6 +180,41 @@ impl<'a> FunctionCompiler<'a> {
         self.resolve_current_local_binding(source_name)
             .map(|(resolved_name, _)| resolved_name)
             .unwrap_or_else(|| source_name.to_string())
+    }
+
+    pub(in crate::backend::direct_wasm) fn module_export_capture_hidden_names_for_source(
+        &self,
+        source_name: &str,
+    ) -> Vec<String> {
+        let Some(function_name) = self.current_function_name() else {
+            return Vec::new();
+        };
+        let Some(module_index) = function_name.strip_prefix("__ayy_module_init_") else {
+            return Vec::new();
+        };
+        let getter_prefix = format!("__ayy_module_export_getter_{module_index}_");
+        let source_alias = scoped_binding_source_name(source_name).unwrap_or(source_name);
+        let mut hidden_names = Vec::new();
+        for (candidate_function, capture_bindings) in &self
+            .backend
+            .function_registry
+            .analysis
+            .user_function_capture_bindings
+        {
+            if !candidate_function.starts_with(&getter_prefix) {
+                continue;
+            }
+            let hidden_name = capture_bindings
+                .get(source_name)
+                .or_else(|| capture_bindings.get(source_alias));
+            let Some(hidden_name) = hidden_name else {
+                continue;
+            };
+            if !hidden_names.contains(hidden_name) {
+                hidden_names.push(hidden_name.clone());
+            }
+        }
+        hidden_names
     }
 
     pub(in crate::backend::direct_wasm) fn capture_slot_member_source_deleted_binding_name(
@@ -232,6 +386,234 @@ impl<'a> FunctionCompiler<'a> {
         Ok(())
     }
 
+    pub(in crate::backend::direct_wasm) fn sync_module_export_capture_globals_from_local_store(
+        &mut self,
+        resolved_name: &str,
+        value_local: u32,
+        value: &Expression,
+    ) -> DirectResult<()> {
+        let hidden_names = self.module_export_capture_hidden_names_for_source(resolved_name);
+        if hidden_names.is_empty() {
+            return Ok(());
+        }
+
+        let trace_identifier_store = std::env::var_os("AYY_TRACE_IDENTIFIER_STORE").is_some();
+        let source = Expression::Identifier(resolved_name.to_string());
+        let is_promise_with_resolvers = expression_is_promise_with_resolvers_call(value)
+            || expression_is_static_promise_with_resolvers_record(value);
+        let static_metadata_value = if is_promise_with_resolvers {
+            static_promise_with_resolvers_record_expression()
+        } else {
+            value.clone()
+        };
+        for hidden_name in hidden_names {
+            if trace_identifier_store {
+                eprintln!(
+                    "identifier_store:{resolved_name}:module_export_capture:{hidden_name}:binding:start"
+                );
+            }
+            let hidden_binding = self.ensure_implicit_global_binding(&hidden_name);
+            if trace_identifier_store {
+                eprintln!(
+                    "identifier_store:{resolved_name}:module_export_capture:{hidden_name}:binding:done"
+                );
+            }
+            if trace_identifier_store {
+                eprintln!(
+                    "identifier_store:{resolved_name}:module_export_capture:{hidden_name}:runtime_store:start"
+                );
+            }
+            self.push_local_get(value_local);
+            self.push_global_set(hidden_binding.value_index);
+            self.push_i32_const(1);
+            self.push_global_set(hidden_binding.present_index);
+            if trace_identifier_store {
+                eprintln!(
+                    "identifier_store:{resolved_name}:module_export_capture:{hidden_name}:runtime_store:done"
+                );
+            }
+
+            if trace_identifier_store {
+                eprintln!(
+                    "identifier_store:{resolved_name}:module_export_capture:{hidden_name}:static_global:start"
+                );
+            }
+            if is_promise_with_resolvers {
+                let object_binding = static_promise_with_resolvers_object_binding();
+                self.backend
+                    .set_global_binding_kind(&hidden_name, StaticValueKind::Object);
+                self.backend
+                    .shared_global_semantics
+                    .set_global_binding_kind(&hidden_name, StaticValueKind::Object);
+                self.backend.sync_global_expression_binding(
+                    &hidden_name,
+                    Some(static_metadata_value.clone()),
+                );
+                self.backend
+                    .shared_global_semantics
+                    .values
+                    .set_value_binding(hidden_name.clone(), static_metadata_value.clone());
+                self.backend.sync_global_array_binding(&hidden_name, None);
+                self.backend
+                    .shared_global_semantics
+                    .values
+                    .sync_array_binding(&hidden_name, None);
+                self.backend
+                    .sync_global_object_binding(&hidden_name, Some(object_binding.clone()));
+                self.backend
+                    .shared_global_semantics
+                    .values
+                    .sync_object_binding(&hidden_name, Some(object_binding));
+                self.backend
+                    .sync_global_arguments_binding(&hidden_name, None);
+                self.backend
+                    .shared_global_semantics
+                    .values
+                    .sync_arguments_binding(&hidden_name, None);
+                self.backend
+                    .sync_global_function_binding(&hidden_name, None);
+                self.backend
+                    .shared_global_semantics
+                    .clear_global_function_binding(&hidden_name);
+            } else {
+                self.update_static_global_assignment_metadata(&hidden_name, &static_metadata_value);
+            }
+            if trace_identifier_store {
+                eprintln!(
+                    "identifier_store:{resolved_name}:module_export_capture:{hidden_name}:static_global:done"
+                );
+            }
+            if trace_identifier_store {
+                eprintln!(
+                    "identifier_store:{resolved_name}:module_export_capture:{hidden_name}:number:start"
+                );
+            }
+            self.preserve_exact_static_global_number_binding(&hidden_name, &static_metadata_value);
+            if trace_identifier_store {
+                eprintln!(
+                    "identifier_store:{resolved_name}:module_export_capture:{hidden_name}:number:done"
+                );
+            }
+            if trace_identifier_store {
+                eprintln!(
+                    "identifier_store:{resolved_name}:module_export_capture:{hidden_name}:specialized:start"
+                );
+            }
+            self.update_global_specialized_function_value(&hidden_name, &static_metadata_value)?;
+            if trace_identifier_store {
+                eprintln!(
+                    "identifier_store:{resolved_name}:module_export_capture:{hidden_name}:specialized:done"
+                );
+            }
+            if trace_identifier_store {
+                eprintln!(
+                    "identifier_store:{resolved_name}:module_export_capture:{hidden_name}:descriptor:start"
+                );
+            }
+            self.ensure_global_property_descriptor_value(
+                &hidden_name,
+                &static_metadata_value,
+                true,
+            );
+            if trace_identifier_store {
+                eprintln!(
+                    "identifier_store:{resolved_name}:module_export_capture:{hidden_name}:descriptor:done"
+                );
+            }
+            if !is_promise_with_resolvers {
+                if trace_identifier_store {
+                    eprintln!(
+                        "identifier_store:{resolved_name}:module_export_capture:{hidden_name}:shadows:start"
+                    );
+                }
+                self.sync_capture_slot_runtime_object_shadows_from_expression(
+                    &hidden_name,
+                    &source,
+                )?;
+                if trace_identifier_store {
+                    eprintln!(
+                        "identifier_store:{resolved_name}:module_export_capture:{hidden_name}:shadows:done"
+                    );
+                }
+            } else if trace_identifier_store {
+                eprintln!(
+                    "identifier_store:{resolved_name}:module_export_capture:{hidden_name}:shadows:skipped_promise_with_resolvers"
+                );
+            }
+            if trace_identifier_store {
+                eprintln!(
+                    "identifier_store:{resolved_name}:module_export_capture:{hidden_name}:array:start"
+                );
+            }
+            self.sync_module_export_capture_runtime_array_from_source(&hidden_name, &source)?;
+            if trace_identifier_store {
+                eprintln!(
+                    "identifier_store:{resolved_name}:module_export_capture:{hidden_name}:array:done"
+                );
+            }
+        }
+
+        Ok(())
+    }
+
+    fn sync_module_export_capture_runtime_array_from_source(
+        &mut self,
+        hidden_name: &str,
+        source: &Expression,
+    ) -> DirectResult<bool> {
+        let source_array_binding = self.resolve_array_binding_from_expression(source);
+        if let Some(array_binding) = source_array_binding.as_ref() {
+            self.backend
+                .sync_global_array_binding(hidden_name, Some(array_binding.clone()));
+            self.backend
+                .shared_global_semantics
+                .values
+                .sync_array_binding(hidden_name, Some(array_binding.clone()));
+        }
+
+        let source_has_runtime_state = self
+            .runtime_array_binding_name_for_expression(source)
+            .is_some_and(|name| self.runtime_array_binding_has_state(&name));
+        if source_has_runtime_state {
+            self.backend
+                .mark_global_array_with_runtime_state(hidden_name);
+            self.backend
+                .shared_global_semantics
+                .values
+                .mark_array_with_runtime_state(hidden_name);
+            if self.emit_sync_global_runtime_array_state_from_runtime_source(hidden_name, source)? {
+                return Ok(true);
+            }
+        }
+
+        if let Some(array_binding) = source_array_binding.as_ref()
+            && self
+                .emit_force_global_runtime_array_state_from_binding(hidden_name, array_binding)?
+        {
+            return Ok(true);
+        }
+
+        Ok(false)
+    }
+
+    pub(in crate::backend::direct_wasm) fn sync_module_export_capture_runtime_arrays_from_local_binding(
+        &mut self,
+        source_name: &str,
+    ) -> DirectResult<bool> {
+        let hidden_names = self.module_export_capture_hidden_names_for_source(source_name);
+        if hidden_names.is_empty() {
+            return Ok(false);
+        }
+        let source = Expression::Identifier(source_name.to_string());
+        let mut synced = false;
+        for hidden_name in hidden_names {
+            self.ensure_implicit_global_binding(&hidden_name);
+            synced |=
+                self.sync_module_export_capture_runtime_array_from_source(&hidden_name, &source)?;
+        }
+        Ok(synced)
+    }
+
     pub(in crate::backend::direct_wasm) fn sync_closure_capture_slots_from_local_store(
         &mut self,
         resolved_name: &str,
@@ -361,7 +743,11 @@ impl<'a> FunctionCompiler<'a> {
         let trace_inherited_bindings = std::env::var_os("AYY_TRACE_INHERITED_BINDINGS").is_some();
         let mut initialized_slots: BTreeMap<String, String> = BTreeMap::new();
         let mut property_slots: HashMap<String, BTreeMap<String, String>> = HashMap::new();
-        let returned_object_binding = self.resolve_object_binding_from_expression(value);
+        let returned_object_binding = if expression_is_unresolved_constructor_instance(value) {
+            None
+        } else {
+            self.resolve_object_binding_from_expression(value)
+        };
         let returned_call_receiver = Self::returned_member_call_receiver_expression(value);
         let value_creates_fresh_returned_member =
             matches!(value, Expression::Call { .. } | Expression::New { .. });
@@ -408,6 +794,8 @@ impl<'a> FunctionCompiler<'a> {
                 .cloned()
             {
                 captures
+            } else if expression_is_unresolved_constructor_instance(value) {
+                continue;
             } else if let Some(returned_expression) = self
                 .resolve_function_binding_static_return_expression_with_call_frame(
                     &binding.binding,
@@ -682,7 +1070,11 @@ impl<'a> FunctionCompiler<'a> {
         let returned_identifier = collect_returned_identifier(&function.body)?;
         let local_aliases = collect_returned_member_local_aliases(&function.body);
         let mut property_bindings = HashMap::new();
-        let returned_object_binding = self.resolve_object_binding_from_expression(value);
+        let returned_object_binding = if expression_is_unresolved_constructor_instance(value) {
+            None
+        } else {
+            self.resolve_object_binding_from_expression(value)
+        };
         let returned_call_receiver = Self::returned_member_call_receiver_expression(value);
 
         for binding in &user_function.returned_member_function_bindings {

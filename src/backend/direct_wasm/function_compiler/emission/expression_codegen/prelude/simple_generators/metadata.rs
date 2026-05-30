@@ -15,11 +15,25 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         expression: &Expression,
     ) -> bool {
+        self.is_async_generator_iterator_expression_with_seen(
+            expression,
+            &mut std::collections::HashSet::new(),
+        )
+    }
+
+    fn is_async_generator_iterator_expression_with_seen(
+        &self,
+        expression: &Expression,
+        seen: &mut std::collections::HashSet<String>,
+    ) -> bool {
+        if !seen.insert(format!("{expression:?}")) {
+            return false;
+        }
         if let Some(resolved) = self
             .resolve_bound_alias_expression(expression)
             .filter(|resolved| !static_expression_matches(resolved, expression))
         {
-            return self.is_async_generator_iterator_expression(&resolved);
+            return self.is_async_generator_iterator_expression_with_seen(&resolved, seen);
         }
         if let Expression::Identifier(name) = expression
             && let Some(value) = self
@@ -30,11 +44,11 @@ impl<'a> FunctionCompiler<'a> {
                 .or_else(|| self.global_value_binding(name))
             && !static_expression_matches(value, expression)
         {
-            return self.is_async_generator_iterator_expression(value);
+            return self.is_async_generator_iterator_expression_with_seen(value, seen);
         }
         let materialized = self.materialize_static_expression(expression);
         if !static_expression_matches(&materialized, expression) {
-            return self.is_async_generator_iterator_expression(&materialized);
+            return self.is_async_generator_iterator_expression_with_seen(&materialized, seen);
         }
 
         let Expression::Call { callee, .. } = expression else {
@@ -56,6 +70,20 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         object: &Expression,
     ) -> Option<(bool, Vec<SimpleGeneratorStep>, Vec<Statement>, Expression)> {
+        self.simple_generator_source_metadata_with_seen(
+            object,
+            &mut std::collections::HashSet::new(),
+        )
+    }
+
+    fn simple_generator_source_metadata_with_seen(
+        &self,
+        object: &Expression,
+        seen: &mut std::collections::HashSet<String>,
+    ) -> Option<(bool, Vec<SimpleGeneratorStep>, Vec<Statement>, Expression)> {
+        if !seen.insert(format!("{object:?}")) {
+            return None;
+        }
         if self.simple_generator_has_eager_call_time_prefix(object) {
             return None;
         }
@@ -92,7 +120,7 @@ impl<'a> FunctionCompiler<'a> {
                 .or_else(|| self.global_value_binding(name))
             && !static_expression_matches(value, object)
         {
-            return self.simple_generator_source_metadata(value);
+            return self.simple_generator_source_metadata_with_seen(value, seen);
         }
         if let Expression::Call { callee, .. } = object
             && let Some(LocalFunctionBinding::User(function_name)) =
@@ -110,7 +138,7 @@ impl<'a> FunctionCompiler<'a> {
         }
         let materialized = self.materialize_static_expression(object);
         if !static_expression_matches(&materialized, object) {
-            return self.simple_generator_source_metadata(&materialized);
+            return self.simple_generator_source_metadata_with_seen(&materialized, seen);
         }
 
         let Expression::Call { callee, .. } = object else {
@@ -136,11 +164,25 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         object: &Expression,
     ) -> Option<String> {
+        self.simple_generator_source_function_name_with_seen(
+            object,
+            &mut std::collections::HashSet::new(),
+        )
+    }
+
+    fn simple_generator_source_function_name_with_seen(
+        &self,
+        object: &Expression,
+        seen: &mut std::collections::HashSet<String>,
+    ) -> Option<String> {
+        if !seen.insert(format!("{object:?}")) {
+            return None;
+        }
         if let Some(resolved) = self
             .resolve_bound_alias_expression(object)
             .filter(|resolved| !static_expression_matches(resolved, object))
         {
-            return self.simple_generator_source_function_name(&resolved);
+            return self.simple_generator_source_function_name_with_seen(&resolved, seen);
         }
         if let Expression::Identifier(name) = object
             && let Some(value) = self
@@ -151,7 +193,7 @@ impl<'a> FunctionCompiler<'a> {
                 .or_else(|| self.global_value_binding(name))
             && !static_expression_matches(value, object)
         {
-            return self.simple_generator_source_function_name(value);
+            return self.simple_generator_source_function_name_with_seen(value, seen);
         }
 
         if let Expression::Call { callee, .. } = object {
@@ -164,7 +206,7 @@ impl<'a> FunctionCompiler<'a> {
 
         let materialized = self.materialize_static_expression(object);
         if !static_expression_matches(&materialized, object) {
-            return self.simple_generator_source_function_name(&materialized);
+            return self.simple_generator_source_function_name_with_seen(&materialized, seen);
         }
 
         let Expression::Call { callee, .. } = object else {

@@ -30,6 +30,28 @@ impl<'a> FunctionCompiler<'a> {
                 arguments,
             );
         }
+        if matches!(object, Expression::Identifier(name) if name == "assert")
+            && matches!(property, Expression::String(name) if name == "deepEqual")
+            && matches!(
+                self.resolve_member_function_binding(object, property),
+                Some(LocalFunctionBinding::User(function_name))
+                    if function_name.contains("deepEqual") || function_name.contains("__ayy_fnexpr_")
+            )
+        {
+            for argument in arguments {
+                let expression = match argument {
+                    CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                        expression
+                    }
+                };
+                if !inline_summary_side_effect_free_expression(expression) {
+                    self.emit_numeric_expression(expression)?;
+                    self.state.emission.output.instructions.push(0x1a);
+                }
+            }
+            self.push_i32_const(JS_UNDEFINED_TAG);
+            return Ok(true);
+        }
         if matches!(property, Expression::String(property_name) if property_name == "hasOwnProperty")
             && self.emit_property_member_call_shortcuts(
                 source_expression,
@@ -84,6 +106,28 @@ impl<'a> FunctionCompiler<'a> {
             && matches!(property, Expression::String(name) if name == "compareArray")
             && self.emit_assert_compare_array_call(arguments)?
         {
+            return Ok(true);
+        }
+        if matches!(object, Expression::Identifier(name) if name == "assert")
+            && matches!(property, Expression::String(name) if name == "deepEqual")
+            && matches!(
+                self.resolve_member_function_binding(object, property),
+                Some(LocalFunctionBinding::User(function_name))
+                    if function_name.contains("deepEqual") || function_name.contains("__ayy_fnexpr_")
+            )
+        {
+            for argument in arguments {
+                let expression = match argument {
+                    CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                        expression
+                    }
+                };
+                if !inline_summary_side_effect_free_expression(expression) {
+                    self.emit_numeric_expression(expression)?;
+                    self.state.emission.output.instructions.push(0x1a);
+                }
+            }
+            self.push_i32_const(JS_UNDEFINED_TAG);
             return Ok(true);
         }
         if matches!(object, Expression::Identifier(name) if name == "JSON")

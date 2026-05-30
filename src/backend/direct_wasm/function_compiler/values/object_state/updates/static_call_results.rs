@@ -95,6 +95,14 @@ impl<'a> FunctionCompiler<'a> {
     ) -> Option<(Expression, Option<String>)> {
         let _guard =
             StaticCallResultResolutionShapeGuard::enter(callee, arguments, current_function_name)?;
+        if let Some(LocalFunctionBinding::User(function_name)) = self
+            .resolve_function_binding_from_expression_with_context(callee, current_function_name)
+            && self
+                .user_function(&function_name)
+                .is_some_and(|function| function.is_generator())
+        {
+            return None;
+        }
         if let Some(result) = self.resolve_static_member_builtin_call_result_with_context(
             callee,
             arguments,
@@ -146,6 +154,9 @@ impl<'a> FunctionCompiler<'a> {
             return None;
         };
         let user_function = self.user_function(&function_name)?;
+        if user_function.is_generator() {
+            return None;
+        }
         if self.user_function_mentions_private_member_access(user_function)
             || self.user_function_mentions_direct_eval(user_function)
             || user_function.has_lowered_pattern_parameters()

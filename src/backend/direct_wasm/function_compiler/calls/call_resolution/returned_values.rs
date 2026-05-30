@@ -602,6 +602,15 @@ impl<'a> FunctionCompiler<'a> {
         let [Statement::Return(return_value)] = function.body.as_slice() else {
             return None;
         };
+        if matches!(return_value, Expression::This)
+            && let Some(user_function) = self.user_function(function_name)
+        {
+            return Some(if user_function.strict || user_function.lexical_this {
+                Expression::Undefined
+            } else {
+                Expression::Identifier("globalThis".to_string())
+            });
+        }
         Some(return_value.clone())
     }
 

@@ -96,6 +96,41 @@ fn expression_is_function_prototype_bind_call(expression: &Expression) -> bool {
     )
 }
 
+fn expression_is_promise_all_call(expression: &Expression) -> bool {
+    matches!(
+        expression,
+        Expression::Call { callee, .. }
+            if matches!(
+                callee.as_ref(),
+                Expression::Member { object, property }
+                    if matches!(object.as_ref(), Expression::Identifier(name) if name == "Promise")
+                        && matches!(property.as_ref(), Expression::String(name) if name == "all")
+            )
+    )
+}
+
+fn expression_is_unresolved_constructor_instance(expression: &Expression) -> bool {
+    matches!(
+        expression,
+        Expression::New { callee, .. }
+            if matches!(
+                callee.as_ref(),
+                Expression::Identifier(name) if !name.starts_with("__ayy_class_ctor_")
+            )
+    )
+}
+
+fn expression_is_array_buffer_constructor_instance(expression: &Expression) -> bool {
+    matches!(
+        expression,
+        Expression::New { callee, .. }
+            if matches!(
+                callee.as_ref(),
+                Expression::Identifier(name) if matches!(name.as_str(), "ArrayBuffer" | "SharedArrayBuffer")
+            )
+    )
+}
+
 fn import_meta_shadow_source_module_index(name: &str) -> Option<&str> {
     let suffix = name.strip_prefix("__ayy_import_meta_").or_else(|| {
         name.rsplit_once("__ayy_import_meta_")
@@ -106,6 +141,95 @@ fn import_meta_shadow_source_module_index(name: &str) -> Option<&str> {
         .take_while(|byte| byte.is_ascii_digit())
         .count();
     (digit_count > 0 && digit_count == suffix.len()).then_some(suffix)
+}
+
+fn expression_is_promise_resolve_undefined_call(expression: &Expression) -> bool {
+    let Expression::Call { callee, arguments } = expression else {
+        return false;
+    };
+    let Expression::Member { object, property } = callee.as_ref() else {
+        return false;
+    };
+    matches!(object.as_ref(), Expression::Identifier(name) if name == "Promise")
+        && matches!(property.as_ref(), Expression::String(name) if name == "resolve")
+        && matches!(
+            arguments.as_slice(),
+            [] | [CallArgument::Expression(Expression::Undefined)]
+        )
+}
+
+fn expression_is_static_promise_with_resolvers_record(expression: &Expression) -> bool {
+    let Expression::Object(entries) = expression else {
+        return false;
+    };
+    let mut has_promise = false;
+    let mut has_resolve = false;
+    let mut has_reject = false;
+    for entry in entries {
+        let ObjectEntry::Data {
+            key: Expression::String(key),
+            value,
+        } = entry
+        else {
+            continue;
+        };
+        match key.as_str() {
+            "promise" => has_promise = expression_is_promise_resolve_undefined_call(value),
+            "resolve" => {
+                has_resolve = matches!(
+                    value,
+                    Expression::Identifier(name)
+                        if name == "__ayy_promise_with_resolvers_resolve"
+                );
+            }
+            "reject" => {
+                has_reject = matches!(
+                    value,
+                    Expression::Identifier(name)
+                        if name == "__ayy_promise_with_resolvers_reject"
+                );
+            }
+            _ => {}
+        }
+    }
+    has_promise && has_resolve && has_reject
+}
+
+fn object_binding_is_static_promise_with_resolvers_record(binding: &ObjectValueBinding) -> bool {
+    let mut has_promise = false;
+    let mut has_resolve = false;
+    let mut has_reject = false;
+    for (key, value) in &binding.string_properties {
+        match key.as_str() {
+            "promise" => has_promise = expression_is_promise_resolve_undefined_call(value),
+            "resolve" => {
+                has_resolve = matches!(
+                    value,
+                    Expression::Identifier(name)
+                        if name == "__ayy_promise_with_resolvers_resolve"
+                );
+            }
+            "reject" => {
+                has_reject = matches!(
+                    value,
+                    Expression::Identifier(name)
+                        if name == "__ayy_promise_with_resolvers_reject"
+                );
+            }
+            _ => {}
+        }
+    }
+    has_promise && has_resolve && has_reject
+}
+
+fn prepared_state_is_static_promise_with_resolvers_record(
+    state: &PreparedIdentifierStoreState,
+) -> bool {
+    expression_is_static_promise_with_resolvers_record(&state.tracked_value_expression)
+        || state
+            .object_binding
+            .as_ref()
+            .is_some_and(object_binding_is_static_promise_with_resolvers_record)
 }
 
 impl<'a> FunctionCompiler<'a> {
@@ -1073,6 +1197,45 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(());
         }
         let trace_identifier_store = std::env::var_os("AYY_TRACE_IDENTIFIER_STORE").is_some();
+        if Self::expression_contains_await_for_user_call_runtime(&state.canonical_value_expression)
+            || Self::expression_contains_await_for_user_call_runtime(
+                &state.tracked_value_expression,
+            )
+            || Self::expression_contains_await_for_user_call_runtime(
+                &state.module_assignment_expression,
+            )
+            || Self::expression_contains_await_for_user_call_runtime(
+                &state.object_binding_expression,
+            )
+        {
+            let target_owner = self
+                .runtime_object_property_shadow_owner_name_for_identifier(target_name)
+                .unwrap_or_else(|| fallback_owner.to_string());
+            self.clear_runtime_object_property_shadow_prefix(&target_owner);
+            self.clear_runtime_object_property_shadow_static_metadata_prefix(&target_owner);
+            if trace_identifier_store {
+                eprintln!("identifier_store:{target_name}:runtime_shadows skipped_await_runtime");
+            }
+            return Ok(());
+        }
+        if expression_is_static_promise_with_resolvers_record(&state.canonical_value_expression)
+            || expression_is_static_promise_with_resolvers_record(&state.tracked_value_expression)
+            || expression_is_static_promise_with_resolvers_record(
+                &state.module_assignment_expression,
+            )
+            || expression_is_static_promise_with_resolvers_record(&state.object_binding_expression)
+            || state
+                .object_binding
+                .as_ref()
+                .is_some_and(object_binding_is_static_promise_with_resolvers_record)
+        {
+            if trace_identifier_store {
+                eprintln!(
+                    "identifier_store:{target_name}:runtime_shadows skipped_promise_with_resolvers"
+                );
+            }
+            return Ok(());
+        }
         if expression_is_function_prototype_bind_call(&state.canonical_value_expression)
             || expression_is_function_prototype_bind_call(&state.tracked_value_expression)
             || expression_is_function_prototype_bind_call(&state.module_assignment_expression)
@@ -1253,6 +1416,11 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         state: &PreparedIdentifierStoreState,
     ) -> Option<IteratorSourceKind> {
+        if let Some(source) =
+            self.resolve_internal_array_iterator_typed_array_source_for_store(state)
+        {
+            return Some(source);
+        }
         let primary_expression = state
             .call_source_snapshot_expression
             .as_ref()
@@ -1288,6 +1456,70 @@ impl<'a> FunctionCompiler<'a> {
             _ => &state.tracked_value_expression,
         };
         self.resolve_local_array_iterator_source(iterator_source_expression)
+    }
+
+    fn resolve_internal_array_iterator_typed_array_source_for_store(
+        &self,
+        state: &PreparedIdentifierStoreState,
+    ) -> Option<IteratorSourceKind> {
+        if !state.is_internal_array_iterator_binding {
+            return None;
+        }
+        [
+            state.call_source_snapshot_expression.as_ref(),
+            Some(&state.canonical_value_expression),
+            Some(&state.tracked_value_expression),
+        ]
+        .into_iter()
+        .flatten()
+        .find_map(|expression| {
+            let source = match expression {
+                Expression::GetIterator(source) => source.as_ref(),
+                other => other,
+            };
+            self.typed_array_view_alias_source_name_for_internal_iterator(source, 0)
+        })
+        .map(|name| IteratorSourceKind::TypedArrayView { name })
+    }
+
+    fn typed_array_view_alias_source_name_for_internal_iterator(
+        &self,
+        expression: &Expression,
+        depth: usize,
+    ) -> Option<String> {
+        if depth > 6 {
+            return None;
+        }
+        let Expression::Identifier(name) = expression else {
+            return None;
+        };
+        if self
+            .state
+            .speculation
+            .static_semantics
+            .has_local_typed_array_view_binding(name)
+        {
+            return Some(name.clone());
+        }
+        if let Some((resolved_name, _)) = self.resolve_current_local_binding(name)
+            && self
+                .state
+                .speculation
+                .static_semantics
+                .has_local_typed_array_view_binding(&resolved_name)
+        {
+            return Some(resolved_name);
+        }
+        let value = self
+            .state
+            .speculation
+            .static_semantics
+            .local_value_binding(name)
+            .or_else(|| self.global_value_binding(name))?;
+        if static_expression_matches(value, expression) {
+            return None;
+        }
+        self.typed_array_view_alias_source_name_for_internal_iterator(value, depth + 1)
     }
 
     fn resolve_identifier_store_iterator_binding_alias(
@@ -1418,6 +1650,24 @@ impl<'a> FunctionCompiler<'a> {
         let value_references_internal_iterator_step =
             expression_references_internal_iterator_step(&state.canonical_value_expression)
                 || expression_references_internal_iterator_step(&state.tracked_value_expression);
+        if is_internal_iterator_bookkeeping_binding_name(&state.resolved_name) {
+            self.state
+                .speculation
+                .static_semantics
+                .set_local_value_binding(
+                    &state.resolved_name,
+                    state.module_assignment_expression.clone(),
+                );
+            if let Some(kind) = state.kind {
+                self.state
+                    .speculation
+                    .static_semantics
+                    .set_local_kind(&state.resolved_name, kind);
+            }
+            if value_references_internal_iterator_step {
+                return Ok(());
+            }
+        }
         let value_is_local_simple_async_generator_next_call = self
             .identifier_store_value_is_local_simple_async_generator_next_call(
                 &state.canonical_value_expression,
@@ -1425,10 +1675,38 @@ impl<'a> FunctionCompiler<'a> {
         let value_is_get_iterator =
             matches!(state.canonical_value_expression, Expression::GetIterator(_))
                 || matches!(state.tracked_value_expression, Expression::GetIterator(_));
+        let value_is_promise_with_resolvers_record =
+            prepared_state_is_static_promise_with_resolvers_record(state);
+        let value_is_promise_all_call =
+            expression_is_promise_all_call(&state.canonical_value_expression)
+                || expression_is_promise_all_call(&state.tracked_value_expression);
+        let value_is_materialized_array_buffer =
+            expression_is_array_buffer_constructor_instance(&state.tracked_value_expression)
+                || expression_is_array_buffer_constructor_instance(
+                    &state.module_assignment_expression,
+                );
+        let value_contains_await = state.opaque_runtime_value
+            || Self::expression_contains_await_for_user_call_runtime(
+                &state.canonical_value_expression,
+            )
+            || Self::expression_contains_await_for_user_call_runtime(
+                &state.tracked_value_expression,
+            );
+        if value_contains_await {
+            trace_step("await_runtime:start");
+            self.state
+                .clear_local_static_binding_metadata(&state.resolved_name);
+            trace_step("await_runtime:done");
+            return Ok(());
+        }
         trace_step("member_bindings:start");
-        if !state.is_internal_array_step_binding {
+        if !state.is_internal_array_step_binding
+            && !value_is_promise_with_resolvers_record
+            && !value_is_promise_all_call
+        {
             if !value_references_internal_iterator_step
                 && !value_is_local_simple_async_generator_next_call
+                && !value_is_materialized_array_buffer
             {
                 self.update_member_function_bindings_for_value(
                     &state.resolved_name,
@@ -1436,7 +1714,8 @@ impl<'a> FunctionCompiler<'a> {
                     value_local,
                 )?;
             }
-            if (!value_references_internal_iterator_step || value_is_get_iterator)
+            if !state.is_internal_array_iterator_binding
+                && (!value_references_internal_iterator_step || value_is_get_iterator)
                 && !value_is_local_simple_async_generator_next_call
             {
                 self.cache_identifier_store_iterator_next_method(state)?;
@@ -1600,26 +1879,58 @@ impl<'a> FunctionCompiler<'a> {
                 .set_local_kind(&state.resolved_name, StaticValueKind::Object);
         }
         trace_step("object_binding:start");
-        self.update_local_object_binding(&state.resolved_name, &state.object_binding_expression);
+        if let Some(object_binding) = state.object_binding.clone() {
+            self.update_local_object_binding_from_resolved(
+                &state.resolved_name,
+                &state.object_binding_expression,
+                object_binding,
+            );
+        } else if expression_is_unresolved_constructor_instance(&state.canonical_value_expression) {
+            self.state
+                .speculation
+                .static_semantics
+                .clear_local_object_binding(&state.resolved_name);
+            if self.binding_name_is_global(&state.resolved_name) {
+                self.backend
+                    .sync_global_object_binding(&state.resolved_name, None);
+            }
+        } else {
+            self.update_local_object_binding(
+                &state.resolved_name,
+                &state.object_binding_expression,
+            );
+        }
         let skip_static_object_seeds =
             expression_references_internal_iterator_step(&state.tracked_value_expression)
+                || expression_is_unresolved_constructor_instance(&state.canonical_value_expression)
+                || expression_is_unresolved_constructor_instance(&state.tracked_value_expression)
                 || expression_references_internal_iterator_step(
                     state.prototype_source_expression(),
                 );
+        let state_object_binding_is_typed_array = state
+            .object_binding
+            .as_ref()
+            .is_some_and(|binding| self.static_typed_array_name_from_binding(binding).is_some());
         if !skip_static_object_seeds {
-            self.seed_local_date_object_binding(
-                &state.resolved_name,
-                &state.tracked_value_expression,
-            );
-            self.seed_local_native_error_object_binding(
-                &state.resolved_name,
-                &state.tracked_value_expression,
-            );
-            self.seed_local_constructed_function_object_binding(
-                &state.resolved_name,
-                &state.tracked_value_expression,
-            );
+            if !state_object_binding_is_typed_array {
+                self.seed_local_date_object_binding(
+                    &state.resolved_name,
+                    &state.tracked_value_expression,
+                );
+                self.seed_local_native_error_object_binding(
+                    &state.resolved_name,
+                    &state.tracked_value_expression,
+                );
+                self.seed_local_constructed_function_object_binding(
+                    &state.resolved_name,
+                    &state.tracked_value_expression,
+                );
+            }
             self.seed_local_viewed_array_buffer_object_binding(
+                &state.resolved_name,
+                &state.tracked_value_expression,
+            );
+            self.seed_local_typed_array_object_binding(
                 &state.resolved_name,
                 &state.tracked_value_expression,
             );

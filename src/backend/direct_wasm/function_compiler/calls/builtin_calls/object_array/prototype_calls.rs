@@ -1,6 +1,23 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn bound_prototype_receiver_is_module_namespace(&self, receiver: &Expression) -> bool {
+        if self
+            .module_namespace_index_from_expression(receiver)
+            .is_some()
+        {
+            return true;
+        }
+        self.resolve_object_binding_from_expression(receiver)
+            .or_else(|| match receiver {
+                Expression::Identifier(name) => {
+                    self.resolve_identifier_object_binding_fallback(name)
+                }
+                _ => None,
+            })
+            .is_some_and(|binding| Self::object_binding_has_module_namespace_marker(&binding))
+    }
+
     pub(in crate::backend::direct_wasm) fn emit_runtime_known_symbol_property_presence_check(
         &mut self,
         receiver: &Expression,
@@ -281,6 +298,10 @@ impl<'a> FunctionCompiler<'a> {
                 if let Some(descriptor) =
                     self.resolve_bound_function_prototype_call_descriptor(receiver, property)
                 {
+                    if self.bound_prototype_receiver_is_module_namespace(receiver) {
+                        self.emit_object_get_own_property_descriptor_result(receiver, property)?;
+                        self.state.emission.output.instructions.push(0x1a);
+                    }
                     self.push_i32_const(descriptor.enumerable as i32);
                 } else if self
                     .emit_runtime_known_symbol_property_presence_check(receiver, property)?

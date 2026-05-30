@@ -36,7 +36,7 @@ impl<'a> FunctionCompiler<'a> {
         resolved
     }
 
-    fn resolve_derived_constructor_super_call_replacement_this_expression(
+    pub(in crate::backend::direct_wasm) fn resolve_derived_constructor_super_call_replacement_this_expression(
         &self,
         user_function: &UserFunction,
         arguments: &[CallArgument],
@@ -95,9 +95,15 @@ impl<'a> FunctionCompiler<'a> {
                 )),
             })
             .collect::<Option<Vec<_>>>()?;
-        let LocalFunctionBinding::User(super_function_name) =
-            self.resolve_function_binding_from_expression(&resolved_callee)?
-        else {
+        let super_function_binding = self
+            .resolve_function_binding_from_expression(&resolved_callee)
+            .or_else(|| match &resolved_callee {
+                Expression::Identifier(name) => {
+                    self.resolve_class_constructor_self_binding_for_identifier(name)
+                }
+                _ => None,
+            })?;
+        let LocalFunctionBinding::User(super_function_name) = super_function_binding else {
             return None;
         };
         let super_function = self.user_function(&super_function_name)?;
@@ -163,17 +169,25 @@ impl<'a> FunctionCompiler<'a> {
             .resolve_constructor_capture_source_bindings_from_expression(&Expression::Identifier(
                 user_function.name.clone(),
             ));
-        self.resolve_user_constructor_return_expression_for_function(
-            user_function,
-            arguments,
-            capture_source_bindings.as_ref(),
-        )
-        .or_else(|| {
-            self.resolve_derived_constructor_super_call_replacement_this_expression(
+        let constructor_return = self
+            .resolve_user_constructor_return_expression_with_explicit_status_for_function(
                 user_function,
                 arguments,
-            )
-        })
+                capture_source_bindings.as_ref(),
+            );
+        if let Some((return_expression, true)) = constructor_return.as_ref() {
+            return Some(return_expression.clone());
+        }
+        if self.user_function_is_derived_constructor(user_function)
+            && let Some(super_return_expression) = self
+                .resolve_derived_constructor_super_call_replacement_this_expression(
+                    user_function,
+                    arguments,
+                )
+        {
+            return Some(super_return_expression);
+        }
+        constructor_return.map(|(expression, _)| expression)
     }
 
     fn sync_runtime_this_shadow_from_expression(
@@ -283,6 +297,12 @@ impl<'a> FunctionCompiler<'a> {
                 .speculation
                 .static_semantics
                 .clear_local_proxy_binding("this");
+        }
+        if matches!(
+            &this_expression,
+            Expression::Identifier(name) if name.starts_with("__ayy_module_deferred_namespace_")
+        ) {
+            return self.sync_runtime_this_shadow_from_expression(&this_expression);
         }
         let capture_source_bindings = self
             .resolve_constructor_capture_source_bindings_from_expression(&Expression::New {

@@ -114,6 +114,9 @@ impl<'a> FunctionCompiler<'a> {
         let home_object_name = match self.resolve_home_object_name_for_function(function_name) {
             Some(home_object_name) => home_object_name,
             None => {
+                if trace_super_resolution {
+                    eprintln!("super_resolution:base current={current_function_name:?} home=None");
+                }
                 let enclosing_function_name =
                     self.lexical_enclosing_function_name(function_name)?;
                 return self

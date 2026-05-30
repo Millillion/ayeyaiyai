@@ -1090,19 +1090,29 @@ impl<'a> FunctionCompiler<'a> {
                 length_local,
                 runtime_name,
                 ..
-            } if !self
-                .static_array_source_has_dynamic_length(*length_local, runtime_name.as_deref()) =>
+            } if self
+                .static_array_source_exhaustion_length(
+                    values.len(),
+                    *length_local,
+                    runtime_name.as_deref(),
+                )
+                .is_some_and(|length| current_static_index >= length) =>
             {
-                current_static_index >= values.len()
+                true
             }
             IteratorSourceKind::StaticArrayEntries {
                 values,
                 length_local,
                 runtime_name,
-            } if !self
-                .static_array_source_has_dynamic_length(*length_local, runtime_name.as_deref()) =>
+            } if self
+                .static_array_source_exhaustion_length(
+                    values.len(),
+                    *length_local,
+                    runtime_name.as_deref(),
+                )
+                .is_some_and(|length| current_static_index >= length) =>
             {
-                current_static_index >= values.len()
+                true
             }
             IteratorSourceKind::StaticMapEntries {
                 values,
@@ -1110,6 +1120,11 @@ impl<'a> FunctionCompiler<'a> {
                 key_runtime_name: None,
                 value_runtime_name: None,
             } => current_static_index >= values.len(),
+            IteratorSourceKind::TypedArrayView { name } => self
+                .typed_array_view_binding_for_name(name)
+                .as_ref()
+                .and_then(|view| view.fixed_length)
+                .is_some_and(|length| current_static_index >= length),
             _ => false,
         }
     }

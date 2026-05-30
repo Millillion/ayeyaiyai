@@ -5,6 +5,10 @@ mod bound_snapshot;
 #[path = "await_resolution/static_resolution.rs"]
 mod static_resolution;
 
+pub(super) fn reset_await_resolution_caches() {
+    static_resolution::reset_static_dynamic_import_caches();
+}
+
 impl<'a> FunctionCompiler<'a> {
     pub(in crate::backend::direct_wasm) fn static_expression_is_object_like(
         &self,

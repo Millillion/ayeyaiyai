@@ -1,7 +1,10 @@
 use std::env;
 use std::fs;
 
-use ayeyaiyai::{CompileOptions, backend, compile_file, compile_source_with_reason, frontend, ir};
+use ayeyaiyai::{
+    CompileOptions, backend, compile_file, compile_file_with_goal, compile_source_with_reason,
+    frontend, ir,
+};
 
 fn main() {
     let path = env::args().nth(1).unwrap_or_else(|| {
@@ -36,13 +39,21 @@ fn main() {
     }
 
     if env::var_os("AYY_DEBUG_FILE_COMPILE").is_some() {
-        let output = env::temp_dir().join("ayy-debug-file-compile.wasm");
+        let output = env::var_os("AYY_DEBUG_OUTPUT")
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|| env::temp_dir().join("ayy-debug-file-compile.wasm"));
         let options = CompileOptions {
             output: output.clone(),
             target: "wasm32-wasip2".to_string(),
         };
-        let result = compile_file(std::path::Path::new(&path), &options);
-        let _ = fs::remove_file(output);
+        let result = if env::var_os("AYY_DEBUG_MODULE_FILE_COMPILE").is_some() {
+            compile_file_with_goal(std::path::Path::new(&path), &options, true)
+        } else {
+            compile_file(std::path::Path::new(&path), &options)
+        };
+        if env::var_os("AYY_DEBUG_OUTPUT").is_none() {
+            let _ = fs::remove_file(output);
+        }
         match result {
             Ok(()) => println!("ok"),
             Err(error) => println!("unsupported: {error:#}"),

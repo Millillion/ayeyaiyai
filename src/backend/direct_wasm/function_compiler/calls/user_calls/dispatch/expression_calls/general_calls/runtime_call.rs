@@ -6,6 +6,7 @@ impl<'a> FunctionCompiler<'a> {
         user_function: &UserFunction,
         expanded_arguments: &[Expression],
         updated_bindings: Option<&HashMap<String, Expression>>,
+        skip_static_argument_member_writebacks: bool,
     ) -> DirectResult<(
         u32,
         Vec<(String, String, Option<ObjectValueBinding>)>,
@@ -19,17 +20,35 @@ impl<'a> FunctionCompiler<'a> {
                 user_function.name
             );
         }
-        let static_argument_member_writebacks = self
-            .user_function_static_argument_object_member_writeback_values(
-                user_function,
-                expanded_arguments,
+        let module_init_call = user_function.name.starts_with("__ayy_module_init_");
+        let static_argument_member_writebacks =
+            if module_init_call || skip_static_argument_member_writebacks {
+                Vec::new()
+            } else {
+                self.user_function_static_argument_object_member_writeback_values(
+                    user_function,
+                    expanded_arguments,
+                )
+            };
+        if trace_user_calls {
+            eprintln!(
+                "runtime_call:after_static_arg_writebacks target={} count={}",
+                user_function.name,
+                static_argument_member_writebacks.len()
             );
+        }
         self.predeclare_static_argument_object_member_writeback_properties(
             &static_argument_member_writebacks,
         );
 
-        let parameter_object_shadow_writebacks = self
-            .emit_user_function_parameter_object_shadow_setup(user_function, expanded_arguments)?;
+        let parameter_object_shadow_writebacks = if module_init_call {
+            Vec::new()
+        } else {
+            self.emit_user_function_parameter_object_shadow_setup(
+                user_function,
+                expanded_arguments,
+            )?
+        };
         if trace_user_calls {
             eprintln!(
                 "runtime_call:after_shadow_setup target={} writebacks={}",
@@ -112,13 +131,15 @@ impl<'a> FunctionCompiler<'a> {
                 user_function.name, return_value_local
             );
         }
-        self.emit_user_function_parameter_object_shadow_writeback(
-            &parameter_object_shadow_writebacks,
-        )?;
-        self.sync_user_function_parameter_object_shadow_writeback_static_metadata(
-            &parameter_object_shadow_writebacks,
-            updated_bindings,
-        );
+        if !module_init_call {
+            self.emit_user_function_parameter_object_shadow_writeback(
+                &parameter_object_shadow_writebacks,
+            )?;
+            self.sync_user_function_parameter_object_shadow_writeback_static_metadata(
+                &parameter_object_shadow_writebacks,
+                updated_bindings,
+            );
+        }
         self.sync_static_argument_object_member_writeback_values(
             &static_argument_member_writebacks,
         );

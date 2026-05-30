@@ -74,6 +74,24 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         value: &Expression,
     ) -> Expression {
+        if let Expression::Member { object, property } = value
+            && let Some(live_binding_value) =
+                self.resolve_module_namespace_live_binding_member_value(object, property)
+        {
+            let materialized = self.materialize_static_expression(&live_binding_value);
+            if matches!(
+                self.infer_value_kind(&materialized),
+                Some(StaticValueKind::Object | StaticValueKind::Function)
+            ) || self
+                .resolve_object_binding_from_expression(&materialized)
+                .is_some()
+                || self
+                    .resolve_array_binding_from_expression(&materialized)
+                    .is_some()
+            {
+                return live_binding_value;
+            }
+        }
         let preserve_reference_alias =
             matches!(value, Expression::Identifier(_) | Expression::This)
                 && (self
@@ -1112,15 +1130,19 @@ impl<'a> FunctionCompiler<'a> {
             let argument_requires_current_object_binding = matches!(argument_expression, Expression::Object(entries) if entries.iter().any(|entry| matches!(entry, ObjectEntry::Spread(_))));
             let argument_reads_descriptor_member =
                 self.expression_reads_local_descriptor_binding_member(argument_expression);
-            let parameter_object_binding =
-                if argument_reads_descriptor_member || argument_requires_current_object_binding {
-                    None
-                } else {
-                    parameter_bindings
-                        .object_bindings
-                        .get(param_name)
-                        .and_then(|binding| binding.as_ref())
-                };
+            let argument_contains_await =
+                Self::expression_contains_await_for_user_call_runtime(argument_expression);
+            let parameter_object_binding = if argument_reads_descriptor_member
+                || argument_requires_current_object_binding
+                || argument_contains_await
+            {
+                None
+            } else {
+                parameter_bindings
+                    .object_bindings
+                    .get(param_name)
+                    .and_then(|binding| binding.as_ref())
+            };
 
             let source_owner = match argument_expression {
                 Expression::Identifier(name) => {
@@ -1128,7 +1150,9 @@ impl<'a> FunctionCompiler<'a> {
                 }
                 _ => None,
             };
-            let argument_object_binding = if argument_reads_descriptor_member {
+            let argument_object_binding = if argument_reads_descriptor_member
+                || argument_contains_await
+            {
                 None
             } else {
                 self.resolve_object_binding_from_expression(argument_expression)
@@ -1259,6 +1283,8 @@ impl<'a> FunctionCompiler<'a> {
             );
             let argument_reads_descriptor_member =
                 self.expression_reads_local_descriptor_binding_member(argument_expression);
+            let argument_contains_await =
+                Self::expression_contains_await_for_user_call_runtime(argument_expression);
             let argument_requires_current_object_binding = matches!(argument_expression, Expression::Object(entries) if entries.iter().any(|entry| matches!(entry, ObjectEntry::Spread(_))));
             let source_owner = match argument_expression {
                 Expression::Identifier(name) => {
@@ -1269,7 +1295,9 @@ impl<'a> FunctionCompiler<'a> {
                 }
                 _ => None,
             };
-            let argument_object_binding = if argument_reads_descriptor_member {
+            let argument_object_binding = if argument_reads_descriptor_member
+                || argument_contains_await
+            {
                 None
             } else {
                 self.resolve_object_binding_from_expression(argument_expression)
@@ -1747,13 +1775,22 @@ impl<'a> FunctionCompiler<'a> {
         {
             return Some(name.to_string());
         }
+        if self.contains_user_function(name) {
+            return Some(name.to_string());
+        }
+        if self.resolve_user_function_by_binding_name(name).is_some() {
+            return Some(name.to_string());
+        }
         if let Some(source_name) = scoped_binding_source_name(name)
             && (self.runtime_object_property_shadow_owner_has_bindings(source_name)
                 || self.backend.global_has_binding(source_name)
                 || self.backend.global_has_lexical_binding(source_name)
                 || self.backend.global_has_implicit_binding(source_name)
                 || self.global_value_binding(source_name).is_some()
-                || self.contains_user_function(source_name))
+                || self.contains_user_function(source_name)
+                || self
+                    .resolve_user_function_by_binding_name(source_name)
+                    .is_some())
         {
             return Some(source_name.to_string());
         }
@@ -1780,9 +1817,6 @@ impl<'a> FunctionCompiler<'a> {
         {
             return Some(name.to_string());
         }
-        if self.resolve_current_local_binding(name).is_some() {
-            return Some(name.to_string());
-        }
         if let Some(Expression::Identifier(source_name)) = self
             .state
             .speculation
@@ -1795,21 +1829,25 @@ impl<'a> FunctionCompiler<'a> {
         {
             return Some(source_owner);
         }
+        if let Some((resolved_name, _)) = self.resolve_current_local_binding(name) {
+            if resolved_name != name
+                && (self
+                    .state
+                    .speculation
+                    .static_semantics
+                    .has_local_object_binding(&resolved_name)
+                    || self.runtime_object_property_shadow_owner_has_bindings(&resolved_name))
+            {
+                return Some(resolved_name);
+            }
+            return Some(name.to_string());
+        }
         if (self.backend.global_has_binding(name)
             || self.backend.global_has_lexical_binding(name)
             || self.backend.global_has_implicit_binding(name))
             && self.runtime_object_property_shadow_owner_has_bindings(name)
         {
             return Some(name.to_string());
-        }
-        if let Some((resolved_name, _)) = self.resolve_current_local_binding(name)
-            && self
-                .state
-                .speculation
-                .static_semantics
-                .has_local_object_binding(&resolved_name)
-        {
-            return Some(resolved_name);
         }
         if self
             .state
@@ -1833,6 +1871,7 @@ impl<'a> FunctionCompiler<'a> {
         }
         let resolved_owner = ((self.backend.global_has_binding(name)
             || self.backend.global_has_lexical_binding(name)
+            || self.backend.global_function_binding(name).is_some()
             || self.backend.global_has_implicit_binding(name))
             && self.backend.global_object_binding(name).is_some())
         .then(|| name.to_string())
@@ -3370,6 +3409,26 @@ impl<'a> FunctionCompiler<'a> {
         self.update_local_object_binding(owner_name, &updated_expression);
     }
 
+    pub(in crate::backend::direct_wasm) fn runtime_shadow_owner_should_preserve_function_identity(
+        &self,
+        owner_name: &str,
+    ) -> bool {
+        owner_name.starts_with("__ayy_class_expr_")
+            || owner_name.starts_with("__ayy_class_ctor_")
+            || self
+                .resolve_function_binding_from_expression(&Expression::Identifier(
+                    owner_name.to_string(),
+                ))
+                .is_some()
+            || self
+                .state
+                .speculation
+                .static_semantics
+                .local_function_binding(owner_name)
+                .is_some()
+            || self.backend.global_function_binding(owner_name).is_some()
+    }
+
     pub(in crate::backend::direct_wasm) fn sync_runtime_object_shadow_owner_static_metadata_from_binding(
         &mut self,
         owner_name: &str,
@@ -3387,31 +3446,56 @@ impl<'a> FunctionCompiler<'a> {
             .map(|(resolved_name, _)| resolved_name)
             .filter(|resolved_name| resolved_name != owner_name);
         if let Some(resolved_name) = resolved_identifier_name.as_deref() {
+            let preserve_function_identity =
+                self.runtime_shadow_owner_should_preserve_function_identity(resolved_name);
             self.state
                 .speculation
                 .static_semantics
                 .set_local_object_binding(resolved_name, updated_object_binding.clone());
-            self.update_local_value_binding(resolved_name, &updated_expression);
-            self.state
-                .speculation
-                .static_semantics
-                .set_local_kind(resolved_name, StaticValueKind::Object);
+            if preserve_function_identity {
+                self.state
+                    .speculation
+                    .static_semantics
+                    .set_local_kind(resolved_name, StaticValueKind::Function);
+            } else {
+                self.update_local_value_binding(resolved_name, &updated_expression);
+                self.state
+                    .speculation
+                    .static_semantics
+                    .set_local_kind(resolved_name, StaticValueKind::Object);
+            }
         }
+        let preserve_function_identity =
+            self.runtime_shadow_owner_should_preserve_function_identity(owner_name);
         self.state
             .speculation
             .static_semantics
             .set_local_object_binding(owner_name, updated_object_binding.clone());
-        self.update_local_value_binding(owner_name, &updated_expression);
-        self.state
-            .speculation
-            .static_semantics
-            .set_local_kind(owner_name, StaticValueKind::Object);
+        if preserve_function_identity {
+            self.state
+                .speculation
+                .static_semantics
+                .set_local_kind(owner_name, StaticValueKind::Function);
+        } else {
+            self.update_local_value_binding(owner_name, &updated_expression);
+            self.state
+                .speculation
+                .static_semantics
+                .set_local_kind(owner_name, StaticValueKind::Object);
+        }
         if self.binding_name_is_global(owner_name)
             || self.backend.global_has_binding(owner_name)
             || self.backend.global_has_lexical_binding(owner_name)
             || self.global_has_implicit_binding(owner_name)
         {
-            self.update_static_global_assignment_metadata(owner_name, &updated_expression);
+            if preserve_function_identity {
+                self.backend
+                    .sync_global_object_binding(owner_name, Some(updated_object_binding.clone()));
+                self.backend
+                    .set_global_binding_kind(owner_name, StaticValueKind::Function);
+            } else {
+                self.update_static_global_assignment_metadata(owner_name, &updated_expression);
+            }
         }
     }
 
@@ -3481,11 +3565,54 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    fn runtime_shadow_copy_effective_owner_name(&self, owner_name: &str) -> String {
+        if owner_name == "this" {
+            return owner_name.to_string();
+        }
+
+        let mut candidates = Vec::new();
+        if let Some((resolved_name, _)) = self.resolve_current_local_binding(owner_name) {
+            candidates.push(resolved_name);
+        }
+        if let Some(Expression::Identifier(source_name)) = self
+            .state
+            .speculation
+            .static_semantics
+            .local_value_binding(owner_name)
+            .or_else(|| self.global_value_binding(owner_name))
+        {
+            candidates.push(source_name.clone());
+        }
+        if let Some(Expression::Identifier(source_name)) =
+            self.resolve_bound_alias_expression(&Expression::Identifier(owner_name.to_string()))
+        {
+            candidates.push(source_name);
+        }
+
+        candidates
+            .into_iter()
+            .find(|candidate| {
+                candidate != owner_name
+                    && (self
+                        .state
+                        .speculation
+                        .static_semantics
+                        .has_local_object_binding(candidate)
+                        || self.global_object_binding(candidate).is_some()
+                        || self.runtime_object_property_shadow_owner_has_bindings(candidate))
+            })
+            .unwrap_or_else(|| owner_name.to_string())
+    }
+
     pub(in crate::backend::direct_wasm) fn emit_runtime_object_property_shadow_copy(
         &mut self,
         source_owner: &str,
         target_owner: &str,
     ) -> DirectResult<()> {
+        let effective_source_owner = self.runtime_shadow_copy_effective_owner_name(source_owner);
+        let effective_target_owner = self.runtime_shadow_copy_effective_owner_name(target_owner);
+        let source_owner = effective_source_owner.as_str();
+        let target_owner = effective_target_owner.as_str();
         if source_owner == target_owner {
             return Ok(());
         }

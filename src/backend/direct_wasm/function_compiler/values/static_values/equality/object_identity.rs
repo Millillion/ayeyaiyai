@@ -60,6 +60,46 @@ fn template_object_reference_identity_key(expression: &Expression) -> Option<Str
     Some(format!("template-object:{site_key}"))
 }
 
+fn module_namespace_reference_identity_key_for_identifier(name: &str) -> Option<String> {
+    fn namespace_suffix<'a>(name: &'a str, marker: &str) -> Option<&'a str> {
+        name.strip_prefix(marker)
+            .or_else(|| name.rsplit_once(marker).map(|(_, suffix)| suffix))
+    }
+
+    let (namespace_kind, suffix) =
+        if let Some(suffix) = namespace_suffix(name, "__ayy_module_deferred_namespace_") {
+            ("deferred", suffix)
+        } else if let Some(suffix) = namespace_suffix(name, "__ayy_module_dep_")
+            .or_else(|| namespace_suffix(name, "__ayy_module_namespace_"))
+        {
+            ("eager", suffix)
+        } else {
+            return None;
+        };
+    let digit_count = suffix
+        .bytes()
+        .take_while(|byte| byte.is_ascii_digit())
+        .count();
+    if digit_count == 0 {
+        return None;
+    }
+    Some(format!(
+        "module-namespace:{namespace_kind}:{}",
+        &suffix[..digit_count]
+    ))
+}
+
+fn function_binding_reference_identity_key(binding: &LocalFunctionBinding) -> String {
+    match binding {
+        LocalFunctionBinding::User(function_name) => {
+            format!("user-function:{function_name}")
+        }
+        LocalFunctionBinding::Builtin(function_name) => {
+            format!("builtin-function:{function_name}")
+        }
+    }
+}
+
 impl<'a> FunctionCompiler<'a> {
     fn constructed_object_reference_identity_key(
         &self,
@@ -405,11 +445,23 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         name: &str,
     ) -> Option<String> {
+        if let Some(module_index) = name.strip_prefix("__ayy_module_error_") {
+            return Some(format!("module-error:{module_index}"));
+        }
+        if let Some(key) = module_namespace_reference_identity_key_for_identifier(name) {
+            return Some(key);
+        }
         let current_local_binding = self.resolve_current_local_binding(name);
         let resolved_name = current_local_binding
             .as_ref()
             .map(|(resolved_name, _)| resolved_name.clone())
             .unwrap_or_else(|| name.to_string());
+        if let Some(function) = self
+            .resolve_user_function_by_binding_name(&resolved_name)
+            .or_else(|| self.resolve_user_function_by_binding_name(name))
+        {
+            return Some(format!("user-function:{}", function.name));
+        }
         let local_value_binding = self
             .state
             .speculation
@@ -450,6 +502,23 @@ impl<'a> FunctionCompiler<'a> {
                 }
                 return Some(binding);
             }
+        }
+        if let Some((resolved_name, _)) = self.resolve_current_local_binding(name)
+            && let Some(binding) = self
+                .state
+                .speculation
+                .static_semantics
+                .local_function_binding(&resolved_name)
+        {
+            return Some(function_binding_reference_identity_key(binding));
+        }
+        if let Some(binding) = self
+            .state
+            .speculation
+            .static_semantics
+            .local_function_binding(name)
+        {
+            return Some(function_binding_reference_identity_key(binding));
         }
         if let Some((resolved_name, _)) = self.resolve_current_local_binding(name)
             && (self

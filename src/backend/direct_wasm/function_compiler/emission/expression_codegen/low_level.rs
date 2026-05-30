@@ -1,5 +1,19 @@
 use super::*;
 
+fn truthy_expression_references_internal_iterator_temp(expression: &Expression) -> bool {
+    let mut referenced_names = HashSet::new();
+    collect_referenced_binding_names_from_expression(expression, &mut referenced_names);
+    referenced_names.iter().any(|name| {
+        name.starts_with("__ayy_array_step_")
+            || name.starts_with("__ayy_array_iter_value_")
+            || name.starts_with("__ayy_array_iter_done_")
+            || name.starts_with("__ayy_for_of_step_")
+            || name.starts_with("__ayy_for_of_iter_value_")
+            || name.starts_with("__ayy_for_of_iter_done_")
+            || name.starts_with("__ayy_binding_value_")
+    })
+}
+
 impl<'a> FunctionCompiler<'a> {
     pub(in crate::backend::direct_wasm) fn emit_truthy_expression(
         &mut self,
@@ -31,6 +45,7 @@ impl<'a> FunctionCompiler<'a> {
         if inline_summary_side_effect_free_expression(expression)
             && !Self::expression_contains_assignment_or_update(expression)
             && !Self::expression_references_internal_assignment_temp(expression)
+            && !truthy_expression_references_internal_iterator_temp(expression)
             && let Some(value) = self.resolve_static_boolean_expression(expression)
         {
             self.push_i32_const(value as i32);

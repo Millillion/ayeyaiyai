@@ -98,69 +98,115 @@ fn tracked_array_push_expression_references_internal_iterator_step(
     }
 }
 
+fn tracked_array_push_materialized_primitive_is_safe(
+    argument: &Expression,
+    materialized_argument: &Expression,
+) -> bool {
+    !static_expression_matches(argument, materialized_argument)
+        && inline_summary_side_effect_free_expression(argument)
+        && matches!(
+            materialized_argument,
+            Expression::Number(_)
+                | Expression::BigInt(_)
+                | Expression::String(_)
+                | Expression::Bool(_)
+                | Expression::Null
+                | Expression::Undefined
+        )
+}
+
 impl<'a> FunctionCompiler<'a> {
+    fn materialize_tracked_array_argument_value(&self, argument: &Expression) -> Expression {
+        if let Expression::Unary {
+            op: UnaryOp::TypeOf,
+            expression,
+        } = argument
+            && let Some(text) = self
+                .infer_typeof_operand_kind(expression)
+                .and_then(StaticValueKind::as_typeof_str)
+        {
+            return Expression::String(text.to_string());
+        }
+        self.materialize_static_expression(argument)
+    }
+
+    fn emit_tracked_array_argument_value(&mut self, argument: &Expression) -> DirectResult<()> {
+        if let Expression::Unary {
+            op: UnaryOp::TypeOf,
+            expression,
+        } = argument
+        {
+            return self.emit_typeof_value_expression(expression);
+        }
+        self.emit_numeric_expression(argument)
+    }
+
     pub(in crate::backend::direct_wasm) fn emit_tracked_array_push_call(
         &mut self,
         object: &Expression,
         arguments: &[CallArgument],
     ) -> DirectResult<bool> {
         let trace = std::env::var_os("AYY_TRACE_TRACKED_ARRAY_PUSH").is_some();
-        let Expression::Identifier(name) = object else {
+        let binding_name = if let Expression::Identifier(name) = object {
+            if self
+                .state
+                .speculation
+                .static_semantics
+                .has_local_array_binding(name)
+                || self.global_array_binding(name).is_some()
+                || self
+                    .state
+                    .speculation
+                    .static_semantics
+                    .runtime_array_length_local(name)
+                    .is_some()
+                || self
+                    .state
+                    .speculation
+                    .static_semantics
+                    .has_runtime_array_slots(name)
+            {
+                name.clone()
+            } else if let Some(hidden_name) = self
+                .resolve_user_function_capture_hidden_name(name)
+                .filter(|hidden_name| {
+                    self.state
+                        .speculation
+                        .static_semantics
+                        .has_local_array_binding(hidden_name)
+                        || self.global_array_binding(hidden_name).is_some()
+                        || self
+                            .state
+                            .speculation
+                            .static_semantics
+                            .runtime_array_length_local(hidden_name)
+                            .is_some()
+                        || self
+                            .state
+                            .speculation
+                            .static_semantics
+                            .has_runtime_array_slots(hidden_name)
+                })
+            {
+                hidden_name
+            } else {
+                name.clone()
+            }
+        } else if let Some(binding_name) = self.runtime_array_binding_name_for_expression(object) {
+            binding_name
+        } else {
             if trace {
-                eprintln!("tracked_array_push:skip non_identifier object={object:?}");
+                eprintln!("tracked_array_push:skip unresolved object={object:?}");
             }
             return Ok(false);
         };
-        let binding_name = if self
-            .state
-            .speculation
-            .static_semantics
-            .has_local_array_binding(name)
-            || self.global_array_binding(name).is_some()
-            || self
-                .state
-                .speculation
-                .static_semantics
-                .runtime_array_length_local(name)
-                .is_some()
-            || self
-                .state
-                .speculation
-                .static_semantics
-                .has_runtime_array_slots(name)
-        {
-            name.clone()
-        } else if let Some(hidden_name) = self
-            .resolve_user_function_capture_hidden_name(name)
-            .filter(|hidden_name| {
-                self.state
-                    .speculation
-                    .static_semantics
-                    .has_local_array_binding(hidden_name)
-                    || self.global_array_binding(hidden_name).is_some()
-                    || self
-                        .state
-                        .speculation
-                        .static_semantics
-                        .runtime_array_length_local(hidden_name)
-                        .is_some()
-                    || self
-                        .state
-                        .speculation
-                        .static_semantics
-                        .has_runtime_array_slots(hidden_name)
-            })
-        {
-            hidden_name
-        } else {
-            name.clone()
-        };
         if trace {
             eprintln!(
-                "tracked_array_push:start name={name} binding={binding_name} args={arguments:?}"
+                "tracked_array_push:start object={object:?} binding={binding_name} args={arguments:?}"
             );
         }
-        let has_runtime_array_state = self.runtime_array_binding_has_state(&binding_name);
+        let has_runtime_array_state = self.runtime_array_binding_has_state(&binding_name)
+            || self.uses_global_runtime_array_state(&binding_name);
         if !self
             .state
             .speculation
@@ -178,9 +224,10 @@ impl<'a> FunctionCompiler<'a> {
         let expanded_arguments = self.expand_call_arguments(arguments);
         let materialized_arguments = expanded_arguments
             .iter()
-            .map(|argument| self.materialize_static_expression(argument))
+            .map(|argument| self.materialize_tracked_array_argument_value(argument))
             .collect::<Vec<_>>();
-        let use_global_runtime_array = self.is_named_global_array_binding(&binding_name)
+        let is_named_global_array = self.is_named_global_array_binding(&binding_name);
+        let use_global_runtime_array = is_named_global_array
             && (!self.state.speculation.execution_context.top_level_function
                 || self.uses_global_runtime_array_state(&binding_name));
         if trace {
@@ -190,7 +237,7 @@ impl<'a> FunctionCompiler<'a> {
                 .static_semantics
                 .runtime_array_length_local(&binding_name);
             eprintln!(
-                "tracked_array_push:runtime name={name} binding={binding_name} use_global={use_global_runtime_array} length_local={length_local:?}"
+                "tracked_array_push:runtime object={object:?} binding={binding_name} use_global={use_global_runtime_array} length_local={length_local:?}"
             );
         }
         self.emit_numeric_expression(object)?;
@@ -222,6 +269,11 @@ impl<'a> FunctionCompiler<'a> {
                     static_step_argument.as_ref()
                 {
                     static_step_argument
+                } else if tracked_array_push_materialized_primitive_is_safe(
+                    argument,
+                    materialized_argument,
+                ) {
+                    materialized_argument
                 } else if tracked_array_push_expression_references_internal_iterator_step(argument)
                     && !tracked_array_push_expression_references_internal_iterator_step(
                         materialized_argument,
@@ -236,7 +288,7 @@ impl<'a> FunctionCompiler<'a> {
                         "tracked_array_push:argument original={argument:?} materialized={materialized_argument:?} emission={emission_argument:?}"
                     );
                 }
-                self.emit_numeric_expression(emission_argument)?;
+                self.emit_tracked_array_argument_value(emission_argument)?;
                 self.push_local_set(local);
                 Ok(local)
             })
@@ -272,8 +324,21 @@ impl<'a> FunctionCompiler<'a> {
                 .extend(materialized_arguments.into_iter().map(Some));
             synced_array_binding = Some(array_binding.clone());
             new_length = Some(array_binding.values.len() as i32);
+        } else if let Some(mut array_binding) = self
+            .backend
+            .shared_global_semantics
+            .values
+            .array_binding(&binding_name)
+            .cloned()
+        {
+            old_length = Some(array_binding.values.len() as u32);
+            array_binding
+                .values
+                .extend(materialized_arguments.into_iter().map(Some));
+            synced_array_binding = Some(array_binding.clone());
+            new_length = Some(array_binding.values.len() as i32);
         }
-        if self.binding_name_is_global(&binding_name) {
+        if self.binding_name_is_global(&binding_name) || is_named_global_array {
             self.backend
                 .sync_global_array_binding(&binding_name, synced_array_binding.clone());
             self.backend
@@ -291,8 +356,11 @@ impl<'a> FunctionCompiler<'a> {
         if let Some(old_length) = old_length {
             for (offset, argument_local) in argument_locals.iter().enumerate() {
                 if use_global_runtime_array
-                    && self
-                        .emit_global_runtime_array_push_from_local(&binding_name, *argument_local)?
+                    && self.emit_global_runtime_array_push_from_local(
+                        &binding_name,
+                        *argument_local,
+                        Some(0),
+                    )?
                 {
                     let index = old_length + offset as u32;
                     self.update_tracked_array_specialized_function_value(
@@ -379,7 +447,11 @@ impl<'a> FunctionCompiler<'a> {
             }
             for (offset, argument_local) in argument_locals.iter().enumerate() {
                 let emitted_runtime_push = if use_global_runtime_array {
-                    self.emit_global_runtime_array_push_from_local(&binding_name, *argument_local)?
+                    self.emit_global_runtime_array_push_from_local(
+                        &binding_name,
+                        *argument_local,
+                        Some(0),
+                    )?
                 } else {
                     self.emit_runtime_array_push_from_local(
                         &binding_name,
@@ -403,6 +475,10 @@ impl<'a> FunctionCompiler<'a> {
             }
         }
         if used_runtime_push {
+            let result_local = self.allocate_temp_local();
+            self.push_local_set(result_local);
+            self.sync_module_export_capture_runtime_arrays_from_local_binding(&binding_name)?;
+            self.push_local_get(result_local);
             if trace {
                 eprintln!("tracked_array_push:used_runtime_push binding={binding_name}");
             }
@@ -422,6 +498,7 @@ impl<'a> FunctionCompiler<'a> {
         if use_global_runtime_array {
             self.emit_global_runtime_array_length_write(&binding_name, new_length);
         }
+        self.sync_module_export_capture_runtime_arrays_from_local_binding(&binding_name)?;
         if trace {
             eprintln!(
                 "tracked_array_push:static_length binding={binding_name} new_length={new_length}"

@@ -24,6 +24,8 @@ pub(in crate::backend::direct_wasm) const JS_BUILTIN_FUNCTION_VALUE_BASE: i32 = 
 pub(in crate::backend::direct_wasm) const JS_BUILTIN_FUNCTION_VALUE_LIMIT: i32 = 128;
 pub(in crate::backend::direct_wasm) const JS_NATIVE_ERROR_VALUE_BASE: i32 = -1073540000;
 pub(in crate::backend::direct_wasm) const JS_NATIVE_ERROR_VALUE_LIMIT: i32 = 9;
+pub(in crate::backend::direct_wasm) const TEST262_ERROR_RUNTIME_VALUE: i32 =
+    JS_NATIVE_ERROR_VALUE_BASE + JS_NATIVE_ERROR_VALUE_LIMIT;
 pub(in crate::backend::direct_wasm) const JS_USER_FUNCTION_VALUE_BASE: i32 = -1073640000;
 pub(in crate::backend::direct_wasm) const JS_USER_FUNCTION_VALUE_LIMIT: i32 = 100000;
 pub(in crate::backend::direct_wasm) const JS_TEMPLATE_OBJECT_VALUE_BASE: i32 = -1073800000;

@@ -7,7 +7,10 @@ impl<'a> FunctionCompiler<'a> {
         callee_property: &Expression,
         arguments: &[CallArgument],
     ) -> DirectResult<bool> {
-        if !matches!(callee_object, Expression::Identifier(name) if name == "Object") {
+        let reflect_call =
+            matches!(callee_object, Expression::Identifier(name) if name == "Reflect");
+        if !matches!(callee_object, Expression::Identifier(name) if name == "Object" || name == "Reflect")
+        {
             return Ok(false);
         }
         if !matches!(callee_property, Expression::String(name) if name == "setPrototypeOf") {
@@ -136,6 +139,50 @@ impl<'a> FunctionCompiler<'a> {
         }
 
         if !synced_static_prototype_target {
+            let static_prototype = prototype_candidates
+                .iter()
+                .find(|candidate| {
+                    matches!(
+                        candidate,
+                        Expression::Identifier(name)
+                            if Self::module_index_from_namespace_like_identifier(name).is_some()
+                    )
+                })
+                .cloned()
+                .unwrap_or_else(|| match materialized_prototype.clone() {
+                    Expression::Sequence(expressions) => {
+                        expressions.last().cloned().unwrap_or(Expression::Undefined)
+                    }
+                    prototype => prototype,
+                });
+            let mut target_names = Vec::new();
+            if let Expression::Identifier(name) = target_expression {
+                target_names.push(name.clone());
+            }
+            if let Expression::Identifier(name) =
+                self.materialize_static_expression(target_expression)
+                && !target_names.iter().any(|existing| existing == &name)
+            {
+                target_names.push(name);
+            }
+            if let Some(Expression::Identifier(name)) = self
+                .resolve_bound_alias_expression(target_expression)
+                .filter(|resolved| !static_expression_matches(resolved, target_expression))
+                && !target_names.iter().any(|existing| existing == &name)
+            {
+                target_names.push(name);
+            }
+            for target_name in target_names {
+                if Self::module_index_from_namespace_like_identifier(&target_name).is_none() {
+                    self.backend.sync_global_object_prototype_expression(
+                        &target_name,
+                        Some(static_prototype.clone()),
+                    );
+                }
+            }
+        }
+
+        if !synced_static_prototype_target {
             self.emit_numeric_expression(target_expression)?;
             self.state.emission.output.instructions.push(0x1a);
         }
@@ -151,12 +198,26 @@ impl<'a> FunctionCompiler<'a> {
                 }
                 _ => None,
             });
-        if target_binding
+        let target_is_module_namespace = target_binding
             .as_ref()
             .is_some_and(Self::object_binding_has_module_namespace_marker)
-            && !matches!(materialized_prototype, Expression::Null)
-        {
-            self.emit_named_error_throw("TypeError")?;
+            || matches!(
+                target_expression,
+                Expression::Identifier(name)
+                    if FunctionCompiler::module_index_from_namespace_like_identifier(name).is_some()
+            );
+        if target_is_module_namespace {
+            if !matches!(materialized_prototype, Expression::Null) {
+                if reflect_call {
+                    self.push_i32_const(0);
+                } else {
+                    self.emit_named_error_throw("TypeError")?;
+                }
+            } else if reflect_call {
+                self.push_i32_const(1);
+            } else {
+                self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
+            }
             return Ok(true);
         }
 
@@ -178,7 +239,11 @@ impl<'a> FunctionCompiler<'a> {
             }
         }
 
-        self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
+        if reflect_call {
+            self.push_i32_const(1);
+        } else {
+            self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
+        }
         Ok(true)
     }
 }

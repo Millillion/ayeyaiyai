@@ -124,6 +124,11 @@ impl<'a> FunctionCompiler<'a> {
             }
             IteratorSourceKind::SimpleGenerator { .. } => Some(0),
             IteratorSourceKind::AsyncYieldDelegateGenerator { .. } => Some(0),
+            IteratorSourceKind::TypedArrayView { name } => self
+                .typed_array_view_binding_for_name(name)
+                .as_ref()
+                .and_then(|view| self.typed_array_view_static_length(view))
+                .map(|_| 0),
             _ => None,
         };
         let static_index = shared_state

@@ -7606,7 +7606,7 @@ fn rejects_direct_eval_do_while_completion_value() {
 }
 
 #[test]
-fn rejects_direct_eval_super_early_errors_before_side_effects() {
+fn compiles_direct_eval_super_early_errors_before_side_effects() {
     let tempdir = tempdir().unwrap();
     let input = tempdir.path().join("direct-eval-super-early-errors.js");
     let output = tempdir.path().join("direct-eval-super-early-errors.wasm");
@@ -7632,13 +7632,41 @@ fn rejects_direct_eval_super_early_errors_before_side_effects() {
           }
         }
 
+        var arrowEvaluated = false;
+        var h = () => {
+          try {
+            eval("super(arrowEvaluated = true);");
+          } catch (error) {
+            console.log("arrow", error.name, arrowEvaluated);
+          }
+        };
+
         f();
         g();
+        h();
         "#,
     )
     .unwrap();
 
-    assert_cli_compile_rejected(&input, &output, "runtime source evaluation");
+    let options = CompileOptions {
+        output: output.clone(),
+        target: "wasm32-wasip2".to_string(),
+    };
+
+    compile_file_with_goal(&input, &options, false).unwrap();
+
+    let run = Command::new("wasmtime").arg(&output).output().unwrap();
+
+    assert!(
+        run.status.success(),
+        "wasmtime failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&run.stdout),
+        String::from_utf8_lossy(&run.stderr),
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&run.stdout),
+        "call SyntaxError false\nprop SyntaxError false\narrow SyntaxError false\n"
+    );
 }
 
 #[test]

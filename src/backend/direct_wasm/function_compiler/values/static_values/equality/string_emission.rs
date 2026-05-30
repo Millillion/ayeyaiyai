@@ -84,9 +84,10 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(false);
         }
 
+        let dynamic_local = self.allocate_temp_local();
         self.emit_numeric_expression(dynamic)?;
-        self.emit_static_string_literal(literal)?;
-        self.push_binary_op(BinaryOp::Equal)?;
+        self.push_local_set(dynamic_local);
+        self.emit_runtime_string_literal_memory_comparison(dynamic_local, literal)?;
         if matches!(op, BinaryOp::NotEqual | BinaryOp::LooseNotEqual) {
             self.state.emission.output.instructions.push(0x45);
         }

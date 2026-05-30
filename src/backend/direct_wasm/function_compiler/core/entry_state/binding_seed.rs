@@ -4,9 +4,10 @@ impl<'a> FunctionCompiler<'a> {
     fn seed_lexical_binding_state(
         declaration: Option<&FunctionDeclaration>,
         next_local_index: &mut u32,
-    ) -> (HashMap<String, u32>, HashSet<String>) {
+    ) -> (HashMap<String, u32>, HashMap<String, u32>, HashSet<String>) {
         fn collect_lexical_bindings(
             statements: &[Statement],
+            locals: &mut HashMap<String, u32>,
             initialized_locals: &mut HashMap<String, u32>,
             immutable_bindings: &mut HashSet<String>,
             next_local_index: &mut u32,
@@ -18,6 +19,7 @@ impl<'a> FunctionCompiler<'a> {
                     | Statement::Labeled { body, .. }
                     | Statement::With { body, .. } => collect_lexical_bindings(
                         body,
+                        locals,
                         initialized_locals,
                         immutable_bindings,
                         next_local_index,
@@ -29,12 +31,14 @@ impl<'a> FunctionCompiler<'a> {
                     } => {
                         collect_lexical_bindings(
                             then_branch,
+                            locals,
                             initialized_locals,
                             immutable_bindings,
                             next_local_index,
                         );
                         collect_lexical_bindings(
                             else_branch,
+                            locals,
                             initialized_locals,
                             immutable_bindings,
                             next_local_index,
@@ -48,18 +52,21 @@ impl<'a> FunctionCompiler<'a> {
                     } => {
                         collect_lexical_bindings(
                             body,
+                            locals,
                             initialized_locals,
                             immutable_bindings,
                             next_local_index,
                         );
                         collect_lexical_bindings(
                             catch_setup,
+                            locals,
                             initialized_locals,
                             immutable_bindings,
                             next_local_index,
                         );
                         collect_lexical_bindings(
                             catch_body,
+                            locals,
                             initialized_locals,
                             immutable_bindings,
                             next_local_index,
@@ -69,6 +76,7 @@ impl<'a> FunctionCompiler<'a> {
                         for case in cases {
                             collect_lexical_bindings(
                                 &case.body,
+                                locals,
                                 initialized_locals,
                                 immutable_bindings,
                                 next_local_index,
@@ -78,12 +86,14 @@ impl<'a> FunctionCompiler<'a> {
                     Statement::For { init, body, .. } => {
                         collect_lexical_bindings(
                             init,
+                            locals,
                             initialized_locals,
                             immutable_bindings,
                             next_local_index,
                         );
                         collect_lexical_bindings(
                             body,
+                            locals,
                             initialized_locals,
                             immutable_bindings,
                             next_local_index,
@@ -92,12 +102,17 @@ impl<'a> FunctionCompiler<'a> {
                     Statement::While { body, .. } | Statement::DoWhile { body, .. } => {
                         collect_lexical_bindings(
                             body,
+                            locals,
                             initialized_locals,
                             immutable_bindings,
                             next_local_index,
                         );
                     }
                     Statement::Let { name, mutable, .. } => {
+                        if !locals.contains_key(name) {
+                            locals.insert(name.clone(), *next_local_index);
+                            *next_local_index += 1;
+                        }
                         if !initialized_locals.contains_key(name) {
                             initialized_locals.insert(name.clone(), *next_local_index);
                             *next_local_index += 1;
@@ -111,17 +126,44 @@ impl<'a> FunctionCompiler<'a> {
             }
         }
 
+        let mut locals = HashMap::new();
         let mut initialized_locals = HashMap::new();
         let mut immutable_bindings = HashSet::new();
         if let Some(declaration) = declaration {
             collect_lexical_bindings(
                 &declaration.body,
+                &mut locals,
                 &mut initialized_locals,
                 &mut immutable_bindings,
                 next_local_index,
             );
+            let mut existing_function_bindings =
+                collect_declared_bindings_from_statements_recursive(&declaration.body);
+            existing_function_bindings.extend(
+                declaration
+                    .params
+                    .iter()
+                    .map(|parameter| parameter.name.clone()),
+            );
+            if let Some(self_binding) = &declaration.self_binding {
+                existing_function_bindings.insert(self_binding.clone());
+            }
+            existing_function_bindings.insert("arguments".to_string());
+            for name in collect_static_direct_eval_var_bindings(declaration) {
+                if existing_function_bindings.contains(&name) {
+                    continue;
+                }
+                if !locals.contains_key(&name) {
+                    locals.insert(name.clone(), *next_local_index);
+                    *next_local_index += 1;
+                }
+                if !initialized_locals.contains_key(&name) {
+                    initialized_locals.insert(name, *next_local_index);
+                    *next_local_index += 1;
+                }
+            }
         }
-        (initialized_locals, immutable_bindings)
+        (locals, initialized_locals, immutable_bindings)
     }
 
     pub(super) fn prepare_binding_state(
@@ -149,8 +191,16 @@ impl<'a> FunctionCompiler<'a> {
         );
         Self::add_fallback_local(&mut bindings, total_param_count);
         Self::allocate_function_scope_locals(&mut bindings, user_function, next_local_index);
-        let (local_lexical_initialized_locals, immutable_local_bindings) =
+        let (local_lexical_locals, local_lexical_initialized_locals, immutable_local_bindings) =
             Self::seed_lexical_binding_state(declaration, next_local_index);
+        for (name, local_index) in local_lexical_locals {
+            bindings.locals.entry(name.clone()).or_insert(local_index);
+            bindings
+                .static_bindings
+                .local_kinds
+                .entry(name)
+                .or_insert(StaticValueKind::Unknown);
+        }
         bindings.static_bindings.local_lexical_initialized_locals =
             local_lexical_initialized_locals;
         bindings.static_bindings.immutable_local_bindings = immutable_local_bindings;
@@ -208,6 +258,13 @@ impl<'a> FunctionCompiler<'a> {
         for param in parameter_names {
             if let Some(Some(binding)) = parameter_array_bindings.get(param) {
                 local_array_bindings.insert(param.clone(), binding.clone());
+                local_kinds.insert(param.clone(), StaticValueKind::Object);
+            } else if let Some(Some(Expression::Array(elements))) =
+                parameter_value_bindings.get(param)
+                && let Some(binding) = Self::array_binding_from_parameter_value_elements(elements)
+            {
+                local_array_bindings.insert(param.clone(), binding);
+                local_kinds.insert(param.clone(), StaticValueKind::Object);
             } else if rest_parameter_names.contains(param) {
                 local_array_bindings
                     .insert(param.clone(), ArrayValueBinding { values: Vec::new() });
@@ -251,6 +308,19 @@ impl<'a> FunctionCompiler<'a> {
                 immutable_local_bindings: HashSet::new(),
             },
         }
+    }
+
+    fn array_binding_from_parameter_value_elements(
+        elements: &[ArrayElement],
+    ) -> Option<ArrayValueBinding> {
+        let values = elements
+            .iter()
+            .map(|element| match element {
+                ArrayElement::Expression(expression) => Some(Some(expression.clone())),
+                ArrayElement::Spread(_) => None,
+            })
+            .collect::<Option<Vec<_>>>()?;
+        Some(ArrayValueBinding { values })
     }
 
     fn add_fallback_local(bindings: &mut EntryBindingState, total_param_count: u32) {

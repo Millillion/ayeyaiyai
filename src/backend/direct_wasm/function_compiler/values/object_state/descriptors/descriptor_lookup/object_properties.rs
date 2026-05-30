@@ -1,6 +1,37 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn module_namespace_to_string_tag_for_target(
+        &self,
+        target: &Expression,
+        resolved_target: Option<&Expression>,
+        materialized_target: &Expression,
+        target_is_module_namespace: bool,
+    ) -> Option<&'static str> {
+        let target_candidates = [
+            Some(target),
+            resolved_target,
+            (!static_expression_matches(materialized_target, target))
+                .then_some(materialized_target),
+        ];
+        for target_candidate in target_candidates.into_iter().flatten() {
+            if let Expression::Identifier(name) = target_candidate
+                && Self::module_index_from_namespace_like_identifier(name).is_some()
+            {
+                return Some(
+                    if name.starts_with("__ayy_module_deferred_namespace_")
+                        || name.contains("__ayy_module_deferred_namespace_")
+                    {
+                        "Deferred Module"
+                    } else {
+                        "Module"
+                    },
+                );
+            }
+        }
+        target_is_module_namespace.then_some("Module")
+    }
+
     fn class_member_binding_expression(binding: &LocalFunctionBinding) -> Option<Expression> {
         match binding {
             LocalFunctionBinding::User(function_name)
@@ -302,6 +333,70 @@ impl<'a> FunctionCompiler<'a> {
                     });
                 }
             }
+        }
+        let target_is_module_namespace = object_binding
+            .as_ref()
+            .is_some_and(Self::object_binding_has_module_namespace_marker)
+            || matches!(
+                target,
+                Expression::Identifier(name)
+                    if FunctionCompiler::module_index_from_namespace_like_identifier(name).is_some()
+            );
+        let property_is_symbol_to_string_tag = self
+            .well_known_symbol_name(&canonical_property)
+            .or_else(|| self.well_known_symbol_name(property))
+            .as_deref()
+            == Some("Symbol.toStringTag");
+        if target_is_module_namespace
+            && property_is_symbol_to_string_tag
+            && let Some(tag) = self.module_namespace_to_string_tag_for_target(
+                target,
+                resolved_target,
+                materialized_target,
+                target_is_module_namespace,
+            )
+        {
+            return Some(PropertyDescriptorBinding {
+                value: Some(Expression::String(tag.to_string())),
+                configurable: false,
+                enumerable: false,
+                writable: Some(false),
+                getter: None,
+                setter: None,
+                has_get: false,
+                has_set: false,
+            });
+        }
+        if string_property_name.is_some()
+            && target_is_module_namespace
+            && let Some(value) = if let Expression::Identifier(name) = target {
+                FunctionCompiler::module_index_from_namespace_like_identifier(name)
+                    .and_then(|module_index| {
+                        self.resolve_static_dynamic_import_namespace_live_binding_member_initializer_value(
+                            module_index,
+                            &canonical_property,
+                        )
+                    })
+                    .or_else(|| {
+                        self.resolve_module_namespace_live_binding_member_value(
+                            target,
+                            &canonical_property,
+                        )
+                    })
+            } else {
+                self.resolve_module_namespace_live_binding_member_value(target, &canonical_property)
+            }
+        {
+            return Some(PropertyDescriptorBinding {
+                value: Some(value),
+                configurable: false,
+                enumerable: true,
+                writable: Some(true),
+                getter: None,
+                setter: None,
+                has_get: false,
+                has_set: false,
+            });
         }
         if let Some(descriptor) = object_binding
             .as_ref()

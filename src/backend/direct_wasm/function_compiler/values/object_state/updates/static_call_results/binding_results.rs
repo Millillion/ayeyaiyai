@@ -40,29 +40,32 @@ impl<'a> FunctionCompiler<'a> {
                 "static_eval_result binding callee={callee:?} current={current_function_name:?} binding={binding:?} args={arguments:?}"
             );
         }
-        if matches!(
+        let is_indirect_eval_alias = matches!(
             binding,
             LocalFunctionBinding::Builtin(ref function_name) if function_name == "eval"
-        ) && !matches!(callee, Expression::Identifier(name) if name == "eval")
-            && let Some(outcome) = self
+        ) && !matches!(callee, Expression::Identifier(name) if name == "eval");
+        if is_indirect_eval_alias {
+            if let Some(outcome) = self
                 .resolve_static_indirect_eval_completion_outcome_with_context(
                     arguments,
                     current_function_name,
                 )
-        {
-            if std::env::var_os("AYY_TRACE_STATIC_EVAL_RESULT").is_some() {
-                let outcome_kind = match &outcome {
-                    StaticEvalOutcome::Value(_) => "value",
-                    StaticEvalOutcome::Throw(_) => "throw",
+            {
+                if std::env::var_os("AYY_TRACE_STATIC_EVAL_RESULT").is_some() {
+                    let outcome_kind = match &outcome {
+                        StaticEvalOutcome::Value(_) => "value",
+                        StaticEvalOutcome::Throw(_) => "throw",
+                    };
+                    eprintln!(
+                        "static_eval_result indirect_outcome callee={callee:?} outcome={outcome_kind}"
+                    );
+                }
+                return match outcome {
+                    StaticEvalOutcome::Value(value) => Some((value, None)),
+                    StaticEvalOutcome::Throw(_) => None,
                 };
-                eprintln!(
-                    "static_eval_result indirect_outcome callee={callee:?} outcome={outcome_kind}"
-                );
             }
-            return match outcome {
-                StaticEvalOutcome::Value(value) => Some((value, None)),
-                StaticEvalOutcome::Throw(_) => None,
-            };
+            return None;
         }
         if let Some(outcome) = self.resolve_static_function_outcome_from_binding_with_context(
             &binding,
@@ -85,6 +88,9 @@ impl<'a> FunctionCompiler<'a> {
             return None;
         };
         let user_function = self.user_function(&function_name)?;
+        if user_function.is_generator() {
+            return None;
+        }
         if self.user_function_mentions_private_member_access(user_function)
             || self.user_function_mentions_direct_eval(user_function)
         {

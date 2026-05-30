@@ -88,6 +88,12 @@ impl<'a> FunctionCompiler<'a> {
         if self.emit_object_get_prototype_of_call(object, property, arguments)? {
             return Ok(true);
         }
+        if self.emit_object_define_property_call(object, property, arguments)? {
+            return Ok(true);
+        }
+        if self.emit_reflect_define_property_call(object, property, arguments)? {
+            return Ok(true);
+        }
         if self.emit_object_freeze_call(object, property, arguments)? {
             return Ok(true);
         }
@@ -144,6 +150,16 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(true);
         }
         if self.emit_static_member_builtin_call_result(object, property, arguments)? {
+            return Ok(true);
+        }
+        if matches!(
+            property,
+            Expression::String(property_name)
+                if matches!(property_name.as_str(), "resize" | "transfer")
+        ) && self.expression_is_static_bytes_module_array_buffer(object)
+        {
+            self.emit_ignored_call_arguments(arguments)?;
+            self.emit_named_error_throw("TypeError")?;
             return Ok(true);
         }
         if matches!(property, Expression::String(property_name) if property_name == "resize")

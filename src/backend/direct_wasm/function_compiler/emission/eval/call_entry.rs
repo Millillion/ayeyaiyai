@@ -1059,6 +1059,18 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(true);
         }
 
+        if !construct
+            && matches!(
+                name,
+                "Promise.prototype.then" | "Promise.prototype.catch" | "Promise.prototype.finally"
+            )
+            && let Expression::Member { object, property } = callee
+            && let Expression::String(property_name) = property.as_ref()
+            && self.emit_fulfilled_promise_protocol_member_call(object, property_name, arguments)?
+        {
+            return Ok(true);
+        }
+
         if name == "eval" {
             if matches!(callee, Expression::Identifier(identifier) if identifier == "eval") {
                 return self.emit_eval_call(arguments);

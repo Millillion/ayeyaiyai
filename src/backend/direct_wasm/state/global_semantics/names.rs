@@ -100,6 +100,10 @@ impl GlobalNameService {
         self.lexical_binding(name).is_some()
     }
 
+    pub(in crate::backend::direct_wasm) fn has_exact_lexical_binding(&self, name: &str) -> bool {
+        self.lexical_bindings.contains_key(name)
+    }
+
     pub(in crate::backend::direct_wasm) fn has_implicit_binding(&self, name: &str) -> bool {
         self.implicit_bindings.contains_key(name)
     }

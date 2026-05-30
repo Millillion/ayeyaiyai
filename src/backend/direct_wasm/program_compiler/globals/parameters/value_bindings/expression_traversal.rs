@@ -55,6 +55,13 @@ impl DirectWasmCompiler {
                         source_bindings,
                         current_function_name,
                     );
+                    self.collect_parameter_value_bindings_from_callback_argument(
+                        argument,
+                        aliases,
+                        bindings,
+                        source_bindings,
+                        current_function_name,
+                    );
                 }
             }
             Expression::Assign { name, value } => {
@@ -313,6 +320,13 @@ impl DirectWasmCompiler {
                         source_bindings,
                         current_function_name,
                     );
+                    self.collect_parameter_value_bindings_from_callback_argument(
+                        argument,
+                        aliases,
+                        bindings,
+                        source_bindings,
+                        current_function_name,
+                    );
                 }
             }
             Expression::Update { .. }
@@ -327,5 +341,39 @@ impl DirectWasmCompiler {
             | Expression::Sent
             | Expression::NewTarget => {}
         }
+    }
+
+    fn collect_parameter_value_bindings_from_callback_argument(
+        &self,
+        argument: &Expression,
+        aliases: &HashMap<String, Option<LocalFunctionBinding>>,
+        bindings: &mut HashMap<String, HashMap<String, Option<Expression>>>,
+        source_bindings: &HashMap<String, HashMap<String, Option<Expression>>>,
+        current_function_name: Option<&str>,
+    ) {
+        let Some(LocalFunctionBinding::User(callback_name)) =
+            self.resolve_function_binding_from_expression_with_aliases(argument, aliases)
+        else {
+            return;
+        };
+        if current_function_name == Some(callback_name.as_str()) {
+            return;
+        }
+        let Some(callback_function) = self.registered_function(&callback_name) else {
+            return;
+        };
+        let mut callback_aliases = aliases.clone();
+        for parameter in &callback_function.params {
+            callback_aliases
+                .entry(parameter.name.clone())
+                .or_insert(None);
+        }
+        self.collect_parameter_value_bindings_from_statements_in_function(
+            &callback_function.body,
+            &mut callback_aliases,
+            bindings,
+            source_bindings,
+            Some(&callback_name),
+        );
     }
 }

@@ -121,12 +121,43 @@ fn format_js_number_to_exponential(number: f64, digits: usize) -> String {
 }
 
 impl<'a> FunctionCompiler<'a> {
+    fn static_promise_with_resolvers_result() -> Expression {
+        let resolved_promise = Expression::Call {
+            callee: Box::new(Expression::Member {
+                object: Box::new(Expression::Identifier("Promise".to_string())),
+                property: Box::new(Expression::String("resolve".to_string())),
+            }),
+            arguments: vec![CallArgument::Expression(Expression::Undefined)],
+        };
+        Expression::Object(vec![
+            ObjectEntry::Data {
+                key: Expression::String("promise".to_string()),
+                value: resolved_promise,
+            },
+            ObjectEntry::Data {
+                key: Expression::String("resolve".to_string()),
+                value: Expression::Identifier("__ayy_promise_with_resolvers_resolve".to_string()),
+            },
+            ObjectEntry::Data {
+                key: Expression::String("reject".to_string()),
+                value: Expression::Identifier("__ayy_promise_with_resolvers_reject".to_string()),
+            },
+        ])
+    }
+
     pub(in crate::backend::direct_wasm) fn resolve_static_member_builtin_call_result_with_context(
         &self,
         callee: &Expression,
         arguments: &[CallArgument],
         current_function_name: Option<&str>,
     ) -> Option<(Expression, Option<String>)> {
+        if let Expression::Member { object, property } = callee
+            && matches!(object.as_ref(), Expression::Identifier(name) if name == "Promise")
+            && matches!(property.as_ref(), Expression::String(name) if name == "withResolvers")
+        {
+            return Some((Self::static_promise_with_resolvers_result(), None));
+        }
+
         if let Expression::Member { object, property } = callee
             && matches!(object.as_ref(), Expression::Identifier(name) if name == "Proxy")
             && matches!(property.as_ref(), Expression::String(name) if name == "revocable")
@@ -313,7 +344,37 @@ impl<'a> FunctionCompiler<'a> {
         }
 
         if let Expression::Member { object, property } = callee
-            && matches!(object.as_ref(), Expression::Identifier(name) if name == "Object")
+            && matches!(object.as_ref(), Expression::Identifier(name) if name == "Object" || name == "Reflect")
+            && matches!(property.as_ref(), Expression::String(name) if name == "getOwnPropertyDescriptor")
+            && let [
+                CallArgument::Expression(target),
+                CallArgument::Expression(property_name),
+                ..,
+            ] = arguments
+        {
+            let resolved_property = self
+                .resolve_property_key_expression(property_name)
+                .unwrap_or_else(|| self.materialize_static_expression(property_name));
+            if static_property_name_from_expression(&resolved_property).is_some()
+                && self
+                    .resolve_call_descriptor_binding(callee, arguments)
+                    .is_none()
+                && (self
+                    .resolve_object_binding_from_expression(target)
+                    .is_some()
+                    || matches!(
+                        target,
+                        Expression::Identifier(name)
+                            if FunctionCompiler::module_index_from_namespace_like_identifier(name)
+                                .is_some()
+                    ))
+            {
+                return Some((Expression::Undefined, None));
+            }
+        }
+
+        if let Expression::Member { object, property } = callee
+            && matches!(object.as_ref(), Expression::Identifier(name) if name == "Object" || name == "Reflect")
             && matches!(property.as_ref(), Expression::String(name) if name == "getPrototypeOf")
             && let [CallArgument::Expression(target), ..] = arguments
             && let Some(prototype) = self.resolve_static_object_prototype_expression(target)
@@ -322,7 +383,7 @@ impl<'a> FunctionCompiler<'a> {
         }
 
         if let Expression::Member { object, property } = callee
-            && matches!(object.as_ref(), Expression::Identifier(name) if name == "Object")
+            && matches!(object.as_ref(), Expression::Identifier(name) if name == "Object" || name == "Reflect")
             && matches!(property.as_ref(), Expression::String(name) if name == "isExtensible")
             && let [CallArgument::Expression(target), ..] = arguments
         {
@@ -336,6 +397,21 @@ impl<'a> FunctionCompiler<'a> {
             && matches!(property.as_ref(), Expression::String(name) if name == "isSealed" || name == "isFrozen")
             && let [CallArgument::Expression(target), ..] = arguments
         {
+            let target_is_module_namespace = self
+                .resolve_object_binding_from_expression(target)
+                .as_ref()
+                .is_some_and(Self::object_binding_has_module_namespace_marker)
+                || matches!(
+                    target,
+                    Expression::Identifier(name)
+                        if FunctionCompiler::module_index_from_namespace_like_identifier(name)
+                            .is_some()
+                );
+            if matches!(property.as_ref(), Expression::String(name) if name == "isFrozen")
+                && target_is_module_namespace
+            {
+                return Some((Expression::Bool(false), None));
+            }
             return self
                 .resolve_static_object_extensibility(target)
                 .map(|extensible| (Expression::Bool(!extensible), None));
@@ -381,6 +457,33 @@ impl<'a> FunctionCompiler<'a> {
             && let [CallArgument::Expression(_target), ..] = arguments
         {
             return Some((Expression::Bool(true), None));
+        }
+
+        if let Expression::Member { object, property } = callee
+            && matches!(object.as_ref(), Expression::Identifier(name) if name == "Reflect")
+            && matches!(property.as_ref(), Expression::String(name) if name == "setPrototypeOf")
+            && let [
+                CallArgument::Expression(target),
+                CallArgument::Expression(prototype),
+                ..,
+            ] = arguments
+        {
+            if self
+                .resolve_object_binding_from_expression(target)
+                .as_ref()
+                .is_some_and(Self::object_binding_has_module_namespace_marker)
+                || matches!(
+                    target,
+                    Expression::Identifier(name)
+                        if FunctionCompiler::module_index_from_namespace_like_identifier(name)
+                            .is_some()
+                )
+            {
+                return Some((
+                    Expression::Bool(matches!(prototype, Expression::Null)),
+                    None,
+                ));
+            }
         }
 
         None
