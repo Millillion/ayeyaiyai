@@ -1,4 +1,4 @@
-1005/23645 (4.25%)
+1006/23645 (4.25%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -10,7 +10,7 @@ Sub-category progress
 - keywords: 25/25 (100.00%)
 - reserved-words: 27/27 (100.00%)
 - future-reserved-words: 55/55 (100.00%)
-- literals: 458/534 (85.77%)
+- literals: 459/534 (85.96%)
 - directive-prologue: 0/62 (0.00%)
 - asi: 0/102 (0.00%)
 - statementList: 0/80 (0.00%)
@@ -1049,7 +1049,7 @@ Sub-category progress
   - [x] test/language/literals/regexp/unicode-escape-nls-err.js
   - [x] test/language/literals/regexp/y-assertion-start.js
   - [x] test/language/literals/string/S7.8.4_A1.1_T1.js
-  - [ ] test/language/literals/string/S7.8.4_A1.1_T2.js
+  - [x] test/language/literals/string/S7.8.4_A1.1_T2.js
   - [ ] test/language/literals/string/S7.8.4_A1.2_T1.js
   - [ ] test/language/literals/string/S7.8.4_A1.2_T2.js
   - [ ] test/language/literals/string/S7.8.4_A2.1_T1.js
