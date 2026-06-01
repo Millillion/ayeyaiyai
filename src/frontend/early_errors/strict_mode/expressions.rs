@@ -46,7 +46,10 @@ fn strict_string_raw_has_forbidden_legacy_escape(raw: &str) -> bool {
         match bytes[index] {
             b'1'..=b'9' => return true,
             b'0' => {
-                if bytes.get(index + 1).is_some_and(|byte| byte.is_ascii_digit()) {
+                if bytes
+                    .get(index + 1)
+                    .is_some_and(|byte| byte.is_ascii_digit())
+                {
                     return true;
                 }
                 index += 1;
@@ -77,11 +80,43 @@ fn validate_strict_mode_string_literal(string: &Str, strict: bool) -> Result<()>
     Ok(())
 }
 
+fn strict_number_raw_is_forbidden_leading_zero_integer(raw: &str) -> bool {
+    if !raw.starts_with('0') || raw == "0" {
+        return false;
+    }
+
+    if raw
+        .get(..2)
+        .is_some_and(|prefix| matches!(prefix, "0b" | "0B" | "0o" | "0O" | "0x" | "0X"))
+    {
+        return false;
+    }
+
+    raw.as_bytes()
+        .get(1)
+        .is_some_and(|byte| byte.is_ascii_digit())
+}
+
+fn validate_strict_mode_number_literal(number: &Number, strict: bool) -> Result<()> {
+    ensure!(
+        !strict
+            || !number
+                .raw
+                .as_ref()
+                .is_some_and(|raw| strict_number_raw_is_forbidden_leading_zero_integer(raw)),
+        "strict mode forbids legacy octal and non-octal decimal integer literals"
+    );
+    Ok(())
+}
+
 pub(super) fn validate_strict_mode_early_errors_in_expression(
     expression: &Expr,
     strict: bool,
 ) -> Result<()> {
     match expression {
+        Expr::Lit(Lit::Num(number)) => {
+            validate_strict_mode_number_literal(number, strict)?;
+        }
         Expr::Lit(Lit::Str(string)) => {
             validate_strict_mode_string_literal(string, strict)?;
         }

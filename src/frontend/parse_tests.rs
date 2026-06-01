@@ -403,6 +403,36 @@ fn validate_script_goal_allows_strict_null_and_escaped_backslash_strings() {
 }
 
 #[test]
+fn validate_script_goal_rejects_strict_leading_zero_integer_literals() {
+    let invalid_sources = [
+        r#""use strict"; 010;"#,
+        r#""use strict"; 08;"#,
+        r#"function invalid() { 00; "use strict"; }"#,
+    ];
+
+    for source in invalid_sources {
+        assert!(
+            frontend::validate_script_goal(source).is_err(),
+            "source should fail to parse:\n{source}"
+        );
+    }
+
+    for source in ["010;", "08;"] {
+        frontend::validate_script_goal(source).expect("source should parse outside strict mode");
+        assert!(
+            frontend::validate_script_goal_with_forced_strict(source, true).is_err(),
+            "source should fail when the runner requests strict mode:\n{source}"
+        );
+    }
+}
+
+#[test]
+fn validate_script_goal_allows_strict_modern_zero_prefixed_number_literals() {
+    frontend::validate_script_goal(r#""use strict"; 0; 0.1; 0e1; 0x10; 0o10; 0b10;"#)
+        .expect("strict non-legacy numeric literals should parse");
+}
+
+#[test]
 fn validate_script_goal_rejects_invalid_string_unicode_code_point_escapes() {
     for source in [r#"'\u{1F_639}';"#, r#""\u{1F_639}";"#] {
         assert!(
