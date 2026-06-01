@@ -1,6 +1,12 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn push_i32_load(&mut self, offset: u32) {
+        self.state.emission.output.instructions.push(0x28);
+        self.state.emission.output.instructions.push(0x02);
+        push_u32(&mut self.state.emission.output.instructions, offset);
+    }
+
     fn push_i32_load8_u(&mut self, offset: u32) {
         self.state.emission.output.instructions.push(0x2d);
         self.state.emission.output.instructions.push(0x00);
@@ -15,6 +21,7 @@ impl<'a> FunctionCompiler<'a> {
         let (literal_ptr, literal_len) = self.intern_string(literal.as_bytes().to_vec());
         let result_local = self.allocate_temp_local();
         let index_local = self.allocate_temp_local();
+        let literal_is_numeric = parse_string_to_i32(literal).is_ok();
 
         self.push_i32_const(0);
         self.push_local_set(result_local);
@@ -35,31 +42,8 @@ impl<'a> FunctionCompiler<'a> {
             self.state.emission.output.instructions.push(0x05);
         }
 
-        if literal_len == 0 {
-            self.push_local_get(value_local);
-            self.push_i32_const(literal_ptr as i32);
-            self.push_binary_op(BinaryOp::Equal)?;
-            self.state.emission.output.instructions.push(0x04);
-            self.state
-                .emission
-                .output
-                .instructions
-                .push(EMPTY_BLOCK_TYPE);
-            self.push_control_frame();
-            self.push_i32_const(1);
-            self.push_local_set(result_local);
-            self.state.emission.output.instructions.push(0x0b);
-            self.pop_control_frame();
-            if parse_string_to_i32(literal).is_ok() {
-                self.state.emission.output.instructions.push(0x0b);
-                self.pop_control_frame();
-            }
-            self.push_local_get(result_local);
-            return Ok(());
-        }
-
         self.push_local_get(value_local);
-        self.push_i32_const(DATA_START_OFFSET as i32);
+        self.push_i32_const((DATA_START_OFFSET + STRING_LENGTH_PREFIX_SIZE) as i32);
         self.push_binary_op(BinaryOp::GreaterThanOrEqual)?;
         self.push_local_get(value_local);
         self.state.emission.output.instructions.push(0x3f);
@@ -77,39 +61,13 @@ impl<'a> FunctionCompiler<'a> {
             .instructions
             .push(EMPTY_BLOCK_TYPE);
         self.push_control_frame();
-        self.push_i32_const(1);
-        self.push_local_set(result_local);
-        self.push_i32_const(0);
-        self.push_local_set(index_local);
-        self.state.emission.output.instructions.push(0x02);
-        self.state
-            .emission
-            .output
-            .instructions
-            .push(EMPTY_BLOCK_TYPE);
-        let break_target = self.push_control_frame();
-        self.state.emission.output.instructions.push(0x03);
-        self.state
-            .emission
-            .output
-            .instructions
-            .push(EMPTY_BLOCK_TYPE);
-        let loop_target = self.push_control_frame();
-
-        self.push_local_get(index_local);
-        self.push_i32_const(literal_len as i32);
-        self.push_binary_op(BinaryOp::GreaterThanOrEqual)?;
-        self.push_br_if(self.relative_depth(break_target));
 
         self.push_local_get(value_local);
-        self.push_local_get(index_local);
-        self.push_binary_op(BinaryOp::Add)?;
-        self.push_i32_load8_u(0);
-        self.push_i32_const(literal_ptr as i32);
-        self.push_local_get(index_local);
-        self.push_binary_op(BinaryOp::Add)?;
-        self.push_i32_load8_u(0);
-        self.push_binary_op(BinaryOp::NotEqual)?;
+        self.push_i32_const(STRING_LENGTH_PREFIX_SIZE as i32);
+        self.push_binary_op(BinaryOp::Subtract)?;
+        self.push_i32_load(0);
+        self.push_i32_const(literal_len as i32);
+        self.push_binary_op(BinaryOp::Equal)?;
         self.state.emission.output.instructions.push(0x04);
         self.state
             .emission
@@ -117,24 +75,70 @@ impl<'a> FunctionCompiler<'a> {
             .instructions
             .push(EMPTY_BLOCK_TYPE);
         self.push_control_frame();
-        self.push_i32_const(0);
-        self.push_local_set(result_local);
-        self.push_br(self.relative_depth(break_target));
-        self.state.emission.output.instructions.push(0x0b);
-        self.pop_control_frame();
-
-        self.push_local_get(index_local);
         self.push_i32_const(1);
-        self.push_binary_op(BinaryOp::Add)?;
-        self.push_local_set(index_local);
-        self.push_br(self.relative_depth(loop_target));
+        self.push_local_set(result_local);
+
+        if literal_len > 0 {
+            self.push_i32_const(0);
+            self.push_local_set(index_local);
+            self.state.emission.output.instructions.push(0x02);
+            self.state
+                .emission
+                .output
+                .instructions
+                .push(EMPTY_BLOCK_TYPE);
+            let break_target = self.push_control_frame();
+            self.state.emission.output.instructions.push(0x03);
+            self.state
+                .emission
+                .output
+                .instructions
+                .push(EMPTY_BLOCK_TYPE);
+            let loop_target = self.push_control_frame();
+
+            self.push_local_get(index_local);
+            self.push_i32_const(literal_len as i32);
+            self.push_binary_op(BinaryOp::GreaterThanOrEqual)?;
+            self.push_br_if(self.relative_depth(break_target));
+
+            self.push_local_get(value_local);
+            self.push_local_get(index_local);
+            self.push_binary_op(BinaryOp::Add)?;
+            self.push_i32_load8_u(0);
+            self.push_i32_const(literal_ptr as i32);
+            self.push_local_get(index_local);
+            self.push_binary_op(BinaryOp::Add)?;
+            self.push_i32_load8_u(0);
+            self.push_binary_op(BinaryOp::NotEqual)?;
+            self.state.emission.output.instructions.push(0x04);
+            self.state
+                .emission
+                .output
+                .instructions
+                .push(EMPTY_BLOCK_TYPE);
+            self.push_control_frame();
+            self.push_i32_const(0);
+            self.push_local_set(result_local);
+            self.push_br(self.relative_depth(break_target));
+            self.state.emission.output.instructions.push(0x0b);
+            self.pop_control_frame();
+
+            self.push_local_get(index_local);
+            self.push_i32_const(1);
+            self.push_binary_op(BinaryOp::Add)?;
+            self.push_local_set(index_local);
+            self.push_br(self.relative_depth(loop_target));
+            self.state.emission.output.instructions.push(0x0b);
+            self.pop_control_frame();
+            self.state.emission.output.instructions.push(0x0b);
+            self.pop_control_frame();
+        }
+
         self.state.emission.output.instructions.push(0x0b);
         self.pop_control_frame();
         self.state.emission.output.instructions.push(0x0b);
         self.pop_control_frame();
-        self.state.emission.output.instructions.push(0x0b);
-        self.pop_control_frame();
-        if parse_string_to_i32(literal).is_ok() {
+        if literal_is_numeric {
             self.state.emission.output.instructions.push(0x0b);
             self.pop_control_frame();
         }

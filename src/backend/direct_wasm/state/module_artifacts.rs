@@ -21,10 +21,14 @@ impl ModuleArtifactsState {
 
         let offset = self.next_data_offset;
         let len = bytes.len() as u32;
-        self.next_data_offset += len.max(1);
-        self.string_data.push((offset, bytes.clone()));
-        self.interned_strings.insert(bytes, (offset, len));
-        (offset, len)
+        let ptr = offset + STRING_LENGTH_PREFIX_SIZE;
+        let mut data = Vec::with_capacity(STRING_LENGTH_PREFIX_SIZE as usize + bytes.len());
+        data.extend_from_slice(&len.to_le_bytes());
+        data.extend_from_slice(&bytes);
+        self.next_data_offset += STRING_LENGTH_PREFIX_SIZE + len;
+        self.string_data.push((offset, data));
+        self.interned_strings.insert(bytes, (ptr, len));
+        (ptr, len)
     }
 
     pub(in crate::backend::direct_wasm) fn snapshot_data(&self) -> (Vec<(u32, Vec<u8>)>, u32) {
