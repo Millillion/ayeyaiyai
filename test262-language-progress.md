@@ -1,4 +1,4 @@
-973/23645 (4.12%)
+974/23645 (4.12%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -10,7 +10,7 @@ Sub-category progress
 - keywords: 25/25 (100.00%)
 - reserved-words: 27/27 (100.00%)
 - future-reserved-words: 55/55 (100.00%)
-- literals: 426/534 (79.78%)
+- literals: 427/534 (79.96%)
 - directive-prologue: 0/62 (0.00%)
 - asi: 0/102 (0.00%)
 - statementList: 0/80 (0.00%)
@@ -1017,7 +1017,7 @@ Sub-category progress
   - [x] test/language/literals/regexp/regexp-first-char-no-paragraph-separator.js
   - [x] test/language/literals/regexp/regexp-source-char-no-line-separator.js
   - [x] test/language/literals/regexp/regexp-source-char-no-paragraph-separator.js
-  - [ ] test/language/literals/regexp/u-astral-char-class-invert.js
+  - [x] test/language/literals/regexp/u-astral-char-class-invert.js
   - [ ] test/language/literals/regexp/u-astral.js
   - [ ] test/language/literals/regexp/u-case-mapping.js
   - [ ] test/language/literals/regexp/u-invalid-class-escape.js

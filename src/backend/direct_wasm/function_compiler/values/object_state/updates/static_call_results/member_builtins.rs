@@ -43,6 +43,46 @@ fn simple_regexp_single_character_class_matches(pattern: &str, subject: &str) ->
     }))
 }
 
+fn simple_regexp_inverted_character_class_matches(pattern: &str, subject: &str) -> Option<bool> {
+    let (pattern, anchored_start) = pattern
+        .strip_prefix('^')
+        .map_or((pattern, false), |rest| (rest, true));
+    let (pattern, anchored_end) = pattern
+        .strip_suffix('$')
+        .map_or((pattern, false), |rest| (rest, true));
+    let class = pattern.strip_prefix("[^")?.strip_suffix(']')?;
+    if class.is_empty()
+        || class.contains('\\')
+        || class.contains('-')
+        || class.contains('[')
+        || class.contains(']')
+    {
+        return None;
+    }
+
+    let class_chars = class.chars().collect::<Vec<_>>();
+    let subject_chars = subject.chars().collect::<Vec<_>>();
+    let character_not_in_class = |character| !class_chars.contains(&character);
+    Some(match (anchored_start, anchored_end) {
+        (true, true) => {
+            subject_chars.len() == 1
+                && subject_chars
+                    .first()
+                    .copied()
+                    .is_some_and(character_not_in_class)
+        }
+        (true, false) => subject_chars
+            .first()
+            .copied()
+            .is_some_and(character_not_in_class),
+        (false, true) => subject_chars
+            .last()
+            .copied()
+            .is_some_and(character_not_in_class),
+        (false, false) => subject_chars.into_iter().any(character_not_in_class),
+    })
+}
+
 fn simple_regexp_named_forward_reference_matches(pattern: &str, subject: &str) -> Option<bool> {
     let rest = pattern.strip_prefix(r"\k<")?;
     let (reference_name, rest) = rest.split_once('>')?;
@@ -71,6 +111,9 @@ fn simple_regexp_pattern_matches(pattern: &str, subject: &str, ignore_case: bool
 
     if simple_regexp_pattern_is_plain_literal(pattern) {
         return Some(subject.contains(pattern));
+    }
+    if let Some(matches) = simple_regexp_inverted_character_class_matches(pattern, subject) {
+        return Some(matches);
     }
     if let Some(matches) = simple_regexp_single_character_class_matches(pattern, subject) {
         return Some(matches);
@@ -600,10 +643,10 @@ impl<'a> FunctionCompiler<'a> {
             }
             None => String::new(),
         };
-        let ignore_case = match flags.as_str() {
-            "" => false,
-            "i" => true,
-            _ => return None,
+        let ignore_case = if flags.chars().all(|flag| matches!(flag, 'i' | 'u')) {
+            flags.contains('i')
+        } else {
+            return None;
         };
 
         if flags.contains('g') || flags.contains('y') {
