@@ -1,4 +1,4 @@
-774/23645 (3.27%)
+785/23645 (3.32%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -10,7 +10,7 @@ Sub-category progress
 - keywords: 25/25 (100.00%)
 - reserved-words: 27/27 (100.00%)
 - future-reserved-words: 55/55 (100.00%)
-- literals: 227/534 (42.51%)
+- literals: 238/534 (44.57%)
 - directive-prologue: 0/62 (0.00%)
 - asi: 0/102 (0.00%)
 - statementList: 0/80 (0.00%)
@@ -815,18 +815,18 @@ Sub-category progress
   - [x] test/language/literals/regexp/7.8.5-2gs.js
   - [x] test/language/literals/regexp/S7.8.5_A1.1_T1.js
   - [ ] (impossible with AOT) test/language/literals/regexp/S7.8.5_A1.1_T2.js
-  - [ ] test/language/literals/regexp/S7.8.5_A1.2_T1.js
-  - [ ] test/language/literals/regexp/S7.8.5_A1.2_T2.js
-  - [ ] test/language/literals/regexp/S7.8.5_A1.2_T3.js
-  - [ ] test/language/literals/regexp/S7.8.5_A1.2_T4.js
-  - [ ] test/language/literals/regexp/S7.8.5_A1.3_T1.js
-  - [ ] test/language/literals/regexp/S7.8.5_A1.3_T2.js
-  - [ ] test/language/literals/regexp/S7.8.5_A1.3_T3.js
-  - [ ] test/language/literals/regexp/S7.8.5_A1.3_T4.js
-  - [ ] test/language/literals/regexp/S7.8.5_A1.3_T5.js
-  - [ ] test/language/literals/regexp/S7.8.5_A1.3_T6.js
-  - [ ] test/language/literals/regexp/S7.8.5_A1.4_T1.js
-  - [ ] test/language/literals/regexp/S7.8.5_A1.4_T2.js
+  - [x] test/language/literals/regexp/S7.8.5_A1.2_T1.js
+  - [x] test/language/literals/regexp/S7.8.5_A1.2_T2.js
+  - [x] test/language/literals/regexp/S7.8.5_A1.2_T3.js
+  - [x] test/language/literals/regexp/S7.8.5_A1.2_T4.js
+  - [x] test/language/literals/regexp/S7.8.5_A1.3_T1.js
+  - [x] test/language/literals/regexp/S7.8.5_A1.3_T2.js
+  - [x] test/language/literals/regexp/S7.8.5_A1.3_T3.js
+  - [x] test/language/literals/regexp/S7.8.5_A1.3_T4.js
+  - [x] test/language/literals/regexp/S7.8.5_A1.3_T5.js
+  - [x] test/language/literals/regexp/S7.8.5_A1.3_T6.js
+  - [x] test/language/literals/regexp/S7.8.5_A1.4_T1.js
+  - [ ] (impossible with AOT) test/language/literals/regexp/S7.8.5_A1.4_T2.js
   - [ ] test/language/literals/regexp/S7.8.5_A1.5_T1.js
   - [ ] test/language/literals/regexp/S7.8.5_A1.5_T2.js
   - [ ] test/language/literals/regexp/S7.8.5_A1.5_T3.js
