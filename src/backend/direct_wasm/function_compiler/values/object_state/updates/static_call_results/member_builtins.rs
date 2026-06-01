@@ -106,6 +106,42 @@ fn simple_regexp_literal_exact_quantifier_matches(pattern: &str, subject: &str) 
     Some(subject.contains(&atom.repeat(count)))
 }
 
+fn simple_regexp_dot_atom_matches(pattern: &str, subject: &str, unicode: bool) -> Option<bool> {
+    let (pattern, anchored_start) = pattern
+        .strip_prefix('^')
+        .map_or((pattern, false), |rest| (rest, true));
+    let (pattern, anchored_end) = pattern
+        .strip_suffix('$')
+        .map_or((pattern, false), |rest| (rest, true));
+    if pattern != "." {
+        return None;
+    }
+
+    if unicode {
+        let subject_chars = subject.chars().collect::<Vec<_>>();
+        let dot_matches = |character| !matches!(character, '\n' | '\r' | '\u{2028}' | '\u{2029}');
+        return Some(match (anchored_start, anchored_end) {
+            (true, true) => {
+                subject_chars.len() == 1 && subject_chars.first().copied().is_some_and(dot_matches)
+            }
+            (true, false) => subject_chars.first().copied().is_some_and(dot_matches),
+            (false, true) => subject_chars.last().copied().is_some_and(dot_matches),
+            (false, false) => subject_chars.into_iter().any(dot_matches),
+        });
+    }
+
+    let code_units = js_string_utf16_code_units(subject);
+    let dot_matches = |unit| !matches!(unit, 0x000a_u16 | 0x000d_u16 | 0x2028_u16 | 0x2029_u16);
+    Some(match (anchored_start, anchored_end) {
+        (true, true) => {
+            code_units.len() == 1 && code_units.first().copied().is_some_and(dot_matches)
+        }
+        (true, false) => code_units.first().copied().is_some_and(dot_matches),
+        (false, true) => code_units.last().copied().is_some_and(dot_matches),
+        (false, false) => code_units.into_iter().any(dot_matches),
+    })
+}
+
 fn simple_regexp_single_character_class_matches(pattern: &str, subject: &str) -> Option<bool> {
     let (pattern, anchored_start) = pattern
         .strip_prefix('^')
@@ -243,6 +279,11 @@ fn simple_regexp_pattern_matches(
         }
         if let Some(matches) =
             simple_regexp_literal_exact_quantifier_matches(simple_pattern, simple_subject)
+        {
+            return Some(matches);
+        }
+        if let Some(matches) =
+            simple_regexp_dot_atom_matches(simple_pattern, simple_subject, unicode)
         {
             return Some(matches);
         }
