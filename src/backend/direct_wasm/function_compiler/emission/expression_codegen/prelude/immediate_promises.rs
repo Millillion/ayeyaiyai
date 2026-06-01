@@ -1869,6 +1869,88 @@ impl<'a> FunctionCompiler<'a> {
         Ok(None)
     }
 
+    fn function_prototype_call_await_resolution_outcome(
+        &mut self,
+        expression: &Expression,
+    ) -> DirectResult<Option<StaticEvalOutcome>> {
+        let Expression::Call { callee, arguments } = expression else {
+            return Ok(None);
+        };
+        let Expression::Member { object, property } = callee.as_ref() else {
+            return Ok(None);
+        };
+        let Expression::String(property_name) = property.as_ref() else {
+            return Ok(None);
+        };
+        if property_name != "call" && property_name != "apply" {
+            return Ok(None);
+        }
+        let Some(binding) = self.resolve_function_binding_from_expression_with_context(
+            object,
+            self.current_function_name(),
+        ) else {
+            return Ok(None);
+        };
+        let LocalFunctionBinding::User(function_name) = &binding else {
+            return Ok(None);
+        };
+        let Some(user_function) = self.user_function(function_name) else {
+            return Ok(None);
+        };
+        if !user_function.is_async() {
+            return Ok(None);
+        }
+
+        let expanded_arguments = self.expand_call_arguments(arguments);
+        let raw_this_binding = expanded_arguments
+            .first()
+            .cloned()
+            .unwrap_or(Expression::Undefined);
+        let this_binding =
+            self.normalize_sloppy_call_frame_this_binding(user_function, raw_this_binding);
+        let call_argument_expressions = if property_name == "call" {
+            expanded_arguments
+                .iter()
+                .skip(1)
+                .cloned()
+                .collect::<Vec<_>>()
+        } else {
+            let apply_expression = expanded_arguments
+                .get(1)
+                .cloned()
+                .unwrap_or(Expression::Undefined);
+            let Some(apply_arguments) =
+                self.expand_apply_call_arguments_from_expression(&apply_expression)
+            else {
+                return Ok(None);
+            };
+            apply_arguments
+                .iter()
+                .map(|argument| argument.expression().clone())
+                .collect::<Vec<_>>()
+        };
+        let capture_source_bindings =
+            self.resolve_function_expression_capture_slots(object)
+                .map(|capture_slots| {
+                    capture_slots
+                        .into_iter()
+                        .map(|(capture_name, slot_name)| {
+                            (
+                                capture_name,
+                                self.snapshot_bound_capture_slot_expression(&slot_name),
+                            )
+                        })
+                        .collect::<HashMap<_, _>>()
+                });
+
+        self.user_function_call_await_resolution_outcome_with_captures(
+            &binding,
+            &call_argument_expressions,
+            &this_binding,
+            capture_source_bindings.as_ref(),
+        )
+    }
+
     pub(in crate::backend::direct_wasm) fn current_async_function_static_promise_outcome(
         &self,
         statements: &[Statement],
@@ -4048,6 +4130,9 @@ impl<'a> FunctionCompiler<'a> {
             && let Some(outcome) =
                 self.bound_function_call_await_resolution_outcome(callee, arguments)?
         {
+            return Ok(Some(outcome));
+        }
+        if let Some(outcome) = self.function_prototype_call_await_resolution_outcome(expression)? {
             return Ok(Some(outcome));
         }
         if let Some(outcome) = self.direct_function_call_returned_promise_outcome(expression)? {

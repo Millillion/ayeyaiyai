@@ -13675,6 +13675,53 @@ fn test262_async_test_helper_runs_async_function_with_global_this() {
 }
 
 #[test]
+fn async_function_prototype_call_preserves_this_for_completion() {
+    let tempdir = tempdir().unwrap();
+    let input = tempdir.path().join("async-function-call-this.js");
+    let output = tempdir.path().join("async-function-call-this.wasm");
+
+    fs::write(
+        &input,
+        r#"
+        async function foo(a) {
+          assert.sameValue(this, a);
+        }
+
+        var obj = {};
+        foo.call(obj, obj).then($DONE, $DONE);
+        "#,
+    )
+    .unwrap();
+
+    let compile = Command::new(env!("CARGO_BIN_EXE_ayeyaiyai"))
+        .arg(&input)
+        .arg("-o")
+        .arg(&output)
+        .output()
+        .unwrap();
+
+    assert!(
+        compile.status.success(),
+        "compiler failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&compile.stdout),
+        String::from_utf8_lossy(&compile.stderr),
+    );
+
+    let run = Command::new("wasmtime").arg(&output).output().unwrap();
+
+    assert!(
+        run.status.success(),
+        "wasmtime failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&run.stdout),
+        String::from_utf8_lossy(&run.stderr),
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&run.stdout),
+        "Test262:AsyncTestComplete\n"
+    );
+}
+
+#[test]
 fn async_mapped_arguments_then_done_reports_completion() {
     let tempdir = tempdir().unwrap();
     let input = tempdir.path().join("async-mapped-arguments.js");
