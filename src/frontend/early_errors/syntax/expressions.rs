@@ -14,6 +14,7 @@ use super::{
     },
     statements::{validate_statement_syntax, validate_statement_syntax_with_restrictions},
 };
+use std::collections::BTreeSet;
 use swc_common::Spanned;
 
 fn validate_digit_sequence(
@@ -401,15 +402,58 @@ fn regex_quantifier_len(pattern: &str, offset: usize, ch: char) -> Option<usize>
     Some(base_len + lazy_len)
 }
 
-fn validate_regex_pattern_syntax(pattern: &str) -> Result<()> {
+fn is_regex_identifier_continue(character: char) -> bool {
+    matches!(character, '\u{200C}' | '\u{200D}') || Ident::is_valid_continue(character)
+}
+
+fn validate_regex_group_name(name: &str) -> Result<()> {
+    ensure!(!name.is_empty(), "regular expression group name is empty");
+    if name.contains('\\') {
+        validate_escaped_identifier_text(name)?;
+        return Ok(());
+    }
+    let mut chars = name.chars();
+    let Some(first) = chars.next() else {
+        bail!("regular expression group name is empty");
+    };
+    ensure!(
+        Ident::is_valid_start(first),
+        "regular expression group name is not identifier-like"
+    );
+    ensure!(
+        chars.all(is_regex_identifier_continue),
+        "regular expression group name is not identifier-like"
+    );
+    Ok(())
+}
+
+fn regex_group_name(pattern: &str, name_start: usize) -> Result<(String, usize)> {
+    let Some(tail) = pattern.get(name_start..) else {
+        bail!("regular expression group name is incomplete");
+    };
+    let Some(relative_end) = tail.find('>') else {
+        bail!("regular expression group name is incomplete");
+    };
+    let name = &tail[..relative_end];
+    validate_regex_group_name(name)?;
+    Ok((name.to_string(), name_start + relative_end + '>'.len_utf8()))
+}
+
+fn validate_regex_pattern_syntax(pattern: &str, unicode_mode: bool) -> Result<()> {
     let mut escaped = false;
     let mut in_class = false;
     let mut can_quantify = false;
     let mut groups = Vec::new();
+    let mut named_groups = BTreeSet::new();
+    let mut named_references = Vec::new();
+    let mut bare_k_escape = false;
     let mut chars = pattern.char_indices().peekable();
 
     while let Some((offset, ch)) = chars.next() {
         if escaped {
+            if !in_class && ch == 'k' {
+                bare_k_escape = true;
+            }
             escaped = false;
             if !in_class {
                 can_quantify = true;
@@ -442,12 +486,46 @@ fn validate_regex_pattern_syntax(pattern: &str) -> Result<()> {
         }
 
         match ch {
-            '\\' => escaped = true,
+            '\\' => {
+                if let Some(name_start) = pattern
+                    .get(offset..)
+                    .and_then(|tail| tail.strip_prefix("\\k<"))
+                    .map(|_| offset + "\\k<".len())
+                {
+                    let (name, group_name_end) = regex_group_name(pattern, name_start)?;
+                    named_references.push(name);
+                    while matches!(chars.peek(), Some((next_offset, _)) if *next_offset < group_name_end)
+                    {
+                        chars.next();
+                    }
+                    can_quantify = true;
+                } else {
+                    escaped = true;
+                }
+            }
             '[' => {
                 in_class = true;
                 can_quantify = false;
             }
             '(' => {
+                if pattern.get(offset..).is_some_and(|tail| {
+                    tail.starts_with("(?<")
+                        && !tail.starts_with("(?<=")
+                        && !tail.starts_with("(?<!")
+                }) {
+                    let (name, group_name_end) = regex_group_name(pattern, offset + "(?<".len())?;
+                    ensure!(
+                        named_groups.insert(name),
+                        "regular expression duplicate group name"
+                    );
+                    while matches!(chars.peek(), Some((next_offset, _)) if *next_offset < group_name_end)
+                    {
+                        chars.next();
+                    }
+                    groups.push(RegexGroupKind::Capturing);
+                    can_quantify = false;
+                    continue;
+                }
                 let (kind, prefix_len) = regex_group_prefix(pattern, offset);
                 let prefix_end = offset + prefix_len;
                 while matches!(chars.peek(), Some((next_offset, _)) if *next_offset < prefix_end) {
@@ -465,6 +543,16 @@ fn validate_regex_pattern_syntax(pattern: &str) -> Result<()> {
             _ => can_quantify = true,
         }
     }
+    ensure!(
+        !(bare_k_escape && (unicode_mode || !named_groups.is_empty())),
+        "regular expression named backreference is incomplete"
+    );
+    for reference in named_references {
+        ensure!(
+            named_groups.contains(&reference),
+            "regular expression named backreference has no matching group"
+        );
+    }
     Ok(())
 }
 
@@ -476,7 +564,8 @@ fn validate_regex_literal_syntax(regex: &Regex, file: &swc_common::SourceFile) -
     );
     if let Some(pattern) = regex_literal_pattern_source(raw) {
         validate_regex_modifier_syntax(pattern)?;
-        validate_regex_pattern_syntax(pattern)?;
+        let flags = regex.flags.to_string();
+        validate_regex_pattern_syntax(pattern, flags.contains('u') || flags.contains('v'))?;
     }
     Ok(())
 }
