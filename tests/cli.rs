@@ -2480,6 +2480,48 @@ fn compiles_anonymous_function_expression_names() {
 }
 
 #[test]
+fn compiles_function_expression_returning_mutated_constructed_object() {
+    let tempdir = tempdir().unwrap();
+    let input = tempdir.path().join("function-expression-new-object.js");
+    let output = tempdir.path().join("function-expression-new-object.wasm");
+
+    fs::write(
+        &input,
+        r#"
+        var result = function f(o) { o.x = 1; return o; }
+        (new Object()).x;
+
+        console.log(result);
+        "#,
+    )
+    .unwrap();
+
+    let compile = Command::new(env!("CARGO_BIN_EXE_ayeyaiyai"))
+        .arg(&input)
+        .arg("-o")
+        .arg(&output)
+        .output()
+        .unwrap();
+
+    assert!(
+        compile.status.success(),
+        "compiler failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&compile.stdout),
+        String::from_utf8_lossy(&compile.stderr),
+    );
+
+    let run = Command::new("wasmtime").arg(&output).output().unwrap();
+
+    assert!(
+        run.status.success(),
+        "wasmtime failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&run.stdout),
+        String::from_utf8_lossy(&run.stderr),
+    );
+    assert_eq!(String::from_utf8_lossy(&run.stdout), "1\n");
+}
+
+#[test]
 fn compiles_generator_arguments_object_across_resumes() {
     let tempdir = tempdir().unwrap();
     let input = tempdir.path().join("generator-arguments.js");
@@ -6797,6 +6839,42 @@ fn compiles_direct_eval_class_declaration_completion_values() {
         String::from_utf8_lossy(&run.stderr),
     );
     assert_eq!(String::from_utf8_lossy(&run.stdout), "true\ntrue\n");
+}
+
+#[test]
+fn compiles_direct_eval_block_regexp_completion_value_to_string() {
+    let tempdir = tempdir().unwrap();
+    let input = tempdir.path().join("eval-block-regexp-completion.js");
+    let output = tempdir.path().join("eval-block-regexp-completion.wasm");
+
+    fs::write(
+        &input,
+        r#"
+        var result = eval("{}/1/g;");
+        console.log(
+          Object.getPrototypeOf(result) === RegExp.prototype,
+          result.flags,
+          result.toString()
+        );
+        "#,
+    )
+    .unwrap();
+
+    let options = CompileOptions {
+        output: output.clone(),
+        target: "wasm32-wasip2".to_string(),
+    };
+
+    compile_file(&input, &options).unwrap();
+
+    let run = Command::new("wasmtime").arg(&output).output().unwrap();
+    assert!(
+        run.status.success(),
+        "wasmtime failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&run.stdout),
+        String::from_utf8_lossy(&run.stderr),
+    );
+    assert_eq!(String::from_utf8_lossy(&run.stdout), "true g /1/g\n");
 }
 
 #[test]
@@ -13005,6 +13083,395 @@ fn async_await_of_immediately_resolved_values_runs_without_trapping() {
     assert_eq!(
         String::from_utf8_lossy(&run.stdout),
         "lhs rhs sup\ndone undefined\n"
+    );
+}
+
+#[test]
+fn async_default_parameter_throw_rejects_before_body() {
+    let tempdir = tempdir().unwrap();
+    let input = tempdir.path().join("async-default-throw.js");
+    let output = tempdir.path().join("async-default-throw.wasm");
+
+    fs::write(
+        &input,
+        r#"
+        var callCount = 0;
+        function Test262Error() {}
+        async function f(_ = (function() { throw new Test262Error(); }())) {
+          callCount = callCount + 1;
+        }
+
+        f()
+          .then(function() {
+            console.log("resolved");
+          }, function(error) {
+            console.log("rejected", error.constructor === Test262Error, callCount);
+          })
+          .then(function() {
+            console.log("done", callCount);
+          }, function(error) {
+            console.log("err", error && error.name);
+          });
+        "#,
+    )
+    .unwrap();
+
+    let compile = Command::new(env!("CARGO_BIN_EXE_ayeyaiyai"))
+        .arg(&input)
+        .arg("-o")
+        .arg(&output)
+        .output()
+        .unwrap();
+
+    assert!(
+        compile.status.success(),
+        "compiler failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&compile.stdout),
+        String::from_utf8_lossy(&compile.stderr),
+    );
+
+    let run = Command::new("wasmtime").arg(&output).output().unwrap();
+
+    assert!(
+        run.status.success(),
+        "wasmtime failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&run.stdout),
+        String::from_utf8_lossy(&run.stderr),
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&run.stdout),
+        "rejected true 0\ndone 0\n"
+    );
+}
+
+#[test]
+fn async_default_parameters_with_values_skip_initializers() {
+    let tempdir = tempdir().unwrap();
+    let input = tempdir.path().join("async-default-values.js");
+    let output = tempdir.path().join("async-default-values.wasm");
+
+    fs::write(
+        &input,
+        r#"
+        var obj = {};
+        var falseCount = 0;
+        var stringCount = 0;
+        var nanCount = 0;
+        var zeroCount = 0;
+        var nullCount = 0;
+        var objCount = 0;
+        var callCount = 0;
+
+        async function ref(
+          aFalse = falseCount += 1,
+          aString = stringCount += 1,
+          aNaN = nanCount += 1,
+          a0 = zeroCount += 1,
+          aNull = nullCount += 1,
+          aObj = objCount += 1
+        ) {
+          assert.sameValue(aFalse, false);
+          assert.sameValue(aString, "");
+          assert.sameValue(aNaN, NaN);
+          assert.sameValue(a0, 0);
+          assert.sameValue(aNull, null);
+          assert.sameValue(aObj, obj);
+          callCount = callCount + 1;
+        }
+
+        ref(false, "", NaN, 0, null, obj).then(function() {
+          assert.sameValue(callCount, 1);
+        }).then($DONE, $DONE);
+
+        assert.sameValue(falseCount, 0);
+        assert.sameValue(stringCount, 0);
+        assert.sameValue(nanCount, 0);
+        assert.sameValue(zeroCount, 0);
+        assert.sameValue(nullCount, 0);
+        assert.sameValue(objCount, 0);
+        "#,
+    )
+    .unwrap();
+
+    let compile = Command::new(env!("CARGO_BIN_EXE_ayeyaiyai"))
+        .arg(&input)
+        .arg("-o")
+        .arg(&output)
+        .output()
+        .unwrap();
+
+    assert!(
+        compile.status.success(),
+        "compiler failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&compile.stdout),
+        String::from_utf8_lossy(&compile.stderr),
+    );
+
+    let run = Command::new("wasmtime").arg(&output).output().unwrap();
+
+    assert!(
+        run.status.success(),
+        "wasmtime failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&run.stdout),
+        String::from_utf8_lossy(&run.stderr),
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&run.stdout),
+        "Test262:AsyncTestComplete\n"
+    );
+}
+
+#[test]
+fn async_default_parameters_with_undefined_use_initializers() {
+    let tempdir = tempdir().unwrap();
+    let input = tempdir.path().join("async-default-undefined.js");
+    let output = tempdir.path().join("async-default-undefined.wasm");
+
+    fs::write(
+        &input,
+        r#"
+        var callCount = 0;
+
+        async function ref(fromLiteral = 23, fromExpr = 45, fromHole = 99) {
+          assert.sameValue(fromLiteral, 23);
+          assert.sameValue(fromExpr, 45);
+          assert.sameValue(fromHole, 99);
+          callCount = callCount + 1;
+        }
+
+        ref(undefined, void 0).then(function() {
+          assert.sameValue(callCount, 1);
+        }).then($DONE, $DONE);
+        "#,
+    )
+    .unwrap();
+
+    let compile = Command::new(env!("CARGO_BIN_EXE_ayeyaiyai"))
+        .arg(&input)
+        .arg("-o")
+        .arg(&output)
+        .output()
+        .unwrap();
+
+    assert!(
+        compile.status.success(),
+        "compiler failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&compile.stdout),
+        String::from_utf8_lossy(&compile.stderr),
+    );
+
+    let run = Command::new("wasmtime").arg(&output).output().unwrap();
+
+    assert!(
+        run.status.success(),
+        "wasmtime failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&run.stdout),
+        String::from_utf8_lossy(&run.stderr),
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&run.stdout),
+        "Test262:AsyncTestComplete\n"
+    );
+}
+
+#[test]
+fn async_default_parameter_later_reference_rejects_before_body() {
+    let tempdir = tempdir().unwrap();
+    let input = tempdir.path().join("async-default-ref-later.js");
+    let output = tempdir.path().join("async-default-ref-later.wasm");
+
+    fs::write(
+        &input,
+        r#"
+        var callCount = 0;
+        async function f(x = y, y) {
+          callCount = callCount + 1;
+        }
+
+        f()
+          .then(function() {
+            throw new Test262Error("function should not resolve");
+          }, function(error) {
+            assert.sameValue(error.constructor, ReferenceError);
+          })
+          .then(function() {
+            assert.sameValue(callCount, 0);
+          }, $DONE)
+          .then($DONE, $DONE);
+        "#,
+    )
+    .unwrap();
+
+    let compile = Command::new(env!("CARGO_BIN_EXE_ayeyaiyai"))
+        .arg(&input)
+        .arg("-o")
+        .arg(&output)
+        .output()
+        .unwrap();
+
+    assert!(
+        compile.status.success(),
+        "compiler failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&compile.stdout),
+        String::from_utf8_lossy(&compile.stderr),
+    );
+
+    let run = Command::new("wasmtime").arg(&output).output().unwrap();
+
+    assert!(
+        run.status.success(),
+        "wasmtime failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&run.stdout),
+        String::from_utf8_lossy(&run.stderr),
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&run.stdout),
+        "Test262:AsyncTestComplete\n"
+    );
+}
+
+#[test]
+fn async_default_parameter_direct_eval_var_conflict_rejects_before_body() {
+    let tempdir = tempdir().unwrap();
+    let input = tempdir.path().join("async-default-eval-var-conflict.js");
+    let output = tempdir.path().join("async-default-eval-var-conflict.wasm");
+
+    fs::write(
+        &input,
+        r#"
+        var callCount = 0;
+        async function f(a = eval("var a = 42")) {
+          callCount = callCount + 1;
+        }
+
+        f()
+          .then(function() {
+            throw new Test262Error("function should not resolve");
+          }, function(error) {
+            assert.sameValue(error.constructor, SyntaxError);
+          })
+          .then(function() {
+            assert.sameValue(callCount, 0);
+          }, $DONE)
+          .then($DONE, $DONE);
+        "#,
+    )
+    .unwrap();
+
+    let compile = Command::new(env!("CARGO_BIN_EXE_ayeyaiyai"))
+        .arg(&input)
+        .arg("-o")
+        .arg(&output)
+        .output()
+        .unwrap();
+
+    assert!(
+        compile.status.success(),
+        "compiler failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&compile.stdout),
+        String::from_utf8_lossy(&compile.stderr),
+    );
+
+    let run = Command::new("wasmtime").arg(&output).output().unwrap();
+
+    assert!(
+        run.status.success(),
+        "wasmtime failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&run.stdout),
+        String::from_utf8_lossy(&run.stderr),
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&run.stdout),
+        "Test262:AsyncTestComplete\n"
+    );
+}
+
+#[test]
+fn immediate_promise_then_done_callback_emits_completion_call() {
+    let tempdir = tempdir().unwrap();
+    let input = tempdir.path().join("promise-done-callback.js");
+    let output = tempdir.path().join("promise-done-callback.wasm");
+
+    fs::write(
+        &input,
+        r#"
+        function $DONE(error) {
+          if (error) {
+            console.log("fail");
+          } else {
+            console.log("complete");
+          }
+        }
+
+        Promise.resolve().then($DONE, $DONE);
+        "#,
+    )
+    .unwrap();
+
+    let compile = Command::new(env!("CARGO_BIN_EXE_ayeyaiyai"))
+        .arg(&input)
+        .arg("-o")
+        .arg(&output)
+        .output()
+        .unwrap();
+
+    assert!(
+        compile.status.success(),
+        "compiler failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&compile.stdout),
+        String::from_utf8_lossy(&compile.stderr),
+    );
+
+    let run = Command::new("wasmtime").arg(&output).output().unwrap();
+
+    assert!(
+        run.status.success(),
+        "wasmtime failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&run.stdout),
+        String::from_utf8_lossy(&run.stderr),
+    );
+    assert_eq!(String::from_utf8_lossy(&run.stdout), "complete\n");
+}
+
+#[test]
+fn immediate_promise_then_synthetic_done_callback_reports_completion() {
+    let tempdir = tempdir().unwrap();
+    let input = tempdir.path().join("promise-synthetic-done-callback.js");
+    let output = tempdir.path().join("promise-synthetic-done-callback.wasm");
+
+    fs::write(
+        &input,
+        r#"
+        Promise.resolve().then($DONE, $DONE);
+        "#,
+    )
+    .unwrap();
+
+    let compile = Command::new(env!("CARGO_BIN_EXE_ayeyaiyai"))
+        .arg(&input)
+        .arg("-o")
+        .arg(&output)
+        .output()
+        .unwrap();
+
+    assert!(
+        compile.status.success(),
+        "compiler failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&compile.stdout),
+        String::from_utf8_lossy(&compile.stderr),
+    );
+
+    let run = Command::new("wasmtime").arg(&output).output().unwrap();
+
+    assert!(
+        run.status.success(),
+        "wasmtime failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&run.stdout),
+        String::from_utf8_lossy(&run.stderr),
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&run.stdout),
+        "Test262:AsyncTestComplete\n"
     );
 }
 

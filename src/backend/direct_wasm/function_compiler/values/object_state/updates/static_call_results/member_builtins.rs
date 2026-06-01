@@ -691,6 +691,31 @@ fn format_js_number_to_exponential(number: f64, digits: usize) -> String {
     format!("{mantissa}e{exponent:+}")
 }
 
+fn static_regexp_to_string_source(pattern: &str) -> String {
+    if pattern.is_empty() {
+        return "(?:)".to_string();
+    }
+    let mut source = String::new();
+    for character in pattern.chars() {
+        match character {
+            '/' => source.push_str("\\/"),
+            '\n' => source.push_str("\\n"),
+            '\r' => source.push_str("\\r"),
+            '\u{2028}' => source.push_str("\\u2028"),
+            '\u{2029}' => source.push_str("\\u2029"),
+            _ => source.push(character),
+        }
+    }
+    source
+}
+
+fn static_regexp_to_string_flags(flags: &str) -> String {
+    ['d', 'g', 'i', 'm', 's', 'u', 'v', 'y']
+        .into_iter()
+        .filter(|flag| flags.contains(*flag))
+        .collect()
+}
+
 impl<'a> FunctionCompiler<'a> {
     fn static_promise_with_resolvers_result() -> Expression {
         let resolved_promise = Expression::Call {
@@ -766,6 +791,22 @@ impl<'a> FunctionCompiler<'a> {
                 .resolve_static_symbol_to_string_value_with_context(object, current_function_name)
         {
             return Some((Expression::String(text), None));
+        }
+
+        if let Expression::Member { object, property } = callee
+            && matches!(property.as_ref(), Expression::String(name) if name == "toString")
+            && arguments.is_empty()
+            && let Some((pattern, flags)) =
+                self.resolve_static_simple_regexp_parts(object, current_function_name)
+        {
+            return Some((
+                Expression::String(format!(
+                    "/{}/{}",
+                    static_regexp_to_string_source(&pattern),
+                    static_regexp_to_string_flags(&flags)
+                )),
+                None,
+            ));
         }
 
         if let Expression::Member { object, property } = callee

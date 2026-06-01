@@ -112,6 +112,29 @@ impl<'a> FunctionCompiler<'a> {
             })
     }
 
+    fn static_call_frame_argument_preserves_parameter_identity(&self, value: &Expression) -> bool {
+        if matches!(value, Expression::Identifier(_) | Expression::This) {
+            return false;
+        }
+        matches!(
+            value,
+            Expression::Array(_) | Expression::Object(_) | Expression::New { .. }
+        ) || self.resolve_object_binding_from_expression(value).is_some()
+            || self.resolve_array_binding_from_expression(value).is_some()
+    }
+
+    fn static_call_frame_substitution_parameter_value(
+        &self,
+        parameter_name: &str,
+        value: &Expression,
+    ) -> Expression {
+        if self.static_call_frame_argument_preserves_parameter_identity(value) {
+            Expression::Identifier(parameter_name.to_string())
+        } else {
+            value.clone()
+        }
+    }
+
     pub(in crate::backend::direct_wasm) fn prepare_static_user_function_execution(
         &self,
         function_name: &str,
@@ -174,10 +197,12 @@ impl<'a> FunctionCompiler<'a> {
                 }
                 local_bindings.insert(parameter.name.clone(), value.clone());
                 if !parameter.rest {
+                    let substitution_value = self
+                        .static_call_frame_substitution_parameter_value(&parameter.name, &value);
                     Self::set_static_user_function_substitution_argument(
                         &mut substitution_call_arguments,
                         index,
-                        value,
+                        substitution_value,
                     );
                 }
             }
@@ -200,10 +225,12 @@ impl<'a> FunctionCompiler<'a> {
                     )?;
                 }
                 local_bindings.insert(parameter_name.clone(), value.clone());
+                let substitution_value =
+                    self.static_call_frame_substitution_parameter_value(parameter_name, &value);
                 Self::set_static_user_function_substitution_argument(
                     &mut substitution_call_arguments,
                     index,
-                    value,
+                    substitution_value,
                 );
             }
         }

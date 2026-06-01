@@ -1495,7 +1495,7 @@ impl<'a> FunctionCompiler<'a> {
         self.parse_eval_program_in_ordinary_function_context(source)
     }
 
-    fn parse_validated_static_direct_eval_program_with_context(
+    fn parse_static_direct_eval_program_with_context(
         &self,
         arguments: &[CallArgument],
         eval_function_name: Option<&str>,
@@ -1537,6 +1537,20 @@ impl<'a> FunctionCompiler<'a> {
         );
         self.normalize_eval_scoped_bindings_to_source_names(&mut program);
 
+        Ok(Some(program))
+    }
+
+    fn parse_validated_static_direct_eval_program_with_context(
+        &self,
+        arguments: &[CallArgument],
+        eval_function_name: Option<&str>,
+    ) -> Result<Option<Program>, StaticThrowValue> {
+        let Some(program) =
+            self.parse_static_direct_eval_program_with_context(arguments, eval_function_name)?
+        else {
+            return Ok(None);
+        };
+
         if self.eval_arguments_initializer_conflict(&program)
             || self.eval_arguments_declaration_conflicts(&program)
             || self.eval_parameter_var_declaration_conflicts(&program)
@@ -1555,6 +1569,70 @@ impl<'a> FunctionCompiler<'a> {
         }
 
         Ok(Some(program))
+    }
+
+    fn parse_validated_static_parameter_default_direct_eval_program(
+        &self,
+        user_function: &UserFunction,
+        arguments: &[CallArgument],
+    ) -> Result<Option<Program>, StaticThrowValue> {
+        let Some(program) = self
+            .parse_static_direct_eval_program_with_context(arguments, Some(&user_function.name))?
+        else {
+            return Ok(None);
+        };
+
+        if eval_program_contains_top_level_return(&program)
+            || self.eval_arguments_initializer_conflict(&program)
+            || Self::eval_arguments_declaration_conflicts_with_user_function(
+                &program,
+                user_function,
+            )
+            || Self::eval_parameter_var_declaration_conflicts_with_names(
+                &program,
+                &user_function.params,
+            )
+            || self.eval_program_declares_var_collision_with_global_lexical(&program)
+            || self.eval_program_declares_var_collision_with_active_lexical(&program)
+        {
+            return Err(StaticThrowValue::NamedError("SyntaxError"));
+        }
+
+        if self.eval_program_declares_non_definable_global_function(&program) {
+            return Err(StaticThrowValue::NamedError("TypeError"));
+        }
+
+        if self.eval_program_declares_non_declarable_global_var(&program, false) {
+            return Err(StaticThrowValue::NamedError("TypeError"));
+        }
+
+        Ok(Some(program))
+    }
+
+    pub(in crate::backend::direct_wasm) fn resolve_static_parameter_default_direct_eval_throw_outcome(
+        &self,
+        user_function: &UserFunction,
+        default: &Expression,
+    ) -> Option<StaticEvalOutcome> {
+        let Expression::Call { callee, arguments } = default else {
+            return None;
+        };
+        if !matches!(callee.as_ref(), Expression::Identifier(name) if name == "eval") {
+            return None;
+        }
+        if user_function
+            .params
+            .iter()
+            .any(|name| Self::binding_source_name_matches(name, "eval"))
+        {
+            return None;
+        }
+        match self
+            .parse_validated_static_parameter_default_direct_eval_program(user_function, arguments)
+        {
+            Ok(_) => None,
+            Err(error) => Some(StaticEvalOutcome::Throw(error)),
+        }
     }
 
     fn parse_validated_static_direct_eval_program(
@@ -2089,7 +2167,19 @@ impl<'a> FunctionCompiler<'a> {
                 || current_function
                     .params
                     .iter()
-                    .any(|parameter| parameter == "arguments"))
+                    .any(|parameter| Self::binding_source_name_matches(parameter, "arguments")))
+    }
+
+    fn eval_arguments_declaration_conflicts_with_user_function(
+        program: &Program,
+        user_function: &UserFunction,
+    ) -> bool {
+        eval_program_declares_var_arguments(program)
+            && (!user_function.lexical_this
+                || user_function
+                    .params
+                    .iter()
+                    .any(|parameter| Self::binding_source_name_matches(parameter, "arguments")))
     }
 
     pub(in crate::backend::direct_wasm) fn eval_arguments_initializer_conflict(
@@ -2111,16 +2201,29 @@ impl<'a> FunctionCompiler<'a> {
             return false;
         }
 
+        Self::eval_parameter_var_declaration_conflicts_with_names(
+            program,
+            &self.state.parameters.parameter_names,
+        )
+    }
+
+    fn eval_parameter_var_declaration_conflicts_with_names(
+        program: &Program,
+        parameter_names: &[String],
+    ) -> bool {
+        if program.strict {
+            return false;
+        }
+
         collect_eval_var_names(program).into_iter().any(|var_name| {
-            self.state
-                .parameters
-                .parameter_names
+            parameter_names
                 .iter()
-                .any(|param_name| {
-                    scoped_binding_source_name(param_name).unwrap_or(param_name.as_str())
-                        == var_name
-                })
+                .any(|parameter_name| Self::binding_source_name_matches(parameter_name, &var_name))
         })
+    }
+
+    fn binding_source_name_matches(binding_name: &str, source_name: &str) -> bool {
+        scoped_binding_source_name(binding_name).unwrap_or(binding_name) == source_name
     }
 
     pub(in crate::backend::direct_wasm) fn eval_program_declares_var_collision_with_global_lexical(

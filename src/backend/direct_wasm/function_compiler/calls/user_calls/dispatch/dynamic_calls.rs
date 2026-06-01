@@ -130,6 +130,7 @@ impl<'a> FunctionCompiler<'a> {
     fn emit_done_callback_dynamic_call(&mut self, arguments: &[CallArgument]) -> DirectResult<()> {
         let expanded_arguments = self.expand_call_arguments(arguments);
         let Some(first_argument) = expanded_arguments.first() else {
+            self.emit_print(&[Expression::String("Test262:AsyncTestComplete".to_string())])?;
             self.push_i32_const(JS_UNDEFINED_TAG);
             return Ok(());
         };
@@ -160,6 +161,8 @@ impl<'a> FunctionCompiler<'a> {
         self.push_i32_const(1);
         self.push_local_set(self.state.runtime.throws.throw_tag_local);
         self.emit_throw_from_locals()?;
+        self.state.emission.output.instructions.push(0x05);
+        self.emit_print(&[Expression::String("Test262:AsyncTestComplete".to_string())])?;
         self.state.emission.output.instructions.push(0x0b);
         self.pop_control_frame();
 

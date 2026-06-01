@@ -223,18 +223,19 @@ impl<'a> FunctionCompiler<'a> {
         let Expression::String(property_name) = property else {
             return Ok(false);
         };
-        let static_receiver_is_safe = (matches!(property_name.as_str(), "exec" | "test")
-            && self.static_regexp_receiver_is_side_effect_free(object))
-            || (matches!(
-                property_name.as_str(),
-                "charAt"
-                    | "charCodeAt"
-                    | "toFixed"
-                    | "toExponential"
-                    | "toString"
-                    | "trim"
-                    | "valueOf"
-            ) && self.static_boxed_primitive_receiver_is_side_effect_free(object));
+        let static_receiver_is_safe =
+            (matches!(property_name.as_str(), "exec" | "test" | "toString")
+                && self.static_regexp_receiver_is_side_effect_free(object))
+                || (matches!(
+                    property_name.as_str(),
+                    "charAt"
+                        | "charCodeAt"
+                        | "toFixed"
+                        | "toExponential"
+                        | "toString"
+                        | "trim"
+                        | "valueOf"
+                ) && self.static_boxed_primitive_receiver_is_side_effect_free(object));
         if !inline_summary_side_effect_free_expression(object) && !static_receiver_is_safe {
             return Ok(false);
         }
@@ -250,6 +251,12 @@ impl<'a> FunctionCompiler<'a> {
                 | "has"
                 | "exec"
                 | "test"
+        ) || matches!(
+            (
+                property_name.as_str(),
+                self.static_regexp_receiver_is_side_effect_free(object)
+            ),
+            ("toString", true)
         ) || matches!(
             (object, property_name.as_str()),
             (

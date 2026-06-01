@@ -20,6 +20,7 @@ impl<'a> FunctionCompiler<'a> {
                     return Ok(());
                 }
                 if self.emit_static_top_level_promise_then_statement(expression)? {
+                    self.emit_pending_static_promise_reactions()?;
                     self.state.emission.output.instructions.push(0x1a);
                     return Ok(());
                 }

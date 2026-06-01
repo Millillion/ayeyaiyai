@@ -38,6 +38,62 @@ impl<'a> FunctionCompiler<'a> {
         current_function_name: Option<&str>,
     ) -> Option<Expression> {
         if let Expression::Member { object, property } = callee
+            && matches!(object.as_ref(), Expression::Identifier(name) if name == "assert")
+            && matches!(property.as_ref(), Expression::String(name) if name == "sameValue")
+        {
+            let [
+                CallArgument::Expression(actual_expression),
+                CallArgument::Expression(expected_expression),
+                rest @ ..,
+            ] = arguments
+            else {
+                return None;
+            };
+            let actual = self.evaluate_bound_snapshot_expression(
+                actual_expression,
+                bindings,
+                current_function_name,
+            )?;
+            let expected = self.evaluate_bound_snapshot_expression(
+                expected_expression,
+                bindings,
+                current_function_name,
+            )?;
+            let result = self.resolve_static_same_value_result_with_context(
+                &actual,
+                &expected,
+                current_function_name,
+            );
+            let result = result.or_else(|| {
+                matches!(
+                    (&actual, expected_expression),
+                    (Expression::Identifier(actual_name), Expression::Identifier(expected_name))
+                        if actual_name == self.resolve_bound_snapshot_binding_name(expected_name, bindings)
+                )
+                .then_some(true)
+            });
+            if std::env::var_os("AYY_TRACE_BOUND_SNAPSHOT").is_some() {
+                eprintln!(
+                    "bound_snapshot_assert_same_value actual={actual:?} expected={expected:?} result={result:?}"
+                );
+            }
+            if !result? {
+                return None;
+            }
+            for argument in rest {
+                match argument {
+                    CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                        self.evaluate_bound_snapshot_expression(
+                            expression,
+                            bindings,
+                            current_function_name,
+                        )?;
+                    }
+                }
+            }
+            return Some(Expression::Undefined);
+        }
+        if let Expression::Member { object, property } = callee
             && matches!(property.as_ref(), Expression::String(name) if name == "push")
         {
             return self.apply_bound_snapshot_array_push(

@@ -208,6 +208,97 @@ fn statement_calls_user_function(statement: &Statement, names: &HashSet<String>)
     }
 }
 
+fn expression_references_any_identifier(expression: &Expression, names: &HashSet<String>) -> bool {
+    match expression {
+        Expression::Identifier(name) | Expression::Update { name, .. } => names.contains(name),
+        Expression::Assign { name, value } => {
+            names.contains(name) || expression_references_any_identifier(value, names)
+        }
+        Expression::Member { object, property } => {
+            expression_references_any_identifier(object, names)
+                || expression_references_any_identifier(property, names)
+        }
+        Expression::SuperMember { property } => {
+            expression_references_any_identifier(property, names)
+        }
+        Expression::AssignMember {
+            object,
+            property,
+            value,
+        } => {
+            expression_references_any_identifier(object, names)
+                || expression_references_any_identifier(property, names)
+                || expression_references_any_identifier(value, names)
+        }
+        Expression::AssignSuperMember { property, value } => {
+            expression_references_any_identifier(property, names)
+                || expression_references_any_identifier(value, names)
+        }
+        Expression::Await(expression)
+        | Expression::EnumerateKeys(expression)
+        | Expression::GetIterator(expression)
+        | Expression::IteratorClose(expression)
+        | Expression::Unary { expression, .. } => {
+            expression_references_any_identifier(expression, names)
+        }
+        Expression::Binary { left, right, .. } => {
+            expression_references_any_identifier(left, names)
+                || expression_references_any_identifier(right, names)
+        }
+        Expression::Conditional {
+            condition,
+            then_expression,
+            else_expression,
+        } => {
+            expression_references_any_identifier(condition, names)
+                || expression_references_any_identifier(then_expression, names)
+                || expression_references_any_identifier(else_expression, names)
+        }
+        Expression::Sequence(expressions) => expressions
+            .iter()
+            .any(|expression| expression_references_any_identifier(expression, names)),
+        Expression::Call { callee, arguments }
+        | Expression::SuperCall { callee, arguments }
+        | Expression::New { callee, arguments } => {
+            expression_references_any_identifier(callee, names)
+                || arguments.iter().any(|argument| {
+                    expression_references_any_identifier(argument.expression(), names)
+                })
+        }
+        Expression::Array(elements) => elements.iter().any(|element| match element {
+            ArrayElement::Expression(expression) | ArrayElement::Spread(expression) => {
+                expression_references_any_identifier(expression, names)
+            }
+        }),
+        Expression::Object(entries) => entries.iter().any(|entry| match entry {
+            ObjectEntry::Data { key, value } => {
+                expression_references_any_identifier(key, names)
+                    || expression_references_any_identifier(value, names)
+            }
+            ObjectEntry::Getter { key, getter } => {
+                expression_references_any_identifier(key, names)
+                    || expression_references_any_identifier(getter, names)
+            }
+            ObjectEntry::Setter { key, setter } => {
+                expression_references_any_identifier(key, names)
+                    || expression_references_any_identifier(setter, names)
+            }
+            ObjectEntry::Spread(expression) => {
+                expression_references_any_identifier(expression, names)
+            }
+        }),
+        Expression::Number(_)
+        | Expression::BigInt(_)
+        | Expression::String(_)
+        | Expression::Bool(_)
+        | Expression::Null
+        | Expression::Undefined
+        | Expression::NewTarget
+        | Expression::This
+        | Expression::Sent => false,
+    }
+}
+
 impl<'a> FunctionCompiler<'a> {
     pub(in crate::backend::direct_wasm) fn merge_bound_snapshot_updated_bindings(
         bindings: &mut HashMap<String, Expression>,
@@ -1095,6 +1186,125 @@ impl<'a> FunctionCompiler<'a> {
         ))
     }
 
+    fn bound_snapshot_argument_definitely_skips_parameter_default(
+        &self,
+        argument: &Expression,
+    ) -> bool {
+        let materialized = self.materialize_static_expression(argument);
+        if matches!(materialized, Expression::Undefined) {
+            return false;
+        }
+        matches!(
+            self.infer_value_kind(&materialized),
+            Some(kind) if !matches!(kind, StaticValueKind::Undefined | StaticValueKind::Unknown)
+        )
+    }
+
+    fn bound_snapshot_argument_default_usage(
+        &self,
+        argument: &Expression,
+        function_name: &str,
+    ) -> Option<bool> {
+        let materialized = self.materialize_static_expression(argument);
+        if matches!(materialized, Expression::Undefined) {
+            return Some(true);
+        }
+        if matches!(
+            self.resolve_static_primitive_expression_with_context(
+                &materialized,
+                Some(function_name)
+            ),
+            Some(Expression::Undefined)
+        ) {
+            return Some(true);
+        }
+        matches!(
+            self.infer_value_kind(&materialized),
+            Some(kind) if !matches!(kind, StaticValueKind::Undefined | StaticValueKind::Unknown)
+        )
+        .then_some(false)
+    }
+
+    fn bound_snapshot_call_uses_parameter_default(
+        &self,
+        user_function: &UserFunction,
+        arguments: &[Expression],
+        index: usize,
+    ) -> Option<bool> {
+        arguments
+            .get(index)
+            .map(|argument| {
+                self.bound_snapshot_argument_default_usage(argument, &user_function.name)
+            })
+            .unwrap_or(Some(true))
+    }
+
+    fn bound_snapshot_parameter_default_throw_outcome(
+        &self,
+        user_function: &UserFunction,
+        arguments: &[Expression],
+    ) -> Option<StaticEvalOutcome> {
+        for (index, default) in user_function.parameter_defaults.iter().enumerate() {
+            let Some(default) = default else {
+                continue;
+            };
+            if !self.bound_snapshot_call_uses_parameter_default(user_function, arguments, index)? {
+                continue;
+            }
+            if Self::parameter_default_references_uninitialized_parameter(
+                user_function,
+                index,
+                default,
+            ) {
+                return Some(StaticEvalOutcome::Throw(StaticThrowValue::NamedError(
+                    "ReferenceError",
+                )));
+            }
+            if let Some(outcome) = self
+                .resolve_static_parameter_default_direct_eval_throw_outcome(user_function, default)
+            {
+                return Some(outcome);
+            }
+        }
+        None
+    }
+
+    fn bound_snapshot_effectful_parameter_default_may_run(
+        &self,
+        user_function: &UserFunction,
+        arguments: &[Expression],
+    ) -> bool {
+        user_function
+            .parameter_defaults
+            .iter()
+            .enumerate()
+            .any(|(index, default)| {
+                default.as_ref().is_some_and(|default| {
+                    !inline_summary_side_effect_free_expression(default)
+                        && arguments.get(index).is_none_or(|argument| {
+                            !self.bound_snapshot_argument_definitely_skips_parameter_default(
+                                argument,
+                            )
+                        })
+                })
+            })
+    }
+
+    pub(in crate::backend::direct_wasm) fn parameter_default_references_uninitialized_parameter(
+        user_function: &UserFunction,
+        default_index: usize,
+        default: &Expression,
+    ) -> bool {
+        let mut uninitialized_names = HashSet::new();
+        for parameter_name in user_function.params.iter().skip(default_index) {
+            uninitialized_names.insert(parameter_name.clone());
+            if let Some(source_name) = scoped_binding_source_name(parameter_name) {
+                uninitialized_names.insert(source_name.to_string());
+            }
+        }
+        expression_references_any_identifier(default, &uninitialized_names)
+    }
+
     pub(in crate::backend::direct_wasm) fn resolve_bound_snapshot_user_function_outcome_with_arguments_and_this(
         &self,
         function_name: &str,
@@ -1149,12 +1359,13 @@ impl<'a> FunctionCompiler<'a> {
             }
             return None;
         }
+        if let Some(outcome) =
+            self.bound_snapshot_parameter_default_throw_outcome(user_function, arguments)
+        {
+            return Some((outcome, HashMap::new()));
+        }
         if user_function.has_parameter_defaults()
-            && !user_function
-                .parameter_defaults
-                .iter()
-                .flatten()
-                .all(inline_summary_side_effect_free_expression)
+            && self.bound_snapshot_effectful_parameter_default_may_run(user_function, arguments)
         {
             if trace {
                 eprintln!(
@@ -1233,12 +1444,30 @@ impl<'a> FunctionCompiler<'a> {
                 .get(index)
                 .cloned()
                 .unwrap_or(Expression::Undefined);
-            if matches!(parameter_value, Expression::Undefined)
+            let parameter_value_is_undefined = matches!(parameter_value, Expression::Undefined)
+                || matches!(
+                    self.resolve_static_primitive_expression_with_context(
+                        &parameter_value,
+                        Some(function_name)
+                    ),
+                    Some(Expression::Undefined)
+                );
+            if parameter_value_is_undefined
                 && let Some(default) = user_function
                     .parameter_defaults
                     .get(index)
                     .and_then(Option::as_ref)
             {
+                if Self::parameter_default_references_uninitialized_parameter(
+                    user_function,
+                    index,
+                    default,
+                ) {
+                    return Some((
+                        StaticEvalOutcome::Throw(StaticThrowValue::NamedError("ReferenceError")),
+                        HashMap::new(),
+                    ));
+                }
                 parameter_value = self
                     .evaluate_bound_snapshot_expression(
                         default,

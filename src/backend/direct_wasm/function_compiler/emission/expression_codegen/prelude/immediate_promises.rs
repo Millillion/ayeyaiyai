@@ -240,6 +240,15 @@ impl<'a> FunctionCompiler<'a> {
         name == "$DONE" || name.contains("$DONE")
     }
 
+    fn emit_done_callback_completion(&mut self, callback: &Expression) -> DirectResult<()> {
+        self.emit_numeric_expression(&Expression::Call {
+            callee: Box::new(callback.clone()),
+            arguments: vec![],
+        })?;
+        self.state.emission.output.instructions.push(0x1a);
+        Ok(())
+    }
+
     fn lowered_for_await_body_breaks_before_done(&self, body: &[Statement]) -> bool {
         let mut passed_done_guard = false;
         for statement in body {
@@ -742,9 +751,79 @@ impl<'a> FunctionCompiler<'a> {
             return None;
         }
         let function = self.resolve_registered_function_declaration(&function_name)?;
+        if let Some(outcome) =
+            self.async_function_parameter_default_throw_outcome(user_function, arguments)
+        {
+            return Some(outcome);
+        }
         self.lowered_for_await_throw_completion_outcome(&function.body)
             .or_else(|| self.lowered_for_await_break_close_outcome(&function.body))
             .or_else(|| self.direct_async_function_terminal_return_outcome(function, arguments))
+    }
+
+    fn async_function_parameter_default_throw_outcome(
+        &self,
+        user_function: &UserFunction,
+        arguments: &[CallArgument],
+    ) -> Option<StaticEvalOutcome> {
+        for (index, default) in user_function.parameter_defaults.iter().enumerate() {
+            let Some(default) = default else {
+                continue;
+            };
+            if !self.async_function_call_uses_parameter_default(arguments, index)? {
+                continue;
+            }
+            if Self::parameter_default_references_uninitialized_parameter(
+                user_function,
+                index,
+                default,
+            ) {
+                return Some(StaticEvalOutcome::Throw(StaticThrowValue::NamedError(
+                    "ReferenceError",
+                )));
+            }
+            if let Some(outcome) = self
+                .resolve_static_parameter_default_direct_eval_throw_outcome(user_function, default)
+            {
+                return Some(outcome);
+            }
+            let outcome = self
+                .resolve_terminal_call_expression_outcome(default)
+                .or_else(|| {
+                    let materialized = self.materialize_static_expression(default);
+                    (!static_expression_matches(&materialized, default))
+                        .then(|| self.resolve_terminal_call_expression_outcome(&materialized))
+                        .flatten()
+                });
+            if let Some(StaticEvalOutcome::Throw(throw_value)) = outcome {
+                return Some(StaticEvalOutcome::Throw(throw_value));
+            }
+        }
+        None
+    }
+
+    fn async_function_call_uses_parameter_default(
+        &self,
+        arguments: &[CallArgument],
+        index: usize,
+    ) -> Option<bool> {
+        let Some(argument) = arguments.get(index) else {
+            return Some(true);
+        };
+        let CallArgument::Expression(argument) = argument else {
+            return None;
+        };
+        let materialized = self.materialize_static_expression(argument);
+        Some(
+            matches!(materialized, Expression::Undefined)
+                || matches!(
+                    self.resolve_static_primitive_expression_with_context(
+                        &materialized,
+                        self.current_function_name()
+                    ),
+                    Some(Expression::Undefined)
+                ),
+        )
     }
 
     fn direct_async_function_terminal_return_outcome(
@@ -1033,6 +1112,37 @@ impl<'a> FunctionCompiler<'a> {
                 &result,
                 &updated_bindings,
             )?;
+            self.state
+                .speculation
+                .static_semantics
+                .last_bound_user_function_call = Some(BoundUserFunctionCallSnapshot {
+                function_name: function_name.clone(),
+                source_expression: None,
+                result_expression: Some(result.clone()),
+                prototype_source_expression: None,
+                updated_bindings: updated_bindings.clone(),
+            });
+            let user_scope_bindings = self
+                .user_function(function_name)
+                .map(|function| function.scope_bindings.clone())
+                .unwrap_or_default();
+            for (name, value) in &updated_bindings {
+                let source_name = scoped_binding_source_name(name).unwrap_or(name).to_string();
+                if user_scope_bindings.contains(&source_name) {
+                    continue;
+                }
+                let array_binding = self.resolve_array_binding_from_expression(value);
+                let object_binding = self.resolve_object_binding_from_expression(value);
+                let kind = self.infer_value_kind(value);
+                self.state.set_local_static_binding(
+                    &source_name,
+                    value.clone(),
+                    array_binding,
+                    object_binding,
+                    kind,
+                );
+                self.update_local_function_binding(&source_name, value);
+            }
             if self
                 .user_function(function_name)
                 .is_some_and(|function| function.is_async())
@@ -2003,8 +2113,10 @@ impl<'a> FunctionCompiler<'a> {
             return false;
         };
         if function.body.iter().any(|statement| {
-            let Statement::Expression(Expression::Call { callee, arguments }) = statement else {
-                return false;
+            let (callee, arguments) = match statement {
+                Statement::Expression(Expression::Call { callee, arguments })
+                | Statement::Return(Expression::Call { callee, arguments }) => (callee, arguments),
+                _ => return false,
             };
             let assertion_callee = match callee.as_ref() {
                 Expression::Identifier(name) => name == "__assertSameValue",
@@ -2049,8 +2161,10 @@ impl<'a> FunctionCompiler<'a> {
             return false;
         };
         function.body.iter().any(|statement| {
-            let Statement::Expression(Expression::Call { callee, arguments }) = statement else {
-                return false;
+            let (callee, arguments) = match statement {
+                Statement::Expression(Expression::Call { callee, arguments })
+                | Statement::Return(Expression::Call { callee, arguments }) => (callee, arguments),
+                _ => return false,
             };
             let assertion_callee = match callee.as_ref() {
                 Expression::Identifier(name) => name == "__assertSameValue",
@@ -3272,16 +3386,12 @@ impl<'a> FunctionCompiler<'a> {
                 });
         if callback_is_done_binding {
             if matches!(argument, Expression::Undefined) {
-                self.push_i32_const(JS_UNDEFINED_TAG);
-                self.state.emission.output.instructions.push(0x1a);
-                return Ok(());
+                return self.emit_done_callback_completion(&effective_callback);
             }
             if let Some(outcome) = self.consume_immediate_promise_outcome(argument)? {
                 match outcome {
                     StaticEvalOutcome::Value(Expression::Undefined) => {
-                        self.push_i32_const(JS_UNDEFINED_TAG);
-                        self.state.emission.output.instructions.push(0x1a);
-                        return Ok(());
+                        return self.emit_done_callback_completion(&effective_callback);
                     }
                     StaticEvalOutcome::Value(value) => {
                         self.emit_numeric_expression(&Expression::Call {
@@ -3318,9 +3428,7 @@ impl<'a> FunctionCompiler<'a> {
         if matches!(&effective_callback, Expression::Identifier(name) if Self::is_done_callback_binding_name(name))
             && matches!(effective_argument, Expression::Undefined)
         {
-            self.push_i32_const(JS_UNDEFINED_TAG);
-            self.state.emission.output.instructions.push(0x1a);
-            return Ok(());
+            return self.emit_done_callback_completion(&effective_callback);
         }
         let inline_safe_argument = self.inline_safe_argument_expression(&effective_argument);
         if let Some(user_function) = self
@@ -3330,9 +3438,7 @@ impl<'a> FunctionCompiler<'a> {
             if Self::is_done_callback_binding_name(&user_function.name)
                 && matches!(effective_argument, Expression::Undefined)
             {
-                self.push_i32_const(JS_UNDEFINED_TAG);
-                self.state.emission.output.instructions.push(0x1a);
-                return Ok(());
+                return self.emit_done_callback_completion(&effective_callback);
             }
             if self
                 .immediate_promise_callback_statically_succeeds(&user_function, &effective_argument)
