@@ -142,6 +142,89 @@ fn simple_regexp_dot_atom_matches(pattern: &str, subject: &str, unicode: bool) -
     })
 }
 
+fn simple_regexp_is_whitespace_code_unit(unit: u16) -> bool {
+    matches!(
+        unit,
+        0x0009
+            | 0x000b
+            | 0x000c
+            | 0x0020
+            | 0x00a0
+            | 0x000a
+            | 0x000d
+            | 0x2028
+            | 0x2029
+            | 0xfeff
+            | 0x1680
+            | 0x2000..=0x200a | 0x202f | 0x205f | 0x3000
+    )
+}
+
+fn simple_regexp_is_word_code_unit(unit: u16) -> bool {
+    matches!(unit, 0x0030..=0x0039 | 0x0041..=0x005a | 0x005f | 0x0061..=0x007a)
+}
+
+fn simple_regexp_character_class_escape_matches(
+    pattern: &str,
+    subject: &str,
+    unicode: bool,
+) -> Option<bool> {
+    let (pattern, anchored_start) = pattern
+        .strip_prefix('^')
+        .map_or((pattern, false), |rest| (rest, true));
+    let (pattern, anchored_end) = pattern
+        .strip_suffix('$')
+        .map_or((pattern, false), |rest| (rest, true));
+    let mut pattern_chars = pattern.chars();
+    if pattern_chars.next()? != '\\' {
+        return None;
+    }
+    let escape = pattern_chars.next()?;
+    if pattern_chars.next().is_some() || !matches!(escape, 'd' | 'D' | 's' | 'S' | 'w' | 'W') {
+        return None;
+    }
+
+    let matches_unit = |unit| {
+        let matched = match escape {
+            'd' | 'D' => (0x0030..=0x0039).contains(&unit),
+            's' | 'S' => simple_regexp_is_whitespace_code_unit(unit),
+            'w' | 'W' => simple_regexp_is_word_code_unit(unit),
+            _ => return false,
+        };
+        match escape {
+            'D' | 'S' | 'W' => !matched,
+            _ => matched,
+        }
+    };
+
+    if unicode {
+        let subject_chars = subject.chars().collect::<Vec<_>>();
+        let matches_char = |character: char| {
+            let code_units = js_string_utf16_code_units(&character.to_string());
+            code_units.len() == 1 && matches_unit(code_units[0])
+                || code_units.len() > 1 && matches!(escape, 'D' | 'S' | 'W')
+        };
+        return Some(match (anchored_start, anchored_end) {
+            (true, true) => {
+                subject_chars.len() == 1 && subject_chars.first().copied().is_some_and(matches_char)
+            }
+            (true, false) => subject_chars.first().copied().is_some_and(matches_char),
+            (false, true) => subject_chars.last().copied().is_some_and(matches_char),
+            (false, false) => subject_chars.into_iter().any(matches_char),
+        });
+    }
+
+    let code_units = js_string_utf16_code_units(subject);
+    Some(match (anchored_start, anchored_end) {
+        (true, true) => {
+            code_units.len() == 1 && code_units.first().copied().is_some_and(matches_unit)
+        }
+        (true, false) => code_units.first().copied().is_some_and(matches_unit),
+        (false, true) => code_units.last().copied().is_some_and(matches_unit),
+        (false, false) => code_units.into_iter().any(matches_unit),
+    })
+}
+
 fn simple_regexp_single_character_class_matches(pattern: &str, subject: &str) -> Option<bool> {
     let (pattern, anchored_start) = pattern
         .strip_prefix('^')
@@ -261,6 +344,10 @@ fn simple_regexp_pattern_matches(
     ignore_case: bool,
     unicode: bool,
 ) -> Option<bool> {
+    if let Some(matches) = simple_regexp_character_class_escape_matches(pattern, subject, unicode) {
+        return Some(matches);
+    }
+
     if let Some(decoded_pattern) = simple_regexp_decode_unicode_escapes(pattern) {
         let normalized_pattern;
         let normalized_subject;
