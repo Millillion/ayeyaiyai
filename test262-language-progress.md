@@ -1,4 +1,4 @@
-478/23645 (2.02%)
+479/23645 (2.03%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -8,7 +8,7 @@ Sub-category progress
 - source-text: 1/1 (100.00%)
 - identifiers: 268/268 (100.00%)
 - keywords: 25/25 (100.00%)
-- reserved-words: 12/27 (44.44%)
+- reserved-words: 13/27 (48.15%)
 - future-reserved-words: 0/55 (0.00%)
 - literals: 1/534 (0.19%)
 - directive-prologue: 0/62 (0.00%)
@@ -522,7 +522,7 @@ Sub-category progress
   - [x] test/language/reserved-words/ident-name-keyword-prop-name.js
   - [x] test/language/reserved-words/ident-name-reserved-word-literal-accessor.js
   - [x] test/language/reserved-words/ident-name-reserved-word-literal-memberexpr-str.js
-  - [ ] test/language/reserved-words/ident-name-reserved-word-literal-memberexpr.js
+  - [x] test/language/reserved-words/ident-name-reserved-word-literal-memberexpr.js
   - [ ] test/language/reserved-words/ident-name-reserved-word-literal-prop-name.js
   - [ ] test/language/reserved-words/ident-reference-false-escaped.js
   - [ ] test/language/reserved-words/ident-reference-false.js
