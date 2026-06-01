@@ -193,12 +193,130 @@ fn validate_string_literal_syntax(string: &Str) -> Result<()> {
     Ok(())
 }
 
+fn regex_literal_pattern_source(raw: &str) -> Option<&str> {
+    if !raw.starts_with('/') {
+        return None;
+    }
+
+    let mut escaped = false;
+    let mut in_class = false;
+    for (offset, ch) in raw[1..].char_indices() {
+        let index = 1 + offset;
+        if escaped {
+            escaped = false;
+            continue;
+        }
+        match ch {
+            '\\' => escaped = true,
+            '[' if !in_class => in_class = true,
+            ']' if in_class => in_class = false,
+            '/' if !in_class => return raw.get(1..index),
+            _ => {}
+        }
+    }
+    None
+}
+
+fn validate_regex_modifier_flags(flags: &str) -> Result<Vec<char>> {
+    let mut seen = HashSet::new();
+    let mut parsed = Vec::new();
+    for ch in flags.chars() {
+        ensure!(
+            matches!(ch, 'i' | 'm' | 's'),
+            "invalid regular expression modifier flag"
+        );
+        ensure!(
+            seen.insert(ch),
+            "duplicate regular expression modifier flag"
+        );
+        parsed.push(ch);
+    }
+    Ok(parsed)
+}
+
+fn validate_regex_modifier_group(pattern: &str, question_offset: usize) -> Result<()> {
+    let head_start = question_offset + '?'.len_utf8();
+    let Some(head) = pattern.get(head_start..) else {
+        return Ok(());
+    };
+    if head.starts_with([':', '=', '!', '<']) {
+        return Ok(());
+    }
+
+    let mut terminator = None;
+    for (offset, ch) in head.char_indices() {
+        if matches!(ch, ':' | ')') {
+            terminator = Some((head_start + offset, ch));
+            break;
+        }
+    }
+    let Some((terminator_offset, terminator_ch)) = terminator else {
+        return Ok(());
+    };
+
+    let modifier_head = &pattern[head_start..terminator_offset];
+    ensure!(
+        terminator_ch == ':',
+        "regular expression modifier group requires ':'"
+    );
+
+    let (enabled, disabled, arithmetic) =
+        if let Some((enabled, disabled)) = modifier_head.split_once('-') {
+            (enabled, disabled, true)
+        } else {
+            (modifier_head, "", false)
+        };
+    ensure!(
+        !arithmetic || !enabled.is_empty() || !disabled.is_empty(),
+        "regular expression arithmetic modifier cannot be empty"
+    );
+
+    let enabled_flags = validate_regex_modifier_flags(enabled)?;
+    let disabled_flags = validate_regex_modifier_flags(disabled)?;
+    ensure!(
+        !enabled_flags
+            .iter()
+            .any(|flag| disabled_flags.contains(flag)),
+        "regular expression modifier flag cannot be both enabled and disabled"
+    );
+    Ok(())
+}
+
+fn validate_regex_modifier_syntax(pattern: &str) -> Result<()> {
+    let mut escaped = false;
+    let mut in_class = false;
+    let mut chars = pattern.char_indices().peekable();
+    while let Some((offset, ch)) = chars.next() {
+        if escaped {
+            escaped = false;
+            continue;
+        }
+        match ch {
+            '\\' => escaped = true,
+            '[' if !in_class => in_class = true,
+            ']' if in_class => in_class = false,
+            '(' if !in_class => {
+                if let Some((question_offset, '?')) = chars.peek().copied() {
+                    validate_regex_modifier_group(pattern, question_offset)?;
+                }
+            }
+            _ => {
+                let _ = offset;
+            }
+        }
+    }
+    Ok(())
+}
+
 fn validate_regex_literal_syntax(regex: &Regex, file: &swc_common::SourceFile) -> Result<()> {
     let raw = source_slice_for_span(file, regex.span)?;
     ensure!(
         !raw.contains(['\u{2028}', '\u{2029}']),
         "regular expression literals cannot contain line terminators"
     );
+    if let Some(pattern) = regex_literal_pattern_source(raw) {
+        validate_regex_modifier_syntax(pattern)?;
+    }
     Ok(())
 }
 

@@ -1,4 +1,4 @@
-815/23645 (3.45%)
+901/23645 (3.81%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -10,7 +10,7 @@ Sub-category progress
 - keywords: 25/25 (100.00%)
 - reserved-words: 27/27 (100.00%)
 - future-reserved-words: 55/55 (100.00%)
-- literals: 268/534 (50.19%)
+- literals: 354/534 (66.29%)
 - directive-prologue: 0/62 (0.00%)
 - asi: 0/102 (0.00%)
 - statementList: 0/80 (0.00%)
@@ -859,92 +859,92 @@ Sub-category progress
   - [x] test/language/literals/regexp/S7.8.5_A3.1_T6.js
   - [x] test/language/literals/regexp/S7.8.5_A4.1.js
   - [x] test/language/literals/regexp/S7.8.5_A4.2.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-add-remove-i.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-add-remove-m.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-add-remove-multi-duplicate.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-add-remove-s-escape.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-add-remove-s.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-both-empty.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-code-point-repeat-i-1.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-code-point-repeat-i-2.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-no-colon-1.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-no-colon-2.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-no-colon-3.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-other-code-point-arbitrary.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-other-code-point-combining-i.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-other-code-point-combining-m.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-other-code-point-combining-s.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-other-code-point-d.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-other-code-point-g.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-other-code-point-non-display-1.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-other-code-point-non-display-2.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-other-code-point-non-flag.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-other-code-point-u.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-other-code-point-uppercase-I.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-other-code-point-y.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-other-code-point-zwj.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-other-code-point-zwnbsp.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-other-code-point-zwnj.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-add-remove-i.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-add-remove-m.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-add-remove-multi-duplicate.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-add-remove-s-escape.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-add-remove-s.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-code-point-repeat-i-1.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-code-point-repeat-i-2.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-other-code-point-arbitrary.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-other-code-point-combining-i.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-other-code-point-combining-m.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-other-code-point-combining-s.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-other-code-point-d.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-other-code-point-g.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-other-code-point-non-display-1.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-other-code-point-non-display-2.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-other-code-point-non-flag.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-other-code-point-u.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-other-code-point-uppercase-I.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-other-code-point-y.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-other-code-point-zwj.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-other-code-point-zwnbsp.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-other-code-point-zwnj.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-should-not-case-fold-i.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-should-not-case-fold-m.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-should-not-case-fold-s.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-should-not-unicode-case-fold-i.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-should-not-unicode-case-fold-s.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-should-not-case-fold-i.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-should-not-case-fold-m.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-should-not-case-fold-s.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-should-not-unicode-case-fold-i.js
-  - [ ] test/language/literals/regexp/early-err-arithmetic-modifiers-should-not-unicode-case-fold-s.js
-  - [ ] test/language/literals/regexp/early-err-bad-flag.js
-  - [ ] test/language/literals/regexp/early-err-dup-flag.js
-  - [ ] test/language/literals/regexp/early-err-flags-unicode-escape.js
-  - [ ] test/language/literals/regexp/early-err-modifiers-code-point-repeat-i-1.js
-  - [ ] test/language/literals/regexp/early-err-modifiers-code-point-repeat-i-2.js
-  - [ ] test/language/literals/regexp/early-err-modifiers-other-code-point-arbitrary.js
-  - [ ] test/language/literals/regexp/early-err-modifiers-other-code-point-combining-i.js
-  - [ ] test/language/literals/regexp/early-err-modifiers-other-code-point-combining-m.js
-  - [ ] test/language/literals/regexp/early-err-modifiers-other-code-point-combining-s.js
-  - [ ] test/language/literals/regexp/early-err-modifiers-other-code-point-d.js
-  - [ ] test/language/literals/regexp/early-err-modifiers-other-code-point-g.js
-  - [ ] test/language/literals/regexp/early-err-modifiers-other-code-point-non-display-1.js
-  - [ ] test/language/literals/regexp/early-err-modifiers-other-code-point-non-display-2.js
-  - [ ] test/language/literals/regexp/early-err-modifiers-other-code-point-non-flag.js
-  - [ ] test/language/literals/regexp/early-err-modifiers-other-code-point-u.js
-  - [ ] test/language/literals/regexp/early-err-modifiers-other-code-point-uppercase-I.js
-  - [ ] test/language/literals/regexp/early-err-modifiers-other-code-point-y.js
-  - [ ] test/language/literals/regexp/early-err-modifiers-other-code-point-zwj.js
-  - [ ] test/language/literals/regexp/early-err-modifiers-other-code-point-zwnbsp.js
-  - [ ] test/language/literals/regexp/early-err-modifiers-other-code-point-zwnj.js
-  - [ ] test/language/literals/regexp/early-err-modifiers-should-not-case-fold-i.js
-  - [ ] test/language/literals/regexp/early-err-modifiers-should-not-case-fold-m.js
-  - [ ] test/language/literals/regexp/early-err-modifiers-should-not-case-fold-s.js
-  - [ ] test/language/literals/regexp/early-err-modifiers-should-not-unicode-case-fold-i.js
-  - [ ] test/language/literals/regexp/early-err-modifiers-should-not-unicode-case-fold-s.js
-  - [ ] test/language/literals/regexp/early-err-modifiers-should-not-unicode-escape-i.js
-  - [ ] test/language/literals/regexp/early-err-modifiers-should-not-unicode-escape-m.js
-  - [ ] test/language/literals/regexp/early-err-modifiers-should-not-unicode-escape-s.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-add-remove-i.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-add-remove-m.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-add-remove-multi-duplicate.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-add-remove-s-escape.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-add-remove-s.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-both-empty.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-code-point-repeat-i-1.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-code-point-repeat-i-2.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-no-colon-1.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-no-colon-2.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-no-colon-3.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-other-code-point-arbitrary.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-other-code-point-combining-i.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-other-code-point-combining-m.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-other-code-point-combining-s.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-other-code-point-d.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-other-code-point-g.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-other-code-point-non-display-1.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-other-code-point-non-display-2.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-other-code-point-non-flag.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-other-code-point-u.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-other-code-point-uppercase-I.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-other-code-point-y.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-other-code-point-zwj.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-other-code-point-zwnbsp.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-other-code-point-zwnj.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-add-remove-i.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-add-remove-m.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-add-remove-multi-duplicate.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-add-remove-s-escape.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-add-remove-s.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-code-point-repeat-i-1.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-code-point-repeat-i-2.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-other-code-point-arbitrary.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-other-code-point-combining-i.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-other-code-point-combining-m.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-other-code-point-combining-s.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-other-code-point-d.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-other-code-point-g.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-other-code-point-non-display-1.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-other-code-point-non-display-2.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-other-code-point-non-flag.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-other-code-point-u.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-other-code-point-uppercase-I.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-other-code-point-y.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-other-code-point-zwj.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-other-code-point-zwnbsp.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-other-code-point-zwnj.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-should-not-case-fold-i.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-should-not-case-fold-m.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-should-not-case-fold-s.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-should-not-unicode-case-fold-i.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-reverse-should-not-unicode-case-fold-s.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-should-not-case-fold-i.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-should-not-case-fold-m.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-should-not-case-fold-s.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-should-not-unicode-case-fold-i.js
+  - [x] test/language/literals/regexp/early-err-arithmetic-modifiers-should-not-unicode-case-fold-s.js
+  - [x] test/language/literals/regexp/early-err-bad-flag.js
+  - [x] test/language/literals/regexp/early-err-dup-flag.js
+  - [x] test/language/literals/regexp/early-err-flags-unicode-escape.js
+  - [x] test/language/literals/regexp/early-err-modifiers-code-point-repeat-i-1.js
+  - [x] test/language/literals/regexp/early-err-modifiers-code-point-repeat-i-2.js
+  - [x] test/language/literals/regexp/early-err-modifiers-other-code-point-arbitrary.js
+  - [x] test/language/literals/regexp/early-err-modifiers-other-code-point-combining-i.js
+  - [x] test/language/literals/regexp/early-err-modifiers-other-code-point-combining-m.js
+  - [x] test/language/literals/regexp/early-err-modifiers-other-code-point-combining-s.js
+  - [x] test/language/literals/regexp/early-err-modifiers-other-code-point-d.js
+  - [x] test/language/literals/regexp/early-err-modifiers-other-code-point-g.js
+  - [x] test/language/literals/regexp/early-err-modifiers-other-code-point-non-display-1.js
+  - [x] test/language/literals/regexp/early-err-modifiers-other-code-point-non-display-2.js
+  - [x] test/language/literals/regexp/early-err-modifiers-other-code-point-non-flag.js
+  - [x] test/language/literals/regexp/early-err-modifiers-other-code-point-u.js
+  - [x] test/language/literals/regexp/early-err-modifiers-other-code-point-uppercase-I.js
+  - [x] test/language/literals/regexp/early-err-modifiers-other-code-point-y.js
+  - [x] test/language/literals/regexp/early-err-modifiers-other-code-point-zwj.js
+  - [x] test/language/literals/regexp/early-err-modifiers-other-code-point-zwnbsp.js
+  - [x] test/language/literals/regexp/early-err-modifiers-other-code-point-zwnj.js
+  - [x] test/language/literals/regexp/early-err-modifiers-should-not-case-fold-i.js
+  - [x] test/language/literals/regexp/early-err-modifiers-should-not-case-fold-m.js
+  - [x] test/language/literals/regexp/early-err-modifiers-should-not-case-fold-s.js
+  - [x] test/language/literals/regexp/early-err-modifiers-should-not-unicode-case-fold-i.js
+  - [x] test/language/literals/regexp/early-err-modifiers-should-not-unicode-case-fold-s.js
+  - [x] test/language/literals/regexp/early-err-modifiers-should-not-unicode-escape-i.js
+  - [x] test/language/literals/regexp/early-err-modifiers-should-not-unicode-escape-m.js
+  - [x] test/language/literals/regexp/early-err-modifiers-should-not-unicode-escape-s.js
   - [ ] test/language/literals/regexp/early-err-pattern.js
   - [ ] test/language/literals/regexp/inequality.js
   - [ ] test/language/literals/regexp/invalid-braced-quantifier-exact.js

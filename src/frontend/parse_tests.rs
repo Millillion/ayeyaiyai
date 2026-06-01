@@ -453,6 +453,30 @@ fn validate_script_goal_rejects_line_terminators_in_regex_literals() {
 }
 
 #[test]
+fn validate_script_goal_rejects_invalid_regex_modifier_groups() {
+    for source in [
+        "/(?i-i:a)/;",
+        "/(?-:a)/;",
+        "/(?-ii:a)/;",
+        "/(?-g:a)/;",
+        "/(?ms-i)/;",
+    ] {
+        assert!(
+            frontend::validate_script_goal(source).is_err(),
+            "source should fail to parse:\n{source}"
+        );
+    }
+}
+
+#[test]
+fn validate_script_goal_accepts_basic_regex_modifier_groups() {
+    for source in ["/(?i:a)/;", "/(?ims-:a)/;", "/(?-s:a)/;"] {
+        frontend::validate_script_goal(source)
+            .unwrap_or_else(|error| panic!("source should parse:\n{source}\n{error:?}"));
+    }
+}
+
+#[test]
 fn parse_script_goal_accepts_yield_assignment_pattern_shorthand_outside_strict_and_generator() {
     let source = r#"
     var yield;
