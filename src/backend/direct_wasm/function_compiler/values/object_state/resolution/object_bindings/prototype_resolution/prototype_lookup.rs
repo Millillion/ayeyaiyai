@@ -1393,6 +1393,9 @@ impl<'a> FunctionCompiler<'a> {
                     let Expression::Identifier(name) = callee.as_ref() else {
                         return None;
                     };
+                    if name == "RegExp" && this.expression_is_static_regexp_instance(expression) {
+                        return Some(Self::prototype_member_expression("RegExp"));
+                    }
                     if native_error_runtime_value(name).is_some() {
                         return Some(Self::prototype_member_expression(name));
                     }
