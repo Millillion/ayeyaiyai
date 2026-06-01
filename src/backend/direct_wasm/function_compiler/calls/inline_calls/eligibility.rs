@@ -645,13 +645,26 @@ impl<'a> FunctionCompiler<'a> {
         }
 
         let binding = match callee {
-            Expression::Member { object, property } => self
-                .resolve_member_function_binding_shallow_without_runtime_public_this_guard(
-                    object, property,
-                )
-                .or_else(|| {
+            Expression::Member { object, property } => {
+                let shallow_binding = self
+                    .resolve_member_function_binding_shallow_without_runtime_public_this_guard(
+                        object, property,
+                    );
+                let receiver_function_binding = self
+                    .resolve_function_binding_from_expression(object)
+                    .or_else(|| {
+                        self.private_access_registered_function_binding_for_identifier(object)
+                    });
+                if matches!(property.as_ref(), Expression::String(name) if name == "hasOwnProperty")
+                    && receiver_function_binding.is_some()
+                    && (shallow_binding.is_none() || shallow_binding == receiver_function_binding)
+                {
+                    return false;
+                }
+                shallow_binding.or_else(|| {
                     self.resolve_syntactic_builtin_member_function_binding(object, property)
-                }),
+                })
+            }
             _ => self.resolve_function_binding_from_expression(callee),
         };
         match binding {
@@ -663,6 +676,38 @@ impl<'a> FunctionCompiler<'a> {
             Some(LocalFunctionBinding::Builtin(_)) => false,
             None => matches!(callee, Expression::Member { .. }),
         }
+    }
+
+    fn private_access_binding_matches_identifier(binding: &str, identifier: &str) -> bool {
+        let binding_source = scoped_binding_source_name(binding).unwrap_or(binding);
+        let identifier_source = scoped_binding_source_name(identifier).unwrap_or(identifier);
+        binding == identifier
+            || binding == identifier_source
+            || binding_source == identifier
+            || binding_source == identifier_source
+    }
+
+    fn private_access_registered_function_binding_for_identifier(
+        &self,
+        expression: &Expression,
+    ) -> Option<LocalFunctionBinding> {
+        let Expression::Identifier(identifier) = expression else {
+            return None;
+        };
+        self.user_functions().into_iter().find_map(|user_function| {
+            let declaration = self.resolve_registered_function_declaration(&user_function.name)?;
+            (Self::private_access_binding_matches_identifier(&user_function.name, identifier)
+                || declaration
+                    .top_level_binding
+                    .as_ref()
+                    .is_some_and(|binding| {
+                        Self::private_access_binding_matches_identifier(binding, identifier)
+                    })
+                || declaration.self_binding.as_ref().is_some_and(|binding| {
+                    Self::private_access_binding_matches_identifier(binding, identifier)
+                }))
+            .then(|| LocalFunctionBinding::User(user_function.name))
+        })
     }
 
     fn resolve_syntactic_builtin_member_function_binding(

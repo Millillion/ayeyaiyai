@@ -338,12 +338,48 @@ impl<'a> FunctionCompiler<'a> {
         saw_object_binding.then_some(Some(false))
     }
 
+    fn has_own_binding_matches_identifier(binding: &str, identifier: &str) -> bool {
+        let binding_source = scoped_binding_source_name(binding).unwrap_or(binding);
+        let identifier_source = scoped_binding_source_name(identifier).unwrap_or(identifier);
+        binding == identifier
+            || binding == identifier_source
+            || binding_source == identifier
+            || binding_source == identifier_source
+    }
+
+    fn has_own_expression_names_registered_user_function(&self, expression: &Expression) -> bool {
+        let Expression::Identifier(identifier) = expression else {
+            return false;
+        };
+        self.user_functions().into_iter().any(|user_function| {
+            self.resolve_registered_function_declaration(&user_function.name)
+                .is_some_and(|declaration| {
+                    Self::has_own_binding_matches_identifier(&user_function.name, identifier)
+                        || declaration
+                            .top_level_binding
+                            .as_ref()
+                            .is_some_and(|binding| {
+                                Self::has_own_binding_matches_identifier(binding, identifier)
+                            })
+                        || declaration.self_binding.as_ref().is_some_and(|binding| {
+                            Self::has_own_binding_matches_identifier(binding, identifier)
+                        })
+                })
+        })
+    }
+
     pub(in crate::backend::direct_wasm) fn resolve_function_object_has_own_property(
         &self,
         object: &Expression,
         property: &Expression,
     ) -> Option<bool> {
-        self.resolve_function_binding_from_expression(object)?;
+        if self
+            .resolve_function_binding_from_expression(object)
+            .is_none()
+            && !self.has_own_expression_names_registered_user_function(object)
+        {
+            return None;
+        }
 
         let resolved_object = self
             .resolve_bound_alias_expression(object)
@@ -495,10 +531,10 @@ impl<'a> FunctionCompiler<'a> {
             };
         }
 
-        if self
-            .resolve_function_binding_from_expression(object)
-            .is_some()
-        {
+        let function_binding = self.resolve_function_binding_from_expression(object);
+        let names_registered_function =
+            self.has_own_expression_names_registered_user_function(object);
+        if function_binding.is_some() || names_registered_function {
             return self.resolve_function_object_has_own_property(object, argument_property);
         }
 

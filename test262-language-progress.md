@@ -1,4 +1,4 @@
-1364/23645 (5.77%)
+1366/23645 (5.78%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,7 +14,7 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 43/9337 (0.46%)
+- statements: 45/9337 (0.48%)
 - expressions: 0/11038 (0.00%)
 - types: 0/113 (0.00%)
 - function-code: 0/217 (0.00%)
@@ -1412,8 +1412,8 @@ Sub-category progress
   - [x] test/language/statements/async-function/evaluation-this-value-global.js
   - [x] test/language/statements/async-function/evaluation-this-value-passed.js
   - [x] test/language/statements/async-function/evaluation-unmapped-arguments.js
-  - [ ] test/language/statements/async-function/forbidden-ext/b1/async-func-decl-forbidden-ext-direct-access-prop-arguments.js
-  - [ ] test/language/statements/async-function/forbidden-ext/b1/async-func-decl-forbidden-ext-direct-access-prop-caller.js
+  - [x] test/language/statements/async-function/forbidden-ext/b1/async-func-decl-forbidden-ext-direct-access-prop-arguments.js
+  - [x] test/language/statements/async-function/forbidden-ext/b1/async-func-decl-forbidden-ext-direct-access-prop-caller.js
   - [ ] test/language/statements/async-function/forbidden-ext/b2/async-func-decl-forbidden-ext-indirect-access-own-prop-caller-get.js
   - [ ] test/language/statements/async-function/forbidden-ext/b2/async-func-decl-forbidden-ext-indirect-access-own-prop-caller-value.js
   - [ ] test/language/statements/async-function/forbidden-ext/b2/async-func-decl-forbidden-ext-indirect-access-prop-caller.js

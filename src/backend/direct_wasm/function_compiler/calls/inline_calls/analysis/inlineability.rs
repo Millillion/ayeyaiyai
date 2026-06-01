@@ -948,4 +948,550 @@ impl<'a> FunctionCompiler<'a> {
                 })
             })
     }
+
+    fn inline_binding_name_matches_source(name: &str, candidate: &str) -> bool {
+        name == candidate
+            || scoped_binding_source_name(name).is_some_and(|source| source == candidate)
+            || scoped_binding_source_name(candidate).is_some_and(|source| source == name)
+            || scoped_binding_source_name(name)
+                .zip(scoped_binding_source_name(candidate))
+                .is_some_and(|(name_source, candidate_source)| name_source == candidate_source)
+    }
+
+    fn identifier_matches_any_binding(name: &str, candidates: &HashSet<String>) -> bool {
+        candidates
+            .iter()
+            .any(|candidate| Self::inline_binding_name_matches_source(name, candidate))
+    }
+
+    fn identifier_matches_self_function_binding(
+        name: &str,
+        function: &FunctionDeclaration,
+        user_function: &UserFunction,
+    ) -> bool {
+        Self::inline_binding_name_matches_source(name, &user_function.name)
+            || function
+                .top_level_binding
+                .as_deref()
+                .is_some_and(|binding| Self::inline_binding_name_matches_source(name, binding))
+            || function
+                .self_binding
+                .as_deref()
+                .is_some_and(|binding| Self::inline_binding_name_matches_source(name, binding))
+    }
+
+    fn expression_is_supported_self_function_has_own_property_call(
+        expression: &Expression,
+        captured_user_function_names: &HashSet<String>,
+        function: &FunctionDeclaration,
+        user_function: &UserFunction,
+    ) -> bool {
+        let Expression::Call { callee, arguments } = expression else {
+            return false;
+        };
+        let Expression::Member { object, property } = callee.as_ref() else {
+            return false;
+        };
+        if !matches!(property.as_ref(), Expression::String(name) if name == "hasOwnProperty") {
+            return false;
+        }
+        let Expression::Identifier(object_name) = object.as_ref() else {
+            return false;
+        };
+        if !Self::identifier_matches_any_binding(object_name, captured_user_function_names)
+            || !Self::identifier_matches_self_function_binding(object_name, function, user_function)
+        {
+            return false;
+        }
+        let [CallArgument::Expression(Expression::String(property_name))] = arguments.as_slice()
+        else {
+            return false;
+        };
+        property_name == "caller" || property_name == "arguments"
+    }
+
+    fn expression_references_only_supported_self_function_has_own_property(
+        expression: &Expression,
+        captured_user_function_names: &HashSet<String>,
+        function: &FunctionDeclaration,
+        user_function: &UserFunction,
+    ) -> bool {
+        if Self::expression_is_supported_self_function_has_own_property_call(
+            expression,
+            captured_user_function_names,
+            function,
+            user_function,
+        ) {
+            return true;
+        }
+        match expression {
+            Expression::Identifier(name) => {
+                !Self::identifier_matches_any_binding(name, captured_user_function_names)
+            }
+            Expression::Array(elements) => elements.iter().all(|element| match element {
+                ArrayElement::Expression(expression) | ArrayElement::Spread(expression) => {
+                    Self::expression_references_only_supported_self_function_has_own_property(
+                        expression,
+                        captured_user_function_names,
+                        function,
+                        user_function,
+                    )
+                }
+            }),
+            Expression::Object(entries) => entries.iter().all(|entry| match entry {
+                ObjectEntry::Data { key, value } => {
+                    Self::expression_references_only_supported_self_function_has_own_property(
+                        key,
+                        captured_user_function_names,
+                        function,
+                        user_function,
+                    ) && Self::expression_references_only_supported_self_function_has_own_property(
+                        value,
+                        captured_user_function_names,
+                        function,
+                        user_function,
+                    )
+                }
+                ObjectEntry::Getter { key, getter } => {
+                    Self::expression_references_only_supported_self_function_has_own_property(
+                        key,
+                        captured_user_function_names,
+                        function,
+                        user_function,
+                    ) && Self::expression_references_only_supported_self_function_has_own_property(
+                        getter,
+                        captured_user_function_names,
+                        function,
+                        user_function,
+                    )
+                }
+                ObjectEntry::Setter { key, setter } => {
+                    Self::expression_references_only_supported_self_function_has_own_property(
+                        key,
+                        captured_user_function_names,
+                        function,
+                        user_function,
+                    ) && Self::expression_references_only_supported_self_function_has_own_property(
+                        setter,
+                        captured_user_function_names,
+                        function,
+                        user_function,
+                    )
+                }
+                ObjectEntry::Spread(expression) => {
+                    Self::expression_references_only_supported_self_function_has_own_property(
+                        expression,
+                        captured_user_function_names,
+                        function,
+                        user_function,
+                    )
+                }
+            }),
+            Expression::Member { object, property } => {
+                Self::expression_references_only_supported_self_function_has_own_property(
+                    object,
+                    captured_user_function_names,
+                    function,
+                    user_function,
+                ) && Self::expression_references_only_supported_self_function_has_own_property(
+                    property,
+                    captured_user_function_names,
+                    function,
+                    user_function,
+                )
+            }
+            Expression::SuperMember { property } => {
+                Self::expression_references_only_supported_self_function_has_own_property(
+                    property,
+                    captured_user_function_names,
+                    function,
+                    user_function,
+                )
+            }
+            Expression::Assign { value, .. }
+            | Expression::Await(value)
+            | Expression::EnumerateKeys(value)
+            | Expression::GetIterator(value)
+            | Expression::IteratorClose(value)
+            | Expression::Unary {
+                expression: value, ..
+            } => Self::expression_references_only_supported_self_function_has_own_property(
+                value,
+                captured_user_function_names,
+                function,
+                user_function,
+            ),
+            Expression::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                Self::expression_references_only_supported_self_function_has_own_property(
+                    object,
+                    captured_user_function_names,
+                    function,
+                    user_function,
+                ) && Self::expression_references_only_supported_self_function_has_own_property(
+                    property,
+                    captured_user_function_names,
+                    function,
+                    user_function,
+                ) && Self::expression_references_only_supported_self_function_has_own_property(
+                    value,
+                    captured_user_function_names,
+                    function,
+                    user_function,
+                )
+            }
+            Expression::AssignSuperMember { property, value } => {
+                Self::expression_references_only_supported_self_function_has_own_property(
+                    property,
+                    captured_user_function_names,
+                    function,
+                    user_function,
+                ) && Self::expression_references_only_supported_self_function_has_own_property(
+                    value,
+                    captured_user_function_names,
+                    function,
+                    user_function,
+                )
+            }
+            Expression::Binary { left, right, .. } => {
+                Self::expression_references_only_supported_self_function_has_own_property(
+                    left,
+                    captured_user_function_names,
+                    function,
+                    user_function,
+                ) && Self::expression_references_only_supported_self_function_has_own_property(
+                    right,
+                    captured_user_function_names,
+                    function,
+                    user_function,
+                )
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                Self::expression_references_only_supported_self_function_has_own_property(
+                    condition,
+                    captured_user_function_names,
+                    function,
+                    user_function,
+                ) && Self::expression_references_only_supported_self_function_has_own_property(
+                    then_expression,
+                    captured_user_function_names,
+                    function,
+                    user_function,
+                ) && Self::expression_references_only_supported_self_function_has_own_property(
+                    else_expression,
+                    captured_user_function_names,
+                    function,
+                    user_function,
+                )
+            }
+            Expression::Sequence(expressions) => expressions.iter().all(|expression| {
+                Self::expression_references_only_supported_self_function_has_own_property(
+                    expression,
+                    captured_user_function_names,
+                    function,
+                    user_function,
+                )
+            }),
+            Expression::Call { callee, arguments }
+            | Expression::SuperCall { callee, arguments }
+            | Expression::New { callee, arguments } => {
+                Self::expression_references_only_supported_self_function_has_own_property(
+                    callee,
+                    captured_user_function_names,
+                    function,
+                    user_function,
+                ) && arguments.iter().all(|argument| match argument {
+                    CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                        Self::expression_references_only_supported_self_function_has_own_property(
+                            expression,
+                            captured_user_function_names,
+                            function,
+                            user_function,
+                        )
+                    }
+                })
+            }
+            Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined
+            | Expression::NewTarget
+            | Expression::This
+            | Expression::Sent
+            | Expression::Update { .. } => true,
+        }
+    }
+
+    fn statement_references_only_supported_self_function_has_own_property(
+        statement: &Statement,
+        captured_user_function_names: &HashSet<String>,
+        function: &FunctionDeclaration,
+        user_function: &UserFunction,
+    ) -> bool {
+        match statement {
+            Statement::Declaration { body }
+            | Statement::Block { body }
+            | Statement::Labeled { body, .. } => body.iter().all(|statement| {
+                Self::statement_references_only_supported_self_function_has_own_property(
+                    statement,
+                    captured_user_function_names,
+                    function,
+                    user_function,
+                )
+            }),
+            Statement::Var { value, .. }
+            | Statement::Let { value, .. }
+            | Statement::Assign { value, .. }
+            | Statement::Expression(value)
+            | Statement::Throw(value)
+            | Statement::Return(value)
+            | Statement::Yield { value }
+            | Statement::YieldDelegate { value } => {
+                Self::expression_references_only_supported_self_function_has_own_property(
+                    value,
+                    captured_user_function_names,
+                    function,
+                    user_function,
+                )
+            }
+            Statement::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                Self::expression_references_only_supported_self_function_has_own_property(
+                    object,
+                    captured_user_function_names,
+                    function,
+                    user_function,
+                ) && Self::expression_references_only_supported_self_function_has_own_property(
+                    property,
+                    captured_user_function_names,
+                    function,
+                    user_function,
+                ) && Self::expression_references_only_supported_self_function_has_own_property(
+                    value,
+                    captured_user_function_names,
+                    function,
+                    user_function,
+                )
+            }
+            Statement::Print { values } => values.iter().all(|value| {
+                Self::expression_references_only_supported_self_function_has_own_property(
+                    value,
+                    captured_user_function_names,
+                    function,
+                    user_function,
+                )
+            }),
+            Statement::With { object, body } => {
+                Self::expression_references_only_supported_self_function_has_own_property(
+                    object,
+                    captured_user_function_names,
+                    function,
+                    user_function,
+                ) && body.iter().all(|statement| {
+                    Self::statement_references_only_supported_self_function_has_own_property(
+                        statement,
+                        captured_user_function_names,
+                        function,
+                        user_function,
+                    )
+                })
+            }
+            Statement::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                Self::expression_references_only_supported_self_function_has_own_property(
+                    condition,
+                    captured_user_function_names,
+                    function,
+                    user_function,
+                ) && then_branch.iter().all(|statement| {
+                    Self::statement_references_only_supported_self_function_has_own_property(
+                        statement,
+                        captured_user_function_names,
+                        function,
+                        user_function,
+                    )
+                }) && else_branch.iter().all(|statement| {
+                    Self::statement_references_only_supported_self_function_has_own_property(
+                        statement,
+                        captured_user_function_names,
+                        function,
+                        user_function,
+                    )
+                })
+            }
+            Statement::Try {
+                body,
+                catch_setup,
+                catch_body,
+                ..
+            } => body
+                .iter()
+                .chain(catch_setup.iter())
+                .chain(catch_body.iter())
+                .all(|statement| {
+                    Self::statement_references_only_supported_self_function_has_own_property(
+                        statement,
+                        captured_user_function_names,
+                        function,
+                        user_function,
+                    )
+                }),
+            Statement::Switch {
+                discriminant,
+                cases,
+                ..
+            } => {
+                Self::expression_references_only_supported_self_function_has_own_property(
+                    discriminant,
+                    captured_user_function_names,
+                    function,
+                    user_function,
+                ) && cases.iter().all(|case| {
+                    case.test.as_ref().is_none_or(|test| {
+                        Self::expression_references_only_supported_self_function_has_own_property(
+                            test,
+                            captured_user_function_names,
+                            function,
+                            user_function,
+                        )
+                    }) && case.body.iter().all(|statement| {
+                        Self::statement_references_only_supported_self_function_has_own_property(
+                            statement,
+                            captured_user_function_names,
+                            function,
+                            user_function,
+                        )
+                    })
+                })
+            }
+            Statement::For {
+                init,
+                condition,
+                update,
+                break_hook,
+                body,
+                ..
+            } => {
+                init.iter().all(|statement| {
+                    Self::statement_references_only_supported_self_function_has_own_property(
+                        statement,
+                        captured_user_function_names,
+                        function,
+                        user_function,
+                    )
+                }) && condition.as_ref().is_none_or(|condition| {
+                    Self::expression_references_only_supported_self_function_has_own_property(
+                        condition,
+                        captured_user_function_names,
+                        function,
+                        user_function,
+                    )
+                }) && update.as_ref().is_none_or(|update| {
+                    Self::expression_references_only_supported_self_function_has_own_property(
+                        update,
+                        captured_user_function_names,
+                        function,
+                        user_function,
+                    )
+                }) && break_hook.as_ref().is_none_or(|break_hook| {
+                    Self::expression_references_only_supported_self_function_has_own_property(
+                        break_hook,
+                        captured_user_function_names,
+                        function,
+                        user_function,
+                    )
+                }) && body.iter().all(|statement| {
+                    Self::statement_references_only_supported_self_function_has_own_property(
+                        statement,
+                        captured_user_function_names,
+                        function,
+                        user_function,
+                    )
+                })
+            }
+            Statement::While {
+                condition,
+                break_hook,
+                body,
+                ..
+            }
+            | Statement::DoWhile {
+                condition,
+                break_hook,
+                body,
+                ..
+            } => {
+                Self::expression_references_only_supported_self_function_has_own_property(
+                    condition,
+                    captured_user_function_names,
+                    function,
+                    user_function,
+                ) && break_hook.as_ref().is_none_or(|break_hook| {
+                    Self::expression_references_only_supported_self_function_has_own_property(
+                        break_hook,
+                        captured_user_function_names,
+                        function,
+                        user_function,
+                    )
+                }) && body.iter().all(|statement| {
+                    Self::statement_references_only_supported_self_function_has_own_property(
+                        statement,
+                        captured_user_function_names,
+                        function,
+                        user_function,
+                    )
+                })
+            }
+            Statement::Break { .. } | Statement::Continue { .. } => true,
+        }
+    }
+
+    pub(in crate::backend::direct_wasm) fn user_function_references_only_supported_self_function_has_own_property(
+        &self,
+        user_function: &UserFunction,
+    ) -> bool {
+        if self
+            .backend
+            .function_registry
+            .analysis
+            .user_function_capture_bindings
+            .is_empty()
+        {
+            return true;
+        }
+        let captured_user_function_names = self
+            .backend
+            .function_registry
+            .analysis
+            .user_function_capture_bindings
+            .keys()
+            .cloned()
+            .collect::<HashSet<_>>();
+        self.resolve_registered_function_declaration(&user_function.name)
+            .is_some_and(|function| {
+                function.body.iter().all(|statement| {
+                    Self::statement_references_only_supported_self_function_has_own_property(
+                        statement,
+                        &captured_user_function_names,
+                        function,
+                        user_function,
+                    )
+                })
+            })
+    }
 }

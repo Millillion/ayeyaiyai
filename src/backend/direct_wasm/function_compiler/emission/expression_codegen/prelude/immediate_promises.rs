@@ -940,7 +940,10 @@ impl<'a> FunctionCompiler<'a> {
             && !self.user_function_mentions_direct_eval(user_function)
             && !self.user_function_contains_identifier_callee_call(user_function)
             && !self.user_function_may_read_restricted_function_property(user_function)
-            && !self.user_function_references_captured_user_function(user_function)
+            && (!self.user_function_references_captured_user_function(user_function)
+                || self.user_function_references_only_supported_self_function_has_own_property(
+                    user_function,
+                ))
             && self.user_function_has_explicit_call_frame_inlineable_terminal_body(user_function)
             && self
                 .resolve_registered_function_declaration(&user_function.name)

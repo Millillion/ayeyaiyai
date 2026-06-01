@@ -323,6 +323,19 @@ impl<'a> FunctionCompiler<'a> {
                 .iter()
                 .all(|expression| self.same_value_operand_static_evaluation_safe(expression)),
             Expression::Call { callee, arguments } => {
+                if self
+                    .resolve_static_has_own_property_call_result(expression)
+                    .is_some()
+                    && inline_summary_side_effect_free_expression(callee)
+                    && arguments.iter().all(|argument| match argument {
+                        CallArgument::Expression(expression) => {
+                            self.same_value_operand_static_evaluation_safe(expression)
+                        }
+                        CallArgument::Spread(_) => false,
+                    })
+                {
+                    return true;
+                }
                 if let Expression::Member { property, .. } = callee.as_ref()
                     && matches!(
                         property.as_ref(),
@@ -2046,6 +2059,11 @@ impl<'a> FunctionCompiler<'a> {
                 Self::same_value_static_binary_expression_value(*op, &left_value, &right_value)
             }
             Expression::Call { callee, arguments } => {
+                if let Some(has_own_property) =
+                    self.resolve_static_has_own_property_call_result(expression)
+                {
+                    return Some(Expression::Bool(has_own_property));
+                }
                 if let Expression::Member { property, .. } = callee.as_ref()
                     && matches!(
                         property.as_ref(),
