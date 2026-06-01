@@ -1,4 +1,4 @@
-494/23645 (2.09%)
+495/23645 (2.09%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -9,7 +9,7 @@ Sub-category progress
 - identifiers: 268/268 (100.00%)
 - keywords: 25/25 (100.00%)
 - reserved-words: 27/27 (100.00%)
-- future-reserved-words: 1/55 (1.82%)
+- future-reserved-words: 2/55 (3.64%)
 - literals: 1/534 (0.19%)
 - directive-prologue: 0/62 (0.00%)
 - asi: 0/102 (0.00%)
@@ -540,7 +540,7 @@ Sub-category progress
 
 - [ ] future-reserved-words (55 tests)
   - [x] test/language/future-reserved-words/_implements.js
-  - [ ] test/language/future-reserved-words/abstract.js
+  - [x] test/language/future-reserved-words/abstract.js
   - [ ] test/language/future-reserved-words/boolean.js
   - [ ] test/language/future-reserved-words/byte.js
   - [ ] test/language/future-reserved-words/char.js
