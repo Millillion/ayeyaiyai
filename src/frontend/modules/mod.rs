@@ -21,7 +21,7 @@ use super::{
         Lowerer, asyncify_statements, collect_direct_statement_lexical_bindings,
         data_property_descriptor, define_property_statement,
     },
-    parse::{parse_module_file, parse_script_file},
+    parse::{parse_module_file, parse_script_file_with_strict},
 };
 
 mod dynamic_imports;
@@ -48,7 +48,11 @@ pub fn bundle_module_entry(path: &Path) -> Result<Program> {
 }
 
 pub fn bundle_script_entry(path: &Path) -> Result<Program> {
-    ModuleLinker::default().bundle_script_entry(path)
+    bundle_script_entry_with_strict(path, false)
+}
+
+pub fn bundle_script_entry_with_strict(path: &Path, force_strict: bool) -> Result<Program> {
+    ModuleLinker::default().bundle_script_entry_with_strict(path, force_strict)
 }
 
 #[derive(Default)]

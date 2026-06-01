@@ -11,25 +11,29 @@ pub use backend::{emit_wasm, emit_wasm_with_reason};
 pub use compile_options::CompileOptions;
 
 pub fn compile_file(path: &Path, options: &CompileOptions) -> Result<()> {
-    let program = frontend::bundle_script_entry(path)?;
-    let program = ir::pipeline::prepare(program)?;
-    if backend::compile_if_supported(&program, options)? {
-        return Ok(());
-    }
-
-    bail!("program uses JavaScript features that are not yet supported by the direct wasm backend")
+    compile_file_with_goal_and_strict(path, options, false, false)
 }
 
 pub fn compile_file_with_goal(path: &Path, options: &CompileOptions, module: bool) -> Result<()> {
+    compile_file_with_goal_and_strict(path, options, module, false)
+}
+
+pub fn compile_file_with_goal_and_strict(
+    path: &Path,
+    options: &CompileOptions,
+    module: bool,
+    force_strict: bool,
+) -> Result<()> {
     let program = if module {
         frontend::bundle_module_entry(path)?
     } else {
-        frontend::bundle_script_entry(path)?
+        frontend::bundle_script_entry_with_strict(path, force_strict)?
     };
     let program = ir::pipeline::prepare(program)?;
     if backend::compile_if_supported(&program, options)? {
         return Ok(());
     }
+
     bail!("program uses JavaScript features that are not yet supported by the direct wasm backend")
 }
 

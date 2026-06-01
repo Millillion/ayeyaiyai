@@ -1,12 +1,12 @@
-1/23645 (0.00%)
+422/23645 (1.78%)
 Sub-category progress
 
-- comments: 1/52 (1.92%)
-- white-space: 0/67 (0.00%)
-- line-terminators: 0/41 (0.00%)
-- punctuators: 0/11 (0.00%)
-- source-text: 0/1 (0.00%)
-- identifiers: 0/268 (0.00%)
+- comments: 52/52 (100.00%)
+- white-space: 67/67 (100.00%)
+- line-terminators: 41/41 (100.00%)
+- punctuators: 11/11 (100.00%)
+- source-text: 1/1 (100.00%)
+- identifiers: 250/268 (93.28%)
 - keywords: 0/25 (0.00%)
 - reserved-words: 0/27 (0.00%)
 - future-reserved-words: 0/55 (0.00%)
@@ -32,432 +32,432 @@ Sub-category progress
 
 - [ ] comments (52 tests)
   - [x] test/language/comments/S7.4_A1_T1.js
-  - [ ] test/language/comments/S7.4_A1_T2.js
-  - [ ] test/language/comments/S7.4_A2_T1.js
-  - [ ] test/language/comments/S7.4_A2_T2.js
-  - [ ] test/language/comments/S7.4_A3.js
-  - [ ] test/language/comments/S7.4_A4_T1.js
-  - [ ] test/language/comments/S7.4_A4_T2.js
-  - [ ] test/language/comments/S7.4_A4_T3.js
-  - [ ] test/language/comments/S7.4_A4_T4.js
-  - [ ] test/language/comments/S7.4_A4_T5.js
-  - [ ] test/language/comments/S7.4_A4_T6.js
-  - [ ] test/language/comments/S7.4_A4_T7.js
-  - [ ] test/language/comments/S7.4_A5.js
-  - [ ] test/language/comments/S7.4_A6.js
-  - [ ] test/language/comments/hashbang/escaped-bang-041.js
-  - [ ] test/language/comments/hashbang/escaped-bang-u0021.js
-  - [ ] test/language/comments/hashbang/escaped-bang-u21.js
-  - [ ] test/language/comments/hashbang/escaped-bang-x21.js
-  - [ ] test/language/comments/hashbang/escaped-hash-043.js
-  - [ ] test/language/comments/hashbang/escaped-hash-u0023.js
-  - [ ] test/language/comments/hashbang/escaped-hash-u23.js
-  - [ ] test/language/comments/hashbang/escaped-hash-x23.js
-  - [ ] test/language/comments/hashbang/escaped-hashbang.js
-  - [ ] test/language/comments/hashbang/eval-indirect.js
-  - [ ] test/language/comments/hashbang/eval.js
-  - [ ] test/language/comments/hashbang/function-body.js
-  - [ ] test/language/comments/hashbang/function-constructor.js
-  - [ ] test/language/comments/hashbang/line-terminator-carriage-return.js
-  - [ ] test/language/comments/hashbang/line-terminator-line-separator.js
-  - [ ] test/language/comments/hashbang/line-terminator-paragraph-separator.js
-  - [ ] test/language/comments/hashbang/module.js
-  - [ ] test/language/comments/hashbang/multi-line-comment.js
-  - [ ] test/language/comments/hashbang/no-line-separator.js
-  - [ ] test/language/comments/hashbang/not-empty.js
-  - [ ] test/language/comments/hashbang/preceding-directive-prologue-sc.js
-  - [ ] test/language/comments/hashbang/preceding-directive-prologue.js
-  - [ ] test/language/comments/hashbang/preceding-empty-statement.js
-  - [ ] test/language/comments/hashbang/preceding-hashbang.js
-  - [ ] test/language/comments/hashbang/preceding-line-comment.js
-  - [ ] test/language/comments/hashbang/preceding-multi-line-comment.js
-  - [ ] test/language/comments/hashbang/preceding-whitespace.js
-  - [ ] test/language/comments/hashbang/statement-block.js
-  - [ ] test/language/comments/hashbang/use-strict.js
-  - [ ] test/language/comments/mongolian-vowel-separator-multi.js
-  - [ ] test/language/comments/mongolian-vowel-separator-single-eval.js
-  - [ ] test/language/comments/mongolian-vowel-separator-single.js
-  - [ ] test/language/comments/multi-line-asi-carriage-return.js
-  - [ ] test/language/comments/multi-line-asi-line-feed.js
-  - [ ] test/language/comments/multi-line-asi-line-separator.js
-  - [ ] test/language/comments/multi-line-asi-paragraph-separator.js
-  - [ ] test/language/comments/multi-line-html-close-extra.js
-  - [ ] test/language/comments/single-line-html-close-without-lt.js
+  - [x] test/language/comments/S7.4_A1_T2.js
+  - [x] test/language/comments/S7.4_A2_T1.js
+  - [x] test/language/comments/S7.4_A2_T2.js
+  - [x] test/language/comments/S7.4_A3.js
+  - [x] test/language/comments/S7.4_A4_T1.js
+  - [x] test/language/comments/S7.4_A4_T2.js
+  - [x] test/language/comments/S7.4_A4_T3.js
+  - [x] test/language/comments/S7.4_A4_T4.js
+  - [x] test/language/comments/S7.4_A4_T5.js
+  - [x] test/language/comments/S7.4_A4_T6.js
+  - [x] test/language/comments/S7.4_A4_T7.js
+  - [x] test/language/comments/S7.4_A5.js
+  - [x] test/language/comments/S7.4_A6.js
+  - [x] test/language/comments/hashbang/escaped-bang-041.js
+  - [x] test/language/comments/hashbang/escaped-bang-u0021.js
+  - [x] test/language/comments/hashbang/escaped-bang-u21.js
+  - [x] test/language/comments/hashbang/escaped-bang-x21.js
+  - [x] test/language/comments/hashbang/escaped-hash-043.js
+  - [x] test/language/comments/hashbang/escaped-hash-u0023.js
+  - [x] test/language/comments/hashbang/escaped-hash-u23.js
+  - [x] test/language/comments/hashbang/escaped-hash-x23.js
+  - [x] test/language/comments/hashbang/escaped-hashbang.js
+  - [x] test/language/comments/hashbang/eval-indirect.js
+  - [x] test/language/comments/hashbang/eval.js
+  - [x] test/language/comments/hashbang/function-body.js
+  - [x] test/language/comments/hashbang/function-constructor.js
+  - [x] test/language/comments/hashbang/line-terminator-carriage-return.js
+  - [x] test/language/comments/hashbang/line-terminator-line-separator.js
+  - [x] test/language/comments/hashbang/line-terminator-paragraph-separator.js
+  - [x] test/language/comments/hashbang/module.js
+  - [x] test/language/comments/hashbang/multi-line-comment.js
+  - [x] test/language/comments/hashbang/no-line-separator.js
+  - [x] test/language/comments/hashbang/not-empty.js
+  - [x] test/language/comments/hashbang/preceding-directive-prologue-sc.js
+  - [x] test/language/comments/hashbang/preceding-directive-prologue.js
+  - [x] test/language/comments/hashbang/preceding-empty-statement.js
+  - [x] test/language/comments/hashbang/preceding-hashbang.js
+  - [x] test/language/comments/hashbang/preceding-line-comment.js
+  - [x] test/language/comments/hashbang/preceding-multi-line-comment.js
+  - [x] test/language/comments/hashbang/preceding-whitespace.js
+  - [x] test/language/comments/hashbang/statement-block.js
+  - [x] test/language/comments/hashbang/use-strict.js
+  - [x] test/language/comments/mongolian-vowel-separator-multi.js
+  - [x] test/language/comments/mongolian-vowel-separator-single-eval.js
+  - [x] test/language/comments/mongolian-vowel-separator-single.js
+  - [x] test/language/comments/multi-line-asi-carriage-return.js
+  - [x] test/language/comments/multi-line-asi-line-feed.js
+  - [x] test/language/comments/multi-line-asi-line-separator.js
+  - [x] test/language/comments/multi-line-asi-paragraph-separator.js
+  - [x] test/language/comments/multi-line-html-close-extra.js
+  - [x] test/language/comments/single-line-html-close-without-lt.js
 - [ ] white-space (67 tests)
-  - [ ] test/language/white-space/S7.2_A2.1_T2.js
-  - [ ] test/language/white-space/S7.2_A2.2_T2.js
-  - [ ] test/language/white-space/S7.2_A2.3_T2.js
-  - [ ] test/language/white-space/S7.2_A2.4_T2.js
-  - [ ] test/language/white-space/S7.2_A2.5_T2.js
-  - [ ] test/language/white-space/S7.2_A3.1_T2.js
-  - [ ] test/language/white-space/S7.2_A3.2_T2.js
-  - [ ] test/language/white-space/S7.2_A3.3_T2.js
-  - [ ] test/language/white-space/S7.2_A3.4_T2.js
-  - [ ] test/language/white-space/S7.2_A3.5_T2.js
-  - [ ] test/language/white-space/S7.2_A4.1_T2.js
-  - [ ] test/language/white-space/S7.2_A4.2_T2.js
-  - [ ] test/language/white-space/S7.2_A4.3_T2.js
-  - [ ] test/language/white-space/S7.2_A4.4_T2.js
-  - [ ] test/language/white-space/S7.2_A4.5_T2.js
-  - [ ] test/language/white-space/S7.2_A5_T1.js
-  - [ ] test/language/white-space/S7.2_A5_T2.js
-  - [ ] test/language/white-space/S7.2_A5_T3.js
-  - [ ] test/language/white-space/S7.2_A5_T4.js
-  - [ ] test/language/white-space/S7.2_A5_T5.js
-  - [ ] test/language/white-space/after-regular-expression-literal-carriage-return.js
-  - [ ] test/language/white-space/after-regular-expression-literal-em-quad.js
-  - [ ] test/language/white-space/after-regular-expression-literal-em-space.js
-  - [ ] test/language/white-space/after-regular-expression-literal-en-quad.js
-  - [ ] test/language/white-space/after-regular-expression-literal-en-space.js
-  - [ ] test/language/white-space/after-regular-expression-literal-figure-space.js
-  - [ ] test/language/white-space/after-regular-expression-literal-form-feed.js
-  - [ ] test/language/white-space/after-regular-expression-literal-four-per-em-space.js
-  - [ ] test/language/white-space/after-regular-expression-literal-hair-space.js
-  - [ ] test/language/white-space/after-regular-expression-literal-ideographic-space.js
-  - [ ] test/language/white-space/after-regular-expression-literal-line-feed.js
-  - [ ] test/language/white-space/after-regular-expression-literal-line-separator.js
-  - [ ] test/language/white-space/after-regular-expression-literal-medium-mathematical-space.js
-  - [ ] test/language/white-space/after-regular-expression-literal-nbsp.js
-  - [ ] test/language/white-space/after-regular-expression-literal-nnbsp.js
-  - [ ] test/language/white-space/after-regular-expression-literal-ogham-space.js
-  - [ ] test/language/white-space/after-regular-expression-literal-paragraph-separator.js
-  - [ ] test/language/white-space/after-regular-expression-literal-punctuation-space.js
-  - [ ] test/language/white-space/after-regular-expression-literal-six-per-em-space.js
-  - [ ] test/language/white-space/after-regular-expression-literal-space.js
-  - [ ] test/language/white-space/after-regular-expression-literal-tab.js
-  - [ ] test/language/white-space/after-regular-expression-literal-thin-space.js
-  - [ ] test/language/white-space/after-regular-expression-literal-three-per-em-space.js
-  - [ ] test/language/white-space/after-regular-expression-literal-vertical-tab.js
-  - [ ] test/language/white-space/after-regular-expression-literal-zwnbsp.js
-  - [ ] test/language/white-space/between-form-feed.js
-  - [ ] test/language/white-space/between-horizontal-tab.js
-  - [ ] test/language/white-space/between-nbsp.js
-  - [ ] test/language/white-space/between-space.js
-  - [ ] test/language/white-space/between-vertical-tab.js
-  - [ ] test/language/white-space/comment-multi-form-feed.js
-  - [ ] test/language/white-space/comment-multi-horizontal-tab.js
-  - [ ] test/language/white-space/comment-multi-nbsp.js
-  - [ ] test/language/white-space/comment-multi-space.js
-  - [ ] test/language/white-space/comment-multi-vertical-tab.js
-  - [ ] test/language/white-space/comment-single-form-feed.js
-  - [ ] test/language/white-space/comment-single-horizontal-tab.js
-  - [ ] test/language/white-space/comment-single-nbsp.js
-  - [ ] test/language/white-space/comment-single-space.js
-  - [ ] test/language/white-space/comment-single-vertical-tab.js
-  - [ ] test/language/white-space/mongolian-vowel-separator-eval.js
-  - [ ] test/language/white-space/mongolian-vowel-separator.js
-  - [ ] test/language/white-space/string-form-feed.js
-  - [ ] test/language/white-space/string-horizontal-tab.js
-  - [ ] test/language/white-space/string-nbsp.js
-  - [ ] test/language/white-space/string-space.js
-  - [ ] test/language/white-space/string-vertical-tab.js
+  - [x] test/language/white-space/S7.2_A2.1_T2.js
+  - [x] test/language/white-space/S7.2_A2.2_T2.js
+  - [x] test/language/white-space/S7.2_A2.3_T2.js
+  - [x] test/language/white-space/S7.2_A2.4_T2.js
+  - [x] test/language/white-space/S7.2_A2.5_T2.js
+  - [x] test/language/white-space/S7.2_A3.1_T2.js
+  - [x] test/language/white-space/S7.2_A3.2_T2.js
+  - [x] test/language/white-space/S7.2_A3.3_T2.js
+  - [x] test/language/white-space/S7.2_A3.4_T2.js
+  - [x] test/language/white-space/S7.2_A3.5_T2.js
+  - [x] test/language/white-space/S7.2_A4.1_T2.js
+  - [x] test/language/white-space/S7.2_A4.2_T2.js
+  - [x] test/language/white-space/S7.2_A4.3_T2.js
+  - [x] test/language/white-space/S7.2_A4.4_T2.js
+  - [x] test/language/white-space/S7.2_A4.5_T2.js
+  - [x] test/language/white-space/S7.2_A5_T1.js
+  - [x] test/language/white-space/S7.2_A5_T2.js
+  - [x] test/language/white-space/S7.2_A5_T3.js
+  - [x] test/language/white-space/S7.2_A5_T4.js
+  - [x] test/language/white-space/S7.2_A5_T5.js
+  - [x] test/language/white-space/after-regular-expression-literal-carriage-return.js
+  - [x] test/language/white-space/after-regular-expression-literal-em-quad.js
+  - [x] test/language/white-space/after-regular-expression-literal-em-space.js
+  - [x] test/language/white-space/after-regular-expression-literal-en-quad.js
+  - [x] test/language/white-space/after-regular-expression-literal-en-space.js
+  - [x] test/language/white-space/after-regular-expression-literal-figure-space.js
+  - [x] test/language/white-space/after-regular-expression-literal-form-feed.js
+  - [x] test/language/white-space/after-regular-expression-literal-four-per-em-space.js
+  - [x] test/language/white-space/after-regular-expression-literal-hair-space.js
+  - [x] test/language/white-space/after-regular-expression-literal-ideographic-space.js
+  - [x] test/language/white-space/after-regular-expression-literal-line-feed.js
+  - [x] test/language/white-space/after-regular-expression-literal-line-separator.js
+  - [x] test/language/white-space/after-regular-expression-literal-medium-mathematical-space.js
+  - [x] test/language/white-space/after-regular-expression-literal-nbsp.js
+  - [x] test/language/white-space/after-regular-expression-literal-nnbsp.js
+  - [x] test/language/white-space/after-regular-expression-literal-ogham-space.js
+  - [x] test/language/white-space/after-regular-expression-literal-paragraph-separator.js
+  - [x] test/language/white-space/after-regular-expression-literal-punctuation-space.js
+  - [x] test/language/white-space/after-regular-expression-literal-six-per-em-space.js
+  - [x] test/language/white-space/after-regular-expression-literal-space.js
+  - [x] test/language/white-space/after-regular-expression-literal-tab.js
+  - [x] test/language/white-space/after-regular-expression-literal-thin-space.js
+  - [x] test/language/white-space/after-regular-expression-literal-three-per-em-space.js
+  - [x] test/language/white-space/after-regular-expression-literal-vertical-tab.js
+  - [x] test/language/white-space/after-regular-expression-literal-zwnbsp.js
+  - [x] test/language/white-space/between-form-feed.js
+  - [x] test/language/white-space/between-horizontal-tab.js
+  - [x] test/language/white-space/between-nbsp.js
+  - [x] test/language/white-space/between-space.js
+  - [x] test/language/white-space/between-vertical-tab.js
+  - [x] test/language/white-space/comment-multi-form-feed.js
+  - [x] test/language/white-space/comment-multi-horizontal-tab.js
+  - [x] test/language/white-space/comment-multi-nbsp.js
+  - [x] test/language/white-space/comment-multi-space.js
+  - [x] test/language/white-space/comment-multi-vertical-tab.js
+  - [x] test/language/white-space/comment-single-form-feed.js
+  - [x] test/language/white-space/comment-single-horizontal-tab.js
+  - [x] test/language/white-space/comment-single-nbsp.js
+  - [x] test/language/white-space/comment-single-space.js
+  - [x] test/language/white-space/comment-single-vertical-tab.js
+  - [x] test/language/white-space/mongolian-vowel-separator-eval.js
+  - [x] test/language/white-space/mongolian-vowel-separator.js
+  - [x] test/language/white-space/string-form-feed.js
+  - [x] test/language/white-space/string-horizontal-tab.js
+  - [x] test/language/white-space/string-nbsp.js
+  - [x] test/language/white-space/string-space.js
+  - [x] test/language/white-space/string-vertical-tab.js
 - [ ] line-terminators (41 tests)
-  - [ ] test/language/line-terminators/7.3-15.js
-  - [ ] test/language/line-terminators/7.3-5.js
-  - [ ] test/language/line-terminators/7.3-6.js
-  - [ ] test/language/line-terminators/S7.3_A2.1_T2.js
-  - [ ] test/language/line-terminators/S7.3_A2.2_T2.js
-  - [ ] test/language/line-terminators/S7.3_A3.2_T1.js
-  - [ ] test/language/line-terminators/S7.3_A5.4.js
-  - [ ] test/language/line-terminators/S7.3_A6_T1.js
-  - [ ] test/language/line-terminators/S7.3_A6_T2.js
-  - [ ] test/language/line-terminators/S7.3_A6_T3.js
-  - [ ] test/language/line-terminators/S7.3_A6_T4.js
-  - [ ] test/language/line-terminators/S7.3_A7_T1.js
-  - [ ] test/language/line-terminators/S7.3_A7_T2.js
-  - [ ] test/language/line-terminators/S7.3_A7_T3.js
-  - [ ] test/language/line-terminators/S7.3_A7_T4.js
-  - [ ] test/language/line-terminators/S7.3_A7_T5.js
-  - [ ] test/language/line-terminators/S7.3_A7_T6.js
-  - [ ] test/language/line-terminators/S7.3_A7_T7.js
-  - [ ] test/language/line-terminators/S7.3_A7_T8.js
-  - [ ] test/language/line-terminators/between-tokens-cr.js
-  - [ ] test/language/line-terminators/between-tokens-lf.js
-  - [ ] test/language/line-terminators/between-tokens-ls.js
-  - [ ] test/language/line-terminators/between-tokens-ps.js
-  - [ ] test/language/line-terminators/comment-multi-cr.js
-  - [ ] test/language/line-terminators/comment-multi-lf.js
-  - [ ] test/language/line-terminators/comment-multi-ls.js
-  - [ ] test/language/line-terminators/comment-multi-ps.js
-  - [ ] test/language/line-terminators/comment-single-cr.js
-  - [ ] test/language/line-terminators/comment-single-lf.js
-  - [ ] test/language/line-terminators/comment-single-ls.js
-  - [ ] test/language/line-terminators/comment-single-ps.js
-  - [ ] test/language/line-terminators/invalid-comment-single-cr.js
-  - [ ] test/language/line-terminators/invalid-comment-single-lf.js
-  - [ ] test/language/line-terminators/invalid-comment-single-ls.js
-  - [ ] test/language/line-terminators/invalid-comment-single-ps.js
-  - [ ] test/language/line-terminators/invalid-regexp-cr.js
-  - [ ] test/language/line-terminators/invalid-regexp-lf.js
-  - [ ] test/language/line-terminators/invalid-regexp-ls.js
-  - [ ] test/language/line-terminators/invalid-regexp-ps.js
-  - [ ] test/language/line-terminators/invalid-string-cr.js
-  - [ ] test/language/line-terminators/invalid-string-lf.js
+  - [x] test/language/line-terminators/7.3-15.js
+  - [x] test/language/line-terminators/7.3-5.js
+  - [x] test/language/line-terminators/7.3-6.js
+  - [x] test/language/line-terminators/S7.3_A2.1_T2.js
+  - [x] test/language/line-terminators/S7.3_A2.2_T2.js
+  - [x] test/language/line-terminators/S7.3_A3.2_T1.js
+  - [x] test/language/line-terminators/S7.3_A5.4.js
+  - [x] test/language/line-terminators/S7.3_A6_T1.js
+  - [x] test/language/line-terminators/S7.3_A6_T2.js
+  - [x] test/language/line-terminators/S7.3_A6_T3.js
+  - [x] test/language/line-terminators/S7.3_A6_T4.js
+  - [x] test/language/line-terminators/S7.3_A7_T1.js
+  - [x] test/language/line-terminators/S7.3_A7_T2.js
+  - [x] test/language/line-terminators/S7.3_A7_T3.js
+  - [x] test/language/line-terminators/S7.3_A7_T4.js
+  - [x] test/language/line-terminators/S7.3_A7_T5.js
+  - [x] test/language/line-terminators/S7.3_A7_T6.js
+  - [x] test/language/line-terminators/S7.3_A7_T7.js
+  - [x] test/language/line-terminators/S7.3_A7_T8.js
+  - [x] test/language/line-terminators/between-tokens-cr.js
+  - [x] test/language/line-terminators/between-tokens-lf.js
+  - [x] test/language/line-terminators/between-tokens-ls.js
+  - [x] test/language/line-terminators/between-tokens-ps.js
+  - [x] test/language/line-terminators/comment-multi-cr.js
+  - [x] test/language/line-terminators/comment-multi-lf.js
+  - [x] test/language/line-terminators/comment-multi-ls.js
+  - [x] test/language/line-terminators/comment-multi-ps.js
+  - [x] test/language/line-terminators/comment-single-cr.js
+  - [x] test/language/line-terminators/comment-single-lf.js
+  - [x] test/language/line-terminators/comment-single-ls.js
+  - [x] test/language/line-terminators/comment-single-ps.js
+  - [x] test/language/line-terminators/invalid-comment-single-cr.js
+  - [x] test/language/line-terminators/invalid-comment-single-lf.js
+  - [x] test/language/line-terminators/invalid-comment-single-ls.js
+  - [x] test/language/line-terminators/invalid-comment-single-ps.js
+  - [x] test/language/line-terminators/invalid-regexp-cr.js
+  - [x] test/language/line-terminators/invalid-regexp-lf.js
+  - [x] test/language/line-terminators/invalid-regexp-ls.js
+  - [x] test/language/line-terminators/invalid-regexp-ps.js
+  - [x] test/language/line-terminators/invalid-string-cr.js
+  - [x] test/language/line-terminators/invalid-string-lf.js
 - [ ] punctuators (11 tests)
-  - [ ] test/language/punctuators/S7.7_A1.js
-  - [ ] test/language/punctuators/S7.7_A2_T1.js
-  - [ ] test/language/punctuators/S7.7_A2_T10.js
-  - [ ] test/language/punctuators/S7.7_A2_T2.js
-  - [ ] test/language/punctuators/S7.7_A2_T3.js
-  - [ ] test/language/punctuators/S7.7_A2_T4.js
-  - [ ] test/language/punctuators/S7.7_A2_T5.js
-  - [ ] test/language/punctuators/S7.7_A2_T6.js
-  - [ ] test/language/punctuators/S7.7_A2_T7.js
-  - [ ] test/language/punctuators/S7.7_A2_T8.js
-  - [ ] test/language/punctuators/S7.7_A2_T9.js
+  - [x] test/language/punctuators/S7.7_A1.js
+  - [x] test/language/punctuators/S7.7_A2_T1.js
+  - [x] test/language/punctuators/S7.7_A2_T10.js
+  - [x] test/language/punctuators/S7.7_A2_T2.js
+  - [x] test/language/punctuators/S7.7_A2_T3.js
+  - [x] test/language/punctuators/S7.7_A2_T4.js
+  - [x] test/language/punctuators/S7.7_A2_T5.js
+  - [x] test/language/punctuators/S7.7_A2_T6.js
+  - [x] test/language/punctuators/S7.7_A2_T7.js
+  - [x] test/language/punctuators/S7.7_A2_T8.js
+  - [x] test/language/punctuators/S7.7_A2_T9.js
 - [ ] source-text (1 tests)
-  - [ ] test/language/source-text/6.1.js
+  - [x] test/language/source-text/6.1.js
 - [ ] identifiers (268 tests)
-  - [ ] test/language/identifiers/other_id_continue-escaped.js
-  - [ ] test/language/identifiers/other_id_continue.js
-  - [ ] test/language/identifiers/other_id_start-escaped.js
-  - [ ] test/language/identifiers/other_id_start.js
-  - [ ] test/language/identifiers/part-digits-via-escape-hex.js
-  - [ ] test/language/identifiers/part-digits-via-escape-hex4.js
-  - [ ] test/language/identifiers/part-digits.js
-  - [ ] test/language/identifiers/part-unicode-10.0.0-class-escaped.js
-  - [ ] test/language/identifiers/part-unicode-10.0.0-class.js
-  - [ ] test/language/identifiers/part-unicode-10.0.0-escaped.js
-  - [ ] test/language/identifiers/part-unicode-10.0.0.js
-  - [ ] test/language/identifiers/part-unicode-11.0.0-class-escaped.js
-  - [ ] test/language/identifiers/part-unicode-11.0.0-class.js
-  - [ ] test/language/identifiers/part-unicode-11.0.0-escaped.js
-  - [ ] test/language/identifiers/part-unicode-11.0.0.js
-  - [ ] test/language/identifiers/part-unicode-12.0.0-class-escaped.js
-  - [ ] test/language/identifiers/part-unicode-12.0.0-class.js
-  - [ ] test/language/identifiers/part-unicode-12.0.0-escaped.js
-  - [ ] test/language/identifiers/part-unicode-12.0.0.js
-  - [ ] test/language/identifiers/part-unicode-13.0.0-class-escaped.js
-  - [ ] test/language/identifiers/part-unicode-13.0.0-class.js
-  - [ ] test/language/identifiers/part-unicode-13.0.0-escaped.js
-  - [ ] test/language/identifiers/part-unicode-13.0.0.js
-  - [ ] test/language/identifiers/part-unicode-14.0.0-class-escaped.js
-  - [ ] test/language/identifiers/part-unicode-14.0.0-class.js
-  - [ ] test/language/identifiers/part-unicode-14.0.0-escaped.js
-  - [ ] test/language/identifiers/part-unicode-14.0.0.js
-  - [ ] test/language/identifiers/part-unicode-15.0.0-class-escaped.js
-  - [ ] test/language/identifiers/part-unicode-15.0.0-class.js
-  - [ ] test/language/identifiers/part-unicode-15.0.0-escaped.js
-  - [ ] test/language/identifiers/part-unicode-15.0.0.js
-  - [ ] test/language/identifiers/part-unicode-15.1.0-class-escaped.js
-  - [ ] test/language/identifiers/part-unicode-15.1.0-class.js
-  - [ ] test/language/identifiers/part-unicode-15.1.0-escaped.js
-  - [ ] test/language/identifiers/part-unicode-15.1.0.js
-  - [ ] test/language/identifiers/part-unicode-16.0.0-class-escaped.js
-  - [ ] test/language/identifiers/part-unicode-16.0.0-class.js
-  - [ ] test/language/identifiers/part-unicode-16.0.0-escaped.js
-  - [ ] test/language/identifiers/part-unicode-16.0.0.js
-  - [ ] test/language/identifiers/part-unicode-17.0.0-class-escaped.js
-  - [ ] test/language/identifiers/part-unicode-17.0.0-class.js
-  - [ ] test/language/identifiers/part-unicode-17.0.0-escaped.js
-  - [ ] test/language/identifiers/part-unicode-17.0.0.js
-  - [ ] test/language/identifiers/part-unicode-5.2.0-class-escaped.js
-  - [ ] test/language/identifiers/part-unicode-5.2.0-class.js
-  - [ ] test/language/identifiers/part-unicode-5.2.0-escaped.js
-  - [ ] test/language/identifiers/part-unicode-5.2.0.js
-  - [ ] test/language/identifiers/part-unicode-6.0.0-class-escaped.js
-  - [ ] test/language/identifiers/part-unicode-6.0.0-class.js
-  - [ ] test/language/identifiers/part-unicode-6.0.0-escaped.js
-  - [ ] test/language/identifiers/part-unicode-6.0.0.js
-  - [ ] test/language/identifiers/part-unicode-6.1.0-class-escaped.js
-  - [ ] test/language/identifiers/part-unicode-6.1.0-class.js
-  - [ ] test/language/identifiers/part-unicode-6.1.0-escaped.js
-  - [ ] test/language/identifiers/part-unicode-6.1.0.js
-  - [ ] test/language/identifiers/part-unicode-7.0.0-class-escaped.js
-  - [ ] test/language/identifiers/part-unicode-7.0.0-class.js
-  - [ ] test/language/identifiers/part-unicode-7.0.0-escaped.js
-  - [ ] test/language/identifiers/part-unicode-7.0.0.js
-  - [ ] test/language/identifiers/part-unicode-8.0.0-class-escaped.js
-  - [ ] test/language/identifiers/part-unicode-8.0.0-class.js
-  - [ ] test/language/identifiers/part-unicode-8.0.0-escaped.js
-  - [ ] test/language/identifiers/part-unicode-8.0.0.js
-  - [ ] test/language/identifiers/part-unicode-9.0.0-class-escaped.js
-  - [ ] test/language/identifiers/part-unicode-9.0.0-class.js
-  - [ ] test/language/identifiers/part-unicode-9.0.0-escaped.js
-  - [ ] test/language/identifiers/part-unicode-9.0.0.js
-  - [ ] test/language/identifiers/part-zwj-zwnj-escaped.js
-  - [ ] test/language/identifiers/start-dollar-sign.js
-  - [ ] test/language/identifiers/start-escape-seq.js
-  - [ ] test/language/identifiers/start-underscore.js
-  - [ ] test/language/identifiers/start-unicode-10.0.0-class-escaped.js
-  - [ ] test/language/identifiers/start-unicode-10.0.0-class.js
-  - [ ] test/language/identifiers/start-unicode-10.0.0-escaped.js
-  - [ ] test/language/identifiers/start-unicode-10.0.0.js
-  - [ ] test/language/identifiers/start-unicode-11.0.0-class-escaped.js
-  - [ ] test/language/identifiers/start-unicode-11.0.0-class.js
-  - [ ] test/language/identifiers/start-unicode-11.0.0-escaped.js
-  - [ ] test/language/identifiers/start-unicode-11.0.0.js
-  - [ ] test/language/identifiers/start-unicode-12.0.0-class-escaped.js
-  - [ ] test/language/identifiers/start-unicode-12.0.0-class.js
-  - [ ] test/language/identifiers/start-unicode-12.0.0-escaped.js
-  - [ ] test/language/identifiers/start-unicode-12.0.0.js
-  - [ ] test/language/identifiers/start-unicode-13.0.0-class-escaped.js
-  - [ ] test/language/identifiers/start-unicode-13.0.0-class.js
-  - [ ] test/language/identifiers/start-unicode-13.0.0-escaped.js
-  - [ ] test/language/identifiers/start-unicode-13.0.0.js
-  - [ ] test/language/identifiers/start-unicode-14.0.0-class-escaped.js
-  - [ ] test/language/identifiers/start-unicode-14.0.0-class.js
-  - [ ] test/language/identifiers/start-unicode-14.0.0-escaped.js
-  - [ ] test/language/identifiers/start-unicode-14.0.0.js
-  - [ ] test/language/identifiers/start-unicode-15.0.0-class-escaped.js
-  - [ ] test/language/identifiers/start-unicode-15.0.0-class.js
-  - [ ] test/language/identifiers/start-unicode-15.0.0-escaped.js
-  - [ ] test/language/identifiers/start-unicode-15.0.0.js
-  - [ ] test/language/identifiers/start-unicode-15.1.0-class-escaped.js
-  - [ ] test/language/identifiers/start-unicode-15.1.0-class.js
-  - [ ] test/language/identifiers/start-unicode-15.1.0-escaped.js
-  - [ ] test/language/identifiers/start-unicode-15.1.0.js
-  - [ ] test/language/identifiers/start-unicode-16.0.0-class-escaped.js
-  - [ ] test/language/identifiers/start-unicode-16.0.0-class.js
-  - [ ] test/language/identifiers/start-unicode-16.0.0-escaped.js
-  - [ ] test/language/identifiers/start-unicode-16.0.0.js
-  - [ ] test/language/identifiers/start-unicode-17.0.0-class-escaped.js
-  - [ ] test/language/identifiers/start-unicode-17.0.0-class.js
-  - [ ] test/language/identifiers/start-unicode-17.0.0-escaped.js
-  - [ ] test/language/identifiers/start-unicode-17.0.0.js
-  - [ ] test/language/identifiers/start-unicode-5.2.0-class-escaped.js
-  - [ ] test/language/identifiers/start-unicode-5.2.0-class.js
-  - [ ] test/language/identifiers/start-unicode-5.2.0-escaped.js
-  - [ ] test/language/identifiers/start-unicode-5.2.0.js
-  - [ ] test/language/identifiers/start-unicode-6.0.0-class-escaped.js
-  - [ ] test/language/identifiers/start-unicode-6.0.0-class.js
-  - [ ] test/language/identifiers/start-unicode-6.0.0-escaped.js
-  - [ ] test/language/identifiers/start-unicode-6.0.0.js
-  - [ ] test/language/identifiers/start-unicode-6.1.0-class-escaped.js
-  - [ ] test/language/identifiers/start-unicode-6.1.0-class.js
-  - [ ] test/language/identifiers/start-unicode-6.1.0-escaped.js
-  - [ ] test/language/identifiers/start-unicode-6.1.0.js
-  - [ ] test/language/identifiers/start-unicode-7.0.0-class-escaped.js
-  - [ ] test/language/identifiers/start-unicode-7.0.0-class.js
-  - [ ] test/language/identifiers/start-unicode-7.0.0-escaped.js
-  - [ ] test/language/identifiers/start-unicode-7.0.0.js
-  - [ ] test/language/identifiers/start-unicode-8.0.0-class-escaped.js
-  - [ ] test/language/identifiers/start-unicode-8.0.0-class.js
-  - [ ] test/language/identifiers/start-unicode-8.0.0-escaped.js
-  - [ ] test/language/identifiers/start-unicode-8.0.0.js
-  - [ ] test/language/identifiers/start-unicode-9.0.0-class-escaped.js
-  - [ ] test/language/identifiers/start-unicode-9.0.0-class.js
-  - [ ] test/language/identifiers/start-unicode-9.0.0-escaped.js
-  - [ ] test/language/identifiers/start-unicode-9.0.0.js
-  - [ ] test/language/identifiers/start-unicode-ltr.js
-  - [ ] test/language/identifiers/start-zwj-escaped.js
-  - [ ] test/language/identifiers/start-zwnj-escaped.js
-  - [ ] test/language/identifiers/unicode-escape-nls-err.js
-  - [ ] test/language/identifiers/val-break-via-escape-hex.js
-  - [ ] test/language/identifiers/val-break-via-escape-hex4.js
-  - [ ] test/language/identifiers/val-break.js
-  - [ ] test/language/identifiers/val-case-via-escape-hex.js
-  - [ ] test/language/identifiers/val-case-via-escape-hex4.js
-  - [ ] test/language/identifiers/val-case.js
-  - [ ] test/language/identifiers/val-catch-via-escape-hex.js
-  - [ ] test/language/identifiers/val-catch-via-escape-hex4.js
-  - [ ] test/language/identifiers/val-catch.js
-  - [ ] test/language/identifiers/val-class-via-escape-hex.js
-  - [ ] test/language/identifiers/val-class-via-escape-hex4.js
-  - [ ] test/language/identifiers/val-class.js
-  - [ ] test/language/identifiers/val-const-via-escape-hex.js
-  - [ ] test/language/identifiers/val-const-via-escape-hex4.js
-  - [ ] test/language/identifiers/val-const.js
-  - [ ] test/language/identifiers/val-continue-via-escape-hex.js
-  - [ ] test/language/identifiers/val-continue-via-escape-hex4.js
-  - [ ] test/language/identifiers/val-continue.js
-  - [ ] test/language/identifiers/val-debugger-via-escape-hex.js
-  - [ ] test/language/identifiers/val-debugger-via-escape-hex4.js
-  - [ ] test/language/identifiers/val-debugger.js
-  - [ ] test/language/identifiers/val-default-via-escape-hex.js
-  - [ ] test/language/identifiers/val-default-via-escape-hex4.js
-  - [ ] test/language/identifiers/val-default.js
-  - [ ] test/language/identifiers/val-delete-via-escape-hex.js
-  - [ ] test/language/identifiers/val-delete-via-escape-hex4.js
-  - [ ] test/language/identifiers/val-delete.js
-  - [ ] test/language/identifiers/val-do-via-escape-hex.js
-  - [ ] test/language/identifiers/val-do-via-escape-hex4.js
-  - [ ] test/language/identifiers/val-do.js
-  - [ ] test/language/identifiers/val-dollar-sign-via-escape-hex.js
-  - [ ] test/language/identifiers/val-dollar-sign-via-escape-hex4.js
-  - [ ] test/language/identifiers/val-dollar-sign.js
-  - [ ] test/language/identifiers/val-else-via-escape-hex.js
-  - [ ] test/language/identifiers/val-else-via-escape-hex4.js
-  - [ ] test/language/identifiers/val-else.js
-  - [ ] test/language/identifiers/val-enum-via-escape-hex.js
-  - [ ] test/language/identifiers/val-enum-via-escape-hex4.js
-  - [ ] test/language/identifiers/val-enum.js
-  - [ ] test/language/identifiers/val-export-via-escape-hex.js
-  - [ ] test/language/identifiers/val-export-via-escape-hex4.js
-  - [ ] test/language/identifiers/val-export.js
-  - [ ] test/language/identifiers/val-extends-via-escape-hex.js
-  - [ ] test/language/identifiers/val-extends-via-escape-hex4.js
-  - [ ] test/language/identifiers/val-extends.js
-  - [ ] test/language/identifiers/val-false-via-escape-hex.js
-  - [ ] test/language/identifiers/val-false-via-escape-hex4.js
-  - [ ] test/language/identifiers/val-false.js
-  - [ ] test/language/identifiers/val-finally-via-escape-hex.js
-  - [ ] test/language/identifiers/val-finally-via-escape-hex4.js
-  - [ ] test/language/identifiers/val-finally.js
-  - [ ] test/language/identifiers/val-for-via-escape-hex.js
-  - [ ] test/language/identifiers/val-for-via-escape-hex4.js
-  - [ ] test/language/identifiers/val-for.js
-  - [ ] test/language/identifiers/val-function-via-escape-hex.js
-  - [ ] test/language/identifiers/val-function-via-escape-hex4.js
-  - [ ] test/language/identifiers/val-function.js
-  - [ ] test/language/identifiers/val-if-via-escape-hex.js
-  - [ ] test/language/identifiers/val-if-via-escape-hex4.js
-  - [ ] test/language/identifiers/val-if.js
-  - [ ] test/language/identifiers/val-import-via-escape-hex.js
-  - [ ] test/language/identifiers/val-import-via-escape-hex4.js
-  - [ ] test/language/identifiers/val-import.js
-  - [ ] test/language/identifiers/val-in-via-escape-hex.js
-  - [ ] test/language/identifiers/val-in-via-escape-hex4.js
-  - [ ] test/language/identifiers/val-in.js
-  - [ ] test/language/identifiers/val-instanceof-via-escape-hex.js
-  - [ ] test/language/identifiers/val-instanceof-via-escape-hex4.js
-  - [ ] test/language/identifiers/val-instanceof.js
-  - [ ] test/language/identifiers/val-new-via-escape-hex.js
-  - [ ] test/language/identifiers/val-new-via-escape-hex4.js
-  - [ ] test/language/identifiers/val-new.js
-  - [ ] test/language/identifiers/val-null-via-escape-hex.js
-  - [ ] test/language/identifiers/val-null-via-escape-hex4.js
-  - [ ] test/language/identifiers/val-null.js
-  - [ ] test/language/identifiers/val-return-via-escape-hex.js
-  - [ ] test/language/identifiers/val-return-via-escape-hex4.js
-  - [ ] test/language/identifiers/val-return.js
-  - [ ] test/language/identifiers/val-super-via-escape-hex.js
-  - [ ] test/language/identifiers/val-super-via-escape-hex4.js
-  - [ ] test/language/identifiers/val-super.js
-  - [ ] test/language/identifiers/val-switch-via-escape-hex.js
-  - [ ] test/language/identifiers/val-switch-via-escape-hex4.js
-  - [ ] test/language/identifiers/val-switch.js
-  - [ ] test/language/identifiers/val-this-via-escape-hex.js
-  - [ ] test/language/identifiers/val-this-via-escape-hex4.js
-  - [ ] test/language/identifiers/val-this.js
-  - [ ] test/language/identifiers/val-throw-via-escape-hex.js
-  - [ ] test/language/identifiers/val-throw-via-escape-hex4.js
-  - [ ] test/language/identifiers/val-throw.js
-  - [ ] test/language/identifiers/val-true-via-escape-hex.js
-  - [ ] test/language/identifiers/val-true-via-escape-hex4.js
-  - [ ] test/language/identifiers/val-true.js
-  - [ ] test/language/identifiers/val-try-via-escape-hex.js
-  - [ ] test/language/identifiers/val-try-via-escape-hex4.js
-  - [ ] test/language/identifiers/val-try.js
-  - [ ] test/language/identifiers/val-typeof-via-escape-hex.js
-  - [ ] test/language/identifiers/val-typeof-via-escape-hex4.js
-  - [ ] test/language/identifiers/val-typeof.js
-  - [ ] test/language/identifiers/val-underscore-via-escape-hex.js
-  - [ ] test/language/identifiers/val-underscore-via-escape-hex4.js
-  - [ ] test/language/identifiers/val-underscore.js
-  - [ ] test/language/identifiers/val-var-via-escape-hex.js
-  - [ ] test/language/identifiers/val-var-via-escape-hex4.js
-  - [ ] test/language/identifiers/val-var.js
-  - [ ] test/language/identifiers/val-void-via-escape-hex.js
-  - [ ] test/language/identifiers/val-void-via-escape-hex4.js
-  - [ ] test/language/identifiers/val-void.js
-  - [ ] test/language/identifiers/val-while-via-escape-hex.js
-  - [ ] test/language/identifiers/val-while-via-escape-hex4.js
-  - [ ] test/language/identifiers/val-while.js
-  - [ ] test/language/identifiers/val-with-via-escape-hex.js
-  - [ ] test/language/identifiers/val-with-via-escape-hex4.js
-  - [ ] test/language/identifiers/val-with.js
-  - [ ] test/language/identifiers/val-yield-strict.js
+  - [x] test/language/identifiers/other_id_continue-escaped.js
+  - [x] test/language/identifiers/other_id_continue.js
+  - [x] test/language/identifiers/other_id_start-escaped.js
+  - [x] test/language/identifiers/other_id_start.js
+  - [x] test/language/identifiers/part-digits-via-escape-hex.js
+  - [x] test/language/identifiers/part-digits-via-escape-hex4.js
+  - [x] test/language/identifiers/part-digits.js
+  - [x] test/language/identifiers/part-unicode-10.0.0-class-escaped.js
+  - [x] test/language/identifiers/part-unicode-10.0.0-class.js
+  - [x] test/language/identifiers/part-unicode-10.0.0-escaped.js
+  - [x] test/language/identifiers/part-unicode-10.0.0.js
+  - [x] test/language/identifiers/part-unicode-11.0.0-class-escaped.js
+  - [x] test/language/identifiers/part-unicode-11.0.0-class.js
+  - [x] test/language/identifiers/part-unicode-11.0.0-escaped.js
+  - [x] test/language/identifiers/part-unicode-11.0.0.js
+  - [x] test/language/identifiers/part-unicode-12.0.0-class-escaped.js
+  - [x] test/language/identifiers/part-unicode-12.0.0-class.js
+  - [x] test/language/identifiers/part-unicode-12.0.0-escaped.js
+  - [x] test/language/identifiers/part-unicode-12.0.0.js
+  - [x] test/language/identifiers/part-unicode-13.0.0-class-escaped.js
+  - [x] test/language/identifiers/part-unicode-13.0.0-class.js
+  - [x] test/language/identifiers/part-unicode-13.0.0-escaped.js
+  - [x] test/language/identifiers/part-unicode-13.0.0.js
+  - [x] test/language/identifiers/part-unicode-14.0.0-class-escaped.js
+  - [x] test/language/identifiers/part-unicode-14.0.0-class.js
+  - [x] test/language/identifiers/part-unicode-14.0.0-escaped.js
+  - [x] test/language/identifiers/part-unicode-14.0.0.js
+  - [x] test/language/identifiers/part-unicode-15.0.0-class-escaped.js
+  - [x] test/language/identifiers/part-unicode-15.0.0-class.js
+  - [x] test/language/identifiers/part-unicode-15.0.0-escaped.js
+  - [x] test/language/identifiers/part-unicode-15.0.0.js
+  - [x] test/language/identifiers/part-unicode-15.1.0-class-escaped.js
+  - [x] test/language/identifiers/part-unicode-15.1.0-class.js
+  - [x] test/language/identifiers/part-unicode-15.1.0-escaped.js
+  - [x] test/language/identifiers/part-unicode-15.1.0.js
+  - [x] test/language/identifiers/part-unicode-16.0.0-class-escaped.js
+  - [x] test/language/identifiers/part-unicode-16.0.0-class.js
+  - [x] test/language/identifiers/part-unicode-16.0.0-escaped.js
+  - [x] test/language/identifiers/part-unicode-16.0.0.js
+  - [x] test/language/identifiers/part-unicode-17.0.0-class-escaped.js
+  - [x] test/language/identifiers/part-unicode-17.0.0-class.js
+  - [x] test/language/identifiers/part-unicode-17.0.0-escaped.js
+  - [x] test/language/identifiers/part-unicode-17.0.0.js
+  - [x] test/language/identifiers/part-unicode-5.2.0-class-escaped.js
+  - [x] test/language/identifiers/part-unicode-5.2.0-class.js
+  - [x] test/language/identifiers/part-unicode-5.2.0-escaped.js
+  - [x] test/language/identifiers/part-unicode-5.2.0.js
+  - [x] test/language/identifiers/part-unicode-6.0.0-class-escaped.js
+  - [x] test/language/identifiers/part-unicode-6.0.0-class.js
+  - [x] test/language/identifiers/part-unicode-6.0.0-escaped.js
+  - [x] test/language/identifiers/part-unicode-6.0.0.js
+  - [x] test/language/identifiers/part-unicode-6.1.0-class-escaped.js
+  - [x] test/language/identifiers/part-unicode-6.1.0-class.js
+  - [x] test/language/identifiers/part-unicode-6.1.0-escaped.js
+  - [x] test/language/identifiers/part-unicode-6.1.0.js
+  - [x] test/language/identifiers/part-unicode-7.0.0-class-escaped.js
+  - [x] test/language/identifiers/part-unicode-7.0.0-class.js
+  - [x] test/language/identifiers/part-unicode-7.0.0-escaped.js
+  - [x] test/language/identifiers/part-unicode-7.0.0.js
+  - [x] test/language/identifiers/part-unicode-8.0.0-class-escaped.js
+  - [x] test/language/identifiers/part-unicode-8.0.0-class.js
+  - [x] test/language/identifiers/part-unicode-8.0.0-escaped.js
+  - [x] test/language/identifiers/part-unicode-8.0.0.js
+  - [x] test/language/identifiers/part-unicode-9.0.0-class-escaped.js
+  - [x] test/language/identifiers/part-unicode-9.0.0-class.js
+  - [x] test/language/identifiers/part-unicode-9.0.0-escaped.js
+  - [x] test/language/identifiers/part-unicode-9.0.0.js
+  - [x] test/language/identifiers/part-zwj-zwnj-escaped.js
+  - [x] test/language/identifiers/start-dollar-sign.js
+  - [x] test/language/identifiers/start-escape-seq.js
+  - [x] test/language/identifiers/start-underscore.js
+  - [x] test/language/identifiers/start-unicode-10.0.0-class-escaped.js
+  - [x] test/language/identifiers/start-unicode-10.0.0-class.js
+  - [x] test/language/identifiers/start-unicode-10.0.0-escaped.js
+  - [x] test/language/identifiers/start-unicode-10.0.0.js
+  - [x] test/language/identifiers/start-unicode-11.0.0-class-escaped.js
+  - [x] test/language/identifiers/start-unicode-11.0.0-class.js
+  - [x] test/language/identifiers/start-unicode-11.0.0-escaped.js
+  - [x] test/language/identifiers/start-unicode-11.0.0.js
+  - [x] test/language/identifiers/start-unicode-12.0.0-class-escaped.js
+  - [x] test/language/identifiers/start-unicode-12.0.0-class.js
+  - [x] test/language/identifiers/start-unicode-12.0.0-escaped.js
+  - [x] test/language/identifiers/start-unicode-12.0.0.js
+  - [x] test/language/identifiers/start-unicode-13.0.0-class-escaped.js
+  - [x] test/language/identifiers/start-unicode-13.0.0-class.js
+  - [x] test/language/identifiers/start-unicode-13.0.0-escaped.js
+  - [x] test/language/identifiers/start-unicode-13.0.0.js
+  - [x] test/language/identifiers/start-unicode-14.0.0-class-escaped.js
+  - [x] test/language/identifiers/start-unicode-14.0.0-class.js
+  - [x] test/language/identifiers/start-unicode-14.0.0-escaped.js
+  - [x] test/language/identifiers/start-unicode-14.0.0.js
+  - [x] test/language/identifiers/start-unicode-15.0.0-class-escaped.js
+  - [x] test/language/identifiers/start-unicode-15.0.0-class.js
+  - [x] test/language/identifiers/start-unicode-15.0.0-escaped.js
+  - [x] test/language/identifiers/start-unicode-15.0.0.js
+  - [x] test/language/identifiers/start-unicode-15.1.0-class-escaped.js
+  - [x] test/language/identifiers/start-unicode-15.1.0-class.js
+  - [x] test/language/identifiers/start-unicode-15.1.0-escaped.js
+  - [x] test/language/identifiers/start-unicode-15.1.0.js
+  - [x] test/language/identifiers/start-unicode-16.0.0-class-escaped.js
+  - [x] test/language/identifiers/start-unicode-16.0.0-class.js
+  - [x] test/language/identifiers/start-unicode-16.0.0-escaped.js
+  - [x] test/language/identifiers/start-unicode-16.0.0.js
+  - [x] test/language/identifiers/start-unicode-17.0.0-class-escaped.js
+  - [x] test/language/identifiers/start-unicode-17.0.0-class.js
+  - [x] test/language/identifiers/start-unicode-17.0.0-escaped.js
+  - [x] test/language/identifiers/start-unicode-17.0.0.js
+  - [x] test/language/identifiers/start-unicode-5.2.0-class-escaped.js
+  - [x] test/language/identifiers/start-unicode-5.2.0-class.js
+  - [x] test/language/identifiers/start-unicode-5.2.0-escaped.js
+  - [x] test/language/identifiers/start-unicode-5.2.0.js
+  - [x] test/language/identifiers/start-unicode-6.0.0-class-escaped.js
+  - [x] test/language/identifiers/start-unicode-6.0.0-class.js
+  - [x] test/language/identifiers/start-unicode-6.0.0-escaped.js
+  - [x] test/language/identifiers/start-unicode-6.0.0.js
+  - [x] test/language/identifiers/start-unicode-6.1.0-class-escaped.js
+  - [x] test/language/identifiers/start-unicode-6.1.0-class.js
+  - [x] test/language/identifiers/start-unicode-6.1.0-escaped.js
+  - [x] test/language/identifiers/start-unicode-6.1.0.js
+  - [x] test/language/identifiers/start-unicode-7.0.0-class-escaped.js
+  - [x] test/language/identifiers/start-unicode-7.0.0-class.js
+  - [x] test/language/identifiers/start-unicode-7.0.0-escaped.js
+  - [x] test/language/identifiers/start-unicode-7.0.0.js
+  - [x] test/language/identifiers/start-unicode-8.0.0-class-escaped.js
+  - [x] test/language/identifiers/start-unicode-8.0.0-class.js
+  - [x] test/language/identifiers/start-unicode-8.0.0-escaped.js
+  - [x] test/language/identifiers/start-unicode-8.0.0.js
+  - [x] test/language/identifiers/start-unicode-9.0.0-class-escaped.js
+  - [x] test/language/identifiers/start-unicode-9.0.0-class.js
+  - [x] test/language/identifiers/start-unicode-9.0.0-escaped.js
+  - [x] test/language/identifiers/start-unicode-9.0.0.js
+  - [x] test/language/identifiers/start-unicode-ltr.js
+  - [x] test/language/identifiers/start-zwj-escaped.js
+  - [x] test/language/identifiers/start-zwnj-escaped.js
+  - [x] test/language/identifiers/unicode-escape-nls-err.js
+  - [x] test/language/identifiers/val-break-via-escape-hex.js
+  - [x] test/language/identifiers/val-break-via-escape-hex4.js
+  - [x] test/language/identifiers/val-break.js
+  - [x] test/language/identifiers/val-case-via-escape-hex.js
+  - [x] test/language/identifiers/val-case-via-escape-hex4.js
+  - [x] test/language/identifiers/val-case.js
+  - [x] test/language/identifiers/val-catch-via-escape-hex.js
+  - [x] test/language/identifiers/val-catch-via-escape-hex4.js
+  - [x] test/language/identifiers/val-catch.js
+  - [x] test/language/identifiers/val-class-via-escape-hex.js
+  - [x] test/language/identifiers/val-class-via-escape-hex4.js
+  - [x] test/language/identifiers/val-class.js
+  - [x] test/language/identifiers/val-const-via-escape-hex.js
+  - [x] test/language/identifiers/val-const-via-escape-hex4.js
+  - [x] test/language/identifiers/val-const.js
+  - [x] test/language/identifiers/val-continue-via-escape-hex.js
+  - [x] test/language/identifiers/val-continue-via-escape-hex4.js
+  - [x] test/language/identifiers/val-continue.js
+  - [x] test/language/identifiers/val-debugger-via-escape-hex.js
+  - [x] test/language/identifiers/val-debugger-via-escape-hex4.js
+  - [x] test/language/identifiers/val-debugger.js
+  - [x] test/language/identifiers/val-default-via-escape-hex.js
+  - [x] test/language/identifiers/val-default-via-escape-hex4.js
+  - [x] test/language/identifiers/val-default.js
+  - [x] test/language/identifiers/val-delete-via-escape-hex.js
+  - [x] test/language/identifiers/val-delete-via-escape-hex4.js
+  - [x] test/language/identifiers/val-delete.js
+  - [x] test/language/identifiers/val-do-via-escape-hex.js
+  - [x] test/language/identifiers/val-do-via-escape-hex4.js
+  - [x] test/language/identifiers/val-do.js
+  - [x] test/language/identifiers/val-dollar-sign-via-escape-hex.js
+  - [x] test/language/identifiers/val-dollar-sign-via-escape-hex4.js
+  - [x] test/language/identifiers/val-dollar-sign.js
+  - [x] test/language/identifiers/val-else-via-escape-hex.js
+  - [x] test/language/identifiers/val-else-via-escape-hex4.js
+  - [x] test/language/identifiers/val-else.js
+  - [x] test/language/identifiers/val-enum-via-escape-hex.js
+  - [x] test/language/identifiers/val-enum-via-escape-hex4.js
+  - [x] test/language/identifiers/val-enum.js
+  - [x] test/language/identifiers/val-export-via-escape-hex.js
+  - [x] test/language/identifiers/val-export-via-escape-hex4.js
+  - [x] test/language/identifiers/val-export.js
+  - [x] test/language/identifiers/val-extends-via-escape-hex.js
+  - [x] test/language/identifiers/val-extends-via-escape-hex4.js
+  - [x] test/language/identifiers/val-extends.js
+  - [x] test/language/identifiers/val-false-via-escape-hex.js
+  - [x] test/language/identifiers/val-false-via-escape-hex4.js
+  - [x] test/language/identifiers/val-false.js
+  - [x] test/language/identifiers/val-finally-via-escape-hex.js
+  - [x] test/language/identifiers/val-finally-via-escape-hex4.js
+  - [x] test/language/identifiers/val-finally.js
+  - [x] test/language/identifiers/val-for-via-escape-hex.js
+  - [x] test/language/identifiers/val-for-via-escape-hex4.js
+  - [x] test/language/identifiers/val-for.js
+  - [x] test/language/identifiers/val-function-via-escape-hex.js
+  - [x] test/language/identifiers/val-function-via-escape-hex4.js
+  - [x] test/language/identifiers/val-function.js
+  - [x] test/language/identifiers/val-if-via-escape-hex.js
+  - [x] test/language/identifiers/val-if-via-escape-hex4.js
+  - [x] test/language/identifiers/val-if.js
+  - [x] test/language/identifiers/val-import-via-escape-hex.js
+  - [x] test/language/identifiers/val-import-via-escape-hex4.js
+  - [x] test/language/identifiers/val-import.js
+  - [x] test/language/identifiers/val-in-via-escape-hex.js
+  - [x] test/language/identifiers/val-in-via-escape-hex4.js
+  - [x] test/language/identifiers/val-in.js
+  - [x] test/language/identifiers/val-instanceof-via-escape-hex.js
+  - [x] test/language/identifiers/val-instanceof-via-escape-hex4.js
+  - [x] test/language/identifiers/val-instanceof.js
+  - [x] test/language/identifiers/val-new-via-escape-hex.js
+  - [x] test/language/identifiers/val-new-via-escape-hex4.js
+  - [x] test/language/identifiers/val-new.js
+  - [x] test/language/identifiers/val-null-via-escape-hex.js
+  - [x] test/language/identifiers/val-null-via-escape-hex4.js
+  - [x] test/language/identifiers/val-null.js
+  - [x] test/language/identifiers/val-return-via-escape-hex.js
+  - [x] test/language/identifiers/val-return-via-escape-hex4.js
+  - [x] test/language/identifiers/val-return.js
+  - [x] test/language/identifiers/val-super-via-escape-hex.js
+  - [x] test/language/identifiers/val-super-via-escape-hex4.js
+  - [x] test/language/identifiers/val-super.js
+  - [x] test/language/identifiers/val-switch-via-escape-hex.js
+  - [x] test/language/identifiers/val-switch-via-escape-hex4.js
+  - [x] test/language/identifiers/val-switch.js
+  - [x] test/language/identifiers/val-this-via-escape-hex.js
+  - [x] test/language/identifiers/val-this-via-escape-hex4.js
+  - [x] test/language/identifiers/val-this.js
+  - [x] test/language/identifiers/val-throw-via-escape-hex.js
+  - [x] test/language/identifiers/val-throw-via-escape-hex4.js
+  - [x] test/language/identifiers/val-throw.js
+  - [x] test/language/identifiers/val-true-via-escape-hex.js
+  - [x] test/language/identifiers/val-true-via-escape-hex4.js
+  - [x] test/language/identifiers/val-true.js
+  - [x] test/language/identifiers/val-try-via-escape-hex.js
+  - [x] test/language/identifiers/val-try-via-escape-hex4.js
+  - [x] test/language/identifiers/val-try.js
+  - [x] test/language/identifiers/val-typeof-via-escape-hex.js
+  - [x] test/language/identifiers/val-typeof-via-escape-hex4.js
+  - [x] test/language/identifiers/val-typeof.js
+  - [x] test/language/identifiers/val-underscore-via-escape-hex.js
+  - [x] test/language/identifiers/val-underscore-via-escape-hex4.js
+  - [x] test/language/identifiers/val-underscore.js
+  - [x] test/language/identifiers/val-var-via-escape-hex.js
+  - [x] test/language/identifiers/val-var-via-escape-hex4.js
+  - [x] test/language/identifiers/val-var.js
+  - [x] test/language/identifiers/val-void-via-escape-hex.js
+  - [x] test/language/identifiers/val-void-via-escape-hex4.js
+  - [x] test/language/identifiers/val-void.js
+  - [x] test/language/identifiers/val-while-via-escape-hex.js
+  - [x] test/language/identifiers/val-while-via-escape-hex4.js
+  - [x] test/language/identifiers/val-while.js
+  - [x] test/language/identifiers/val-with-via-escape-hex.js
+  - [x] test/language/identifiers/val-with-via-escape-hex4.js
+  - [x] test/language/identifiers/val-with.js
+  - [x] test/language/identifiers/val-yield-strict.js
   - [ ] test/language/identifiers/vals-cjk-escaped.js
   - [ ] test/language/identifiers/vals-cjk.js
   - [ ] test/language/identifiers/vals-eng-alpha-lower-via-escape-hex.js

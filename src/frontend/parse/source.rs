@@ -30,8 +30,12 @@ pub(super) fn parse_module_program_with_path(path: &Path, source: &str) -> Resul
 }
 
 pub(super) fn validate_script_source(source: &str) -> Result<()> {
+    validate_script_source_with_strict(source, false)
+}
+
+pub(super) fn validate_script_source_with_strict(source: &str, force_strict: bool) -> Result<()> {
     let file = source_file(FileName::Custom("eval.js".into()), source);
-    parse_script(&file).map(|_| ())
+    parse_script_with_strict(&file, force_strict).map(|_| ())
 }
 
 pub(super) fn script_source_has_direct_using_declaration(source: &str) -> bool {
@@ -54,17 +58,20 @@ pub(crate) fn parse_module_file(path: &Path) -> Result<(Module, String)> {
     Ok((module, source))
 }
 
-pub(crate) fn parse_script_file(path: &Path) -> Result<(swc_ecma_ast::Script, String)> {
+pub(crate) fn parse_script_file_with_strict(
+    path: &Path,
+    force_strict: bool,
+) -> Result<(swc_ecma_ast::Script, String)> {
     let source =
         fs::read_to_string(path).with_context(|| format!("failed to read `{}`", path.display()))?;
 
-    parse_script_file_once(path, &source)
+    parse_script_file_once(path, &source, force_strict)
         .map(|script| (script, source.clone()))
         .or_else(|parse_error| {
             let Some(rewritten) = rewrite_script_await_identifiers(&source) else {
                 return Err(parse_error);
             };
-            parse_script_file_once(path, &rewritten)
+            parse_script_file_once(path, &rewritten, force_strict)
                 .map(|script| (script, rewritten))
                 .map_err(|rewrite_error| {
                     anyhow::anyhow!(
@@ -1189,8 +1196,15 @@ fn skip_block_comment(bytes: &[u8], mut index: usize) -> usize {
 }
 
 fn parse_script(file: &swc_common::SourceFile) -> Result<SwcProgram> {
+    parse_script_with_strict(file, false)
+}
+
+fn parse_script_with_strict(
+    file: &swc_common::SourceFile,
+    force_strict: bool,
+) -> Result<SwcProgram> {
     let script = parse_script_unvalidated(file)?;
-    validate_script_ast(&script, file)?;
+    validate_script_ast_with_strict(&script, file, force_strict)?;
     Ok(SwcProgram::Script(script))
 }
 
@@ -1229,9 +1243,13 @@ fn parse_module(file: &swc_common::SourceFile) -> Result<SwcProgram> {
     Ok(SwcProgram::Module(module))
 }
 
-fn parse_script_file_once(path: &Path, source: &str) -> Result<swc_ecma_ast::Script> {
+fn parse_script_file_once(
+    path: &Path,
+    source: &str,
+    force_strict: bool,
+) -> Result<swc_ecma_ast::Script> {
     let file = source_file(FileName::Real(path.to_path_buf()).into(), source);
-    let SwcProgram::Script(script) = parse_script(&file)? else {
+    let SwcProgram::Script(script) = parse_script_with_strict(&file, force_strict)? else {
         unreachable!("parse_script must return a script");
     };
     Ok(script)

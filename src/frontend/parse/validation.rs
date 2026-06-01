@@ -15,9 +15,10 @@ use crate::frontend::early_errors::{
     validate_strict_mode_early_errors_in_statements,
 };
 
-pub(super) fn validate_script_ast(
+pub(super) fn validate_script_ast_with_strict(
     script: &swc_ecma_ast::Script,
     file: &swc_common::SourceFile,
+    force_strict: bool,
 ) -> Result<()> {
     validate_script_body_early_errors(&script.body)?;
 
@@ -27,7 +28,7 @@ pub(super) fn validate_script_ast(
 
     validate_strict_mode_early_errors_in_statements(
         &script.body,
-        script_has_use_strict_directive(&script.body),
+        force_strict || script_has_use_strict_directive(&script.body),
     )?;
 
     Ok(())

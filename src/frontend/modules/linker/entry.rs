@@ -54,8 +54,12 @@ impl ModuleLinker {
         Ok(self.lowerer.finish_program(statements, true))
     }
 
-    pub(crate) fn bundle_script_entry(&mut self, path: &Path) -> Result<Program> {
-        let (script, lowered_source) = parse_script_file(path)?;
+    pub(crate) fn bundle_script_entry_with_strict(
+        &mut self,
+        path: &Path,
+        force_strict: bool,
+    ) -> Result<Program> {
+        let (script, lowered_source) = parse_script_file_with_strict(path, force_strict)?;
         let dynamic_import_sources =
             self.dynamic_import_specifier_sources_for_script(&script, &lowered_source);
         for source in &dynamic_import_sources {
@@ -69,7 +73,7 @@ impl ModuleLinker {
         self.lowerer.module_index_lookup = self.module_indices.clone();
         self.lowerer.dynamic_import_specifier_lookup =
             self.dynamic_import_specifier_index_lookup(path, &dynamic_import_sources);
-        let strict = script_has_use_strict_directive(&script.body);
+        let strict = force_strict || script_has_use_strict_directive(&script.body);
         self.lowerer.strict_modes.push(strict);
         self.lowerer.module_mode = false;
 

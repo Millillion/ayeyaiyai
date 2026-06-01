@@ -9,7 +9,7 @@ use std::{
 };
 
 use anyhow::{Context, Result};
-use ayeyaiyai::{compile_file, compile_file_with_goal, CompileOptions};
+use ayeyaiyai::{CompileOptions, compile_file_with_goal_and_strict};
 use clap::{ArgAction, Parser};
 use tempfile::tempdir;
 use walkdir::WalkDir;
@@ -123,8 +123,16 @@ fn run() -> Result<()> {
 
         let is_module = metadata.flags.iter().any(|flag| flag == "module");
         let is_async = metadata.flags.iter().any(|flag| flag == "async");
+        let force_strict = metadata.flags.iter().any(|flag| flag == "onlyStrict");
 
-        let outcome = run_single_test(path, &cli.target, cli.timeout_seconds, is_module, is_async);
+        let outcome = run_single_test(
+            path,
+            &cli.target,
+            cli.timeout_seconds,
+            is_module,
+            is_async,
+            force_strict,
+        );
 
         match apply_negative_expectation(&metadata, outcome) {
             Ok(()) => {
@@ -229,6 +237,7 @@ fn run_single_test(
     timeout_seconds: u64,
     module: bool,
     async_test: bool,
+    force_strict: bool,
 ) -> Result<(), TestFailure> {
     let tempdir = tempdir().map_err(|error| TestFailure::Compile(error.to_string()))?;
     let trace_timing = std::env::var_os("AYY_TRACE_TEST262_TIMING").is_some();
@@ -246,11 +255,8 @@ fn run_single_test(
     let keep_tempdir = std::env::var_os("AYY_KEEP_TEST262_TEMP").is_some()
         || std::env::var_os("AYY_KEEP_TEST262_TEMP_PRECOMPILE").is_some();
 
-    let compile_result = if module {
-        compile_file_with_goal(source_path, &options, true)
-    } else {
-        compile_file(source_path, &options)
-    };
+    let compile_result =
+        compile_file_with_goal_and_strict(source_path, &options, module, force_strict);
 
     compile_result.map_err(|error| TestFailure::Compile(format!("{error:#}")))?;
     if trace_timing {
@@ -480,8 +486,8 @@ mod tests {
     use std::{fs, path::Path};
 
     use super::{
-        apply_negative_expectation, normalize_requested_test, parse_frontmatter,
-        parse_test262_metadata, should_skip_path, Metadata, NegativeExpectation, TestFailure,
+        Metadata, NegativeExpectation, TestFailure, apply_negative_expectation,
+        normalize_requested_test, parse_frontmatter, parse_test262_metadata, should_skip_path,
     };
 
     #[test]
@@ -564,11 +570,10 @@ assert.sameValue(1, 1);
             ..Metadata::default()
         };
 
-        assert!(apply_negative_expectation(
-            &metadata,
-            Err(TestFailure::Compile("syntax".to_string()))
-        )
-        .is_ok());
+        assert!(
+            apply_negative_expectation(&metadata, Err(TestFailure::Compile("syntax".to_string())))
+                .is_ok()
+        );
     }
 
     #[test]
@@ -581,16 +586,20 @@ assert.sameValue(1, 1);
             ..Metadata::default()
         };
 
-        assert!(apply_negative_expectation(
-            &metadata,
-            Err(TestFailure::Runtime("TypeError: boom".to_string()))
-        )
-        .is_ok());
-        assert!(apply_negative_expectation(
-            &metadata,
-            Err(TestFailure::Runtime("ReferenceError: boom".to_string()))
-        )
-        .is_err());
+        assert!(
+            apply_negative_expectation(
+                &metadata,
+                Err(TestFailure::Runtime("TypeError: boom".to_string()))
+            )
+            .is_ok()
+        );
+        assert!(
+            apply_negative_expectation(
+                &metadata,
+                Err(TestFailure::Runtime("ReferenceError: boom".to_string()))
+            )
+            .is_err()
+        );
     }
 
     #[test]

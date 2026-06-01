@@ -433,6 +433,17 @@ fn parse_script_goal_accepts_yield_assignment_pattern_shorthand_outside_strict_a
 }
 
 #[test]
+fn forced_strict_script_goal_rejects_yield_binding() {
+    let source = "var yield = 13;";
+
+    frontend::validate_script_goal(source).expect("source should parse outside strict mode");
+    assert!(
+        frontend::validate_script_goal_with_forced_strict(source, true).is_err(),
+        "source should fail when the runner requests strict mode"
+    );
+}
+
+#[test]
 fn parse_script_goal_rejects_escaped_reserved_assignment_pattern_shorthand() {
     let invalid_sources = [
         r#"0, { \u0063onst } = { const: 1 };"#,
