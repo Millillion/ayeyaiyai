@@ -450,7 +450,7 @@ fn validate_regex_unicode_escape(
     pattern: &str,
     escape_offset: usize,
     in_class: bool,
-) -> Result<(usize, Option<u32>)> {
+) -> Result<(usize, Option<u32>, bool)> {
     let escaped_start = escape_offset + '\\'.len_utf8();
     let Some((relative_offset, escaped)) = pattern
         .get(escaped_start..)
@@ -462,11 +462,10 @@ fn validate_regex_unicode_escape(
     let escaped_end = escaped_offset + escaped.len_utf8();
 
     match escaped {
-        'b' | 'B' | 'd' | 'D' | 'f' | 'n' | 'r' | 's' | 'S' | 't' | 'v' | 'w' | 'W' => {
-            Ok((escaped_end, None))
-        }
-        '/' => Ok((escaped_end, None)),
-        '-' if in_class => Ok((escaped_end, None)),
+        'd' | 'D' | 's' | 'S' | 'w' | 'W' => Ok((escaped_end, None, false)),
+        'b' | 'B' | 'f' | 'n' | 'r' | 't' | 'v' => Ok((escaped_end, None, true)),
+        '/' => Ok((escaped_end, None, true)),
+        '-' if in_class => Ok((escaped_end, None, true)),
         'c' => {
             let Some(control) = pattern
                 .get(escaped_end..)
@@ -478,7 +477,7 @@ fn validate_regex_unicode_escape(
                 control.is_ascii_alphabetic(),
                 "regular expression control escape must use an ASCII letter"
             );
-            Ok((escaped_end + control.len_utf8(), None))
+            Ok((escaped_end + control.len_utf8(), None, true))
         }
         '0' => {
             ensure!(
@@ -488,17 +487,17 @@ fn validate_regex_unicode_escape(
                 ),
                 "regular expression legacy octal escape is not allowed in unicode mode"
             );
-            Ok((escaped_end, None))
+            Ok((escaped_end, None, true))
         }
-        'x' => regex_fixed_hex_escape_end(pattern, escaped_end, 2).map(|end| (end, None)),
+        'x' => regex_fixed_hex_escape_end(pattern, escaped_end, 2).map(|end| (end, None, true)),
         'u' if pattern
             .get(escaped_end..)
             .is_some_and(|tail| tail.starts_with('{')) =>
         {
             regex_braced_unicode_escape_end(pattern, escaped_end + '{'.len_utf8())
-                .map(|end| (end, None))
+                .map(|end| (end, None, true))
         }
-        'u' => regex_fixed_hex_escape_end(pattern, escaped_end, 4).map(|end| (end, None)),
+        'u' => regex_fixed_hex_escape_end(pattern, escaped_end, 4).map(|end| (end, None, true)),
         'p' | 'P'
             if pattern
                 .get(escaped_end..)
@@ -510,6 +509,7 @@ fn validate_regex_unicode_escape(
             Ok((
                 escaped_end + '{'.len_utf8() + relative_end + '}'.len_utf8(),
                 None,
+                false,
             ))
         }
         decimal if decimal.is_ascii_digit() => {
@@ -532,11 +532,33 @@ fn validate_regex_unicode_escape(
                         .expect("ascii digit escape should parse as decimal");
                 decimal_end += next.len_utf8();
             }
-            Ok((decimal_end, Some(value)))
+            Ok((decimal_end, Some(value), true))
         }
-        syntax if is_regex_syntax_character(syntax) => Ok((escaped_end, None)),
+        syntax if is_regex_syntax_character(syntax) => Ok((escaped_end, None, true)),
         _ => bail!("regular expression identity escape is not allowed in unicode mode"),
     }
+}
+
+fn regex_class_range_right_atom(
+    pattern: &str,
+    atom_offset: usize,
+    unicode_mode: bool,
+) -> Result<Option<(usize, bool)>> {
+    let Some((_, atom)) = pattern
+        .get(atom_offset..)
+        .and_then(|tail| tail.char_indices().next())
+    else {
+        return Ok(None);
+    };
+    if atom == ']' {
+        return Ok(None);
+    }
+    if atom == '\\' && unicode_mode {
+        let (atom_end, _, single_character) =
+            validate_regex_unicode_escape(pattern, atom_offset, true)?;
+        return Ok(Some((atom_end, single_character)));
+    }
+    Ok(Some((atom_offset + atom.len_utf8(), true)))
 }
 
 fn is_regex_identifier_continue(character: char) -> bool {
@@ -586,6 +608,7 @@ fn validate_regex_pattern_syntax(pattern: &str, unicode_mode: bool) -> Result<()
     let mut capture_count = 0;
     let mut numeric_references = Vec::new();
     let mut bare_k_escape = false;
+    let mut last_class_atom_single = None;
     let mut chars = pattern.char_indices().peekable();
 
     while let Some((offset, ch)) = chars.next() {
@@ -602,18 +625,38 @@ fn validate_regex_pattern_syntax(pattern: &str, unicode_mode: bool) -> Result<()
         if in_class {
             match ch {
                 '\\' if unicode_mode => {
-                    let (escape_end, _) = validate_regex_unicode_escape(pattern, offset, true)?;
+                    let (escape_end, _, single_character) =
+                        validate_regex_unicode_escape(pattern, offset, true)?;
                     while matches!(chars.peek(), Some((next_offset, _)) if *next_offset < escape_end)
                     {
                         chars.next();
                     }
+                    last_class_atom_single = Some(single_character);
                 }
                 '\\' => escaped = true,
                 ']' => {
                     in_class = false;
+                    last_class_atom_single = None;
                     can_quantify = true;
                 }
-                _ => {}
+                '-' if unicode_mode => {
+                    let dash_end = offset + ch.len_utf8();
+                    if let Some(left_single_character) = last_class_atom_single
+                        && let Some((right_atom_end, right_single_character)) =
+                            regex_class_range_right_atom(pattern, dash_end, unicode_mode)?
+                    {
+                        ensure!(
+                            left_single_character && right_single_character,
+                            "regular expression character class range endpoint is not a single character"
+                        );
+                        while matches!(chars.peek(), Some((next_offset, _)) if *next_offset < right_atom_end)
+                        {
+                            chars.next();
+                        }
+                    }
+                    last_class_atom_single = Some(true);
+                }
+                _ => last_class_atom_single = Some(true),
             }
             continue;
         }
@@ -649,7 +692,7 @@ fn validate_regex_pattern_syntax(pattern: &str, unicode_mode: bool) -> Result<()
                     }
                     can_quantify = true;
                 } else if unicode_mode {
-                    let (escape_end, numeric_reference) =
+                    let (escape_end, numeric_reference, _) =
                         validate_regex_unicode_escape(pattern, offset, false)?;
                     if let Some(numeric_reference) = numeric_reference {
                         numeric_references.push(numeric_reference);
@@ -665,6 +708,7 @@ fn validate_regex_pattern_syntax(pattern: &str, unicode_mode: bool) -> Result<()
             }
             '[' => {
                 in_class = true;
+                last_class_atom_single = None;
                 can_quantify = false;
             }
             '(' => {

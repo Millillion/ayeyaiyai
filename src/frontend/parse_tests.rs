@@ -520,6 +520,24 @@ fn validate_script_goal_accepts_unicode_regex_decimal_backreferences() {
 }
 
 #[test]
+fn validate_script_goal_rejects_unicode_regex_multichar_class_range_endpoints() {
+    for source in [r"/[\d-a]/u;", r"/[\s-\d]/u;", r"/[%-\d]/u;", r"/[--\d]/u;"] {
+        assert!(
+            frontend::validate_script_goal(source).is_err(),
+            "source should fail to parse:\n{source}"
+        );
+    }
+}
+
+#[test]
+fn validate_script_goal_accepts_unicode_regex_single_char_class_ranges() {
+    for source in [r"/[a-z]/u;", r"/[-\d]/u;", r"/[\d-]/u;"] {
+        frontend::validate_script_goal(source)
+            .unwrap_or_else(|error| panic!("source should parse:\n{source}\n{error:?}"));
+    }
+}
+
+#[test]
 fn validate_script_goal_accepts_quantified_regex_atoms() {
     for source in ["/a?/;", "/a{2}/;", "/(?:a)?/;", "/(?=a)?/;"] {
         frontend::validate_script_goal(source)
