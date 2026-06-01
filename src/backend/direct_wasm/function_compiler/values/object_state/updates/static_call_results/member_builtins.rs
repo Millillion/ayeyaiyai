@@ -10,7 +10,22 @@ fn simple_regexp_pattern_is_plain_literal(pattern: &str) -> bool {
     })
 }
 
+fn simple_regexp_literal_exact_quantifier_matches(pattern: &str, subject: &str) -> Option<bool> {
+    let (atom, count) = pattern.strip_suffix('}')?.rsplit_once('{')?;
+    if atom.chars().count() != 1 || !simple_regexp_pattern_is_plain_literal(atom) {
+        return None;
+    }
+    let count = count.parse::<usize>().ok()?;
+    Some(subject.contains(&atom.repeat(count)))
+}
+
 fn simple_regexp_single_character_class_matches(pattern: &str, subject: &str) -> Option<bool> {
+    let (pattern, anchored_start) = pattern
+        .strip_prefix('^')
+        .map_or((pattern, false), |rest| (rest, true));
+    let (pattern, anchored_end) = pattern
+        .strip_suffix('$')
+        .map_or((pattern, false), |rest| (rest, true));
     let class = pattern.strip_prefix('[')?.strip_suffix(']')?;
     if class.is_empty() || class.starts_with('^') || class.contains('\\') {
         return None;
@@ -36,11 +51,30 @@ fn simple_regexp_single_character_class_matches(pattern: &str, subject: &str) ->
         }
     }
 
-    Some(subject.chars().any(|subject_char| {
+    let subject_chars = subject.chars().collect::<Vec<_>>();
+    let character_in_class = |subject_char| {
         ranges
             .iter()
             .any(|(start, end)| *start <= subject_char && subject_char <= *end)
-    }))
+    };
+    Some(match (anchored_start, anchored_end) {
+        (true, true) => {
+            subject_chars.len() == 1
+                && subject_chars
+                    .first()
+                    .copied()
+                    .is_some_and(character_in_class)
+        }
+        (true, false) => subject_chars
+            .first()
+            .copied()
+            .is_some_and(character_in_class),
+        (false, true) => subject_chars
+            .last()
+            .copied()
+            .is_some_and(character_in_class),
+        (false, false) => subject_chars.into_iter().any(character_in_class),
+    })
 }
 
 fn simple_regexp_inverted_character_class_matches(pattern: &str, subject: &str) -> Option<bool> {
@@ -111,6 +145,9 @@ fn simple_regexp_pattern_matches(pattern: &str, subject: &str, ignore_case: bool
 
     if simple_regexp_pattern_is_plain_literal(pattern) {
         return Some(subject.contains(pattern));
+    }
+    if let Some(matches) = simple_regexp_literal_exact_quantifier_matches(pattern, subject) {
+        return Some(matches);
     }
     if let Some(matches) = simple_regexp_inverted_character_class_matches(pattern, subject) {
         return Some(matches);
