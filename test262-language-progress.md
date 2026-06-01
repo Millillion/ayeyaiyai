@@ -1,4 +1,4 @@
-967/23645 (4.09%)
+968/23645 (4.09%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -10,7 +10,7 @@ Sub-category progress
 - keywords: 25/25 (100.00%)
 - reserved-words: 27/27 (100.00%)
 - future-reserved-words: 55/55 (100.00%)
-- literals: 420/534 (78.65%)
+- literals: 421/534 (78.84%)
 - directive-prologue: 0/62 (0.00%)
 - asi: 0/102 (0.00%)
 - statementList: 0/80 (0.00%)
@@ -1011,7 +1011,7 @@ Sub-category progress
   - [x] test/language/literals/regexp/named-groups/invalid-punctuator-starting-groupspecifier.js
   - [x] test/language/literals/regexp/named-groups/invalid-punctuator-within-groupspecifier-u.js
   - [x] test/language/literals/regexp/named-groups/invalid-punctuator-within-groupspecifier.js
-  - [ ] test/language/literals/regexp/named-groups/invalid-unterminated-groupspecifier-u.js
+  - [x] test/language/literals/regexp/named-groups/invalid-unterminated-groupspecifier-u.js
   - [ ] test/language/literals/regexp/named-groups/invalid-unterminated-groupspecifier.js
   - [ ] test/language/literals/regexp/regexp-first-char-no-line-separator.js
   - [ ] test/language/literals/regexp/regexp-first-char-no-paragraph-separator.js
