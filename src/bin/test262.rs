@@ -9,7 +9,7 @@ use std::{
 };
 
 use anyhow::{Context, Result};
-use ayeyaiyai::{CompileOptions, compile_file, compile_file_with_goal};
+use ayeyaiyai::{compile_file, compile_file_with_goal, CompileOptions};
 use clap::{ArgAction, Parser};
 use tempfile::tempdir;
 use walkdir::WalkDir;
@@ -117,43 +117,14 @@ fn run() -> Result<()> {
 
         let source =
             fs::read_to_string(path).with_context(|| format!("failed to read `{display}`"))?;
-        let (metadata, body) = parse_test262_source(&source);
-
-        let trace_timing = std::env::var_os("AYY_TRACE_TEST262_TIMING").is_some();
-        if trace_timing {
-            eprintln!("test262 timing prepare_start {relative_display}");
-        }
-        let prepared = match prepare_test_source(&metadata, &body, &cli.test262_dir) {
-            Ok(prepared) => prepared,
-            Err(error) => {
-                summary.attempted += 1;
-                summary.compile_failed += 1;
-                println!("COMPILE_FAIL {display}\n{error:#}");
-                continue;
-            }
-        };
-        if trace_timing {
-            eprintln!("test262 timing prepare_done {relative_display}");
-        }
-
-        if std::env::var_os("AYY_DUMP_PREPARED_SOURCE").is_some() {
-            println!("{prepared}");
-            return Ok(());
-        }
+        let metadata = parse_test262_metadata(&source);
 
         summary.attempted += 1;
 
         let is_module = metadata.flags.iter().any(|flag| flag == "module");
         let is_async = metadata.flags.iter().any(|flag| flag == "async");
 
-        let outcome = run_single_test(
-            path,
-            &prepared,
-            &cli.target,
-            cli.timeout_seconds,
-            is_module,
-            is_async,
-        );
+        let outcome = run_single_test(path, &cli.target, cli.timeout_seconds, is_module, is_async);
 
         match apply_negative_expectation(&metadata, outcome) {
             Ok(()) => {
@@ -254,7 +225,6 @@ enum TestFailure {
 
 fn run_single_test(
     source_path: &Path,
-    source: &str,
     target: &str,
     timeout_seconds: u64,
     module: bool,
@@ -266,18 +236,6 @@ fn run_single_test(
     if trace_timing {
         eprintln!("test262 timing run_start {}", source_path.display());
     }
-    let source_root = tempdir.path().join("source");
-    fs::create_dir_all(&source_root).map_err(|error| TestFailure::Compile(error.to_string()))?;
-    let entry_name = source_path
-        .file_name()
-        .unwrap_or_else(|| OsStr::new("test.js"));
-    let entry_path = source_root.join(entry_name);
-
-    if module || source.contains("import(") {
-        stage_module_siblings(source_path, &source_root)
-            .map_err(|error| TestFailure::Compile(error.to_string()))?;
-    }
-    fs::write(&entry_path, source).map_err(|error| TestFailure::Compile(error.to_string()))?;
 
     let wasm_path = tempdir.path().join("test.wasm");
     let options = CompileOptions {
@@ -289,9 +247,9 @@ fn run_single_test(
         || std::env::var_os("AYY_KEEP_TEST262_TEMP_PRECOMPILE").is_some();
 
     let compile_result = if module {
-        compile_file_with_goal(&entry_path, &options, true)
+        compile_file_with_goal(source_path, &options, true)
     } else {
-        compile_file(&entry_path, &options)
+        compile_file(source_path, &options)
     };
 
     compile_result.map_err(|error| TestFailure::Compile(format!("{error:#}")))?;
@@ -380,37 +338,16 @@ fn run_single_test(
     result
 }
 
-fn stage_module_siblings(source_path: &Path, target_dir: &Path) -> Result<()> {
-    let Some(parent) = source_path.parent() else {
-        return Ok(());
-    };
-
-    for entry in fs::read_dir(parent)? {
-        let entry = entry?;
-        let path = entry.path();
-        if path == source_path || !path.is_file() {
-            continue;
-        }
-
-        let target = target_dir.join(entry.file_name());
-        fs::copy(&path, &target).with_context(|| format!("failed to copy `{}`", path.display()))?;
-    }
-
-    Ok(())
-}
-
-fn parse_test262_source(source: &str) -> (Metadata, String) {
+fn parse_test262_metadata(source: &str) -> Metadata {
     let Some(start) = source.find("/*---") else {
-        return (Metadata::default(), source.to_string());
+        return Metadata::default();
     };
-    let prefix = &source[..start];
     let rest = &source[start + "/*---".len()..];
-    let Some((frontmatter, body)) = rest.split_once("---*/") else {
-        return (Metadata::default(), source.to_string());
+    let Some((frontmatter, _body)) = rest.split_once("---*/") else {
+        return Metadata::default();
     };
 
-    let metadata = parse_frontmatter(frontmatter);
-    (metadata, format!("{prefix}{}", body.trim_start()))
+    parse_frontmatter(frontmatter)
 }
 
 fn parse_frontmatter(frontmatter: &str) -> Metadata {
@@ -486,60 +423,6 @@ fn parse_inline_list(line: &str, key: &str) -> Option<Vec<String>> {
     )
 }
 
-fn has_flag(metadata: &Metadata, expected: &str) -> bool {
-    metadata.flags.iter().any(|flag| flag == expected)
-}
-
-fn strict_prefix(metadata: &Metadata) -> &'static str {
-    has_flag(metadata, "onlyStrict")
-        .then_some("\"use strict\";\n")
-        .unwrap_or_default()
-}
-
-fn prepare_test_source(metadata: &Metadata, body: &str, test262_dir: &Path) -> Result<String> {
-    if has_flag(metadata, "raw") {
-        return Ok(body.to_string());
-    }
-
-    if metadata
-        .negative
-        .as_ref()
-        .and_then(|negative| negative.phase.as_deref())
-        .is_some_and(|phase| phase == "parse" || phase == "resolution")
-    {
-        return Ok(format!("{}{body}", strict_prefix(metadata)));
-    }
-
-    let harness_dir = test262_dir.join("harness");
-    let mut harness_files = vec!["sta.js".to_string(), "assert.js".to_string()];
-    if has_flag(metadata, "async") {
-        harness_files.push("doneprintHandle.js".to_string());
-    }
-    for include in &metadata.includes {
-        if !harness_files.iter().any(|existing| existing == include) {
-            harness_files.push(include.clone());
-        }
-    }
-
-    let mut prepared = String::new();
-    prepared.push_str(strict_prefix(metadata));
-    for include in harness_files {
-        let include_path = harness_dir.join(&include);
-        let include_source = fs::read_to_string(&include_path).with_context(|| {
-            format!(
-                "failed to read harness include `{}`",
-                include_path.display()
-            )
-        })?;
-        prepared.push_str(&include_source);
-        if !prepared.ends_with('\n') {
-            prepared.push('\n');
-        }
-    }
-    prepared.push_str(body);
-    Ok(prepared)
-}
-
 fn apply_negative_expectation(
     metadata: &Metadata,
     outcome: Result<(), TestFailure>,
@@ -597,29 +480,13 @@ mod tests {
     use std::{fs, path::Path};
 
     use super::{
-        Metadata, NegativeExpectation, TestFailure, apply_negative_expectation,
-        normalize_requested_test, parse_frontmatter, parse_test262_source, prepare_test_source,
-        should_skip_path,
+        apply_negative_expectation, normalize_requested_test, parse_frontmatter,
+        parse_test262_metadata, should_skip_path, Metadata, NegativeExpectation, TestFailure,
     };
 
     #[test]
-    fn preserves_raw_leading_hashbang_tests_without_prelude_injection() {
-        let metadata = Metadata {
-            flags: vec!["raw".to_string()],
-            ..Metadata::default()
-        };
-
-        let source =
-            prepare_test_source(&metadata, "#! comment\r{}\n", Path::new("/missing/test262"))
-                .unwrap();
-
-        assert_eq!(source, "#! comment\r{}\n");
-    }
-
-    #[test]
-    fn preserves_prefix_before_frontmatter_in_test_source() {
-        let (metadata, body) = parse_test262_source(
-            r#"#\041
+    fn parses_metadata_without_rewriting_test_source() {
+        let source = r#"#\041
 
 /*---
 flags: [raw]
@@ -629,13 +496,16 @@ negative:
 ---*/
 
 throw "unreachable";
-"#,
-        );
+"#;
+        let metadata = parse_test262_metadata(source);
 
         assert_eq!(metadata.flags, vec!["raw".to_string()]);
-        assert!(
-            body.starts_with("#\\041\n\nthrow \"unreachable\";"),
-            "{body:?}"
+        assert_eq!(
+            metadata.negative,
+            Some(NegativeExpectation {
+                phase: Some("parse".to_string()),
+                error_type: Some("SyntaxError".to_string()),
+            })
         );
     }
 
@@ -659,79 +529,29 @@ negative:
     }
 
     #[test]
-    fn prepares_negative_parse_tests_without_harness() {
-        let metadata = Metadata {
-            flags: vec!["onlyStrict".to_string()],
-            negative: Some(NegativeExpectation {
-                phase: Some("parse".to_string()),
-                error_type: Some("SyntaxError".to_string()),
-            }),
-            ..Metadata::default()
-        };
+    fn parses_inline_flags_and_includes_from_metadata() {
+        let metadata = parse_test262_metadata(
+            r#"
+/*---
+flags: [module, async]
+includes: [propertyHelper.js, compareArray.js]
+---*/
 
-        let source =
-            prepare_test_source(&metadata, "await 1;", Path::new("/missing/test262")).unwrap();
+assert.sameValue(1, 1);
+"#,
+        );
 
-        assert!(source.starts_with("\"use strict\";\nawait 1;"));
-        assert!(!source.contains("function assert("));
-    }
-
-    #[test]
-    fn prepares_official_harness_without_rewriting_test_body() {
-        let tempdir = tempfile::tempdir().unwrap();
-        let harness_dir = tempdir.path().join("harness");
-        fs::create_dir_all(&harness_dir).unwrap();
-        fs::write(harness_dir.join("sta.js"), "function Test262Error() {}\n").unwrap();
-        fs::write(
-            harness_dir.join("assert.js"),
-            "assert.sameValue = function () {};\n",
-        )
-        .unwrap();
-        fs::write(
-            harness_dir.join("propertyHelper.js"),
-            "function verifyProperty() {}\n",
-        )
-        .unwrap();
-
-        let metadata = Metadata {
-            includes: vec!["propertyHelper.js".to_string()],
-            ..Metadata::default()
-        };
-        let body = "assert.sameValue(1, 1);\nassert.compareArray(actual, expected);\n";
-
-        let source = prepare_test_source(&metadata, body, tempdir.path()).unwrap();
-
-        assert!(source.contains("function Test262Error() {}"));
-        assert!(source.contains("assert.sameValue = function () {};"));
-        assert!(source.contains("function verifyProperty() {}"));
-        assert!(source.ends_with(body));
-        assert!(source.contains("assert.compareArray(actual, expected);"));
-        assert!(!source.contains("__assertSameValue"));
-        assert!(!source.contains("__ayyAssert"));
-    }
-
-    #[test]
-    fn async_flag_adds_official_done_handler() {
-        let tempdir = tempfile::tempdir().unwrap();
-        let harness_dir = tempdir.path().join("harness");
-        fs::create_dir_all(&harness_dir).unwrap();
-        fs::write(harness_dir.join("sta.js"), "/* sta */\n").unwrap();
-        fs::write(harness_dir.join("assert.js"), "/* assert */\n").unwrap();
-        fs::write(
-            harness_dir.join("doneprintHandle.js"),
-            "function $DONE(error) {}\n",
-        )
-        .unwrap();
-
-        let metadata = Metadata {
-            flags: vec!["async".to_string()],
-            ..Metadata::default()
-        };
-
-        let source = prepare_test_source(&metadata, "$DONE();", tempdir.path()).unwrap();
-
-        assert!(source.contains("function $DONE(error) {}"));
-        assert!(source.ends_with("$DONE();"));
+        assert_eq!(
+            metadata.flags,
+            vec!["module".to_string(), "async".to_string()]
+        );
+        assert_eq!(
+            metadata.includes,
+            vec![
+                "propertyHelper.js".to_string(),
+                "compareArray.js".to_string()
+            ]
+        );
     }
 
     #[test]
@@ -744,10 +564,11 @@ negative:
             ..Metadata::default()
         };
 
-        assert!(
-            apply_negative_expectation(&metadata, Err(TestFailure::Compile("syntax".to_string())))
-                .is_ok()
-        );
+        assert!(apply_negative_expectation(
+            &metadata,
+            Err(TestFailure::Compile("syntax".to_string()))
+        )
+        .is_ok());
     }
 
     #[test]
@@ -760,20 +581,16 @@ negative:
             ..Metadata::default()
         };
 
-        assert!(
-            apply_negative_expectation(
-                &metadata,
-                Err(TestFailure::Runtime("TypeError: boom".to_string()))
-            )
-            .is_ok()
-        );
-        assert!(
-            apply_negative_expectation(
-                &metadata,
-                Err(TestFailure::Runtime("ReferenceError: boom".to_string()))
-            )
-            .is_err()
-        );
+        assert!(apply_negative_expectation(
+            &metadata,
+            Err(TestFailure::Runtime("TypeError: boom".to_string()))
+        )
+        .is_ok());
+        assert!(apply_negative_expectation(
+            &metadata,
+            Err(TestFailure::Runtime("ReferenceError: boom".to_string()))
+        )
+        .is_err());
     }
 
     #[test]
