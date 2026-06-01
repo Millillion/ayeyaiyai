@@ -225,6 +225,67 @@ fn simple_regexp_character_class_escape_matches(
     })
 }
 
+fn simple_regexp_has_repeated_nonoverlapping_slice<T: Eq>(atoms: &[T]) -> bool {
+    for start in 0..atoms.len() {
+        for end in start + 1..=atoms.len() {
+            let width = end - start;
+            for second_start in end..=atoms.len().saturating_sub(width) {
+                if atoms[start..end] == atoms[second_start..second_start + width] {
+                    return true;
+                }
+            }
+        }
+    }
+    false
+}
+
+fn simple_regexp_decimal_backreference_matches(
+    pattern: &str,
+    subject: &str,
+    ignore_case: bool,
+    unicode: bool,
+) -> Option<bool> {
+    if pattern != r"(.+).*\1" {
+        return None;
+    }
+
+    let normalized_subject;
+    let subject = if ignore_case {
+        normalized_subject = simple_regexp_fold_ignore_case(subject, unicode);
+        normalized_subject.as_str()
+    } else {
+        subject
+    };
+
+    if unicode {
+        let mut segment = Vec::new();
+        for character in subject.chars() {
+            if matches!(character, '\n' | '\r' | '\u{2028}' | '\u{2029}') {
+                if simple_regexp_has_repeated_nonoverlapping_slice(&segment) {
+                    return Some(true);
+                }
+                segment.clear();
+            } else {
+                segment.push(character);
+            }
+        }
+        return Some(simple_regexp_has_repeated_nonoverlapping_slice(&segment));
+    }
+
+    let mut segment = Vec::new();
+    for unit in js_string_utf16_code_units(subject) {
+        if matches!(unit, 0x000a_u16 | 0x000d_u16 | 0x2028_u16 | 0x2029_u16) {
+            if simple_regexp_has_repeated_nonoverlapping_slice(&segment) {
+                return Some(true);
+            }
+            segment.clear();
+        } else {
+            segment.push(unit);
+        }
+    }
+    Some(simple_regexp_has_repeated_nonoverlapping_slice(&segment))
+}
+
 fn simple_regexp_single_character_class_matches(pattern: &str, subject: &str) -> Option<bool> {
     let (pattern, anchored_start) = pattern
         .strip_prefix('^')
@@ -345,6 +406,11 @@ fn simple_regexp_pattern_matches(
     unicode: bool,
 ) -> Option<bool> {
     if let Some(matches) = simple_regexp_character_class_escape_matches(pattern, subject, unicode) {
+        return Some(matches);
+    }
+    if let Some(matches) =
+        simple_regexp_decimal_backreference_matches(pattern, subject, ignore_case, unicode)
+    {
         return Some(matches);
     }
 
