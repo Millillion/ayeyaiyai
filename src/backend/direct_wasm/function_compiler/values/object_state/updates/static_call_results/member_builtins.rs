@@ -1,5 +1,5 @@
 use super::*;
-use crate::ir::hir::js_string_utf16_code_units;
+use crate::ir::hir::{js_string_utf16_code_units, js_surrogate_code_unit_to_sentinel};
 
 fn simple_regexp_pattern_is_plain_literal(pattern: &str) -> bool {
     !pattern.chars().any(|character| {
@@ -20,6 +20,38 @@ fn simple_regexp_read_fixed_hex_u16(
     Some(value)
 }
 
+fn simple_regexp_read_braced_code_point(
+    chars: &mut std::iter::Peekable<std::str::Chars<'_>>,
+) -> Option<u32> {
+    if chars.next()? != '{' {
+        return None;
+    }
+
+    let mut value = 0_u32;
+    let mut has_digits = false;
+    for character in chars.by_ref() {
+        if character == '}' {
+            return has_digits.then_some(value);
+        }
+        value = value
+            .checked_mul(16)?
+            .checked_add(character.to_digit(16)?)?;
+        if value > 0x10ffff {
+            return None;
+        }
+        has_digits = true;
+    }
+    None
+}
+
+fn simple_regexp_decode_code_point(value: u32) -> Option<char> {
+    if (0xd800..=0xdfff).contains(&value) {
+        js_surrogate_code_unit_to_sentinel(value as u16)
+    } else {
+        char::from_u32(value)
+    }
+}
+
 fn simple_regexp_decode_unicode_escapes(pattern: &str) -> Option<String> {
     if !pattern.contains('\\') {
         return Some(pattern.to_string());
@@ -38,6 +70,12 @@ fn simple_regexp_decode_unicode_escapes(pattern: &str) -> Option<String> {
                 decoded.push('\0');
             }
             'u' => {
+                if chars.peek().is_some_and(|next| *next == '{') {
+                    let value = simple_regexp_read_braced_code_point(&mut chars)?;
+                    decoded.push(simple_regexp_decode_code_point(value)?);
+                    continue;
+                }
+
                 let mut value = simple_regexp_read_fixed_hex_u16(&mut chars)?;
                 if (0xd800..=0xdbff).contains(&value) {
                     if chars.next()? != '\\' || chars.next()? != 'u' {
@@ -51,12 +89,31 @@ fn simple_regexp_decode_unicode_escapes(pattern: &str) -> Option<String> {
                 } else if (0xdc00..=0xdfff).contains(&value) {
                     return None;
                 }
-                decoded.push(char::from_u32(value)?);
+                decoded.push(simple_regexp_decode_code_point(value)?);
             }
             _ => return None,
         }
     }
     Some(decoded)
+}
+
+fn simple_regexp_literal_match_range_with_anchors(
+    literal: &str,
+    subject: &str,
+    anchored_start: bool,
+    anchored_end: bool,
+) -> Option<(usize, usize)> {
+    match (anchored_start, anchored_end) {
+        (true, true) => subject.eq(literal).then_some((0, subject.len())),
+        (true, false) => subject.starts_with(literal).then_some((0, literal.len())),
+        (false, true) => subject.ends_with(literal).then(|| {
+            let start = subject.len() - literal.len();
+            (start, subject.len())
+        }),
+        (false, false) => subject
+            .find(literal)
+            .map(|start| (start, start + literal.len())),
+    }
 }
 
 fn simple_regexp_plain_literal_match_range(
@@ -73,18 +130,12 @@ fn simple_regexp_plain_literal_match_range(
         return None;
     }
 
-    let matched = match (anchored_start, anchored_end) {
-        (true, true) => subject.eq(literal).then_some((0, subject.len())),
-        (true, false) => subject.starts_with(literal).then_some((0, literal.len())),
-        (false, true) => subject.ends_with(literal).then(|| {
-            let start = subject.len() - literal.len();
-            (start, subject.len())
-        }),
-        (false, false) => subject
-            .find(literal)
-            .map(|start| (start, start + literal.len())),
-    };
-    Some(matched)
+    Some(simple_regexp_literal_match_range_with_anchors(
+        literal,
+        subject,
+        anchored_start,
+        anchored_end,
+    ))
 }
 
 fn simple_regexp_fold_ignore_case(text: &str, unicode: bool) -> String {
@@ -95,6 +146,65 @@ fn simple_regexp_fold_ignore_case(text: &str, unicode: bool) -> String {
             .map(|character| character.to_ascii_lowercase())
             .collect()
     }
+}
+
+fn simple_regexp_single_unicode_escape_literal_matches(
+    pattern: &str,
+    subject: &str,
+    ignore_case: bool,
+    unicode: bool,
+) -> Option<bool> {
+    let (pattern, anchored_start) = pattern
+        .strip_prefix('^')
+        .map_or((pattern, false), |rest| (rest, true));
+    let (pattern, anchored_end) = pattern
+        .strip_suffix('$')
+        .map_or((pattern, false), |rest| (rest, true));
+
+    let mut chars = pattern.chars().peekable();
+    if chars.next()? != '\\' || chars.next()? != 'u' {
+        return None;
+    }
+    let value = if chars.peek().is_some_and(|next| *next == '{') {
+        simple_regexp_read_braced_code_point(&mut chars)?
+    } else {
+        let mut value = simple_regexp_read_fixed_hex_u16(&mut chars)?;
+        if (0xd800..=0xdbff).contains(&value) {
+            if chars.next()? != '\\' || chars.next()? != 'u' {
+                return None;
+            }
+            let low = simple_regexp_read_fixed_hex_u16(&mut chars)?;
+            if !(0xdc00..=0xdfff).contains(&low) {
+                return None;
+            }
+            value = 0x10000 + ((value - 0xd800) << 10) + (low - 0xdc00);
+        }
+        value
+    };
+    if chars.next().is_some() {
+        return None;
+    }
+
+    let literal = simple_regexp_decode_code_point(value)?.to_string();
+    let normalized_literal;
+    let normalized_subject;
+    let (literal, subject) = if ignore_case {
+        normalized_literal = simple_regexp_fold_ignore_case(&literal, unicode);
+        normalized_subject = simple_regexp_fold_ignore_case(subject, unicode);
+        (normalized_literal.as_str(), normalized_subject.as_str())
+    } else {
+        (literal.as_str(), subject)
+    };
+
+    Some(
+        simple_regexp_literal_match_range_with_anchors(
+            literal,
+            subject,
+            anchored_start,
+            anchored_end,
+        )
+        .is_some(),
+    )
 }
 
 fn simple_regexp_literal_exact_quantifier_matches(pattern: &str, subject: &str) -> Option<bool> {
@@ -406,6 +516,11 @@ fn simple_regexp_pattern_matches(
     unicode: bool,
 ) -> Option<bool> {
     if let Some(matches) = simple_regexp_character_class_escape_matches(pattern, subject, unicode) {
+        return Some(matches);
+    }
+    if let Some(matches) =
+        simple_regexp_single_unicode_escape_literal_matches(pattern, subject, ignore_case, unicode)
+    {
         return Some(matches);
     }
     if let Some(matches) =
