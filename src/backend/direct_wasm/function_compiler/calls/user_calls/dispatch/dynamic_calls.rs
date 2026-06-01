@@ -127,6 +127,10 @@ impl<'a> FunctionCompiler<'a> {
             .is_some_and(|function| Self::is_done_callback_name(&function.name))
     }
 
+    fn expression_is_async_test_callee(callee: &Expression) -> bool {
+        matches!(callee, Expression::Identifier(name) if name == "asyncTest")
+    }
+
     fn emit_done_callback_dynamic_call(&mut self, arguments: &[CallArgument]) -> DirectResult<()> {
         let expanded_arguments = self.expand_call_arguments(arguments);
         let Some(first_argument) = expanded_arguments.first() else {
@@ -168,6 +172,38 @@ impl<'a> FunctionCompiler<'a> {
 
         self.push_i32_const(JS_UNDEFINED_TAG);
         Ok(())
+    }
+
+    fn emit_test262_async_test_call(&mut self, arguments: &[CallArgument]) -> DirectResult<bool> {
+        let expanded_arguments = self.expand_call_arguments(arguments);
+        for argument in expanded_arguments.iter().skip(1) {
+            self.emit_numeric_expression(argument)?;
+            self.state.emission.output.instructions.push(0x1a);
+        }
+
+        let Some(callback) = expanded_arguments.first() else {
+            self.emit_named_error_throw("Test262Error")?;
+            return Ok(true);
+        };
+
+        let callback_call = Expression::Call {
+            callee: Box::new(callback.clone()),
+            arguments: Vec::new(),
+        };
+        let Some(outcome) = self.consume_immediate_promise_outcome(&callback_call)? else {
+            return Ok(false);
+        };
+
+        match outcome {
+            StaticEvalOutcome::Value(_) => {
+                self.emit_print(&[Expression::String("Test262:AsyncTestComplete".to_string())])?;
+                self.push_i32_const(JS_UNDEFINED_TAG);
+            }
+            StaticEvalOutcome::Throw(throw_value) => {
+                self.emit_static_throw_value(&throw_value)?;
+            }
+        }
+        Ok(true)
     }
 
     fn synthesize_dynamic_identifier_capture_slots(
@@ -634,6 +670,11 @@ impl<'a> FunctionCompiler<'a> {
         }
         if self.expression_is_done_callback_callee(callee) {
             self.emit_done_callback_dynamic_call(arguments)?;
+            return Ok(true);
+        }
+        if Self::expression_is_async_test_callee(callee)
+            && self.emit_test262_async_test_call(arguments)?
+        {
             return Ok(true);
         }
         if Self::expression_is_known_promise_resolver_callee(callee) {

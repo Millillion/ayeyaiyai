@@ -826,6 +826,36 @@ impl<'a> FunctionCompiler<'a> {
         )
     }
 
+    fn direct_call_frame_this_binding(
+        &self,
+        user_function: &UserFunction,
+        callee: &Expression,
+    ) -> Expression {
+        let this_binding = match callee {
+            Expression::Member { object, .. } => self.materialize_static_expression(object),
+            Expression::SuperMember { .. } => Expression::This,
+            _ => Expression::Undefined,
+        };
+        self.normalize_sloppy_call_frame_this_binding(user_function, this_binding)
+    }
+
+    fn normalize_sloppy_call_frame_this_binding(
+        &self,
+        user_function: &UserFunction,
+        this_binding: Expression,
+    ) -> Expression {
+        match self.static_sloppy_function_this_binding(user_function, &this_binding) {
+            Some(Expression::Identifier(name))
+                if name == "globalThis"
+                    && matches!(this_binding, Expression::Undefined | Expression::Null) =>
+            {
+                Expression::This
+            }
+            Some(adjusted_this) => adjusted_this,
+            None => this_binding,
+        }
+    }
+
     fn direct_async_implicit_completion_statement_supported(statement: &Statement) -> bool {
         match statement {
             Statement::Return(_) | Statement::Throw(_) => false,
@@ -938,11 +968,7 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(Some(outcome));
         }
         let call_arguments = self.expand_call_arguments(arguments);
-        let this_binding = match callee.as_ref() {
-            Expression::Member { object, .. } => self.materialize_static_expression(object),
-            Expression::SuperMember { .. } => Expression::This,
-            _ => Expression::Undefined,
-        };
+        let this_binding = self.direct_call_frame_this_binding(&user_function, callee);
         if !self.can_emit_direct_async_implicit_completion_with_explicit_call_frame(
             &user_function,
             &call_arguments,
@@ -1743,10 +1769,18 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(self.resolve_static_await_resolution_outcome(resolution));
         };
         let call_arguments = self.expand_call_arguments(arguments);
-        let this_binding = match callee.as_ref() {
-            Expression::Member { object, .. } => self.materialize_static_expression(object),
-            Expression::SuperMember { .. } => Expression::This,
-            _ => Expression::Undefined,
+        let this_binding = if let LocalFunctionBinding::User(function_name) = &binding {
+            if let Some(user_function) = self.user_function(function_name) {
+                self.direct_call_frame_this_binding(user_function, callee)
+            } else {
+                Expression::Undefined
+            }
+        } else {
+            match callee.as_ref() {
+                Expression::Member { object, .. } => self.materialize_static_expression(object),
+                Expression::SuperMember { .. } => Expression::This,
+                _ => Expression::Undefined,
+            }
         };
         let capture_source_bindings =
             self.resolve_function_expression_capture_slots(callee)
@@ -1811,6 +1845,13 @@ impl<'a> FunctionCompiler<'a> {
             .first()
             .cloned()
             .unwrap_or(Expression::Undefined);
+        let this_binding = if let LocalFunctionBinding::User(function_name) = &binding
+            && let Some(user_function) = self.user_function(function_name)
+        {
+            self.normalize_sloppy_call_frame_this_binding(user_function, this_binding)
+        } else {
+            this_binding
+        };
         let call_arguments = bound_arguments
             .iter()
             .skip(1)
@@ -4251,11 +4292,7 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(None);
         };
         let call_arguments = self.expand_call_arguments(arguments);
-        let this_binding = match callee.as_ref() {
-            Expression::Member { object, .. } => self.materialize_static_expression(object),
-            Expression::SuperMember { .. } => Expression::This,
-            _ => Expression::Undefined,
-        };
+        let this_binding = self.direct_call_frame_this_binding(&user_function, callee);
         let capture_source_bindings =
             self.resolve_function_expression_capture_slots(callee)
                 .map(|capture_slots| {

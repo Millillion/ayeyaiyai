@@ -1,4 +1,4 @@
-1361/23645 (5.76%)
+1362/23645 (5.76%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,7 +14,7 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 40/9337 (0.43%)
+- statements: 41/9337 (0.44%)
 - expressions: 0/11038 (0.00%)
 - types: 0/113 (0.00%)
 - function-code: 0/217 (0.00%)
@@ -1409,7 +1409,7 @@ Sub-category progress
   - [x] test/language/statements/async-function/evaluation-body.js
   - [x] test/language/statements/async-function/evaluation-default-that-throws.js
   - [x] test/language/statements/async-function/evaluation-mapped-arguments.js
-  - [ ] test/language/statements/async-function/evaluation-this-value-global.js
+  - [x] test/language/statements/async-function/evaluation-this-value-global.js
   - [ ] test/language/statements/async-function/evaluation-this-value-passed.js
   - [ ] test/language/statements/async-function/evaluation-unmapped-arguments.js
   - [ ] test/language/statements/async-function/forbidden-ext/b1/async-func-decl-forbidden-ext-direct-access-prop-arguments.js
