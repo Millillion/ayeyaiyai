@@ -308,6 +308,166 @@ fn validate_regex_modifier_syntax(pattern: &str) -> Result<()> {
     Ok(())
 }
 
+#[derive(Clone, Copy)]
+enum RegexGroupKind {
+    Capturing,
+    QuantifiableAssertion,
+    LookbehindAssertion,
+}
+
+impl RegexGroupKind {
+    fn can_be_quantified_after_close(self) -> bool {
+        match self {
+            Self::Capturing | Self::QuantifiableAssertion => true,
+            Self::LookbehindAssertion => false,
+        }
+    }
+}
+
+fn regex_group_prefix(pattern: &str, open_offset: usize) -> (RegexGroupKind, usize) {
+    let Some(group_source) = pattern.get(open_offset..) else {
+        return (RegexGroupKind::Capturing, '('.len_utf8());
+    };
+    if group_source.starts_with("(?<=") || group_source.starts_with("(?<!") {
+        return (RegexGroupKind::LookbehindAssertion, "(?<=".len());
+    }
+    if group_source.starts_with("(?=") || group_source.starts_with("(?!") {
+        return (RegexGroupKind::QuantifiableAssertion, "(?=".len());
+    }
+    if group_source.starts_with("(?:") {
+        return (RegexGroupKind::Capturing, "(?:".len());
+    }
+    if group_source.starts_with("(?<") {
+        return (RegexGroupKind::Capturing, "(?<".len());
+    }
+    if let Some(head) = group_source.strip_prefix("(?") {
+        for (offset, ch) in head.char_indices() {
+            if ch == ':' {
+                return (
+                    RegexGroupKind::Capturing,
+                    "(?".len() + offset + ch.len_utf8(),
+                );
+            }
+            if ch == ')' {
+                break;
+            }
+        }
+    }
+    (RegexGroupKind::Capturing, '('.len_utf8())
+}
+
+fn regex_braced_quantifier_len(pattern: &str, open_offset: usize) -> Option<usize> {
+    let bytes = pattern.as_bytes();
+    if bytes.get(open_offset) != Some(&b'{') {
+        return None;
+    }
+
+    let mut index = open_offset + 1;
+    let minimum_start = index;
+    while matches!(bytes.get(index), Some(byte) if byte.is_ascii_digit()) {
+        index += 1;
+    }
+    if index == minimum_start {
+        return None;
+    }
+
+    if bytes.get(index) == Some(&b'}') {
+        return Some(index + 1 - open_offset);
+    }
+    if bytes.get(index) != Some(&b',') {
+        return None;
+    }
+    index += 1;
+    while matches!(bytes.get(index), Some(byte) if byte.is_ascii_digit()) {
+        index += 1;
+    }
+    if bytes.get(index) == Some(&b'}') {
+        return Some(index + 1 - open_offset);
+    }
+    None
+}
+
+fn regex_quantifier_len(pattern: &str, offset: usize, ch: char) -> Option<usize> {
+    let base_len = match ch {
+        '*' | '+' | '?' => ch.len_utf8(),
+        '{' => regex_braced_quantifier_len(pattern, offset)?,
+        _ => return None,
+    };
+    let lazy_len = pattern
+        .get(offset + base_len..)
+        .and_then(|tail| tail.chars().next())
+        .filter(|next| *next == '?')
+        .map_or(0, char::len_utf8);
+    Some(base_len + lazy_len)
+}
+
+fn validate_regex_pattern_syntax(pattern: &str) -> Result<()> {
+    let mut escaped = false;
+    let mut in_class = false;
+    let mut can_quantify = false;
+    let mut groups = Vec::new();
+    let mut chars = pattern.char_indices().peekable();
+
+    while let Some((offset, ch)) = chars.next() {
+        if escaped {
+            escaped = false;
+            if !in_class {
+                can_quantify = true;
+            }
+            continue;
+        }
+        if in_class {
+            match ch {
+                '\\' => escaped = true,
+                ']' => {
+                    in_class = false;
+                    can_quantify = true;
+                }
+                _ => {}
+            }
+            continue;
+        }
+
+        if let Some(quantifier_len) = regex_quantifier_len(pattern, offset, ch) {
+            ensure!(
+                can_quantify,
+                "regular expression quantifier has no preceding atom"
+            );
+            let quantifier_end = offset + quantifier_len;
+            while matches!(chars.peek(), Some((next_offset, _)) if *next_offset < quantifier_end) {
+                chars.next();
+            }
+            can_quantify = false;
+            continue;
+        }
+
+        match ch {
+            '\\' => escaped = true,
+            '[' => {
+                in_class = true;
+                can_quantify = false;
+            }
+            '(' => {
+                let (kind, prefix_len) = regex_group_prefix(pattern, offset);
+                let prefix_end = offset + prefix_len;
+                while matches!(chars.peek(), Some((next_offset, _)) if *next_offset < prefix_end) {
+                    chars.next();
+                }
+                groups.push(kind);
+                can_quantify = false;
+            }
+            ')' => {
+                can_quantify = groups
+                    .pop()
+                    .map_or(true, RegexGroupKind::can_be_quantified_after_close);
+            }
+            '|' | '^' | '$' => can_quantify = false,
+            _ => can_quantify = true,
+        }
+    }
+    Ok(())
+}
+
 fn validate_regex_literal_syntax(regex: &Regex, file: &swc_common::SourceFile) -> Result<()> {
     let raw = source_slice_for_span(file, regex.span)?;
     ensure!(
@@ -316,6 +476,7 @@ fn validate_regex_literal_syntax(regex: &Regex, file: &swc_common::SourceFile) -
     );
     if let Some(pattern) = regex_literal_pattern_source(raw) {
         validate_regex_modifier_syntax(pattern)?;
+        validate_regex_pattern_syntax(pattern)?;
     }
     Ok(())
 }

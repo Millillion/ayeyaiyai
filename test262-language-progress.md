@@ -1,4 +1,4 @@
-901/23645 (3.81%)
+909/23645 (3.84%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -10,7 +10,7 @@ Sub-category progress
 - keywords: 25/25 (100.00%)
 - reserved-words: 27/27 (100.00%)
 - future-reserved-words: 55/55 (100.00%)
-- literals: 354/534 (66.29%)
+- literals: 362/534 (67.79%)
 - directive-prologue: 0/62 (0.00%)
 - asi: 0/102 (0.00%)
 - statementList: 0/80 (0.00%)
@@ -945,15 +945,15 @@ Sub-category progress
   - [x] test/language/literals/regexp/early-err-modifiers-should-not-unicode-escape-i.js
   - [x] test/language/literals/regexp/early-err-modifiers-should-not-unicode-escape-m.js
   - [x] test/language/literals/regexp/early-err-modifiers-should-not-unicode-escape-s.js
-  - [ ] test/language/literals/regexp/early-err-pattern.js
+  - [x] test/language/literals/regexp/early-err-pattern.js
   - [ ] test/language/literals/regexp/inequality.js
-  - [ ] test/language/literals/regexp/invalid-braced-quantifier-exact.js
-  - [ ] test/language/literals/regexp/invalid-braced-quantifier-lower.js
-  - [ ] test/language/literals/regexp/invalid-braced-quantifier-range.js
-  - [ ] test/language/literals/regexp/invalid-optional-lookbehind.js
-  - [ ] test/language/literals/regexp/invalid-optional-negative-lookbehind.js
-  - [ ] test/language/literals/regexp/invalid-range-lookbehind.js
-  - [ ] test/language/literals/regexp/invalid-range-negative-lookbehind.js
+  - [x] test/language/literals/regexp/invalid-braced-quantifier-exact.js
+  - [x] test/language/literals/regexp/invalid-braced-quantifier-lower.js
+  - [x] test/language/literals/regexp/invalid-braced-quantifier-range.js
+  - [x] test/language/literals/regexp/invalid-optional-lookbehind.js
+  - [x] test/language/literals/regexp/invalid-optional-negative-lookbehind.js
+  - [x] test/language/literals/regexp/invalid-range-lookbehind.js
+  - [x] test/language/literals/regexp/invalid-range-negative-lookbehind.js
   - [ ] test/language/literals/regexp/lastIndex.js
   - [ ] test/language/literals/regexp/mongolian-vowel-separator-eval.js
   - [ ] test/language/literals/regexp/mongolian-vowel-separator.js
