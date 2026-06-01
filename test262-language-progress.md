@@ -1,4 +1,4 @@
-422/23645 (1.78%)
+518/23645 (2.19%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -6,10 +6,10 @@ Sub-category progress
 - line-terminators: 41/41 (100.00%)
 - punctuators: 11/11 (100.00%)
 - source-text: 1/1 (100.00%)
-- identifiers: 250/268 (93.28%)
-- keywords: 0/25 (0.00%)
-- reserved-words: 0/27 (0.00%)
-- future-reserved-words: 0/55 (0.00%)
+- identifiers: 268/268 (100.00%)
+- keywords: 25/25 (100.00%)
+- reserved-words: 27/27 (100.00%)
+- future-reserved-words: 26/55 (47.27%)
 - literals: 0/534 (0.00%)
 - directive-prologue: 0/62 (0.00%)
 - asi: 0/102 (0.00%)
@@ -458,105 +458,105 @@ Sub-category progress
   - [x] test/language/identifiers/val-with-via-escape-hex4.js
   - [x] test/language/identifiers/val-with.js
   - [x] test/language/identifiers/val-yield-strict.js
-  - [ ] test/language/identifiers/vals-cjk-escaped.js
-  - [ ] test/language/identifiers/vals-cjk.js
-  - [ ] test/language/identifiers/vals-eng-alpha-lower-via-escape-hex.js
-  - [ ] test/language/identifiers/vals-eng-alpha-lower-via-escape-hex4.js
-  - [ ] test/language/identifiers/vals-eng-alpha-lower.js
-  - [ ] test/language/identifiers/vals-eng-alpha-upper-via-escape-hex.js
-  - [ ] test/language/identifiers/vals-eng-alpha-upper-via-escape-hex4.js
-  - [ ] test/language/identifiers/vals-eng-alpha-upper.js
-  - [ ] test/language/identifiers/vals-rus-alpha-lower-via-escape-hex.js
-  - [ ] test/language/identifiers/vals-rus-alpha-lower-via-escape-hex4.js
-  - [ ] test/language/identifiers/vals-rus-alpha-lower.js
-  - [ ] test/language/identifiers/vals-rus-alpha-upper-via-escape-hex.js
-  - [ ] test/language/identifiers/vals-rus-alpha-upper-via-escape-hex4.js
-  - [ ] test/language/identifiers/vals-rus-alpha-upper.js
-  - [ ] test/language/identifiers/vertical-tilde-continue-escaped.js
-  - [ ] test/language/identifiers/vertical-tilde-continue.js
-  - [ ] test/language/identifiers/vertical-tilde-start-escaped.js
-  - [ ] test/language/identifiers/vertical-tilde-start.js
+  - [x] test/language/identifiers/vals-cjk-escaped.js
+  - [x] test/language/identifiers/vals-cjk.js
+  - [x] test/language/identifiers/vals-eng-alpha-lower-via-escape-hex.js
+  - [x] test/language/identifiers/vals-eng-alpha-lower-via-escape-hex4.js
+  - [x] test/language/identifiers/vals-eng-alpha-lower.js
+  - [x] test/language/identifiers/vals-eng-alpha-upper-via-escape-hex.js
+  - [x] test/language/identifiers/vals-eng-alpha-upper-via-escape-hex4.js
+  - [x] test/language/identifiers/vals-eng-alpha-upper.js
+  - [x] test/language/identifiers/vals-rus-alpha-lower-via-escape-hex.js
+  - [x] test/language/identifiers/vals-rus-alpha-lower-via-escape-hex4.js
+  - [x] test/language/identifiers/vals-rus-alpha-lower.js
+  - [x] test/language/identifiers/vals-rus-alpha-upper-via-escape-hex.js
+  - [x] test/language/identifiers/vals-rus-alpha-upper-via-escape-hex4.js
+  - [x] test/language/identifiers/vals-rus-alpha-upper.js
+  - [x] test/language/identifiers/vertical-tilde-continue-escaped.js
+  - [x] test/language/identifiers/vertical-tilde-continue.js
+  - [x] test/language/identifiers/vertical-tilde-start-escaped.js
+  - [x] test/language/identifiers/vertical-tilde-start.js
 - [ ] keywords (25 tests)
-  - [ ] test/language/keywords/ident-ref-break.js
-  - [ ] test/language/keywords/ident-ref-case.js
-  - [ ] test/language/keywords/ident-ref-catch.js
-  - [ ] test/language/keywords/ident-ref-continue.js
-  - [ ] test/language/keywords/ident-ref-default.js
-  - [ ] test/language/keywords/ident-ref-delete.js
-  - [ ] test/language/keywords/ident-ref-do.js
-  - [ ] test/language/keywords/ident-ref-else.js
-  - [ ] test/language/keywords/ident-ref-finally.js
-  - [ ] test/language/keywords/ident-ref-for.js
-  - [ ] test/language/keywords/ident-ref-function.js
-  - [ ] test/language/keywords/ident-ref-if.js
-  - [ ] test/language/keywords/ident-ref-in.js
-  - [ ] test/language/keywords/ident-ref-instanceof.js
-  - [ ] test/language/keywords/ident-ref-new.js
-  - [ ] test/language/keywords/ident-ref-return.js
-  - [ ] test/language/keywords/ident-ref-switch.js
-  - [ ] test/language/keywords/ident-ref-this.js
-  - [ ] test/language/keywords/ident-ref-throw.js
-  - [ ] test/language/keywords/ident-ref-try.js
-  - [ ] test/language/keywords/ident-ref-typeof.js
-  - [ ] test/language/keywords/ident-ref-var.js
-  - [ ] test/language/keywords/ident-ref-void.js
-  - [ ] test/language/keywords/ident-ref-while.js
-  - [ ] test/language/keywords/ident-ref-with.js
+  - [x] test/language/keywords/ident-ref-break.js
+  - [x] test/language/keywords/ident-ref-case.js
+  - [x] test/language/keywords/ident-ref-catch.js
+  - [x] test/language/keywords/ident-ref-continue.js
+  - [x] test/language/keywords/ident-ref-default.js
+  - [x] test/language/keywords/ident-ref-delete.js
+  - [x] test/language/keywords/ident-ref-do.js
+  - [x] test/language/keywords/ident-ref-else.js
+  - [x] test/language/keywords/ident-ref-finally.js
+  - [x] test/language/keywords/ident-ref-for.js
+  - [x] test/language/keywords/ident-ref-function.js
+  - [x] test/language/keywords/ident-ref-if.js
+  - [x] test/language/keywords/ident-ref-in.js
+  - [x] test/language/keywords/ident-ref-instanceof.js
+  - [x] test/language/keywords/ident-ref-new.js
+  - [x] test/language/keywords/ident-ref-return.js
+  - [x] test/language/keywords/ident-ref-switch.js
+  - [x] test/language/keywords/ident-ref-this.js
+  - [x] test/language/keywords/ident-ref-throw.js
+  - [x] test/language/keywords/ident-ref-try.js
+  - [x] test/language/keywords/ident-ref-typeof.js
+  - [x] test/language/keywords/ident-ref-var.js
+  - [x] test/language/keywords/ident-ref-void.js
+  - [x] test/language/keywords/ident-ref-while.js
+  - [x] test/language/keywords/ident-ref-with.js
 - [ ] reserved-words (27 tests)
-  - [ ] test/language/reserved-words/await-module.js
-  - [ ] test/language/reserved-words/await-script.js
-  - [ ] test/language/reserved-words/ident-name-global-property-accessor.js
-  - [ ] test/language/reserved-words/ident-name-global-property-memberexpr-str.js
-  - [ ] test/language/reserved-words/ident-name-global-property-memberexpr.js
-  - [ ] test/language/reserved-words/ident-name-global-property-prop-name.js
-  - [ ] test/language/reserved-words/ident-name-keyword-accessor.js
-  - [ ] test/language/reserved-words/ident-name-keyword-memberexpr-str.js
-  - [ ] test/language/reserved-words/ident-name-keyword-memberexpr.js
-  - [ ] test/language/reserved-words/ident-name-keyword-prop-name.js
-  - [ ] test/language/reserved-words/ident-name-reserved-word-literal-accessor.js
-  - [ ] test/language/reserved-words/ident-name-reserved-word-literal-memberexpr-str.js
-  - [ ] test/language/reserved-words/ident-name-reserved-word-literal-memberexpr.js
-  - [ ] test/language/reserved-words/ident-name-reserved-word-literal-prop-name.js
-  - [ ] test/language/reserved-words/ident-reference-false-escaped.js
-  - [ ] test/language/reserved-words/ident-reference-false.js
-  - [ ] test/language/reserved-words/ident-reference-null-escaped.js
-  - [ ] test/language/reserved-words/ident-reference-null.js
-  - [ ] test/language/reserved-words/ident-reference-true-escaped.js
-  - [ ] test/language/reserved-words/ident-reference-true.js
-  - [ ] test/language/reserved-words/label-ident-false-escaped.js
-  - [ ] test/language/reserved-words/label-ident-false.js
-  - [ ] test/language/reserved-words/label-ident-null-escaped.js
-  - [ ] test/language/reserved-words/label-ident-null.js
-  - [ ] test/language/reserved-words/label-ident-true-escaped.js
-  - [ ] test/language/reserved-words/label-ident-true.js
-  - [ ] test/language/reserved-words/unreserved-words.js
+  - [x] test/language/reserved-words/await-module.js
+  - [x] test/language/reserved-words/await-script.js
+  - [x] test/language/reserved-words/ident-name-global-property-accessor.js
+  - [x] test/language/reserved-words/ident-name-global-property-memberexpr-str.js
+  - [x] test/language/reserved-words/ident-name-global-property-memberexpr.js
+  - [x] test/language/reserved-words/ident-name-global-property-prop-name.js
+  - [x] test/language/reserved-words/ident-name-keyword-accessor.js
+  - [x] test/language/reserved-words/ident-name-keyword-memberexpr-str.js
+  - [x] test/language/reserved-words/ident-name-keyword-memberexpr.js
+  - [x] test/language/reserved-words/ident-name-keyword-prop-name.js
+  - [x] test/language/reserved-words/ident-name-reserved-word-literal-accessor.js
+  - [x] test/language/reserved-words/ident-name-reserved-word-literal-memberexpr-str.js
+  - [x] test/language/reserved-words/ident-name-reserved-word-literal-memberexpr.js
+  - [x] test/language/reserved-words/ident-name-reserved-word-literal-prop-name.js
+  - [x] test/language/reserved-words/ident-reference-false-escaped.js
+  - [x] test/language/reserved-words/ident-reference-false.js
+  - [x] test/language/reserved-words/ident-reference-null-escaped.js
+  - [x] test/language/reserved-words/ident-reference-null.js
+  - [x] test/language/reserved-words/ident-reference-true-escaped.js
+  - [x] test/language/reserved-words/ident-reference-true.js
+  - [x] test/language/reserved-words/label-ident-false-escaped.js
+  - [x] test/language/reserved-words/label-ident-false.js
+  - [x] test/language/reserved-words/label-ident-null-escaped.js
+  - [x] test/language/reserved-words/label-ident-null.js
+  - [x] test/language/reserved-words/label-ident-true-escaped.js
+  - [x] test/language/reserved-words/label-ident-true.js
+  - [x] test/language/reserved-words/unreserved-words.js
 - [ ] future-reserved-words (55 tests)
-  - [ ] test/language/future-reserved-words/_implements.js
-  - [ ] test/language/future-reserved-words/abstract.js
-  - [ ] test/language/future-reserved-words/boolean.js
-  - [ ] test/language/future-reserved-words/byte.js
-  - [ ] test/language/future-reserved-words/char.js
-  - [ ] test/language/future-reserved-words/class.js
-  - [ ] test/language/future-reserved-words/const.js
-  - [ ] test/language/future-reserved-words/debugger.js
-  - [ ] test/language/future-reserved-words/double.js
-  - [ ] test/language/future-reserved-words/enum.js
-  - [ ] test/language/future-reserved-words/export.js
-  - [ ] test/language/future-reserved-words/extends.js
-  - [ ] test/language/future-reserved-words/final.js
-  - [ ] test/language/future-reserved-words/float.js
-  - [ ] test/language/future-reserved-words/goto.js
-  - [ ] test/language/future-reserved-words/implement.js
-  - [ ] test/language/future-reserved-words/implements-strict-escaped.js
-  - [ ] test/language/future-reserved-words/implements-strict.js
-  - [ ] test/language/future-reserved-words/implements-titlecase.js
-  - [ ] test/language/future-reserved-words/implements-uppercase.js
-  - [ ] test/language/future-reserved-words/implements.js
-  - [ ] test/language/future-reserved-words/implements0.js
-  - [ ] test/language/future-reserved-words/implementss.js
-  - [ ] test/language/future-reserved-words/import.js
-  - [ ] test/language/future-reserved-words/int.js
-  - [ ] test/language/future-reserved-words/interface-strict-escaped.js
+  - [x] test/language/future-reserved-words/_implements.js
+  - [x] test/language/future-reserved-words/abstract.js
+  - [x] test/language/future-reserved-words/boolean.js
+  - [x] test/language/future-reserved-words/byte.js
+  - [x] test/language/future-reserved-words/char.js
+  - [x] test/language/future-reserved-words/class.js
+  - [x] test/language/future-reserved-words/const.js
+  - [x] test/language/future-reserved-words/debugger.js
+  - [x] test/language/future-reserved-words/double.js
+  - [x] test/language/future-reserved-words/enum.js
+  - [x] test/language/future-reserved-words/export.js
+  - [x] test/language/future-reserved-words/extends.js
+  - [x] test/language/future-reserved-words/final.js
+  - [x] test/language/future-reserved-words/float.js
+  - [x] test/language/future-reserved-words/goto.js
+  - [x] test/language/future-reserved-words/implement.js
+  - [x] test/language/future-reserved-words/implements-strict-escaped.js
+  - [x] test/language/future-reserved-words/implements-strict.js
+  - [x] test/language/future-reserved-words/implements-titlecase.js
+  - [x] test/language/future-reserved-words/implements-uppercase.js
+  - [x] test/language/future-reserved-words/implements.js
+  - [x] test/language/future-reserved-words/implements0.js
+  - [x] test/language/future-reserved-words/implementss.js
+  - [x] test/language/future-reserved-words/import.js
+  - [x] test/language/future-reserved-words/int.js
+  - [x] test/language/future-reserved-words/interface-strict-escaped.js
   - [ ] test/language/future-reserved-words/interface-strict.js
   - [ ] test/language/future-reserved-words/interface.js
   - [ ] test/language/future-reserved-words/let-strict-escaped.js
