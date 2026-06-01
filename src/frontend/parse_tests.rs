@@ -380,6 +380,49 @@ fn validate_script_goal_rejects_yield_assignment_pattern_shorthand_in_strict_mod
 }
 
 #[test]
+fn validate_script_goal_rejects_strict_legacy_string_escapes() {
+    let invalid_sources = [
+        r#""use strict"; "\1";"#,
+        r#""use strict"; "\8";"#,
+        r#""\052"; "use strict";"#,
+        r#"function invalid() { "\6"; "use strict"; }"#,
+    ];
+
+    for source in invalid_sources {
+        assert!(
+            frontend::validate_script_goal(source).is_err(),
+            "source should fail to parse:\n{source}"
+        );
+    }
+}
+
+#[test]
+fn validate_script_goal_allows_strict_null_and_escaped_backslash_strings() {
+    frontend::validate_script_goal(r#""use strict"; "\0"; "\\8"; "\\1";"#)
+        .expect("strict string literals without legacy escape sequences should parse");
+}
+
+#[test]
+fn validate_script_goal_rejects_invalid_string_unicode_code_point_escapes() {
+    for source in [r#"'\u{1F_639}';"#, r#""\u{1F_639}";"#] {
+        assert!(
+            frontend::validate_script_goal(source).is_err(),
+            "source should fail to parse:\n{source}"
+        );
+    }
+}
+
+#[test]
+fn validate_script_goal_rejects_line_terminators_in_regex_literals() {
+    for source in ["/\u{2028}/;", "/\u{2029}/;"] {
+        assert!(
+            frontend::validate_script_goal(source).is_err(),
+            "source should fail to parse:\n{source:?}"
+        );
+    }
+}
+
+#[test]
 fn parse_script_goal_accepts_yield_assignment_pattern_shorthand_outside_strict_and_generator() {
     let source = r#"
     var yield;

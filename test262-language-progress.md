@@ -1,4 +1,4 @@
-458/23645 (1.94%)
+461/23645 (1.95%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -8,9 +8,9 @@ Sub-category progress
 - source-text: 1/1 (100.00%)
 - identifiers: 268/268 (100.00%)
 - keywords: 18/25 (72.00%)
-- reserved-words: 0/27 (0.00%)
+- reserved-words: 2/27 (7.41%)
 - future-reserved-words: 0/55 (0.00%)
-- literals: 0/534 (0.00%)
+- literals: 1/534 (0.19%)
 - directive-prologue: 0/62 (0.00%)
 - asi: 0/102 (0.00%)
 - statementList: 0/80 (0.00%)
@@ -512,11 +512,11 @@ Sub-category progress
 - [ ] reserved-words (27 tests)
   - [ ] test/language/reserved-words/await-module.js
   - [ ] test/language/reserved-words/await-script.js
-  - [ ] test/language/reserved-words/ident-name-global-property-accessor.js
+  - [x] test/language/reserved-words/ident-name-global-property-accessor.js
   - [ ] test/language/reserved-words/ident-name-global-property-memberexpr-str.js
   - [ ] test/language/reserved-words/ident-name-global-property-memberexpr.js
   - [ ] test/language/reserved-words/ident-name-global-property-prop-name.js
-  - [ ] test/language/reserved-words/ident-name-keyword-accessor.js
+  - [x] test/language/reserved-words/ident-name-keyword-accessor.js
   - [ ] test/language/reserved-words/ident-name-keyword-memberexpr-str.js
   - [ ] test/language/reserved-words/ident-name-keyword-memberexpr.js
   - [ ] test/language/reserved-words/ident-name-keyword-prop-name.js
@@ -966,7 +966,7 @@ Sub-category progress
   - [ ] test/language/literals/regexp/lastIndex.js
   - [ ] test/language/literals/regexp/mongolian-vowel-separator-eval.js
   - [ ] test/language/literals/regexp/mongolian-vowel-separator.js
-  - [ ] test/language/literals/regexp/named-groups/forward-reference.js
+  - [x] test/language/literals/regexp/named-groups/forward-reference.js
   - [ ] test/language/literals/regexp/named-groups/invalid-dangling-groupname-2-u.js
   - [ ] test/language/literals/regexp/named-groups/invalid-dangling-groupname-2.js
   - [ ] test/language/literals/regexp/named-groups/invalid-dangling-groupname-3-u.js

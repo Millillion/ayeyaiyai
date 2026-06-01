@@ -43,6 +43,21 @@ fn simple_regexp_single_character_class_matches(pattern: &str, subject: &str) ->
     }))
 }
 
+fn simple_regexp_named_forward_reference_matches(pattern: &str, subject: &str) -> Option<bool> {
+    let rest = pattern.strip_prefix(r"\k<")?;
+    let (reference_name, rest) = rest.split_once('>')?;
+    let rest = rest.strip_prefix("(?<")?;
+    let (capture_name, rest) = rest.split_once('>')?;
+    if reference_name != capture_name {
+        return None;
+    }
+    let captured_literal = rest.strip_suffix(')')?;
+    if captured_literal.is_empty() || !simple_regexp_pattern_is_plain_literal(captured_literal) {
+        return None;
+    }
+    Some(subject.contains(captured_literal))
+}
+
 fn simple_regexp_pattern_matches(pattern: &str, subject: &str, ignore_case: bool) -> Option<bool> {
     let normalized_pattern;
     let normalized_subject;
@@ -58,6 +73,9 @@ fn simple_regexp_pattern_matches(pattern: &str, subject: &str, ignore_case: bool
         return Some(subject.contains(pattern));
     }
     if let Some(matches) = simple_regexp_single_character_class_matches(pattern, subject) {
+        return Some(matches);
+    }
+    if let Some(matches) = simple_regexp_named_forward_reference_matches(pattern, subject) {
         return Some(matches);
     }
     if let Some(required_prefix) = pattern.strip_suffix('?') {

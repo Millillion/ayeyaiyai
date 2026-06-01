@@ -298,10 +298,16 @@ impl<'a> FunctionCompiler<'a> {
                 .static_semantics
                 .clear_local_proxy_binding("this");
         }
-        if matches!(
+        let this_is_module_namespace = matches!(
             &this_expression,
             Expression::Identifier(name) if name.starts_with("__ayy_module_deferred_namespace_")
-        ) {
+        ) || self
+            .module_namespace_index_from_expression(&this_expression)
+            .is_some();
+        if this_is_module_namespace {
+            self.update_local_object_binding("this", &this_expression);
+            self.update_local_value_binding(super_target_name, &this_expression);
+            self.update_local_object_binding(super_target_name, &this_expression);
             return self.sync_runtime_this_shadow_from_expression(&this_expression);
         }
         let capture_source_bindings = self

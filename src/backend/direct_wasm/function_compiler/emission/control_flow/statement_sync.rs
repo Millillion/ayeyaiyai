@@ -489,6 +489,10 @@ impl<'a> FunctionCompiler<'a> {
             return true;
         }
 
+        if matches!(statement, Statement::For { .. }) {
+            return false;
+        }
+
         let mut environment = environment;
         if !matches!(
             self.execute_static_statements_with_state(

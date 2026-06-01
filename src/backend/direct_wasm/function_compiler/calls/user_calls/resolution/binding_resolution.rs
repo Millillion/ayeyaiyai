@@ -395,6 +395,38 @@ impl<'a> FunctionCompiler<'a> {
                         .local_function_binding(&resolved_name)
                         .cloned()
                         .or_else(|| {
+                            self.state
+                                .speculation
+                                .static_semantics
+                                .local_value_binding(&resolved_name)
+                                .cloned()
+                                .filter(|value| !static_expression_matches(value, expression))
+                                .and_then(|value| {
+                                    self.resolve_function_binding_from_expression_with_context(
+                                        &value,
+                                        current_function_name,
+                                    )
+                                })
+                        })
+                        .or_else(|| {
+                            if resolved_name.as_str() != name.as_str() {
+                                self.state
+                                    .speculation
+                                    .static_semantics
+                                    .local_value_binding(name)
+                                    .cloned()
+                                    .filter(|value| !static_expression_matches(value, expression))
+                                    .and_then(|value| {
+                                        self.resolve_function_binding_from_expression_with_context(
+                                            &value,
+                                            current_function_name,
+                                        )
+                                    })
+                            } else {
+                                None
+                            }
+                        })
+                        .or_else(|| {
                             self.resolve_scoped_function_declaration_alias_binding(
                                 &resolved_name,
                                 current_function_name,
@@ -448,6 +480,21 @@ impl<'a> FunctionCompiler<'a> {
                     .static_semantics
                     .local_function_binding(name)
                     .cloned()
+                {
+                    Some(function_binding)
+                } else if let Some(function_binding) = self
+                    .state
+                    .speculation
+                    .static_semantics
+                    .local_value_binding(name)
+                    .cloned()
+                    .filter(|value| !static_expression_matches(value, expression))
+                    .and_then(|value| {
+                        self.resolve_function_binding_from_expression_with_context(
+                            &value,
+                            current_function_name,
+                        )
+                    })
                 {
                     Some(function_binding)
                 } else if self.resolve_eval_local_function_hidden_name(name).is_some() {

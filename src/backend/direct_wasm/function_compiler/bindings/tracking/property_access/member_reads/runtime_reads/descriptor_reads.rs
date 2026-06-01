@@ -56,11 +56,25 @@ impl<'a> FunctionCompiler<'a> {
         name: &str,
         property_name: &str,
     ) -> DirectResult<bool> {
+        let trace = std::env::var_os("AYY_TRACE_DESCRIPTOR_READS").is_some();
         let Some((receiver, descriptor_property)) =
             self.dynamic_property_descriptor_source_for_local(name)
         else {
             return Ok(false);
         };
+        if trace {
+            eprintln!(
+                "descriptor_read:dynamic_source local={name} receiver={receiver:?} descriptor_property={descriptor_property:?} member={property_name}"
+            );
+        }
+
+        if self.emit_module_namespace_dynamic_descriptor_member_read(
+            &receiver,
+            &descriptor_property,
+            property_name,
+        )? {
+            return Ok(true);
+        }
 
         let resolved_receiver = self
             .resolve_bound_alias_expression(&receiver)
@@ -116,6 +130,115 @@ impl<'a> FunctionCompiler<'a> {
         for (descriptor_name, descriptor) in descriptors {
             self.push_local_get(descriptor_property_local);
             self.emit_static_string_literal(&descriptor_name)?;
+            self.push_binary_op(BinaryOp::Equal)?;
+            self.state.emission.output.instructions.push(0x04);
+            self.state
+                .emission
+                .output
+                .instructions
+                .push(EMPTY_BLOCK_TYPE);
+            self.push_control_frame();
+            if self.emit_property_descriptor_binding_member_value(&descriptor, property_name)? {
+                self.push_local_set(result_local);
+            }
+            self.state.emission.output.instructions.push(0x0b);
+            self.pop_control_frame();
+        }
+
+        self.push_local_get(result_local);
+        Ok(true)
+    }
+
+    fn emit_module_namespace_dynamic_descriptor_member_read(
+        &mut self,
+        receiver: &Expression,
+        descriptor_property: &Expression,
+        property_name: &str,
+    ) -> DirectResult<bool> {
+        if !matches!(
+            property_name,
+            "value" | "configurable" | "enumerable" | "writable" | "get" | "set"
+        ) {
+            return Ok(false);
+        }
+        let Some(module_index) = self.module_namespace_index_from_expression(receiver) else {
+            return Ok(false);
+        };
+        let materialized_property = self
+            .resolve_property_key_expression(descriptor_property)
+            .unwrap_or_else(|| self.materialize_static_expression(descriptor_property));
+        if static_property_name_from_expression(&materialized_property).is_some()
+            || is_symbol_to_string_tag_expression(&materialized_property)
+        {
+            if let Some(descriptor) = self.module_namespace_current_descriptor_from_module_index(
+                receiver,
+                module_index,
+                &materialized_property,
+            ) {
+                return self
+                    .emit_property_descriptor_binding_member_value(&descriptor, property_name);
+            }
+            self.push_i32_const(JS_UNDEFINED_TAG);
+            return Ok(true);
+        }
+        if !inline_summary_side_effect_free_expression(descriptor_property) {
+            return Ok(false);
+        }
+
+        let mut descriptors = self
+            .resolve_static_dynamic_import_namespace_own_property_names_binding(module_index)
+            .map(|binding| {
+                binding
+                    .values
+                    .into_iter()
+                    .filter_map(|value| {
+                        let Some(Expression::String(property_name)) = value else {
+                            return None;
+                        };
+                        if property_name.starts_with("__ayy$") || property_name == "then" {
+                            return None;
+                        }
+                        let property = Expression::String(property_name);
+                        self.module_namespace_current_descriptor_from_module_index(
+                            receiver,
+                            module_index,
+                            &property,
+                        )
+                        .map(|descriptor| (property, descriptor))
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+        let to_string_tag_property = Expression::Member {
+            object: Box::new(Expression::Identifier("Symbol".to_string())),
+            property: Box::new(Expression::String("toStringTag".to_string())),
+        };
+        if let Some(descriptor) = self.module_namespace_current_descriptor_from_module_index(
+            receiver,
+            module_index,
+            &to_string_tag_property,
+        ) {
+            descriptors.push((to_string_tag_property, descriptor));
+        }
+        if descriptors.is_empty() {
+            self.push_i32_const(JS_UNDEFINED_TAG);
+            return Ok(true);
+        }
+
+        let descriptor_property_local = self.allocate_temp_local();
+        let result_local = self.allocate_temp_local();
+        self.emit_numeric_expression(descriptor_property)?;
+        self.push_local_set(descriptor_property_local);
+        self.push_i32_const(JS_UNDEFINED_TAG);
+        self.push_local_set(result_local);
+
+        for (descriptor_name, descriptor) in descriptors {
+            self.push_local_get(descriptor_property_local);
+            if let Expression::String(property_name) = &descriptor_name {
+                self.emit_static_string_literal(property_name)?;
+            } else {
+                self.emit_numeric_expression(&descriptor_name)?;
+            }
             self.push_binary_op(BinaryOp::Equal)?;
             self.state.emission.output.instructions.push(0x04);
             self.state

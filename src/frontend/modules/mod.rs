@@ -29,6 +29,7 @@ mod emit;
 mod export_resolution;
 mod import_rewriter;
 mod linker;
+mod module_binding_storage;
 pub(crate) mod resolution;
 
 use self::{
@@ -75,6 +76,7 @@ struct LinkedModule {
     async_continuation_names: Vec<String>,
     init_async: bool,
     dependency_params: Vec<ModuleDependencyParam>,
+    local_binding_storage: BTreeMap<String, String>,
     export_names: Vec<String>,
     export_resolutions: BTreeMap<String, ExportResolution>,
     star_export_module_indices: Vec<usize>,

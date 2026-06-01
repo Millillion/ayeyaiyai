@@ -565,6 +565,14 @@ impl<'a> FunctionCompiler<'a> {
                 }
             })
             .unwrap_or_else(|| self.canonical_object_property_expression(property));
+        if is_symbol_to_string_tag_expression(&property_key)
+            || self.well_known_symbol_name(&property_key).is_some()
+            || self
+                .resolve_symbol_identity_expression(&property_key)
+                .is_some()
+        {
+            return None;
+        }
         if is_symbol_to_string_tag_expression(&property_key) {
             return None;
         }
@@ -579,6 +587,21 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         object: &Expression,
     ) -> Option<usize> {
+        if matches!(object, Expression::This) {
+            if let Some(value) = self
+                .state
+                .speculation
+                .static_semantics
+                .local_value_binding("this")
+                .cloned()
+                && !matches!(value, Expression::This | Expression::Undefined)
+                && let Some(module_index) =
+                    self.deferred_module_namespace_materialized_object_module_index(&value)
+            {
+                return Some(module_index);
+            }
+        }
+
         if let Expression::Member {
             object: base,
             property,
@@ -787,6 +810,14 @@ impl<'a> FunctionCompiler<'a> {
                 }
             })
             .unwrap_or_else(|| self.canonical_object_property_expression(property));
+        if is_symbol_to_string_tag_expression(&property_key)
+            || self.well_known_symbol_name(&property_key).is_some()
+            || self
+                .resolve_symbol_identity_expression(&property_key)
+                .is_some()
+        {
+            return None;
+        }
         let Some(property_name) = static_property_name_from_expression(&property_key) else {
             return Some(None);
         };
@@ -1310,6 +1341,20 @@ impl<'a> FunctionCompiler<'a> {
                 "private_emit_member current_fn={:?} object={object:?} property={property:?}",
                 self.current_function_name(),
             );
+        }
+        if matches!(
+            (object, property),
+            (Expression::Identifier(name), Expression::String(property_name))
+                if matches!(
+                    property_name.as_str(),
+                    "value" | "configurable" | "enumerable" | "writable" | "get" | "set"
+                ) && self.local_binding_is_dynamic_property_descriptor_result(name)
+        ) && self.emit_runtime_descriptor_member_read(object, property)?
+        {
+            if trace_member_reads {
+                eprintln!("member_expr:dynamic_descriptor object={object:?} property={property:?}");
+            }
+            return Ok(());
         }
         let object_is_internal_assignment_temp =
             matches!(object, Expression::Identifier(name) if is_internal_assignment_temp(name));
@@ -1976,6 +2021,9 @@ impl<'a> FunctionCompiler<'a> {
             self.resolve_super_base_expression_with_context(self.current_function_name());
         if self.super_base_is_statically_nullish(super_base.as_ref()) {
             self.emit_named_error_throw("TypeError")?;
+            return Ok(());
+        }
+        if self.emit_deferred_module_namespace_super_member_read(super_base.as_ref(), property)? {
             return Ok(());
         }
         if let Some(function_binding) = self.resolve_super_function_binding(property) {

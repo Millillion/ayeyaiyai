@@ -238,4 +238,28 @@ impl<'a> FunctionCompiler<'a> {
             environment,
         })
     }
+
+    pub(in crate::backend::direct_wasm) fn user_function_uses_direct_arguments_object(
+        &self,
+        user_function: &UserFunction,
+    ) -> bool {
+        let Some(function) = self.resolve_registered_function_declaration(&user_function.name)
+        else {
+            return false;
+        };
+        if function.lexical_this {
+            return false;
+        }
+
+        let parameter_default_expressions = function
+            .params
+            .iter()
+            .filter_map(|parameter| parameter.default.as_ref());
+        !collect_arguments_usage_from_statements_and_expressions(
+            &function.body,
+            parameter_default_expressions,
+        )
+        .indexed_slots
+        .is_empty()
+    }
 }

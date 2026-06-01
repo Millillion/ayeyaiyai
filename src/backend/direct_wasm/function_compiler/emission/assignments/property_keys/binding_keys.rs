@@ -189,15 +189,223 @@ impl<'a> FunctionCompiler<'a> {
     }
 
     fn normalize_member_function_binding_identifier_target(&self, name: &str) -> String {
-        self.resolve_registered_function_declaration(name)
-            .and_then(|function| function.self_binding.as_ref())
-            .or_else(|| {
-                self.resolve_registered_function_declaration(name)
-                    .and_then(|function| function.top_level_binding.as_ref())
-            })
-            .cloned()
-            .or_else(|| scoped_binding_source_name(name).map(str::to_string))
-            .unwrap_or_else(|| name.to_string())
+        let mut current = name.to_string();
+        let mut seen = HashSet::new();
+
+        while seen.insert(current.clone()) {
+            if let Some(normalized) = self
+                .resolve_registered_function_declaration(&current)
+                .or_else(|| self.prepared_function_declaration(&current))
+                .and_then(|function| function.self_binding.as_ref())
+                .or_else(|| {
+                    self.resolve_registered_function_declaration(&current)
+                        .or_else(|| self.prepared_function_declaration(&current))
+                        .and_then(|function| function.top_level_binding.as_ref())
+                })
+                .cloned()
+                .or_else(|| scoped_binding_source_name(&current).map(str::to_string))
+                && normalized != current
+            {
+                current = normalized;
+                continue;
+            }
+
+            if let Some(self_binding) = Self::generated_class_constructor_self_binding(&current)
+                && self_binding != current
+            {
+                current = self_binding;
+                continue;
+            }
+
+            let resolved_local_name = self
+                .resolve_current_local_binding(&current)
+                .map(|(resolved_name, _)| resolved_name);
+            let alias = resolved_local_name
+                .as_deref()
+                .and_then(|resolved_name| {
+                    self.state
+                        .speculation
+                        .static_semantics
+                        .local_value_binding(resolved_name)
+                })
+                .or_else(|| {
+                    self.state
+                        .speculation
+                        .static_semantics
+                        .local_value_binding(&current)
+                })
+                .or_else(|| {
+                    resolved_local_name
+                        .is_none()
+                        .then(|| self.global_value_binding(&current))
+                        .flatten()
+                });
+
+            if let Some(Expression::Identifier(alias_name)) = alias
+                && alias_name != &current
+            {
+                current = alias_name.clone();
+                continue;
+            }
+
+            break;
+        }
+
+        current
+    }
+
+    fn generated_class_constructor_self_binding(name: &str) -> Option<String> {
+        let (_, binding_name) = name.rsplit_once("__name_")?;
+        (!binding_name.is_empty()).then(|| binding_name.to_string())
+    }
+
+    fn insert_member_function_binding_target_alias(
+        aliases: &mut std::collections::BTreeSet<String>,
+        name: &str,
+    ) -> bool {
+        let mut changed = aliases.insert(name.to_string());
+        if let Some(source_name) = scoped_binding_source_name(name) {
+            changed |= aliases.insert(source_name.to_string());
+        }
+        changed
+    }
+
+    fn collect_member_function_binding_target_aliases(
+        &self,
+        name: &str,
+    ) -> std::collections::BTreeSet<String> {
+        let mut aliases = std::collections::BTreeSet::new();
+        Self::insert_member_function_binding_target_alias(&mut aliases, name);
+
+        let mut changed = true;
+        while changed {
+            changed = false;
+            let snapshot = aliases.iter().cloned().collect::<Vec<_>>();
+            for candidate in snapshot {
+                if let Some(self_binding) =
+                    Self::generated_class_constructor_self_binding(&candidate)
+                {
+                    changed |= Self::insert_member_function_binding_target_alias(
+                        &mut aliases,
+                        &self_binding,
+                    );
+                }
+
+                if let Some(function) = self
+                    .resolve_registered_function_declaration(&candidate)
+                    .or_else(|| self.prepared_function_declaration(&candidate))
+                {
+                    changed |= Self::insert_member_function_binding_target_alias(
+                        &mut aliases,
+                        &function.name,
+                    );
+                    if let Some(self_binding) = function.self_binding.as_deref() {
+                        changed |= Self::insert_member_function_binding_target_alias(
+                            &mut aliases,
+                            self_binding,
+                        );
+                    }
+                    if let Some(top_level_binding) = function.top_level_binding.as_deref() {
+                        changed |= Self::insert_member_function_binding_target_alias(
+                            &mut aliases,
+                            top_level_binding,
+                        );
+                    }
+                }
+
+                let resolved_local_name = self
+                    .resolve_current_local_binding(&candidate)
+                    .map(|(resolved_name, _)| resolved_name);
+                let alias = resolved_local_name
+                    .as_deref()
+                    .and_then(|resolved_name| {
+                        self.state
+                            .speculation
+                            .static_semantics
+                            .local_value_binding(resolved_name)
+                    })
+                    .or_else(|| {
+                        self.state
+                            .speculation
+                            .static_semantics
+                            .local_value_binding(&candidate)
+                    })
+                    .or_else(|| {
+                        resolved_local_name
+                            .is_none()
+                            .then(|| self.global_value_binding(&candidate))
+                            .flatten()
+                    });
+                if let Some(Expression::Identifier(alias_name)) = alias {
+                    changed |=
+                        Self::insert_member_function_binding_target_alias(&mut aliases, alias_name);
+                }
+            }
+
+            for function in self.user_functions() {
+                let Some(declaration) = self
+                    .prepared_function_declaration(&function.name)
+                    .or_else(|| self.resolve_registered_function_declaration(&function.name))
+                else {
+                    continue;
+                };
+                let declaration_names = [
+                    Some(function.name.as_str()),
+                    declaration.self_binding.as_deref(),
+                    declaration.top_level_binding.as_deref(),
+                ];
+                let matches_alias = declaration_names.into_iter().flatten().any(|candidate| {
+                    aliases.contains(candidate)
+                        || scoped_binding_source_name(candidate)
+                            .is_some_and(|source_name| aliases.contains(source_name))
+                });
+                if !matches_alias {
+                    continue;
+                }
+                changed |=
+                    Self::insert_member_function_binding_target_alias(&mut aliases, &function.name);
+                if let Some(self_binding) = declaration.self_binding.as_deref() {
+                    changed |= Self::insert_member_function_binding_target_alias(
+                        &mut aliases,
+                        self_binding,
+                    );
+                }
+                if let Some(top_level_binding) = declaration.top_level_binding.as_deref() {
+                    changed |= Self::insert_member_function_binding_target_alias(
+                        &mut aliases,
+                        top_level_binding,
+                    );
+                }
+            }
+        }
+
+        aliases
+    }
+
+    pub(in crate::backend::direct_wasm) fn member_function_binding_targets_may_alias(
+        &self,
+        requested: &MemberFunctionBindingTarget,
+        candidate: &MemberFunctionBindingTarget,
+    ) -> bool {
+        let (requested_name, candidate_name) = match (requested, candidate) {
+            (
+                MemberFunctionBindingTarget::Identifier(requested_name),
+                MemberFunctionBindingTarget::Identifier(candidate_name),
+            )
+            | (
+                MemberFunctionBindingTarget::Prototype(requested_name),
+                MemberFunctionBindingTarget::Prototype(candidate_name),
+            ) => (requested_name, candidate_name),
+            _ => return false,
+        };
+        if requested_name == candidate_name {
+            return true;
+        }
+        let requested_aliases = self.collect_member_function_binding_target_aliases(requested_name);
+        let candidate_aliases = self.collect_member_function_binding_target_aliases(candidate_name);
+        requested_aliases
+            .iter()
+            .any(|name| candidate_aliases.contains(name))
     }
 
     fn resolve_member_function_binding_identifier_source(&self, name: &str) -> Option<Expression> {
@@ -218,6 +426,23 @@ impl<'a> FunctionCompiler<'a> {
                 let resolved_object = self
                     .resolve_bound_alias_expression(object)
                     .filter(|resolved| !static_expression_matches(resolved, object))
+                    .or_else(|| {
+                        let Expression::Identifier(name) = object.as_ref() else {
+                            return None;
+                        };
+                        let LocalFunctionBinding::User(function_name) =
+                            self.resolve_class_constructor_self_binding_for_identifier(name)?
+                        else {
+                            return None;
+                        };
+                        let self_binding = self
+                            .prepared_function_declaration(&function_name)
+                            .or_else(|| {
+                                self.resolve_registered_function_declaration(&function_name)
+                            })
+                            .and_then(|function| function.self_binding.clone())?;
+                        Some(Expression::Identifier(self_binding))
+                    })
                     .unwrap_or_else(|| object.as_ref().clone());
                 let Expression::Identifier(name) = resolved_object else {
                     return None;

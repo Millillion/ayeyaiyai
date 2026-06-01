@@ -2362,6 +2362,9 @@ impl<'a> FunctionCompiler<'a> {
         for argument in arguments.iter().skip(2) {
             match argument {
                 CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                    if self.assertion_static_message_argument_effect_free(expression) {
+                        continue;
+                    }
                     self.emit_numeric_expression(expression)?;
                     self.state.emission.output.instructions.push(0x1a);
                 }
@@ -3231,7 +3234,8 @@ impl<'a> FunctionCompiler<'a> {
         let operands_contain_member_access =
             Self::same_value_operand_contains_member_access(actual)
                 || Self::same_value_operand_contains_member_access(expected);
-        let operands_use_runtime_array_state = !handled_as_typeof
+        let operands_use_runtime_array_state = !operands_contain_dynamic_descriptor_member
+            && !handled_as_typeof
             && (self.expression_uses_runtime_array_state(actual)
                 || self.expression_uses_runtime_array_state(expected));
         if handled_as_typeof
@@ -3585,10 +3589,19 @@ impl<'a> FunctionCompiler<'a> {
         for argument in arguments.iter().skip(2) {
             match argument {
                 CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                    if self.assertion_static_message_argument_effect_free(expression) {
+                        continue;
+                    }
                     self.emit_numeric_expression(expression)?;
                     self.state.emission.output.instructions.push(0x1a);
                 }
             }
+        }
+        if trace_assertions {
+            eprintln!(
+                "same_value_assertion:failure_branch:start actual={actual:?} expected={expected:?} fn={:?}",
+                self.current_function_name()
+            );
         }
         self.push_local_get(actual_local);
         self.state.emission.output.instructions.push(0x04);
@@ -3602,6 +3615,12 @@ impl<'a> FunctionCompiler<'a> {
         self.state.emission.output.instructions.push(0x0b);
         self.pop_control_frame();
         self.push_i32_const(JS_UNDEFINED_TAG);
+        if trace_assertions {
+            eprintln!(
+                "same_value_assertion:done actual={actual:?} expected={expected:?} fn={:?}",
+                self.current_function_name()
+            );
+        }
         Ok(true)
     }
 }

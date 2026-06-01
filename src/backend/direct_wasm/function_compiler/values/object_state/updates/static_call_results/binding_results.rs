@@ -91,6 +91,9 @@ impl<'a> FunctionCompiler<'a> {
         if user_function.is_generator() {
             return None;
         }
+        if self.user_function_uses_direct_arguments_object(user_function) {
+            return None;
+        }
         if self.user_function_mentions_private_member_access(user_function)
             || self.user_function_mentions_direct_eval(user_function)
         {
@@ -197,6 +200,9 @@ impl<'a> FunctionCompiler<'a> {
             if !self.user_function_allows_static_call_frame_result(user_function) {
                 return None;
             }
+            if self.user_function_uses_direct_arguments_object(user_function) {
+                return None;
+            }
             if user_function.has_lowered_pattern_parameters()
                 || !self
                     .user_function_parameter_iterator_consumption_indices(user_function)
@@ -235,6 +241,9 @@ impl<'a> FunctionCompiler<'a> {
             };
             let user_function = self.user_function(function_name)?;
             if !self.user_function_allows_static_call_frame_result(user_function) {
+                return None;
+            }
+            if self.user_function_uses_direct_arguments_object(user_function) {
                 return None;
             }
             if user_function.has_lowered_pattern_parameters()
@@ -305,6 +314,9 @@ impl<'a> FunctionCompiler<'a> {
             };
             let user_function = self.user_function(function_name)?;
             if !self.user_function_allows_static_call_frame_result(user_function) {
+                return None;
+            }
+            if self.user_function_uses_direct_arguments_object(user_function) {
                 return None;
             }
             if user_function.has_lowered_pattern_parameters()

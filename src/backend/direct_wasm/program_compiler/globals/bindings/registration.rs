@@ -2299,6 +2299,9 @@ impl DirectWasmCompiler {
                 let source_name = scoped_binding_source_name(&name)
                     .unwrap_or(&name)
                     .to_string();
+                if source_name.starts_with("__ayy_module_binding_") {
+                    continue;
+                }
                 let is_eval_local_function_binding =
                     eval_local_function_bindings.iter().any(|binding_name| {
                         binding_name == &source_name

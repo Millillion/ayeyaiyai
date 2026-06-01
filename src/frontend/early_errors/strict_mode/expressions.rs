@@ -29,11 +29,62 @@ fn is_strict_delete_forbidden_target(expression: &Expr) -> bool {
     }
 }
 
+fn strict_string_raw_has_forbidden_legacy_escape(raw: &str) -> bool {
+    let bytes = raw.as_bytes();
+    let mut index = 0;
+    while index < bytes.len() {
+        if bytes[index] != b'\\' {
+            index += 1;
+            continue;
+        }
+
+        index += 1;
+        if index >= bytes.len() {
+            return false;
+        }
+
+        match bytes[index] {
+            b'1'..=b'9' => return true,
+            b'0' => {
+                if bytes.get(index + 1).is_some_and(|byte| byte.is_ascii_digit()) {
+                    return true;
+                }
+                index += 1;
+            }
+            b'\r' => {
+                index += if bytes.get(index + 1) == Some(&b'\n') {
+                    2
+                } else {
+                    1
+                };
+            }
+            _ => index += 1,
+        }
+    }
+
+    false
+}
+
+fn validate_strict_mode_string_literal(string: &Str, strict: bool) -> Result<()> {
+    ensure!(
+        !strict
+            || !string
+                .raw
+                .as_ref()
+                .is_some_and(|raw| strict_string_raw_has_forbidden_legacy_escape(raw.as_ref())),
+        "strict mode forbids legacy string literal escape sequences"
+    );
+    Ok(())
+}
+
 pub(super) fn validate_strict_mode_early_errors_in_expression(
     expression: &Expr,
     strict: bool,
 ) -> Result<()> {
     match expression {
+        Expr::Lit(Lit::Str(string)) => {
+            validate_strict_mode_string_literal(string, strict)?;
+        }
         Expr::Ident(identifier) => {
             ensure!(
                 !strict || !is_strict_mode_reserved_identifier(identifier.sym.as_ref()),

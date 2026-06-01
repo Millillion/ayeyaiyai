@@ -176,6 +176,19 @@ impl<'a> FunctionCompiler<'a> {
             callee: Box::new(callee.clone()),
             arguments: arguments.to_vec(),
         };
+        if let Some(LocalFunctionBinding::Builtin(function_name)) =
+            self.resolve_function_binding_from_expression(callee)
+            && is_function_constructor_builtin(&function_name)
+        {
+            if trace_construct_calls {
+                eprintln!(
+                    "construct_call:function_constructor_builtin callee={callee:?} binding={function_name}"
+                );
+            }
+            if self.emit_builtin_call_for_callee(callee, &function_name, arguments, true)? {
+                return Ok(());
+            }
+        }
         if self
             .resolve_static_constructed_function_metadata_object_binding(&new_expression)
             .is_some()

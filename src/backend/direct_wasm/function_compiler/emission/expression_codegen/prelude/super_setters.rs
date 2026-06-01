@@ -41,6 +41,7 @@ impl<'a> FunctionCompiler<'a> {
             )?;
         }
         self.state.emission.output.instructions.push(0x1a);
+        self.invalidate_user_function_assigned_nonlocal_bindings(user_function);
         Ok(())
     }
 

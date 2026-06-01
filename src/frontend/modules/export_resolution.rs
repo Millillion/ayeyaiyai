@@ -321,6 +321,21 @@ impl ModuleLinker {
         self.canonicalize_export_resolution_with_visited(resolution, &mut HashSet::new())
     }
 
+    pub(super) fn resolve_star_export_resolution_for_dependency(
+        &self,
+        current_module_index: usize,
+        dependency_index: usize,
+        export_name: &str,
+    ) -> Result<Option<ExportResolution>> {
+        let mut visited = HashSet::new();
+        visited.insert((current_module_index, export_name.to_string()));
+        self.resolve_export_resolution_for_dependency_with_visited(
+            dependency_index,
+            export_name,
+            &mut visited,
+        )
+    }
+
     fn canonicalize_export_resolution_with_visited(
         &self,
         resolution: ExportResolution,

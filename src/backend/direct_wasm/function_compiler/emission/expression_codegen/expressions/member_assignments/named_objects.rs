@@ -407,6 +407,14 @@ impl<'a> FunctionCompiler<'a> {
                 true,
             ));
         }
+        if self.state.speculation.execution_context.top_level_function
+            && (self.global_has_binding(capture_name)
+                || self.backend.global_has_lexical_binding(capture_name)
+                || self.backend.global_function_binding(capture_name).is_some()
+                || self.global_has_implicit_binding(capture_name))
+        {
+            return Some((Expression::Identifier(capture_name.to_string()), false));
+        }
         if self.resolve_current_local_binding(capture_name).is_some() {
             return Some((Expression::Identifier(capture_name.to_string()), true));
         }
@@ -534,7 +542,9 @@ impl<'a> FunctionCompiler<'a> {
                         "capture_slots init insert existing key={key:?} slots={capture_slots:?}"
                     );
                 }
-                if self.binding_key_is_global(&key) {
+                if self.binding_key_is_global(&key)
+                    || self.state.speculation.execution_context.top_level_function
+                {
                     self.backend
                         .set_global_member_function_capture_slots(key, capture_slots);
                 }
@@ -631,7 +641,9 @@ impl<'a> FunctionCompiler<'a> {
         if trace_capture_bindings {
             eprintln!("capture_slots init insert key={key:?} slots={capture_slots:?}");
         }
-        if self.binding_key_is_global(&key) {
+        if self.binding_key_is_global(&key)
+            || self.state.speculation.execution_context.top_level_function
+        {
             self.backend
                 .set_global_member_function_capture_slots(key, capture_slots);
         }

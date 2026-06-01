@@ -545,7 +545,8 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(false);
         };
         if !inline_summary_side_effect_free_expression(&target)
-            || !inline_summary_side_effect_free_expression(&property)
+            || (!inline_summary_side_effect_free_expression(&property)
+                && !is_symbol_to_string_tag_expression(&property))
             || !inline_summary_side_effect_free_expression(&descriptor)
         {
             return Ok(false);

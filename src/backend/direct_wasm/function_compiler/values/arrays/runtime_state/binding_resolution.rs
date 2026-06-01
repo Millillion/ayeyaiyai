@@ -1,5 +1,39 @@
 use super::*;
 
+thread_local! {
+    static RUNTIME_ARRAY_BINDING_RESOLUTION_STACK: std::cell::RefCell<Vec<Expression>> =
+        const { std::cell::RefCell::new(Vec::new()) };
+}
+
+struct RuntimeArrayBindingResolutionGuard;
+
+impl RuntimeArrayBindingResolutionGuard {
+    fn enter(expression: &Expression) -> Option<Self> {
+        RUNTIME_ARRAY_BINDING_RESOLUTION_STACK.with(|stack| {
+            let mut stack = stack.borrow_mut();
+            if stack.len() >= 64 {
+                return None;
+            }
+            if stack
+                .iter()
+                .any(|active| static_expression_matches(active, expression))
+            {
+                return None;
+            }
+            stack.push(expression.clone());
+            Some(Self)
+        })
+    }
+}
+
+impl Drop for RuntimeArrayBindingResolutionGuard {
+    fn drop(&mut self) {
+        RUNTIME_ARRAY_BINDING_RESOLUTION_STACK.with(|stack| {
+            stack.borrow_mut().pop();
+        });
+    }
+}
+
 impl<'a> FunctionCompiler<'a> {
     pub(in crate::backend::direct_wasm) fn runtime_array_binding_has_state(
         &self,
@@ -157,6 +191,8 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         expression: &Expression,
     ) -> Option<String> {
+        let _guard = RuntimeArrayBindingResolutionGuard::enter(expression)?;
+
         if let Expression::Identifier(name) = expression {
             if let Some(alias_expression) = self.direct_identifier_value_binding(name)
                 && !static_expression_matches(alias_expression, expression)

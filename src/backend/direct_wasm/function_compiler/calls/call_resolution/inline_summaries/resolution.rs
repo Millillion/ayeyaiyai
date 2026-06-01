@@ -403,6 +403,9 @@ impl<'a> FunctionCompiler<'a> {
             return None;
         };
         let user_function = self.user_function(function_name)?;
+        if self.user_function_uses_direct_arguments_object(user_function) {
+            return None;
+        }
         if self.user_function_mentions_direct_eval(user_function) {
             return None;
         }

@@ -63,7 +63,10 @@ impl<'a> FunctionCompiler<'a> {
         self.emit_numeric_expression(property)?;
         self.push_local_set(property_local);
 
-        if let Some(binding_name) = self.runtime_array_binding_name_for_expression(object) {
+        let use_runtime_slot_read = array_binding.values.len() <= TRACKED_ARRAY_SLOT_LIMIT as usize;
+        if use_runtime_slot_read
+            && let Some(binding_name) = self.runtime_array_binding_name_for_expression(object)
+        {
             if self.emit_dynamic_global_runtime_array_slot_read_from_local(
                 &binding_name,
                 property_local,
@@ -161,7 +164,12 @@ impl<'a> FunctionCompiler<'a> {
             }
         }
 
-        if let Some(binding_name) = self.runtime_array_binding_name_for_expression(object)
+        let array_binding = self.resolve_array_binding_from_expression(object);
+        let dynamic_runtime_slot_read_can_cover_property = array_binding
+            .as_ref()
+            .is_none_or(|binding| binding.values.len() <= TRACKED_ARRAY_SLOT_LIMIT as usize);
+        if dynamic_runtime_slot_read_can_cover_property
+            && let Some(binding_name) = self.runtime_array_binding_name_for_expression(object)
             && argument_index_from_expression(static_array_property).is_none()
             && !static_array_property_is_known_non_index(static_array_property)
             && !matches!(static_array_property, Expression::String(text) if text == "length")
@@ -183,7 +191,6 @@ impl<'a> FunctionCompiler<'a> {
             }
         }
 
-        let array_binding = self.resolve_array_binding_from_expression(object);
         if matches!(static_array_property, Expression::String(text) if text == "length")
             && let Some(binding_name) = self.runtime_array_binding_name_for_expression(object)
             && self.emit_global_runtime_array_length_read(&binding_name)

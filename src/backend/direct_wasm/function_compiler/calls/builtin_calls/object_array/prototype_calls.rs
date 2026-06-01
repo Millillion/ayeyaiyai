@@ -1,7 +1,10 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
-    fn bound_prototype_receiver_is_module_namespace(&self, receiver: &Expression) -> bool {
+    pub(in crate::backend::direct_wasm) fn bound_prototype_receiver_is_module_namespace(
+        &self,
+        receiver: &Expression,
+    ) -> bool {
         if self
             .module_namespace_index_from_expression(receiver)
             .is_some()
@@ -270,6 +273,12 @@ impl<'a> FunctionCompiler<'a> {
                 if let Some(has_own) =
                     self.resolve_static_bound_has_own_property_result(receiver, property)
                 {
+                    if has_own
+                        && self.module_namespace_get_own_property_may_throw_tdz(receiver, property)
+                    {
+                        self.emit_object_get_own_property_descriptor_result(receiver, property)?;
+                        self.state.emission.output.instructions.push(0x1a);
+                    }
                     self.push_i32_const(has_own as i32);
                 } else if self.emit_runtime_known_object_has_property_check(receiver, property)? {
                 } else {

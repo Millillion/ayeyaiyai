@@ -6,18 +6,14 @@ impl<'a> FunctionCompiler<'a> {
         property_local: u32,
         existing_key: &Expression,
     ) -> DirectResult<()> {
+        if let Expression::String(property_name) = existing_key {
+            self.emit_runtime_string_literal_memory_comparison(property_local, property_name)?;
+            return Ok(());
+        }
+
         self.push_local_get(property_local);
         self.emit_numeric_expression(existing_key)?;
         self.push_binary_op(BinaryOp::Equal)?;
-
-        if let Expression::String(property_name) = existing_key
-            && let Some(index) = canonical_array_index_from_property_name(property_name)
-        {
-            self.push_local_get(property_local);
-            self.emit_numeric_expression(&Expression::Number(index as f64))?;
-            self.push_binary_op(BinaryOp::Equal)?;
-            self.state.emission.output.instructions.push(0x71);
-        }
 
         Ok(())
     }
@@ -56,6 +52,225 @@ impl<'a> FunctionCompiler<'a> {
             self.emit_runtime_shadow_fallback_value(fallback_value)?;
         }
         Ok(())
+    }
+
+    fn emit_runtime_object_descriptor_member_value(
+        &mut self,
+        object: &Expression,
+        existing_key: &Expression,
+        descriptor: &PropertyDescriptorBinding,
+    ) -> DirectResult<()> {
+        if let Some(getter) = descriptor.getter.as_ref()
+            && let Some(function_binding) = self.resolve_function_binding_from_expression(getter)
+        {
+            let capture_slots = self.resolve_member_function_capture_slots(object, existing_key);
+            match function_binding {
+                LocalFunctionBinding::User(function_name) => {
+                    let static_getter_binding = LocalFunctionBinding::User(function_name.clone());
+                    let static_this_expression =
+                        self.resolve_static_snapshot_this_expression(object);
+                    if let Some(return_value) = self
+                        .resolve_static_getter_value_from_binding_with_context(
+                            &static_getter_binding,
+                            &static_this_expression,
+                            self.current_function_name(),
+                        )
+                    {
+                        let return_value = if self
+                            .resolve_static_boxed_primitive_value(&return_value)
+                            .is_some()
+                        {
+                            return_value
+                        } else {
+                            self.resolve_static_primitive_expression_with_context(
+                                &return_value,
+                                self.current_function_name(),
+                            )
+                            .unwrap_or(return_value)
+                        };
+                        self.emit_numeric_expression(&return_value)?;
+                        return Ok(());
+                    }
+                    self.emit_member_getter_call_with_bound_this(
+                        &function_name,
+                        object,
+                        capture_slots.as_ref(),
+                    )?;
+                }
+                LocalFunctionBinding::Builtin(function_name) => {
+                    let callee = Expression::Identifier(function_name);
+                    if !self.emit_arguments_slot_accessor_call(&callee, &[], 0, Some(&[]))? {
+                        self.push_i32_const(JS_UNDEFINED_TAG);
+                    }
+                }
+            }
+            return Ok(());
+        }
+
+        if let Some(value) = descriptor.value.as_ref() {
+            let owner_name = match object {
+                Expression::Identifier(name) => {
+                    self.runtime_object_property_shadow_owner_name_for_identifier(name)
+                }
+                _ => None,
+            };
+            self.emit_runtime_object_binding_property_value(
+                owner_name.as_deref(),
+                existing_key,
+                value,
+            )?;
+            return Ok(());
+        }
+
+        self.push_i32_const(JS_UNDEFINED_TAG);
+        Ok(())
+    }
+
+    fn dynamic_string_descriptor_property_key_getter_names(
+        &self,
+        object: &Expression,
+        object_binding: &ObjectValueBinding,
+    ) -> Option<Vec<String>> {
+        let static_this_expression = self.resolve_static_snapshot_this_expression(object);
+        let mut property_names = Vec::new();
+        for (property, descriptor) in &object_binding.property_descriptors {
+            let property_name = static_property_name_from_expression(property)?;
+            let Some(getter) = descriptor.getter.as_ref() else {
+                if descriptor.value.is_some() {
+                    return None;
+                }
+                continue;
+            };
+            let getter_binding = self.resolve_function_binding_from_expression(getter)?;
+            let return_value = self.resolve_static_getter_value_from_binding_with_context(
+                &getter_binding,
+                &static_this_expression,
+                self.current_function_name(),
+            )?;
+            let return_value = if self
+                .resolve_static_boxed_primitive_value(&return_value)
+                .is_some()
+            {
+                return_value
+            } else {
+                self.resolve_static_primitive_expression_with_context(
+                    &return_value,
+                    self.current_function_name(),
+                )
+                .unwrap_or(return_value)
+            };
+            if !matches!(return_value, Expression::String(value) if value == property_name) {
+                return None;
+            }
+            if !property_names
+                .iter()
+                .any(|existing_name| existing_name == &property_name)
+            {
+                property_names.push(property_name);
+            }
+        }
+        (!property_names.is_empty()).then_some(property_names)
+    }
+
+    fn emit_property_key_membership_from_local(
+        &mut self,
+        property_local: u32,
+        property_names: &[String],
+    ) -> DirectResult<bool> {
+        let mut emitted = false;
+        for property_name in property_names {
+            let existing_key = Expression::String(property_name.clone());
+            self.emit_runtime_property_key_match_from_local(property_local, &existing_key)?;
+            if emitted {
+                self.state.emission.output.instructions.push(0x72);
+            }
+            emitted = true;
+        }
+        Ok(emitted)
+    }
+
+    fn emit_dynamic_runtime_string_property_key_descriptor_read(
+        &mut self,
+        object: &Expression,
+        property: &Expression,
+        object_binding: &ObjectValueBinding,
+    ) -> DirectResult<bool> {
+        let Some(property_names) =
+            self.dynamic_string_descriptor_property_key_getter_names(object, object_binding)
+        else {
+            return Ok(false);
+        };
+
+        let property_local = self.allocate_temp_local();
+        self.emit_numeric_expression(property)?;
+        self.push_local_set(property_local);
+        if !self.emit_property_key_membership_from_local(property_local, &property_names)? {
+            return Ok(false);
+        }
+        self.state.emission.output.instructions.push(0x04);
+        self.state.emission.output.instructions.push(I32_TYPE);
+        self.push_control_frame();
+        self.push_local_get(property_local);
+        self.state.emission.output.instructions.push(0x05);
+        self.push_i32_const(JS_UNDEFINED_TAG);
+        self.state.emission.output.instructions.push(0x0b);
+        self.pop_control_frame();
+        Ok(true)
+    }
+
+    fn emit_dynamic_runtime_string_descriptor_member_read(
+        &mut self,
+        object: &Expression,
+        property: &Expression,
+        object_binding: &ObjectValueBinding,
+    ) -> DirectResult<bool> {
+        let canonical_property = self.canonical_object_property_expression(property);
+        if static_property_name_from_expression(&canonical_property).is_some() {
+            return Ok(false);
+        }
+
+        if self.emit_dynamic_runtime_string_property_key_descriptor_read(
+            object,
+            property,
+            object_binding,
+        )? {
+            return Ok(true);
+        }
+
+        let descriptor_entries = object_binding
+            .property_descriptors
+            .iter()
+            .filter_map(|(property, descriptor)| {
+                static_property_name_from_expression(property)
+                    .map(|property_name| (property_name, descriptor.clone()))
+            })
+            .collect::<Vec<_>>();
+        if descriptor_entries.is_empty() {
+            return Ok(false);
+        }
+
+        let property_local = self.allocate_temp_local();
+        self.emit_numeric_expression(property)?;
+        self.push_local_set(property_local);
+
+        let mut open_frames = 0;
+        for (property_name, descriptor) in descriptor_entries {
+            let existing_key = Expression::String(property_name);
+            self.emit_runtime_property_key_match_from_local(property_local, &existing_key)?;
+            self.state.emission.output.instructions.push(0x04);
+            self.state.emission.output.instructions.push(I32_TYPE);
+            self.push_control_frame();
+            open_frames += 1;
+            self.emit_runtime_object_descriptor_member_value(object, &existing_key, &descriptor)?;
+            self.state.emission.output.instructions.push(0x05);
+        }
+
+        self.push_i32_const(JS_UNDEFINED_TAG);
+        for _ in 0..open_frames {
+            self.state.emission.output.instructions.push(0x0b);
+            self.pop_control_frame();
+        }
+        Ok(true)
     }
 
     fn emit_dynamic_runtime_string_object_binding_member_read(
@@ -177,6 +392,29 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(false);
         }
         let is_private_property = self.is_private_member_read_property(property);
+        if !is_private_property && static_property_name_from_expression(property).is_none() {
+            if self.emit_dynamic_runtime_string_descriptor_member_read(
+                object,
+                property,
+                &object_binding,
+            )? {
+                return Ok(true);
+            }
+            if self.emit_dynamic_runtime_string_object_binding_member_read(
+                object,
+                property,
+                &object_binding,
+            )? {
+                return Ok(true);
+            }
+            if self.emit_dynamic_runtime_symbol_object_binding_member_read(
+                object,
+                property,
+                &object_binding,
+            )? {
+                return Ok(true);
+            }
+        }
         let resolved_object = self
             .resolve_bound_alias_expression(object)
             .filter(|resolved| !static_expression_matches(resolved, object));
@@ -258,6 +496,14 @@ impl<'a> FunctionCompiler<'a> {
                 return Ok(true);
             }
             self.emit_numeric_expression(&value)?;
+        } else if !is_private_property
+            && self.emit_dynamic_runtime_string_descriptor_member_read(
+                object,
+                property,
+                &object_binding,
+            )?
+        {
+            return Ok(true);
         } else if self.emit_dynamic_runtime_string_object_binding_member_read(
             object,
             property,

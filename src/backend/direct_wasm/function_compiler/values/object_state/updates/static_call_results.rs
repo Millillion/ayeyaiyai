@@ -157,6 +157,9 @@ impl<'a> FunctionCompiler<'a> {
         if user_function.is_generator() {
             return None;
         }
+        if self.user_function_uses_direct_arguments_object(user_function) {
+            return None;
+        }
         if self.user_function_mentions_private_member_access(user_function)
             || self.user_function_mentions_direct_eval(user_function)
             || user_function.has_lowered_pattern_parameters()

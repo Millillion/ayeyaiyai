@@ -187,6 +187,36 @@ impl<'a> FunctionCompiler<'a> {
                         .is_some()
                 );
             }
+            if static_property_name_from_expression(argument_property).is_none()
+                && let Some(object_binding) = self.resolve_object_binding_from_expression(object)
+            {
+                if !inline_summary_side_effect_free_expression(object) {
+                    self.emit_numeric_expression(object)?;
+                    self.state.emission.output.instructions.push(0x1a);
+                }
+                let property_names =
+                    Self::dynamic_string_descriptor_property_names(&object_binding);
+                if !property_names.is_empty() && object_binding.symbol_properties.is_empty() {
+                    let property_local = self.allocate_temp_local();
+                    self.emit_numeric_expression(argument_property)?;
+                    self.push_local_set(property_local);
+                    let mut emitted = false;
+                    for property_name in &property_names {
+                        let existing_key = Expression::String(property_name.clone());
+                        self.emit_runtime_property_key_match_from_local(
+                            property_local,
+                            &existing_key,
+                        )?;
+                        if emitted {
+                            self.state.emission.output.instructions.push(0x72);
+                        }
+                        emitted = true;
+                    }
+                    if emitted {
+                        return Ok(true);
+                    }
+                }
+            }
             if let Some(has_property) = self
                 .resolve_top_level_global_object_has_own_property_result(object, argument_property)
             {
@@ -227,6 +257,35 @@ impl<'a> FunctionCompiler<'a> {
             if let Some(object_binding) = self.resolve_object_binding_from_expression(object) {
                 self.emit_numeric_expression(object)?;
                 self.state.emission.output.instructions.push(0x1a);
+                if static_property_name_from_expression(argument_property).is_none() {
+                    let property_names =
+                        Self::dynamic_string_descriptor_property_names(&object_binding);
+                    if !property_names.is_empty() && object_binding.symbol_properties.is_empty() {
+                        let property_local = self.allocate_temp_local();
+                        self.emit_numeric_expression(argument_property)?;
+                        self.push_local_set(property_local);
+                        let mut emitted = false;
+                        for property_name in &property_names {
+                            let existing_key = Expression::String(property_name.clone());
+                            self.emit_runtime_property_key_match_from_local(
+                                property_local,
+                                &existing_key,
+                            )?;
+                            if emitted {
+                                self.state.emission.output.instructions.push(0x72);
+                            }
+                            emitted = true;
+                        }
+                        if emitted {
+                            return Ok(true);
+                        }
+                    }
+                    if self
+                        .emit_runtime_known_object_has_property_check(object, argument_property)?
+                    {
+                        return Ok(true);
+                    }
+                }
                 if self.runtime_object_property_shadow_deletion_may_affect_property(
                     object,
                     argument_property,

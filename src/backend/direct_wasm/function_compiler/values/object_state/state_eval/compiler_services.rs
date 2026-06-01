@@ -46,6 +46,30 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         expression: &Expression,
     ) -> Option<usize> {
+        if matches!(expression, Expression::This) {
+            if let Some(value) = self
+                .state
+                .speculation
+                .static_semantics
+                .local_value_binding("this")
+                .cloned()
+                && !matches!(value, Expression::This | Expression::Undefined)
+                && let Some(module_index) = self.module_namespace_index_from_expression(&value)
+            {
+                return Some(module_index);
+            }
+
+            if let Some(module_index) = self
+                .state
+                .speculation
+                .static_semantics
+                .local_object_binding("this")
+                .and_then(Self::module_namespace_index_from_object_binding)
+            {
+                return Some(module_index);
+            }
+        }
+
         if let Expression::Identifier(name) = expression
             && let Some(module_index) = Self::module_index_from_namespace_like_identifier(name)
         {

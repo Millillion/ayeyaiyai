@@ -1,5 +1,12 @@
 use super::*;
 
+fn js_to_uint16(value: f64) -> u16 {
+    if !value.is_finite() || value == 0.0 {
+        return 0;
+    }
+    value.trunc().rem_euclid(65_536.0) as u16
+}
+
 impl<'a> FunctionCompiler<'a> {
     pub(in crate::backend::direct_wasm) fn emit_eval_comment_pattern(
         &mut self,
@@ -117,6 +124,10 @@ impl<'a> FunctionCompiler<'a> {
             if resolved != *argument {
                 return self.resolve_char_code_argument(&resolved);
             }
+        }
+
+        if let Some(number) = self.resolve_static_number_value(argument) {
+            return Some(Expression::Number(js_to_uint16(number) as f64));
         }
 
         match argument {

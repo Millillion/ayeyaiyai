@@ -227,6 +227,13 @@ impl ModuleLinker {
                 mutable: true,
                 value: Expression::Undefined,
             });
+            for storage_name in module.local_binding_storage.values() {
+                statements.push(Statement::Let {
+                    name: storage_name.clone(),
+                    mutable: true,
+                    value: Expression::Undefined,
+                });
+            }
             for dependency in &module.dependency_params {
                 if dependency.eager {
                     statements.push(Statement::Let {

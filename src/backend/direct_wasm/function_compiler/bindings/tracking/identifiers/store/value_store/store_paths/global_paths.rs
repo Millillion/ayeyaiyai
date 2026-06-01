@@ -1327,8 +1327,23 @@ impl<'a> FunctionCompiler<'a> {
             || state_stores_function_constructor_alias(state);
         let stores_unresolved_constructor_instance =
             state_stores_unresolved_constructor_instance(state);
+        let value_cannot_have_runtime_array_state = state.array_binding.is_none()
+            && matches!(
+                state.kind,
+                Some(
+                    StaticValueKind::Number
+                        | StaticValueKind::Bool
+                        | StaticValueKind::String
+                        | StaticValueKind::BigInt
+                        | StaticValueKind::Null
+                        | StaticValueKind::Undefined
+                        | StaticValueKind::Function
+                        | StaticValueKind::Symbol
+                )
+            );
         let stores_runtime_array_alias =
-            matches!(state.tracked_value_expression, Expression::Identifier(_))
+            !value_cannot_have_runtime_array_state
+                && matches!(state.tracked_value_expression, Expression::Identifier(_))
                 && (self
                     .runtime_array_binding_name_for_expression(&state.tracked_value_expression)
                     .is_some()

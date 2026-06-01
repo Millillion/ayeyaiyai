@@ -2088,6 +2088,9 @@ impl<'a> FunctionCompiler<'a> {
         value: &Expression,
         getter_name: &str,
     ) -> Option<Expression> {
+        if binding_name.starts_with("__ayy_module_binding_") {
+            return Some(Expression::Identifier(binding_name.to_string()));
+        }
         if let Some(value) =
             Self::static_dynamic_import_global_namespace_capture_expression(binding_name)
         {

@@ -681,11 +681,200 @@ impl<'a> FunctionCompiler<'a> {
         }
         if let Some(value) = descriptor.value.as_ref() {
             let current_value = current.value.as_ref().unwrap_or(&Expression::Undefined);
-            if !self.static_define_property_values_match(value, current_value)? {
+            if !self
+                .static_define_property_values_match(value, current_value)
+                .unwrap_or(false)
+            {
                 return Some(false);
             }
         }
         Some(true)
+    }
+
+    pub(in crate::backend::direct_wasm) fn module_namespace_current_descriptor_from_module_index(
+        &self,
+        target: &Expression,
+        module_index: usize,
+        property: &Expression,
+    ) -> Option<PropertyDescriptorBinding> {
+        let materialized_property = self
+            .resolve_property_key_expression(property)
+            .unwrap_or_else(|| self.materialize_static_expression(property));
+        let property = static_property_name_from_expression(&materialized_property)
+            .map(Expression::String)
+            .unwrap_or(materialized_property);
+
+        if is_symbol_to_string_tag_expression(&property) {
+            let tag = match target {
+                Expression::Identifier(name)
+                    if name.starts_with("__ayy_module_deferred_namespace_") =>
+                {
+                    "Deferred Module"
+                }
+                _ => "Module",
+            };
+            return Some(PropertyDescriptorBinding {
+                value: Some(Expression::String(tag.to_string())),
+                configurable: false,
+                enumerable: false,
+                writable: Some(false),
+                getter: None,
+                setter: None,
+                has_get: false,
+                has_set: false,
+            });
+        }
+
+        let Expression::String(export_name) = &property else {
+            return None;
+        };
+        if export_name.starts_with("__ayy$") || export_name == "then" {
+            return None;
+        }
+
+        let value = self
+            .resolve_static_dynamic_import_namespace_live_binding_member_value(
+                module_index,
+                &property,
+            )
+            .or_else(|| {
+                self.resolve_static_dynamic_import_namespace_live_binding_member_initializer_value(
+                    module_index,
+                    &property,
+                )
+            })?;
+        let value = self
+            .current_module_namespace_descriptor_local_value(module_index, &property)
+            .unwrap_or(value);
+
+        Some(PropertyDescriptorBinding {
+            value: Some(value),
+            configurable: false,
+            enumerable: true,
+            writable: Some(true),
+            getter: None,
+            setter: None,
+            has_get: false,
+            has_set: false,
+        })
+    }
+
+    fn current_module_namespace_descriptor_local_value(
+        &self,
+        module_index: usize,
+        property: &Expression,
+    ) -> Option<Expression> {
+        let property_name = static_property_name_from_expression(property)?;
+        let current_module_init = format!("__ayy_module_init_{module_index}");
+        if !self
+            .current_function_name()
+            .is_some_and(|function_name| function_name == current_module_init)
+        {
+            return None;
+        }
+
+        if let Some((binding_name, _)) = self
+            .resolve_static_dynamic_import_namespace_live_binding_member_binding_initializer_value(
+                module_index,
+                property,
+            )
+        {
+            let binding = Expression::Identifier(binding_name);
+            if self.module_namespace_live_value_is_readable_in_current_context(&binding) {
+                return Some(binding);
+            }
+        }
+
+        self.current_module_namespace_descriptor_export_getter_local_value(
+            module_index,
+            &property_name,
+        )
+    }
+
+    fn current_module_namespace_descriptor_export_getter_local_value(
+        &self,
+        module_index: usize,
+        export_name: &str,
+    ) -> Option<Expression> {
+        let init_function = self.resolve_registered_function_declaration(&format!(
+            "__ayy_module_init_{module_index}"
+        ))?;
+        let getter_name = init_function.body.iter().find_map(|statement| {
+            let Statement::Expression(Expression::Call { callee, arguments }) = statement else {
+                return None;
+            };
+            let Expression::Member { object, property } = callee.as_ref() else {
+                return None;
+            };
+            if !matches!(object.as_ref(), Expression::Identifier(name) if name == "Object")
+                || !matches!(property.as_ref(), Expression::String(name) if name == "defineProperty")
+            {
+                return None;
+            }
+            let [
+                CallArgument::Expression(Expression::Identifier(target_name)),
+                CallArgument::Expression(Expression::String(candidate_export_name)),
+                CallArgument::Expression(Expression::Object(descriptor_entries)),
+                ..,
+            ] = arguments.as_slice()
+            else {
+                return None;
+            };
+            if target_name != "exports" || candidate_export_name != export_name {
+                return None;
+            }
+            descriptor_entries.iter().find_map(|entry| match entry {
+                ObjectEntry::Data { key, value }
+                    if matches!(key, Expression::String(name) if name == "get") =>
+                {
+                    match value {
+                        Expression::Identifier(name) => Some(name.clone()),
+                        _ => None,
+                    }
+                }
+                _ => None,
+            })
+        })?;
+
+        let getter = self.resolve_registered_function_declaration(&getter_name)?;
+        let [Statement::Return(return_value)] = getter.body.as_slice() else {
+            return None;
+        };
+        let binding_name = match return_value {
+            Expression::Identifier(name) => name,
+            Expression::Member { object, property } if matches!(object.as_ref(), Expression::Identifier(name) if name.starts_with("__ayy_module_dep_")) =>
+            {
+                let Expression::String(name) = property.as_ref() else {
+                    return None;
+                };
+                name
+            }
+            _ => return None,
+        };
+        let binding = Expression::Identifier(binding_name.clone());
+        self.module_namespace_live_value_is_readable_in_current_context(&binding)
+            .then_some(binding)
+    }
+
+    fn module_namespace_define_property_allowed_for_module_index(
+        &self,
+        target: &Expression,
+        module_index: usize,
+        property: &Expression,
+        descriptor: &PropertyDescriptorDefinition,
+    ) -> Option<bool> {
+        let Some(current) = self.module_namespace_current_descriptor_from_module_index(
+            target,
+            module_index,
+            property,
+        ) else {
+            return Some(false);
+        };
+        match self.define_property_descriptor_matches_without_change(&current, descriptor) {
+            Some(matches) => Some(matches),
+            None if descriptor.value.is_some() => Some(false),
+            None => None,
+        }
     }
 
     fn deferred_module_namespace_define_property_trigger_module_index(
@@ -972,6 +1161,32 @@ impl<'a> FunctionCompiler<'a> {
         let trace = std::env::var_os("AYY_TRACE_DEFINE_PROPERTY_DECISION").is_some();
         let descriptor = resolve_property_descriptor_definition(descriptor_expression)?;
         let materialized_property = self.canonical_object_property_expression(property);
+        if !target_is_module_init_namespace_construction_target(
+            self.current_function_name(),
+            target,
+        ) && let Some(module_index) = self
+            .module_namespace_index_from_expression(target)
+            .or_else(|| match target {
+                Expression::Identifier(name) => {
+                    Self::module_index_from_namespace_like_identifier(name)
+                }
+                _ => None,
+            })
+            && let Some(allowed) = self.module_namespace_define_property_allowed_for_module_index(
+                target,
+                module_index,
+                &materialized_property,
+                &descriptor,
+            )
+        {
+            if trace {
+                eprintln!(
+                    "define_property_decision namespace_index target={target:?} module={module_index} property={materialized_property:?} descriptor={descriptor_expression:?} allowed={allowed}",
+                );
+            }
+            return Some(allowed);
+        }
+
         let object_binding = self.static_define_property_target_binding(target)?;
         let target_is_module_init_namespace_construction =
             target_is_module_init_namespace_construction_target(
@@ -1350,6 +1565,14 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(());
         }
 
+        if let Some(local_value) =
+            self.current_module_namespace_descriptor_local_value(module_index, &property_key)
+        {
+            self.emit_numeric_expression(&local_value)?;
+            self.state.emission.output.instructions.push(0x1a);
+            return Ok(());
+        }
+
         if let Some(live_value) = self
             .resolve_static_dynamic_import_namespace_live_binding_member_value(
                 module_index,
@@ -1377,6 +1600,214 @@ impl<'a> FunctionCompiler<'a> {
         }
 
         Ok(())
+    }
+
+    pub(in crate::backend::direct_wasm) fn module_namespace_get_own_property_may_throw_tdz(
+        &self,
+        receiver: &Expression,
+        property: &Expression,
+    ) -> bool {
+        let Some(module_index) = self.module_namespace_index_from_expression(receiver) else {
+            return false;
+        };
+        let property_key = self
+            .resolve_property_key_expression(property)
+            .unwrap_or_else(|| self.materialize_static_expression(property));
+        let property_key = static_property_name_from_expression(&property_key)
+            .map(Expression::String)
+            .unwrap_or(property_key);
+        if is_symbol_to_string_tag_expression(&property_key)
+            || !matches!(property_key, Expression::String(_))
+        {
+            return false;
+        }
+
+        let local_value = self
+            .current_module_namespace_descriptor_local_value(module_index, &property_key)
+            .or_else(|| {
+                self.resolve_static_dynamic_import_namespace_live_binding_member_value(
+                    module_index,
+                    &property_key,
+                )
+            })
+            .or_else(|| {
+                self.resolve_static_dynamic_import_namespace_live_binding_member_binding_initializer_value(
+                    module_index,
+                    &property_key,
+                )
+                .map(|(binding_name, _)| Expression::Identifier(binding_name))
+            });
+        matches!(
+            local_value,
+            Some(Expression::Identifier(ref name))
+                if self.local_lexical_capture_source_is_statically_uninitialized(name)
+        )
+    }
+
+    fn emit_module_namespace_get_own_property_descriptor_result(
+        &mut self,
+        receiver: &Expression,
+        property: &Expression,
+        materialized_property: &Expression,
+    ) -> DirectResult<bool> {
+        let trace = std::env::var_os("AYY_TRACE_NAMESPACE_DESCRIPTOR").is_some();
+        let Some(module_index) = self.module_namespace_index_from_expression(receiver) else {
+            return Ok(false);
+        };
+        if trace {
+            eprintln!(
+                "namespace_descriptor:start receiver={receiver:?} property={property:?} materialized={materialized_property:?} module={module_index}"
+            );
+        }
+        let property_key = static_property_name_from_expression(materialized_property)
+            .map(Expression::String)
+            .unwrap_or_else(|| materialized_property.clone());
+        let property_is_symbol_like = is_symbol_to_string_tag_expression(&property_key)
+            || self.well_known_symbol_name(&property_key).is_some()
+            || self
+                .resolve_symbol_identity_expression(&property_key)
+                .is_some();
+        if let Some(deferred_module_index) =
+            self.deferred_module_namespace_materialized_object_module_index(receiver)
+            && !property_is_symbol_like
+        {
+            if trace {
+                eprintln!("namespace_descriptor:deferred_eval module={deferred_module_index}");
+            }
+            self.emit_sync_module_init_if_needed(deferred_module_index, &mut HashSet::new())?;
+        }
+
+        if static_property_name_from_expression(&property_key).is_some()
+            || is_symbol_to_string_tag_expression(&property_key)
+        {
+            if trace {
+                eprintln!("namespace_descriptor:static_key {property_key:?}");
+            }
+            if let Some(descriptor) = self.module_namespace_current_descriptor_from_module_index(
+                receiver,
+                module_index,
+                &property_key,
+            ) {
+                if trace {
+                    eprintln!("namespace_descriptor:static_descriptor_found");
+                }
+                self.emit_module_namespace_get_own_property_live_binding_read(
+                    receiver,
+                    &property_key,
+                )?;
+                self.emit_descriptor_or_deleted_undefined(receiver, &property_key, &descriptor)?;
+            } else {
+                if trace {
+                    eprintln!("namespace_descriptor:static_descriptor_missing");
+                }
+                self.push_i32_const(JS_UNDEFINED_TAG);
+            }
+            return Ok(true);
+        }
+
+        if !inline_summary_side_effect_free_expression(property) {
+            if trace {
+                eprintln!("namespace_descriptor:dynamic_property_has_effects");
+            }
+            return Ok(false);
+        }
+
+        if trace {
+            eprintln!("namespace_descriptor:dynamic_names_start");
+        }
+        let mut descriptors = self
+            .resolve_static_dynamic_import_namespace_own_property_names_binding(module_index)
+            .map(|binding| {
+                binding
+                    .values
+                    .into_iter()
+                    .filter_map(|value| {
+                        let Some(Expression::String(property_name)) = value else {
+                            return None;
+                        };
+                        if property_name.starts_with("__ayy$") || property_name == "then" {
+                            return None;
+                        }
+                        let property = Expression::String(property_name.clone());
+                        self.module_namespace_current_descriptor_from_module_index(
+                            receiver,
+                            module_index,
+                            &property,
+                        )
+                        .map(|descriptor| (property, descriptor))
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+        if trace {
+            eprintln!(
+                "namespace_descriptor:dynamic_names_done count={}",
+                descriptors.len()
+            );
+        }
+
+        let to_string_tag_property = Expression::Member {
+            object: Box::new(Expression::Identifier("Symbol".to_string())),
+            property: Box::new(Expression::String("toStringTag".to_string())),
+        };
+        if let Some(descriptor) = self.module_namespace_current_descriptor_from_module_index(
+            receiver,
+            module_index,
+            &to_string_tag_property,
+        ) {
+            descriptors.push((to_string_tag_property, descriptor));
+        }
+        if trace {
+            eprintln!(
+                "namespace_descriptor:dynamic_emit_start count={}",
+                descriptors.len()
+            );
+        }
+        if descriptors.is_empty() {
+            self.push_i32_const(JS_UNDEFINED_TAG);
+            return Ok(true);
+        }
+
+        let property_local = self.allocate_temp_local();
+        let result_local = self.allocate_temp_local();
+        self.emit_numeric_expression(property)?;
+        self.push_local_set(property_local);
+        self.push_i32_const(JS_UNDEFINED_TAG);
+        self.push_local_set(result_local);
+
+        for (descriptor_property, descriptor) in descriptors {
+            if trace {
+                eprintln!("namespace_descriptor:dynamic_emit_property {descriptor_property:?}");
+            }
+            self.push_local_get(property_local);
+            if let Expression::String(property_name) = &descriptor_property {
+                self.emit_static_string_literal(property_name)?;
+            } else {
+                self.emit_numeric_expression(&descriptor_property)?;
+            }
+            self.push_binary_op(BinaryOp::Equal)?;
+            self.state.emission.output.instructions.push(0x04);
+            self.state
+                .emission
+                .output
+                .instructions
+                .push(EMPTY_BLOCK_TYPE);
+            self.push_control_frame();
+            self.emit_module_namespace_get_own_property_live_binding_read(
+                receiver,
+                &descriptor_property,
+            )?;
+            self.emit_descriptor_or_deleted_undefined(receiver, &descriptor_property, &descriptor)?;
+            self.push_local_set(result_local);
+            self.state.emission.output.instructions.push(0x0b);
+            self.pop_control_frame();
+        }
+
+        self.push_local_get(result_local);
+        if trace {
+            eprintln!("namespace_descriptor:dynamic_done");
+        }
+        Ok(true)
     }
 
     fn emit_runtime_known_object_dynamic_has_property_check(
@@ -1415,7 +1846,7 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(true);
         }
 
-        let property_names = ordered_object_property_names(&object_binding);
+        let property_names = Self::dynamic_string_descriptor_property_names(&object_binding);
         let symbol_properties = object_binding
             .symbol_properties
             .iter()
@@ -1428,6 +1859,28 @@ impl<'a> FunctionCompiler<'a> {
         let property_local = self.allocate_temp_local();
         self.emit_numeric_expression(property)?;
         self.push_local_set(property_local);
+
+        if symbol_properties.is_empty()
+            && property_names.iter().all(|property_name| {
+                !self.runtime_object_property_shadow_deletion_may_affect_property(
+                    receiver,
+                    &Expression::String(property_name.clone()),
+                )
+            })
+        {
+            let mut emitted = false;
+            for property_name in &property_names {
+                let existing_key = Expression::String(property_name.clone());
+                self.emit_runtime_property_key_match_from_local(property_local, &existing_key)?;
+                if emitted {
+                    self.state.emission.output.instructions.push(0x72);
+                }
+                emitted = true;
+            }
+            if emitted {
+                return Ok(true);
+            }
+        }
 
         let mut open_frames = 0;
         for property_name in property_names {
@@ -1576,11 +2029,11 @@ impl<'a> FunctionCompiler<'a> {
                             _ => None,
                         })
                 };
-                let fallback_present = fallback_binding
-                    .and_then(|object_binding| {
-                        self.resolve_object_binding_property_value(&object_binding, property)
-                    })
-                    .is_some();
+                let fallback_present = fallback_binding.is_some_and(|object_binding| {
+                    self.resolve_object_binding_property_value(&object_binding, property)
+                        .is_some()
+                        || object_binding_has_property(&object_binding, property)
+                });
                 (binding.is_some() || fallback_present).then_some((
                     binding,
                     deleted_binding,
@@ -1649,6 +2102,14 @@ impl<'a> FunctionCompiler<'a> {
             && let Some(binding) = self.implicit_global_binding(&property_name)
         {
             self.emit_implicit_global_property_descriptor_result(&property_name, binding)?;
+            return Ok(());
+        }
+
+        if self.emit_module_namespace_get_own_property_descriptor_result(
+            receiver,
+            property,
+            &materialized_property,
+        )? {
             return Ok(());
         }
 
@@ -2062,6 +2523,29 @@ impl<'a> FunctionCompiler<'a> {
         Ok(())
     }
 
+    fn initialize_define_property_member_function_capture_slots(
+        &mut self,
+        target: &Expression,
+        property: &Expression,
+        descriptor_expression: &Expression,
+    ) -> DirectResult<()> {
+        let Some(descriptor) =
+            self.property_descriptor_binding_from_expression(descriptor_expression)
+        else {
+            return Ok(());
+        };
+        if let Some(value) = descriptor.value.as_ref() {
+            self.initialize_member_function_assignment_capture_slots(target, property, value)?;
+        }
+        if let Some(getter) = descriptor.getter.as_ref() {
+            self.initialize_member_function_assignment_capture_slots(target, property, getter)?;
+        }
+        if let Some(setter) = descriptor.setter.as_ref() {
+            self.initialize_member_function_assignment_capture_slots(target, property, setter)?;
+        }
+        Ok(())
+    }
+
     fn property_descriptor_binding_from_expression(
         &self,
         descriptor_expression: &Expression,
@@ -2398,6 +2882,14 @@ impl<'a> FunctionCompiler<'a> {
         };
 
         self.discard_call_arguments(rest)?;
+        if self.is_direct_arguments_object(target)
+            && let Some(index) = argument_index_from_expression(property)
+            && let Some(descriptor) = resolve_property_descriptor_definition(descriptor_expression)
+            && self.apply_direct_arguments_define_property(index, &descriptor)?
+        {
+            self.push_i32_const(1);
+            return Ok(true);
+        }
         if self.emit_generated_module_namespace_define_property_fast(
             target,
             property,
@@ -2411,6 +2903,11 @@ impl<'a> FunctionCompiler<'a> {
             descriptor_expression,
         ) {
             self.emit_define_property_function_capture_initializers(descriptor_expression)?;
+            self.initialize_define_property_member_function_capture_slots(
+                target,
+                property,
+                descriptor_expression,
+            )?;
         }
 
         if let Some(module_index) =
@@ -2515,6 +3012,14 @@ impl<'a> FunctionCompiler<'a> {
         };
 
         self.discard_call_arguments(rest)?;
+        if self.is_direct_arguments_object(target)
+            && let Some(index) = argument_index_from_expression(property)
+            && let Some(descriptor) = resolve_property_descriptor_definition(descriptor_expression)
+            && self.apply_direct_arguments_define_property(index, &descriptor)?
+        {
+            self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
+            return Ok(true);
+        }
         if self.emit_generated_module_namespace_define_property_fast(
             target,
             property,
@@ -2528,6 +3033,11 @@ impl<'a> FunctionCompiler<'a> {
             descriptor_expression,
         ) {
             self.emit_define_property_function_capture_initializers(descriptor_expression)?;
+            self.initialize_define_property_member_function_capture_slots(
+                target,
+                property,
+                descriptor_expression,
+            )?;
         }
 
         if let Some(module_index) =
@@ -2683,13 +3193,18 @@ impl<'a> FunctionCompiler<'a> {
         if let Expression::Object(entries) = properties {
             for entry in entries {
                 let crate::ir::hir::ObjectEntry::Data {
-                    key: _,
+                    key,
                     value: descriptor_expression,
                 } = entry
                 else {
                     continue;
                 };
                 self.emit_define_property_function_capture_initializers(descriptor_expression)?;
+                self.initialize_define_property_member_function_capture_slots(
+                    target,
+                    key,
+                    descriptor_expression,
+                )?;
             }
         }
 

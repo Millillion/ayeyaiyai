@@ -20,6 +20,7 @@ impl ModuleLinker {
             async_continuation_names: Vec::new(),
             init_async: false,
             dependency_params: Vec::new(),
+            local_binding_storage: BTreeMap::new(),
             export_names: Vec::new(),
             export_resolutions: BTreeMap::new(),
             star_export_module_indices: Vec::new(),

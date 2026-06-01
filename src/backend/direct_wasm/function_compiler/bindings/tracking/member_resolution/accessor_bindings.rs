@@ -6,6 +6,107 @@ impl<'a> FunctionCompiler<'a> {
             || matches!(value, Expression::Number(number) if *number == JS_UNDEFINED_TAG as f64)
     }
 
+    fn push_unique_local_function_binding(
+        bindings: &mut Vec<LocalFunctionBinding>,
+        binding: LocalFunctionBinding,
+    ) {
+        if !bindings.contains(&binding) {
+            bindings.push(binding);
+        }
+    }
+
+    fn scoped_source_alias_member_getter_binding(
+        &self,
+        key: &MemberFunctionBindingKey,
+    ) -> Option<LocalFunctionBinding> {
+        let mut bindings = Vec::new();
+        for (candidate_key, binding) in &self
+            .state
+            .speculation
+            .static_semantics
+            .objects
+            .member_getter_bindings
+        {
+            if candidate_key.property == key.property
+                && self
+                    .member_function_binding_targets_may_alias(&key.target, &candidate_key.target)
+            {
+                Self::push_unique_local_function_binding(&mut bindings, binding.clone());
+            }
+        }
+        for (candidate_key, binding) in self.backend.global_member_getter_binding_entries() {
+            if candidate_key.property == key.property
+                && self
+                    .member_function_binding_targets_may_alias(&key.target, &candidate_key.target)
+            {
+                Self::push_unique_local_function_binding(&mut bindings, binding);
+            }
+        }
+        for (candidate_key, binding) in self
+            .backend
+            .shared_global_semantics
+            .global_members()
+            .getter_bindings()
+        {
+            if candidate_key.property == key.property
+                && self
+                    .member_function_binding_targets_may_alias(&key.target, &candidate_key.target)
+            {
+                Self::push_unique_local_function_binding(&mut bindings, binding.clone());
+            }
+        }
+        match bindings.as_slice() {
+            [binding] => Some(binding.clone()),
+            _ => None,
+        }
+    }
+
+    fn scoped_source_alias_member_setter_binding(
+        &self,
+        key: &MemberFunctionBindingKey,
+    ) -> Option<LocalFunctionBinding> {
+        let mut bindings = Vec::new();
+        for (candidate_key, binding) in &self
+            .state
+            .speculation
+            .static_semantics
+            .objects
+            .member_setter_bindings
+        {
+            if candidate_key.property == key.property
+                && self
+                    .member_function_binding_targets_may_alias(&key.target, &candidate_key.target)
+            {
+                Self::push_unique_local_function_binding(&mut bindings, binding.clone());
+            }
+        }
+        for (candidate_key, binding) in self.backend.global_member_setter_binding_entries() {
+            if candidate_key.property == key.property
+                && self
+                    .member_function_binding_targets_may_alias(&key.target, &candidate_key.target)
+            {
+                Self::push_unique_local_function_binding(&mut bindings, binding);
+            }
+        }
+        for (candidate_key, binding) in self
+            .backend
+            .shared_global_semantics
+            .global_members()
+            .setter_bindings()
+        {
+            if candidate_key.property == key.property
+                && self
+                    .member_function_binding_targets_may_alias(&key.target, &candidate_key.target)
+            {
+                Self::push_unique_local_function_binding(&mut bindings, binding.clone());
+            }
+        }
+        match bindings.as_slice() {
+            [binding] => Some(binding.clone()),
+            _ => None,
+        }
+    }
+
     fn runtime_shadow_has_own_non_accessor_data_value(
         &self,
         object: &Expression,
@@ -266,7 +367,11 @@ impl<'a> FunctionCompiler<'a> {
         }
         let resolved = key
             .as_ref()
-            .and_then(|key| self.member_getter_binding_entry_for_scoped_resolution(key));
+            .and_then(|key| self.member_getter_binding_entry_for_scoped_resolution(key))
+            .or_else(|| {
+                key.as_ref()
+                    .and_then(|key| self.scoped_source_alias_member_getter_binding(key))
+            });
         if is_private_property_name_expression(property) && resolved.is_some() {
             return resolved;
         }
@@ -459,7 +564,11 @@ impl<'a> FunctionCompiler<'a> {
             self.member_function_binding_key_with_context(object, property, current_function_name);
         let resolved = key
             .as_ref()
-            .and_then(|key| self.member_setter_binding_entry_for_scoped_resolution(key));
+            .and_then(|key| self.member_setter_binding_entry_for_scoped_resolution(key))
+            .or_else(|| {
+                key.as_ref()
+                    .and_then(|key| self.scoped_source_alias_member_setter_binding(key))
+            });
         if trace_member_bindings {
             eprintln!(
                 "member_setter_binding:direct object={object:?} property={property:?} key={key:?} resolved={resolved:?}"

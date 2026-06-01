@@ -203,12 +203,30 @@ impl<'a> FunctionCompiler<'a> {
             if trace_identifier_store {
                 eprintln!("identifier_store:{name}:local_init:update_value:start");
             }
-            self.update_local_store_value_binding(resolved_name, state);
+            if super::super::context::expression_is_dynamic_module_namespace_descriptor_call(
+                self,
+                &state.module_assignment_expression,
+            ) {
+                self.state
+                    .speculation
+                    .static_semantics
+                    .set_local_value_binding(
+                        resolved_name,
+                        state.module_assignment_expression.clone(),
+                    );
+            } else {
+                self.update_local_store_value_binding(resolved_name, state);
+            }
             if trace_identifier_store {
                 eprintln!("identifier_store:{name}:local_init:update_value:done");
                 eprintln!("identifier_store:{name}:local_init:update_prototype:start");
             }
-            if !Self::identifier_store_state_contains_await(state) {
+            if !Self::identifier_store_state_contains_await(state)
+                && !super::super::context::expression_is_dynamic_module_namespace_descriptor_call(
+                    self,
+                    &state.module_assignment_expression,
+                )
+            {
                 self.update_object_prototype_binding_from_value(
                     resolved_name,
                     state.prototype_binding_expression(),
@@ -218,7 +236,15 @@ impl<'a> FunctionCompiler<'a> {
                 eprintln!("identifier_store:{name}:local_init:update_prototype:done");
                 eprintln!("identifier_store:{name}:local_init:kind:start");
             }
-            let static_kind = self.local_store_static_value_kind(resolved_name, state);
+            let static_kind =
+                if super::super::context::expression_is_dynamic_module_namespace_descriptor_call(
+                    self,
+                    &state.module_assignment_expression,
+                ) {
+                    StaticValueKind::Unknown
+                } else {
+                    self.local_store_static_value_kind(resolved_name, state)
+                };
             self.state
                 .speculation
                 .static_semantics
@@ -245,7 +271,12 @@ impl<'a> FunctionCompiler<'a> {
             eprintln!("identifier_store:{name}:local_init:direct_eval_capture:done");
             eprintln!("identifier_store:{name}:local_init:runtime_shadows:start");
         }
-        self.sync_local_store_runtime_object_shadows(name, resolved_name, state)?;
+        if !super::super::context::expression_is_dynamic_module_namespace_descriptor_call(
+            self,
+            &state.module_assignment_expression,
+        ) {
+            self.sync_local_store_runtime_object_shadows(name, resolved_name, state)?;
+        }
         if trace_identifier_store {
             eprintln!("identifier_store:{name}:local_init:runtime_shadows:done");
             eprintln!("identifier_store:{name}:local_init:module_export_capture:start");
@@ -367,12 +398,30 @@ impl<'a> FunctionCompiler<'a> {
             if trace_identifier_store {
                 eprintln!("identifier_store:{name}:local:update_value:start");
             }
-            self.update_local_store_value_binding(resolved_name, state);
+            if super::super::context::expression_is_dynamic_module_namespace_descriptor_call(
+                self,
+                &state.module_assignment_expression,
+            ) {
+                self.state
+                    .speculation
+                    .static_semantics
+                    .set_local_value_binding(
+                        resolved_name,
+                        state.module_assignment_expression.clone(),
+                    );
+            } else {
+                self.update_local_store_value_binding(resolved_name, state);
+            }
             if trace_identifier_store {
                 eprintln!("identifier_store:{name}:local:update_value:done");
                 eprintln!("identifier_store:{name}:local:update_prototype:start");
             }
-            if !Self::identifier_store_state_contains_await(state) {
+            if !Self::identifier_store_state_contains_await(state)
+                && !super::super::context::expression_is_dynamic_module_namespace_descriptor_call(
+                    self,
+                    &state.module_assignment_expression,
+                )
+            {
                 self.update_object_prototype_binding_from_value(
                     resolved_name,
                     state.prototype_binding_expression(),
@@ -382,7 +431,15 @@ impl<'a> FunctionCompiler<'a> {
                 eprintln!("identifier_store:{name}:local:update_prototype:done");
                 eprintln!("identifier_store:{name}:local:kind:start");
             }
-            let static_kind = self.local_store_static_value_kind(resolved_name, state);
+            let static_kind =
+                if super::super::context::expression_is_dynamic_module_namespace_descriptor_call(
+                    self,
+                    &state.module_assignment_expression,
+                ) {
+                    StaticValueKind::Unknown
+                } else {
+                    self.local_store_static_value_kind(resolved_name, state)
+                };
             self.state
                 .speculation
                 .static_semantics
@@ -408,7 +465,12 @@ impl<'a> FunctionCompiler<'a> {
             eprintln!("identifier_store:{name}:local:direct_eval_capture:done");
             eprintln!("identifier_store:{name}:local:runtime_shadows:start");
         }
-        self.sync_local_store_runtime_object_shadows(name, resolved_name, state)?;
+        if !super::super::context::expression_is_dynamic_module_namespace_descriptor_call(
+            self,
+            &state.module_assignment_expression,
+        ) {
+            self.sync_local_store_runtime_object_shadows(name, resolved_name, state)?;
+        }
         if trace_identifier_store {
             eprintln!("identifier_store:{name}:local:runtime_shadows:done");
             eprintln!("identifier_store:{name}:local:module_export_capture:start");

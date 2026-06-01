@@ -9,7 +9,7 @@ use std::{
 };
 
 use anyhow::{Context, Result};
-use ayeyaiyai::{compile_file, compile_file_with_goal, CompileOptions};
+use ayeyaiyai::{CompileOptions, compile_file, compile_file_with_goal};
 use clap::{ArgAction, Parser};
 use tempfile::tempdir;
 use walkdir::WalkDir;
@@ -186,14 +186,29 @@ fn run() -> Result<()> {
         compliance_percent,
     );
 
+    if summary.compile_failed > 0 || summary.runtime_failed > 0 {
+        anyhow::bail!(
+            "test262 run failed: compile_failed={} runtime_failed={}",
+            summary.compile_failed,
+            summary.runtime_failed
+        );
+    }
+
     Ok(())
 }
 
-fn normalize_requested_tests(test262_dir: &Path, tests: &[String]) -> Result<HashSet<String>> {
-    tests
-        .iter()
-        .map(|test| normalize_requested_test(test262_dir, test))
-        .collect()
+fn normalize_requested_tests(test262_dir: &Path, tests: &[String]) -> Result<Vec<String>> {
+    let mut seen = HashSet::new();
+    let mut normalized_tests = Vec::new();
+
+    for test in tests {
+        let normalized = normalize_requested_test(test262_dir, test)?;
+        if seen.insert(normalized.clone()) {
+            normalized_tests.push(normalized);
+        }
+    }
+
+    Ok(normalized_tests)
 }
 
 fn normalize_requested_test(test262_dir: &Path, test: &str) -> Result<String> {
@@ -582,9 +597,9 @@ mod tests {
     use std::{fs, path::Path};
 
     use super::{
-        apply_negative_expectation, normalize_requested_test, parse_frontmatter,
-        parse_test262_source, prepare_test_source, should_skip_path, Metadata, NegativeExpectation,
-        TestFailure,
+        Metadata, NegativeExpectation, TestFailure, apply_negative_expectation,
+        normalize_requested_test, parse_frontmatter, parse_test262_source, prepare_test_source,
+        should_skip_path,
     };
 
     #[test]
@@ -729,11 +744,10 @@ negative:
             ..Metadata::default()
         };
 
-        assert!(apply_negative_expectation(
-            &metadata,
-            Err(TestFailure::Compile("syntax".to_string()))
-        )
-        .is_ok());
+        assert!(
+            apply_negative_expectation(&metadata, Err(TestFailure::Compile("syntax".to_string())))
+                .is_ok()
+        );
     }
 
     #[test]
@@ -746,16 +760,20 @@ negative:
             ..Metadata::default()
         };
 
-        assert!(apply_negative_expectation(
-            &metadata,
-            Err(TestFailure::Runtime("TypeError: boom".to_string()))
-        )
-        .is_ok());
-        assert!(apply_negative_expectation(
-            &metadata,
-            Err(TestFailure::Runtime("ReferenceError: boom".to_string()))
-        )
-        .is_err());
+        assert!(
+            apply_negative_expectation(
+                &metadata,
+                Err(TestFailure::Runtime("TypeError: boom".to_string()))
+            )
+            .is_ok()
+        );
+        assert!(
+            apply_negative_expectation(
+                &metadata,
+                Err(TestFailure::Runtime("ReferenceError: boom".to_string()))
+            )
+            .is_err()
+        );
     }
 
     #[test]

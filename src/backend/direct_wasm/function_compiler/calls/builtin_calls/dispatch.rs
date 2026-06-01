@@ -856,6 +856,36 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(true);
         }
 
+        if name == "String.fromCharCode" {
+            let static_value = arguments
+                .iter()
+                .map(|argument| {
+                    let Expression::Number(codepoint) =
+                        self.resolve_char_code_argument(argument.expression())?
+                    else {
+                        return None;
+                    };
+                    char::from_u32(codepoint as u32)
+                })
+                .collect::<Option<String>>();
+
+            for argument in arguments {
+                match argument {
+                    CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                        self.emit_numeric_expression(expression)?;
+                        self.state.emission.output.instructions.push(0x1a);
+                    }
+                }
+            }
+
+            if let Some(value) = static_value {
+                self.emit_static_string_literal(&value)?;
+            } else {
+                self.push_i32_const(JS_TYPEOF_STRING_TAG);
+            }
+            return Ok(true);
+        }
+
         if name == "JSON.stringify" {
             for argument in arguments {
                 match argument {

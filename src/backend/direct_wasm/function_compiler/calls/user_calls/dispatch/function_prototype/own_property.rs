@@ -379,6 +379,18 @@ impl<'a> FunctionCompiler<'a> {
             self.push_binary_op(BinaryOp::NotEqual)?;
             return Ok(true);
         }
+        if has_property
+            && self.module_namespace_get_own_property_may_throw_tdz(
+                receiver,
+                &canonical_argument_property,
+            )
+        {
+            self.emit_object_get_own_property_descriptor_result(
+                receiver,
+                &canonical_argument_property,
+            )?;
+            self.state.emission.output.instructions.push(0x1a);
+        }
         if !has_property
             && !dynamic_import_inherited_method_property
             && self.emit_runtime_known_object_has_property_check(receiver, argument_property)?

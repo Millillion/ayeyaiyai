@@ -32,12 +32,22 @@ impl<'a> FunctionCompiler<'a> {
             .is_some_and(|receiver_binding| {
                 !object_binding_can_define_property(&receiver_binding, &materialized_property)
             });
-        if !base_rejects && !receiver_rejects {
+        let receiver_is_module_namespace = self
+            .module_namespace_index_from_expression(&Expression::This)
+            .is_some();
+        if !base_rejects && !receiver_rejects && !receiver_is_module_namespace {
             return Ok(false);
         }
 
         self.emit_numeric_expression(value)?;
         self.state.emission.output.instructions.push(0x1a);
+        if receiver_is_module_namespace && !base_rejects {
+            self.emit_object_get_own_property_descriptor_result(
+                &Expression::This,
+                &materialized_property,
+            )?;
+            self.state.emission.output.instructions.push(0x1a);
+        }
         self.emit_named_error_throw("TypeError")?;
         Ok(true)
     }
@@ -174,14 +184,6 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(());
         }
 
-        if self.emit_strict_super_assignment_rejection_for_static_base(
-            super_base.as_ref(),
-            &effective_property,
-            value,
-        )? {
-            return Ok(());
-        }
-
         if let Some((_, binding)) = runtime_prototype_binding.as_ref()
             && let Some(state_local) = runtime_state_local
         {
@@ -224,6 +226,14 @@ impl<'a> FunctionCompiler<'a> {
                 value_local,
             )?;
             self.push_local_get(value_local);
+            return Ok(());
+        }
+
+        if self.emit_strict_super_assignment_rejection_for_static_base(
+            super_base.as_ref(),
+            &effective_property,
+            value,
+        )? {
             return Ok(());
         }
 

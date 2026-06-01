@@ -315,6 +315,8 @@ impl<'a> FunctionCompiler<'a> {
                 if self
                     .resolve_object_binding_property_value(&object_binding, property_candidate)
                     .is_some()
+                    || object_binding_has_property(&object_binding, property_candidate)
+                    || object_binding_has_property(&object_binding, &canonical_property)
                 {
                     return Some(Some(true));
                 }

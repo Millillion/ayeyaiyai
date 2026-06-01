@@ -193,7 +193,8 @@ impl<'a> FunctionCompiler<'a> {
         ) {
             return None;
         }
-        (self.global_has_binding(&source_name)
+        (source_name.starts_with("__ayy_module_binding_")
+            || self.global_has_binding(&source_name)
             || self.global_has_implicit_binding(&source_name)
             || self.backend.global_has_lexical_binding(&source_name)
             || self.backend.global_function_binding(&source_name).is_some())

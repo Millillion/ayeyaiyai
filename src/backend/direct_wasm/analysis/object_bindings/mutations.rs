@@ -37,6 +37,7 @@ pub(in crate::backend::direct_wasm) fn object_binding_has_property(
     property: &Expression,
 ) -> bool {
     object_binding_lookup_value(object_binding, property).is_some()
+        || object_binding_lookup_descriptor(object_binding, property).is_some()
 }
 
 pub(in crate::backend::direct_wasm) fn object_binding_is_extensible(

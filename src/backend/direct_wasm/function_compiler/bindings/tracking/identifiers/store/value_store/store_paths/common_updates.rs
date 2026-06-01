@@ -1699,6 +1699,37 @@ impl<'a> FunctionCompiler<'a> {
             trace_step("await_runtime:done");
             return Ok(());
         }
+        if super::super::context::expression_is_dynamic_module_namespace_descriptor_call(
+            self,
+            &state.canonical_value_expression,
+        ) {
+            trace_step("dynamic_module_namespace_descriptor:start");
+            self.state
+                .speculation
+                .static_semantics
+                .set_local_value_binding(
+                    &state.resolved_name,
+                    state.canonical_value_expression.clone(),
+                );
+            self.state
+                .speculation
+                .static_semantics
+                .clear_local_function_binding(&state.resolved_name);
+            self.state
+                .speculation
+                .static_semantics
+                .clear_local_object_binding(&state.resolved_name);
+            self.state
+                .speculation
+                .static_semantics
+                .clear_local_array_binding(&state.resolved_name);
+            self.state
+                .speculation
+                .static_semantics
+                .set_local_kind(&state.resolved_name, StaticValueKind::Unknown);
+            trace_step("dynamic_module_namespace_descriptor:done");
+            return Ok(());
+        }
         trace_step("member_bindings:start");
         if !state.is_internal_array_step_binding
             && !value_is_promise_with_resolvers_record
@@ -1775,11 +1806,25 @@ impl<'a> FunctionCompiler<'a> {
                 trace_step("object_literal_members:done");
             }
             trace_step("array_binding:start");
-            let should_copy_runtime_array_source =
-                matches!(state.tracked_value_expression, Expression::Identifier(_))
-                    && self
-                        .runtime_array_binding_name_for_expression(&state.tracked_value_expression)
-                        .is_some();
+            let value_cannot_have_runtime_array_state = state.array_binding.is_none()
+                && matches!(
+                    state.kind,
+                    Some(
+                        StaticValueKind::Number
+                            | StaticValueKind::Bool
+                            | StaticValueKind::String
+                            | StaticValueKind::BigInt
+                            | StaticValueKind::Null
+                            | StaticValueKind::Undefined
+                            | StaticValueKind::Function
+                            | StaticValueKind::Symbol
+                    )
+                );
+            let should_copy_runtime_array_source = !value_cannot_have_runtime_array_state
+                && matches!(state.tracked_value_expression, Expression::Identifier(_))
+                && self
+                    .runtime_array_binding_name_for_expression(&state.tracked_value_expression)
+                    .is_some();
             let target_is_global_runtime_array_store = should_copy_runtime_array_source
                 && (self.is_named_global_array_binding(&state.resolved_name)
                     || self
@@ -1789,7 +1834,25 @@ impl<'a> FunctionCompiler<'a> {
                     || self
                         .backend
                         .global_has_implicit_binding(&state.resolved_name));
-            if self
+            if value_cannot_have_runtime_array_state {
+                self.state
+                    .speculation
+                    .static_semantics
+                    .clear_local_array_binding(&state.resolved_name);
+                self.state
+                    .speculation
+                    .static_semantics
+                    .clear_runtime_array_slots(&state.resolved_name);
+                self.state
+                    .speculation
+                    .static_semantics
+                    .clear_tracked_array_specialized_function_values(&state.resolved_name);
+                if self.binding_name_is_global(&state.resolved_name) {
+                    self.backend
+                        .sync_global_array_binding(&state.resolved_name, None);
+                }
+                trace_step("array_binding:static_non_array");
+            } else if self
                 .sync_identifier_store_iterator_entry_array_binding(
                     &state.resolved_name,
                     &state.tracked_value_expression,

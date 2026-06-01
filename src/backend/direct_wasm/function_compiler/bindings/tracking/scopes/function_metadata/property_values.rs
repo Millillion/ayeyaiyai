@@ -186,6 +186,13 @@ impl<'a> FunctionCompiler<'a> {
         object: &Expression,
         property: &Expression,
     ) -> Option<String> {
+        if static_property_name_from_expression(property).as_deref() == Some("name")
+            && let Some(LocalFunctionBinding::Builtin(function_name)) =
+                self.resolve_function_binding_from_expression(object)
+        {
+            return Some(builtin_function_display_name(&function_name).to_string());
+        }
+
         let resolved_object = self
             .resolve_bound_alias_expression(object)
             .filter(|resolved| !static_expression_matches(resolved, object));

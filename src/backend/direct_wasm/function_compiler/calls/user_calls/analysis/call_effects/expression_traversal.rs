@@ -1,7 +1,7 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
-    fn collect_module_init_call_effect_nonlocal_bindings_for_module_index(
+    pub(in crate::backend::direct_wasm) fn collect_module_init_call_effect_nonlocal_bindings_for_module_index(
         &self,
         module_index: usize,
         names: &mut HashSet<String>,
@@ -63,6 +63,14 @@ impl<'a> FunctionCompiler<'a> {
                 }
             })
             .unwrap_or_else(|| self.canonical_object_property_expression(property));
+        if is_symbol_to_string_tag_expression(&property_key)
+            || self.well_known_symbol_name(&property_key).is_some()
+            || self
+                .resolve_symbol_identity_expression(&property_key)
+                .is_some()
+        {
+            return false;
+        }
         let Some(property_name) = static_property_name_from_expression(&property_key) else {
             return true;
         };
@@ -335,6 +343,12 @@ impl<'a> FunctionCompiler<'a> {
             }
             Expression::AssignSuperMember { property, value } => {
                 names.insert("this".to_string());
+                self.collect_deferred_module_namespace_super_member_call_effects(
+                    property,
+                    current_function_name,
+                    names,
+                    visited,
+                );
                 if let Some(effective_property) = self.resolve_property_key_expression(property) {
                     if let Some((_, binding)) = self
                         .resolve_super_runtime_prototype_binding_with_context(current_function_name)

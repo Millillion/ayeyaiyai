@@ -112,6 +112,45 @@ fn expression_is_promise_all_call(expression: &Expression) -> bool {
     )
 }
 
+pub(in crate::backend::direct_wasm) fn expression_is_dynamic_module_namespace_descriptor_call(
+    compiler: &FunctionCompiler<'_>,
+    expression: &Expression,
+) -> bool {
+    let Expression::Call { callee, arguments } = expression else {
+        return false;
+    };
+    if !matches!(
+        callee.as_ref(),
+        Expression::Member { object, property }
+            if matches!(object.as_ref(), Expression::Identifier(name) if name == "Object" || name == "Reflect")
+                && matches!(
+                    property.as_ref(),
+                    Expression::String(name) if name == "getOwnPropertyDescriptor"
+                )
+    ) {
+        return false;
+    }
+    let [
+        CallArgument::Expression(target),
+        CallArgument::Expression(property),
+        ..,
+    ] = arguments.as_slice()
+    else {
+        return false;
+    };
+    if compiler
+        .module_namespace_index_from_expression(target)
+        .is_none()
+    {
+        return false;
+    }
+    let materialized_property = compiler
+        .resolve_property_key_expression(property)
+        .unwrap_or_else(|| compiler.materialize_static_expression(property));
+    static_property_name_from_expression(&materialized_property).is_none()
+        && !is_symbol_to_string_tag_expression(&materialized_property)
+}
+
 fn promise_resolve_array_placeholder() -> Expression {
     Expression::Call {
         callee: Box::new(Expression::Member {
@@ -1142,6 +1181,33 @@ impl<'a> FunctionCompiler<'a> {
         if trace_identifier_store {
             eprintln!("identifier_store:{name}:canonical {canonical_value_expression:?}");
         }
+        if expression_is_dynamic_module_namespace_descriptor_call(self, &canonical_value_expression)
+        {
+            if trace_identifier_store {
+                eprintln!("identifier_store:{name}:dynamic_module_namespace_descriptor");
+            }
+            return PreparedIdentifierValueStore {
+                canonical_value_expression: canonical_value_expression.clone(),
+                tracked_value_expression: canonical_value_expression.clone(),
+                descriptor_binding_expression: Expression::Undefined,
+                tracked_object_expression: Expression::Undefined,
+                call_source_snapshot_expression: None,
+                prototype_source_snapshot_expression: None,
+                function_binding_expression: Expression::Undefined,
+                function_binding: None,
+                object_binding_expression: Expression::Undefined,
+                object_binding: None,
+                kind: Some(StaticValueKind::Unknown),
+                static_string_value: None,
+                exact_static_number: None,
+                array_binding: None,
+                module_assignment_expression: canonical_value_expression,
+                resolved_local_binding,
+                returned_descriptor_binding: None,
+                runtime_value_override: None,
+                opaque_runtime_value: false,
+            };
+        }
         if expression_is_nested_assert_helper_runtime_value(&canonical_value_expression) {
             if trace_identifier_store {
                 eprintln!("identifier_store:{name}:nested_assert_helper_runtime_fast_path");
@@ -1807,7 +1873,12 @@ impl<'a> FunctionCompiler<'a> {
         let function_binding = if self
             .expression_depends_on_active_loop_assignment(&function_binding_expression)
         {
-            None
+            self.resolve_function_binding_from_expression_with_context(
+                value_expression,
+                call_snapshot_function_context,
+            )
+            .or(call_result_function_binding)
+            .or_else(|| self.resolve_function_binding_from_expression(value_expression))
         } else {
             self.resolve_function_binding_from_expression_with_context(
                 &function_binding_expression,

@@ -15,16 +15,68 @@ impl<'a> FunctionCompiler<'a> {
         let (literal_ptr, literal_len) = self.intern_string(literal.as_bytes().to_vec());
         let result_local = self.allocate_temp_local();
         let index_local = self.allocate_temp_local();
-        let break_target;
-        let loop_target;
 
-        self.push_i32_const((literal_len == 0) as i32);
+        self.push_i32_const(0);
         self.push_local_set(result_local);
+
+        if let Ok(parsed) = parse_string_to_i32(literal) {
+            self.push_local_get(value_local);
+            self.push_i32_const(parsed);
+            self.push_binary_op(BinaryOp::Equal)?;
+            self.state.emission.output.instructions.push(0x04);
+            self.state
+                .emission
+                .output
+                .instructions
+                .push(EMPTY_BLOCK_TYPE);
+            self.push_control_frame();
+            self.push_i32_const(1);
+            self.push_local_set(result_local);
+            self.state.emission.output.instructions.push(0x05);
+        }
+
         if literal_len == 0 {
+            self.push_local_get(value_local);
+            self.push_i32_const(literal_ptr as i32);
+            self.push_binary_op(BinaryOp::Equal)?;
+            self.state.emission.output.instructions.push(0x04);
+            self.state
+                .emission
+                .output
+                .instructions
+                .push(EMPTY_BLOCK_TYPE);
+            self.push_control_frame();
+            self.push_i32_const(1);
+            self.push_local_set(result_local);
+            self.state.emission.output.instructions.push(0x0b);
+            self.pop_control_frame();
+            if parse_string_to_i32(literal).is_ok() {
+                self.state.emission.output.instructions.push(0x0b);
+                self.pop_control_frame();
+            }
             self.push_local_get(result_local);
             return Ok(());
         }
 
+        self.push_local_get(value_local);
+        self.push_i32_const(DATA_START_OFFSET as i32);
+        self.push_binary_op(BinaryOp::GreaterThanOrEqual)?;
+        self.push_local_get(value_local);
+        self.state.emission.output.instructions.push(0x3f);
+        self.state.emission.output.instructions.push(0x00);
+        self.push_i32_const(WASM_MEMORY_PAGE_SIZE as i32);
+        self.push_binary_op(BinaryOp::Multiply)?;
+        self.push_i32_const(literal_len as i32);
+        self.push_binary_op(BinaryOp::Subtract)?;
+        self.push_binary_op(BinaryOp::LessThanOrEqual)?;
+        self.state.emission.output.instructions.push(0x71);
+        self.state.emission.output.instructions.push(0x04);
+        self.state
+            .emission
+            .output
+            .instructions
+            .push(EMPTY_BLOCK_TYPE);
+        self.push_control_frame();
         self.push_i32_const(1);
         self.push_local_set(result_local);
         self.push_i32_const(0);
@@ -35,14 +87,14 @@ impl<'a> FunctionCompiler<'a> {
             .output
             .instructions
             .push(EMPTY_BLOCK_TYPE);
-        break_target = self.push_control_frame();
+        let break_target = self.push_control_frame();
         self.state.emission.output.instructions.push(0x03);
         self.state
             .emission
             .output
             .instructions
             .push(EMPTY_BLOCK_TYPE);
-        loop_target = self.push_control_frame();
+        let loop_target = self.push_control_frame();
 
         self.push_local_get(index_local);
         self.push_i32_const(literal_len as i32);
@@ -80,6 +132,12 @@ impl<'a> FunctionCompiler<'a> {
         self.pop_control_frame();
         self.state.emission.output.instructions.push(0x0b);
         self.pop_control_frame();
+        self.state.emission.output.instructions.push(0x0b);
+        self.pop_control_frame();
+        if parse_string_to_i32(literal).is_ok() {
+            self.state.emission.output.instructions.push(0x0b);
+            self.pop_control_frame();
+        }
         self.push_local_get(result_local);
         Ok(())
     }

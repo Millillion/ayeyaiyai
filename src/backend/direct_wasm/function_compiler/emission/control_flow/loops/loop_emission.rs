@@ -1550,6 +1550,7 @@ impl<'a> FunctionCompiler<'a> {
         break_hook: Option<&Expression>,
         body: &[Statement],
     ) -> DirectResult<()> {
+        let trace_loop = std::env::var_os("AYY_TRACE_LOOP_INVALIDATION").is_some();
         let fallback_condition = Expression::Bool(true);
         let invalidated_bindings = self
             .collect_loop_assigned_binding_names_with_effectful_iterators(
@@ -1559,11 +1560,17 @@ impl<'a> FunctionCompiler<'a> {
                 Some(init),
                 update,
             );
-        if std::env::var_os("AYY_TRACE_LOOP_INVALIDATION").is_some() {
+        if trace_loop {
             eprintln!("loop_invalidated for={invalidated_bindings:?}");
         }
         self.with_active_eval_lexical_scope(per_iteration_bindings.to_vec(), |compiler| {
+            if trace_loop {
+                eprintln!("loop_emit:init:start");
+            }
             compiler.emit_statements(init)?;
+            if trace_loop {
+                eprintln!("loop_emit:init:done");
+            }
             let preserved_kinds = compiler.preserved_binding_kinds_for_loop(
                 &invalidated_bindings,
                 condition.unwrap_or(&fallback_condition),
@@ -1643,13 +1650,25 @@ impl<'a> FunctionCompiler<'a> {
                     break_hook: break_hook.cloned(),
                 });
 
+            if trace_loop {
+                eprintln!("loop_emit:body:start");
+            }
             compiler.emit_statements(body)?;
+            if trace_loop {
+                eprintln!("loop_emit:body:done");
+            }
             compiler.state.emission.output.instructions.push(0x0b);
             compiler.pop_control_frame();
 
             if let Some(update) = update {
+                if trace_loop {
+                    eprintln!("loop_emit:update:start update={update:?}");
+                }
                 compiler.emit_numeric_expression(update)?;
                 compiler.state.emission.output.instructions.push(0x1a);
+                if trace_loop {
+                    eprintln!("loop_emit:update:done");
+                }
             }
             compiler.push_br(compiler.relative_depth(loop_target));
 
@@ -1670,11 +1689,20 @@ impl<'a> FunctionCompiler<'a> {
                 .with_scopes
                 .last()
                 .cloned();
+            if trace_loop {
+                eprintln!("loop_emit:mark_scope:start");
+            }
             compiler.mark_loop_with_scope_shadow_dynamics_from_statements(
                 body,
                 active_with_object.as_ref(),
             );
+            if trace_loop {
+                eprintln!("loop_emit:mark_scope:done");
+            }
             compiler.restore_loop_function_assignment_metadata(&restorable_function_assignments);
+            if trace_loop {
+                eprintln!("loop_emit:done");
+            }
             Ok(())
         })
     }

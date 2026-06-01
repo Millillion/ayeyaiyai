@@ -876,6 +876,8 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         names: &HashSet<String>,
     ) -> DirectResult<()> {
+        self.sync_current_function_local_capture_sources_from_call_effects(names)?;
+
         let syncs = names
             .iter()
             .filter(|source_name| source_name.as_str() != "this")
@@ -909,6 +911,106 @@ impl<'a> FunctionCompiler<'a> {
                 &source_name,
                 &source_expression,
             )?;
+        }
+
+        Ok(())
+    }
+
+    fn call_effect_capture_source_matches(source_name: &str, capture_name: &str) -> bool {
+        let source_root = scoped_binding_source_name(source_name).unwrap_or(source_name);
+        let capture_root = scoped_binding_source_name(capture_name).unwrap_or(capture_name);
+        source_name == capture_name
+            || source_name == capture_root
+            || source_root == capture_name
+            || source_root == capture_root
+    }
+
+    fn local_capture_source_writeback_name_for_call_effect(&self, name: &str) -> Option<String> {
+        if name == "this" || name == "new.target" {
+            return None;
+        }
+        if name.starts_with("__ayy_class_brand_") || name.starts_with("__ayy_class_super_") {
+            return None;
+        }
+        if let Some((resolved_name, _)) = self.resolve_current_local_binding(name)
+            && !self.local_binding_is_immutable(&resolved_name)
+        {
+            return Some(name.to_string());
+        }
+        let source_name = scoped_binding_source_name(name)?;
+        if let Some((resolved_name, _)) = self.resolve_current_local_binding(source_name)
+            && !self.local_binding_is_immutable(&resolved_name)
+        {
+            return Some(source_name.to_string());
+        }
+        None
+    }
+
+    fn hidden_capture_writeback_names_for_call_effect(&self, source_name: &str) -> Vec<String> {
+        let mut hidden_names = Vec::new();
+        let mut collect = |bindings: &HashMap<String, String>| {
+            for (capture_name, hidden_name) in bindings {
+                if Self::call_effect_capture_source_matches(source_name, capture_name)
+                    && !hidden_names.contains(hidden_name)
+                {
+                    hidden_names.push(hidden_name.clone());
+                }
+            }
+        };
+
+        for bindings in self
+            .prepared_program
+            .user_function_capture_bindings
+            .values()
+        {
+            collect(bindings);
+        }
+        for bindings in self
+            .backend
+            .function_registry
+            .analysis
+            .user_function_capture_bindings
+            .values()
+        {
+            collect(bindings);
+        }
+
+        hidden_names
+    }
+
+    fn sync_current_function_local_capture_sources_from_call_effects(
+        &mut self,
+        names: &HashSet<String>,
+    ) -> DirectResult<()> {
+        let syncs = names
+            .iter()
+            .filter_map(|name| {
+                let source_name = self.local_capture_source_writeback_name_for_call_effect(name)?;
+                let hidden_names =
+                    self.hidden_capture_writeback_names_for_call_effect(&source_name);
+                (!hidden_names.is_empty()).then_some((source_name, hidden_names))
+            })
+            .collect::<Vec<_>>();
+
+        for (source_name, hidden_names) in syncs {
+            for hidden_name in hidden_names {
+                let binding = self.ensure_implicit_global_binding(&hidden_name);
+                let value_local = self.allocate_temp_local();
+                self.push_global_get(binding.present_index);
+                self.state.emission.output.instructions.push(0x04);
+                self.state
+                    .emission
+                    .output
+                    .instructions
+                    .push(EMPTY_BLOCK_TYPE);
+                self.push_control_frame();
+                self.push_global_get(binding.value_index);
+                self.push_local_set(value_local);
+                self.emit_sync_identifier_runtime_value_from_local(&source_name, value_local)?;
+                self.state.emission.output.instructions.push(0x0b);
+                self.pop_control_frame();
+                break;
+            }
         }
 
         Ok(())

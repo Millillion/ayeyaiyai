@@ -3015,6 +3015,11 @@ impl<'a> FunctionCompiler<'a> {
             BinaryOp::NullishCoalescing => self.emit_nullish_coalescing(left, right),
             BinaryOp::Exponentiate => self.emit_exponentiate(left, right),
             BinaryOp::Equal | BinaryOp::NotEqual
+                if self.emit_string_from_char_code_equality_comparison(left, right, op)? =>
+            {
+                Ok(())
+            }
+            BinaryOp::Equal | BinaryOp::NotEqual
                 if self.expression_has_dynamic_member_property_access(left)
                     || self.expression_has_dynamic_member_property_access(right) =>
             {

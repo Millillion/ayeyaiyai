@@ -19,7 +19,8 @@ impl<'a> FunctionCompiler<'a> {
                                     &resolved_name,
                                 )
                             },
-                        ) || self.resolve_global_binding_index(source_name).is_some()
+                        ) || source_name.starts_with("__ayy_module_binding_")
+                            || self.resolve_global_binding_index(source_name).is_some()
                             || self.backend.global_has_lexical_binding(source_name)
                             || self.global_has_implicit_binding(source_name)
                             || self.backend.global_function_binding(source_name).is_some()

@@ -131,6 +131,77 @@ fn validate_number_literal_syntax(number: &Number, file: &swc_common::SourceFile
     validate_decimal_literal(normalized)
 }
 
+fn ascii_hex_digit_value(byte: u8) -> Option<u32> {
+    match byte {
+        b'0'..=b'9' => Some(u32::from(byte - b'0')),
+        b'a'..=b'f' => Some(u32::from(byte - b'a') + 10),
+        b'A'..=b'F' => Some(u32::from(byte - b'A') + 10),
+        _ => None,
+    }
+}
+
+fn validate_string_literal_unicode_code_point_escapes(raw: &str) -> Result<()> {
+    let bytes = raw.as_bytes();
+    let mut index = 0;
+    while index < bytes.len() {
+        if bytes[index] != b'\\' {
+            index += 1;
+            continue;
+        }
+
+        index += 1;
+        if index >= bytes.len() {
+            return Ok(());
+        }
+
+        match bytes[index] {
+            b'u' if bytes.get(index + 1) == Some(&b'{') => {
+                let mut cursor = index + 2;
+                let mut value = 0u32;
+                let mut digit_count = 0usize;
+                while cursor < bytes.len() && bytes[cursor] != b'}' {
+                    let Some(digit) = ascii_hex_digit_value(bytes[cursor]) else {
+                        bail!("invalid unicode code point escape in string literal");
+                    };
+                    value = value.saturating_mul(16).saturating_add(digit);
+                    digit_count += 1;
+                    cursor += 1;
+                }
+                ensure!(
+                    cursor < bytes.len() && digit_count > 0 && value <= 0x10ffff,
+                    "invalid unicode code point escape in string literal"
+                );
+                index = cursor + 1;
+            }
+            b'\r' => {
+                index += if bytes.get(index + 1) == Some(&b'\n') {
+                    2
+                } else {
+                    1
+                };
+            }
+            _ => index += 1,
+        }
+    }
+    Ok(())
+}
+
+fn validate_string_literal_syntax(string: &Str) -> Result<()> {
+    if let Some(raw) = string.raw.as_ref() {
+        validate_string_literal_unicode_code_point_escapes(raw.as_ref())?;
+    }
+    Ok(())
+}
+
+fn validate_regex_literal_syntax(regex: &Regex, file: &swc_common::SourceFile) -> Result<()> {
+    let raw = source_slice_for_span(file, regex.span)?;
+    ensure!(
+        !raw.contains(['\u{2028}', '\u{2029}']),
+        "regular expression literals cannot contain line terminators"
+    );
+    Ok(())
+}
+
 pub(crate) fn validate_expression_syntax(
     expression: &Expr,
     file: &swc_common::SourceFile,
@@ -498,6 +569,8 @@ pub(super) fn validate_expression_syntax_with_restrictions(
 ) -> Result<()> {
     match expression {
         Expr::Lit(Lit::Num(number)) => validate_number_literal_syntax(number, file)?,
+        Expr::Lit(Lit::Str(string)) => validate_string_literal_syntax(string)?,
+        Expr::Lit(Lit::Regex(regex)) => validate_regex_literal_syntax(regex, file)?,
         Expr::Ident(identifier) => {
             validate_identifier_reference_syntax(identifier, file, restrictions)?;
         }

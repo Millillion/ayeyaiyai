@@ -568,6 +568,9 @@ impl<'a> FunctionCompiler<'a> {
                 for argument in arguments.iter().skip(1) {
                     match argument {
                         CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                            if self.assertion_static_message_argument_effect_free(expression) {
+                                continue;
+                            }
                             self.emit_numeric_expression(expression)?;
                             self.state.emission.output.instructions.push(0x1a);
                         }

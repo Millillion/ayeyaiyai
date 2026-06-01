@@ -1285,34 +1285,61 @@ impl<'a> FunctionCompiler<'a> {
             self.emit_runtime_object_property_shadow_copy(&hidden_name, &source_owner)?;
         }
         self.invalidate_raw_assigned_global_metadata_after_user_call(user_function);
+        let mut constructor_call_effect_names =
+            self.collect_user_function_call_effect_nonlocal_bindings(user_function);
+        if let Some(Expression::Identifier(name)) = self
+            .resolve_derived_constructor_super_call_replacement_this_expression(
+                user_function,
+                arguments,
+            )
+            && let Some(module_index) = Self::module_index_from_namespace_like_identifier(&name)
+        {
+            self.collect_module_init_call_effect_nonlocal_bindings_for_module_index(
+                module_index,
+                &mut constructor_call_effect_names,
+                &mut HashSet::new(),
+                &mut HashSet::new(),
+            );
+        }
+        let constructor_argument_expressions = arguments
+            .iter()
+            .map(|argument| match argument {
+                CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                    expression.clone()
+                }
+            })
+            .collect::<Vec<_>>();
+        constructor_call_effect_names.extend(
+            self.collect_user_function_argument_call_effect_nonlocal_bindings(
+                user_function,
+                &constructor_argument_expressions,
+            ),
+        );
+        let mut additional_constructor_call_effect_names = constructor_call_effect_names.clone();
         if let Some(updated_bindings) = constructor_updated_bindings_for_sync.as_ref() {
-            let mut updated_names =
-                self.collect_user_function_call_effect_nonlocal_bindings(user_function);
-            updated_names.extend(
+            additional_constructor_call_effect_names.extend(
                 self.collect_snapshot_updated_nonlocal_bindings(
                     user_function,
                     Some(updated_bindings),
                 ),
             );
-            let unresolved = self.sync_snapshot_user_function_call_effect_bindings(
-                &updated_names,
-                Some(updated_bindings),
+            constructor_call_effect_names
+                .extend(additional_constructor_call_effect_names.iter().cloned());
+        }
+        let unresolved_constructor_call_effect_names = self
+            .sync_snapshot_user_function_call_effect_bindings(
+                &additional_constructor_call_effect_names,
+                constructor_updated_bindings_for_sync.as_ref(),
                 None,
             )?;
-            if !unresolved.is_empty() {
-                let preserved_kinds = unresolved
-                    .iter()
-                    .filter_map(|name| {
-                        self.lookup_identifier_kind(name)
-                            .map(|kind| (name.clone(), kind))
-                    })
-                    .collect::<HashMap<_, _>>();
-                self.invalidate_static_binding_metadata_for_names_with_preserved_kinds(
-                    &unresolved,
-                    &preserved_kinds,
-                );
-            }
+        if !unresolved_constructor_call_effect_names.is_empty() {
+            self.invalidate_static_binding_metadata_for_names(
+                &unresolved_constructor_call_effect_names,
+            );
         }
+        self.sync_current_function_capture_runtime_values_for_call_effects(
+            &constructor_call_effect_names,
+        )?;
         self.push_local_get(constructor_return_local);
         self.state.emission.output.instructions.push(0x1a);
         self.push_i32_const(JS_TYPEOF_OBJECT_TAG);

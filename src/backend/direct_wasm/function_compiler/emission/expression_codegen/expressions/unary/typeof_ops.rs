@@ -137,12 +137,15 @@ impl<'a> FunctionCompiler<'a> {
                             if self.local_binding_is_dynamic_property_descriptor_result(name)
                     )
         );
+        let module_namespace_live_member =
+            self.typeof_operand_is_module_namespace_live_binding_member(expression);
         if trace_typeof {
             eprintln!(
-                "emit_typeof_expression:function_binding_probe skip={skip_static_function_binding_probe} expression={expression:?}"
+                "emit_typeof_expression:function_binding_probe skip={skip_static_function_binding_probe} module_namespace_live={module_namespace_live_member} expression={expression:?}"
             );
         }
         if !skip_static_function_binding_probe
+            && !module_namespace_live_member
             && self
                 .resolve_function_binding_from_expression(expression)
                 .is_some()
@@ -197,6 +200,13 @@ impl<'a> FunctionCompiler<'a> {
             self.push_i32_const(JS_TYPEOF_FUNCTION_TAG);
             return Ok(());
         }
+        if module_namespace_live_member {
+            if trace_typeof {
+                eprintln!("emit_typeof_expression:module_namespace_live_member_runtime");
+            }
+            self.emit_runtime_typeof_tag(expression)?;
+            return Ok(());
+        }
         if let Expression::Identifier(name) = expression
             && self.is_identifier_bound(name)
         {
@@ -227,5 +237,22 @@ impl<'a> FunctionCompiler<'a> {
         }
         self.push_i32_const(type_tag);
         Ok(())
+    }
+
+    fn typeof_operand_is_module_namespace_live_binding_member(
+        &self,
+        expression: &Expression,
+    ) -> bool {
+        let Expression::Member { object, property } = expression else {
+            return false;
+        };
+        self.deferred_module_namespace_materialized_member_access(object, property)
+            .is_some()
+            || self
+                .resolve_module_namespace_live_binding_member_raw_value(object, property)
+                .is_some()
+            || self
+                .resolve_module_namespace_live_binding_member_value(object, property)
+                .is_some()
     }
 }

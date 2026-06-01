@@ -841,6 +841,14 @@ impl<'a> FunctionCompiler<'a> {
             );
             return Some(self.resolve_member_function_capture_slot_names(capture_slots));
         }
+        if let Some(capture_slots) = self.scoped_source_alias_member_function_capture_slots(&key) {
+            if trace_capture_bindings {
+                eprintln!(
+                    "capture_slots member_scoped_alias_hit key={key:?} slots={capture_slots:?}"
+                );
+            }
+            return Some(self.resolve_member_function_capture_slot_names(capture_slots));
+        }
         if let Expression::Member {
             object: prototype_owner,
             property: prototype_property,
@@ -910,6 +918,56 @@ impl<'a> FunctionCompiler<'a> {
             eprintln!("capture_slots member_miss key={key:?}");
         }
         None
+    }
+
+    fn merge_scoped_source_alias_capture_slots(
+        merged: &mut BTreeMap<String, String>,
+        candidate_slots: &BTreeMap<String, String>,
+    ) -> Option<()> {
+        for (capture_name, slot_name) in candidate_slots {
+            if let Some(existing_slot) = merged.get(capture_name)
+                && existing_slot != slot_name
+            {
+                return None;
+            }
+            merged.insert(capture_name.clone(), slot_name.clone());
+        }
+        Some(())
+    }
+
+    fn scoped_source_alias_member_function_capture_slots(
+        &self,
+        key: &MemberFunctionBindingKey,
+    ) -> Option<BTreeMap<String, String>> {
+        let mut merged = BTreeMap::new();
+        let mut matched = false;
+        for (candidate_key, capture_slots) in &self
+            .state
+            .speculation
+            .static_semantics
+            .objects
+            .member_function_capture_slots
+        {
+            if candidate_key.property == key.property
+                && self
+                    .member_function_binding_targets_may_alias(&key.target, &candidate_key.target)
+            {
+                matched = true;
+                Self::merge_scoped_source_alias_capture_slots(&mut merged, capture_slots)?;
+            }
+        }
+        for (candidate_key, capture_slots) in
+            self.backend.global_member_function_capture_slot_entries()
+        {
+            if candidate_key.property == key.property
+                && self
+                    .member_function_binding_targets_may_alias(&key.target, &candidate_key.target)
+            {
+                matched = true;
+                Self::merge_scoped_source_alias_capture_slots(&mut merged, &capture_slots)?;
+            }
+        }
+        matched.then_some(merged)
     }
 
     fn member_function_capture_slot_alias_keys(

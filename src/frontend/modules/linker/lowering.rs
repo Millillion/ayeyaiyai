@@ -1,6 +1,24 @@
 use super::super::*;
 
 impl ModuleLinker {
+    fn module_local_binding_storage(
+        module_index: usize,
+        module_declared_names: &HashSet<String>,
+    ) -> BTreeMap<String, String> {
+        let mut names = module_declared_names.iter().cloned().collect::<Vec<_>>();
+        names.sort();
+        names
+            .into_iter()
+            .enumerate()
+            .map(|(index, name)| {
+                (
+                    name,
+                    format!("__ayy_module_binding_{module_index}_{index}"),
+                )
+            })
+            .collect()
+    }
+
     fn static_module_seed_value(value: &Expression) -> bool {
         matches!(
             value,
@@ -959,6 +977,9 @@ impl ModuleLinker {
         let module_path = self.modules[module_index].path.clone();
         ensure_module_lexical_names_are_unique(module)?;
         let module_declared_names = collect_module_declared_names(module)?;
+        let local_binding_storage =
+            Self::module_local_binding_storage(module_index, &module_declared_names);
+        self.modules[module_index].local_binding_storage = local_binding_storage.clone();
         self.modules[module_index]
             .pending_import_resolutions
             .clear();
@@ -1350,7 +1371,7 @@ impl ModuleLinker {
                             .context("export-all dependency must be registered")?;
                         let dependency_export_resolutions =
                             self.modules[dependency_index].export_resolutions.clone();
-                        for (export_name, resolution) in dependency_export_resolutions {
+                        for (export_name, _) in dependency_export_resolutions {
                             if export_name == "default" {
                                 continue;
                             }
@@ -1359,7 +1380,15 @@ impl ModuleLinker {
                             {
                                 continue;
                             }
-                            let resolution = self.canonicalize_export_resolution(resolution)?;
+                            let Some(resolution) = self
+                                .resolve_star_export_resolution_for_dependency(
+                                    module_index,
+                                    dependency_index,
+                                    &export_name,
+                                )?
+                            else {
+                                continue;
+                            };
 
                             let expression = Expression::Member {
                                 object: Box::new(Expression::Identifier(namespace_param.clone())),
@@ -1446,6 +1475,17 @@ impl ModuleLinker {
         )?;
         for function in &mut self.lowerer.functions[function_start..] {
             rewrite_module_import_bindings_in_function(function, &import_bindings, module_index)?;
+        }
+
+        let mut storage_rewriter =
+            module_binding_storage::ModuleBindingStorageRewriter::new(&local_binding_storage);
+        storage_rewriter.rewrite_module_statement_list(&mut hoisted_statements)?;
+        storage_rewriter.rewrite_module_statement_list(&mut body_statements)?;
+        for expression in export_expressions.values_mut() {
+            storage_rewriter.rewrite_expression(expression)?;
+        }
+        for function in &mut self.lowerer.functions[function_start..] {
+            storage_rewriter.rewrite_function(function)?;
         }
 
         let early_export_expressions = export_expressions

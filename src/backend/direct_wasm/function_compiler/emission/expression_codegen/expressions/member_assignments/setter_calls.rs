@@ -40,6 +40,303 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    fn dynamic_runtime_string_setter_entries(
+        &self,
+        object_binding: &ObjectValueBinding,
+    ) -> Vec<(String, LocalFunctionBinding)> {
+        object_binding
+            .property_descriptors
+            .iter()
+            .filter_map(|(property, descriptor)| {
+                let property_name = static_property_name_from_expression(property)?;
+                let setter = descriptor.setter.as_ref()?;
+                let setter_binding = self.resolve_function_binding_from_expression(setter)?;
+                Some((property_name, setter_binding))
+            })
+            .collect()
+    }
+
+    fn simple_setter_nonlocal_assignment(
+        &self,
+        setter_binding: &LocalFunctionBinding,
+        value_expression: &Expression,
+        receiver_expression: &Expression,
+    ) -> Option<(String, Expression)> {
+        let LocalFunctionBinding::User(function_name) = setter_binding else {
+            return None;
+        };
+        let user_function = self.user_function(function_name)?;
+        let function = self.resolve_registered_function_declaration(function_name)?;
+        let [Statement::Assign { name, value }] = function.body.as_slice() else {
+            return None;
+        };
+
+        let source_name = scoped_binding_source_name(name).unwrap_or(name);
+        if source_name == "this"
+            || source_name == "arguments"
+            || user_function
+                .params
+                .iter()
+                .any(|param| param == source_name)
+            || user_function.scope_bindings.contains(source_name)
+        {
+            return None;
+        }
+
+        let arguments = [CallArgument::Expression(value_expression.clone())];
+        let substituted =
+            self.substitute_user_function_argument_bindings(value, user_function, &arguments);
+        let substituted =
+            self.substitute_setter_receiver_this_binding(&substituted, receiver_expression);
+        Some((source_name.to_string(), substituted))
+    }
+
+    fn dynamic_property_key_setter_assignment_target(
+        &self,
+        setter_entries: &[(String, LocalFunctionBinding)],
+        value_expression: &Expression,
+        receiver_expression: &Expression,
+    ) -> Option<String> {
+        let mut target_name = None;
+        for (property_name, setter_binding) in setter_entries {
+            let (next_target_name, assignment_value) = self.simple_setter_nonlocal_assignment(
+                setter_binding,
+                value_expression,
+                receiver_expression,
+            )?;
+            if !matches!(assignment_value, Expression::String(value) if value == *property_name) {
+                return None;
+            }
+            match target_name.as_ref() {
+                Some(target_name) if target_name != &next_target_name => return None,
+                Some(_) => {}
+                None => target_name = Some(next_target_name),
+            }
+        }
+        target_name
+    }
+
+    fn emit_setter_property_key_membership_from_local(
+        &mut self,
+        property_local: u32,
+        property_names: &[String],
+    ) -> DirectResult<bool> {
+        let mut emitted = false;
+        for property_name in property_names {
+            let existing_key = Expression::String(property_name.clone());
+            self.emit_runtime_property_key_match_from_local(property_local, &existing_key)?;
+            if emitted {
+                self.state.emission.output.instructions.push(0x72);
+            }
+            emitted = true;
+        }
+        Ok(emitted)
+    }
+
+    fn emit_dynamic_runtime_string_accessor_setter_assignment(
+        &mut self,
+        object: &Expression,
+        property: &Expression,
+        value: &Expression,
+    ) -> DirectResult<bool> {
+        let trace_member_assignment = std::env::var_os("AYY_TRACE_MEMBER_ASSIGNMENT").is_some();
+        if trace_member_assignment {
+            eprintln!(
+                "member_assignment:dynamic_setter:start object={object:?} property={property:?}"
+            );
+        }
+        if static_property_name_from_expression(property).is_some() {
+            if trace_member_assignment {
+                eprintln!("member_assignment:dynamic_setter:static_property_skip");
+            }
+            return Ok(false);
+        }
+
+        let object_binding = self
+            .resolve_object_binding_from_expression(object)
+            .or_else(|| match object {
+                Expression::Identifier(name) => self
+                    .resolve_identifier_object_binding_fallback(name)
+                    .or_else(|| self.resolve_runtime_shadow_object_binding(name)),
+                Expression::This => self.resolve_runtime_shadow_object_binding("this"),
+                _ => None,
+            });
+        let Some(object_binding) = object_binding else {
+            if trace_member_assignment {
+                eprintln!("member_assignment:dynamic_setter:no_object_binding");
+            }
+            return Ok(false);
+        };
+
+        let setter_entries = self.dynamic_runtime_string_setter_entries(&object_binding);
+        if trace_member_assignment {
+            eprintln!(
+                "member_assignment:dynamic_setter:entries count={}",
+                setter_entries.len()
+            );
+        }
+        if setter_entries.is_empty() {
+            return Ok(false);
+        }
+
+        let receiver_hidden_name = self.allocate_named_hidden_local(
+            "dynamic_setter_receiver",
+            self.infer_value_kind(object)
+                .unwrap_or(StaticValueKind::Unknown),
+        );
+        let receiver_local = self
+            .state
+            .runtime
+            .locals
+            .get(&receiver_hidden_name)
+            .copied()
+            .expect("fresh dynamic setter receiver hidden local must exist");
+        let value_hidden_name = self.allocate_named_hidden_local(
+            "dynamic_setter_value",
+            self.infer_value_kind(value)
+                .unwrap_or(StaticValueKind::Unknown),
+        );
+        let value_local = self
+            .state
+            .runtime
+            .locals
+            .get(&value_hidden_name)
+            .copied()
+            .expect("fresh dynamic setter value hidden local must exist");
+        let property_local = self.allocate_temp_local();
+
+        self.emit_numeric_expression(object)?;
+        self.push_local_set(receiver_local);
+        self.emit_numeric_expression(property)?;
+        self.push_local_set(property_local);
+        self.emit_numeric_expression(value)?;
+        self.push_local_set(value_local);
+
+        let receiver_expression = Expression::Identifier(receiver_hidden_name.clone());
+        let value_expression = Expression::Identifier(value_hidden_name.clone());
+        self.update_local_value_binding(&receiver_hidden_name, object);
+        self.update_local_object_binding(&receiver_hidden_name, object);
+        if trace_member_assignment {
+            eprintln!("member_assignment:dynamic_setter:locals_ready");
+        }
+
+        if let Some(target_name) = self.dynamic_property_key_setter_assignment_target(
+            &setter_entries,
+            &value_expression,
+            &receiver_expression,
+        ) {
+            if trace_member_assignment {
+                eprintln!("member_assignment:dynamic_setter:simple_target name={target_name}");
+            }
+            let property_names = setter_entries
+                .iter()
+                .map(|(property_name, _)| property_name.clone())
+                .collect::<Vec<_>>();
+            if !self
+                .emit_setter_property_key_membership_from_local(property_local, &property_names)?
+            {
+                return Ok(false);
+            }
+            if trace_member_assignment {
+                eprintln!("member_assignment:dynamic_setter:membership_emitted");
+            }
+            self.state.emission.output.instructions.push(0x04);
+            self.state
+                .emission
+                .output
+                .instructions
+                .push(EMPTY_BLOCK_TYPE);
+            self.push_control_frame();
+            let assignment_local = self.allocate_temp_local();
+            self.push_local_get(property_local);
+            self.push_local_set(assignment_local);
+            if trace_member_assignment {
+                eprintln!("member_assignment:dynamic_setter:store:start");
+            }
+            self.emit_store_identifier_value_local(&target_name, property, assignment_local)?;
+            if trace_member_assignment {
+                eprintln!("member_assignment:dynamic_setter:store:done");
+            }
+            self.state.emission.output.instructions.push(0x0b);
+            self.pop_control_frame();
+            let mut invalidated_names = HashSet::new();
+            invalidated_names.insert(target_name);
+            self.invalidate_static_binding_metadata_for_names(&invalidated_names);
+            self.push_local_get(value_local);
+            if trace_member_assignment {
+                eprintln!("member_assignment:dynamic_setter:done simple_target");
+            }
+            return Ok(true);
+        }
+
+        if trace_member_assignment {
+            eprintln!("member_assignment:dynamic_setter:fallback_branches:start");
+        }
+        let mut open_frames = 0;
+        let mut invalidated_names = HashSet::new();
+        for (property_name, setter_binding) in setter_entries {
+            let simple_assignment = self.simple_setter_nonlocal_assignment(
+                &setter_binding,
+                &value_expression,
+                &receiver_expression,
+            );
+            if let Some((target_name, _)) = simple_assignment.as_ref() {
+                invalidated_names.insert(target_name.clone());
+            } else if let LocalFunctionBinding::User(function_name) = &setter_binding
+                && let Some(user_function) = self.user_function(function_name)
+            {
+                invalidated_names.extend(
+                    self.collect_user_function_call_effect_nonlocal_bindings(user_function),
+                );
+            }
+
+            let existing_key = Expression::String(property_name);
+            self.emit_runtime_property_key_match_from_local(property_local, &existing_key)?;
+            self.state.emission.output.instructions.push(0x04);
+            self.state
+                .emission
+                .output
+                .instructions
+                .push(EMPTY_BLOCK_TYPE);
+            self.push_control_frame();
+            open_frames += 1;
+            if let Some((target_name, assignment_value)) = simple_assignment {
+                let assignment_local = self.allocate_temp_local();
+                self.emit_numeric_expression(&assignment_value)?;
+                self.push_local_set(assignment_local);
+                self.emit_store_identifier_value_local(
+                    &target_name,
+                    &assignment_value,
+                    assignment_local,
+                )?;
+            } else if self
+                .emit_function_binding_call_with_function_this_binding_from_argument_locals(
+                    &setter_binding,
+                    &[value_local],
+                    1,
+                    &receiver_expression,
+                )?
+            {
+                self.state.emission.output.instructions.push(0x1a);
+            }
+            self.state.emission.output.instructions.push(0x05);
+        }
+
+        for _ in 0..open_frames {
+            self.state.emission.output.instructions.push(0x0b);
+            self.pop_control_frame();
+        }
+
+        if !invalidated_names.is_empty() {
+            self.invalidate_static_binding_metadata_for_names(&invalidated_names);
+        }
+        self.push_local_get(value_local);
+        if trace_member_assignment {
+            eprintln!("member_assignment:dynamic_setter:done fallback_branches");
+        }
+        Ok(true)
+    }
+
     fn evaluate_simple_setter_statement_for_nonlocal_metadata(
         &self,
         statement: &Statement,
@@ -571,6 +868,10 @@ impl<'a> FunctionCompiler<'a> {
     ) -> DirectResult<bool> {
         if self.expression_is_json_module_default_import_member(object) {
             return Ok(false);
+        }
+
+        if self.emit_dynamic_runtime_string_accessor_setter_assignment(object, property, value)? {
+            return Ok(true);
         }
 
         let Some(function_binding) = self.resolve_member_setter_binding(object, property) else {

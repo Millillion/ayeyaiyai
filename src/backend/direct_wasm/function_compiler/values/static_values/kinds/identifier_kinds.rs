@@ -27,6 +27,24 @@ impl<'a> FunctionCompiler<'a> {
         else {
             return None;
         };
+        if self
+            .module_namespace_index_from_expression(target)
+            .is_some()
+            && matches!(
+                property_name,
+                Expression::Identifier(identifier)
+                    if self.resolve_current_local_binding(identifier).is_some()
+            )
+        {
+            let materialized_property = self
+                .resolve_property_key_expression(property_name)
+                .unwrap_or_else(|| self.materialize_static_expression(property_name));
+            if static_property_name_from_expression(&materialized_property).is_none()
+                && !is_symbol_to_string_tag_expression(&materialized_property)
+            {
+                return Some((target.clone(), property_name.clone()));
+            }
+        }
         if !matches!(
             property_name,
             Expression::Identifier(identifier)
