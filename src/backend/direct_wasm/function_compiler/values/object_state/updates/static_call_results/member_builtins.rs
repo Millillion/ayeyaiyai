@@ -10,6 +10,41 @@ fn simple_regexp_pattern_is_plain_literal(pattern: &str) -> bool {
     })
 }
 
+fn simple_regexp_decode_unicode_escapes(pattern: &str) -> Option<String> {
+    if !pattern.contains('\\') {
+        return Some(pattern.to_string());
+    }
+
+    let mut decoded = String::new();
+    let mut chars = pattern.chars();
+    while let Some(character) = chars.next() {
+        if character != '\\' {
+            decoded.push(character);
+            continue;
+        }
+
+        if chars.next()? != 'u' {
+            return None;
+        }
+        let mut value = 0;
+        for _ in 0..4 {
+            value = value * 16 + chars.next()?.to_digit(16)?;
+        }
+        decoded.push(char::from_u32(value)?);
+    }
+    Some(decoded)
+}
+
+fn simple_regexp_fold_ignore_case(text: &str, unicode: bool) -> String {
+    if unicode {
+        text.to_lowercase()
+    } else {
+        text.chars()
+            .map(|character| character.to_ascii_lowercase())
+            .collect()
+    }
+}
+
 fn simple_regexp_literal_exact_quantifier_matches(pattern: &str, subject: &str) -> Option<bool> {
     let (atom, count) = pattern.strip_suffix('}')?.rsplit_once('{')?;
     if atom.chars().count() != 1 || !simple_regexp_pattern_is_plain_literal(atom) {
@@ -132,29 +167,53 @@ fn simple_regexp_named_forward_reference_matches(pattern: &str, subject: &str) -
     Some(subject.contains(captured_literal))
 }
 
-fn simple_regexp_pattern_matches(pattern: &str, subject: &str, ignore_case: bool) -> Option<bool> {
-    let normalized_pattern;
-    let normalized_subject;
+fn simple_regexp_pattern_matches(
+    pattern: &str,
+    subject: &str,
+    ignore_case: bool,
+    unicode: bool,
+) -> Option<bool> {
+    if let Some(decoded_pattern) = simple_regexp_decode_unicode_escapes(pattern) {
+        let normalized_pattern;
+        let normalized_subject;
+        let (simple_pattern, simple_subject) = if ignore_case {
+            normalized_pattern = simple_regexp_fold_ignore_case(&decoded_pattern, unicode);
+            normalized_subject = simple_regexp_fold_ignore_case(subject, unicode);
+            (normalized_pattern.as_str(), normalized_subject.as_str())
+        } else {
+            (decoded_pattern.as_str(), subject)
+        };
+
+        if simple_regexp_pattern_is_plain_literal(simple_pattern) {
+            return Some(simple_subject.contains(simple_pattern));
+        }
+        if let Some(matches) =
+            simple_regexp_literal_exact_quantifier_matches(simple_pattern, simple_subject)
+        {
+            return Some(matches);
+        }
+        if let Some(matches) =
+            simple_regexp_inverted_character_class_matches(simple_pattern, simple_subject)
+        {
+            return Some(matches);
+        }
+        if let Some(matches) =
+            simple_regexp_single_character_class_matches(simple_pattern, simple_subject)
+        {
+            return Some(matches);
+        }
+    }
+
+    let fallback_pattern;
+    let fallback_subject;
     let (pattern, subject) = if ignore_case {
-        normalized_pattern = pattern.to_lowercase();
-        normalized_subject = subject.to_lowercase();
-        (normalized_pattern.as_str(), normalized_subject.as_str())
+        fallback_pattern = simple_regexp_fold_ignore_case(pattern, unicode);
+        fallback_subject = simple_regexp_fold_ignore_case(subject, unicode);
+        (fallback_pattern.as_str(), fallback_subject.as_str())
     } else {
         (pattern, subject)
     };
 
-    if simple_regexp_pattern_is_plain_literal(pattern) {
-        return Some(subject.contains(pattern));
-    }
-    if let Some(matches) = simple_regexp_literal_exact_quantifier_matches(pattern, subject) {
-        return Some(matches);
-    }
-    if let Some(matches) = simple_regexp_inverted_character_class_matches(pattern, subject) {
-        return Some(matches);
-    }
-    if let Some(matches) = simple_regexp_single_character_class_matches(pattern, subject) {
-        return Some(matches);
-    }
     if let Some(matches) = simple_regexp_named_forward_reference_matches(pattern, subject) {
         return Some(matches);
     }
@@ -692,6 +751,6 @@ impl<'a> FunctionCompiler<'a> {
 
         let subject =
             self.resolve_static_string_concat_value(subject_expression, current_function_name)?;
-        simple_regexp_pattern_matches(&pattern, &subject, ignore_case)
+        simple_regexp_pattern_matches(&pattern, &subject, ignore_case, flags.contains('u'))
     }
 }
