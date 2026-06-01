@@ -603,6 +603,9 @@ fn validate_regex_pattern_syntax(pattern: &str, unicode_mode: bool) -> Result<()
             can_quantify = false;
             continue;
         }
+        if unicode_mode && matches!(ch, '{' | '}') {
+            bail!("regular expression extended pattern character is not allowed in unicode mode");
+        }
 
         match ch {
             '\\' => {
