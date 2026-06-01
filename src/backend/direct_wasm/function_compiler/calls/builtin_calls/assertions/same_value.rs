@@ -423,6 +423,14 @@ impl<'a> FunctionCompiler<'a> {
                         })
             }
             Expression::Member { object, property } => {
+                if self.expression_is_static_regexp_instance(object) {
+                    let materialized = self.materialize_static_expression(expression);
+                    if !static_expression_matches(&materialized, expression)
+                        && self.same_value_assertion_is_primitive_literal_operand(&materialized)
+                    {
+                        return true;
+                    }
+                }
                 if matches!(
                     object.as_ref(),
                     Expression::Call { callee, .. }
@@ -669,6 +677,19 @@ impl<'a> FunctionCompiler<'a> {
                 .and_then(|value| self.same_value_assertion_fast_primitive_value(value, depth - 1)),
             Expression::Member { object, property } => {
                 let resolved_property = self.same_value_resolved_property_key(property);
+                if self.expression_is_static_regexp_instance(object) {
+                    let materialized = self.materialize_static_expression(expression);
+                    if !static_expression_matches(&materialized, expression) {
+                        return self
+                            .same_value_assertion_fast_primitive_value(&materialized, depth - 1)
+                            .or_else(|| {
+                                self.same_value_assertion_direct_static_value(
+                                    &materialized,
+                                    depth - 1,
+                                )
+                            });
+                    }
+                }
                 if (is_symbol_to_string_tag_expression(property)
                     || is_symbol_to_string_tag_expression(&resolved_property))
                     && self
@@ -1813,6 +1834,14 @@ impl<'a> FunctionCompiler<'a> {
                         .or_else(|| Some(value.clone()))
                 }),
             Expression::Member { object, property } => {
+                if self.expression_is_static_regexp_instance(object) {
+                    let materialized = self.materialize_static_expression(expression);
+                    if !static_expression_matches(&materialized, expression) {
+                        return self
+                            .same_value_assertion_direct_static_value(&materialized, depth - 1)
+                            .or(Some(materialized));
+                    }
+                }
                 if matches!(
                     object.as_ref(),
                     Expression::Call { callee, .. }
