@@ -1,11 +1,11 @@
-62/23645 (0.26%)
+172/23645 (0.73%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
-- white-space: 10/67 (14.93%)
-- line-terminators: 0/41 (0.00%)
-- punctuators: 0/11 (0.00%)
-- source-text: 0/1 (0.00%)
+- white-space: 67/67 (100.00%)
+- line-terminators: 41/41 (100.00%)
+- punctuators: 11/11 (100.00%)
+- source-text: 1/1 (100.00%)
 - identifiers: 0/268 (0.00%)
 - keywords: 0/25 (0.00%)
 - reserved-words: 0/27 (0.00%)
@@ -95,122 +95,122 @@ Sub-category progress
   - [x] test/language/white-space/S7.2_A3.3_T2.js
   - [x] test/language/white-space/S7.2_A3.4_T2.js
   - [x] test/language/white-space/S7.2_A3.5_T2.js
-  - [ ] test/language/white-space/S7.2_A4.1_T2.js
-  - [ ] test/language/white-space/S7.2_A4.2_T2.js
-  - [ ] test/language/white-space/S7.2_A4.3_T2.js
-  - [ ] test/language/white-space/S7.2_A4.4_T2.js
-  - [ ] test/language/white-space/S7.2_A4.5_T2.js
-  - [ ] test/language/white-space/S7.2_A5_T1.js
-  - [ ] test/language/white-space/S7.2_A5_T2.js
-  - [ ] test/language/white-space/S7.2_A5_T3.js
-  - [ ] test/language/white-space/S7.2_A5_T4.js
-  - [ ] test/language/white-space/S7.2_A5_T5.js
-  - [ ] test/language/white-space/after-regular-expression-literal-carriage-return.js
-  - [ ] test/language/white-space/after-regular-expression-literal-em-quad.js
-  - [ ] test/language/white-space/after-regular-expression-literal-em-space.js
-  - [ ] test/language/white-space/after-regular-expression-literal-en-quad.js
-  - [ ] test/language/white-space/after-regular-expression-literal-en-space.js
-  - [ ] test/language/white-space/after-regular-expression-literal-figure-space.js
-  - [ ] test/language/white-space/after-regular-expression-literal-form-feed.js
-  - [ ] test/language/white-space/after-regular-expression-literal-four-per-em-space.js
-  - [ ] test/language/white-space/after-regular-expression-literal-hair-space.js
-  - [ ] test/language/white-space/after-regular-expression-literal-ideographic-space.js
-  - [ ] test/language/white-space/after-regular-expression-literal-line-feed.js
-  - [ ] test/language/white-space/after-regular-expression-literal-line-separator.js
-  - [ ] test/language/white-space/after-regular-expression-literal-medium-mathematical-space.js
-  - [ ] test/language/white-space/after-regular-expression-literal-nbsp.js
-  - [ ] test/language/white-space/after-regular-expression-literal-nnbsp.js
-  - [ ] test/language/white-space/after-regular-expression-literal-ogham-space.js
-  - [ ] test/language/white-space/after-regular-expression-literal-paragraph-separator.js
-  - [ ] test/language/white-space/after-regular-expression-literal-punctuation-space.js
-  - [ ] test/language/white-space/after-regular-expression-literal-six-per-em-space.js
-  - [ ] test/language/white-space/after-regular-expression-literal-space.js
-  - [ ] test/language/white-space/after-regular-expression-literal-tab.js
-  - [ ] test/language/white-space/after-regular-expression-literal-thin-space.js
-  - [ ] test/language/white-space/after-regular-expression-literal-three-per-em-space.js
-  - [ ] test/language/white-space/after-regular-expression-literal-vertical-tab.js
-  - [ ] test/language/white-space/after-regular-expression-literal-zwnbsp.js
-  - [ ] test/language/white-space/between-form-feed.js
-  - [ ] test/language/white-space/between-horizontal-tab.js
-  - [ ] test/language/white-space/between-nbsp.js
-  - [ ] test/language/white-space/between-space.js
-  - [ ] test/language/white-space/between-vertical-tab.js
-  - [ ] test/language/white-space/comment-multi-form-feed.js
-  - [ ] test/language/white-space/comment-multi-horizontal-tab.js
-  - [ ] test/language/white-space/comment-multi-nbsp.js
-  - [ ] test/language/white-space/comment-multi-space.js
-  - [ ] test/language/white-space/comment-multi-vertical-tab.js
-  - [ ] test/language/white-space/comment-single-form-feed.js
-  - [ ] test/language/white-space/comment-single-horizontal-tab.js
-  - [ ] test/language/white-space/comment-single-nbsp.js
-  - [ ] test/language/white-space/comment-single-space.js
-  - [ ] test/language/white-space/comment-single-vertical-tab.js
-  - [ ] test/language/white-space/mongolian-vowel-separator-eval.js
-  - [ ] test/language/white-space/mongolian-vowel-separator.js
-  - [ ] test/language/white-space/string-form-feed.js
-  - [ ] test/language/white-space/string-horizontal-tab.js
-  - [ ] test/language/white-space/string-nbsp.js
-  - [ ] test/language/white-space/string-space.js
-  - [ ] test/language/white-space/string-vertical-tab.js
+  - [x] test/language/white-space/S7.2_A4.1_T2.js
+  - [x] test/language/white-space/S7.2_A4.2_T2.js
+  - [x] test/language/white-space/S7.2_A4.3_T2.js
+  - [x] test/language/white-space/S7.2_A4.4_T2.js
+  - [x] test/language/white-space/S7.2_A4.5_T2.js
+  - [x] test/language/white-space/S7.2_A5_T1.js
+  - [x] test/language/white-space/S7.2_A5_T2.js
+  - [x] test/language/white-space/S7.2_A5_T3.js
+  - [x] test/language/white-space/S7.2_A5_T4.js
+  - [x] test/language/white-space/S7.2_A5_T5.js
+  - [x] test/language/white-space/after-regular-expression-literal-carriage-return.js
+  - [x] test/language/white-space/after-regular-expression-literal-em-quad.js
+  - [x] test/language/white-space/after-regular-expression-literal-em-space.js
+  - [x] test/language/white-space/after-regular-expression-literal-en-quad.js
+  - [x] test/language/white-space/after-regular-expression-literal-en-space.js
+  - [x] test/language/white-space/after-regular-expression-literal-figure-space.js
+  - [x] test/language/white-space/after-regular-expression-literal-form-feed.js
+  - [x] test/language/white-space/after-regular-expression-literal-four-per-em-space.js
+  - [x] test/language/white-space/after-regular-expression-literal-hair-space.js
+  - [x] test/language/white-space/after-regular-expression-literal-ideographic-space.js
+  - [x] test/language/white-space/after-regular-expression-literal-line-feed.js
+  - [x] test/language/white-space/after-regular-expression-literal-line-separator.js
+  - [x] test/language/white-space/after-regular-expression-literal-medium-mathematical-space.js
+  - [x] test/language/white-space/after-regular-expression-literal-nbsp.js
+  - [x] test/language/white-space/after-regular-expression-literal-nnbsp.js
+  - [x] test/language/white-space/after-regular-expression-literal-ogham-space.js
+  - [x] test/language/white-space/after-regular-expression-literal-paragraph-separator.js
+  - [x] test/language/white-space/after-regular-expression-literal-punctuation-space.js
+  - [x] test/language/white-space/after-regular-expression-literal-six-per-em-space.js
+  - [x] test/language/white-space/after-regular-expression-literal-space.js
+  - [x] test/language/white-space/after-regular-expression-literal-tab.js
+  - [x] test/language/white-space/after-regular-expression-literal-thin-space.js
+  - [x] test/language/white-space/after-regular-expression-literal-three-per-em-space.js
+  - [x] test/language/white-space/after-regular-expression-literal-vertical-tab.js
+  - [x] test/language/white-space/after-regular-expression-literal-zwnbsp.js
+  - [x] test/language/white-space/between-form-feed.js
+  - [x] test/language/white-space/between-horizontal-tab.js
+  - [x] test/language/white-space/between-nbsp.js
+  - [x] test/language/white-space/between-space.js
+  - [x] test/language/white-space/between-vertical-tab.js
+  - [x] test/language/white-space/comment-multi-form-feed.js
+  - [x] test/language/white-space/comment-multi-horizontal-tab.js
+  - [x] test/language/white-space/comment-multi-nbsp.js
+  - [x] test/language/white-space/comment-multi-space.js
+  - [x] test/language/white-space/comment-multi-vertical-tab.js
+  - [x] test/language/white-space/comment-single-form-feed.js
+  - [x] test/language/white-space/comment-single-horizontal-tab.js
+  - [x] test/language/white-space/comment-single-nbsp.js
+  - [x] test/language/white-space/comment-single-space.js
+  - [x] test/language/white-space/comment-single-vertical-tab.js
+  - [x] test/language/white-space/mongolian-vowel-separator-eval.js
+  - [x] test/language/white-space/mongolian-vowel-separator.js
+  - [x] test/language/white-space/string-form-feed.js
+  - [x] test/language/white-space/string-horizontal-tab.js
+  - [x] test/language/white-space/string-nbsp.js
+  - [x] test/language/white-space/string-space.js
+  - [x] test/language/white-space/string-vertical-tab.js
 
 - [ ] line-terminators (41 tests)
-  - [ ] test/language/line-terminators/7.3-15.js
-  - [ ] test/language/line-terminators/7.3-5.js
-  - [ ] test/language/line-terminators/7.3-6.js
-  - [ ] test/language/line-terminators/S7.3_A2.1_T2.js
-  - [ ] test/language/line-terminators/S7.3_A2.2_T2.js
-  - [ ] test/language/line-terminators/S7.3_A3.2_T1.js
-  - [ ] test/language/line-terminators/S7.3_A5.4.js
-  - [ ] test/language/line-terminators/S7.3_A6_T1.js
-  - [ ] test/language/line-terminators/S7.3_A6_T2.js
-  - [ ] test/language/line-terminators/S7.3_A6_T3.js
-  - [ ] test/language/line-terminators/S7.3_A6_T4.js
-  - [ ] test/language/line-terminators/S7.3_A7_T1.js
-  - [ ] test/language/line-terminators/S7.3_A7_T2.js
-  - [ ] test/language/line-terminators/S7.3_A7_T3.js
-  - [ ] test/language/line-terminators/S7.3_A7_T4.js
-  - [ ] test/language/line-terminators/S7.3_A7_T5.js
-  - [ ] test/language/line-terminators/S7.3_A7_T6.js
-  - [ ] test/language/line-terminators/S7.3_A7_T7.js
-  - [ ] test/language/line-terminators/S7.3_A7_T8.js
-  - [ ] test/language/line-terminators/between-tokens-cr.js
-  - [ ] test/language/line-terminators/between-tokens-lf.js
-  - [ ] test/language/line-terminators/between-tokens-ls.js
-  - [ ] test/language/line-terminators/between-tokens-ps.js
-  - [ ] test/language/line-terminators/comment-multi-cr.js
-  - [ ] test/language/line-terminators/comment-multi-lf.js
-  - [ ] test/language/line-terminators/comment-multi-ls.js
-  - [ ] test/language/line-terminators/comment-multi-ps.js
-  - [ ] test/language/line-terminators/comment-single-cr.js
-  - [ ] test/language/line-terminators/comment-single-lf.js
-  - [ ] test/language/line-terminators/comment-single-ls.js
-  - [ ] test/language/line-terminators/comment-single-ps.js
-  - [ ] test/language/line-terminators/invalid-comment-single-cr.js
-  - [ ] test/language/line-terminators/invalid-comment-single-lf.js
-  - [ ] test/language/line-terminators/invalid-comment-single-ls.js
-  - [ ] test/language/line-terminators/invalid-comment-single-ps.js
-  - [ ] test/language/line-terminators/invalid-regexp-cr.js
-  - [ ] test/language/line-terminators/invalid-regexp-lf.js
-  - [ ] test/language/line-terminators/invalid-regexp-ls.js
-  - [ ] test/language/line-terminators/invalid-regexp-ps.js
-  - [ ] test/language/line-terminators/invalid-string-cr.js
-  - [ ] test/language/line-terminators/invalid-string-lf.js
+  - [x] test/language/line-terminators/7.3-15.js
+  - [x] test/language/line-terminators/7.3-5.js
+  - [x] test/language/line-terminators/7.3-6.js
+  - [x] test/language/line-terminators/S7.3_A2.1_T2.js
+  - [x] test/language/line-terminators/S7.3_A2.2_T2.js
+  - [x] test/language/line-terminators/S7.3_A3.2_T1.js
+  - [x] test/language/line-terminators/S7.3_A5.4.js
+  - [x] test/language/line-terminators/S7.3_A6_T1.js
+  - [x] test/language/line-terminators/S7.3_A6_T2.js
+  - [x] test/language/line-terminators/S7.3_A6_T3.js
+  - [x] test/language/line-terminators/S7.3_A6_T4.js
+  - [x] test/language/line-terminators/S7.3_A7_T1.js
+  - [x] test/language/line-terminators/S7.3_A7_T2.js
+  - [x] test/language/line-terminators/S7.3_A7_T3.js
+  - [x] test/language/line-terminators/S7.3_A7_T4.js
+  - [x] test/language/line-terminators/S7.3_A7_T5.js
+  - [x] test/language/line-terminators/S7.3_A7_T6.js
+  - [x] test/language/line-terminators/S7.3_A7_T7.js
+  - [x] test/language/line-terminators/S7.3_A7_T8.js
+  - [x] test/language/line-terminators/between-tokens-cr.js
+  - [x] test/language/line-terminators/between-tokens-lf.js
+  - [x] test/language/line-terminators/between-tokens-ls.js
+  - [x] test/language/line-terminators/between-tokens-ps.js
+  - [x] test/language/line-terminators/comment-multi-cr.js
+  - [x] test/language/line-terminators/comment-multi-lf.js
+  - [x] test/language/line-terminators/comment-multi-ls.js
+  - [x] test/language/line-terminators/comment-multi-ps.js
+  - [x] test/language/line-terminators/comment-single-cr.js
+  - [x] test/language/line-terminators/comment-single-lf.js
+  - [x] test/language/line-terminators/comment-single-ls.js
+  - [x] test/language/line-terminators/comment-single-ps.js
+  - [x] test/language/line-terminators/invalid-comment-single-cr.js
+  - [x] test/language/line-terminators/invalid-comment-single-lf.js
+  - [x] test/language/line-terminators/invalid-comment-single-ls.js
+  - [x] test/language/line-terminators/invalid-comment-single-ps.js
+  - [x] test/language/line-terminators/invalid-regexp-cr.js
+  - [x] test/language/line-terminators/invalid-regexp-lf.js
+  - [x] test/language/line-terminators/invalid-regexp-ls.js
+  - [x] test/language/line-terminators/invalid-regexp-ps.js
+  - [x] test/language/line-terminators/invalid-string-cr.js
+  - [x] test/language/line-terminators/invalid-string-lf.js
 
 - [ ] punctuators (11 tests)
-  - [ ] test/language/punctuators/S7.7_A1.js
-  - [ ] test/language/punctuators/S7.7_A2_T1.js
-  - [ ] test/language/punctuators/S7.7_A2_T10.js
-  - [ ] test/language/punctuators/S7.7_A2_T2.js
-  - [ ] test/language/punctuators/S7.7_A2_T3.js
-  - [ ] test/language/punctuators/S7.7_A2_T4.js
-  - [ ] test/language/punctuators/S7.7_A2_T5.js
-  - [ ] test/language/punctuators/S7.7_A2_T6.js
-  - [ ] test/language/punctuators/S7.7_A2_T7.js
-  - [ ] test/language/punctuators/S7.7_A2_T8.js
-  - [ ] test/language/punctuators/S7.7_A2_T9.js
+  - [x] test/language/punctuators/S7.7_A1.js
+  - [x] test/language/punctuators/S7.7_A2_T1.js
+  - [x] test/language/punctuators/S7.7_A2_T10.js
+  - [x] test/language/punctuators/S7.7_A2_T2.js
+  - [x] test/language/punctuators/S7.7_A2_T3.js
+  - [x] test/language/punctuators/S7.7_A2_T4.js
+  - [x] test/language/punctuators/S7.7_A2_T5.js
+  - [x] test/language/punctuators/S7.7_A2_T6.js
+  - [x] test/language/punctuators/S7.7_A2_T7.js
+  - [x] test/language/punctuators/S7.7_A2_T8.js
+  - [x] test/language/punctuators/S7.7_A2_T9.js
 
 - [ ] source-text (1 tests)
-  - [ ] test/language/source-text/6.1.js
+  - [x] test/language/source-text/6.1.js
 
 - [ ] identifiers (268 tests)
   - [ ] test/language/identifiers/other_id_continue-escaped.js

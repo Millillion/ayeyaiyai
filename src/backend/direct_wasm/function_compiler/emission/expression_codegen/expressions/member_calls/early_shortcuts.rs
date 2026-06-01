@@ -227,7 +227,13 @@ impl<'a> FunctionCompiler<'a> {
             && self.static_regexp_receiver_is_side_effect_free(object))
             || (matches!(
                 property_name.as_str(),
-                "charAt" | "toFixed" | "toExponential" | "toString" | "trim" | "valueOf"
+                "charAt"
+                    | "charCodeAt"
+                    | "toFixed"
+                    | "toExponential"
+                    | "toString"
+                    | "trim"
+                    | "valueOf"
             ) && self.static_boxed_primitive_receiver_is_side_effect_free(object));
         if !inline_summary_side_effect_free_expression(object) && !static_receiver_is_safe {
             return Ok(false);
@@ -235,6 +241,7 @@ impl<'a> FunctionCompiler<'a> {
         let supported_static_builtin_member = matches!(
             property_name.as_str(),
             "charAt"
+                | "charCodeAt"
                 | "replace"
                 | "toFixed"
                 | "toExponential"

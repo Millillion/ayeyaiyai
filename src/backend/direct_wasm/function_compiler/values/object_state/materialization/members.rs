@@ -415,7 +415,7 @@ impl<'a> FunctionCompiler<'a> {
                     .unwrap_or(Expression::Undefined);
             }
             if matches!(&materialized_property, Expression::String(name) if name == "length") {
-                return Expression::Number(text.chars().count() as f64);
+                return Expression::Number(text.encode_utf16().count() as f64);
             }
         }
         if matches!(&materialized_property, Expression::String(name) if name == "length") {
@@ -429,7 +429,7 @@ impl<'a> FunctionCompiler<'a> {
                 if let Some(Expression::String(text)) =
                     self.resolve_static_boxed_primitive_value(object_candidate)
                 {
-                    return Expression::Number(text.chars().count() as f64);
+                    return Expression::Number(text.encode_utf16().count() as f64);
                 }
             }
         }

@@ -1,4 +1,5 @@
 use super::*;
+use crate::ir::hir::js_string_utf16_code_units;
 
 fn simple_regexp_pattern_is_plain_literal(pattern: &str) -> bool {
     !pattern.chars().any(|character| {
@@ -269,6 +270,39 @@ impl<'a> FunctionCompiler<'a> {
                     .unwrap_or_default()
             };
             return Some((Expression::String(text), None));
+        }
+
+        if let Expression::Member { object, property } = callee
+            && matches!(property.as_ref(), Expression::String(property_name) if property_name == "charCodeAt")
+        {
+            let string_value = self
+                .resolve_static_boxed_primitive_value(object)
+                .and_then(|value| match value {
+                    Expression::String(text) => Some(text),
+                    _ => None,
+                })
+                .or_else(|| {
+                    self.resolve_static_string_value_with_context(object, current_function_name)
+                })?;
+            let expanded_arguments = self.expand_call_arguments(arguments);
+            let index_value = expanded_arguments
+                .first()
+                .and_then(|argument| self.resolve_static_number_value(argument))
+                .unwrap_or(0.0);
+            let index = if index_value.is_nan() {
+                0.0
+            } else {
+                index_value.trunc()
+            };
+            let value = if index < 0.0 || !index.is_finite() {
+                f64::NAN
+            } else {
+                js_string_utf16_code_units(&string_value)
+                    .get(index as usize)
+                    .map(|unit| f64::from(*unit))
+                    .unwrap_or(f64::NAN)
+            };
+            return Some((Expression::Number(value), None));
         }
 
         if let Expression::Member { object, property } = callee
