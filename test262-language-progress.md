@@ -1,4 +1,4 @@
-1354/23645 (5.73%)
+1359/23645 (5.75%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,7 +14,7 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 33/9337 (0.35%)
+- statements: 38/9337 (0.41%)
 - expressions: 0/11038 (0.00%)
 - types: 0/113 (0.00%)
 - function-code: 0/217 (0.00%)
@@ -1402,11 +1402,11 @@ Sub-category progress
   - [x] test/language/statements/async-function/early-errors-declaration-formals-contains-super-property.js
   - [x] test/language/statements/async-function/escaped-async.js
   - [x] test/language/statements/async-function/eval-var-scope-syntax-err.js
-  - [ ] test/language/statements/async-function/evaluation-body-that-returns-after-await.js
-  - [ ] test/language/statements/async-function/evaluation-body-that-returns.js
-  - [ ] test/language/statements/async-function/evaluation-body-that-throws-after-await.js
-  - [ ] test/language/statements/async-function/evaluation-body-that-throws.js
-  - [ ] test/language/statements/async-function/evaluation-body.js
+  - [x] test/language/statements/async-function/evaluation-body-that-returns-after-await.js
+  - [x] test/language/statements/async-function/evaluation-body-that-returns.js
+  - [x] test/language/statements/async-function/evaluation-body-that-throws-after-await.js
+  - [x] test/language/statements/async-function/evaluation-body-that-throws.js
+  - [x] test/language/statements/async-function/evaluation-body.js
   - [ ] test/language/statements/async-function/evaluation-default-that-throws.js
   - [ ] test/language/statements/async-function/evaluation-mapped-arguments.js
   - [ ] test/language/statements/async-function/evaluation-this-value-global.js

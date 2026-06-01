@@ -13087,6 +13087,108 @@ fn async_await_of_immediately_resolved_values_runs_without_trapping() {
 }
 
 #[test]
+fn async_returns_after_static_await_reports_completion() {
+    let tempdir = tempdir().unwrap();
+    let input = tempdir.path().join("async-return-after-await.js");
+    let output = tempdir.path().join("async-return-after-await.wasm");
+
+    fs::write(
+        &input,
+        r#"
+        async function foo() {
+          await Promise.resolve();
+          return 42;
+        }
+
+        foo().then(function(value) {
+          assert.sameValue(value, 42);
+          $DONE();
+        }, $DONE);
+        "#,
+    )
+    .unwrap();
+
+    let compile = Command::new(env!("CARGO_BIN_EXE_ayeyaiyai"))
+        .arg(&input)
+        .arg("-o")
+        .arg(&output)
+        .output()
+        .unwrap();
+
+    assert!(
+        compile.status.success(),
+        "compiler failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&compile.stdout),
+        String::from_utf8_lossy(&compile.stderr),
+    );
+
+    let run = Command::new("wasmtime").arg(&output).output().unwrap();
+
+    assert!(
+        run.status.success(),
+        "wasmtime failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&run.stdout),
+        String::from_utf8_lossy(&run.stderr),
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&run.stdout),
+        "Test262:AsyncTestComplete\n"
+    );
+}
+
+#[test]
+fn async_throws_after_static_await_reports_completion() {
+    let tempdir = tempdir().unwrap();
+    let input = tempdir.path().join("async-throw-after-await.js");
+    let output = tempdir.path().join("async-throw-after-await.wasm");
+
+    fs::write(
+        &input,
+        r#"
+        async function foo() {
+          await Promise.resolve();
+          throw 1;
+        }
+
+        foo().then(function() {
+          $DONE("Should not be called");
+        }, function(error) {
+          assert.sameValue(error, 1);
+          $DONE();
+        });
+        "#,
+    )
+    .unwrap();
+
+    let compile = Command::new(env!("CARGO_BIN_EXE_ayeyaiyai"))
+        .arg(&input)
+        .arg("-o")
+        .arg(&output)
+        .output()
+        .unwrap();
+
+    assert!(
+        compile.status.success(),
+        "compiler failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&compile.stdout),
+        String::from_utf8_lossy(&compile.stderr),
+    );
+
+    let run = Command::new("wasmtime").arg(&output).output().unwrap();
+
+    assert!(
+        run.status.success(),
+        "wasmtime failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&run.stdout),
+        String::from_utf8_lossy(&run.stderr),
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&run.stdout),
+        "Test262:AsyncTestComplete\n"
+    );
+}
+
+#[test]
 fn async_default_parameter_throw_rejects_before_body() {
     let tempdir = tempdir().unwrap();
     let input = tempdir.path().join("async-default-throw.js");

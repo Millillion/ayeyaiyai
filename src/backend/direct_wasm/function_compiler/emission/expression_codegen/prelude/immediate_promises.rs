@@ -758,7 +758,7 @@ impl<'a> FunctionCompiler<'a> {
         }
         self.lowered_for_await_throw_completion_outcome(&function.body)
             .or_else(|| self.lowered_for_await_break_close_outcome(&function.body))
-            .or_else(|| self.direct_async_function_terminal_return_outcome(function, arguments))
+            .or_else(|| self.direct_async_function_terminal_body_outcome(function, arguments))
     }
 
     fn async_function_parameter_default_throw_outcome(
@@ -826,7 +826,17 @@ impl<'a> FunctionCompiler<'a> {
         )
     }
 
-    fn direct_async_function_terminal_return_outcome(
+    fn direct_async_function_static_await_prefix_outcome(
+        &self,
+        statement: &Statement,
+    ) -> Option<StaticEvalOutcome> {
+        let Statement::Expression(Expression::Await(value)) = statement else {
+            return None;
+        };
+        self.resolve_static_await_resolution_outcome(&Expression::Await(value.clone()))
+    }
+
+    fn direct_async_function_terminal_body_outcome(
         &self,
         function: &FunctionDeclaration,
         arguments: &[CallArgument],
@@ -834,10 +844,24 @@ impl<'a> FunctionCompiler<'a> {
         if !arguments.is_empty() || !function.params.is_empty() {
             return None;
         }
-        let [Statement::Return(return_value)] = function.body.as_slice() else {
-            return None;
-        };
-        self.resolve_static_await_resolution_outcome(return_value)
+        let (terminal_statement, prefix_statements) = function.body.split_last()?;
+        for statement in prefix_statements {
+            match self.direct_async_function_static_await_prefix_outcome(statement)? {
+                StaticEvalOutcome::Value(_) => {}
+                StaticEvalOutcome::Throw(throw_value) => {
+                    return Some(StaticEvalOutcome::Throw(throw_value));
+                }
+            }
+        }
+        match terminal_statement {
+            Statement::Return(return_value) => {
+                self.resolve_static_await_resolution_outcome(return_value)
+            }
+            Statement::Throw(throw_value) => Some(StaticEvalOutcome::Throw(
+                StaticThrowValue::Value(self.materialize_static_expression(throw_value)),
+            )),
+            _ => None,
+        }
     }
 
     fn emit_direct_async_function_call_await_effects(
@@ -874,11 +898,21 @@ impl<'a> FunctionCompiler<'a> {
         if self.lowered_for_await_break_close_outcome(&body).is_some() {
             return self.emit_lowered_for_await_break_side_effects(&body);
         }
-        let [Statement::Return(return_value)] = body.as_slice() else {
+        let Some((terminal_statement, prefix_statements)) = body.split_last() else {
             return Ok(());
         };
-        let return_value = return_value.clone();
-        self.emit_static_await_resolution_effects(&return_value)
+        for statement in prefix_statements {
+            let Statement::Expression(Expression::Await(value)) = statement else {
+                return Ok(());
+            };
+            self.emit_static_await_resolution_effects(&Expression::Await(value.clone()))?;
+        }
+        match terminal_statement {
+            Statement::Return(value) | Statement::Throw(value) => {
+                self.emit_static_await_resolution_effects(value)
+            }
+            _ => Ok(()),
+        }
     }
 
     pub(in crate::backend::direct_wasm) fn emit_static_await_resolution_effects(
