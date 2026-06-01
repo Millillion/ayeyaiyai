@@ -1,4 +1,4 @@
-913/23645 (3.86%)
+914/23645 (3.87%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -10,7 +10,7 @@ Sub-category progress
 - keywords: 25/25 (100.00%)
 - reserved-words: 27/27 (100.00%)
 - future-reserved-words: 55/55 (100.00%)
-- literals: 366/534 (68.54%)
+- literals: 367/534 (68.73%)
 - directive-prologue: 0/62 (0.00%)
 - asi: 0/102 (0.00%)
 - statementList: 0/80 (0.00%)
@@ -957,7 +957,7 @@ Sub-category progress
   - [x] test/language/literals/regexp/lastIndex.js
   - [x] test/language/literals/regexp/mongolian-vowel-separator-eval.js
   - [x] test/language/literals/regexp/mongolian-vowel-separator.js
-  - [ ] test/language/literals/regexp/named-groups/forward-reference.js
+  - [x] test/language/literals/regexp/named-groups/forward-reference.js
   - [ ] test/language/literals/regexp/named-groups/invalid-dangling-groupname-2-u.js
   - [ ] test/language/literals/regexp/named-groups/invalid-dangling-groupname-2.js
   - [ ] test/language/literals/regexp/named-groups/invalid-dangling-groupname-3-u.js
