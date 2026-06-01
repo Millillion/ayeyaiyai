@@ -207,6 +207,25 @@ fn simple_regexp_single_unicode_escape_literal_matches(
     )
 }
 
+fn simple_regexp_multiline_start_literal_matches(pattern: &str, subject: &str) -> Option<bool> {
+    let literal = pattern.strip_prefix('^')?;
+    if literal.is_empty() || !simple_regexp_pattern_is_plain_literal(literal) {
+        return None;
+    }
+    if subject.starts_with(literal) {
+        return Some(true);
+    }
+
+    for (index, character) in subject.char_indices() {
+        if matches!(character, '\n' | '\r' | '\u{2028}' | '\u{2029}')
+            && subject[index + character.len_utf8()..].starts_with(literal)
+        {
+            return Some(true);
+        }
+    }
+    Some(false)
+}
+
 fn simple_regexp_literal_exact_quantifier_matches(pattern: &str, subject: &str) -> Option<bool> {
     let (atom, count) = pattern.strip_suffix('}')?.rsplit_once('{')?;
     if atom.chars().count() != 1 || !simple_regexp_pattern_is_plain_literal(atom) {
@@ -514,6 +533,7 @@ fn simple_regexp_pattern_matches(
     subject: &str,
     ignore_case: bool,
     unicode: bool,
+    multiline: bool,
 ) -> Option<bool> {
     if let Some(matches) = simple_regexp_character_class_escape_matches(pattern, subject, unicode) {
         return Some(matches);
@@ -540,6 +560,12 @@ fn simple_regexp_pattern_matches(
             (decoded_pattern.as_str(), subject)
         };
 
+        if multiline
+            && let Some(matches) =
+                simple_regexp_multiline_start_literal_matches(simple_pattern, simple_subject)
+        {
+            return Some(matches);
+        }
         if let Some(matches) =
             simple_regexp_plain_literal_match_range(simple_pattern, simple_subject)
         {
@@ -1208,18 +1234,30 @@ impl<'a> FunctionCompiler<'a> {
     ) -> Option<bool> {
         let (pattern, flags) =
             self.resolve_static_simple_regexp_parts(regexp_expression, current_function_name)?;
-        let ignore_case = if flags.chars().all(|flag| matches!(flag, 'i' | 'u')) {
+        let ignore_case = if flags
+            .chars()
+            .all(|flag| matches!(flag, 'i' | 'm' | 'u' | 'y'))
+        {
             flags.contains('i')
         } else {
             return None;
         };
 
-        if flags.contains('g') || flags.contains('y') {
+        if flags.contains('y') && !pattern.starts_with('^') {
+            return None;
+        }
+        if flags.contains('m') && !pattern.starts_with('^') {
             return None;
         }
 
         let subject =
             self.resolve_static_string_concat_value(subject_expression, current_function_name)?;
-        simple_regexp_pattern_matches(&pattern, &subject, ignore_case, flags.contains('u'))
+        simple_regexp_pattern_matches(
+            &pattern,
+            &subject,
+            ignore_case,
+            flags.contains('u'),
+            flags.contains('m'),
+        )
     }
 }
