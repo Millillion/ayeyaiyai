@@ -155,7 +155,7 @@ impl GlobalNameService {
             )
             .max()
             .map(|index| index + 1)
-            .unwrap_or(NEXT_PRIVATE_BRAND_GLOBAL_INDEX + 1)
+            .unwrap_or(NEXT_RUNTIME_OBJECT_VALUE_GLOBAL_INDEX + 1)
     }
 
     pub(in crate::backend::direct_wasm) fn ensure_implicit_binding(

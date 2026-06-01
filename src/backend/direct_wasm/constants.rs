@@ -28,6 +28,8 @@ pub(in crate::backend::direct_wasm) const TEST262_ERROR_RUNTIME_VALUE: i32 =
     JS_NATIVE_ERROR_VALUE_BASE + JS_NATIVE_ERROR_VALUE_LIMIT;
 pub(in crate::backend::direct_wasm) const JS_USER_FUNCTION_VALUE_BASE: i32 = -1073640000;
 pub(in crate::backend::direct_wasm) const JS_USER_FUNCTION_VALUE_LIMIT: i32 = 100000;
+pub(in crate::backend::direct_wasm) const JS_RUNTIME_OBJECT_VALUE_BASE: i32 = -1074300000;
+pub(in crate::backend::direct_wasm) const JS_RUNTIME_OBJECT_VALUE_LIMIT: i32 = 100000;
 pub(in crate::backend::direct_wasm) const JS_TEMPLATE_OBJECT_VALUE_BASE: i32 = -1073800000;
 pub(in crate::backend::direct_wasm) const JS_EVAL_TEMPLATE_OBJECT_VALUE_STRIDE: i32 = 100000;
 pub(in crate::backend::direct_wasm) const EVAL_TEMPLATE_CURRENT_EPOCH_GLOBAL: &str =
@@ -64,6 +66,7 @@ pub(in crate::backend::direct_wasm) const THROW_VALUE_GLOBAL_INDEX: u32 = 1;
 pub(in crate::backend::direct_wasm) const CURRENT_NEW_TARGET_GLOBAL_INDEX: u32 = 2;
 pub(in crate::backend::direct_wasm) const CURRENT_THIS_GLOBAL_INDEX: u32 = 3;
 pub(in crate::backend::direct_wasm) const NEXT_PRIVATE_BRAND_GLOBAL_INDEX: u32 = 4;
+pub(in crate::backend::direct_wasm) const NEXT_RUNTIME_OBJECT_VALUE_GLOBAL_INDEX: u32 = 5;
 pub(in crate::backend::direct_wasm) const TRACKED_ARGUMENT_SLOT_LIMIT: u32 = 64;
 pub(in crate::backend::direct_wasm) const TRACKED_ARRAY_SLOT_LIMIT: u32 = 32;
 

@@ -1,6 +1,18 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn emit_fresh_runtime_object_value(&mut self) -> DirectResult<()> {
+        let object_value_local = self.allocate_temp_local();
+        self.push_global_get(NEXT_RUNTIME_OBJECT_VALUE_GLOBAL_INDEX);
+        self.push_local_set(object_value_local);
+        self.push_global_get(NEXT_RUNTIME_OBJECT_VALUE_GLOBAL_INDEX);
+        self.push_i32_const(1);
+        self.push_binary_op(BinaryOp::Add)?;
+        self.push_global_set(NEXT_RUNTIME_OBJECT_VALUE_GLOBAL_INDEX);
+        self.push_local_get(object_value_local);
+        Ok(())
+    }
+
     fn emit_promise_resolve_user_call_argument_side_effects(
         &mut self,
         expression: &Expression,
@@ -1316,18 +1328,24 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(true);
         }
 
+        if name == "RegExp" {
+            self.discard_call_arguments(arguments)?;
+            self.emit_fresh_runtime_object_value()?;
+            return Ok(true);
+        }
+
         let Some(result_tag) = (match name {
             "Promise.resolve" | "Promise.reject" | "Promise.withResolvers" => {
                 Some(JS_TYPEOF_OBJECT_TAG)
             }
             "Number" => Some(JS_TYPEOF_NUMBER_TAG),
             "Boolean" => Some(JS_TYPEOF_BOOLEAN_TAG),
-            "Object" | "Array" | "ArrayBuffer" | "SharedArrayBuffer" | "DataView" | "RegExp"
-            | "Map" | "Set" | "Error" | "EvalError" | "RangeError" | "ReferenceError"
-            | "SyntaxError" | "TypeError" | "URIError" | "AggregateError" | "SuppressedError"
-            | "Promise" | "WeakMap" | "WeakRef" | "WeakSet" | "Uint8Array" | "Int8Array"
-            | "Uint16Array" | "Int16Array" | "Uint32Array" | "Int32Array" | "Float32Array"
-            | "Float64Array" | "Uint8ClampedArray" | "BigInt64Array" | "BigUint64Array" => {
+            "Object" | "Array" | "ArrayBuffer" | "SharedArrayBuffer" | "DataView" | "Map"
+            | "Set" | "Error" | "EvalError" | "RangeError" | "ReferenceError" | "SyntaxError"
+            | "TypeError" | "URIError" | "AggregateError" | "SuppressedError" | "Promise"
+            | "WeakMap" | "WeakRef" | "WeakSet" | "Uint8Array" | "Int8Array" | "Uint16Array"
+            | "Int16Array" | "Uint32Array" | "Int32Array" | "Float32Array" | "Float64Array"
+            | "Uint8ClampedArray" | "BigInt64Array" | "BigUint64Array" => {
                 Some(JS_TYPEOF_OBJECT_TAG)
             }
             "BigInt" => Some(JS_TYPEOF_BIGINT_TAG),

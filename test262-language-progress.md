@@ -1,4 +1,4 @@
-909/23645 (3.84%)
+910/23645 (3.85%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -10,7 +10,7 @@ Sub-category progress
 - keywords: 25/25 (100.00%)
 - reserved-words: 27/27 (100.00%)
 - future-reserved-words: 55/55 (100.00%)
-- literals: 362/534 (67.79%)
+- literals: 363/534 (67.98%)
 - directive-prologue: 0/62 (0.00%)
 - asi: 0/102 (0.00%)
 - statementList: 0/80 (0.00%)
@@ -946,7 +946,7 @@ Sub-category progress
   - [x] test/language/literals/regexp/early-err-modifiers-should-not-unicode-escape-m.js
   - [x] test/language/literals/regexp/early-err-modifiers-should-not-unicode-escape-s.js
   - [x] test/language/literals/regexp/early-err-pattern.js
-  - [ ] test/language/literals/regexp/inequality.js
+  - [x] test/language/literals/regexp/inequality.js
   - [x] test/language/literals/regexp/invalid-braced-quantifier-exact.js
   - [x] test/language/literals/regexp/invalid-braced-quantifier-lower.js
   - [x] test/language/literals/regexp/invalid-braced-quantifier-range.js

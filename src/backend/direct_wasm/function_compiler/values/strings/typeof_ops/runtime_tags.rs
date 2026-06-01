@@ -99,6 +99,13 @@ impl<'a> FunctionCompiler<'a> {
             JS_USER_FUNCTION_VALUE_BASE + JS_USER_FUNCTION_VALUE_LIMIT,
             JS_TYPEOF_FUNCTION_TAG,
         )?;
+        self.emit_runtime_typeof_range_match(
+            value_local,
+            result_local,
+            JS_RUNTIME_OBJECT_VALUE_BASE,
+            JS_RUNTIME_OBJECT_VALUE_BASE + JS_RUNTIME_OBJECT_VALUE_LIMIT,
+            JS_TYPEOF_OBJECT_TAG,
+        )?;
 
         self.push_local_get(result_local);
         Ok(())

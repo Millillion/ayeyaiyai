@@ -61,11 +61,18 @@ pub(super) fn encode_memory_section(initial_pages: u32) -> Vec<u8> {
 
 pub(super) fn encode_global_section(global_initial_values: &[i32]) -> Vec<u8> {
     let mut bytes = Vec::new();
-    push_u32(&mut bytes, 5 + global_initial_values.len() as u32);
+    push_u32(&mut bytes, 6 + global_initial_values.len() as u32);
 
-    for initial_value in [0, 0, JS_UNDEFINED_TAG, JS_TYPEOF_OBJECT_TAG, 1]
-        .into_iter()
-        .chain(global_initial_values.iter().copied())
+    for initial_value in [
+        0,
+        0,
+        JS_UNDEFINED_TAG,
+        JS_TYPEOF_OBJECT_TAG,
+        1,
+        JS_RUNTIME_OBJECT_VALUE_BASE,
+    ]
+    .into_iter()
+    .chain(global_initial_values.iter().copied())
     {
         bytes.push(I32_TYPE);
         bytes.push(0x01);
