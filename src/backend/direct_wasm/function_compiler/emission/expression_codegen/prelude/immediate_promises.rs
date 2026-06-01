@@ -826,6 +826,142 @@ impl<'a> FunctionCompiler<'a> {
         )
     }
 
+    fn direct_async_implicit_completion_statement_supported(statement: &Statement) -> bool {
+        match statement {
+            Statement::Return(_) | Statement::Throw(_) => false,
+            Statement::Var { value, .. }
+            | Statement::Let { value, .. }
+            | Statement::Assign { value, .. }
+            | Statement::Expression(value) => {
+                !Self::expression_contains_await_for_user_call_runtime(value)
+            }
+            Statement::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                !Self::expression_contains_await_for_user_call_runtime(object)
+                    && !Self::expression_contains_await_for_user_call_runtime(property)
+                    && !Self::expression_contains_await_for_user_call_runtime(value)
+            }
+            Statement::Print { values } => values
+                .iter()
+                .all(|value| !Self::expression_contains_await_for_user_call_runtime(value)),
+            Statement::Block { body } => body
+                .iter()
+                .all(Self::direct_async_implicit_completion_statement_supported),
+            Statement::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                !Self::expression_contains_await_for_user_call_runtime(condition)
+                    && then_branch
+                        .iter()
+                        .all(Self::direct_async_implicit_completion_statement_supported)
+                    && else_branch
+                        .iter()
+                        .all(Self::direct_async_implicit_completion_statement_supported)
+            }
+            _ => false,
+        }
+    }
+
+    fn can_emit_direct_async_implicit_completion_with_explicit_call_frame(
+        &self,
+        user_function: &UserFunction,
+        arguments: &[Expression],
+        this_binding: &Expression,
+    ) -> bool {
+        user_function.is_async()
+            && !user_function.is_generator()
+            && !user_function.has_parameter_defaults()
+            && !user_function.has_lowered_pattern_parameters()
+            && user_function.extra_argument_indices.is_empty()
+            && !self.current_function_contains_try_statement()
+            && self.state.emission.control_flow.try_stack.is_empty()
+            && self.inline_safe_argument_expression(this_binding)
+            && !self.expression_reads_local_descriptor_binding_member(this_binding)
+            && !self.inline_argument_mentions_shadowed_implicit_global(this_binding)
+            && arguments
+                .iter()
+                .all(|argument| self.inline_safe_argument_expression(argument))
+            && !arguments
+                .iter()
+                .any(|argument| self.inline_argument_mentions_shadowed_implicit_global(argument))
+            && !self.user_function_mentions_private_member_access(user_function)
+            && !self.user_function_mentions_direct_eval(user_function)
+            && !self.user_function_contains_identifier_callee_call(user_function)
+            && !self.user_function_may_read_restricted_function_property(user_function)
+            && !self.user_function_references_captured_user_function(user_function)
+            && self.user_function_has_explicit_call_frame_inlineable_terminal_body(user_function)
+            && self
+                .resolve_registered_function_declaration(&user_function.name)
+                .is_some_and(|function| {
+                    function
+                        .body
+                        .iter()
+                        .all(Self::direct_async_implicit_completion_statement_supported)
+                })
+    }
+
+    fn consume_direct_async_function_implicit_completion(
+        &mut self,
+        expression: &Expression,
+    ) -> DirectResult<Option<StaticEvalOutcome>> {
+        let Expression::Call { callee, arguments } = expression else {
+            return Ok(None);
+        };
+        if arguments
+            .iter()
+            .any(|argument| matches!(argument, CallArgument::Spread(_)))
+        {
+            return Ok(None);
+        }
+        let Some(LocalFunctionBinding::User(function_name)) = self
+            .resolve_function_binding_from_expression_with_context(
+                callee,
+                self.current_function_name(),
+            )
+        else {
+            return Ok(None);
+        };
+        let Some(user_function) = self.user_function(&function_name).cloned() else {
+            return Ok(None);
+        };
+        if !user_function.is_async() {
+            return Ok(None);
+        }
+        if let Some(outcome) =
+            self.async_function_parameter_default_throw_outcome(&user_function, arguments)
+        {
+            return Ok(Some(outcome));
+        }
+        let call_arguments = self.expand_call_arguments(arguments);
+        let this_binding = match callee.as_ref() {
+            Expression::Member { object, .. } => self.materialize_static_expression(object),
+            Expression::SuperMember { .. } => Expression::This,
+            _ => Expression::Undefined,
+        };
+        if !self.can_emit_direct_async_implicit_completion_with_explicit_call_frame(
+            &user_function,
+            &call_arguments,
+            &this_binding,
+        ) {
+            return Ok(None);
+        }
+        let result_local = self.allocate_temp_local();
+        if !self.emit_inline_user_function_summary_with_explicit_call_frame(
+            &user_function,
+            &call_arguments,
+            &this_binding,
+            result_local,
+        )? {
+            return Ok(None);
+        }
+        Ok(Some(StaticEvalOutcome::Value(Expression::Undefined)))
+    }
+
     fn direct_async_function_static_await_prefix_outcome(
         &self,
         statement: &Statement,
@@ -3859,6 +3995,12 @@ impl<'a> FunctionCompiler<'a> {
             && let Some(outcome) = self.direct_async_function_call_outcome(expression)
         {
             self.emit_direct_async_function_call_await_effects(expression)?;
+            return Ok(Some(outcome));
+        }
+        if !is_then_or_catch_chain
+            && let Some(outcome) =
+                self.consume_direct_async_function_implicit_completion(expression)?
+        {
             return Ok(Some(outcome));
         }
         if let Expression::Call { callee, arguments } = expression

@@ -163,6 +163,52 @@ impl<'a> FunctionCompiler<'a> {
                 self.push_i32_const(JS_UNDEFINED_TAG);
                 self.push_local_set(result_local);
             }
+            Statement::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                if let Some(parameter_name) =
+                    self.call_frame_mapped_arguments_parameter_name(user_function, object, property)
+                {
+                    self.emit_statement(&Statement::Assign {
+                        name: parameter_name.to_string(),
+                        value: self.substitute_user_function_call_frame_bindings(
+                            value,
+                            user_function,
+                            call_arguments,
+                            this_binding,
+                            arguments_binding,
+                        ),
+                    })?;
+                } else {
+                    self.emit_statement(&Statement::AssignMember {
+                        object: self.substitute_user_function_call_frame_bindings(
+                            object,
+                            user_function,
+                            call_arguments,
+                            this_binding,
+                            arguments_binding,
+                        ),
+                        property: self.substitute_user_function_call_frame_bindings(
+                            property,
+                            user_function,
+                            call_arguments,
+                            this_binding,
+                            arguments_binding,
+                        ),
+                        value: self.substitute_user_function_call_frame_bindings(
+                            value,
+                            user_function,
+                            call_arguments,
+                            this_binding,
+                            arguments_binding,
+                        ),
+                    })?;
+                }
+                self.push_i32_const(JS_UNDEFINED_TAG);
+                self.push_local_set(result_local);
+            }
             Statement::Expression(Expression::Update { name, op, prefix }) => {
                 self.emit_numeric_expression(&Expression::Update {
                     name: name.clone(),

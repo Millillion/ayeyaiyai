@@ -9,20 +9,27 @@ impl<'a> FunctionCompiler<'a> {
         arguments_binding: &Expression,
     ) -> Option<Expression> {
         match expression {
-            Expression::Member { object, property } => Some(Expression::Member {
-                object: Box::new(self.substitute_call_frame_special_bindings(
-                    object,
-                    user_function,
-                    this_binding,
-                    arguments_binding,
-                )),
-                property: Box::new(self.substitute_call_frame_special_bindings(
-                    property,
-                    user_function,
-                    this_binding,
-                    arguments_binding,
-                )),
-            }),
+            Expression::Member { object, property } => {
+                if let Some(parameter_name) =
+                    self.call_frame_mapped_arguments_parameter_name(user_function, object, property)
+                {
+                    return Some(Expression::Identifier(parameter_name.to_string()));
+                }
+                Some(Expression::Member {
+                    object: Box::new(self.substitute_call_frame_special_bindings(
+                        object,
+                        user_function,
+                        this_binding,
+                        arguments_binding,
+                    )),
+                    property: Box::new(self.substitute_call_frame_special_bindings(
+                        property,
+                        user_function,
+                        this_binding,
+                        arguments_binding,
+                    )),
+                })
+            }
             Expression::Assign { name, value } => Some(Expression::Assign {
                 name: name.clone(),
                 value: Box::new(self.substitute_call_frame_special_bindings(
@@ -36,26 +43,41 @@ impl<'a> FunctionCompiler<'a> {
                 object,
                 property,
                 value,
-            } => Some(Expression::AssignMember {
-                object: Box::new(self.substitute_call_frame_special_bindings(
-                    object,
-                    user_function,
-                    this_binding,
-                    arguments_binding,
-                )),
-                property: Box::new(self.substitute_call_frame_special_bindings(
-                    property,
-                    user_function,
-                    this_binding,
-                    arguments_binding,
-                )),
-                value: Box::new(self.substitute_call_frame_special_bindings(
-                    value,
-                    user_function,
-                    this_binding,
-                    arguments_binding,
-                )),
-            }),
+            } => {
+                if let Some(parameter_name) =
+                    self.call_frame_mapped_arguments_parameter_name(user_function, object, property)
+                {
+                    return Some(Expression::Assign {
+                        name: parameter_name.to_string(),
+                        value: Box::new(self.substitute_call_frame_special_bindings(
+                            value,
+                            user_function,
+                            this_binding,
+                            arguments_binding,
+                        )),
+                    });
+                }
+                Some(Expression::AssignMember {
+                    object: Box::new(self.substitute_call_frame_special_bindings(
+                        object,
+                        user_function,
+                        this_binding,
+                        arguments_binding,
+                    )),
+                    property: Box::new(self.substitute_call_frame_special_bindings(
+                        property,
+                        user_function,
+                        this_binding,
+                        arguments_binding,
+                    )),
+                    value: Box::new(self.substitute_call_frame_special_bindings(
+                        value,
+                        user_function,
+                        this_binding,
+                        arguments_binding,
+                    )),
+                })
+            }
             Expression::AssignSuperMember { property, value } => {
                 Some(Expression::AssignSuperMember {
                     property: Box::new(self.substitute_call_frame_special_bindings(

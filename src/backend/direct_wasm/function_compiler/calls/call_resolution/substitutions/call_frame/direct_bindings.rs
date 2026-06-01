@@ -8,12 +8,7 @@ impl<'a> FunctionCompiler<'a> {
         this_binding: &Expression,
         arguments_binding: &Expression,
     ) -> Option<Expression> {
-        let arguments_shadowed = user_function.body_declares_arguments_binding
-            || user_function.params.iter().any(|param| {
-                param == "arguments"
-                    || scoped_binding_source_name(param)
-                        .is_some_and(|source_name| source_name == "arguments")
-            });
+        let arguments_shadowed = Self::call_frame_arguments_shadowed(user_function);
         let self_binding_name = self
             .resolve_registered_function_declaration(&user_function.name)
             .and_then(|function| function.self_binding.as_deref());

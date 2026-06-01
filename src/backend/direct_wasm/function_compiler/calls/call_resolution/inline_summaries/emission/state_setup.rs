@@ -47,13 +47,7 @@ impl<'a> FunctionCompiler<'a> {
         }
         self.emit_prepare_user_function_capture_globals(&user_function.name)?;
 
-        let arguments_binding = Expression::Array(
-            arguments
-                .iter()
-                .cloned()
-                .map(crate::ir::hir::ArrayElement::Expression)
-                .collect(),
-        );
+        let arguments_binding = self.inline_summary_arguments_binding(user_function, arguments);
         let (call_arguments, inline_parameter_scope_names, inline_parameter_shadow_writebacks) =
             self.prepare_inline_summary_call_arguments(
                 user_function,
@@ -179,6 +173,35 @@ impl<'a> FunctionCompiler<'a> {
             inline_parameter_scope_names,
             inline_parameter_shadow_writebacks,
         ))
+    }
+
+    fn inline_summary_arguments_binding(
+        &self,
+        user_function: &UserFunction,
+        arguments: &[Expression],
+    ) -> Expression {
+        let visible_param_count = user_function.visible_param_count() as usize;
+        let use_mapped_parameters = self.user_function_has_mapped_arguments(user_function)
+            && !user_function.lexical_this
+            && !Self::call_frame_arguments_shadowed(user_function);
+        Expression::Array(
+            arguments
+                .iter()
+                .enumerate()
+                .map(|(index, argument)| {
+                    let value = if use_mapped_parameters && index < visible_param_count {
+                        user_function
+                            .params
+                            .get(index)
+                            .map(|parameter| Expression::Identifier(parameter.clone()))
+                            .unwrap_or_else(|| argument.clone())
+                    } else {
+                        argument.clone()
+                    };
+                    crate::ir::hir::ArrayElement::Expression(value)
+                })
+                .collect(),
+        )
     }
 
     pub(super) fn abort_inline_summary_emission_state(
