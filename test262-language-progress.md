@@ -1,4 +1,4 @@
-461/23645 (1.95%)
+468/23645 (1.98%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -7,7 +7,7 @@ Sub-category progress
 - punctuators: 11/11 (100.00%)
 - source-text: 1/1 (100.00%)
 - identifiers: 268/268 (100.00%)
-- keywords: 18/25 (72.00%)
+- keywords: 25/25 (100.00%)
 - reserved-words: 2/27 (7.41%)
 - future-reserved-words: 0/55 (0.00%)
 - literals: 1/534 (0.19%)
@@ -501,13 +501,13 @@ Sub-category progress
   - [x] test/language/keywords/ident-ref-return.js
   - [x] test/language/keywords/ident-ref-switch.js
   - [x] test/language/keywords/ident-ref-this.js
-  - [ ] test/language/keywords/ident-ref-throw.js
-  - [ ] test/language/keywords/ident-ref-try.js
-  - [ ] test/language/keywords/ident-ref-typeof.js
-  - [ ] test/language/keywords/ident-ref-var.js
-  - [ ] test/language/keywords/ident-ref-void.js
-  - [ ] test/language/keywords/ident-ref-while.js
-  - [ ] test/language/keywords/ident-ref-with.js
+  - [x] test/language/keywords/ident-ref-throw.js
+  - [x] test/language/keywords/ident-ref-try.js
+  - [x] test/language/keywords/ident-ref-typeof.js
+  - [x] test/language/keywords/ident-ref-var.js
+  - [x] test/language/keywords/ident-ref-void.js
+  - [x] test/language/keywords/ident-ref-while.js
+  - [x] test/language/keywords/ident-ref-with.js
 
 - [ ] reserved-words (27 tests)
   - [ ] test/language/reserved-words/await-module.js
