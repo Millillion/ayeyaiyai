@@ -326,7 +326,7 @@ impl<'a> FunctionCompiler<'a> {
                 if let Expression::Member { property, .. } = callee.as_ref()
                     && matches!(
                         property.as_ref(),
-                        Expression::String(name) if matches!(name.as_str(), "match" | "search")
+                        Expression::String(name) if matches!(name.as_str(), "match" | "search" | "test")
                     )
                     && self
                         .resolve_static_member_builtin_call_result_with_context(

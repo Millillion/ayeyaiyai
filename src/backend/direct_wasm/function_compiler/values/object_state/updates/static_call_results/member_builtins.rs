@@ -10,6 +10,16 @@ fn simple_regexp_pattern_is_plain_literal(pattern: &str) -> bool {
     })
 }
 
+fn simple_regexp_read_fixed_hex_u16(
+    chars: &mut std::iter::Peekable<std::str::Chars<'_>>,
+) -> Option<u32> {
+    let mut value = 0;
+    for _ in 0..4 {
+        value = value * 16 + chars.next()?.to_digit(16)?;
+    }
+    Some(value)
+}
+
 fn simple_regexp_decode_unicode_escapes(pattern: &str) -> Option<String> {
     if !pattern.contains('\\') {
         return Some(pattern.to_string());
@@ -28,9 +38,18 @@ fn simple_regexp_decode_unicode_escapes(pattern: &str) -> Option<String> {
                 decoded.push('\0');
             }
             'u' => {
-                let mut value = 0;
-                for _ in 0..4 {
-                    value = value * 16 + chars.next()?.to_digit(16)?;
+                let mut value = simple_regexp_read_fixed_hex_u16(&mut chars)?;
+                if (0xd800..=0xdbff).contains(&value) {
+                    if chars.next()? != '\\' || chars.next()? != 'u' {
+                        return None;
+                    }
+                    let low = simple_regexp_read_fixed_hex_u16(&mut chars)?;
+                    if !(0xdc00..=0xdfff).contains(&low) {
+                        return None;
+                    }
+                    value = 0x10000 + ((value - 0xd800) << 10) + (low - 0xdc00);
+                } else if (0xdc00..=0xdfff).contains(&value) {
+                    return None;
                 }
                 decoded.push(char::from_u32(value)?);
             }
