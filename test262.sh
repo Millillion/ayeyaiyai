@@ -142,7 +142,7 @@ done
 
 RUNNER_CMD=(
   cargo run --release --bin test262 -- --test262-dir "$TEST262_DIR_RESOLVED"
-  --timeout-seconds "${TEST262_TIMEOUT_SECONDS:-5}"
+  --timeout-seconds "${TEST262_TIMEOUT_SECONDS:-30}"
 )
 
 if [[ ${#CATEGORY_FILTERS[@]} -gt 0 ]]; then
@@ -174,16 +174,12 @@ if [[ -n "$SUMMARY_LINE" ]]; then
   PASSED="$(sed -nE 's/.* passed=([0-9]+).*/\1/p' <<<"$SUMMARY_LINE")"
   COMPILE_FAILED="$(sed -nE 's/.* compile_failed=([0-9]+).*/\1/p' <<<"$SUMMARY_LINE")"
   RUNTIME_FAILED="$(sed -nE 's/.* runtime_failed=([0-9]+).*/\1/p' <<<"$SUMMARY_LINE")"
-  SKIPPED_METADATA="$(sed -nE 's/.* skipped_metadata=([0-9]+).*/\1/p' <<<"$SUMMARY_LINE")"
-  SKIPPED_CONTENT="$(sed -nE 's/.* skipped_content=([0-9]+).*/\1/p' <<<"$SUMMARY_LINE")"
-  ATTEMPT_RATE="$(sed -nE 's/.* attempt_rate_percent=([0-9]+\.[0-9]+).*/\1/p' <<<"$SUMMARY_LINE")"
   COMPLIANCE="$(sed -nE 's/.* compliance_percent=([0-9]+\.[0-9]+).*/\1/p' <<<"$SUMMARY_LINE")"
 
   printf '\n'
   printf 'Compliance: %s%% (%s / %s discovered tests passed)\n' "$COMPLIANCE" "$PASSED" "$DISCOVERED"
-  printf 'Attempt rate: %s%% (%s / %s discovered tests executed)\n' "$ATTEMPT_RATE" "$ATTEMPTED" "$DISCOVERED"
+  printf 'Executed: %s / %s discovered tests\n' "$ATTEMPTED" "$DISCOVERED"
   printf 'Failures: compile=%s runtime=%s\n' "$COMPILE_FAILED" "$RUNTIME_FAILED"
-  printf 'Skipped: metadata=%s content=%s\n' "$SKIPPED_METADATA" "$SKIPPED_CONTENT"
   printf 'Latest log: %s\n' "$LATEST_LOG_PATH"
 fi
 

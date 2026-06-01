@@ -9,434 +9,10 @@ use std::{
 };
 
 use anyhow::{Context, Result};
-use ayeyaiyai::{CompileOptions, compile_file, compile_file_with_goal};
+use ayeyaiyai::{compile_file, compile_file_with_goal, CompileOptions};
 use clap::{ArgAction, Parser};
 use tempfile::tempdir;
 use walkdir::WalkDir;
-
-const ASSERT_PRELUDE: &str = r#"
-function Test262Error(message) {
-  this.name = "Test262Error";
-  this.message = message ?? "";
-}
-
-function __formatIdentityFreeValue(value) {
-  switch (value === null ? "null" : typeof value) {
-    case "string":
-      return typeof JSON !== "undefined" ? JSON.stringify(value) : "\"" + value + "\"";
-    case "bigint":
-      return String(value) + "n";
-    case "number":
-      if (value === 0 && 1 / value === -Infinity) {
-        return "-0";
-      }
-      return String(value);
-    case "boolean":
-    case "undefined":
-    case "null":
-      return String(value);
-  }
-}
-
-function __sameValue(left, right) {
-  if (left === right) {
-    return left !== 0 || 1 / left === 1 / right;
-  }
-  return left !== left && right !== right;
-}
-
-function __assertToString(value) {
-  var basic = __formatIdentityFreeValue(value);
-  if (basic) {
-    return basic;
-  }
-  try {
-    return String(value);
-  } catch (error) {
-    if (error && error.name === "TypeError") {
-      return Object.prototype.toString.call(value);
-    }
-    throw error;
-  }
-}
-
-function assert(mustBeTrue, message) {
-  if (mustBeTrue === true) {
-    return;
-  }
-  if (message === undefined) {
-    message = "Expected true but got " + __assertToString(mustBeTrue);
-  }
-  throw new Test262Error(message);
-}
-
-globalThis.assert = assert;
-
-function __assert(condition, message) {
-  assert(condition, message);
-}
-
-function __assertSameValue(actual, expected, message) {
-  try {
-    if (__sameValue(actual, expected)) {
-      return;
-    }
-  } catch (error) {
-    throw new Test262Error((message ?? "") + " (_isSameValue operation threw) " + error);
-  }
-
-  if (message === undefined) {
-    message = "";
-  } else {
-    message += " ";
-  }
-
-  message += "Expected SameValue(«" + __assertToString(actual) + "», «" + __assertToString(expected) + "») to be true";
-  throw new Test262Error(message);
-}
-
-function __assertNotSameValue(actual, expected, message) {
-  if (!__sameValue(actual, expected)) {
-    return;
-  }
-
-  if (message === undefined) {
-    message = "";
-  } else {
-    message += " ";
-  }
-
-  message += "Expected SameValue(«" + __assertToString(actual) + "», «" + __assertToString(expected) + "») to be false";
-  throw new Test262Error(message);
-}
-
-function __ayyAssertThrows(expectedErrorConstructor, func, message) {
-  var expectedName, actualName;
-
-  if (typeof func !== "function") {
-    throw new Test262Error("assert.throws requires two arguments: the error constructor and a function to run");
-  }
-
-  if (message === undefined) {
-    message = "";
-  } else {
-    message += " ";
-  }
-
-  try {
-    func();
-  } catch (thrown) {
-    if (typeof thrown !== "object" || thrown === null) {
-      throw new Test262Error(message + "Thrown value was not an object!");
-    } else if (thrown.constructor !== expectedErrorConstructor) {
-      expectedName = expectedErrorConstructor.name;
-      actualName = thrown.constructor.name;
-      if (expectedName === actualName) {
-        message += "Expected a " + expectedName + " but got a different error constructor with the same name";
-      } else {
-        message += "Expected a " + expectedName + " but got a " + actualName;
-      }
-      throw new Test262Error(message);
-    }
-    return;
-  }
-
-  throw new Test262Error(message + "Expected a " + expectedErrorConstructor.name + " to be thrown but no exception was thrown at all");
-}
-
-assert._isSameValue = __sameValue;
-assert._toString = __assertToString;
-assert.sameValue = __assertSameValue;
-assert.notSameValue = __assertNotSameValue;
-assert.throws = __ayyAssertThrows;
-
-function compareArray(actual, expected) {
-  if (actual.length !== expected.length) {
-    return false;
-  }
-  for (var i = 0; i < actual.length; i += 1) {
-    if (!__sameValue(actual[i], expected[i])) {
-      return false;
-    }
-  }
-  return true;
-}
-
-compareArray.format = function (arrayLike) {
-  return "" + arrayLike;
-};
-
-function __ayyAssertCompareArray() {}
-
-assert.compareArray = __ayyAssertCompareArray;
-"#;
-
-const PROPERTY_HELPER_PRELUDE: &str = r#"
-function __propertyHelperHasOwn(obj, name) {
-  return Object.getOwnPropertyDescriptor(obj, name) !== undefined;
-}
-
-function __propertyHelperUnsupported(name) {
-  throw new Test262Error("unsupported propertyHelper fallback: " + name);
-}
-
-function verifyProperty(obj, name, desc, options) {
-  return __propertyHelperUnsupported("verifyProperty");
-}
-
-function verifyEqualTo(obj, name, value) {
-  return __propertyHelperUnsupported("verifyEqualTo");
-}
-
-function verifyWritable(obj, name, verifyProp, value) {
-  return __propertyHelperUnsupported("verifyWritable");
-}
-
-function verifyNotWritable(obj, name, verifyProp, value) {
-  return __propertyHelperUnsupported("verifyNotWritable");
-}
-
-function verifyEnumerable(obj, name) {
-  return __propertyHelperUnsupported("verifyEnumerable");
-}
-
-function verifyNotEnumerable(obj, name) {
-  return __propertyHelperUnsupported("verifyNotEnumerable");
-}
-
-function verifyConfigurable(obj, name) {
-  return __propertyHelperUnsupported("verifyConfigurable");
-}
-
-function verifyNotConfigurable(obj, name) {
-  return __propertyHelperUnsupported("verifyNotConfigurable");
-}
-
-function verifyCallableProperty(obj, name, functionName, length, desc) {
-  return __propertyHelperUnsupported("verifyCallableProperty");
-}
-
-function verifyPrimordialProperty(obj, name, desc) {
-  return __propertyHelperUnsupported("verifyPrimordialProperty");
-}
-
-function verifyPrimordialCallableProperty(obj, name, functionName, length, desc) {
-  return __propertyHelperUnsupported("verifyPrimordialCallableProperty");
-}
-"#;
-
-const TEST262_ERROR_PRELUDE: &str = r#"
-function Test262Error(message) {
-  this.name = "Test262Error";
-  this.message = message ?? "";
-}
-"#;
-
-const FN_GLOBAL_OBJECT_PRELUDE: &str = r#"
-function fnGlobalObject() {
-  return globalThis;
-}
-"#;
-
-const WELL_KNOWN_INTRINSIC_OBJECTS_PRELUDE: &str = r#"
-function getWellKnownIntrinsicObject(key) {
-  if (key === "%AsyncFunction%") {
-    return (async function () {}).constructor;
-  }
-  throw new Test262Error("unknown well-known intrinsic " + key);
-}
-"#;
-
-const DONE_PRELUDE: &str = r#"
-function $DONE(error) {
-  if (error !== undefined) {
-    throw error;
-  }
-}
-"#;
-
-const ASYNC_HELPERS_PRELUDE: &str = r#"
-function asyncTest(testFunc) {
-  if (typeof testFunc !== "function") {
-    $DONE("asyncTest called with non-function argument");
-    return;
-  }
-  try {
-    testFunc().then(
-      function () {
-        $DONE();
-      },
-      function (error) {
-        $DONE(error);
-      }
-    );
-  } catch (syncError) {
-    $DONE(syncError);
-  }
-}
-
-assert.throwsAsync = function (expectedErrorConstructor, func, message) {
-  return new Promise(function (resolve, reject) {
-    var fail = function (detail) {
-      reject(new Test262Error(message === undefined ? detail : message + " " + detail));
-    };
-    if (typeof expectedErrorConstructor !== "function") {
-      fail("assert.throwsAsync called with an argument that is not an error constructor");
-      return;
-    }
-    if (typeof func !== "function") {
-      fail("assert.throwsAsync called with an argument that is not a function");
-      return;
-    }
-    var expectedName = expectedErrorConstructor.name;
-    var expectation = "Expected a " + expectedName + " to be thrown asynchronously";
-    var result;
-    try {
-      result = func();
-    } catch (thrown) {
-      fail(expectation + " but the function threw synchronously");
-      return;
-    }
-    if (result === null || typeof result !== "object" || typeof result.then !== "function") {
-      fail(expectation + " but result was not a thenable");
-      return;
-    }
-    result.then(
-      function () {
-        fail(expectation + " but no exception was thrown at all");
-      },
-      function (thrown) {
-        if (thrown === null || typeof thrown !== "object") {
-          fail(expectation + " but thrown value was not an object");
-          return;
-        }
-        if (thrown.constructor !== expectedErrorConstructor) {
-          var actualName = thrown.constructor && thrown.constructor.name || typeof thrown;
-          fail(expectation + " but got a " + actualName);
-          return;
-        }
-        resolve();
-      }
-    );
-  });
-};
-"#;
-
-const RESIZABLE_ARRAYBUFFER_UTILS_PRELUDE: &str = r#"
-var MyUint8Array;
-var MyFloat32Array;
-var MyBigInt64Array;
-
-try {
-  MyUint8Array = class MyUint8Array extends Uint8Array {};
-} catch (e) {}
-
-try {
-  MyFloat32Array = class MyFloat32Array extends Float32Array {};
-} catch (e) {}
-
-try {
-  MyBigInt64Array = class MyBigInt64Array extends BigInt64Array {};
-} catch (e) {}
-
-const builtinCtors = [
-  Uint8Array,
-];
-
-const floatCtors = [];
-
-const ctors = [
-  Uint8Array,
-];
-
-function CreateResizableArrayBuffer(byteLength, maxByteLength) {
-  return new ArrayBuffer(byteLength, { maxByteLength: maxByteLength });
-}
-
-function Convert(item) {
-  if (typeof item == "bigint") {
-    return Number(item);
-  }
-  return item;
-}
-
-function ToNumbers(array) {
-  let result = [];
-  for (let i = 0; i < array.length; i++) {
-    result.push(Convert(array[i]));
-  }
-  return result;
-}
-
-function MayNeedBigInt(ta, n) {
-  assert.sameValue(typeof n, "number");
-  if ((typeof BigInt64Array !== "undefined" && ta instanceof BigInt64Array) ||
-      (typeof BigUint64Array !== "undefined" && ta instanceof BigUint64Array)) {
-    return BigInt(n);
-  }
-  return n;
-}
-
-function TestIterationAndResize(iterable, expected, rab, resizeAfter, newByteLength) {
-  let values = [];
-  let resized = false;
-
-  for (let value of iterable) {
-    values.push(Number(value));
-    if (!resized && values.length == resizeAfter) {
-      rab.resize(newByteLength);
-      resized = true;
-    }
-  }
-
-  if (expected !== null) {
-    assert.compareArray(values, expected, "TestIterationAndResize: list of iterated values");
-  }
-  assert(resized, "TestIterationAndResize: resize condition should have been hit");
-}
-"#;
-
-const DECIMAL_TO_HEX_STRING_PRELUDE: &str = r#"
-function decimalToHexString(n) {
-  var hex = "0123456789ABCDEF";
-  n >>>= 0;
-  var s = "";
-  while (n) {
-    s = hex[n & 0xf] + s;
-    n >>>= 4;
-  }
-  while (s.length < 4) {
-    s = "0" + s;
-  }
-  return s;
-}
-
-function decimalToPercentHexString(n) {
-  var hex = "0123456789ABCDEF";
-  return "%" + hex[(n >> 4) & 0xf] + hex[n & 0xf];
-}
-"#;
-
-const SIMPLE_TEST_TYPED_ARRAY_PRELUDE: &str = r#"
-var typedArrayConstructors = [
-  Float64Array,
-  Float32Array,
-  Int32Array,
-  Int16Array,
-  Int8Array,
-  Uint32Array,
-  Uint16Array,
-  Uint8Array,
-  Uint8ClampedArray
-];
-
-function testWithTypedArrayConstructors(f, constructors) {
-  var ctors = constructors || typedArrayConstructors;
-  for (var i = 0; i < ctors.length; ++i) {
-    f(ctors[i]);
-  }
-}
-"#;
 
 #[derive(Debug, Parser)]
 #[command(about = "Run a supported subset of test262 against AyeYaiYai")]
@@ -456,7 +32,7 @@ struct Cli {
     #[arg(long)]
     limit: Option<usize>,
 
-    #[arg(long, default_value_t = 5)]
+    #[arg(long, default_value_t = 30)]
     timeout_seconds: u64,
 }
 
@@ -467,8 +43,6 @@ struct Summary {
     passed: usize,
     compile_failed: usize,
     runtime_failed: usize,
-    skipped_metadata: usize,
-    skipped_content: usize,
 }
 
 #[derive(Debug, Default)]
@@ -545,38 +119,40 @@ fn run() -> Result<()> {
             fs::read_to_string(path).with_context(|| format!("failed to read `{display}`"))?;
         let (metadata, body) = parse_test262_source(&source);
 
-        if should_skip_metadata(&metadata) {
-            summary.skipped_metadata += 1;
-            continue;
-        }
-
         let trace_timing = std::env::var_os("AYY_TRACE_TEST262_TIMING").is_some();
         if trace_timing {
             eprintln!("test262 timing prepare_start {relative_display}");
         }
-        let Some(rewritten) = prepare_test_source(&metadata, &body, &cli.test262_dir) else {
-            summary.skipped_content += 1;
-            continue;
+        let prepared = match prepare_test_source(&metadata, &body, &cli.test262_dir) {
+            Ok(prepared) => prepared,
+            Err(error) => {
+                summary.attempted += 1;
+                summary.compile_failed += 1;
+                println!("COMPILE_FAIL {display}\n{error:#}");
+                continue;
+            }
         };
         if trace_timing {
             eprintln!("test262 timing prepare_done {relative_display}");
         }
 
         if std::env::var_os("AYY_DUMP_PREPARED_SOURCE").is_some() {
-            println!("{rewritten}");
+            println!("{prepared}");
             return Ok(());
         }
 
         summary.attempted += 1;
 
         let is_module = metadata.flags.iter().any(|flag| flag == "module");
+        let is_async = metadata.flags.iter().any(|flag| flag == "async");
 
         let outcome = run_single_test(
             path,
-            &rewritten,
+            &prepared,
             &cli.target,
             cli.timeout_seconds,
             is_module,
+            is_async,
         );
 
         match apply_negative_expectation(&metadata, outcome) {
@@ -600,22 +176,13 @@ fn run() -> Result<()> {
     } else {
         (summary.passed as f64 / summary.discovered as f64) * 100.0
     };
-    let attempt_rate_percent = if summary.discovered == 0 {
-        0.0
-    } else {
-        (summary.attempted as f64 / summary.discovered as f64) * 100.0
-    };
-
     println!(
-        "SUMMARY discovered={} attempted={} passed={} compile_failed={} runtime_failed={} skipped_metadata={} skipped_content={} attempt_rate_percent={:.2} compliance_percent={:.2}",
+        "SUMMARY discovered={} attempted={} passed={} compile_failed={} runtime_failed={} compliance_percent={:.2}",
         summary.discovered,
         summary.attempted,
         summary.passed,
         summary.compile_failed,
         summary.runtime_failed,
-        summary.skipped_metadata,
-        summary.skipped_content,
-        attempt_rate_percent,
         compliance_percent,
     );
 
@@ -676,6 +243,7 @@ fn run_single_test(
     target: &str,
     timeout_seconds: u64,
     module: bool,
+    async_test: bool,
 ) -> Result<(), TestFailure> {
     let tempdir = tempdir().map_err(|error| TestFailure::Compile(error.to_string()))?;
     let trace_timing = std::env::var_os("AYY_TRACE_TEST262_TIMING").is_some();
@@ -704,9 +272,6 @@ fn run_single_test(
 
     let keep_tempdir = std::env::var_os("AYY_KEEP_TEST262_TEMP").is_some()
         || std::env::var_os("AYY_KEEP_TEST262_TEMP_PRECOMPILE").is_some();
-    if std::env::var_os("AYY_KEEP_TEST262_TEMP_PRECOMPILE").is_some() {
-        eprintln!("kept test262 tempdir: {}", tempdir.path().display());
-    }
 
     let compile_result = if module {
         compile_file_with_goal(&entry_path, &options, true)
@@ -724,6 +289,10 @@ fn run_single_test(
     }
 
     if std::env::var_os("AYY_COMPILE_ONLY").is_some() {
+        if keep_tempdir {
+            eprintln!("kept test262 tempdir: {}", tempdir.path().display());
+            std::mem::forget(tempdir);
+        }
         return Ok(());
     }
 
@@ -768,13 +337,25 @@ fn run_single_test(
         .wait_with_output()
         .map_err(|error| TestFailure::Runtime(error.to_string()))?;
 
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
     let result = if output.status.success() {
-        Ok(())
+        if async_test && stdout.contains("Test262:AsyncTestFailure:") {
+            Err(TestFailure::Runtime(format!(
+                "async test reported failure\nstdout:\n{stdout}\nstderr:\n{stderr}",
+            )))
+        } else if async_test && !stdout.contains("Test262:AsyncTestComplete") {
+            Err(TestFailure::Runtime(format!(
+                "async test did not report completion\nstdout:\n{stdout}\nstderr:\n{stderr}",
+            )))
+        } else {
+            Ok(())
+        }
     } else {
         Err(TestFailure::Runtime(format!(
             "stdout:\n{}\nstderr:\n{}",
-            String::from_utf8_lossy(&output.stdout),
-            String::from_utf8_lossy(&output.stderr),
+            stdout, stderr,
         )))
     };
     if keep_tempdir {
@@ -890,34 +471,58 @@ fn parse_inline_list(line: &str, key: &str) -> Option<Vec<String>> {
     )
 }
 
-fn should_skip_metadata(metadata: &Metadata) -> bool {
-    let _ = metadata;
-    false
+fn has_flag(metadata: &Metadata, expected: &str) -> bool {
+    metadata.flags.iter().any(|flag| flag == expected)
 }
 
-fn prepare_test_source(metadata: &Metadata, body: &str, test262_dir: &Path) -> Option<String> {
-    if metadata.flags.iter().any(|flag| flag == "raw")
-        && (body.starts_with("#!") || body.starts_with("\u{FEFF}#!"))
-    {
-        return Some(body.to_string());
+fn strict_prefix(metadata: &Metadata) -> &'static str {
+    has_flag(metadata, "onlyStrict")
+        .then_some("\"use strict\";\n")
+        .unwrap_or_default()
+}
+
+fn prepare_test_source(metadata: &Metadata, body: &str, test262_dir: &Path) -> Result<String> {
+    if has_flag(metadata, "raw") {
+        return Ok(body.to_string());
     }
 
-    match metadata
+    if metadata
         .negative
         .as_ref()
         .and_then(|negative| negative.phase.as_deref())
+        .is_some_and(|phase| phase == "parse" || phase == "resolution")
     {
-        Some("parse" | "resolution") => {
-            let strict_prefix = metadata
-                .flags
-                .iter()
-                .any(|flag| flag == "onlyStrict")
-                .then_some("\"use strict\";\n")
-                .unwrap_or_default();
-            Some(format!("{strict_prefix}{body}"))
-        }
-        _ => rewrite_for_supported_subset(metadata, body, &test262_dir.join("harness")),
+        return Ok(format!("{}{body}", strict_prefix(metadata)));
     }
+
+    let harness_dir = test262_dir.join("harness");
+    let mut harness_files = vec!["sta.js".to_string(), "assert.js".to_string()];
+    if has_flag(metadata, "async") {
+        harness_files.push("doneprintHandle.js".to_string());
+    }
+    for include in &metadata.includes {
+        if !harness_files.iter().any(|existing| existing == include) {
+            harness_files.push(include.clone());
+        }
+    }
+
+    let mut prepared = String::new();
+    prepared.push_str(strict_prefix(metadata));
+    for include in harness_files {
+        let include_path = harness_dir.join(&include);
+        let include_source = fs::read_to_string(&include_path).with_context(|| {
+            format!(
+                "failed to read harness include `{}`",
+                include_path.display()
+            )
+        })?;
+        prepared.push_str(&include_source);
+        if !prepared.ends_with('\n') {
+            prepared.push('\n');
+        }
+    }
+    prepared.push_str(body);
+    Ok(prepared)
 }
 
 fn apply_negative_expectation(
@@ -966,222 +571,10 @@ fn apply_negative_expectation(
     }
 }
 
-fn source_can_use_simple_typed_array_prelude(body: &str) -> bool {
-    let regular_subclassing_shape = body.contains("class Typed extends Constructor")
-        && body.contains("new Typed(2)")
-        && body.contains("assert.sameValue(arr.length, 2)");
-    let super_must_be_called_shape = body.contains("class Typed extends Constructor")
-        && body.contains("constructor() {}")
-        && body.contains("assert.throws(ReferenceError")
-        && body.contains("new Typed();")
-        && body.contains("class TypedWithSuper extends Constructor")
-        && body.contains("super();")
-        && body.contains("new TypedWithSuper();");
-
-    body.contains("testWithTypedArrayConstructors(function(Constructor)")
-        && (regular_subclassing_shape || super_must_be_called_shape)
-        && !body.contains("testWithAllTypedArrayConstructors")
-        && !body.contains("testWithBigIntTypedArrayConstructors")
-        && !body.contains("testWithAtomicsFriendlyTypedArrayConstructors")
-        && !body.contains("testWithNonAtomicsFriendlyTypedArrayConstructors")
-        && !body.contains("typedArrayCtorArgFactories")
-        && !body.contains("makePassthrough")
-        && !body.contains("makeArray")
-        && !body.contains("makeArrayLike")
-        && !body.contains("makeArrayBuffer")
-        && !body.contains("testTypedArrayConversions")
-        && !body.contains("floatArrayConstructors")
-        && !body.contains("intArrayConstructors")
-        && !body.contains("nonClampedIntArrayConstructors")
-}
-
-fn include_prelude(include: &str, harness_dir: &Path, body: &str) -> Option<String> {
-    match include {
-        "assert.js" | "sta.js" => Some(String::new()),
-        "compareArray.js" => Some(String::new()),
-        "propertyHelper.js" => Some(PROPERTY_HELPER_PRELUDE.to_string()),
-        "fnGlobalObject.js" => Some(FN_GLOBAL_OBJECT_PRELUDE.to_string()),
-        "wellKnownIntrinsicObjects.js" => Some(WELL_KNOWN_INTRINSIC_OBJECTS_PRELUDE.to_string()),
-        "asyncHelpers.js" => Some(ASYNC_HELPERS_PRELUDE.to_string()),
-        "decimalToHexString.js" => Some(DECIMAL_TO_HEX_STRING_PRELUDE.to_string()),
-        "resizableArrayBufferUtils.js" => Some(RESIZABLE_ARRAYBUFFER_UTILS_PRELUDE.to_string()),
-        "testTypedArray.js" if source_can_use_simple_typed_array_prelude(body) => {
-            Some(SIMPLE_TEST_TYPED_ARRAY_PRELUDE.to_string())
-        }
-        _ => fs::read_to_string(harness_dir.join(include)).ok(),
-    }
-}
-
 fn should_skip_path(path: &std::path::Path) -> bool {
     path.file_name()
         .and_then(|name| name.to_str())
         .is_some_and(|name| name.ends_with("_FIXTURE.js"))
-}
-
-fn supported_subset_haystack(source: &str) -> String {
-    #[derive(Clone, Copy)]
-    enum State {
-        Code,
-        SingleQuoted,
-        DoubleQuoted,
-        Template,
-        LineComment,
-        BlockComment,
-    }
-
-    let characters = source.chars().collect::<Vec<_>>();
-    let mut haystack = String::with_capacity(source.len());
-    let mut state = State::Code;
-    let mut index = 0;
-
-    while index < characters.len() {
-        let character = characters[index];
-        let next = characters.get(index + 1).copied();
-
-        match state {
-            State::Code => {
-                if character == '\'' {
-                    state = State::SingleQuoted;
-                    haystack.push(' ');
-                    index += 1;
-                    continue;
-                }
-                if character == '"' {
-                    state = State::DoubleQuoted;
-                    haystack.push(' ');
-                    index += 1;
-                    continue;
-                }
-                if character == '`' {
-                    state = State::Template;
-                    haystack.push(' ');
-                    index += 1;
-                    continue;
-                }
-                if character == '/' && next == Some('/') {
-                    state = State::LineComment;
-                    haystack.push(' ');
-                    haystack.push(' ');
-                    index += 2;
-                    continue;
-                }
-                if character == '/' && next == Some('*') {
-                    state = State::BlockComment;
-                    haystack.push(' ');
-                    haystack.push(' ');
-                    index += 2;
-                    continue;
-                }
-                haystack.push(character);
-                index += 1;
-            }
-            State::SingleQuoted | State::DoubleQuoted | State::Template => {
-                if character == '\\' {
-                    haystack.push(' ');
-                    index += 1;
-                    if index < characters.len() {
-                        haystack.push(' ');
-                        index += 1;
-                    }
-                    continue;
-                }
-
-                let closing = match state {
-                    State::SingleQuoted => '\'',
-                    State::DoubleQuoted => '"',
-                    State::Template => '`',
-                    _ => unreachable!(),
-                };
-                if character == closing {
-                    state = State::Code;
-                }
-                haystack.push(if character == '\n' { '\n' } else { ' ' });
-                index += 1;
-            }
-            State::LineComment => {
-                haystack.push(if character == '\n' { '\n' } else { ' ' });
-                index += 1;
-                if character == '\n' {
-                    state = State::Code;
-                }
-            }
-            State::BlockComment => {
-                if character == '*' && next == Some('/') {
-                    haystack.push(' ');
-                    haystack.push(' ');
-                    index += 2;
-                    state = State::Code;
-                    continue;
-                }
-                haystack.push(if character == '\n' { '\n' } else { ' ' });
-                index += 1;
-            }
-        }
-    }
-
-    haystack
-}
-
-fn rewrite_for_supported_subset(
-    metadata: &Metadata,
-    body: &str,
-    harness_dir: &Path,
-) -> Option<String> {
-    let unsupported_markers = ["$DONOTEVALUATE"];
-    let searchable = supported_subset_haystack(&body);
-
-    if unsupported_markers
-        .iter()
-        .any(|marker| searchable.contains(marker))
-    {
-        return None;
-    }
-
-    let include_prelude = metadata
-        .includes
-        .iter()
-        .map(|include| include_prelude(include, harness_dir, body))
-        .collect::<Option<Vec<_>>>()?
-        .join("\n");
-
-    let rewritten = body
-        .replace("assert.throws(", "__ayyAssertThrows(")
-        .replace("assert.compareArray(", "__ayyAssertCompareArray(")
-        .replace("assert.sameValue(", "__assertSameValue(")
-        .replace("assert.notSameValue(", "__assertNotSameValue(")
-        .replace("assert(", "__assert(");
-
-    let strict_prefix = metadata
-        .flags
-        .iter()
-        .any(|flag| flag == "onlyStrict")
-        .then_some("\"use strict\";\n")
-        .unwrap_or_default();
-
-    let needs_assert_prelude = source_needs_assert_prelude(metadata, &searchable);
-    let needs_done_prelude = source_needs_done_prelude(metadata, &searchable);
-    let assert_prelude = if needs_assert_prelude {
-        ASSERT_PRELUDE
-    } else {
-        TEST262_ERROR_PRELUDE
-    };
-    let done_prelude = needs_done_prelude
-        .then_some(DONE_PRELUDE)
-        .unwrap_or_default();
-
-    Some(format!(
-        "{strict_prefix}{assert_prelude}\n{done_prelude}\n{include_prelude}\n{rewritten}"
-    ))
-}
-
-fn source_needs_assert_prelude(metadata: &Metadata, searchable_body: &str) -> bool {
-    !metadata.includes.is_empty()
-        || searchable_body.contains("assert")
-        || searchable_body.contains("compareArray")
-}
-
-fn source_needs_done_prelude(metadata: &Metadata, searchable_body: &str) -> bool {
-    !metadata.includes.is_empty() || searchable_body.contains("$DONE")
 }
 
 #[cfg(test)]
@@ -1189,84 +582,10 @@ mod tests {
     use std::{fs, path::Path};
 
     use super::{
-        Metadata, NegativeExpectation, TestFailure, apply_negative_expectation,
-        normalize_requested_test, parse_frontmatter, parse_test262_source, prepare_test_source,
-        rewrite_for_supported_subset, should_skip_metadata, should_skip_path,
-        supported_subset_haystack,
+        apply_negative_expectation, normalize_requested_test, parse_frontmatter,
+        parse_test262_source, prepare_test_source, should_skip_path, Metadata, NegativeExpectation,
+        TestFailure,
     };
-
-    #[test]
-    fn rewrites_only_strict_tests_with_directive_prefix() {
-        let metadata = Metadata {
-            flags: vec!["onlyStrict".to_string()],
-            ..Metadata::default()
-        };
-
-        let rewritten = rewrite_for_supported_subset(
-            &metadata,
-            "assert.sameValue(1, 1);",
-            Path::new(".cache/test262/harness"),
-        )
-        .unwrap();
-
-        assert!(rewritten.starts_with("\"use strict\";\n"));
-    }
-
-    #[test]
-    fn exposes_assert_helpers_to_harness_preludes() {
-        let rewritten = rewrite_for_supported_subset(
-            &Metadata::default(),
-            "assert.sameValue(1, 1);",
-            Path::new(".cache/test262/harness"),
-        )
-        .unwrap();
-
-        assert!(rewritten.contains("assert.sameValue = __assertSameValue;"));
-        assert!(rewritten.contains("assert.notSameValue = __assertNotSameValue;"));
-        assert!(rewritten.contains("assert.throws = __ayyAssertThrows;"));
-        assert!(rewritten.contains("assert.compareArray = __ayyAssertCompareArray;"));
-    }
-
-    #[test]
-    fn rewrites_assert_compare_array_calls_to_internal_helper() {
-        let rewritten = rewrite_for_supported_subset(
-            &Metadata::default(),
-            "assert.compareArray(actual, expected, message);",
-            Path::new(".cache/test262/harness"),
-        )
-        .unwrap();
-
-        assert!(rewritten.contains("__ayyAssertCompareArray(actual, expected, message);"));
-    }
-
-    #[test]
-    fn exposes_callable_assert_to_harness_preludes() {
-        let rewritten = rewrite_for_supported_subset(
-            &Metadata::default(),
-            "assert(true);",
-            Path::new(".cache/test262/harness"),
-        )
-        .unwrap();
-
-        assert!(rewritten.contains("function assert(mustBeTrue, message) {"));
-        assert!(rewritten.contains("globalThis.assert = assert;"));
-        assert!(rewritten.contains("assert._toString = __assertToString;"));
-    }
-
-    #[test]
-    fn resizable_arraybuffer_prelude_avoids_constructor_slice_copy() {
-        let metadata = Metadata {
-            includes: vec!["resizableArrayBufferUtils.js".to_string()],
-            ..Metadata::default()
-        };
-
-        let rewritten =
-            rewrite_for_supported_subset(&metadata, "", Path::new(".cache/test262/harness"))
-                .unwrap();
-
-        assert!(!rewritten.contains("builtinCtors.slice()"));
-        assert!(rewritten.contains("const ctors = ["));
-    }
 
     #[test]
     fn preserves_raw_leading_hashbang_tests_without_prelude_injection() {
@@ -1276,7 +595,7 @@ mod tests {
         };
 
         let source =
-            prepare_test_source(&metadata, "#! comment\r{}\n", Path::new(".cache/test262"))
+            prepare_test_source(&metadata, "#! comment\r{}\n", Path::new("/missing/test262"))
                 .unwrap();
 
         assert_eq!(source, "#! comment\r{}\n");
@@ -1306,56 +625,6 @@ throw "unreachable";
     }
 
     #[test]
-    fn does_not_skip_module_flag_tests() {
-        let metadata = Metadata {
-            flags: vec!["module".to_string()],
-            ..Metadata::default()
-        };
-
-        assert!(!should_skip_metadata(&metadata));
-    }
-
-    #[test]
-    fn does_not_skip_generated_positive_tests() {
-        let metadata = Metadata {
-            flags: vec!["generated".to_string(), "module".to_string()],
-            ..Metadata::default()
-        };
-
-        assert!(!should_skip_metadata(&metadata));
-    }
-
-    #[test]
-    fn does_not_skip_raw_tests() {
-        let metadata = Metadata {
-            flags: vec!["raw".to_string(), "module".to_string()],
-            ..Metadata::default()
-        };
-
-        assert!(!should_skip_metadata(&metadata));
-    }
-
-    #[test]
-    fn does_not_skip_negative_tests() {
-        let metadata = Metadata {
-            negative: Some(NegativeExpectation::default()),
-            ..Metadata::default()
-        };
-
-        assert!(!should_skip_metadata(&metadata));
-    }
-
-    #[test]
-    fn does_not_skip_async_tests() {
-        let metadata = Metadata {
-            flags: vec!["module".to_string(), "async".to_string()],
-            ..Metadata::default()
-        };
-
-        assert!(!should_skip_metadata(&metadata));
-    }
-
-    #[test]
     fn parses_negative_phase_and_type() {
         let metadata = parse_frontmatter(
             r#"
@@ -1375,7 +644,7 @@ negative:
     }
 
     #[test]
-    fn prepares_negative_parse_tests_without_assert_prelude() {
+    fn prepares_negative_parse_tests_without_harness() {
         let metadata = Metadata {
             flags: vec!["onlyStrict".to_string()],
             negative: Some(NegativeExpectation {
@@ -1386,27 +655,68 @@ negative:
         };
 
         let source =
-            prepare_test_source(&metadata, "await 1;", Path::new(".cache/test262")).unwrap();
+            prepare_test_source(&metadata, "await 1;", Path::new("/missing/test262")).unwrap();
 
         assert!(source.starts_with("\"use strict\";\nawait 1;"));
-        assert!(!source.contains("function __assert("));
+        assert!(!source.contains("function assert("));
     }
 
     #[test]
-    fn rewrites_property_helper_include() {
+    fn prepares_official_harness_without_rewriting_test_body() {
+        let tempdir = tempfile::tempdir().unwrap();
+        let harness_dir = tempdir.path().join("harness");
+        fs::create_dir_all(&harness_dir).unwrap();
+        fs::write(harness_dir.join("sta.js"), "function Test262Error() {}\n").unwrap();
+        fs::write(
+            harness_dir.join("assert.js"),
+            "assert.sameValue = function () {};\n",
+        )
+        .unwrap();
+        fs::write(
+            harness_dir.join("propertyHelper.js"),
+            "function verifyProperty() {}\n",
+        )
+        .unwrap();
+
         let metadata = Metadata {
             includes: vec!["propertyHelper.js".to_string()],
             ..Metadata::default()
         };
+        let body = "assert.sameValue(1, 1);\nassert.compareArray(actual, expected);\n";
 
-        let source = rewrite_for_supported_subset(
-            &metadata,
-            "verifyProperty({}, 'x', {});",
-            Path::new(".cache/test262/harness"),
+        let source = prepare_test_source(&metadata, body, tempdir.path()).unwrap();
+
+        assert!(source.contains("function Test262Error() {}"));
+        assert!(source.contains("assert.sameValue = function () {};"));
+        assert!(source.contains("function verifyProperty() {}"));
+        assert!(source.ends_with(body));
+        assert!(source.contains("assert.compareArray(actual, expected);"));
+        assert!(!source.contains("__assertSameValue"));
+        assert!(!source.contains("__ayyAssert"));
+    }
+
+    #[test]
+    fn async_flag_adds_official_done_handler() {
+        let tempdir = tempfile::tempdir().unwrap();
+        let harness_dir = tempdir.path().join("harness");
+        fs::create_dir_all(&harness_dir).unwrap();
+        fs::write(harness_dir.join("sta.js"), "/* sta */\n").unwrap();
+        fs::write(harness_dir.join("assert.js"), "/* assert */\n").unwrap();
+        fs::write(
+            harness_dir.join("doneprintHandle.js"),
+            "function $DONE(error) {}\n",
         )
-        .expect("propertyHelper.js should be supported");
+        .unwrap();
 
-        assert!(source.contains("function verifyProperty("));
+        let metadata = Metadata {
+            flags: vec!["async".to_string()],
+            ..Metadata::default()
+        };
+
+        let source = prepare_test_source(&metadata, "$DONE();", tempdir.path()).unwrap();
+
+        assert!(source.contains("function $DONE(error) {}"));
+        assert!(source.ends_with("$DONE();"));
     }
 
     #[test]
@@ -1419,10 +729,11 @@ negative:
             ..Metadata::default()
         };
 
-        assert!(
-            apply_negative_expectation(&metadata, Err(TestFailure::Compile("syntax".to_string())))
-                .is_ok()
-        );
+        assert!(apply_negative_expectation(
+            &metadata,
+            Err(TestFailure::Compile("syntax".to_string()))
+        )
+        .is_ok());
     }
 
     #[test]
@@ -1435,113 +746,16 @@ negative:
             ..Metadata::default()
         };
 
-        assert!(
-            apply_negative_expectation(
-                &metadata,
-                Err(TestFailure::Runtime("TypeError: boom".to_string()))
-            )
-            .is_ok()
-        );
-        assert!(
-            apply_negative_expectation(
-                &metadata,
-                Err(TestFailure::Runtime("ReferenceError: boom".to_string()))
-            )
-            .is_err()
-        );
-    }
-
-    #[test]
-    fn does_not_skip_export_source_rewrites() {
-        let metadata = Metadata {
-            flags: vec!["module".to_string()],
-            ..Metadata::default()
-        };
-
-        assert!(
-            rewrite_for_supported_subset(
-                &metadata,
-                "export var value = 1;",
-                Path::new(".cache/test262/harness"),
-            )
-            .is_some()
-        );
-    }
-
-    #[test]
-    fn rewrites_assert_throws_helpers() {
-        let metadata = Metadata::default();
-        let rewritten = rewrite_for_supported_subset(
+        assert!(apply_negative_expectation(
             &metadata,
-            "assert.throws(TypeError, function() { throw new Test262Error(); });",
-            Path::new(".cache/test262/harness"),
+            Err(TestFailure::Runtime("TypeError: boom".to_string()))
         )
-        .unwrap();
-
-        assert!(rewritten.contains("__ayyAssertThrows("));
-        assert!(rewritten.contains("throw new Test262Error();"));
-    }
-
-    #[test]
-    fn injects_test262_error_prelude() {
-        let metadata = Metadata::default();
-        let rewritten = rewrite_for_supported_subset(
+        .is_ok());
+        assert!(apply_negative_expectation(
             &metadata,
-            "new Test262Error();",
-            Path::new(".cache/test262/harness"),
+            Err(TestFailure::Runtime("ReferenceError: boom".to_string()))
         )
-        .unwrap();
-
-        assert!(rewritten.contains("function Test262Error("));
-    }
-
-    #[test]
-    fn avoids_full_assert_prelude_when_body_only_uses_test262_error() {
-        let rewritten = rewrite_for_supported_subset(
-            &Metadata::default(),
-            "throw new Test262Error('boom');",
-            Path::new(".cache/test262/harness"),
-        )
-        .unwrap();
-
-        assert!(rewritten.contains("function Test262Error("));
-        assert!(!rewritten.contains("assert.sameValue = __assertSameValue;"));
-        assert!(!rewritten.contains("function $DONE("));
-    }
-
-    #[test]
-    fn supports_fn_global_object_include() {
-        let metadata = Metadata {
-            includes: vec!["fnGlobalObject.js".to_string()],
-            ..Metadata::default()
-        };
-
-        let rewritten = rewrite_for_supported_subset(
-            &metadata,
-            "assert.sameValue(fnGlobalObject(), globalThis);",
-            Path::new(".cache/test262/harness"),
-        )
-        .unwrap();
-
-        assert!(rewritten.contains("function fnGlobalObject()"));
-    }
-
-    #[test]
-    fn allows_class_and_try_catch_in_supported_subset() {
-        let metadata = Metadata {
-            flags: vec!["module".to_string()],
-            ..Metadata::default()
-        };
-
-        let body = r#"
-        class Example {}
-        try { throw new TypeError(); } catch (error) {}
-        "#;
-
-        assert!(
-            rewrite_for_supported_subset(&metadata, body, Path::new(".cache/test262/harness"))
-                .is_some()
-        );
+        .is_err());
     }
 
     #[test]
@@ -1552,81 +766,6 @@ negative:
         assert!(!should_skip_path(Path::new(
             "/tmp/test262/test/language/expressions/yield/rhs-iter.js"
         )));
-    }
-
-    #[test]
-    fn ignores_comments_when_scanning_for_unsupported_markers() {
-        let metadata = Metadata {
-            flags: vec!["module".to_string()],
-            ..Metadata::default()
-        };
-        let body = r#"
-        // This invocation should not throw an exception
-        Reflect.preventExtensions({});
-        "#;
-
-        assert!(!supported_subset_haystack(body).contains("throw "));
-        assert!(
-            rewrite_for_supported_subset(&metadata, body, Path::new(".cache/test262/harness"))
-                .is_some()
-        );
-    }
-
-    #[test]
-    fn loads_local_harness_includes_from_test262_directory() {
-        let tempdir = tempfile::tempdir().unwrap();
-        let harness_dir = tempdir.path().join("harness");
-        fs::create_dir_all(&harness_dir).unwrap();
-        fs::write(harness_dir.join("customHarness.js"), "var injected = 1;").unwrap();
-
-        let metadata = Metadata {
-            includes: vec!["customHarness.js".to_string()],
-            ..Metadata::default()
-        };
-
-        let rewritten =
-            rewrite_for_supported_subset(&metadata, "assert.sameValue(injected, 1);", &harness_dir)
-                .unwrap();
-
-        assert!(rewritten.contains("var injected = 1;"));
-    }
-
-    #[test]
-    fn supports_well_known_intrinsic_objects_without_function_constructor() {
-        let metadata = Metadata {
-            includes: vec!["wellKnownIntrinsicObjects.js".to_string()],
-            ..Metadata::default()
-        };
-
-        let rewritten = rewrite_for_supported_subset(
-            &metadata,
-            "getWellKnownIntrinsicObject('%AsyncFunction%');",
-            Path::new(".cache/test262/harness"),
-        )
-        .unwrap();
-
-        assert!(rewritten.contains("function getWellKnownIntrinsicObject("));
-        assert!(rewritten.contains("%AsyncFunction%"));
-        assert!(!rewritten.contains("new Function("));
-    }
-
-    #[test]
-    fn supports_resizable_arraybuffer_utils_without_function_constructor() {
-        let metadata = Metadata {
-            includes: vec!["resizableArrayBufferUtils.js".to_string()],
-            ..Metadata::default()
-        };
-
-        let rewritten = rewrite_for_supported_subset(
-            &metadata,
-            "assert.sameValue(typeof CreateResizableArrayBuffer, 'function');",
-            Path::new(".cache/test262/harness"),
-        )
-        .unwrap();
-
-        assert!(rewritten.contains("function CreateResizableArrayBuffer("));
-        assert!(rewritten.contains("function TestIterationAndResize("));
-        assert!(!rewritten.contains("new Function("));
     }
 
     #[test]
