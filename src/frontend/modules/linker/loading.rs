@@ -100,7 +100,11 @@ impl ModuleLinker {
             self.load_json_module(module_index, &resolved)
         } else {
             (|| -> Result<()> {
-                let (module, source_text) = parse_module_file(&resolved)?;
+                let (module, source_text) = if self.unmodified_source {
+                    parse_module_file_unmodified(&resolved)?
+                } else {
+                    parse_module_file(&resolved)?
+                };
                 self.modules[module_index].state = ModuleState::Lowering;
                 self.predeclare_module_export_resolutions(module_index, &module, &resolved)?;
                 self.lower_module(module_index, &module, source_text)?;

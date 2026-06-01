@@ -58,6 +58,16 @@ pub(crate) fn parse_module_file(path: &Path) -> Result<(Module, String)> {
     Ok((module, source))
 }
 
+pub(crate) fn parse_module_file_unmodified(path: &Path) -> Result<(Module, String)> {
+    let source =
+        fs::read_to_string(path).with_context(|| format!("failed to read `{}`", path.display()))?;
+    let file = unmodified_source_file(FileName::Real(path.to_path_buf()).into(), &source);
+    let SwcProgram::Module(module) = parse_module(&file)? else {
+        unreachable!("parse_module must return a module");
+    };
+    Ok((module, source))
+}
+
 pub(crate) fn parse_script_file_with_strict(
     path: &Path,
     force_strict: bool,
@@ -81,10 +91,25 @@ pub(crate) fn parse_script_file_with_strict(
         })
 }
 
+pub(crate) fn parse_script_file_with_strict_unmodified(
+    path: &Path,
+    force_strict: bool,
+) -> Result<(swc_ecma_ast::Script, String)> {
+    let source =
+        fs::read_to_string(path).with_context(|| format!("failed to read `{}`", path.display()))?;
+    parse_script_file_once_unmodified(path, &source, force_strict)
+        .map(|script| (script, source.clone()))
+}
+
 fn source_file(file_name: FileName, source: &str) -> Lrc<swc_common::SourceFile> {
     let normalized = normalize_parser_source(source);
     let source_map: Lrc<SourceMap> = Default::default();
     source_map.new_source_file(file_name.into(), normalized.into_owned())
+}
+
+fn unmodified_source_file(file_name: FileName, source: &str) -> Lrc<swc_common::SourceFile> {
+    let source_map: Lrc<SourceMap> = Default::default();
+    source_map.new_source_file(file_name.into(), source.to_string())
 }
 
 fn normalize_parser_source(source: &str) -> Cow<'_, str> {
@@ -1249,6 +1274,18 @@ fn parse_script_file_once(
     force_strict: bool,
 ) -> Result<swc_ecma_ast::Script> {
     let file = source_file(FileName::Real(path.to_path_buf()).into(), source);
+    let SwcProgram::Script(script) = parse_script_with_strict(&file, force_strict)? else {
+        unreachable!("parse_script must return a script");
+    };
+    Ok(script)
+}
+
+fn parse_script_file_once_unmodified(
+    path: &Path,
+    source: &str,
+    force_strict: bool,
+) -> Result<swc_ecma_ast::Script> {
+    let file = unmodified_source_file(FileName::Real(path.to_path_buf()).into(), source);
     let SwcProgram::Script(script) = parse_script_with_strict(&file, force_strict)? else {
         unreachable!("parse_script must return a script");
     };

@@ -59,7 +59,11 @@ impl ModuleLinker {
         path: &Path,
         force_strict: bool,
     ) -> Result<Program> {
-        let (script, lowered_source) = parse_script_file_with_strict(path, force_strict)?;
+        let (script, lowered_source) = if self.unmodified_source {
+            parse_script_file_with_strict_unmodified(path, force_strict)?
+        } else {
+            parse_script_file_with_strict(path, force_strict)?
+        };
         let dynamic_import_sources =
             self.dynamic_import_specifier_sources_for_script(&script, &lowered_source);
         for source in &dynamic_import_sources {

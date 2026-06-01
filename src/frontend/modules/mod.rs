@@ -21,7 +21,10 @@ use super::{
         Lowerer, asyncify_statements, collect_direct_statement_lexical_bindings,
         data_property_descriptor, define_property_statement,
     },
-    parse::{parse_module_file, parse_script_file_with_strict},
+    parse::{
+        parse_module_file, parse_module_file_unmodified, parse_script_file_with_strict,
+        parse_script_file_with_strict_unmodified,
+    },
 };
 
 mod dynamic_imports;
@@ -47,6 +50,14 @@ pub fn bundle_module_entry(path: &Path) -> Result<Program> {
     ModuleLinker::default().bundle_entry(path)
 }
 
+pub fn bundle_module_entry_unmodified(path: &Path) -> Result<Program> {
+    ModuleLinker {
+        unmodified_source: true,
+        ..Default::default()
+    }
+    .bundle_entry(path)
+}
+
 pub fn bundle_script_entry(path: &Path) -> Result<Program> {
     bundle_script_entry_with_strict(path, false)
 }
@@ -55,8 +66,20 @@ pub fn bundle_script_entry_with_strict(path: &Path, force_strict: bool) -> Resul
     ModuleLinker::default().bundle_script_entry_with_strict(path, force_strict)
 }
 
+pub fn bundle_script_entry_with_strict_unmodified(
+    path: &Path,
+    force_strict: bool,
+) -> Result<Program> {
+    ModuleLinker {
+        unmodified_source: true,
+        ..Default::default()
+    }
+    .bundle_script_entry_with_strict(path, force_strict)
+}
+
 #[derive(Default)]
 struct ModuleLinker {
+    unmodified_source: bool,
     lowerer: Lowerer,
     modules: Vec<LinkedModule>,
     module_indices: HashMap<PathBuf, usize>,

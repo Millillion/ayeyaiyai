@@ -37,6 +37,25 @@ pub fn compile_file_with_goal_and_strict(
     bail!("program uses JavaScript features that are not yet supported by the direct wasm backend")
 }
 
+pub fn compile_unmodified_file_with_goal_and_strict(
+    path: &Path,
+    options: &CompileOptions,
+    module: bool,
+    force_strict: bool,
+) -> Result<()> {
+    let program = if module {
+        frontend::bundle_module_entry_unmodified(path)?
+    } else {
+        frontend::bundle_script_entry_with_strict_unmodified(path, force_strict)?
+    };
+    let program = ir::pipeline::prepare(program)?;
+    if backend::compile_if_supported(&program, options)? {
+        return Ok(());
+    }
+
+    bail!("program uses JavaScript features that are not yet supported by the direct wasm backend")
+}
+
 pub fn compile_source(source: &str, options: &CompileOptions) -> Result<()> {
     compile_source_with_goal(source, options, false)
 }

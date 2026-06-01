@@ -9,7 +9,7 @@ use std::{
 };
 
 use anyhow::{Context, Result};
-use ayeyaiyai::{CompileOptions, compile_file_with_goal_and_strict};
+use ayeyaiyai::{CompileOptions, compile_unmodified_file_with_goal_and_strict};
 use clap::{ArgAction, Parser};
 use tempfile::tempdir;
 use walkdir::WalkDir;
@@ -256,7 +256,7 @@ fn run_single_test(
         || std::env::var_os("AYY_KEEP_TEST262_TEMP_PRECOMPILE").is_some();
 
     let compile_result =
-        compile_file_with_goal_and_strict(source_path, &options, module, force_strict);
+        compile_unmodified_file_with_goal_and_strict(source_path, &options, module, force_strict);
 
     compile_result.map_err(|error| TestFailure::Compile(format!("{error:#}")))?;
     if trace_timing {

@@ -9,5 +9,6 @@ pub use self::entrypoints::{
     validate_script_goal_with_forced_strict,
 };
 pub(crate) use self::source::{
-    parse_module_file, parse_script_file_with_strict, parse_script_program_source,
+    parse_module_file, parse_module_file_unmodified, parse_script_file_with_strict,
+    parse_script_file_with_strict_unmodified, parse_script_program_source,
 };
