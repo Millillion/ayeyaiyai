@@ -229,13 +229,21 @@ fn validate_assignment_identifier_reference_syntax(
     file: &swc_common::SourceFile,
     restrictions: BindingRestrictions,
 ) -> Result<()> {
+    validate_identifier_reference_syntax(identifier, file, restrictions)
+}
+
+fn validate_identifier_reference_syntax(
+    identifier: &Ident,
+    file: &swc_common::SourceFile,
+    restrictions: BindingRestrictions,
+) -> Result<()> {
     let raw = source_slice_for_span(file, identifier.span)?;
     if raw.contains('\\') {
         validate_escaped_identifier_text(raw)?;
     }
     ensure!(
         !identifier.is_reserved(),
-        "reserved word `{}` cannot be used as an assignment identifier reference",
+        "reserved word `{}` cannot be used as an identifier reference",
         identifier.sym
     );
     ensure!(
@@ -491,14 +499,7 @@ pub(super) fn validate_expression_syntax_with_restrictions(
     match expression {
         Expr::Lit(Lit::Num(number)) => validate_number_literal_syntax(number, file)?,
         Expr::Ident(identifier) => {
-            ensure!(
-                !(restrictions.await_reserved && is_await_like_identifier(identifier.sym.as_ref())),
-                "`await` cannot be used as an identifier in an async function"
-            );
-            ensure!(
-                !(restrictions.yield_reserved && is_yield_like_identifier(identifier.sym.as_ref())),
-                "`yield` cannot be used as an identifier in a generator function"
-            );
+            validate_identifier_reference_syntax(identifier, file, restrictions)?;
         }
         Expr::Call(call) => {
             if let Callee::Expr(callee) = &call.callee {
@@ -557,16 +558,7 @@ pub(super) fn validate_expression_syntax_with_restrictions(
                     )?,
                     PropOrSpread::Prop(property) => match &**property {
                         Prop::Shorthand(identifier) => {
-                            ensure!(
-                                !(restrictions.await_reserved
-                                    && is_await_like_identifier(identifier.sym.as_ref())),
-                                "`await` cannot be used as an identifier in an async function"
-                            );
-                            ensure!(
-                                !(restrictions.yield_reserved
-                                    && is_yield_like_identifier(identifier.sym.as_ref())),
-                                "`yield` cannot be used as an identifier in a generator function"
-                            );
+                            validate_identifier_reference_syntax(identifier, file, restrictions)?;
                         }
                         Prop::KeyValue(property) => {
                             validate_property_name_syntax(&property.key, file)?;
@@ -613,11 +605,18 @@ pub(super) fn validate_expression_syntax_with_restrictions(
                             )?;
                             validate_function_syntax(&property.function, file)?;
                         }
-                        Prop::Assign(property) => validate_expression_syntax_with_restrictions(
-                            &property.value,
-                            file,
-                            restrictions,
-                        )?,
+                        Prop::Assign(property) => {
+                            validate_identifier_reference_syntax(
+                                &property.key,
+                                file,
+                                restrictions,
+                            )?;
+                            validate_expression_syntax_with_restrictions(
+                                &property.value,
+                                file,
+                                restrictions,
+                            )?;
+                        }
                     },
                 }
             }

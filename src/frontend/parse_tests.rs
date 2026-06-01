@@ -246,6 +246,24 @@ fn rejects_escaped_reserved_words_in_binding_identifiers() {
 }
 
 #[test]
+fn rejects_reserved_object_literal_shorthand_identifier_references() {
+    let invalid_sources = ["({ this });", "({ this = 1 });"];
+
+    for source in invalid_sources {
+        assert!(
+            frontend::validate_script_goal(source).is_err(),
+            "source should fail to parse:\n{source}"
+        );
+    }
+}
+
+#[test]
+fn accepts_reserved_object_literal_property_names() {
+    frontend::validate_script_goal("({ this: 1, if: 2 });")
+        .expect("reserved words should be valid object literal property names");
+}
+
+#[test]
 fn rejects_reserved_object_pattern_shorthand_bindings() {
     let invalid_sources = [
         "var x = ({ default }) => {};",
