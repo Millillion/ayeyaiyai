@@ -16,23 +16,56 @@ fn simple_regexp_decode_unicode_escapes(pattern: &str) -> Option<String> {
     }
 
     let mut decoded = String::new();
-    let mut chars = pattern.chars();
+    let mut chars = pattern.chars().peekable();
     while let Some(character) = chars.next() {
         if character != '\\' {
             decoded.push(character);
             continue;
         }
 
-        if chars.next()? != 'u' {
-            return None;
+        match chars.next()? {
+            '0' if !chars.peek().is_some_and(|next| next.is_ascii_digit()) => {
+                decoded.push('\0');
+            }
+            'u' => {
+                let mut value = 0;
+                for _ in 0..4 {
+                    value = value * 16 + chars.next()?.to_digit(16)?;
+                }
+                decoded.push(char::from_u32(value)?);
+            }
+            _ => return None,
         }
-        let mut value = 0;
-        for _ in 0..4 {
-            value = value * 16 + chars.next()?.to_digit(16)?;
-        }
-        decoded.push(char::from_u32(value)?);
     }
     Some(decoded)
+}
+
+fn simple_regexp_plain_literal_match_range(
+    pattern: &str,
+    subject: &str,
+) -> Option<Option<(usize, usize)>> {
+    let (pattern, anchored_start) = pattern
+        .strip_prefix('^')
+        .map_or((pattern, false), |rest| (rest, true));
+    let (literal, anchored_end) = pattern
+        .strip_suffix('$')
+        .map_or((pattern, false), |rest| (rest, true));
+    if !simple_regexp_pattern_is_plain_literal(literal) {
+        return None;
+    }
+
+    let matched = match (anchored_start, anchored_end) {
+        (true, true) => subject.eq(literal).then_some((0, subject.len())),
+        (true, false) => subject.starts_with(literal).then_some((0, literal.len())),
+        (false, true) => subject.ends_with(literal).then(|| {
+            let start = subject.len() - literal.len();
+            (start, subject.len())
+        }),
+        (false, false) => subject
+            .find(literal)
+            .map(|start| (start, start + literal.len())),
+    };
+    Some(matched)
 }
 
 fn simple_regexp_fold_ignore_case(text: &str, unicode: bool) -> String {
@@ -184,8 +217,10 @@ fn simple_regexp_pattern_matches(
             (decoded_pattern.as_str(), subject)
         };
 
-        if simple_regexp_pattern_is_plain_literal(simple_pattern) {
-            return Some(simple_subject.contains(simple_pattern));
+        if let Some(matches) =
+            simple_regexp_plain_literal_match_range(simple_pattern, simple_subject)
+        {
+            return Some(matches.is_some());
         }
         if let Some(matches) =
             simple_regexp_literal_exact_quantifier_matches(simple_pattern, simple_subject)
@@ -231,6 +266,30 @@ fn simple_regexp_pattern_matches(
         }
     }
     None
+}
+
+fn simple_regexp_match_text(
+    pattern: &str,
+    subject: &str,
+    ignore_case: bool,
+    unicode: bool,
+) -> Option<Option<(usize, String)>> {
+    let decoded_pattern = simple_regexp_decode_unicode_escapes(pattern)?;
+    let normalized_pattern;
+    let normalized_subject;
+    let (simple_pattern, simple_subject) = if ignore_case {
+        normalized_pattern = simple_regexp_fold_ignore_case(&decoded_pattern, unicode);
+        normalized_subject = simple_regexp_fold_ignore_case(subject, unicode);
+        (normalized_pattern.as_str(), normalized_subject.as_str())
+    } else {
+        (decoded_pattern.as_str(), subject)
+    };
+    let Some(range) = simple_regexp_plain_literal_match_range(simple_pattern, simple_subject)?
+    else {
+        return Some(None);
+    };
+    let matched = subject.get(range.0..range.1)?.to_string();
+    Some(Some((range.0, matched)))
 }
 
 fn js_number_fraction_digits(value: Option<f64>) -> Option<usize> {
@@ -520,16 +579,61 @@ impl<'a> FunctionCompiler<'a> {
             && let Expression::String(property_name) = property.as_ref()
             && matches!(property_name.as_str(), "exec" | "test")
             && let [CallArgument::Expression(subject) | CallArgument::Spread(subject)] = arguments
-            && let Some(matches) = self.resolve_static_simple_regexp_match_result(
+        {
+            if property_name == "exec"
+                && let Some(match_result) = self.resolve_static_simple_regexp_match_text_result(
+                    object,
+                    subject,
+                    current_function_name,
+                )
+            {
+                return Some((
+                    match match_result {
+                        Some((_, matched)) => Expression::Array(vec![ArrayElement::Expression(
+                            Expression::String(matched),
+                        )]),
+                        None => Expression::Null,
+                    },
+                    None,
+                ));
+            }
+            let matches = self.resolve_static_simple_regexp_match_result(
                 object,
                 subject,
                 current_function_name,
-            )
-        {
+            )?;
             return match property_name.as_str() {
                 "test" => Some((Expression::Bool(matches), None)),
                 "exec" if matches => Some((Expression::Object(Vec::new()), None)),
                 "exec" => Some((Expression::Null, None)),
+                _ => None,
+            };
+        }
+
+        if let Expression::Member { object, property } = callee
+            && let Expression::String(property_name) = property.as_ref()
+            && matches!(property_name.as_str(), "match" | "search")
+            && let [CallArgument::Expression(regexp) | CallArgument::Spread(regexp)] = arguments
+            && let Some(match_result) = self.resolve_static_simple_regexp_match_text_result(
+                regexp,
+                object,
+                current_function_name,
+            )
+        {
+            return match property_name.as_str() {
+                "match" => Some((
+                    match match_result {
+                        Some((_, matched)) => Expression::Array(vec![ArrayElement::Expression(
+                            Expression::String(matched),
+                        )]),
+                        None => Expression::Null,
+                    },
+                    None,
+                )),
+                "search" => Some((
+                    Expression::Number(match_result.map(|(index, _)| index as f64).unwrap_or(-1.0)),
+                    None,
+                )),
                 _ => None,
             };
         }
@@ -694,26 +798,29 @@ impl<'a> FunctionCompiler<'a> {
         .map(|matches| !matches)
     }
 
-    pub(in crate::backend::direct_wasm) fn resolve_static_simple_regexp_match_result(
+    fn resolve_static_simple_regexp_parts(
         &self,
         regexp_expression: &Expression,
-        subject_expression: &Expression,
         current_function_name: Option<&str>,
-    ) -> Option<bool> {
+    ) -> Option<(String, String)> {
         let resolved_alias = self
             .resolve_bound_alias_expression(regexp_expression)
             .filter(|resolved| !static_expression_matches(resolved, regexp_expression));
         let materialized = self.materialize_static_expression(regexp_expression);
-        let resolved = [Some(regexp_expression), resolved_alias.as_ref(), Some(&materialized)]
-            .into_iter()
-            .flatten()
-            .find(|candidate| {
-                matches!(
-                    candidate,
-                    Expression::Call { callee, .. } | Expression::New { callee, .. }
-                        if matches!(callee.as_ref(), Expression::Identifier(name) if name == "RegExp" && self.is_unshadowed_builtin_identifier(name))
-                )
-            })?;
+        let resolved = [
+            Some(regexp_expression),
+            resolved_alias.as_ref(),
+            Some(&materialized),
+        ]
+        .into_iter()
+        .flatten()
+        .find(|candidate| {
+            matches!(
+                candidate,
+                Expression::Call { callee, .. } | Expression::New { callee, .. }
+                    if matches!(callee.as_ref(), Expression::Identifier(name) if name == "RegExp" && self.is_unshadowed_builtin_identifier(name))
+            )
+        })?;
         let (callee, arguments) = match resolved {
             Expression::Call { callee, arguments } | Expression::New { callee, arguments } => {
                 (callee, arguments)
@@ -739,6 +846,40 @@ impl<'a> FunctionCompiler<'a> {
             }
             None => String::new(),
         };
+        Some((pattern, flags))
+    }
+
+    fn resolve_static_simple_regexp_match_text_result(
+        &self,
+        regexp_expression: &Expression,
+        subject_expression: &Expression,
+        current_function_name: Option<&str>,
+    ) -> Option<Option<(usize, String)>> {
+        let (pattern, flags) =
+            self.resolve_static_simple_regexp_parts(regexp_expression, current_function_name)?;
+        let ignore_case = if flags.chars().all(|flag| matches!(flag, 'i' | 'u')) {
+            flags.contains('i')
+        } else {
+            return None;
+        };
+
+        if flags.contains('g') || flags.contains('y') {
+            return None;
+        }
+
+        let subject =
+            self.resolve_static_string_concat_value(subject_expression, current_function_name)?;
+        simple_regexp_match_text(&pattern, &subject, ignore_case, flags.contains('u'))
+    }
+
+    pub(in crate::backend::direct_wasm) fn resolve_static_simple_regexp_match_result(
+        &self,
+        regexp_expression: &Expression,
+        subject_expression: &Expression,
+        current_function_name: Option<&str>,
+    ) -> Option<bool> {
+        let (pattern, flags) =
+            self.resolve_static_simple_regexp_parts(regexp_expression, current_function_name)?;
         let ignore_case = if flags.chars().all(|flag| matches!(flag, 'i' | 'u')) {
             flags.contains('i')
         } else {

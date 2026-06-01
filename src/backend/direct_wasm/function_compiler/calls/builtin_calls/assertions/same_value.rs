@@ -323,6 +323,21 @@ impl<'a> FunctionCompiler<'a> {
                 .iter()
                 .all(|expression| self.same_value_operand_static_evaluation_safe(expression)),
             Expression::Call { callee, arguments } => {
+                if let Expression::Member { property, .. } = callee.as_ref()
+                    && matches!(
+                        property.as_ref(),
+                        Expression::String(name) if matches!(name.as_str(), "match" | "search")
+                    )
+                    && self
+                        .resolve_static_member_builtin_call_result_with_context(
+                            callee,
+                            arguments,
+                            self.current_function_name(),
+                        )
+                        .is_some()
+                {
+                    return true;
+                }
                 if let Expression::Member { object, property } = callee.as_ref()
                     && matches!(object.as_ref(), Expression::Identifier(name) if name == "Object")
                     && matches!(
@@ -1696,6 +1711,22 @@ impl<'a> FunctionCompiler<'a> {
         }) else {
             return None;
         };
+        if let Some((Expression::Array(elements), _)) = self
+            .resolve_static_member_builtin_call_result_with_context(
+                callee,
+                arguments,
+                self.current_function_name(),
+            )
+        {
+            let mut values = Vec::new();
+            for element in elements {
+                let ArrayElement::Expression(value) = element else {
+                    return None;
+                };
+                values.push(Some(value));
+            }
+            return Some(ArrayValueBinding { values });
+        }
         if let Some(binding) = self.static_builtin_object_array_call_binding(callee, arguments) {
             return Some(binding);
         }
@@ -1841,6 +1872,18 @@ impl<'a> FunctionCompiler<'a> {
                             .same_value_assertion_direct_static_value(&materialized, depth - 1)
                             .or(Some(materialized));
                     }
+                }
+                if let Expression::Call { .. } = object.as_ref()
+                    && let Some(index) = argument_index_from_expression(property)
+                    && let Some(array_binding) =
+                        self.same_value_assertion_direct_array_binding(object, depth - 1)
+                {
+                    if let Some(Some(value)) = array_binding.values.get(index as usize) {
+                        return self
+                            .same_value_assertion_direct_static_value(value, depth - 1)
+                            .or_else(|| Some(value.clone()));
+                    }
+                    return Some(Expression::Undefined);
                 }
                 if matches!(
                     object.as_ref(),
@@ -2001,6 +2044,25 @@ impl<'a> FunctionCompiler<'a> {
                 let right_value =
                     self.same_value_assertion_direct_static_value(right, depth - 1)?;
                 Self::same_value_static_binary_expression_value(*op, &left_value, &right_value)
+            }
+            Expression::Call { callee, arguments } => {
+                if let Expression::Member { property, .. } = callee.as_ref()
+                    && matches!(
+                        property.as_ref(),
+                        Expression::String(name) if matches!(name.as_str(), "match" | "search")
+                    )
+                    && let Some((value, _)) = self
+                        .resolve_static_member_builtin_call_result_with_context(
+                            callee,
+                            arguments,
+                            self.current_function_name(),
+                        )
+                {
+                    return self
+                        .same_value_assertion_direct_static_value(&value, depth - 1)
+                        .or(Some(value));
+                }
+                None
             }
             Expression::Unary {
                 op: UnaryOp::TypeOf,
