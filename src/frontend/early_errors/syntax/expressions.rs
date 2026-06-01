@@ -317,9 +317,10 @@ enum RegexGroupKind {
 }
 
 impl RegexGroupKind {
-    fn can_be_quantified_after_close(self) -> bool {
+    fn can_be_quantified_after_close(self, unicode_mode: bool) -> bool {
         match self {
-            Self::Capturing | Self::QuantifiableAssertion => true,
+            Self::Capturing => true,
+            Self::QuantifiableAssertion => !unicode_mode,
             Self::LookbehindAssertion => false,
         }
     }
@@ -746,9 +747,9 @@ fn validate_regex_pattern_syntax(pattern: &str, unicode_mode: bool) -> Result<()
                 can_quantify = false;
             }
             ')' => {
-                can_quantify = groups
-                    .pop()
-                    .map_or(true, RegexGroupKind::can_be_quantified_after_close);
+                can_quantify = groups.pop().map_or(true, |kind| {
+                    kind.can_be_quantified_after_close(unicode_mode)
+                });
             }
             '|' | '^' | '$' => can_quantify = false,
             _ => can_quantify = true,

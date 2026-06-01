@@ -494,6 +494,16 @@ fn validate_script_goal_rejects_invalid_regex_quantifiers() {
 }
 
 #[test]
+fn validate_script_goal_rejects_unicode_quantifiable_assertions() {
+    for source in ["/.(?=.)?/u;", "/.(?!.)?/u;"] {
+        assert!(
+            frontend::validate_script_goal(source).is_err(),
+            "source should fail to parse:\n{source}"
+        );
+    }
+}
+
+#[test]
 fn validate_script_goal_rejects_unicode_regex_extended_pattern_characters() {
     for source in ["/{/u;", "/}/u;"] {
         assert!(
