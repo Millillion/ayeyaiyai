@@ -504,6 +504,22 @@ fn validate_script_goal_rejects_unicode_regex_extended_pattern_characters() {
 }
 
 #[test]
+fn validate_script_goal_rejects_invalid_unicode_regex_decimal_escapes() {
+    for source in [r"/\1/u;", r"/\8/u;", r"/[\1]/u;"] {
+        assert!(
+            frontend::validate_script_goal(source).is_err(),
+            "source should fail to parse:\n{source}"
+        );
+    }
+}
+
+#[test]
+fn validate_script_goal_accepts_unicode_regex_decimal_backreferences() {
+    frontend::validate_script_goal(r"/(.)\1/u;")
+        .expect("unicode regex decimal backreference should parse");
+}
+
+#[test]
 fn validate_script_goal_accepts_quantified_regex_atoms() {
     for source in ["/a?/;", "/a{2}/;", "/(?:a)?/;", "/(?=a)?/;"] {
         frontend::validate_script_goal(source)

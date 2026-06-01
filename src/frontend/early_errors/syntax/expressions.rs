@@ -450,7 +450,7 @@ fn validate_regex_unicode_escape(
     pattern: &str,
     escape_offset: usize,
     in_class: bool,
-) -> Result<usize> {
+) -> Result<(usize, Option<u32>)> {
     let escaped_start = escape_offset + '\\'.len_utf8();
     let Some((relative_offset, escaped)) = pattern
         .get(escaped_start..)
@@ -463,10 +463,10 @@ fn validate_regex_unicode_escape(
 
     match escaped {
         'b' | 'B' | 'd' | 'D' | 'f' | 'n' | 'r' | 's' | 'S' | 't' | 'v' | 'w' | 'W' => {
-            Ok(escaped_end)
+            Ok((escaped_end, None))
         }
-        '/' => Ok(escaped_end),
-        '-' if in_class => Ok(escaped_end),
+        '/' => Ok((escaped_end, None)),
+        '-' if in_class => Ok((escaped_end, None)),
         'c' => {
             let Some(control) = pattern
                 .get(escaped_end..)
@@ -478,7 +478,7 @@ fn validate_regex_unicode_escape(
                 control.is_ascii_alphabetic(),
                 "regular expression control escape must use an ASCII letter"
             );
-            Ok(escaped_end + control.len_utf8())
+            Ok((escaped_end + control.len_utf8(), None))
         }
         '0' => {
             ensure!(
@@ -488,16 +488,17 @@ fn validate_regex_unicode_escape(
                 ),
                 "regular expression legacy octal escape is not allowed in unicode mode"
             );
-            Ok(escaped_end)
+            Ok((escaped_end, None))
         }
-        'x' => regex_fixed_hex_escape_end(pattern, escaped_end, 2),
+        'x' => regex_fixed_hex_escape_end(pattern, escaped_end, 2).map(|end| (end, None)),
         'u' if pattern
             .get(escaped_end..)
             .is_some_and(|tail| tail.starts_with('{')) =>
         {
             regex_braced_unicode_escape_end(pattern, escaped_end + '{'.len_utf8())
+                .map(|end| (end, None))
         }
-        'u' => regex_fixed_hex_escape_end(pattern, escaped_end, 4),
+        'u' => regex_fixed_hex_escape_end(pattern, escaped_end, 4).map(|end| (end, None)),
         'p' | 'P'
             if pattern
                 .get(escaped_end..)
@@ -506,10 +507,34 @@ fn validate_regex_unicode_escape(
             let Some(relative_end) = pattern[escaped_end + '{'.len_utf8()..].find('}') else {
                 bail!("regular expression property escape is incomplete");
             };
-            Ok(escaped_end + '{'.len_utf8() + relative_end + '}'.len_utf8())
+            Ok((
+                escaped_end + '{'.len_utf8() + relative_end + '}'.len_utf8(),
+                None,
+            ))
         }
-        decimal if decimal.is_ascii_digit() => Ok(escaped_end),
-        syntax if is_regex_syntax_character(syntax) => Ok(escaped_end),
+        decimal if decimal.is_ascii_digit() => {
+            ensure!(
+                !in_class,
+                "regular expression decimal escape is not allowed in unicode character class"
+            );
+            let mut decimal_end = escaped_end;
+            let mut value = decimal
+                .to_digit(10)
+                .expect("ascii digit escape should parse as decimal");
+            while let Some((_, next)) = pattern
+                .get(decimal_end..)
+                .and_then(|tail| tail.char_indices().next())
+                .filter(|(_, next)| next.is_ascii_digit())
+            {
+                value = value * 10
+                    + next
+                        .to_digit(10)
+                        .expect("ascii digit escape should parse as decimal");
+                decimal_end += next.len_utf8();
+            }
+            Ok((decimal_end, Some(value)))
+        }
+        syntax if is_regex_syntax_character(syntax) => Ok((escaped_end, None)),
         _ => bail!("regular expression identity escape is not allowed in unicode mode"),
     }
 }
@@ -558,6 +583,8 @@ fn validate_regex_pattern_syntax(pattern: &str, unicode_mode: bool) -> Result<()
     let mut groups = Vec::new();
     let mut named_groups = BTreeSet::new();
     let mut named_references = Vec::new();
+    let mut capture_count = 0;
+    let mut numeric_references = Vec::new();
     let mut bare_k_escape = false;
     let mut chars = pattern.char_indices().peekable();
 
@@ -575,7 +602,7 @@ fn validate_regex_pattern_syntax(pattern: &str, unicode_mode: bool) -> Result<()
         if in_class {
             match ch {
                 '\\' if unicode_mode => {
-                    let escape_end = validate_regex_unicode_escape(pattern, offset, true)?;
+                    let (escape_end, _) = validate_regex_unicode_escape(pattern, offset, true)?;
                     while matches!(chars.peek(), Some((next_offset, _)) if *next_offset < escape_end)
                     {
                         chars.next();
@@ -622,7 +649,11 @@ fn validate_regex_pattern_syntax(pattern: &str, unicode_mode: bool) -> Result<()
                     }
                     can_quantify = true;
                 } else if unicode_mode {
-                    let escape_end = validate_regex_unicode_escape(pattern, offset, false)?;
+                    let (escape_end, numeric_reference) =
+                        validate_regex_unicode_escape(pattern, offset, false)?;
+                    if let Some(numeric_reference) = numeric_reference {
+                        numeric_references.push(numeric_reference);
+                    }
                     while matches!(chars.peek(), Some((next_offset, _)) if *next_offset < escape_end)
                     {
                         chars.next();
@@ -652,10 +683,17 @@ fn validate_regex_pattern_syntax(pattern: &str, unicode_mode: bool) -> Result<()
                         chars.next();
                     }
                     groups.push(RegexGroupKind::Capturing);
+                    capture_count += 1;
                     can_quantify = false;
                     continue;
                 }
                 let (kind, prefix_len) = regex_group_prefix(pattern, offset);
+                if pattern
+                    .get(offset..)
+                    .is_some_and(|tail| !tail.starts_with("(?"))
+                {
+                    capture_count += 1;
+                }
                 let prefix_end = offset + prefix_len;
                 while matches!(chars.peek(), Some((next_offset, _)) if *next_offset < prefix_end) {
                     chars.next();
@@ -680,6 +718,12 @@ fn validate_regex_pattern_syntax(pattern: &str, unicode_mode: bool) -> Result<()
         ensure!(
             named_groups.contains(&reference),
             "regular expression named backreference has no matching group"
+        );
+    }
+    for reference in numeric_references {
+        ensure!(
+            reference > 0 && reference <= capture_count,
+            "regular expression decimal escape has no matching capture"
         );
     }
     Ok(())
