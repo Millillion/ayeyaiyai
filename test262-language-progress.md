@@ -1,4 +1,4 @@
-949/23645 (4.01%)
+950/23645 (4.02%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -10,7 +10,7 @@ Sub-category progress
 - keywords: 25/25 (100.00%)
 - reserved-words: 27/27 (100.00%)
 - future-reserved-words: 55/55 (100.00%)
-- literals: 402/534 (75.28%)
+- literals: 403/534 (75.47%)
 - directive-prologue: 0/62 (0.00%)
 - asi: 0/102 (0.00%)
 - statementList: 0/80 (0.00%)
@@ -993,7 +993,7 @@ Sub-category progress
   - [x] test/language/literals/regexp/named-groups/invalid-non-id-continue-groupspecifier.js
   - [x] test/language/literals/regexp/named-groups/invalid-non-id-start-groupspecifier-2-u.js
   - [x] test/language/literals/regexp/named-groups/invalid-non-id-start-groupspecifier-2.js
-  - [ ] test/language/literals/regexp/named-groups/invalid-non-id-start-groupspecifier-3.js
+  - [x] test/language/literals/regexp/named-groups/invalid-non-id-start-groupspecifier-3.js
   - [ ] test/language/literals/regexp/named-groups/invalid-non-id-start-groupspecifier-4-u.js
   - [ ] test/language/literals/regexp/named-groups/invalid-non-id-start-groupspecifier-4.js
   - [ ] test/language/literals/regexp/named-groups/invalid-non-id-start-groupspecifier-5-u.js

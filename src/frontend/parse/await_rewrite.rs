@@ -101,6 +101,12 @@ pub(super) fn rewrite_script_await_identifiers(source: &str) -> Option<String> {
                         }
                     }
 
+                    if raw.is_empty() {
+                        rewritten.push(character);
+                        index += 1;
+                        continue;
+                    }
+
                     if word == "await" {
                         rewritten.push_str("__ayy_await_ident");
                         changed = true;
