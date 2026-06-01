@@ -47,13 +47,17 @@ impl<'a> FunctionCompiler<'a> {
         }
         self.emit_prepare_user_function_capture_globals(&user_function.name)?;
 
-        let arguments_binding = self.inline_summary_arguments_binding(user_function, arguments);
-        let (call_arguments, inline_parameter_scope_names, inline_parameter_shadow_writebacks) =
-            self.prepare_inline_summary_call_arguments(
-                user_function,
-                arguments,
-                &arguments_binding,
-            )?;
+        let raw_arguments_binding = self.inline_summary_arguments_binding(user_function, arguments);
+        let (
+            call_arguments,
+            inline_parameter_scope_names,
+            inline_parameter_shadow_writebacks,
+            arguments_binding,
+        ) = self.prepare_inline_summary_call_arguments(
+            user_function,
+            arguments,
+            &raw_arguments_binding,
+        )?;
 
         Ok(InlineSummaryEmissionState {
             prepared_capture_bindings,
@@ -75,10 +79,16 @@ impl<'a> FunctionCompiler<'a> {
         user_function: &UserFunction,
         arguments: &[Expression],
         arguments_binding: &Expression,
-    ) -> DirectResult<(Vec<CallArgument>, Vec<String>, Vec<(String, String)>)> {
+    ) -> DirectResult<(
+        Vec<CallArgument>,
+        Vec<String>,
+        Vec<(String, String)>,
+        Expression,
+    )> {
         let mut call_arguments = Vec::new();
         let mut inline_parameter_scope_names = Vec::new();
         let mut inline_parameter_shadow_writebacks = Vec::new();
+        let mut effective_arguments_binding = arguments_binding.clone();
         let visible_param_count = user_function.visible_param_count() as usize;
         for (param_index, param_name) in user_function
             .params
@@ -165,13 +175,15 @@ impl<'a> FunctionCompiler<'a> {
                 .active_scoped_lexical_bindings
                 .entry("arguments".to_string())
                 .or_default()
-                .push(hidden_name);
+                .push(hidden_name.clone());
+            effective_arguments_binding = Expression::Identifier(hidden_name);
             inline_parameter_scope_names.push("arguments".to_string());
         }
         Ok((
             call_arguments,
             inline_parameter_scope_names,
             inline_parameter_shadow_writebacks,
+            effective_arguments_binding,
         ))
     }
 

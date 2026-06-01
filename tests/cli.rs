@@ -13772,6 +13772,56 @@ fn async_mapped_arguments_then_done_reports_completion() {
 }
 
 #[test]
+fn async_unmapped_arguments_with_skipped_default_reports_completion() {
+    let tempdir = tempdir().unwrap();
+    let input = tempdir.path().join("async-unmapped-arguments.js");
+    let output = tempdir.path().join("async-unmapped-arguments.wasm");
+
+    fs::write(
+        &input,
+        r#"
+        async function foo(a = 42) {
+          arguments[0] = 2;
+          assert.sameValue(a, 1);
+
+          a = 3;
+          assert.sameValue(arguments[0], 2);
+        }
+
+        foo(1).then($DONE, $DONE);
+        "#,
+    )
+    .unwrap();
+
+    let compile = Command::new(env!("CARGO_BIN_EXE_ayeyaiyai"))
+        .arg(&input)
+        .arg("-o")
+        .arg(&output)
+        .output()
+        .unwrap();
+
+    assert!(
+        compile.status.success(),
+        "compiler failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&compile.stdout),
+        String::from_utf8_lossy(&compile.stderr),
+    );
+
+    let run = Command::new("wasmtime").arg(&output).output().unwrap();
+
+    assert!(
+        run.status.success(),
+        "wasmtime failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&run.stdout),
+        String::from_utf8_lossy(&run.stderr),
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&run.stdout),
+        "Test262:AsyncTestComplete\n"
+    );
+}
+
+#[test]
 fn object_spread_keeps_symbol_values_and_own_key_order() {
     let tempdir = tempdir().unwrap();
     let input = tempdir.path().join("object-spread-symbols.js");

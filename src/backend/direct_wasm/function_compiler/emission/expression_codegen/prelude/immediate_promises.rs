@@ -826,6 +826,22 @@ impl<'a> FunctionCompiler<'a> {
         )
     }
 
+    fn async_function_call_skips_parameter_defaults(
+        &self,
+        user_function: &UserFunction,
+        arguments: &[CallArgument],
+    ) -> Option<bool> {
+        for (index, default) in user_function.parameter_defaults.iter().enumerate() {
+            if default.is_none() {
+                continue;
+            }
+            if self.async_function_call_uses_parameter_default(arguments, index)? {
+                return Some(false);
+            }
+        }
+        Some(true)
+    }
+
     fn direct_call_frame_this_binding(
         &self,
         user_function: &UserFunction,
@@ -902,10 +918,11 @@ impl<'a> FunctionCompiler<'a> {
         user_function: &UserFunction,
         arguments: &[Expression],
         this_binding: &Expression,
+        parameter_defaults_supported: bool,
     ) -> bool {
         user_function.is_async()
             && !user_function.is_generator()
-            && !user_function.has_parameter_defaults()
+            && (!user_function.has_parameter_defaults() || parameter_defaults_supported)
             && !user_function.has_lowered_pattern_parameters()
             && user_function.extra_argument_indices.is_empty()
             && !self.current_function_contains_try_statement()
@@ -969,10 +986,14 @@ impl<'a> FunctionCompiler<'a> {
         }
         let call_arguments = self.expand_call_arguments(arguments);
         let this_binding = self.direct_call_frame_this_binding(&user_function, callee);
+        let parameter_defaults_supported = self
+            .async_function_call_skips_parameter_defaults(&user_function, arguments)
+            .unwrap_or(false);
         if !self.can_emit_direct_async_implicit_completion_with_explicit_call_frame(
             &user_function,
             &call_arguments,
             &this_binding,
+            parameter_defaults_supported,
         ) {
             return Ok(None);
         }
