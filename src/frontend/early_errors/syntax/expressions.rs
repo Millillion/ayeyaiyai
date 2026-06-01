@@ -402,6 +402,118 @@ fn regex_quantifier_len(pattern: &str, offset: usize, ch: char) -> Option<usize>
     Some(base_len + lazy_len)
 }
 
+fn is_regex_syntax_character(character: char) -> bool {
+    matches!(
+        character,
+        '^' | '$' | '\\' | '.' | '*' | '+' | '?' | '(' | ')' | '[' | ']' | '{' | '}' | '|'
+    )
+}
+
+fn regex_fixed_hex_escape_end(
+    pattern: &str,
+    digits_start: usize,
+    digits_len: usize,
+) -> Result<usize> {
+    let digits_end = digits_start + digits_len;
+    let Some(digits) = pattern.get(digits_start..digits_end) else {
+        bail!("regular expression escape is incomplete");
+    };
+    ensure!(
+        digits.bytes().all(|byte| byte.is_ascii_hexdigit()),
+        "regular expression escape has invalid hexadecimal digits"
+    );
+    Ok(digits_end)
+}
+
+fn regex_braced_unicode_escape_end(pattern: &str, digits_start: usize) -> Result<usize> {
+    let Some(tail) = pattern.get(digits_start..) else {
+        bail!("regular expression unicode escape is incomplete");
+    };
+    let Some(relative_end) = tail.find('}') else {
+        bail!("regular expression unicode escape is incomplete");
+    };
+    let digits = &tail[..relative_end];
+    ensure!(
+        !digits.is_empty() && digits.bytes().all(|byte| byte.is_ascii_hexdigit()),
+        "regular expression unicode escape has invalid hexadecimal digits"
+    );
+    let value =
+        u32::from_str_radix(digits, 16).context("unicode escape digits should be hexadecimal")?;
+    ensure!(
+        value <= 0x10ffff,
+        "regular expression unicode escape is out of range"
+    );
+    Ok(digits_start + relative_end + '}'.len_utf8())
+}
+
+fn validate_regex_unicode_escape(
+    pattern: &str,
+    escape_offset: usize,
+    in_class: bool,
+) -> Result<usize> {
+    let escaped_start = escape_offset + '\\'.len_utf8();
+    let Some((relative_offset, escaped)) = pattern
+        .get(escaped_start..)
+        .and_then(|tail| tail.char_indices().next())
+    else {
+        bail!("regular expression escape is incomplete");
+    };
+    let escaped_offset = escaped_start + relative_offset;
+    let escaped_end = escaped_offset + escaped.len_utf8();
+
+    match escaped {
+        'b' | 'B' | 'd' | 'D' | 'f' | 'n' | 'r' | 's' | 'S' | 't' | 'v' | 'w' | 'W' => {
+            Ok(escaped_end)
+        }
+        '/' => Ok(escaped_end),
+        '-' if in_class => Ok(escaped_end),
+        'c' => {
+            let Some(control) = pattern
+                .get(escaped_end..)
+                .and_then(|tail| tail.chars().next())
+            else {
+                bail!("regular expression control escape is incomplete");
+            };
+            ensure!(
+                control.is_ascii_alphabetic(),
+                "regular expression control escape must use an ASCII letter"
+            );
+            Ok(escaped_end + control.len_utf8())
+        }
+        '0' => {
+            ensure!(
+                !matches!(
+                    pattern.get(escaped_end..).and_then(|tail| tail.chars().next()),
+                    Some(next) if next.is_ascii_digit()
+                ),
+                "regular expression legacy octal escape is not allowed in unicode mode"
+            );
+            Ok(escaped_end)
+        }
+        'x' => regex_fixed_hex_escape_end(pattern, escaped_end, 2),
+        'u' if pattern
+            .get(escaped_end..)
+            .is_some_and(|tail| tail.starts_with('{')) =>
+        {
+            regex_braced_unicode_escape_end(pattern, escaped_end + '{'.len_utf8())
+        }
+        'u' => regex_fixed_hex_escape_end(pattern, escaped_end, 4),
+        'p' | 'P'
+            if pattern
+                .get(escaped_end..)
+                .is_some_and(|tail| tail.starts_with('{')) =>
+        {
+            let Some(relative_end) = pattern[escaped_end + '{'.len_utf8()..].find('}') else {
+                bail!("regular expression property escape is incomplete");
+            };
+            Ok(escaped_end + '{'.len_utf8() + relative_end + '}'.len_utf8())
+        }
+        decimal if decimal.is_ascii_digit() => Ok(escaped_end),
+        syntax if is_regex_syntax_character(syntax) => Ok(escaped_end),
+        _ => bail!("regular expression identity escape is not allowed in unicode mode"),
+    }
+}
+
 fn is_regex_identifier_continue(character: char) -> bool {
     matches!(character, '\u{200C}' | '\u{200D}') || Ident::is_valid_continue(character)
 }
@@ -462,6 +574,13 @@ fn validate_regex_pattern_syntax(pattern: &str, unicode_mode: bool) -> Result<()
         }
         if in_class {
             match ch {
+                '\\' if unicode_mode => {
+                    let escape_end = validate_regex_unicode_escape(pattern, offset, true)?;
+                    while matches!(chars.peek(), Some((next_offset, _)) if *next_offset < escape_end)
+                    {
+                        chars.next();
+                    }
+                }
                 '\\' => escaped = true,
                 ']' => {
                     in_class = false;
@@ -495,6 +614,13 @@ fn validate_regex_pattern_syntax(pattern: &str, unicode_mode: bool) -> Result<()
                     let (name, group_name_end) = regex_group_name(pattern, name_start)?;
                     named_references.push(name);
                     while matches!(chars.peek(), Some((next_offset, _)) if *next_offset < group_name_end)
+                    {
+                        chars.next();
+                    }
+                    can_quantify = true;
+                } else if unicode_mode {
+                    let escape_end = validate_regex_unicode_escape(pattern, offset, false)?;
+                    while matches!(chars.peek(), Some((next_offset, _)) if *next_offset < escape_end)
                     {
                         chars.next();
                     }

@@ -1,4 +1,4 @@
-942/23645 (3.98%)
+943/23645 (3.99%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -10,7 +10,7 @@ Sub-category progress
 - keywords: 25/25 (100.00%)
 - reserved-words: 27/27 (100.00%)
 - future-reserved-words: 55/55 (100.00%)
-- literals: 395/534 (73.97%)
+- literals: 396/534 (74.16%)
 - directive-prologue: 0/62 (0.00%)
 - asi: 0/102 (0.00%)
 - statementList: 0/80 (0.00%)
@@ -974,7 +974,7 @@ Sub-category progress
   - [x] test/language/literals/regexp/named-groups/invalid-duplicate-groupspecifier.js
   - [x] test/language/literals/regexp/named-groups/invalid-empty-groupspecifier-u.js
   - [x] test/language/literals/regexp/named-groups/invalid-empty-groupspecifier.js
-  - [ ] test/language/literals/regexp/named-groups/invalid-identity-escape-in-capture-u.js
+  - [x] test/language/literals/regexp/named-groups/invalid-identity-escape-in-capture-u.js
   - [x] test/language/literals/regexp/named-groups/invalid-incomplete-groupname-2-u.js
   - [x] test/language/literals/regexp/named-groups/invalid-incomplete-groupname-2.js
   - [x] test/language/literals/regexp/named-groups/invalid-incomplete-groupname-3-u.js
