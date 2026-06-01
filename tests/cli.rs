@@ -13247,6 +13247,55 @@ fn async_default_parameter_throw_rejects_before_body() {
 }
 
 #[test]
+fn async_default_parameter_non_callable_call_rejects_promise() {
+    let tempdir = tempdir().unwrap();
+    let input = tempdir.path().join("async-default-non-callable.js");
+    let output = tempdir.path().join("async-default-non-callable.wasm");
+
+    fs::write(
+        &input,
+        r#"
+        var y = null;
+        async function foo(x = y()) {}
+
+        foo().then(function() {
+          $DONE("promise should be rejected");
+        }, function() {
+          $DONE();
+        });
+        "#,
+    )
+    .unwrap();
+
+    let compile = Command::new(env!("CARGO_BIN_EXE_ayeyaiyai"))
+        .arg(&input)
+        .arg("-o")
+        .arg(&output)
+        .output()
+        .unwrap();
+
+    assert!(
+        compile.status.success(),
+        "compiler failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&compile.stdout),
+        String::from_utf8_lossy(&compile.stderr),
+    );
+
+    let run = Command::new("wasmtime").arg(&output).output().unwrap();
+
+    assert!(
+        run.status.success(),
+        "wasmtime failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&run.stdout),
+        String::from_utf8_lossy(&run.stderr),
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&run.stdout),
+        "Test262:AsyncTestComplete\n"
+    );
+}
+
+#[test]
 fn async_default_parameters_with_values_skip_initializers() {
     let tempdir = tempdir().unwrap();
     let input = tempdir.path().join("async-default-values.js");

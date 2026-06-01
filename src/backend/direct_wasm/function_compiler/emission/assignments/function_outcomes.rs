@@ -671,6 +671,9 @@ impl<'a> FunctionCompiler<'a> {
         {
             return Some(outcome);
         }
+        if let Some(outcome) = self.resolve_static_non_callable_call_outcome(expression) {
+            return Some(outcome);
+        }
         let binding = self.resolve_function_binding_from_expression(callee)?;
         let argument_expressions = arguments
             .iter()
@@ -680,5 +683,37 @@ impl<'a> FunctionCompiler<'a> {
             })
             .collect::<Option<Vec<_>>>()?;
         self.resolve_terminal_function_outcome_from_binding(&binding, &argument_expressions)
+    }
+
+    pub(in crate::backend::direct_wasm) fn resolve_static_non_callable_call_outcome(
+        &self,
+        expression: &Expression,
+    ) -> Option<StaticEvalOutcome> {
+        let Expression::Call { callee, arguments } = expression else {
+            return None;
+        };
+        if !arguments.is_empty()
+            || self
+                .resolve_function_binding_from_expression(callee)
+                .is_some()
+        {
+            return None;
+        }
+        let materialized = self.materialize_static_expression(callee);
+        if self
+            .resolve_function_binding_from_expression(&materialized)
+            .is_some()
+        {
+            return None;
+        }
+        let kind = self
+            .infer_value_kind(&materialized)
+            .or_else(|| self.infer_value_kind(callee))?;
+        if matches!(kind, StaticValueKind::Function | StaticValueKind::Unknown) {
+            return None;
+        }
+        Some(StaticEvalOutcome::Throw(StaticThrowValue::NamedError(
+            "TypeError",
+        )))
     }
 }
