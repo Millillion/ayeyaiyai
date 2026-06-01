@@ -60,6 +60,105 @@ impl<'a> FunctionCompiler<'a> {
         })
     }
 
+    fn static_regexp_instance_arguments<'b>(
+        &self,
+        object: &'b Expression,
+    ) -> Option<&'b [CallArgument]> {
+        let (callee, arguments) = match object {
+            Expression::Call { callee, arguments } | Expression::New { callee, arguments } => {
+                (callee, arguments)
+            }
+            _ => return None,
+        };
+        if !matches!(
+            callee.as_ref(),
+            Expression::Identifier(name)
+                if name == "RegExp" && self.is_unshadowed_builtin_identifier(name)
+        ) {
+            return None;
+        }
+        arguments
+            .iter()
+            .all(|argument| inline_summary_side_effect_free_expression(argument.expression()))
+            .then_some(arguments.as_slice())
+    }
+
+    fn static_regexp_argument_string(
+        &self,
+        arguments: &[CallArgument],
+        index: usize,
+        default: &str,
+    ) -> Option<String> {
+        match arguments.get(index) {
+            Some(CallArgument::Expression(argument) | CallArgument::Spread(argument)) => {
+                self.resolve_static_string_concat_value(argument, self.current_function_name())
+            }
+            None => Some(default.to_string()),
+        }
+    }
+
+    fn static_regexp_source_text(pattern: String) -> String {
+        if pattern.is_empty() {
+            "(?:)".to_string()
+        } else {
+            pattern
+        }
+    }
+
+    fn static_regexp_flags_text(flags: &str) -> String {
+        ['d', 'g', 'i', 'm', 's', 'u', 'v', 'y']
+            .into_iter()
+            .filter(|flag| flags.contains(*flag))
+            .collect()
+    }
+
+    fn materialize_static_regexp_member(
+        &self,
+        object: &Expression,
+        property_name: &str,
+    ) -> Option<Expression> {
+        let arguments = self.static_regexp_instance_arguments(object)?;
+        match property_name {
+            "source" => {
+                let pattern = self.static_regexp_argument_string(arguments, 0, "")?;
+                Some(Expression::String(Self::static_regexp_source_text(pattern)))
+            }
+            "flags" => {
+                let flags = self.static_regexp_argument_string(arguments, 1, "")?;
+                Some(Expression::String(Self::static_regexp_flags_text(&flags)))
+            }
+            "global" => {
+                let flags = self.static_regexp_argument_string(arguments, 1, "")?;
+                Some(Expression::Bool(flags.contains('g')))
+            }
+            "ignoreCase" => {
+                let flags = self.static_regexp_argument_string(arguments, 1, "")?;
+                Some(Expression::Bool(flags.contains('i')))
+            }
+            "multiline" => {
+                let flags = self.static_regexp_argument_string(arguments, 1, "")?;
+                Some(Expression::Bool(flags.contains('m')))
+            }
+            "dotAll" => {
+                let flags = self.static_regexp_argument_string(arguments, 1, "")?;
+                Some(Expression::Bool(flags.contains('s')))
+            }
+            "unicode" => {
+                let flags = self.static_regexp_argument_string(arguments, 1, "")?;
+                Some(Expression::Bool(flags.contains('u')))
+            }
+            "sticky" => {
+                let flags = self.static_regexp_argument_string(arguments, 1, "")?;
+                Some(Expression::Bool(flags.contains('y')))
+            }
+            "hasIndices" => {
+                let flags = self.static_regexp_argument_string(arguments, 1, "")?;
+                Some(Expression::Bool(flags.contains('d')))
+            }
+            _ => None,
+        }
+    }
+
     pub(in crate::backend::direct_wasm) fn materialize_member_expression(
         &self,
         object: &Expression,
@@ -195,6 +294,21 @@ impl<'a> FunctionCompiler<'a> {
         }
         let materialized_object = self.materialize_static_expression(object);
         let materialized_property = self.materialize_static_expression(property);
+        if let Expression::String(property_name) = &materialized_property {
+            let object_candidates = [
+                Some(object),
+                resolved_object.as_ref(),
+                (!static_expression_matches(&materialized_object, object))
+                    .then_some(&materialized_object),
+            ];
+            for object_candidate in object_candidates.into_iter().flatten() {
+                if let Some(value) =
+                    self.materialize_static_regexp_member(object_candidate, property_name)
+                {
+                    return value;
+                }
+            }
+        }
         if let Some(realm_id) = self
             .resolve_test262_realm_global_id_from_expression(object)
             .or_else(|| {
