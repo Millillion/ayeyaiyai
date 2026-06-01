@@ -286,6 +286,12 @@ impl<'a> FunctionCompiler<'a> {
             return Some(key);
         }
 
+        if matches!(expression, Expression::Call { .. } | Expression::New { .. })
+            && self.expression_is_static_regexp_instance(expression)
+        {
+            return Some(format!("regexp-object:{expression:p}"));
+        }
+
         if let Expression::New { callee, arguments } = expression
             && let Some(key) =
                 self.constructed_object_reference_identity_key(expression, callee, arguments)
@@ -362,6 +368,12 @@ impl<'a> FunctionCompiler<'a> {
             return Some(key);
         }
 
+        if let Expression::Identifier(name) = expression
+            && let Some(key) = self.reference_identity_key_for_identifier(name)
+        {
+            return Some(key);
+        }
+
         if let Some(resolved) = self.resolve_bound_alias_expression(expression)
             && !static_expression_matches(&resolved, expression)
             && let Some(key) = self.resolve_static_reference_identity_key(&resolved)
@@ -423,12 +435,6 @@ impl<'a> FunctionCompiler<'a> {
             return Some(key);
         }
 
-        if let Expression::Identifier(name) = expression
-            && let Some(key) = self.reference_identity_key_for_identifier(name)
-        {
-            return Some(key);
-        }
-
         if let Some(function) = self.resolve_user_function_from_expression(expression) {
             return Some(format!("user-function:{}", function.name));
         }
@@ -475,6 +481,9 @@ impl<'a> FunctionCompiler<'a> {
                 )
             });
         if let Some(value) = local_value_binding {
+            if self.expression_is_static_regexp_instance(value) {
+                return Some(format!("regexp-object:local:{resolved_name}"));
+            }
             if expression_is_dynamic_import_call(value) {
                 return Some(format!("local:{resolved_name}"));
             }
@@ -492,6 +501,9 @@ impl<'a> FunctionCompiler<'a> {
         {
             if std::env::var_os("AYY_TRACE_REFERENCE_IDENTITY").is_some() {
                 eprintln!("reference_identity:identifier {name}:prefer_global value={value:?}");
+            }
+            if self.expression_is_static_regexp_instance(value) {
+                return Some(format!("regexp-object:global:{name}"));
             }
             if expression_is_dynamic_import_call(value) {
                 return Some(format!("global:{name}"));
@@ -563,6 +575,9 @@ impl<'a> FunctionCompiler<'a> {
         {
             if std::env::var_os("AYY_TRACE_REFERENCE_IDENTITY").is_some() {
                 eprintln!("reference_identity:identifier {name}:global value={value:?}");
+            }
+            if self.expression_is_static_regexp_instance(value) {
+                return Some(format!("regexp-object:global:{name}"));
             }
             if expression_is_dynamic_import_call(value) {
                 return Some(format!("global:{name}"));
