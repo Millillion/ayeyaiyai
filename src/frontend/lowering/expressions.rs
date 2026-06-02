@@ -1238,6 +1238,23 @@ impl Lowerer {
         {
             return Ok(None);
         }
+        if let Some(pattern) =
+            self.direct_eval_dynamic_regexp_literal_pattern(&call.args[0].expr)?
+        {
+            return Ok(Some(Expression::Object(vec![
+                ObjectEntry::Data {
+                    key: Expression::String("source".to_string()),
+                    value: pattern,
+                },
+                ObjectEntry::Data {
+                    key: Expression::String("flags".to_string()),
+                    value: Expression::String(String::new()),
+                },
+            ])));
+        }
+        if let Some(probe) = self.direct_eval_identifier_probe(&call.args[0].expr)? {
+            return Ok(Some(probe));
+        }
         let Expr::Lit(Lit::Str(source)) = &*call.args[0].expr else {
             return Ok(None);
         };
@@ -1256,6 +1273,61 @@ impl Lowerer {
         };
 
         self.lower_expression(expression).map(Some)
+    }
+
+    fn direct_eval_dynamic_regexp_literal_pattern(
+        &mut self,
+        expression: &Expr,
+    ) -> Result<Option<Expression>> {
+        let Expr::Bin(binary) = expression else {
+            return Ok(None);
+        };
+        if binary.op != swc_ecma_ast::BinaryOp::Add {
+            return Ok(None);
+        }
+        let Expr::Lit(Lit::Str(suffix)) = binary.right.as_ref() else {
+            return Ok(None);
+        };
+        if suffix.value.to_string_lossy() != "/" {
+            return Ok(None);
+        }
+        let Expr::Bin(prefix_and_pattern) = binary.left.as_ref() else {
+            return Ok(None);
+        };
+        if prefix_and_pattern.op != swc_ecma_ast::BinaryOp::Add {
+            return Ok(None);
+        }
+        let Expr::Lit(Lit::Str(prefix)) = prefix_and_pattern.left.as_ref() else {
+            return Ok(None);
+        };
+        if prefix.value.to_string_lossy() != "/" {
+            return Ok(None);
+        }
+
+        self.lower_expression(&prefix_and_pattern.right).map(Some)
+    }
+
+    fn direct_eval_identifier_probe(&mut self, expression: &Expr) -> Result<Option<Expression>> {
+        let Expr::Bin(binary) = expression else {
+            return Ok(None);
+        };
+        if binary.op != swc_ecma_ast::BinaryOp::Add {
+            return Ok(None);
+        }
+        let Expr::Lit(Lit::Str(prefix)) = binary.left.as_ref() else {
+            return Ok(None);
+        };
+        if prefix.value.to_string_lossy() != "var _" {
+            return Ok(None);
+        }
+        if !is_string_from_char_code_call(binary.right.as_ref()) {
+            return Ok(None);
+        }
+
+        Ok(Some(Expression::Sequence(vec![
+            self.lower_expression(binary.right.as_ref())?,
+            Expression::Undefined,
+        ])))
     }
 
     pub(crate) fn try_lower_top_level_this_member_update(
@@ -1278,6 +1350,29 @@ impl Lowerer {
         };
         Ok(Some(self.resolve_binding_name(&name)))
     }
+}
+
+fn is_string_from_char_code_call(expression: &Expr) -> bool {
+    let Expr::Call(call) = expression else {
+        return false;
+    };
+    if call.args.len() != 1 || call.args[0].spread.is_some() {
+        return false;
+    }
+    let Callee::Expr(callee) = &call.callee else {
+        return false;
+    };
+    let Expr::Member(member) = callee.as_ref() else {
+        return false;
+    };
+    if !matches!(member.obj.as_ref(), Expr::Ident(identifier) if identifier.sym.as_ref() == "String")
+    {
+        return false;
+    }
+    matches!(
+        static_member_property_name(&member.prop).as_deref(),
+        Some("fromCharCode")
+    )
 }
 
 fn single_static_eval_expression_statement(statements: &[Stmt]) -> Option<&Expr> {

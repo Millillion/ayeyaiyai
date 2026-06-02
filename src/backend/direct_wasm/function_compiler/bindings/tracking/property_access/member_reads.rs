@@ -380,6 +380,28 @@ impl<'a> FunctionCompiler<'a> {
             }
             return Ok(());
         }
+        if !object_uses_internal_assignment_temp
+            && !object_contains_await
+            && inline_summary_side_effect_free_expression(object)
+            && inline_summary_side_effect_free_expression(property)
+        {
+            let member_expression = Expression::Member {
+                object: Box::new(object.clone()),
+                property: Box::new(property.clone()),
+            };
+            let materialized = self.materialize_static_expression(&member_expression);
+            if !static_expression_matches(&materialized, &member_expression)
+                && !matches!(materialized, Expression::Member { .. })
+            {
+                if trace_member_reads {
+                    eprintln!(
+                        "member_read:materialized object={object:?} property={property:?} value={materialized:?}"
+                    );
+                }
+                self.emit_numeric_expression(&materialized)?;
+                return Ok(());
+            }
+        }
         if trace_member_reads {
             eprintln!("member_read:before_runtime object={object:?} property={property:?}");
         }

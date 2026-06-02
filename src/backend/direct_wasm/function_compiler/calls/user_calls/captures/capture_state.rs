@@ -21,13 +21,48 @@ impl<'a> FunctionCompiler<'a> {
                 .is_none()
     }
 
-    fn user_function_capture_source_is_unshadowed_builtin(&self, source_name: &str) -> bool {
+    pub(in crate::backend::direct_wasm) fn user_function_capture_source_is_unshadowed_builtin(
+        &self,
+        source_name: &str,
+    ) -> bool {
         if self.user_function_capture_source_is_unshadowed_assert_harness_object(source_name) {
             return true;
         }
         (matches!(source_name, "NaN" | "Infinity" | "undefined")
             || builtin_function_runtime_value(source_name).is_some())
             && self.is_unshadowed_builtin_identifier(source_name)
+    }
+
+    pub(in crate::backend::direct_wasm) fn emit_unshadowed_builtin_capture_source_value(
+        &mut self,
+        source_name: &str,
+    ) -> DirectResult<bool> {
+        if !self.user_function_capture_source_is_unshadowed_builtin(source_name) {
+            return Ok(false);
+        }
+        if let Some(runtime_value) = builtin_function_runtime_value(source_name) {
+            self.push_i32_const(runtime_value);
+            return Ok(true);
+        }
+        match source_name {
+            "assert" => {
+                self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
+                Ok(true)
+            }
+            "NaN" => {
+                self.push_i32_const(JS_NAN_TAG);
+                Ok(true)
+            }
+            "Infinity" => {
+                self.emit_numeric_expression(&Expression::Number(f64::INFINITY))?;
+                Ok(true)
+            }
+            "undefined" => {
+                self.push_i32_const(JS_UNDEFINED_TAG);
+                Ok(true)
+            }
+            _ => Ok(false),
+        }
     }
 
     fn capture_source_expression(&self, source_name: &str) -> Expression {
@@ -306,29 +341,8 @@ impl<'a> FunctionCompiler<'a> {
                 return Ok(());
             }
         }
-        if self.user_function_capture_source_is_unshadowed_builtin(source_name) {
-            if let Some(runtime_value) = builtin_function_runtime_value(source_name) {
-                self.push_i32_const(runtime_value);
-                return Ok(());
-            }
-            match source_name {
-                "assert" => {
-                    self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
-                    return Ok(());
-                }
-                "NaN" => {
-                    self.push_i32_const(JS_NAN_TAG);
-                    return Ok(());
-                }
-                "Infinity" => {
-                    return self.emit_numeric_expression(&Expression::Number(f64::INFINITY));
-                }
-                "undefined" => {
-                    self.push_i32_const(JS_UNDEFINED_TAG);
-                    return Ok(());
-                }
-                _ => {}
-            }
+        if self.emit_unshadowed_builtin_capture_source_value(source_name)? {
+            return Ok(());
         }
         if source_name.starts_with("__ayy_class_brand_")
             && self.emit_private_brand_runtime_value_for_binding_name(source_name)?

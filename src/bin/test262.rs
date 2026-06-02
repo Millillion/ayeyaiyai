@@ -26,11 +26,17 @@ struct Cli {
     #[arg(long = "test", action = ArgAction::Append)]
     tests: Vec<String>,
 
+    #[arg(long = "tests-from", action = ArgAction::Append)]
+    tests_from: Vec<PathBuf>,
+
     #[arg(long, action = ArgAction::Append)]
     contains: Vec<String>,
 
     #[arg(long)]
     limit: Option<usize>,
+
+    #[arg(long)]
+    stop_on_fail: bool,
 
     #[arg(long, default_value_t = 30)]
     timeout_seconds: u64,
@@ -68,7 +74,7 @@ fn main() {
 fn run() -> Result<()> {
     let cli = Cli::parse();
     let mut summary = Summary::default();
-    let exact_tests = normalize_requested_tests(&cli.test262_dir, &cli.tests)?;
+    let exact_tests = normalize_requested_tests(&cli.test262_dir, &cli.tests, &cli.tests_from)?;
     let candidate_paths: Box<dyn Iterator<Item = PathBuf>> = if exact_tests.is_empty() {
         Box::new(
             WalkDir::new(cli.test262_dir.join("test"))
@@ -142,10 +148,16 @@ fn run() -> Result<()> {
             Err(TestFailure::Compile(error)) => {
                 summary.compile_failed += 1;
                 println!("COMPILE_FAIL {display}\n{error}");
+                if cli.stop_on_fail {
+                    break;
+                }
             }
             Err(TestFailure::Runtime(error)) => {
                 summary.runtime_failed += 1;
                 println!("RUNTIME_FAIL {display}\n{error}");
+                if cli.stop_on_fail {
+                    break;
+                }
             }
         }
     }
@@ -176,7 +188,11 @@ fn run() -> Result<()> {
     Ok(())
 }
 
-fn normalize_requested_tests(test262_dir: &Path, tests: &[String]) -> Result<Vec<String>> {
+fn normalize_requested_tests(
+    test262_dir: &Path,
+    tests: &[String],
+    tests_from: &[PathBuf],
+) -> Result<Vec<String>> {
     let mut seen = HashSet::new();
     let mut normalized_tests = Vec::new();
 
@@ -186,8 +202,34 @@ fn normalize_requested_tests(test262_dir: &Path, tests: &[String]) -> Result<Vec
             normalized_tests.push(normalized);
         }
     }
+    for list_path in tests_from {
+        let source = fs::read_to_string(list_path)
+            .with_context(|| format!("failed to read test list `{}`", list_path.display()))?;
+        for test in extract_requested_tests_from_list(&source) {
+            let normalized = normalize_requested_test(test262_dir, &test)?;
+            if seen.insert(normalized.clone()) {
+                normalized_tests.push(normalized);
+            }
+        }
+    }
 
     Ok(normalized_tests)
+}
+
+fn extract_requested_tests_from_list(source: &str) -> Vec<String> {
+    source
+        .lines()
+        .filter_map(|line| {
+            let trimmed = line.trim();
+            if trimmed.is_empty() || trimmed.starts_with('#') {
+                return None;
+            }
+            let start = trimmed.find("test/").unwrap_or(0);
+            let candidate = &trimmed[start..];
+            let end = candidate.find(".js")? + ".js".len();
+            Some(candidate[..end].to_string())
+        })
+        .collect()
 }
 
 fn normalize_requested_test(test262_dir: &Path, test: &str) -> Result<String> {
@@ -487,7 +529,8 @@ mod tests {
 
     use super::{
         Metadata, NegativeExpectation, TestFailure, apply_negative_expectation,
-        normalize_requested_test, parse_frontmatter, parse_test262_metadata, should_skip_path,
+        extract_requested_tests_from_list, normalize_requested_test, parse_frontmatter,
+        parse_test262_metadata, should_skip_path,
     };
 
     #[test]
@@ -644,5 +687,25 @@ assert.sameValue(1, 1);
                 .unwrap();
 
         assert_eq!(normalized, "test/language/expressions/yield/rhs-iter.js");
+    }
+
+    #[test]
+    fn extracts_test_paths_from_progress_tracker() {
+        let tests = extract_requested_tests_from_list(
+            r#"
+0/2 (0.00%)
+- [ ] comments
+  - [ ] test/language/comments/S7.4_A1_T1.js
+  - [ ] test/language/comments/S7.4_A1_T2.js (impossible with AOT)
+"#,
+        );
+
+        assert_eq!(
+            tests,
+            vec![
+                "test/language/comments/S7.4_A1_T1.js".to_string(),
+                "test/language/comments/S7.4_A1_T2.js".to_string()
+            ]
+        );
     }
 }

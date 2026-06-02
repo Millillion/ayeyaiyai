@@ -56,6 +56,20 @@ impl<'a> FunctionCompiler<'a> {
         arguments: &[CallArgument],
     ) -> DirectResult<bool> {
         if matches!(property, Expression::String(property_name) if property_name == "toString")
+            && let [CallArgument::Expression(radix)] = arguments
+            && self.infer_value_kind(object) == Some(StaticValueKind::Number)
+            && self
+                .resolve_static_number_value(radix)
+                .is_some_and(|radix| (2.0..=36.0).contains(&radix))
+        {
+            self.emit_numeric_expression(object)?;
+            self.state.emission.output.instructions.push(0x1a);
+            self.emit_numeric_expression(radix)?;
+            self.state.emission.output.instructions.push(0x1a);
+            self.push_i32_const(JS_TYPEOF_STRING_TAG);
+            return Ok(true);
+        }
+        if matches!(property, Expression::String(property_name) if property_name == "toString")
             && arguments.is_empty()
             && (self.infer_value_kind(object) == Some(StaticValueKind::String)
                 || self.resolve_static_string_value(object).is_some()

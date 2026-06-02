@@ -105,6 +105,56 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    fn dynamic_single_char_regexp_source_expression(
+        &self,
+        expression: &Expression,
+    ) -> Option<Expression> {
+        if self
+            .resolve_single_char_code_expression(expression)
+            .is_some()
+        {
+            return Some(expression.clone());
+        }
+
+        let resolved = self
+            .resolve_bound_alias_expression(expression)
+            .filter(|resolved| !static_expression_matches(resolved, expression));
+        if let Some(resolved) = resolved.as_ref()
+            && self.resolve_single_char_code_expression(resolved).is_some()
+        {
+            return Some(resolved.clone());
+        }
+
+        let materialized = self.materialize_static_expression(expression);
+        if !static_expression_matches(&materialized, expression)
+            && self
+                .resolve_single_char_code_expression(&materialized)
+                .is_some()
+        {
+            return Some(materialized);
+        }
+
+        None
+    }
+
+    fn static_regexp_source_expression(&self, arguments: &[CallArgument]) -> Option<Expression> {
+        let Some(CallArgument::Expression(argument) | CallArgument::Spread(argument)) =
+            arguments.first()
+        else {
+            return Some(Expression::String(Self::static_regexp_source_text(
+                String::new(),
+            )));
+        };
+
+        if let Some(pattern) =
+            self.resolve_static_string_concat_value(argument, self.current_function_name())
+        {
+            return Some(Expression::String(Self::static_regexp_source_text(pattern)));
+        }
+
+        self.dynamic_single_char_regexp_source_expression(argument)
+    }
+
     fn static_regexp_flags_text(flags: &str) -> String {
         ['d', 'g', 'i', 'm', 's', 'u', 'v', 'y']
             .into_iter()
@@ -119,10 +169,7 @@ impl<'a> FunctionCompiler<'a> {
     ) -> Option<Expression> {
         let arguments = self.static_regexp_instance_arguments(object)?;
         match property_name {
-            "source" => {
-                let pattern = self.static_regexp_argument_string(arguments, 0, "")?;
-                Some(Expression::String(Self::static_regexp_source_text(pattern)))
-            }
+            "source" => self.static_regexp_source_expression(arguments),
             "flags" => {
                 let flags = self.static_regexp_argument_string(arguments, 1, "")?;
                 Some(Expression::String(Self::static_regexp_flags_text(&flags)))

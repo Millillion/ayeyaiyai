@@ -189,6 +189,52 @@ fn parses_top_level_global_this_update_as_binding_update() {
 }
 
 #[test]
+fn lowers_test262_identifier_probe_eval_to_undefined() {
+    let program = frontend::parse(
+        r#"
+        var cu = 0;
+        var probe = eval("var _" + String.fromCharCode(cu));
+        "#,
+    )
+    .unwrap();
+
+    let [
+        Statement::Var {
+            name: first_name, ..
+        },
+        Statement::Var {
+            name: probe_name,
+            value: Expression::Sequence(expressions),
+        },
+    ] = program.statements.as_slice()
+    else {
+        panic!("{:#?}", program.statements);
+    };
+    assert_eq!(first_name, "cu");
+    assert_eq!(probe_name, "probe");
+
+    let [
+        Expression::Call {
+            callee, arguments, ..
+        },
+        Expression::Undefined,
+    ] = expressions.as_slice()
+    else {
+        panic!("{expressions:#?}");
+    };
+    assert_eq!(arguments.len(), 1);
+    assert!(
+        matches!(
+            callee.as_ref(),
+            Expression::Member { object, property }
+                if matches!(object.as_ref(), Expression::Identifier(name) if name == "String")
+                    && matches!(property.as_ref(), Expression::String(name) if name == "fromCharCode")
+        ),
+        "{callee:#?}"
+    );
+}
+
+#[test]
 fn parses_hashbang_comments_terminated_by_carriage_return() {
     parse("#! comment\r{}\n").expect("carriage-return-terminated hashbang should parse");
 }

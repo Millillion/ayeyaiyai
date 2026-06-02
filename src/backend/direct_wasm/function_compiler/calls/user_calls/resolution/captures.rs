@@ -12,6 +12,9 @@ impl<'a> FunctionCompiler<'a> {
             self.push_global_get(CURRENT_THIS_GLOBAL_INDEX);
             return Ok(());
         }
+        if self.emit_unshadowed_builtin_capture_source_value(capture_name)? {
+            return Ok(());
+        }
         self.emit_capture_source_expression_value(capture_name, source_expression)
     }
 

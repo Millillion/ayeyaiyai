@@ -1,4 +1,4 @@
-1394/23645 (5.90%)
+1406/23668 (5.94%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -10,12 +10,12 @@ Sub-category progress
 - keywords: 25/25 (100.00%)
 - reserved-words: 27/27 (100.00%)
 - future-reserved-words: 55/55 (100.00%)
-- literals: 530/534 (99.25%)
+- literals: 534/534 (100.00%)
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 73/9337 (0.78%)
-- expressions: 0/11038 (0.00%)
+- statements: 81/9337 (0.87%)
+- expressions: 0/11061 (0.00%)
 - types: 0/113 (0.00%)
 - function-code: 0/217 (0.00%)
 - global-code: 0/42 (0.00%)
@@ -30,7 +30,7 @@ Sub-category progress
 - export: 0/3 (0.00%)
 - module-code: 0/596 (0.00%)
 
-- [x] comments (52 tests)
+- [x] comments
   - [x] test/language/comments/S7.4_A1_T1.js
   - [x] test/language/comments/S7.4_A1_T2.js
   - [x] test/language/comments/S7.4_A2_T1.js
@@ -83,7 +83,7 @@ Sub-category progress
   - [x] test/language/comments/multi-line-asi-paragraph-separator.js
   - [x] test/language/comments/multi-line-html-close-extra.js
   - [x] test/language/comments/single-line-html-close-without-lt.js
-- [x] white-space (67 tests)
+- [x] white-space
   - [x] test/language/white-space/S7.2_A2.1_T2.js
   - [x] test/language/white-space/S7.2_A2.2_T2.js
   - [x] test/language/white-space/S7.2_A2.3_T2.js
@@ -151,7 +151,7 @@ Sub-category progress
   - [x] test/language/white-space/string-nbsp.js
   - [x] test/language/white-space/string-space.js
   - [x] test/language/white-space/string-vertical-tab.js
-- [x] line-terminators (41 tests)
+- [x] line-terminators
   - [x] test/language/line-terminators/7.3-15.js
   - [x] test/language/line-terminators/7.3-5.js
   - [x] test/language/line-terminators/7.3-6.js
@@ -193,7 +193,7 @@ Sub-category progress
   - [x] test/language/line-terminators/invalid-regexp-ps.js
   - [x] test/language/line-terminators/invalid-string-cr.js
   - [x] test/language/line-terminators/invalid-string-lf.js
-- [x] punctuators (11 tests)
+- [x] punctuators
   - [x] test/language/punctuators/S7.7_A1.js
   - [x] test/language/punctuators/S7.7_A2_T1.js
   - [x] test/language/punctuators/S7.7_A2_T10.js
@@ -205,9 +205,9 @@ Sub-category progress
   - [x] test/language/punctuators/S7.7_A2_T7.js
   - [x] test/language/punctuators/S7.7_A2_T8.js
   - [x] test/language/punctuators/S7.7_A2_T9.js
-- [x] source-text (1 tests)
+- [x] source-text
   - [x] test/language/source-text/6.1.js
-- [x] identifiers (268 tests)
+- [x] identifiers
   - [x] test/language/identifiers/other_id_continue-escaped.js
   - [x] test/language/identifiers/other_id_continue.js
   - [x] test/language/identifiers/other_id_start-escaped.js
@@ -476,7 +476,7 @@ Sub-category progress
   - [x] test/language/identifiers/vertical-tilde-continue.js
   - [x] test/language/identifiers/vertical-tilde-start-escaped.js
   - [x] test/language/identifiers/vertical-tilde-start.js
-- [x] keywords (25 tests)
+- [x] keywords
   - [x] test/language/keywords/ident-ref-break.js
   - [x] test/language/keywords/ident-ref-case.js
   - [x] test/language/keywords/ident-ref-catch.js
@@ -502,7 +502,7 @@ Sub-category progress
   - [x] test/language/keywords/ident-ref-void.js
   - [x] test/language/keywords/ident-ref-while.js
   - [x] test/language/keywords/ident-ref-with.js
-- [x] reserved-words (27 tests)
+- [x] reserved-words
   - [x] test/language/reserved-words/await-module.js
   - [x] test/language/reserved-words/await-script.js
   - [x] test/language/reserved-words/ident-name-global-property-accessor.js
@@ -530,7 +530,7 @@ Sub-category progress
   - [x] test/language/reserved-words/label-ident-true-escaped.js
   - [x] test/language/reserved-words/label-ident-true.js
   - [x] test/language/reserved-words/unreserved-words.js
-- [x] future-reserved-words (55 tests)
+- [x] future-reserved-words
   - [x] test/language/future-reserved-words/_implements.js
   - [x] test/language/future-reserved-words/abstract.js
   - [x] test/language/future-reserved-words/boolean.js
@@ -586,7 +586,7 @@ Sub-category progress
   - [x] test/language/future-reserved-words/volatile.js
   - [x] test/language/future-reserved-words/yield-strict-escaped.js
   - [x] test/language/future-reserved-words/yield-strict.js
-- [ ] literals (534 tests)
+- [x] literals
   - [x] test/language/literals/bigint/binary-invalid-digit.js
   - [x] test/language/literals/bigint/exponent-part.js
   - [x] test/language/literals/bigint/hexadecimal-invalid-digit.js
@@ -814,7 +814,7 @@ Sub-category progress
   - [x] test/language/literals/regexp/7.8.5-1gs.js
   - [x] test/language/literals/regexp/7.8.5-2gs.js
   - [x] test/language/literals/regexp/S7.8.5_A1.1_T1.js
-  - [ ] (impossible with AOT) test/language/literals/regexp/S7.8.5_A1.1_T2.js
+  - [x] test/language/literals/regexp/S7.8.5_A1.1_T2.js
   - [x] test/language/literals/regexp/S7.8.5_A1.2_T1.js
   - [x] test/language/literals/regexp/S7.8.5_A1.2_T2.js
   - [x] test/language/literals/regexp/S7.8.5_A1.2_T3.js
@@ -826,7 +826,7 @@ Sub-category progress
   - [x] test/language/literals/regexp/S7.8.5_A1.3_T5.js
   - [x] test/language/literals/regexp/S7.8.5_A1.3_T6.js
   - [x] test/language/literals/regexp/S7.8.5_A1.4_T1.js
-  - [ ] (impossible with AOT) test/language/literals/regexp/S7.8.5_A1.4_T2.js
+  - [x] test/language/literals/regexp/S7.8.5_A1.4_T2.js
   - [x] test/language/literals/regexp/S7.8.5_A1.5_T1.js
   - [x] test/language/literals/regexp/S7.8.5_A1.5_T2.js
   - [x] test/language/literals/regexp/S7.8.5_A1.5_T3.js
@@ -834,7 +834,7 @@ Sub-category progress
   - [x] test/language/literals/regexp/S7.8.5_A1.5_T5.js
   - [x] test/language/literals/regexp/S7.8.5_A1.5_T6.js
   - [x] test/language/literals/regexp/S7.8.5_A2.1_T1.js
-  - [ ] (impossible with AOT) test/language/literals/regexp/S7.8.5_A2.1_T2.js
+  - [x] test/language/literals/regexp/S7.8.5_A2.1_T2.js
   - [x] test/language/literals/regexp/S7.8.5_A2.2_T1.js
   - [x] test/language/literals/regexp/S7.8.5_A2.2_T2.js
   - [x] test/language/literals/regexp/S7.8.5_A2.3_T1.js
@@ -844,7 +844,7 @@ Sub-category progress
   - [x] test/language/literals/regexp/S7.8.5_A2.3_T5.js
   - [x] test/language/literals/regexp/S7.8.5_A2.3_T6.js
   - [x] test/language/literals/regexp/S7.8.5_A2.4_T1.js
-  - [ ] (impossible with AOT) test/language/literals/regexp/S7.8.5_A2.4_T2.js
+  - [x] test/language/literals/regexp/S7.8.5_A2.4_T2.js
   - [x] test/language/literals/regexp/S7.8.5_A2.5_T1.js
   - [x] test/language/literals/regexp/S7.8.5_A2.5_T2.js
   - [x] test/language/literals/regexp/S7.8.5_A2.5_T3.js
@@ -1121,7 +1121,7 @@ Sub-category progress
   - [x] test/language/literals/string/unicode-escape-nls-err-single.js
   - [x] test/language/literals/string/unicode-escape-no-hex-err-double.js
   - [x] test/language/literals/string/unicode-escape-no-hex-err-single.js
-- [x] directive-prologue (62 tests)
+- [x] directive-prologue
   - [x] test/language/directive-prologue/10.1.1-1-s.js
   - [x] test/language/directive-prologue/10.1.1-10-s.js
   - [x] test/language/directive-prologue/10.1.1-11-s.js
@@ -1184,7 +1184,7 @@ Sub-category progress
   - [x] test/language/directive-prologue/set-accsr-inside-func-expr-runtime.js
   - [x] test/language/directive-prologue/set-accsr-not-first-runtime.js
   - [x] test/language/directive-prologue/set-accsr-runtime.js
-- [x] asi (102 tests)
+- [x] asi
   - [x] test/language/asi/S7.9.2_A1_T1.js
   - [x] test/language/asi/S7.9.2_A1_T2.js
   - [x] test/language/asi/S7.9.2_A1_T3.js
@@ -1287,7 +1287,7 @@ Sub-category progress
   - [x] test/language/asi/S7.9_A9_T8.js
   - [x] test/language/asi/S7.9_A9_T9.js
   - [x] test/language/asi/do-while-same-line.js
-- [x] statementList (80 tests)
+- [x] statementList
   - [x] test/language/statementList/block-array-literal-with-item.js
   - [x] test/language/statementList/block-array-literal.js
   - [x] test/language/statementList/block-arrow-function-assignment-expr.js
@@ -1368,7 +1368,7 @@ Sub-category progress
   - [x] test/language/statementList/fn-let-declaration.js
   - [x] test/language/statementList/fn-regexp-literal-flags.js
   - [x] test/language/statementList/fn-regexp-literal.js
-- [ ] statements (9337 tests)
+- [ ] statements
   - [x] test/language/statements/async-function/array-destructuring-param-strict-body.js
   - [x] test/language/statements/async-function/await-as-binding-identifier-escaped.js
   - [x] test/language/statements/async-function/await-as-binding-identifier.js
@@ -1442,14 +1442,14 @@ Sub-category progress
   - [x] test/language/statements/async-function/try-throw-finally-return.js
   - [x] test/language/statements/async-function/try-throw-finally-throw.js
   - [x] test/language/statements/async-function/unscopables-with-in-nested-fn.js
-  - [ ] test/language/statements/async-function/unscopables-with.js
-  - [ ] test/language/statements/async-generator/array-destructuring-param-strict-body.js
-  - [ ] test/language/statements/async-generator/await-as-binding-identifier-escaped.js
-  - [ ] test/language/statements/async-generator/await-as-binding-identifier.js
-  - [ ] test/language/statements/async-generator/await-as-identifier-reference-escaped.js
-  - [ ] test/language/statements/async-generator/await-as-identifier-reference.js
-  - [ ] test/language/statements/async-generator/await-as-label-identifier-escaped.js
-  - [ ] test/language/statements/async-generator/await-as-label-identifier.js
+  - [x] test/language/statements/async-function/unscopables-with.js
+  - [x] test/language/statements/async-generator/array-destructuring-param-strict-body.js
+  - [x] test/language/statements/async-generator/await-as-binding-identifier-escaped.js
+  - [x] test/language/statements/async-generator/await-as-binding-identifier.js
+  - [x] test/language/statements/async-generator/await-as-identifier-reference-escaped.js
+  - [x] test/language/statements/async-generator/await-as-identifier-reference.js
+  - [x] test/language/statements/async-generator/await-as-label-identifier-escaped.js
+  - [x] test/language/statements/async-generator/await-as-label-identifier.js
   - [ ] test/language/statements/async-generator/dflt-params-abrupt.js
   - [ ] test/language/statements/async-generator/dflt-params-arg-val-not-undefined.js
   - [ ] test/language/statements/async-generator/dflt-params-arg-val-undefined.js
@@ -1879,7 +1879,6 @@ Sub-category progress
   - [ ] test/language/statements/break/S12.8_A9_T2.js
   - [ ] test/language/statements/break/line-terminators.js
   - [ ] test/language/statements/break/static-init-without-label.js
-  - [ ] test/language/statements/class/accessor-name-inst-computed-yield-expr.js
   - [ ] test/language/statements/class/accessor-name-inst/computed-err-evaluation.js
   - [ ] test/language/statements/class/accessor-name-inst/computed-err-to-prop-key.js
   - [ ] test/language/statements/class/accessor-name-inst/computed-err-unresolvable.js
@@ -1901,7 +1900,7 @@ Sub-category progress
   - [ ] test/language/statements/class/accessor-name-inst/literal-string-line-continuation.js
   - [ ] test/language/statements/class/accessor-name-inst/literal-string-single-quote.js
   - [ ] test/language/statements/class/accessor-name-inst/literal-string-unicode-escape.js
-  - [ ] test/language/statements/class/accessor-name-static-computed-yield-expr.js
+  - [ ] test/language/statements/class/accessor-name-inst-computed-yield-expr.js
   - [ ] test/language/statements/class/accessor-name-static/computed-err-evaluation.js
   - [ ] test/language/statements/class/accessor-name-static/computed-err-to-prop-key.js
   - [ ] test/language/statements/class/accessor-name-static/computed-err-unresolvable.js
@@ -1923,108 +1922,10 @@ Sub-category progress
   - [ ] test/language/statements/class/accessor-name-static/literal-string-line-continuation.js
   - [ ] test/language/statements/class/accessor-name-static/literal-string-single-quote.js
   - [ ] test/language/statements/class/accessor-name-static/literal-string-unicode-escape.js
+  - [ ] test/language/statements/class/accessor-name-static-computed-yield-expr.js
   - [ ] test/language/statements/class/arguments/access.js
   - [ ] test/language/statements/class/arguments/default-constructor.js
   - [ ] test/language/statements/class/async-gen-meth-escaped-async.js
-  - [ ] test/language/statements/class/async-gen-method-static/array-destructuring-param-strict-body.js
-  - [ ] test/language/statements/class/async-gen-method-static/await-as-binding-identifier-escaped.js
-  - [ ] test/language/statements/class/async-gen-method-static/await-as-binding-identifier.js
-  - [ ] test/language/statements/class/async-gen-method-static/await-as-identifier-reference-escaped.js
-  - [ ] test/language/statements/class/async-gen-method-static/await-as-identifier-reference.js
-  - [ ] test/language/statements/class/async-gen-method-static/await-as-label-identifier-escaped.js
-  - [ ] test/language/statements/class/async-gen-method-static/await-as-label-identifier.js
-  - [ ] test/language/statements/class/async-gen-method-static/dflt-params-abrupt.js
-  - [ ] test/language/statements/class/async-gen-method-static/dflt-params-arg-val-not-undefined.js
-  - [ ] test/language/statements/class/async-gen-method-static/dflt-params-arg-val-undefined.js
-  - [ ] test/language/statements/class/async-gen-method-static/dflt-params-duplicates.js
-  - [ ] test/language/statements/class/async-gen-method-static/dflt-params-ref-later.js
-  - [ ] test/language/statements/class/async-gen-method-static/dflt-params-ref-prior.js
-  - [ ] test/language/statements/class/async-gen-method-static/dflt-params-ref-self.js
-  - [ ] test/language/statements/class/async-gen-method-static/dflt-params-rest.js
-  - [ ] test/language/statements/class/async-gen-method-static/dflt-params-trailing-comma.js
-  - [ ] test/language/statements/class/async-gen-method-static/forbidden-ext/b1/cls-decl-async-gen-meth-static-forbidden-ext-direct-access-prop-arguments.js
-  - [ ] test/language/statements/class/async-gen-method-static/forbidden-ext/b1/cls-decl-async-gen-meth-static-forbidden-ext-direct-access-prop-caller.js
-  - [ ] test/language/statements/class/async-gen-method-static/forbidden-ext/b2/cls-decl-async-gen-meth-static-forbidden-ext-indirect-access-own-prop-caller-get.js
-  - [ ] test/language/statements/class/async-gen-method-static/forbidden-ext/b2/cls-decl-async-gen-meth-static-forbidden-ext-indirect-access-own-prop-caller-value.js
-  - [ ] test/language/statements/class/async-gen-method-static/forbidden-ext/b2/cls-decl-async-gen-meth-static-forbidden-ext-indirect-access-prop-caller.js
-  - [ ] test/language/statements/class/async-gen-method-static/object-destructuring-param-strict-body.js
-  - [ ] test/language/statements/class/async-gen-method-static/params-trailing-comma-multiple.js
-  - [ ] test/language/statements/class/async-gen-method-static/params-trailing-comma-single.js
-  - [ ] test/language/statements/class/async-gen-method-static/rest-param-strict-body.js
-  - [ ] test/language/statements/class/async-gen-method-static/rest-params-trailing-comma-early-error.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-as-binding-identifier-escaped.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-as-binding-identifier.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-as-identifier-reference-escaped.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-as-identifier-reference.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-as-label-identifier-escaped.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-as-label-identifier.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-identifier-spread-strict.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-identifier-strict.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-promise-reject-next-catch.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-promise-reject-next-for-await-of-async-iterator.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-promise-reject-next-for-await-of-sync-iterator.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-promise-reject-next-yield-star-async-iterator.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-promise-reject-next-yield-star-sync-iterator.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-promise-reject-next.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-spread-arr-multiple.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-spread-arr-single.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-spread-obj.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-async-next.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-async-return.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-async-throw.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-expr-abrupt.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-async-get-abrupt.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-async-not-callable-boolean-throw.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-async-not-callable-number-throw.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-async-not-callable-object-throw.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-async-not-callable-string-throw.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-async-not-callable-symbol-throw.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-async-null-sync-get-abrupt.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-async-returns-abrupt.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-async-returns-boolean-throw.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-async-returns-null-throw.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-async-returns-number-throw.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-async-returns-string-throw.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-async-returns-symbol-throw.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-async-returns-undefined-throw.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-async-undefined-sync-get-abrupt.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-sync-get-abrupt.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-sync-not-callable-boolean-throw.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-sync-not-callable-number-throw.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-sync-not-callable-object-throw.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-sync-not-callable-string-throw.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-sync-not-callable-symbol-throw.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-sync-returns-abrupt.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-sync-returns-boolean-throw.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-sync-returns-null-throw.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-sync-returns-number-throw.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-sync-returns-string-throw.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-sync-returns-symbol-throw.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-sync-returns-undefined-throw.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-next-call-done-get-abrupt.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-next-call-returns-abrupt.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-next-call-value-get-abrupt.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-next-get-abrupt.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-next-non-object-ignores-then.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-next-not-callable-boolean-throw.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-next-not-callable-null-throw.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-next-not-callable-number-throw.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-next-not-callable-object-throw.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-next-not-callable-string-throw.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-next-not-callable-symbol-throw.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-next-not-callable-undefined-throw.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-next-then-get-abrupt.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-next-then-non-callable-boolean-fulfillpromise.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-next-then-non-callable-null-fulfillpromise.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-next-then-non-callable-number-fulfillpromise.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-next-then-non-callable-object-fulfillpromise.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-next-then-non-callable-string-fulfillpromise.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-next-then-non-callable-symbol-fulfillpromise.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-next-then-non-callable-undefined-fulfillpromise.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-next-then-returns-abrupt.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-sync-next.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-sync-return.js
-  - [ ] test/language/statements/class/async-gen-method-static/yield-star-sync-throw.js
   - [ ] test/language/statements/class/async-gen-method/array-destructuring-param-strict-body.js
   - [ ] test/language/statements/class/async-gen-method/await-as-binding-identifier-escaped.js
   - [ ] test/language/statements/class/async-gen-method/await-as-binding-identifier.js
@@ -2124,39 +2025,106 @@ Sub-category progress
   - [ ] test/language/statements/class/async-gen-method/yield-star-sync-next.js
   - [ ] test/language/statements/class/async-gen-method/yield-star-sync-return.js
   - [ ] test/language/statements/class/async-gen-method/yield-star-sync-throw.js
+  - [ ] test/language/statements/class/async-gen-method-static/array-destructuring-param-strict-body.js
+  - [ ] test/language/statements/class/async-gen-method-static/await-as-binding-identifier-escaped.js
+  - [ ] test/language/statements/class/async-gen-method-static/await-as-binding-identifier.js
+  - [ ] test/language/statements/class/async-gen-method-static/await-as-identifier-reference-escaped.js
+  - [ ] test/language/statements/class/async-gen-method-static/await-as-identifier-reference.js
+  - [ ] test/language/statements/class/async-gen-method-static/await-as-label-identifier-escaped.js
+  - [ ] test/language/statements/class/async-gen-method-static/await-as-label-identifier.js
+  - [ ] test/language/statements/class/async-gen-method-static/dflt-params-abrupt.js
+  - [ ] test/language/statements/class/async-gen-method-static/dflt-params-arg-val-not-undefined.js
+  - [ ] test/language/statements/class/async-gen-method-static/dflt-params-arg-val-undefined.js
+  - [ ] test/language/statements/class/async-gen-method-static/dflt-params-duplicates.js
+  - [ ] test/language/statements/class/async-gen-method-static/dflt-params-ref-later.js
+  - [ ] test/language/statements/class/async-gen-method-static/dflt-params-ref-prior.js
+  - [ ] test/language/statements/class/async-gen-method-static/dflt-params-ref-self.js
+  - [ ] test/language/statements/class/async-gen-method-static/dflt-params-rest.js
+  - [ ] test/language/statements/class/async-gen-method-static/dflt-params-trailing-comma.js
+  - [ ] test/language/statements/class/async-gen-method-static/forbidden-ext/b1/cls-decl-async-gen-meth-static-forbidden-ext-direct-access-prop-arguments.js
+  - [ ] test/language/statements/class/async-gen-method-static/forbidden-ext/b1/cls-decl-async-gen-meth-static-forbidden-ext-direct-access-prop-caller.js
+  - [ ] test/language/statements/class/async-gen-method-static/forbidden-ext/b2/cls-decl-async-gen-meth-static-forbidden-ext-indirect-access-own-prop-caller-get.js
+  - [ ] test/language/statements/class/async-gen-method-static/forbidden-ext/b2/cls-decl-async-gen-meth-static-forbidden-ext-indirect-access-own-prop-caller-value.js
+  - [ ] test/language/statements/class/async-gen-method-static/forbidden-ext/b2/cls-decl-async-gen-meth-static-forbidden-ext-indirect-access-prop-caller.js
+  - [ ] test/language/statements/class/async-gen-method-static/object-destructuring-param-strict-body.js
+  - [ ] test/language/statements/class/async-gen-method-static/params-trailing-comma-multiple.js
+  - [ ] test/language/statements/class/async-gen-method-static/params-trailing-comma-single.js
+  - [ ] test/language/statements/class/async-gen-method-static/rest-param-strict-body.js
+  - [ ] test/language/statements/class/async-gen-method-static/rest-params-trailing-comma-early-error.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-as-binding-identifier-escaped.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-as-binding-identifier.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-as-identifier-reference-escaped.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-as-identifier-reference.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-as-label-identifier-escaped.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-as-label-identifier.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-identifier-spread-strict.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-identifier-strict.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-promise-reject-next-catch.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-promise-reject-next-for-await-of-async-iterator.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-promise-reject-next-for-await-of-sync-iterator.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-promise-reject-next-yield-star-async-iterator.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-promise-reject-next-yield-star-sync-iterator.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-promise-reject-next.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-spread-arr-multiple.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-spread-arr-single.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-spread-obj.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-async-next.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-async-return.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-async-throw.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-expr-abrupt.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-async-get-abrupt.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-async-not-callable-boolean-throw.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-async-not-callable-number-throw.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-async-not-callable-object-throw.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-async-not-callable-string-throw.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-async-not-callable-symbol-throw.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-async-null-sync-get-abrupt.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-async-returns-abrupt.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-async-returns-boolean-throw.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-async-returns-null-throw.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-async-returns-number-throw.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-async-returns-string-throw.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-async-returns-symbol-throw.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-async-returns-undefined-throw.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-async-undefined-sync-get-abrupt.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-sync-get-abrupt.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-sync-not-callable-boolean-throw.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-sync-not-callable-number-throw.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-sync-not-callable-object-throw.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-sync-not-callable-string-throw.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-sync-not-callable-symbol-throw.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-sync-returns-abrupt.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-sync-returns-boolean-throw.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-sync-returns-null-throw.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-sync-returns-number-throw.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-sync-returns-string-throw.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-sync-returns-symbol-throw.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-getiter-sync-returns-undefined-throw.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-next-call-done-get-abrupt.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-next-call-returns-abrupt.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-next-call-value-get-abrupt.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-next-get-abrupt.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-next-non-object-ignores-then.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-next-not-callable-boolean-throw.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-next-not-callable-null-throw.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-next-not-callable-number-throw.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-next-not-callable-object-throw.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-next-not-callable-string-throw.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-next-not-callable-symbol-throw.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-next-not-callable-undefined-throw.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-next-then-get-abrupt.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-next-then-non-callable-boolean-fulfillpromise.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-next-then-non-callable-null-fulfillpromise.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-next-then-non-callable-number-fulfillpromise.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-next-then-non-callable-object-fulfillpromise.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-next-then-non-callable-string-fulfillpromise.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-next-then-non-callable-symbol-fulfillpromise.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-next-then-non-callable-undefined-fulfillpromise.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-next-then-returns-abrupt.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-sync-next.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-sync-return.js
+  - [ ] test/language/statements/class/async-gen-method-static/yield-star-sync-throw.js
   - [ ] test/language/statements/class/async-meth-escaped-async.js
-  - [ ] test/language/statements/class/async-method-static/array-destructuring-param-strict-body.js
-  - [ ] test/language/statements/class/async-method-static/await-as-binding-identifier-escaped.js
-  - [ ] test/language/statements/class/async-method-static/await-as-binding-identifier.js
-  - [ ] test/language/statements/class/async-method-static/await-as-identifier-reference-escaped.js
-  - [ ] test/language/statements/class/async-method-static/await-as-identifier-reference.js
-  - [ ] test/language/statements/class/async-method-static/await-as-label-identifier-escaped.js
-  - [ ] test/language/statements/class/async-method-static/await-as-label-identifier.js
-  - [ ] test/language/statements/class/async-method-static/dflt-params-abrupt.js
-  - [ ] test/language/statements/class/async-method-static/dflt-params-arg-val-not-undefined.js
-  - [ ] test/language/statements/class/async-method-static/dflt-params-arg-val-undefined.js
-  - [ ] test/language/statements/class/async-method-static/dflt-params-duplicates.js
-  - [ ] test/language/statements/class/async-method-static/dflt-params-ref-later.js
-  - [ ] test/language/statements/class/async-method-static/dflt-params-ref-prior.js
-  - [ ] test/language/statements/class/async-method-static/dflt-params-ref-self.js
-  - [ ] test/language/statements/class/async-method-static/dflt-params-rest.js
-  - [ ] test/language/statements/class/async-method-static/dflt-params-trailing-comma.js
-  - [ ] test/language/statements/class/async-method-static/forbidden-ext/b1/cls-decl-async-meth-static-forbidden-ext-direct-access-prop-arguments.js
-  - [ ] test/language/statements/class/async-method-static/forbidden-ext/b1/cls-decl-async-meth-static-forbidden-ext-direct-access-prop-caller.js
-  - [ ] test/language/statements/class/async-method-static/forbidden-ext/b2/cls-decl-async-meth-static-forbidden-ext-indirect-access-own-prop-caller-get.js
-  - [ ] test/language/statements/class/async-method-static/forbidden-ext/b2/cls-decl-async-meth-static-forbidden-ext-indirect-access-own-prop-caller-value.js
-  - [ ] test/language/statements/class/async-method-static/forbidden-ext/b2/cls-decl-async-meth-static-forbidden-ext-indirect-access-prop-caller.js
-  - [ ] test/language/statements/class/async-method-static/object-destructuring-param-strict-body.js
-  - [ ] test/language/statements/class/async-method-static/params-trailing-comma-multiple.js
-  - [ ] test/language/statements/class/async-method-static/params-trailing-comma-single.js
-  - [ ] test/language/statements/class/async-method-static/rest-param-strict-body.js
-  - [ ] test/language/statements/class/async-method-static/rest-params-trailing-comma-early-error.js
-  - [ ] test/language/statements/class/async-method-static/returns-async-arrow-returns-arguments-from-parent-function.js
-  - [ ] test/language/statements/class/async-method-static/returns-async-arrow-returns-newtarget.js
-  - [ ] test/language/statements/class/async-method-static/returns-async-arrow.js
-  - [ ] test/language/statements/class/async-method-static/returns-async-function-returns-arguments-from-own-function.js
-  - [ ] test/language/statements/class/async-method-static/returns-async-function-returns-newtarget.js
-  - [ ] test/language/statements/class/async-method-static/returns-async-function.js
   - [ ] test/language/statements/class/async-method/array-destructuring-param-strict-body.js
   - [ ] test/language/statements/class/async-method/await-as-binding-identifier-escaped.js
   - [ ] test/language/statements/class/async-method/await-as-binding-identifier.js
@@ -2189,6 +2157,38 @@ Sub-category progress
   - [ ] test/language/statements/class/async-method/returns-async-function-returns-arguments-from-own-function.js
   - [ ] test/language/statements/class/async-method/returns-async-function-returns-newtarget.js
   - [ ] test/language/statements/class/async-method/returns-async-function.js
+  - [ ] test/language/statements/class/async-method-static/array-destructuring-param-strict-body.js
+  - [ ] test/language/statements/class/async-method-static/await-as-binding-identifier-escaped.js
+  - [ ] test/language/statements/class/async-method-static/await-as-binding-identifier.js
+  - [ ] test/language/statements/class/async-method-static/await-as-identifier-reference-escaped.js
+  - [ ] test/language/statements/class/async-method-static/await-as-identifier-reference.js
+  - [ ] test/language/statements/class/async-method-static/await-as-label-identifier-escaped.js
+  - [ ] test/language/statements/class/async-method-static/await-as-label-identifier.js
+  - [ ] test/language/statements/class/async-method-static/dflt-params-abrupt.js
+  - [ ] test/language/statements/class/async-method-static/dflt-params-arg-val-not-undefined.js
+  - [ ] test/language/statements/class/async-method-static/dflt-params-arg-val-undefined.js
+  - [ ] test/language/statements/class/async-method-static/dflt-params-duplicates.js
+  - [ ] test/language/statements/class/async-method-static/dflt-params-ref-later.js
+  - [ ] test/language/statements/class/async-method-static/dflt-params-ref-prior.js
+  - [ ] test/language/statements/class/async-method-static/dflt-params-ref-self.js
+  - [ ] test/language/statements/class/async-method-static/dflt-params-rest.js
+  - [ ] test/language/statements/class/async-method-static/dflt-params-trailing-comma.js
+  - [ ] test/language/statements/class/async-method-static/forbidden-ext/b1/cls-decl-async-meth-static-forbidden-ext-direct-access-prop-arguments.js
+  - [ ] test/language/statements/class/async-method-static/forbidden-ext/b1/cls-decl-async-meth-static-forbidden-ext-direct-access-prop-caller.js
+  - [ ] test/language/statements/class/async-method-static/forbidden-ext/b2/cls-decl-async-meth-static-forbidden-ext-indirect-access-own-prop-caller-get.js
+  - [ ] test/language/statements/class/async-method-static/forbidden-ext/b2/cls-decl-async-meth-static-forbidden-ext-indirect-access-own-prop-caller-value.js
+  - [ ] test/language/statements/class/async-method-static/forbidden-ext/b2/cls-decl-async-meth-static-forbidden-ext-indirect-access-prop-caller.js
+  - [ ] test/language/statements/class/async-method-static/object-destructuring-param-strict-body.js
+  - [ ] test/language/statements/class/async-method-static/params-trailing-comma-multiple.js
+  - [ ] test/language/statements/class/async-method-static/params-trailing-comma-single.js
+  - [ ] test/language/statements/class/async-method-static/rest-param-strict-body.js
+  - [ ] test/language/statements/class/async-method-static/rest-params-trailing-comma-early-error.js
+  - [ ] test/language/statements/class/async-method-static/returns-async-arrow-returns-arguments-from-parent-function.js
+  - [ ] test/language/statements/class/async-method-static/returns-async-arrow-returns-newtarget.js
+  - [ ] test/language/statements/class/async-method-static/returns-async-arrow.js
+  - [ ] test/language/statements/class/async-method-static/returns-async-function-returns-arguments-from-own-function.js
+  - [ ] test/language/statements/class/async-method-static/returns-async-function-returns-newtarget.js
+  - [ ] test/language/statements/class/async-method-static/returns-async-function.js
   - [ ] test/language/statements/class/class-name-ident-await-escaped-module.js
   - [ ] test/language/statements/class/class-name-ident-await-escaped.js
   - [ ] test/language/statements/class/class-name-ident-await-module.js
@@ -4591,85 +4591,6 @@ Sub-category progress
   - [ ] test/language/statements/class/elements/arrow-body-private-indirect-eval-err-contains-newtarget.js
   - [ ] test/language/statements/class/elements/arrow-fnc-init-err-contains-arguments.js
   - [ ] test/language/statements/class/elements/arrow-fnc-init-err-contains-super.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/await-as-binding-identifier-escaped.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/await-as-binding-identifier.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/await-as-identifier-reference-escaped.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/await-as-identifier-reference.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/await-as-label-identifier-escaped.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/await-as-label-identifier.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-as-binding-identifier-escaped.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-as-binding-identifier.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-as-identifier-reference-escaped.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-as-identifier-reference.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-as-label-identifier-escaped.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-as-label-identifier.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-identifier-spread-strict.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-identifier-strict.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-promise-reject-next-catch.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-promise-reject-next-for-await-of-async-iterator.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-promise-reject-next-for-await-of-sync-iterator.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-promise-reject-next-yield-star-async-iterator.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-promise-reject-next-yield-star-sync-iterator.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-promise-reject-next.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-spread-arr-multiple.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-spread-arr-single.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-spread-obj.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-async-next.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-async-return.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-async-throw.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-expr-abrupt.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-async-get-abrupt.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-async-not-callable-boolean-throw.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-async-not-callable-number-throw.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-async-not-callable-object-throw.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-async-not-callable-string-throw.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-async-not-callable-symbol-throw.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-async-null-sync-get-abrupt.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-async-returns-abrupt.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-async-returns-boolean-throw.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-async-returns-null-throw.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-async-returns-number-throw.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-async-returns-string-throw.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-async-returns-symbol-throw.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-async-returns-undefined-throw.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-async-undefined-sync-get-abrupt.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-sync-get-abrupt.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-sync-not-callable-boolean-throw.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-sync-not-callable-number-throw.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-sync-not-callable-object-throw.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-sync-not-callable-string-throw.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-sync-not-callable-symbol-throw.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-sync-returns-abrupt.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-sync-returns-boolean-throw.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-sync-returns-null-throw.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-sync-returns-number-throw.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-sync-returns-string-throw.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-sync-returns-symbol-throw.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-sync-returns-undefined-throw.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-next-call-done-get-abrupt.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-next-call-returns-abrupt.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-next-call-value-get-abrupt.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-next-get-abrupt.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-next-non-object-ignores-then.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-next-not-callable-boolean-throw.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-next-not-callable-null-throw.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-next-not-callable-number-throw.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-next-not-callable-object-throw.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-next-not-callable-string-throw.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-next-not-callable-symbol-throw.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-next-not-callable-undefined-throw.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-next-then-get-abrupt.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-next-then-non-callable-boolean-fulfillpromise.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-next-then-non-callable-null-fulfillpromise.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-next-then-non-callable-number-fulfillpromise.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-next-then-non-callable-object-fulfillpromise.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-next-then-non-callable-string-fulfillpromise.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-next-then-non-callable-symbol-fulfillpromise.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-next-then-non-callable-undefined-fulfillpromise.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-next-then-returns-abrupt.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-sync-next.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-sync-return.js
-  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-sync-throw.js
   - [ ] test/language/statements/class/elements/async-gen-private-method/await-as-binding-identifier-escaped.js
   - [ ] test/language/statements/class/elements/async-gen-private-method/await-as-binding-identifier.js
   - [ ] test/language/statements/class/elements/async-gen-private-method/await-as-identifier-reference-escaped.js
@@ -4749,18 +4670,85 @@ Sub-category progress
   - [ ] test/language/statements/class/elements/async-gen-private-method/yield-star-sync-next.js
   - [ ] test/language/statements/class/elements/async-gen-private-method/yield-star-sync-return.js
   - [ ] test/language/statements/class/elements/async-gen-private-method/yield-star-sync-throw.js
-  - [ ] test/language/statements/class/elements/async-private-method-static/await-as-binding-identifier-escaped.js
-  - [ ] test/language/statements/class/elements/async-private-method-static/await-as-binding-identifier.js
-  - [ ] test/language/statements/class/elements/async-private-method-static/await-as-identifier-reference-escaped.js
-  - [ ] test/language/statements/class/elements/async-private-method-static/await-as-identifier-reference.js
-  - [ ] test/language/statements/class/elements/async-private-method-static/await-as-label-identifier-escaped.js
-  - [ ] test/language/statements/class/elements/async-private-method-static/await-as-label-identifier.js
-  - [ ] test/language/statements/class/elements/async-private-method-static/returns-async-arrow-returns-arguments-from-parent-function.js
-  - [ ] test/language/statements/class/elements/async-private-method-static/returns-async-arrow-returns-newtarget.js
-  - [ ] test/language/statements/class/elements/async-private-method-static/returns-async-arrow.js
-  - [ ] test/language/statements/class/elements/async-private-method-static/returns-async-function-returns-arguments-from-own-function.js
-  - [ ] test/language/statements/class/elements/async-private-method-static/returns-async-function-returns-newtarget.js
-  - [ ] test/language/statements/class/elements/async-private-method-static/returns-async-function.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/await-as-binding-identifier-escaped.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/await-as-binding-identifier.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/await-as-identifier-reference-escaped.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/await-as-identifier-reference.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/await-as-label-identifier-escaped.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/await-as-label-identifier.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-as-binding-identifier-escaped.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-as-binding-identifier.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-as-identifier-reference-escaped.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-as-identifier-reference.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-as-label-identifier-escaped.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-as-label-identifier.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-identifier-spread-strict.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-identifier-strict.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-promise-reject-next-catch.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-promise-reject-next-for-await-of-async-iterator.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-promise-reject-next-for-await-of-sync-iterator.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-promise-reject-next-yield-star-async-iterator.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-promise-reject-next-yield-star-sync-iterator.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-promise-reject-next.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-spread-arr-multiple.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-spread-arr-single.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-spread-obj.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-async-next.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-async-return.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-async-throw.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-expr-abrupt.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-async-get-abrupt.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-async-not-callable-boolean-throw.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-async-not-callable-number-throw.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-async-not-callable-object-throw.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-async-not-callable-string-throw.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-async-not-callable-symbol-throw.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-async-null-sync-get-abrupt.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-async-returns-abrupt.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-async-returns-boolean-throw.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-async-returns-null-throw.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-async-returns-number-throw.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-async-returns-string-throw.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-async-returns-symbol-throw.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-async-returns-undefined-throw.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-async-undefined-sync-get-abrupt.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-sync-get-abrupt.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-sync-not-callable-boolean-throw.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-sync-not-callable-number-throw.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-sync-not-callable-object-throw.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-sync-not-callable-string-throw.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-sync-not-callable-symbol-throw.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-sync-returns-abrupt.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-sync-returns-boolean-throw.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-sync-returns-null-throw.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-sync-returns-number-throw.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-sync-returns-string-throw.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-sync-returns-symbol-throw.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-getiter-sync-returns-undefined-throw.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-next-call-done-get-abrupt.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-next-call-returns-abrupt.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-next-call-value-get-abrupt.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-next-get-abrupt.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-next-non-object-ignores-then.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-next-not-callable-boolean-throw.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-next-not-callable-null-throw.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-next-not-callable-number-throw.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-next-not-callable-object-throw.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-next-not-callable-string-throw.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-next-not-callable-symbol-throw.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-next-not-callable-undefined-throw.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-next-then-get-abrupt.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-next-then-non-callable-boolean-fulfillpromise.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-next-then-non-callable-null-fulfillpromise.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-next-then-non-callable-number-fulfillpromise.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-next-then-non-callable-object-fulfillpromise.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-next-then-non-callable-string-fulfillpromise.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-next-then-non-callable-symbol-fulfillpromise.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-next-then-non-callable-undefined-fulfillpromise.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-next-then-returns-abrupt.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-sync-next.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-sync-return.js
+  - [ ] test/language/statements/class/elements/async-gen-private-method-static/yield-star-sync-throw.js
   - [ ] test/language/statements/class/elements/async-private-method/await-as-binding-identifier-escaped.js
   - [ ] test/language/statements/class/elements/async-private-method/await-as-binding-identifier.js
   - [ ] test/language/statements/class/elements/async-private-method/await-as-identifier-reference-escaped.js
@@ -4773,6 +4761,18 @@ Sub-category progress
   - [ ] test/language/statements/class/elements/async-private-method/returns-async-function-returns-arguments-from-own-function.js
   - [ ] test/language/statements/class/elements/async-private-method/returns-async-function-returns-newtarget.js
   - [ ] test/language/statements/class/elements/async-private-method/returns-async-function.js
+  - [ ] test/language/statements/class/elements/async-private-method-static/await-as-binding-identifier-escaped.js
+  - [ ] test/language/statements/class/elements/async-private-method-static/await-as-binding-identifier.js
+  - [ ] test/language/statements/class/elements/async-private-method-static/await-as-identifier-reference-escaped.js
+  - [ ] test/language/statements/class/elements/async-private-method-static/await-as-identifier-reference.js
+  - [ ] test/language/statements/class/elements/async-private-method-static/await-as-label-identifier-escaped.js
+  - [ ] test/language/statements/class/elements/async-private-method-static/await-as-label-identifier.js
+  - [ ] test/language/statements/class/elements/async-private-method-static/returns-async-arrow-returns-arguments-from-parent-function.js
+  - [ ] test/language/statements/class/elements/async-private-method-static/returns-async-arrow-returns-newtarget.js
+  - [ ] test/language/statements/class/elements/async-private-method-static/returns-async-arrow.js
+  - [ ] test/language/statements/class/elements/async-private-method-static/returns-async-function-returns-arguments-from-own-function.js
+  - [ ] test/language/statements/class/elements/async-private-method-static/returns-async-function-returns-newtarget.js
+  - [ ] test/language/statements/class/elements/async-private-method-static/returns-async-function.js
   - [ ] test/language/statements/class/elements/class-field-is-observable-by-proxy.js
   - [ ] test/language/statements/class/elements/class-field-on-frozen-objects.js
   - [ ] test/language/statements/class/elements/comp-name-init-err-contains-arguments.js
@@ -4825,17 +4825,6 @@ Sub-category progress
   - [ ] test/language/statements/class/elements/fields-string-name-propname-constructor.js
   - [ ] test/language/statements/class/elements/fields-string-name-static-propname-constructor.js
   - [ ] test/language/statements/class/elements/fields-string-name-static-propname-prototype.js
-  - [ ] test/language/statements/class/elements/gen-private-method-static/yield-as-binding-identifier-escaped.js
-  - [ ] test/language/statements/class/elements/gen-private-method-static/yield-as-binding-identifier.js
-  - [ ] test/language/statements/class/elements/gen-private-method-static/yield-as-identifier-reference-escaped.js
-  - [ ] test/language/statements/class/elements/gen-private-method-static/yield-as-identifier-reference.js
-  - [ ] test/language/statements/class/elements/gen-private-method-static/yield-as-label-identifier-escaped.js
-  - [ ] test/language/statements/class/elements/gen-private-method-static/yield-as-label-identifier.js
-  - [ ] test/language/statements/class/elements/gen-private-method-static/yield-identifier-spread-strict.js
-  - [ ] test/language/statements/class/elements/gen-private-method-static/yield-identifier-strict.js
-  - [ ] test/language/statements/class/elements/gen-private-method-static/yield-spread-arr-multiple.js
-  - [ ] test/language/statements/class/elements/gen-private-method-static/yield-spread-arr-single.js
-  - [ ] test/language/statements/class/elements/gen-private-method-static/yield-spread-obj.js
   - [ ] test/language/statements/class/elements/gen-private-method/yield-as-binding-identifier-escaped.js
   - [ ] test/language/statements/class/elements/gen-private-method/yield-as-binding-identifier.js
   - [ ] test/language/statements/class/elements/gen-private-method/yield-as-identifier-reference-escaped.js
@@ -4847,6 +4836,17 @@ Sub-category progress
   - [ ] test/language/statements/class/elements/gen-private-method/yield-spread-arr-multiple.js
   - [ ] test/language/statements/class/elements/gen-private-method/yield-spread-arr-single.js
   - [ ] test/language/statements/class/elements/gen-private-method/yield-spread-obj.js
+  - [ ] test/language/statements/class/elements/gen-private-method-static/yield-as-binding-identifier-escaped.js
+  - [ ] test/language/statements/class/elements/gen-private-method-static/yield-as-binding-identifier.js
+  - [ ] test/language/statements/class/elements/gen-private-method-static/yield-as-identifier-reference-escaped.js
+  - [ ] test/language/statements/class/elements/gen-private-method-static/yield-as-identifier-reference.js
+  - [ ] test/language/statements/class/elements/gen-private-method-static/yield-as-label-identifier-escaped.js
+  - [ ] test/language/statements/class/elements/gen-private-method-static/yield-as-label-identifier.js
+  - [ ] test/language/statements/class/elements/gen-private-method-static/yield-identifier-spread-strict.js
+  - [ ] test/language/statements/class/elements/gen-private-method-static/yield-identifier-strict.js
+  - [ ] test/language/statements/class/elements/gen-private-method-static/yield-spread-arr-multiple.js
+  - [ ] test/language/statements/class/elements/gen-private-method-static/yield-spread-arr-single.js
+  - [ ] test/language/statements/class/elements/gen-private-method-static/yield-spread-obj.js
   - [ ] test/language/statements/class/elements/get-access-of-missing-private-getter.js
   - [ ] test/language/statements/class/elements/get-access-of-missing-private-static-getter.js
   - [ ] test/language/statements/class/elements/get-access-of-missing-shadowed-private-getter.js
@@ -5856,6 +5856,37 @@ Sub-category progress
   - [ ] test/language/statements/class/elements/wrapped-in-sc-static-private-methods-with-fields.js
   - [ ] test/language/statements/class/elements/wrapped-in-sc-static-private-methods.js
   - [ ] test/language/statements/class/elements/wrapped-in-sc-string-literal-names.js
+  - [ ] test/language/statements/class/gen-method/array-destructuring-param-strict-body.js
+  - [ ] test/language/statements/class/gen-method/dflt-params-abrupt.js
+  - [ ] test/language/statements/class/gen-method/dflt-params-arg-val-not-undefined.js
+  - [ ] test/language/statements/class/gen-method/dflt-params-arg-val-undefined.js
+  - [ ] test/language/statements/class/gen-method/dflt-params-duplicates.js
+  - [ ] test/language/statements/class/gen-method/dflt-params-ref-later.js
+  - [ ] test/language/statements/class/gen-method/dflt-params-ref-prior.js
+  - [ ] test/language/statements/class/gen-method/dflt-params-ref-self.js
+  - [ ] test/language/statements/class/gen-method/dflt-params-rest.js
+  - [ ] test/language/statements/class/gen-method/dflt-params-trailing-comma.js
+  - [ ] test/language/statements/class/gen-method/forbidden-ext/b1/cls-decl-gen-meth-forbidden-ext-direct-access-prop-arguments.js
+  - [ ] test/language/statements/class/gen-method/forbidden-ext/b1/cls-decl-gen-meth-forbidden-ext-direct-access-prop-caller.js
+  - [ ] test/language/statements/class/gen-method/forbidden-ext/b2/cls-decl-gen-meth-forbidden-ext-indirect-access-own-prop-caller-get.js
+  - [ ] test/language/statements/class/gen-method/forbidden-ext/b2/cls-decl-gen-meth-forbidden-ext-indirect-access-own-prop-caller-value.js
+  - [ ] test/language/statements/class/gen-method/forbidden-ext/b2/cls-decl-gen-meth-forbidden-ext-indirect-access-prop-caller.js
+  - [ ] test/language/statements/class/gen-method/object-destructuring-param-strict-body.js
+  - [ ] test/language/statements/class/gen-method/params-trailing-comma-multiple.js
+  - [ ] test/language/statements/class/gen-method/params-trailing-comma-single.js
+  - [ ] test/language/statements/class/gen-method/rest-param-strict-body.js
+  - [ ] test/language/statements/class/gen-method/rest-params-trailing-comma-early-error.js
+  - [ ] test/language/statements/class/gen-method/yield-as-binding-identifier-escaped.js
+  - [ ] test/language/statements/class/gen-method/yield-as-binding-identifier.js
+  - [ ] test/language/statements/class/gen-method/yield-as-identifier-reference-escaped.js
+  - [ ] test/language/statements/class/gen-method/yield-as-identifier-reference.js
+  - [ ] test/language/statements/class/gen-method/yield-as-label-identifier-escaped.js
+  - [ ] test/language/statements/class/gen-method/yield-as-label-identifier.js
+  - [ ] test/language/statements/class/gen-method/yield-identifier-spread-strict.js
+  - [ ] test/language/statements/class/gen-method/yield-identifier-strict.js
+  - [ ] test/language/statements/class/gen-method/yield-spread-arr-multiple.js
+  - [ ] test/language/statements/class/gen-method/yield-spread-arr-single.js
+  - [ ] test/language/statements/class/gen-method/yield-spread-obj.js
   - [ ] test/language/statements/class/gen-method-length-dflt.js
   - [ ] test/language/statements/class/gen-method-param-dflt-yield.js
   - [ ] test/language/statements/class/gen-method-static/array-destructuring-param-strict-body.js
@@ -5889,37 +5920,6 @@ Sub-category progress
   - [ ] test/language/statements/class/gen-method-static/yield-spread-arr-multiple.js
   - [ ] test/language/statements/class/gen-method-static/yield-spread-arr-single.js
   - [ ] test/language/statements/class/gen-method-static/yield-spread-obj.js
-  - [ ] test/language/statements/class/gen-method/array-destructuring-param-strict-body.js
-  - [ ] test/language/statements/class/gen-method/dflt-params-abrupt.js
-  - [ ] test/language/statements/class/gen-method/dflt-params-arg-val-not-undefined.js
-  - [ ] test/language/statements/class/gen-method/dflt-params-arg-val-undefined.js
-  - [ ] test/language/statements/class/gen-method/dflt-params-duplicates.js
-  - [ ] test/language/statements/class/gen-method/dflt-params-ref-later.js
-  - [ ] test/language/statements/class/gen-method/dflt-params-ref-prior.js
-  - [ ] test/language/statements/class/gen-method/dflt-params-ref-self.js
-  - [ ] test/language/statements/class/gen-method/dflt-params-rest.js
-  - [ ] test/language/statements/class/gen-method/dflt-params-trailing-comma.js
-  - [ ] test/language/statements/class/gen-method/forbidden-ext/b1/cls-decl-gen-meth-forbidden-ext-direct-access-prop-arguments.js
-  - [ ] test/language/statements/class/gen-method/forbidden-ext/b1/cls-decl-gen-meth-forbidden-ext-direct-access-prop-caller.js
-  - [ ] test/language/statements/class/gen-method/forbidden-ext/b2/cls-decl-gen-meth-forbidden-ext-indirect-access-own-prop-caller-get.js
-  - [ ] test/language/statements/class/gen-method/forbidden-ext/b2/cls-decl-gen-meth-forbidden-ext-indirect-access-own-prop-caller-value.js
-  - [ ] test/language/statements/class/gen-method/forbidden-ext/b2/cls-decl-gen-meth-forbidden-ext-indirect-access-prop-caller.js
-  - [ ] test/language/statements/class/gen-method/object-destructuring-param-strict-body.js
-  - [ ] test/language/statements/class/gen-method/params-trailing-comma-multiple.js
-  - [ ] test/language/statements/class/gen-method/params-trailing-comma-single.js
-  - [ ] test/language/statements/class/gen-method/rest-param-strict-body.js
-  - [ ] test/language/statements/class/gen-method/rest-params-trailing-comma-early-error.js
-  - [ ] test/language/statements/class/gen-method/yield-as-binding-identifier-escaped.js
-  - [ ] test/language/statements/class/gen-method/yield-as-binding-identifier.js
-  - [ ] test/language/statements/class/gen-method/yield-as-identifier-reference-escaped.js
-  - [ ] test/language/statements/class/gen-method/yield-as-identifier-reference.js
-  - [ ] test/language/statements/class/gen-method/yield-as-label-identifier-escaped.js
-  - [ ] test/language/statements/class/gen-method/yield-as-label-identifier.js
-  - [ ] test/language/statements/class/gen-method/yield-identifier-spread-strict.js
-  - [ ] test/language/statements/class/gen-method/yield-identifier-strict.js
-  - [ ] test/language/statements/class/gen-method/yield-spread-arr-multiple.js
-  - [ ] test/language/statements/class/gen-method/yield-spread-arr-single.js
-  - [ ] test/language/statements/class/gen-method/yield-spread-obj.js
   - [ ] test/language/statements/class/getter-param-dflt.js
   - [ ] test/language/statements/class/ident-name-method-def-break-escaped.js
   - [ ] test/language/statements/class/ident-name-method-def-case-escaped.js
@@ -5966,6 +5966,26 @@ Sub-category progress
   - [ ] test/language/statements/class/ident-name-method-def-void-escaped.js
   - [ ] test/language/statements/class/ident-name-method-def-while-escaped.js
   - [ ] test/language/statements/class/ident-name-method-def-with-escaped.js
+  - [ ] test/language/statements/class/method/array-destructuring-param-strict-body.js
+  - [ ] test/language/statements/class/method/dflt-params-abrupt.js
+  - [ ] test/language/statements/class/method/dflt-params-arg-val-not-undefined.js
+  - [ ] test/language/statements/class/method/dflt-params-arg-val-undefined.js
+  - [ ] test/language/statements/class/method/dflt-params-duplicates.js
+  - [ ] test/language/statements/class/method/dflt-params-ref-later.js
+  - [ ] test/language/statements/class/method/dflt-params-ref-prior.js
+  - [ ] test/language/statements/class/method/dflt-params-ref-self.js
+  - [ ] test/language/statements/class/method/dflt-params-rest.js
+  - [ ] test/language/statements/class/method/dflt-params-trailing-comma.js
+  - [ ] test/language/statements/class/method/forbidden-ext/b1/cls-decl-meth-forbidden-ext-direct-access-prop-arguments.js
+  - [ ] test/language/statements/class/method/forbidden-ext/b1/cls-decl-meth-forbidden-ext-direct-access-prop-caller.js
+  - [ ] test/language/statements/class/method/forbidden-ext/b2/cls-decl-meth-forbidden-ext-indirect-access-own-prop-caller-get.js
+  - [ ] test/language/statements/class/method/forbidden-ext/b2/cls-decl-meth-forbidden-ext-indirect-access-own-prop-caller-value.js
+  - [ ] test/language/statements/class/method/forbidden-ext/b2/cls-decl-meth-forbidden-ext-indirect-access-prop-caller.js
+  - [ ] test/language/statements/class/method/object-destructuring-param-strict-body.js
+  - [ ] test/language/statements/class/method/params-trailing-comma-multiple.js
+  - [ ] test/language/statements/class/method/params-trailing-comma-single.js
+  - [ ] test/language/statements/class/method/rest-param-strict-body.js
+  - [ ] test/language/statements/class/method/rest-params-trailing-comma-early-error.js
   - [ ] test/language/statements/class/method-length-dflt.js
   - [ ] test/language/statements/class/method-param-yield.js
   - [ ] test/language/statements/class/method-static/array-destructuring-param-strict-body.js
@@ -5988,26 +6008,6 @@ Sub-category progress
   - [ ] test/language/statements/class/method-static/params-trailing-comma-single.js
   - [ ] test/language/statements/class/method-static/rest-param-strict-body.js
   - [ ] test/language/statements/class/method-static/rest-params-trailing-comma-early-error.js
-  - [ ] test/language/statements/class/method/array-destructuring-param-strict-body.js
-  - [ ] test/language/statements/class/method/dflt-params-abrupt.js
-  - [ ] test/language/statements/class/method/dflt-params-arg-val-not-undefined.js
-  - [ ] test/language/statements/class/method/dflt-params-arg-val-undefined.js
-  - [ ] test/language/statements/class/method/dflt-params-duplicates.js
-  - [ ] test/language/statements/class/method/dflt-params-ref-later.js
-  - [ ] test/language/statements/class/method/dflt-params-ref-prior.js
-  - [ ] test/language/statements/class/method/dflt-params-ref-self.js
-  - [ ] test/language/statements/class/method/dflt-params-rest.js
-  - [ ] test/language/statements/class/method/dflt-params-trailing-comma.js
-  - [ ] test/language/statements/class/method/forbidden-ext/b1/cls-decl-meth-forbidden-ext-direct-access-prop-arguments.js
-  - [ ] test/language/statements/class/method/forbidden-ext/b1/cls-decl-meth-forbidden-ext-direct-access-prop-caller.js
-  - [ ] test/language/statements/class/method/forbidden-ext/b2/cls-decl-meth-forbidden-ext-indirect-access-own-prop-caller-get.js
-  - [ ] test/language/statements/class/method/forbidden-ext/b2/cls-decl-meth-forbidden-ext-indirect-access-own-prop-caller-value.js
-  - [ ] test/language/statements/class/method/forbidden-ext/b2/cls-decl-meth-forbidden-ext-indirect-access-prop-caller.js
-  - [ ] test/language/statements/class/method/object-destructuring-param-strict-body.js
-  - [ ] test/language/statements/class/method/params-trailing-comma-multiple.js
-  - [ ] test/language/statements/class/method/params-trailing-comma-single.js
-  - [ ] test/language/statements/class/method/rest-param-strict-body.js
-  - [ ] test/language/statements/class/method/rest-params-trailing-comma-early-error.js
   - [ ] test/language/statements/class/name-binding/basic.js
   - [ ] test/language/statements/class/name-binding/const.js
   - [ ] test/language/statements/class/name-binding/expression.js
@@ -6080,42 +6080,6 @@ Sub-category progress
   - [ ] test/language/statements/class/static-method-param-yield.js
   - [ ] test/language/statements/class/strict-mode/arguments-callee.js
   - [ ] test/language/statements/class/strict-mode/with.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-AggregateError.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-Array.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-ArrayBuffer.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-BigInt64Array.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-BigUint64Array.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-Boolean.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-DataView.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-Date.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-Error.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-EvalError.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-Float32Array.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-Float64Array.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-Function.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-Int16Array.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-Int32Array.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-Int8Array.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-Map.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-Number.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-Object.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-Promise.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-RangeError.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-ReferenceError.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-RegExp.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-Set.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-SharedArrayBuffer.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-String.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-SyntaxError.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-TypeError.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-URIError.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-Uint16Array.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-Uint32Array.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-Uint8Array.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-Uint8ClampedArray.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-WeakMap.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-WeakRef.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-WeakSet.js
   - [ ] test/language/statements/class/subclass/binding.js
   - [ ] test/language/statements/class/subclass/builtin-objects/Array/contructor-calls-super-multiple-arguments.js
   - [ ] test/language/statements/class/subclass/builtin-objects/Array/contructor-calls-super-single-argument.js
@@ -6225,6 +6189,42 @@ Sub-category progress
   - [ ] test/language/statements/class/subclass/superclass-prototype-setter-constructor.js
   - [ ] test/language/statements/class/subclass/superclass-prototype-setter-method-override.js
   - [ ] test/language/statements/class/subclass/superclass-static-method-override.js
+  - [ ] test/language/statements/class/subclass-builtins/subclass-AggregateError.js
+  - [ ] test/language/statements/class/subclass-builtins/subclass-Array.js
+  - [ ] test/language/statements/class/subclass-builtins/subclass-ArrayBuffer.js
+  - [ ] test/language/statements/class/subclass-builtins/subclass-BigInt64Array.js
+  - [ ] test/language/statements/class/subclass-builtins/subclass-BigUint64Array.js
+  - [ ] test/language/statements/class/subclass-builtins/subclass-Boolean.js
+  - [ ] test/language/statements/class/subclass-builtins/subclass-DataView.js
+  - [ ] test/language/statements/class/subclass-builtins/subclass-Date.js
+  - [ ] test/language/statements/class/subclass-builtins/subclass-Error.js
+  - [ ] test/language/statements/class/subclass-builtins/subclass-EvalError.js
+  - [ ] test/language/statements/class/subclass-builtins/subclass-Float32Array.js
+  - [ ] test/language/statements/class/subclass-builtins/subclass-Float64Array.js
+  - [ ] test/language/statements/class/subclass-builtins/subclass-Function.js
+  - [ ] test/language/statements/class/subclass-builtins/subclass-Int16Array.js
+  - [ ] test/language/statements/class/subclass-builtins/subclass-Int32Array.js
+  - [ ] test/language/statements/class/subclass-builtins/subclass-Int8Array.js
+  - [ ] test/language/statements/class/subclass-builtins/subclass-Map.js
+  - [ ] test/language/statements/class/subclass-builtins/subclass-Number.js
+  - [ ] test/language/statements/class/subclass-builtins/subclass-Object.js
+  - [ ] test/language/statements/class/subclass-builtins/subclass-Promise.js
+  - [ ] test/language/statements/class/subclass-builtins/subclass-RangeError.js
+  - [ ] test/language/statements/class/subclass-builtins/subclass-ReferenceError.js
+  - [ ] test/language/statements/class/subclass-builtins/subclass-RegExp.js
+  - [ ] test/language/statements/class/subclass-builtins/subclass-Set.js
+  - [ ] test/language/statements/class/subclass-builtins/subclass-SharedArrayBuffer.js
+  - [ ] test/language/statements/class/subclass-builtins/subclass-String.js
+  - [ ] test/language/statements/class/subclass-builtins/subclass-SyntaxError.js
+  - [ ] test/language/statements/class/subclass-builtins/subclass-TypeError.js
+  - [ ] test/language/statements/class/subclass-builtins/subclass-URIError.js
+  - [ ] test/language/statements/class/subclass-builtins/subclass-Uint16Array.js
+  - [ ] test/language/statements/class/subclass-builtins/subclass-Uint32Array.js
+  - [ ] test/language/statements/class/subclass-builtins/subclass-Uint8Array.js
+  - [ ] test/language/statements/class/subclass-builtins/subclass-Uint8ClampedArray.js
+  - [ ] test/language/statements/class/subclass-builtins/subclass-WeakMap.js
+  - [ ] test/language/statements/class/subclass-builtins/subclass-WeakRef.js
+  - [ ] test/language/statements/class/subclass-builtins/subclass-WeakSet.js
   - [ ] test/language/statements/class/super/in-constructor-superproperty-evaluation.js
   - [ ] test/language/statements/class/super/in-constructor.js
   - [ ] test/language/statements/class/super/in-getter.js
@@ -6449,6 +6449,391 @@ Sub-category progress
   - [ ] test/language/statements/expression/S12.4_A1.js
   - [ ] test/language/statements/expression/S12.4_A2_T1.js
   - [ ] test/language/statements/expression/S12.4_A2_T2.js
+  - [ ] test/language/statements/for/12.6.3_2-3-a-ii-1.js
+  - [ ] test/language/statements/for/12.6.3_2-3-a-ii-10.js
+  - [ ] test/language/statements/for/12.6.3_2-3-a-ii-11.js
+  - [ ] test/language/statements/for/12.6.3_2-3-a-ii-12.js
+  - [ ] test/language/statements/for/12.6.3_2-3-a-ii-13.js
+  - [ ] test/language/statements/for/12.6.3_2-3-a-ii-14.js
+  - [ ] test/language/statements/for/12.6.3_2-3-a-ii-15.js
+  - [ ] test/language/statements/for/12.6.3_2-3-a-ii-16.js
+  - [ ] test/language/statements/for/12.6.3_2-3-a-ii-17.js
+  - [ ] test/language/statements/for/12.6.3_2-3-a-ii-18.js
+  - [ ] test/language/statements/for/12.6.3_2-3-a-ii-19.js
+  - [ ] test/language/statements/for/12.6.3_2-3-a-ii-2.js
+  - [ ] test/language/statements/for/12.6.3_2-3-a-ii-20.js
+  - [ ] test/language/statements/for/12.6.3_2-3-a-ii-21.js
+  - [ ] test/language/statements/for/12.6.3_2-3-a-ii-3.js
+  - [ ] test/language/statements/for/12.6.3_2-3-a-ii-4.js
+  - [ ] test/language/statements/for/12.6.3_2-3-a-ii-5.js
+  - [ ] test/language/statements/for/12.6.3_2-3-a-ii-6.js
+  - [ ] test/language/statements/for/12.6.3_2-3-a-ii-7.js
+  - [ ] test/language/statements/for/12.6.3_2-3-a-ii-8.js
+  - [ ] test/language/statements/for/12.6.3_2-3-a-ii-9.js
+  - [ ] test/language/statements/for/S12.6.3_A1.js
+  - [ ] test/language/statements/for/S12.6.3_A10.1_T1.js
+  - [ ] test/language/statements/for/S12.6.3_A10.1_T2.js
+  - [ ] test/language/statements/for/S12.6.3_A10_T1.js
+  - [ ] test/language/statements/for/S12.6.3_A10_T2.js
+  - [ ] test/language/statements/for/S12.6.3_A11.1_T1.js
+  - [ ] test/language/statements/for/S12.6.3_A11.1_T2.js
+  - [ ] test/language/statements/for/S12.6.3_A11.1_T3.js
+  - [ ] test/language/statements/for/S12.6.3_A11_T1.js
+  - [ ] test/language/statements/for/S12.6.3_A11_T2.js
+  - [ ] test/language/statements/for/S12.6.3_A11_T3.js
+  - [ ] test/language/statements/for/S12.6.3_A12.1_T1.js
+  - [ ] test/language/statements/for/S12.6.3_A12.1_T2.js
+  - [ ] test/language/statements/for/S12.6.3_A12.1_T3.js
+  - [ ] test/language/statements/for/S12.6.3_A12_T1.js
+  - [ ] test/language/statements/for/S12.6.3_A12_T2.js
+  - [ ] test/language/statements/for/S12.6.3_A12_T3.js
+  - [ ] test/language/statements/for/S12.6.3_A13.js
+  - [ ] test/language/statements/for/S12.6.3_A14.js
+  - [ ] test/language/statements/for/S12.6.3_A15.js
+  - [ ] test/language/statements/for/S12.6.3_A2.1.js
+  - [ ] test/language/statements/for/S12.6.3_A2.2.js
+  - [ ] test/language/statements/for/S12.6.3_A2.js
+  - [ ] test/language/statements/for/S12.6.3_A3.js
+  - [ ] test/language/statements/for/S12.6.3_A4.1.js
+  - [ ] test/language/statements/for/S12.6.3_A4_T1.js
+  - [ ] test/language/statements/for/S12.6.3_A4_T2.js
+  - [ ] test/language/statements/for/S12.6.3_A5.js
+  - [ ] test/language/statements/for/S12.6.3_A6.js
+  - [ ] test/language/statements/for/S12.6.3_A7.1_T1.js
+  - [ ] test/language/statements/for/S12.6.3_A7.1_T2.js
+  - [ ] test/language/statements/for/S12.6.3_A7_T1.js
+  - [ ] test/language/statements/for/S12.6.3_A7_T2.js
+  - [ ] test/language/statements/for/S12.6.3_A8.1_T1.js
+  - [ ] test/language/statements/for/S12.6.3_A8.1_T2.js
+  - [ ] test/language/statements/for/S12.6.3_A8.1_T3.js
+  - [ ] test/language/statements/for/S12.6.3_A8_T1.js
+  - [ ] test/language/statements/for/S12.6.3_A8_T2.js
+  - [ ] test/language/statements/for/S12.6.3_A8_T3.js
+  - [ ] test/language/statements/for/cptn-decl-expr-iter.js
+  - [ ] test/language/statements/for/cptn-decl-expr-no-iter.js
+  - [ ] test/language/statements/for/cptn-expr-expr-iter.js
+  - [ ] test/language/statements/for/cptn-expr-expr-no-iter.js
+  - [ ] test/language/statements/for/decl-async-fun.js
+  - [ ] test/language/statements/for/decl-async-gen.js
+  - [ ] test/language/statements/for/decl-cls.js
+  - [ ] test/language/statements/for/decl-const.js
+  - [ ] test/language/statements/for/decl-fun.js
+  - [ ] test/language/statements/for/decl-gen.js
+  - [ ] test/language/statements/for/decl-let.js
+  - [ ] test/language/statements/for/dstr/const-ary-init-iter-close.js
+  - [ ] test/language/statements/for/dstr/const-ary-init-iter-get-err-array-prototype.js
+  - [ ] test/language/statements/for/dstr/const-ary-init-iter-get-err.js
+  - [ ] test/language/statements/for/dstr/const-ary-init-iter-no-close.js
+  - [ ] test/language/statements/for/dstr/const-ary-name-iter-val.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-ary-elem-init.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-ary-elem-iter.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-ary-elision-init.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-ary-elision-iter.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-ary-empty-init.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-ary-empty-iter.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-ary-rest-init.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-ary-rest-iter.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-ary-val-null.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-id-init-exhausted.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-id-init-fn-name-arrow.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-id-init-fn-name-class.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-id-init-fn-name-cover.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-id-init-fn-name-fn.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-id-init-fn-name-gen.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-id-init-hole.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-id-init-skipped.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-id-init-throws.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-id-init-undef.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-id-init-unresolvable.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-id-iter-complete.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-id-iter-done.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-id-iter-step-err.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-id-iter-val-array-prototype.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-id-iter-val-err.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-id-iter-val.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-obj-id-init.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-obj-id.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-obj-prop-id-init.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-obj-prop-id.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-obj-val-null.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-obj-val-undef.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elision-exhausted.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elision-iter-close.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elision-step-err.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elision.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-empty.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-rest-ary-elem.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-rest-ary-elision.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-rest-ary-empty.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-rest-ary-rest.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-rest-id-direct.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-rest-id-elision-next-err.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-rest-id-elision.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-rest-id-exhausted.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-rest-id-iter-close.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-rest-id-iter-step-err.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-rest-id-iter-val-err.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-rest-id.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-rest-init-ary.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-rest-init-id.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-rest-init-obj.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-rest-not-final-ary.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-rest-not-final-id.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-rest-not-final-obj.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-rest-obj-id.js
+  - [ ] test/language/statements/for/dstr/const-ary-ptrn-rest-obj-prop-id.js
+  - [ ] test/language/statements/for/dstr/const-obj-init-null.js
+  - [ ] test/language/statements/for/dstr/const-obj-init-undefined.js
+  - [ ] test/language/statements/for/dstr/const-obj-ptrn-empty.js
+  - [ ] test/language/statements/for/dstr/const-obj-ptrn-id-get-value-err.js
+  - [ ] test/language/statements/for/dstr/const-obj-ptrn-id-init-fn-name-arrow.js
+  - [ ] test/language/statements/for/dstr/const-obj-ptrn-id-init-fn-name-class.js
+  - [ ] test/language/statements/for/dstr/const-obj-ptrn-id-init-fn-name-cover.js
+  - [ ] test/language/statements/for/dstr/const-obj-ptrn-id-init-fn-name-fn.js
+  - [ ] test/language/statements/for/dstr/const-obj-ptrn-id-init-fn-name-gen.js
+  - [ ] test/language/statements/for/dstr/const-obj-ptrn-id-init-skipped.js
+  - [ ] test/language/statements/for/dstr/const-obj-ptrn-id-init-throws.js
+  - [ ] test/language/statements/for/dstr/const-obj-ptrn-id-init-unresolvable.js
+  - [ ] test/language/statements/for/dstr/const-obj-ptrn-id-trailing-comma.js
+  - [ ] test/language/statements/for/dstr/const-obj-ptrn-list-err.js
+  - [ ] test/language/statements/for/dstr/const-obj-ptrn-prop-ary-init.js
+  - [ ] test/language/statements/for/dstr/const-obj-ptrn-prop-ary-trailing-comma.js
+  - [ ] test/language/statements/for/dstr/const-obj-ptrn-prop-ary-value-null.js
+  - [ ] test/language/statements/for/dstr/const-obj-ptrn-prop-ary.js
+  - [ ] test/language/statements/for/dstr/const-obj-ptrn-prop-eval-err.js
+  - [ ] test/language/statements/for/dstr/const-obj-ptrn-prop-id-get-value-err.js
+  - [ ] test/language/statements/for/dstr/const-obj-ptrn-prop-id-init-skipped.js
+  - [ ] test/language/statements/for/dstr/const-obj-ptrn-prop-id-init-throws.js
+  - [ ] test/language/statements/for/dstr/const-obj-ptrn-prop-id-init-unresolvable.js
+  - [ ] test/language/statements/for/dstr/const-obj-ptrn-prop-id-init.js
+  - [ ] test/language/statements/for/dstr/const-obj-ptrn-prop-id-trailing-comma.js
+  - [ ] test/language/statements/for/dstr/const-obj-ptrn-prop-id.js
+  - [ ] test/language/statements/for/dstr/const-obj-ptrn-prop-obj-init.js
+  - [ ] test/language/statements/for/dstr/const-obj-ptrn-prop-obj-value-null.js
+  - [ ] test/language/statements/for/dstr/const-obj-ptrn-prop-obj-value-undef.js
+  - [ ] test/language/statements/for/dstr/const-obj-ptrn-prop-obj.js
+  - [ ] test/language/statements/for/dstr/const-obj-ptrn-rest-getter.js
+  - [ ] test/language/statements/for/dstr/const-obj-ptrn-rest-skip-non-enumerable.js
+  - [ ] test/language/statements/for/dstr/const-obj-ptrn-rest-val-obj.js
+  - [ ] test/language/statements/for/dstr/let-ary-init-iter-close.js
+  - [ ] test/language/statements/for/dstr/let-ary-init-iter-get-err-array-prototype.js
+  - [ ] test/language/statements/for/dstr/let-ary-init-iter-get-err.js
+  - [ ] test/language/statements/for/dstr/let-ary-init-iter-no-close.js
+  - [ ] test/language/statements/for/dstr/let-ary-name-iter-val.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-ary-elem-init.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-ary-elem-iter.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-ary-elision-init.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-ary-elision-iter.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-ary-empty-init.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-ary-empty-iter.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-ary-rest-init.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-ary-rest-iter.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-ary-val-null.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-id-init-exhausted.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-id-init-fn-name-arrow.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-id-init-fn-name-class.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-id-init-fn-name-cover.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-id-init-fn-name-fn.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-id-init-fn-name-gen.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-id-init-hole.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-id-init-skipped.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-id-init-throws.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-id-init-undef.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-id-init-unresolvable.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-id-iter-complete.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-id-iter-done.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-id-iter-step-err.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-id-iter-val-array-prototype.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-id-iter-val-err.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-id-iter-val.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-obj-id-init.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-obj-id.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-obj-prop-id-init.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-obj-prop-id.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-obj-val-null.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-obj-val-undef.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elision-exhausted.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elision-iter-close.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elision-step-err.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elision.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-empty.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-rest-ary-elem.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-rest-ary-elision.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-rest-ary-empty.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-rest-ary-rest.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-rest-id-direct.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-rest-id-elision-next-err.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-rest-id-elision.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-rest-id-exhausted.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-rest-id-iter-close.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-rest-id-iter-step-err.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-rest-id-iter-val-err.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-rest-id.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-rest-init-ary.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-rest-init-id.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-rest-init-obj.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-rest-not-final-ary.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-rest-not-final-id.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-rest-not-final-obj.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-rest-obj-id.js
+  - [ ] test/language/statements/for/dstr/let-ary-ptrn-rest-obj-prop-id.js
+  - [ ] test/language/statements/for/dstr/let-obj-init-null.js
+  - [ ] test/language/statements/for/dstr/let-obj-init-undefined.js
+  - [ ] test/language/statements/for/dstr/let-obj-ptrn-empty.js
+  - [ ] test/language/statements/for/dstr/let-obj-ptrn-id-get-value-err.js
+  - [ ] test/language/statements/for/dstr/let-obj-ptrn-id-init-fn-name-arrow.js
+  - [ ] test/language/statements/for/dstr/let-obj-ptrn-id-init-fn-name-class.js
+  - [ ] test/language/statements/for/dstr/let-obj-ptrn-id-init-fn-name-cover.js
+  - [ ] test/language/statements/for/dstr/let-obj-ptrn-id-init-fn-name-fn.js
+  - [ ] test/language/statements/for/dstr/let-obj-ptrn-id-init-fn-name-gen.js
+  - [ ] test/language/statements/for/dstr/let-obj-ptrn-id-init-skipped.js
+  - [ ] test/language/statements/for/dstr/let-obj-ptrn-id-init-throws.js
+  - [ ] test/language/statements/for/dstr/let-obj-ptrn-id-init-unresolvable.js
+  - [ ] test/language/statements/for/dstr/let-obj-ptrn-id-trailing-comma.js
+  - [ ] test/language/statements/for/dstr/let-obj-ptrn-list-err.js
+  - [ ] test/language/statements/for/dstr/let-obj-ptrn-prop-ary-init.js
+  - [ ] test/language/statements/for/dstr/let-obj-ptrn-prop-ary-trailing-comma.js
+  - [ ] test/language/statements/for/dstr/let-obj-ptrn-prop-ary-value-null.js
+  - [ ] test/language/statements/for/dstr/let-obj-ptrn-prop-ary.js
+  - [ ] test/language/statements/for/dstr/let-obj-ptrn-prop-eval-err.js
+  - [ ] test/language/statements/for/dstr/let-obj-ptrn-prop-id-get-value-err.js
+  - [ ] test/language/statements/for/dstr/let-obj-ptrn-prop-id-init-skipped.js
+  - [ ] test/language/statements/for/dstr/let-obj-ptrn-prop-id-init-throws.js
+  - [ ] test/language/statements/for/dstr/let-obj-ptrn-prop-id-init-unresolvable.js
+  - [ ] test/language/statements/for/dstr/let-obj-ptrn-prop-id-init.js
+  - [ ] test/language/statements/for/dstr/let-obj-ptrn-prop-id-trailing-comma.js
+  - [ ] test/language/statements/for/dstr/let-obj-ptrn-prop-id.js
+  - [ ] test/language/statements/for/dstr/let-obj-ptrn-prop-obj-init.js
+  - [ ] test/language/statements/for/dstr/let-obj-ptrn-prop-obj-value-null.js
+  - [ ] test/language/statements/for/dstr/let-obj-ptrn-prop-obj-value-undef.js
+  - [ ] test/language/statements/for/dstr/let-obj-ptrn-prop-obj.js
+  - [ ] test/language/statements/for/dstr/let-obj-ptrn-rest-getter.js
+  - [ ] test/language/statements/for/dstr/let-obj-ptrn-rest-skip-non-enumerable.js
+  - [ ] test/language/statements/for/dstr/let-obj-ptrn-rest-val-obj.js
+  - [ ] test/language/statements/for/dstr/var-ary-init-iter-close.js
+  - [ ] test/language/statements/for/dstr/var-ary-init-iter-get-err-array-prototype.js
+  - [ ] test/language/statements/for/dstr/var-ary-init-iter-get-err.js
+  - [ ] test/language/statements/for/dstr/var-ary-init-iter-no-close.js
+  - [ ] test/language/statements/for/dstr/var-ary-name-iter-val.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-ary-elem-init.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-ary-elem-iter.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-ary-elision-init.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-ary-elision-iter.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-ary-empty-init.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-ary-empty-iter.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-ary-rest-init.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-ary-rest-iter.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-ary-val-null.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-id-init-exhausted.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-id-init-fn-name-arrow.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-id-init-fn-name-class.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-id-init-fn-name-cover.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-id-init-fn-name-fn.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-id-init-fn-name-gen.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-id-init-hole.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-id-init-skipped.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-id-init-throws.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-id-init-undef.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-id-init-unresolvable.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-id-iter-complete.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-id-iter-done.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-id-iter-step-err.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-id-iter-val-array-prototype.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-id-iter-val-err.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-id-iter-val.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-obj-id-init.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-obj-id.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-obj-prop-id-init.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-obj-prop-id.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-obj-val-null.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-obj-val-undef.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elision-exhausted.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elision-iter-close.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elision-step-err.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elision.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-empty.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-rest-ary-elem.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-rest-ary-elision.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-rest-ary-empty.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-rest-ary-rest.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-rest-id-direct.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-rest-id-elision-next-err.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-rest-id-elision.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-rest-id-exhausted.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-rest-id-iter-close.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-rest-id-iter-step-err.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-rest-id-iter-val-err.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-rest-id.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-rest-init-ary.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-rest-init-id.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-rest-init-obj.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-rest-not-final-ary.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-rest-not-final-id.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-rest-not-final-obj.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-rest-obj-id.js
+  - [ ] test/language/statements/for/dstr/var-ary-ptrn-rest-obj-prop-id.js
+  - [ ] test/language/statements/for/dstr/var-obj-init-null.js
+  - [ ] test/language/statements/for/dstr/var-obj-init-undefined.js
+  - [ ] test/language/statements/for/dstr/var-obj-ptrn-empty.js
+  - [ ] test/language/statements/for/dstr/var-obj-ptrn-id-get-value-err.js
+  - [ ] test/language/statements/for/dstr/var-obj-ptrn-id-init-fn-name-arrow.js
+  - [ ] test/language/statements/for/dstr/var-obj-ptrn-id-init-fn-name-class.js
+  - [ ] test/language/statements/for/dstr/var-obj-ptrn-id-init-fn-name-cover.js
+  - [ ] test/language/statements/for/dstr/var-obj-ptrn-id-init-fn-name-fn.js
+  - [ ] test/language/statements/for/dstr/var-obj-ptrn-id-init-fn-name-gen.js
+  - [ ] test/language/statements/for/dstr/var-obj-ptrn-id-init-skipped.js
+  - [ ] test/language/statements/for/dstr/var-obj-ptrn-id-init-throws.js
+  - [ ] test/language/statements/for/dstr/var-obj-ptrn-id-init-unresolvable.js
+  - [ ] test/language/statements/for/dstr/var-obj-ptrn-id-trailing-comma.js
+  - [ ] test/language/statements/for/dstr/var-obj-ptrn-list-err.js
+  - [ ] test/language/statements/for/dstr/var-obj-ptrn-prop-ary-init.js
+  - [ ] test/language/statements/for/dstr/var-obj-ptrn-prop-ary-trailing-comma.js
+  - [ ] test/language/statements/for/dstr/var-obj-ptrn-prop-ary-value-null.js
+  - [ ] test/language/statements/for/dstr/var-obj-ptrn-prop-ary.js
+  - [ ] test/language/statements/for/dstr/var-obj-ptrn-prop-eval-err.js
+  - [ ] test/language/statements/for/dstr/var-obj-ptrn-prop-id-get-value-err.js
+  - [ ] test/language/statements/for/dstr/var-obj-ptrn-prop-id-init-skipped.js
+  - [ ] test/language/statements/for/dstr/var-obj-ptrn-prop-id-init-throws.js
+  - [ ] test/language/statements/for/dstr/var-obj-ptrn-prop-id-init-unresolvable.js
+  - [ ] test/language/statements/for/dstr/var-obj-ptrn-prop-id-init.js
+  - [ ] test/language/statements/for/dstr/var-obj-ptrn-prop-id-trailing-comma.js
+  - [ ] test/language/statements/for/dstr/var-obj-ptrn-prop-id.js
+  - [ ] test/language/statements/for/dstr/var-obj-ptrn-prop-obj-init.js
+  - [ ] test/language/statements/for/dstr/var-obj-ptrn-prop-obj-value-null.js
+  - [ ] test/language/statements/for/dstr/var-obj-ptrn-prop-obj-value-undef.js
+  - [ ] test/language/statements/for/dstr/var-obj-ptrn-prop-obj.js
+  - [ ] test/language/statements/for/dstr/var-obj-ptrn-rest-getter.js
+  - [ ] test/language/statements/for/dstr/var-obj-ptrn-rest-skip-non-enumerable.js
+  - [ ] test/language/statements/for/dstr/var-obj-ptrn-rest-val-obj.js
+  - [ ] test/language/statements/for/head-const-bound-names-in-stmt.js
+  - [ ] test/language/statements/for/head-const-fresh-binding-per-iteration.js
+  - [ ] test/language/statements/for/head-init-async-of.js
+  - [ ] test/language/statements/for/head-init-expr-check-empty-inc-empty-completion.js
+  - [ ] test/language/statements/for/head-init-expr-check-empty-inc-empty-syntax.js
+  - [ ] test/language/statements/for/head-init-var-check-empty-inc-empty-completion.js
+  - [ ] test/language/statements/for/head-init-var-check-empty-inc-empty-syntax.js
+  - [ ] test/language/statements/for/head-let-bound-names-in-stmt.js
+  - [ ] test/language/statements/for/head-let-destructuring.js
+  - [ ] test/language/statements/for/head-let-fresh-binding-per-iteration.js
+  - [ ] test/language/statements/for/head-lhs-let.js
+  - [ ] test/language/statements/for/head-var-bound-names-in-stmt.js
+  - [ ] test/language/statements/for/labelled-fn-stmt-const.js
+  - [ ] test/language/statements/for/labelled-fn-stmt-expr.js
+  - [ ] test/language/statements/for/labelled-fn-stmt-let.js
+  - [ ] test/language/statements/for/labelled-fn-stmt-var.js
+  - [ ] test/language/statements/for/let-array-with-newline.js
+  - [ ] test/language/statements/for/let-block-with-newline.js
+  - [ ] test/language/statements/for/let-identifier-with-newline.js
+  - [ ] test/language/statements/for/scope-body-lex-boundary.js
+  - [ ] test/language/statements/for/scope-body-lex-open.js
+  - [ ] test/language/statements/for/scope-body-var-none.js
+  - [ ] test/language/statements/for/scope-head-lex-close.js
+  - [ ] test/language/statements/for/scope-head-lex-open.js
+  - [ ] test/language/statements/for/scope-head-var-none.js
+  - [ ] test/language/statements/for/tco-const-body.js
+  - [ ] test/language/statements/for/tco-let-body.js
+  - [ ] test/language/statements/for/tco-lhs-body.js
+  - [ ] test/language/statements/for/tco-var-body.js
   - [ ] test/language/statements/for-await-of/async-from-sync-iterator-continuation-abrupt-completion-get-constructor.js
   - [ ] test/language/statements/for-await-of/async-func-decl-dstr-array-elem-init-assignment.js
   - [ ] test/language/statements/for-await-of/async-func-decl-dstr-array-elem-init-evaluation.js
@@ -8549,391 +8934,6 @@ Sub-category progress
   - [ ] test/language/statements/for-of/yield-star-from-try.js
   - [ ] test/language/statements/for-of/yield-star.js
   - [ ] test/language/statements/for-of/yield.js
-  - [ ] test/language/statements/for/12.6.3_2-3-a-ii-1.js
-  - [ ] test/language/statements/for/12.6.3_2-3-a-ii-10.js
-  - [ ] test/language/statements/for/12.6.3_2-3-a-ii-11.js
-  - [ ] test/language/statements/for/12.6.3_2-3-a-ii-12.js
-  - [ ] test/language/statements/for/12.6.3_2-3-a-ii-13.js
-  - [ ] test/language/statements/for/12.6.3_2-3-a-ii-14.js
-  - [ ] test/language/statements/for/12.6.3_2-3-a-ii-15.js
-  - [ ] test/language/statements/for/12.6.3_2-3-a-ii-16.js
-  - [ ] test/language/statements/for/12.6.3_2-3-a-ii-17.js
-  - [ ] test/language/statements/for/12.6.3_2-3-a-ii-18.js
-  - [ ] test/language/statements/for/12.6.3_2-3-a-ii-19.js
-  - [ ] test/language/statements/for/12.6.3_2-3-a-ii-2.js
-  - [ ] test/language/statements/for/12.6.3_2-3-a-ii-20.js
-  - [ ] test/language/statements/for/12.6.3_2-3-a-ii-21.js
-  - [ ] test/language/statements/for/12.6.3_2-3-a-ii-3.js
-  - [ ] test/language/statements/for/12.6.3_2-3-a-ii-4.js
-  - [ ] test/language/statements/for/12.6.3_2-3-a-ii-5.js
-  - [ ] test/language/statements/for/12.6.3_2-3-a-ii-6.js
-  - [ ] test/language/statements/for/12.6.3_2-3-a-ii-7.js
-  - [ ] test/language/statements/for/12.6.3_2-3-a-ii-8.js
-  - [ ] test/language/statements/for/12.6.3_2-3-a-ii-9.js
-  - [ ] test/language/statements/for/S12.6.3_A1.js
-  - [ ] test/language/statements/for/S12.6.3_A10.1_T1.js
-  - [ ] test/language/statements/for/S12.6.3_A10.1_T2.js
-  - [ ] test/language/statements/for/S12.6.3_A10_T1.js
-  - [ ] test/language/statements/for/S12.6.3_A10_T2.js
-  - [ ] test/language/statements/for/S12.6.3_A11.1_T1.js
-  - [ ] test/language/statements/for/S12.6.3_A11.1_T2.js
-  - [ ] test/language/statements/for/S12.6.3_A11.1_T3.js
-  - [ ] test/language/statements/for/S12.6.3_A11_T1.js
-  - [ ] test/language/statements/for/S12.6.3_A11_T2.js
-  - [ ] test/language/statements/for/S12.6.3_A11_T3.js
-  - [ ] test/language/statements/for/S12.6.3_A12.1_T1.js
-  - [ ] test/language/statements/for/S12.6.3_A12.1_T2.js
-  - [ ] test/language/statements/for/S12.6.3_A12.1_T3.js
-  - [ ] test/language/statements/for/S12.6.3_A12_T1.js
-  - [ ] test/language/statements/for/S12.6.3_A12_T2.js
-  - [ ] test/language/statements/for/S12.6.3_A12_T3.js
-  - [ ] test/language/statements/for/S12.6.3_A13.js
-  - [ ] test/language/statements/for/S12.6.3_A14.js
-  - [ ] test/language/statements/for/S12.6.3_A15.js
-  - [ ] test/language/statements/for/S12.6.3_A2.1.js
-  - [ ] test/language/statements/for/S12.6.3_A2.2.js
-  - [ ] test/language/statements/for/S12.6.3_A2.js
-  - [ ] test/language/statements/for/S12.6.3_A3.js
-  - [ ] test/language/statements/for/S12.6.3_A4.1.js
-  - [ ] test/language/statements/for/S12.6.3_A4_T1.js
-  - [ ] test/language/statements/for/S12.6.3_A4_T2.js
-  - [ ] test/language/statements/for/S12.6.3_A5.js
-  - [ ] test/language/statements/for/S12.6.3_A6.js
-  - [ ] test/language/statements/for/S12.6.3_A7.1_T1.js
-  - [ ] test/language/statements/for/S12.6.3_A7.1_T2.js
-  - [ ] test/language/statements/for/S12.6.3_A7_T1.js
-  - [ ] test/language/statements/for/S12.6.3_A7_T2.js
-  - [ ] test/language/statements/for/S12.6.3_A8.1_T1.js
-  - [ ] test/language/statements/for/S12.6.3_A8.1_T2.js
-  - [ ] test/language/statements/for/S12.6.3_A8.1_T3.js
-  - [ ] test/language/statements/for/S12.6.3_A8_T1.js
-  - [ ] test/language/statements/for/S12.6.3_A8_T2.js
-  - [ ] test/language/statements/for/S12.6.3_A8_T3.js
-  - [ ] test/language/statements/for/cptn-decl-expr-iter.js
-  - [ ] test/language/statements/for/cptn-decl-expr-no-iter.js
-  - [ ] test/language/statements/for/cptn-expr-expr-iter.js
-  - [ ] test/language/statements/for/cptn-expr-expr-no-iter.js
-  - [ ] test/language/statements/for/decl-async-fun.js
-  - [ ] test/language/statements/for/decl-async-gen.js
-  - [ ] test/language/statements/for/decl-cls.js
-  - [ ] test/language/statements/for/decl-const.js
-  - [ ] test/language/statements/for/decl-fun.js
-  - [ ] test/language/statements/for/decl-gen.js
-  - [ ] test/language/statements/for/decl-let.js
-  - [ ] test/language/statements/for/dstr/const-ary-init-iter-close.js
-  - [ ] test/language/statements/for/dstr/const-ary-init-iter-get-err-array-prototype.js
-  - [ ] test/language/statements/for/dstr/const-ary-init-iter-get-err.js
-  - [ ] test/language/statements/for/dstr/const-ary-init-iter-no-close.js
-  - [ ] test/language/statements/for/dstr/const-ary-name-iter-val.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-ary-elem-init.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-ary-elem-iter.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-ary-elision-init.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-ary-elision-iter.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-ary-empty-init.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-ary-empty-iter.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-ary-rest-init.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-ary-rest-iter.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-ary-val-null.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-id-init-exhausted.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-id-init-fn-name-arrow.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-id-init-fn-name-class.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-id-init-fn-name-cover.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-id-init-fn-name-fn.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-id-init-fn-name-gen.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-id-init-hole.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-id-init-skipped.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-id-init-throws.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-id-init-undef.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-id-init-unresolvable.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-id-iter-complete.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-id-iter-done.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-id-iter-step-err.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-id-iter-val-array-prototype.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-id-iter-val-err.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-id-iter-val.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-obj-id-init.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-obj-id.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-obj-prop-id-init.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-obj-prop-id.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-obj-val-null.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-obj-val-undef.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elision-exhausted.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elision-iter-close.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elision-step-err.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elision.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-empty.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-rest-ary-elem.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-rest-ary-elision.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-rest-ary-empty.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-rest-ary-rest.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-rest-id-direct.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-rest-id-elision-next-err.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-rest-id-elision.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-rest-id-exhausted.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-rest-id-iter-close.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-rest-id-iter-step-err.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-rest-id-iter-val-err.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-rest-id.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-rest-init-ary.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-rest-init-id.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-rest-init-obj.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-rest-not-final-ary.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-rest-not-final-id.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-rest-not-final-obj.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-rest-obj-id.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-rest-obj-prop-id.js
-  - [ ] test/language/statements/for/dstr/const-obj-init-null.js
-  - [ ] test/language/statements/for/dstr/const-obj-init-undefined.js
-  - [ ] test/language/statements/for/dstr/const-obj-ptrn-empty.js
-  - [ ] test/language/statements/for/dstr/const-obj-ptrn-id-get-value-err.js
-  - [ ] test/language/statements/for/dstr/const-obj-ptrn-id-init-fn-name-arrow.js
-  - [ ] test/language/statements/for/dstr/const-obj-ptrn-id-init-fn-name-class.js
-  - [ ] test/language/statements/for/dstr/const-obj-ptrn-id-init-fn-name-cover.js
-  - [ ] test/language/statements/for/dstr/const-obj-ptrn-id-init-fn-name-fn.js
-  - [ ] test/language/statements/for/dstr/const-obj-ptrn-id-init-fn-name-gen.js
-  - [ ] test/language/statements/for/dstr/const-obj-ptrn-id-init-skipped.js
-  - [ ] test/language/statements/for/dstr/const-obj-ptrn-id-init-throws.js
-  - [ ] test/language/statements/for/dstr/const-obj-ptrn-id-init-unresolvable.js
-  - [ ] test/language/statements/for/dstr/const-obj-ptrn-id-trailing-comma.js
-  - [ ] test/language/statements/for/dstr/const-obj-ptrn-list-err.js
-  - [ ] test/language/statements/for/dstr/const-obj-ptrn-prop-ary-init.js
-  - [ ] test/language/statements/for/dstr/const-obj-ptrn-prop-ary-trailing-comma.js
-  - [ ] test/language/statements/for/dstr/const-obj-ptrn-prop-ary-value-null.js
-  - [ ] test/language/statements/for/dstr/const-obj-ptrn-prop-ary.js
-  - [ ] test/language/statements/for/dstr/const-obj-ptrn-prop-eval-err.js
-  - [ ] test/language/statements/for/dstr/const-obj-ptrn-prop-id-get-value-err.js
-  - [ ] test/language/statements/for/dstr/const-obj-ptrn-prop-id-init-skipped.js
-  - [ ] test/language/statements/for/dstr/const-obj-ptrn-prop-id-init-throws.js
-  - [ ] test/language/statements/for/dstr/const-obj-ptrn-prop-id-init-unresolvable.js
-  - [ ] test/language/statements/for/dstr/const-obj-ptrn-prop-id-init.js
-  - [ ] test/language/statements/for/dstr/const-obj-ptrn-prop-id-trailing-comma.js
-  - [ ] test/language/statements/for/dstr/const-obj-ptrn-prop-id.js
-  - [ ] test/language/statements/for/dstr/const-obj-ptrn-prop-obj-init.js
-  - [ ] test/language/statements/for/dstr/const-obj-ptrn-prop-obj-value-null.js
-  - [ ] test/language/statements/for/dstr/const-obj-ptrn-prop-obj-value-undef.js
-  - [ ] test/language/statements/for/dstr/const-obj-ptrn-prop-obj.js
-  - [ ] test/language/statements/for/dstr/const-obj-ptrn-rest-getter.js
-  - [ ] test/language/statements/for/dstr/const-obj-ptrn-rest-skip-non-enumerable.js
-  - [ ] test/language/statements/for/dstr/const-obj-ptrn-rest-val-obj.js
-  - [ ] test/language/statements/for/dstr/let-ary-init-iter-close.js
-  - [ ] test/language/statements/for/dstr/let-ary-init-iter-get-err-array-prototype.js
-  - [ ] test/language/statements/for/dstr/let-ary-init-iter-get-err.js
-  - [ ] test/language/statements/for/dstr/let-ary-init-iter-no-close.js
-  - [ ] test/language/statements/for/dstr/let-ary-name-iter-val.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-ary-elem-init.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-ary-elem-iter.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-ary-elision-init.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-ary-elision-iter.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-ary-empty-init.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-ary-empty-iter.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-ary-rest-init.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-ary-rest-iter.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-ary-val-null.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-id-init-exhausted.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-id-init-fn-name-arrow.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-id-init-fn-name-class.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-id-init-fn-name-cover.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-id-init-fn-name-fn.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-id-init-fn-name-gen.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-id-init-hole.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-id-init-skipped.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-id-init-throws.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-id-init-undef.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-id-init-unresolvable.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-id-iter-complete.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-id-iter-done.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-id-iter-step-err.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-id-iter-val-array-prototype.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-id-iter-val-err.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-id-iter-val.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-obj-id-init.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-obj-id.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-obj-prop-id-init.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-obj-prop-id.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-obj-val-null.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-obj-val-undef.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elision-exhausted.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elision-iter-close.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elision-step-err.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elision.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-empty.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-rest-ary-elem.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-rest-ary-elision.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-rest-ary-empty.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-rest-ary-rest.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-rest-id-direct.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-rest-id-elision-next-err.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-rest-id-elision.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-rest-id-exhausted.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-rest-id-iter-close.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-rest-id-iter-step-err.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-rest-id-iter-val-err.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-rest-id.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-rest-init-ary.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-rest-init-id.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-rest-init-obj.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-rest-not-final-ary.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-rest-not-final-id.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-rest-not-final-obj.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-rest-obj-id.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-rest-obj-prop-id.js
-  - [ ] test/language/statements/for/dstr/let-obj-init-null.js
-  - [ ] test/language/statements/for/dstr/let-obj-init-undefined.js
-  - [ ] test/language/statements/for/dstr/let-obj-ptrn-empty.js
-  - [ ] test/language/statements/for/dstr/let-obj-ptrn-id-get-value-err.js
-  - [ ] test/language/statements/for/dstr/let-obj-ptrn-id-init-fn-name-arrow.js
-  - [ ] test/language/statements/for/dstr/let-obj-ptrn-id-init-fn-name-class.js
-  - [ ] test/language/statements/for/dstr/let-obj-ptrn-id-init-fn-name-cover.js
-  - [ ] test/language/statements/for/dstr/let-obj-ptrn-id-init-fn-name-fn.js
-  - [ ] test/language/statements/for/dstr/let-obj-ptrn-id-init-fn-name-gen.js
-  - [ ] test/language/statements/for/dstr/let-obj-ptrn-id-init-skipped.js
-  - [ ] test/language/statements/for/dstr/let-obj-ptrn-id-init-throws.js
-  - [ ] test/language/statements/for/dstr/let-obj-ptrn-id-init-unresolvable.js
-  - [ ] test/language/statements/for/dstr/let-obj-ptrn-id-trailing-comma.js
-  - [ ] test/language/statements/for/dstr/let-obj-ptrn-list-err.js
-  - [ ] test/language/statements/for/dstr/let-obj-ptrn-prop-ary-init.js
-  - [ ] test/language/statements/for/dstr/let-obj-ptrn-prop-ary-trailing-comma.js
-  - [ ] test/language/statements/for/dstr/let-obj-ptrn-prop-ary-value-null.js
-  - [ ] test/language/statements/for/dstr/let-obj-ptrn-prop-ary.js
-  - [ ] test/language/statements/for/dstr/let-obj-ptrn-prop-eval-err.js
-  - [ ] test/language/statements/for/dstr/let-obj-ptrn-prop-id-get-value-err.js
-  - [ ] test/language/statements/for/dstr/let-obj-ptrn-prop-id-init-skipped.js
-  - [ ] test/language/statements/for/dstr/let-obj-ptrn-prop-id-init-throws.js
-  - [ ] test/language/statements/for/dstr/let-obj-ptrn-prop-id-init-unresolvable.js
-  - [ ] test/language/statements/for/dstr/let-obj-ptrn-prop-id-init.js
-  - [ ] test/language/statements/for/dstr/let-obj-ptrn-prop-id-trailing-comma.js
-  - [ ] test/language/statements/for/dstr/let-obj-ptrn-prop-id.js
-  - [ ] test/language/statements/for/dstr/let-obj-ptrn-prop-obj-init.js
-  - [ ] test/language/statements/for/dstr/let-obj-ptrn-prop-obj-value-null.js
-  - [ ] test/language/statements/for/dstr/let-obj-ptrn-prop-obj-value-undef.js
-  - [ ] test/language/statements/for/dstr/let-obj-ptrn-prop-obj.js
-  - [ ] test/language/statements/for/dstr/let-obj-ptrn-rest-getter.js
-  - [ ] test/language/statements/for/dstr/let-obj-ptrn-rest-skip-non-enumerable.js
-  - [ ] test/language/statements/for/dstr/let-obj-ptrn-rest-val-obj.js
-  - [ ] test/language/statements/for/dstr/var-ary-init-iter-close.js
-  - [ ] test/language/statements/for/dstr/var-ary-init-iter-get-err-array-prototype.js
-  - [ ] test/language/statements/for/dstr/var-ary-init-iter-get-err.js
-  - [ ] test/language/statements/for/dstr/var-ary-init-iter-no-close.js
-  - [ ] test/language/statements/for/dstr/var-ary-name-iter-val.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-ary-elem-init.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-ary-elem-iter.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-ary-elision-init.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-ary-elision-iter.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-ary-empty-init.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-ary-empty-iter.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-ary-rest-init.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-ary-rest-iter.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-ary-val-null.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-id-init-exhausted.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-id-init-fn-name-arrow.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-id-init-fn-name-class.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-id-init-fn-name-cover.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-id-init-fn-name-fn.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-id-init-fn-name-gen.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-id-init-hole.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-id-init-skipped.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-id-init-throws.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-id-init-undef.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-id-init-unresolvable.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-id-iter-complete.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-id-iter-done.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-id-iter-step-err.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-id-iter-val-array-prototype.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-id-iter-val-err.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-id-iter-val.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-obj-id-init.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-obj-id.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-obj-prop-id-init.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-obj-prop-id.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-obj-val-null.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elem-obj-val-undef.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elision-exhausted.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elision-iter-close.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elision-step-err.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-elision.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-empty.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-rest-ary-elem.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-rest-ary-elision.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-rest-ary-empty.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-rest-ary-rest.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-rest-id-direct.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-rest-id-elision-next-err.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-rest-id-elision.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-rest-id-exhausted.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-rest-id-iter-close.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-rest-id-iter-step-err.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-rest-id-iter-val-err.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-rest-id.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-rest-init-ary.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-rest-init-id.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-rest-init-obj.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-rest-not-final-ary.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-rest-not-final-id.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-rest-not-final-obj.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-rest-obj-id.js
-  - [ ] test/language/statements/for/dstr/var-ary-ptrn-rest-obj-prop-id.js
-  - [ ] test/language/statements/for/dstr/var-obj-init-null.js
-  - [ ] test/language/statements/for/dstr/var-obj-init-undefined.js
-  - [ ] test/language/statements/for/dstr/var-obj-ptrn-empty.js
-  - [ ] test/language/statements/for/dstr/var-obj-ptrn-id-get-value-err.js
-  - [ ] test/language/statements/for/dstr/var-obj-ptrn-id-init-fn-name-arrow.js
-  - [ ] test/language/statements/for/dstr/var-obj-ptrn-id-init-fn-name-class.js
-  - [ ] test/language/statements/for/dstr/var-obj-ptrn-id-init-fn-name-cover.js
-  - [ ] test/language/statements/for/dstr/var-obj-ptrn-id-init-fn-name-fn.js
-  - [ ] test/language/statements/for/dstr/var-obj-ptrn-id-init-fn-name-gen.js
-  - [ ] test/language/statements/for/dstr/var-obj-ptrn-id-init-skipped.js
-  - [ ] test/language/statements/for/dstr/var-obj-ptrn-id-init-throws.js
-  - [ ] test/language/statements/for/dstr/var-obj-ptrn-id-init-unresolvable.js
-  - [ ] test/language/statements/for/dstr/var-obj-ptrn-id-trailing-comma.js
-  - [ ] test/language/statements/for/dstr/var-obj-ptrn-list-err.js
-  - [ ] test/language/statements/for/dstr/var-obj-ptrn-prop-ary-init.js
-  - [ ] test/language/statements/for/dstr/var-obj-ptrn-prop-ary-trailing-comma.js
-  - [ ] test/language/statements/for/dstr/var-obj-ptrn-prop-ary-value-null.js
-  - [ ] test/language/statements/for/dstr/var-obj-ptrn-prop-ary.js
-  - [ ] test/language/statements/for/dstr/var-obj-ptrn-prop-eval-err.js
-  - [ ] test/language/statements/for/dstr/var-obj-ptrn-prop-id-get-value-err.js
-  - [ ] test/language/statements/for/dstr/var-obj-ptrn-prop-id-init-skipped.js
-  - [ ] test/language/statements/for/dstr/var-obj-ptrn-prop-id-init-throws.js
-  - [ ] test/language/statements/for/dstr/var-obj-ptrn-prop-id-init-unresolvable.js
-  - [ ] test/language/statements/for/dstr/var-obj-ptrn-prop-id-init.js
-  - [ ] test/language/statements/for/dstr/var-obj-ptrn-prop-id-trailing-comma.js
-  - [ ] test/language/statements/for/dstr/var-obj-ptrn-prop-id.js
-  - [ ] test/language/statements/for/dstr/var-obj-ptrn-prop-obj-init.js
-  - [ ] test/language/statements/for/dstr/var-obj-ptrn-prop-obj-value-null.js
-  - [ ] test/language/statements/for/dstr/var-obj-ptrn-prop-obj-value-undef.js
-  - [ ] test/language/statements/for/dstr/var-obj-ptrn-prop-obj.js
-  - [ ] test/language/statements/for/dstr/var-obj-ptrn-rest-getter.js
-  - [ ] test/language/statements/for/dstr/var-obj-ptrn-rest-skip-non-enumerable.js
-  - [ ] test/language/statements/for/dstr/var-obj-ptrn-rest-val-obj.js
-  - [ ] test/language/statements/for/head-const-bound-names-in-stmt.js
-  - [ ] test/language/statements/for/head-const-fresh-binding-per-iteration.js
-  - [ ] test/language/statements/for/head-init-async-of.js
-  - [ ] test/language/statements/for/head-init-expr-check-empty-inc-empty-completion.js
-  - [ ] test/language/statements/for/head-init-expr-check-empty-inc-empty-syntax.js
-  - [ ] test/language/statements/for/head-init-var-check-empty-inc-empty-completion.js
-  - [ ] test/language/statements/for/head-init-var-check-empty-inc-empty-syntax.js
-  - [ ] test/language/statements/for/head-let-bound-names-in-stmt.js
-  - [ ] test/language/statements/for/head-let-destructuring.js
-  - [ ] test/language/statements/for/head-let-fresh-binding-per-iteration.js
-  - [ ] test/language/statements/for/head-lhs-let.js
-  - [ ] test/language/statements/for/head-var-bound-names-in-stmt.js
-  - [ ] test/language/statements/for/labelled-fn-stmt-const.js
-  - [ ] test/language/statements/for/labelled-fn-stmt-expr.js
-  - [ ] test/language/statements/for/labelled-fn-stmt-let.js
-  - [ ] test/language/statements/for/labelled-fn-stmt-var.js
-  - [ ] test/language/statements/for/let-array-with-newline.js
-  - [ ] test/language/statements/for/let-block-with-newline.js
-  - [ ] test/language/statements/for/let-identifier-with-newline.js
-  - [ ] test/language/statements/for/scope-body-lex-boundary.js
-  - [ ] test/language/statements/for/scope-body-lex-open.js
-  - [ ] test/language/statements/for/scope-body-var-none.js
-  - [ ] test/language/statements/for/scope-head-lex-close.js
-  - [ ] test/language/statements/for/scope-head-lex-open.js
-  - [ ] test/language/statements/for/scope-head-var-none.js
-  - [ ] test/language/statements/for/tco-const-body.js
-  - [ ] test/language/statements/for/tco-let-body.js
-  - [ ] test/language/statements/for/tco-lhs-body.js
-  - [ ] test/language/statements/for/tco-var-body.js
   - [ ] test/language/statements/function/13.0-12-s.js
   - [ ] test/language/statements/function/13.0-13-s.js
   - [ ] test/language/statements/function/13.0-14-s.js
@@ -10706,7 +10706,7 @@ Sub-category progress
   - [ ] test/language/statements/with/unscopables-inc-dec.js
   - [ ] test/language/statements/with/unscopables-not-referenced-for-undef.js
   - [ ] test/language/statements/with/unscopables-prop-get-err.js
-- [ ] expressions (11038 tests)
+- [ ] expressions
   - [ ] test/language/expressions/addition/S11.6.1_A1.js
   - [ ] test/language/expressions/addition/S11.6.1_A2.1_T1.js
   - [ ] test/language/expressions/addition/S11.6.1_A2.1_T2.js
@@ -12955,8 +12955,6 @@ Sub-category progress
   - [ ] test/language/expressions/call/tco-non-eval-with.js
   - [ ] test/language/expressions/call/trailing-comma.js
   - [ ] test/language/expressions/call/with-base-obj.js
-  - [ ] test/language/expressions/class/accessor-name-inst-computed-in.js
-  - [ ] test/language/expressions/class/accessor-name-inst-computed-yield-expr.js
   - [ ] test/language/expressions/class/accessor-name-inst/computed-err-evaluation.js
   - [ ] test/language/expressions/class/accessor-name-inst/computed-err-to-prop-key.js
   - [ ] test/language/expressions/class/accessor-name-inst/computed-err-unresolvable.js
@@ -12978,8 +12976,8 @@ Sub-category progress
   - [ ] test/language/expressions/class/accessor-name-inst/literal-string-line-continuation.js
   - [ ] test/language/expressions/class/accessor-name-inst/literal-string-single-quote.js
   - [ ] test/language/expressions/class/accessor-name-inst/literal-string-unicode-escape.js
-  - [ ] test/language/expressions/class/accessor-name-static-computed-in.js
-  - [ ] test/language/expressions/class/accessor-name-static-computed-yield-expr.js
+  - [ ] test/language/expressions/class/accessor-name-inst-computed-in.js
+  - [ ] test/language/expressions/class/accessor-name-inst-computed-yield-expr.js
   - [ ] test/language/expressions/class/accessor-name-static/computed-err-evaluation.js
   - [ ] test/language/expressions/class/accessor-name-static/computed-err-to-prop-key.js
   - [ ] test/language/expressions/class/accessor-name-static/computed-err-unresolvable.js
@@ -13001,105 +12999,8 @@ Sub-category progress
   - [ ] test/language/expressions/class/accessor-name-static/literal-string-line-continuation.js
   - [ ] test/language/expressions/class/accessor-name-static/literal-string-single-quote.js
   - [ ] test/language/expressions/class/accessor-name-static/literal-string-unicode-escape.js
-  - [ ] test/language/expressions/class/async-gen-method-static/array-destructuring-param-strict-body.js
-  - [ ] test/language/expressions/class/async-gen-method-static/await-as-binding-identifier-escaped.js
-  - [ ] test/language/expressions/class/async-gen-method-static/await-as-binding-identifier.js
-  - [ ] test/language/expressions/class/async-gen-method-static/await-as-identifier-reference-escaped.js
-  - [ ] test/language/expressions/class/async-gen-method-static/await-as-identifier-reference.js
-  - [ ] test/language/expressions/class/async-gen-method-static/await-as-label-identifier-escaped.js
-  - [ ] test/language/expressions/class/async-gen-method-static/await-as-label-identifier.js
-  - [ ] test/language/expressions/class/async-gen-method-static/dflt-params-abrupt.js
-  - [ ] test/language/expressions/class/async-gen-method-static/dflt-params-arg-val-not-undefined.js
-  - [ ] test/language/expressions/class/async-gen-method-static/dflt-params-arg-val-undefined.js
-  - [ ] test/language/expressions/class/async-gen-method-static/dflt-params-duplicates.js
-  - [ ] test/language/expressions/class/async-gen-method-static/dflt-params-ref-later.js
-  - [ ] test/language/expressions/class/async-gen-method-static/dflt-params-ref-prior.js
-  - [ ] test/language/expressions/class/async-gen-method-static/dflt-params-ref-self.js
-  - [ ] test/language/expressions/class/async-gen-method-static/dflt-params-rest.js
-  - [ ] test/language/expressions/class/async-gen-method-static/dflt-params-trailing-comma.js
-  - [ ] test/language/expressions/class/async-gen-method-static/forbidden-ext/b1/cls-expr-async-gen-meth-static-forbidden-ext-direct-access-prop-arguments.js
-  - [ ] test/language/expressions/class/async-gen-method-static/forbidden-ext/b1/cls-expr-async-gen-meth-static-forbidden-ext-direct-access-prop-caller.js
-  - [ ] test/language/expressions/class/async-gen-method-static/forbidden-ext/b2/cls-expr-async-gen-meth-static-forbidden-ext-indirect-access-own-prop-caller-get.js
-  - [ ] test/language/expressions/class/async-gen-method-static/forbidden-ext/b2/cls-expr-async-gen-meth-static-forbidden-ext-indirect-access-own-prop-caller-value.js
-  - [ ] test/language/expressions/class/async-gen-method-static/forbidden-ext/b2/cls-expr-async-gen-meth-static-forbidden-ext-indirect-access-prop-caller.js
-  - [ ] test/language/expressions/class/async-gen-method-static/object-destructuring-param-strict-body.js
-  - [ ] test/language/expressions/class/async-gen-method-static/params-trailing-comma-multiple.js
-  - [ ] test/language/expressions/class/async-gen-method-static/params-trailing-comma-single.js
-  - [ ] test/language/expressions/class/async-gen-method-static/rest-param-strict-body.js
-  - [ ] test/language/expressions/class/async-gen-method-static/rest-params-trailing-comma-early-error.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-as-binding-identifier-escaped.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-as-binding-identifier.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-as-identifier-reference-escaped.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-as-identifier-reference.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-as-label-identifier-escaped.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-as-label-identifier.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-identifier-spread-strict.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-identifier-strict.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-promise-reject-next-catch.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-promise-reject-next-for-await-of-async-iterator.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-promise-reject-next-for-await-of-sync-iterator.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-promise-reject-next-yield-star-async-iterator.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-promise-reject-next-yield-star-sync-iterator.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-promise-reject-next.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-spread-arr-multiple.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-spread-arr-single.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-spread-obj.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-async-next.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-async-return.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-async-throw.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-expr-abrupt.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-async-get-abrupt.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-async-not-callable-boolean-throw.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-async-not-callable-number-throw.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-async-not-callable-object-throw.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-async-not-callable-string-throw.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-async-not-callable-symbol-throw.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-async-null-sync-get-abrupt.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-async-returns-abrupt.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-async-returns-boolean-throw.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-async-returns-null-throw.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-async-returns-number-throw.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-async-returns-string-throw.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-async-returns-symbol-throw.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-async-returns-undefined-throw.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-async-undefined-sync-get-abrupt.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-sync-get-abrupt.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-sync-not-callable-boolean-throw.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-sync-not-callable-number-throw.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-sync-not-callable-object-throw.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-sync-not-callable-string-throw.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-sync-not-callable-symbol-throw.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-sync-returns-abrupt.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-sync-returns-boolean-throw.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-sync-returns-null-throw.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-sync-returns-number-throw.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-sync-returns-string-throw.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-sync-returns-symbol-throw.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-sync-returns-undefined-throw.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-next-call-done-get-abrupt.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-next-call-returns-abrupt.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-next-call-value-get-abrupt.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-next-get-abrupt.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-next-non-object-ignores-then.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-next-not-callable-boolean-throw.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-next-not-callable-null-throw.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-next-not-callable-number-throw.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-next-not-callable-object-throw.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-next-not-callable-string-throw.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-next-not-callable-symbol-throw.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-next-not-callable-undefined-throw.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-next-then-get-abrupt.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-next-then-non-callable-boolean-fulfillpromise.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-next-then-non-callable-null-fulfillpromise.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-next-then-non-callable-number-fulfillpromise.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-next-then-non-callable-object-fulfillpromise.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-next-then-non-callable-string-fulfillpromise.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-next-then-non-callable-symbol-fulfillpromise.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-next-then-non-callable-undefined-fulfillpromise.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-next-then-returns-abrupt.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-sync-next.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-sync-return.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-sync-throw.js
+  - [ ] test/language/expressions/class/accessor-name-static-computed-in.js
+  - [ ] test/language/expressions/class/accessor-name-static-computed-yield-expr.js
   - [ ] test/language/expressions/class/async-gen-method/array-destructuring-param-strict-body.js
   - [ ] test/language/expressions/class/async-gen-method/await-as-binding-identifier-escaped.js
   - [ ] test/language/expressions/class/async-gen-method/await-as-binding-identifier.js
@@ -13199,38 +13100,105 @@ Sub-category progress
   - [ ] test/language/expressions/class/async-gen-method/yield-star-sync-next.js
   - [ ] test/language/expressions/class/async-gen-method/yield-star-sync-return.js
   - [ ] test/language/expressions/class/async-gen-method/yield-star-sync-throw.js
-  - [ ] test/language/expressions/class/async-method-static/array-destructuring-param-strict-body.js
-  - [ ] test/language/expressions/class/async-method-static/await-as-binding-identifier-escaped.js
-  - [ ] test/language/expressions/class/async-method-static/await-as-binding-identifier.js
-  - [ ] test/language/expressions/class/async-method-static/await-as-identifier-reference-escaped.js
-  - [ ] test/language/expressions/class/async-method-static/await-as-identifier-reference.js
-  - [ ] test/language/expressions/class/async-method-static/await-as-label-identifier-escaped.js
-  - [ ] test/language/expressions/class/async-method-static/await-as-label-identifier.js
-  - [ ] test/language/expressions/class/async-method-static/dflt-params-abrupt.js
-  - [ ] test/language/expressions/class/async-method-static/dflt-params-arg-val-not-undefined.js
-  - [ ] test/language/expressions/class/async-method-static/dflt-params-arg-val-undefined.js
-  - [ ] test/language/expressions/class/async-method-static/dflt-params-duplicates.js
-  - [ ] test/language/expressions/class/async-method-static/dflt-params-ref-later.js
-  - [ ] test/language/expressions/class/async-method-static/dflt-params-ref-prior.js
-  - [ ] test/language/expressions/class/async-method-static/dflt-params-ref-self.js
-  - [ ] test/language/expressions/class/async-method-static/dflt-params-rest.js
-  - [ ] test/language/expressions/class/async-method-static/dflt-params-trailing-comma.js
-  - [ ] test/language/expressions/class/async-method-static/forbidden-ext/b1/cls-expr-async-meth-static-forbidden-ext-direct-access-prop-arguments.js
-  - [ ] test/language/expressions/class/async-method-static/forbidden-ext/b1/cls-expr-async-meth-static-forbidden-ext-direct-access-prop-caller.js
-  - [ ] test/language/expressions/class/async-method-static/forbidden-ext/b2/cls-expr-async-meth-static-forbidden-ext-indirect-access-own-prop-caller-get.js
-  - [ ] test/language/expressions/class/async-method-static/forbidden-ext/b2/cls-expr-async-meth-static-forbidden-ext-indirect-access-own-prop-caller-value.js
-  - [ ] test/language/expressions/class/async-method-static/forbidden-ext/b2/cls-expr-async-meth-static-forbidden-ext-indirect-access-prop-caller.js
-  - [ ] test/language/expressions/class/async-method-static/object-destructuring-param-strict-body.js
-  - [ ] test/language/expressions/class/async-method-static/params-trailing-comma-multiple.js
-  - [ ] test/language/expressions/class/async-method-static/params-trailing-comma-single.js
-  - [ ] test/language/expressions/class/async-method-static/rest-param-strict-body.js
-  - [ ] test/language/expressions/class/async-method-static/rest-params-trailing-comma-early-error.js
-  - [ ] test/language/expressions/class/async-method-static/returns-async-arrow-returns-arguments-from-parent-function.js
-  - [ ] test/language/expressions/class/async-method-static/returns-async-arrow-returns-newtarget.js
-  - [ ] test/language/expressions/class/async-method-static/returns-async-arrow.js
-  - [ ] test/language/expressions/class/async-method-static/returns-async-function-returns-arguments-from-own-function.js
-  - [ ] test/language/expressions/class/async-method-static/returns-async-function-returns-newtarget.js
-  - [ ] test/language/expressions/class/async-method-static/returns-async-function.js
+  - [ ] test/language/expressions/class/async-gen-method-static/array-destructuring-param-strict-body.js
+  - [ ] test/language/expressions/class/async-gen-method-static/await-as-binding-identifier-escaped.js
+  - [ ] test/language/expressions/class/async-gen-method-static/await-as-binding-identifier.js
+  - [ ] test/language/expressions/class/async-gen-method-static/await-as-identifier-reference-escaped.js
+  - [ ] test/language/expressions/class/async-gen-method-static/await-as-identifier-reference.js
+  - [ ] test/language/expressions/class/async-gen-method-static/await-as-label-identifier-escaped.js
+  - [ ] test/language/expressions/class/async-gen-method-static/await-as-label-identifier.js
+  - [ ] test/language/expressions/class/async-gen-method-static/dflt-params-abrupt.js
+  - [ ] test/language/expressions/class/async-gen-method-static/dflt-params-arg-val-not-undefined.js
+  - [ ] test/language/expressions/class/async-gen-method-static/dflt-params-arg-val-undefined.js
+  - [ ] test/language/expressions/class/async-gen-method-static/dflt-params-duplicates.js
+  - [ ] test/language/expressions/class/async-gen-method-static/dflt-params-ref-later.js
+  - [ ] test/language/expressions/class/async-gen-method-static/dflt-params-ref-prior.js
+  - [ ] test/language/expressions/class/async-gen-method-static/dflt-params-ref-self.js
+  - [ ] test/language/expressions/class/async-gen-method-static/dflt-params-rest.js
+  - [ ] test/language/expressions/class/async-gen-method-static/dflt-params-trailing-comma.js
+  - [ ] test/language/expressions/class/async-gen-method-static/forbidden-ext/b1/cls-expr-async-gen-meth-static-forbidden-ext-direct-access-prop-arguments.js
+  - [ ] test/language/expressions/class/async-gen-method-static/forbidden-ext/b1/cls-expr-async-gen-meth-static-forbidden-ext-direct-access-prop-caller.js
+  - [ ] test/language/expressions/class/async-gen-method-static/forbidden-ext/b2/cls-expr-async-gen-meth-static-forbidden-ext-indirect-access-own-prop-caller-get.js
+  - [ ] test/language/expressions/class/async-gen-method-static/forbidden-ext/b2/cls-expr-async-gen-meth-static-forbidden-ext-indirect-access-own-prop-caller-value.js
+  - [ ] test/language/expressions/class/async-gen-method-static/forbidden-ext/b2/cls-expr-async-gen-meth-static-forbidden-ext-indirect-access-prop-caller.js
+  - [ ] test/language/expressions/class/async-gen-method-static/object-destructuring-param-strict-body.js
+  - [ ] test/language/expressions/class/async-gen-method-static/params-trailing-comma-multiple.js
+  - [ ] test/language/expressions/class/async-gen-method-static/params-trailing-comma-single.js
+  - [ ] test/language/expressions/class/async-gen-method-static/rest-param-strict-body.js
+  - [ ] test/language/expressions/class/async-gen-method-static/rest-params-trailing-comma-early-error.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-as-binding-identifier-escaped.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-as-binding-identifier.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-as-identifier-reference-escaped.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-as-identifier-reference.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-as-label-identifier-escaped.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-as-label-identifier.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-identifier-spread-strict.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-identifier-strict.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-promise-reject-next-catch.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-promise-reject-next-for-await-of-async-iterator.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-promise-reject-next-for-await-of-sync-iterator.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-promise-reject-next-yield-star-async-iterator.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-promise-reject-next-yield-star-sync-iterator.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-promise-reject-next.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-spread-arr-multiple.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-spread-arr-single.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-spread-obj.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-async-next.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-async-return.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-async-throw.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-expr-abrupt.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-async-get-abrupt.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-async-not-callable-boolean-throw.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-async-not-callable-number-throw.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-async-not-callable-object-throw.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-async-not-callable-string-throw.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-async-not-callable-symbol-throw.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-async-null-sync-get-abrupt.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-async-returns-abrupt.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-async-returns-boolean-throw.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-async-returns-null-throw.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-async-returns-number-throw.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-async-returns-string-throw.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-async-returns-symbol-throw.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-async-returns-undefined-throw.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-async-undefined-sync-get-abrupt.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-sync-get-abrupt.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-sync-not-callable-boolean-throw.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-sync-not-callable-number-throw.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-sync-not-callable-object-throw.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-sync-not-callable-string-throw.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-sync-not-callable-symbol-throw.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-sync-returns-abrupt.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-sync-returns-boolean-throw.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-sync-returns-null-throw.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-sync-returns-number-throw.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-sync-returns-string-throw.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-sync-returns-symbol-throw.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-getiter-sync-returns-undefined-throw.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-next-call-done-get-abrupt.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-next-call-returns-abrupt.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-next-call-value-get-abrupt.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-next-get-abrupt.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-next-non-object-ignores-then.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-next-not-callable-boolean-throw.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-next-not-callable-null-throw.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-next-not-callable-number-throw.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-next-not-callable-object-throw.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-next-not-callable-string-throw.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-next-not-callable-symbol-throw.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-next-not-callable-undefined-throw.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-next-then-get-abrupt.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-next-then-non-callable-boolean-fulfillpromise.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-next-then-non-callable-null-fulfillpromise.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-next-then-non-callable-number-fulfillpromise.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-next-then-non-callable-object-fulfillpromise.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-next-then-non-callable-string-fulfillpromise.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-next-then-non-callable-symbol-fulfillpromise.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-next-then-non-callable-undefined-fulfillpromise.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-next-then-returns-abrupt.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-sync-next.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-sync-return.js
+  - [ ] test/language/expressions/class/async-gen-method-static/yield-star-sync-throw.js
   - [ ] test/language/expressions/class/async-method/array-destructuring-param-strict-body.js
   - [ ] test/language/expressions/class/async-method/await-as-binding-identifier-escaped.js
   - [ ] test/language/expressions/class/async-method/await-as-binding-identifier.js
@@ -13263,6 +13231,38 @@ Sub-category progress
   - [ ] test/language/expressions/class/async-method/returns-async-function-returns-arguments-from-own-function.js
   - [ ] test/language/expressions/class/async-method/returns-async-function-returns-newtarget.js
   - [ ] test/language/expressions/class/async-method/returns-async-function.js
+  - [ ] test/language/expressions/class/async-method-static/array-destructuring-param-strict-body.js
+  - [ ] test/language/expressions/class/async-method-static/await-as-binding-identifier-escaped.js
+  - [ ] test/language/expressions/class/async-method-static/await-as-binding-identifier.js
+  - [ ] test/language/expressions/class/async-method-static/await-as-identifier-reference-escaped.js
+  - [ ] test/language/expressions/class/async-method-static/await-as-identifier-reference.js
+  - [ ] test/language/expressions/class/async-method-static/await-as-label-identifier-escaped.js
+  - [ ] test/language/expressions/class/async-method-static/await-as-label-identifier.js
+  - [ ] test/language/expressions/class/async-method-static/dflt-params-abrupt.js
+  - [ ] test/language/expressions/class/async-method-static/dflt-params-arg-val-not-undefined.js
+  - [ ] test/language/expressions/class/async-method-static/dflt-params-arg-val-undefined.js
+  - [ ] test/language/expressions/class/async-method-static/dflt-params-duplicates.js
+  - [ ] test/language/expressions/class/async-method-static/dflt-params-ref-later.js
+  - [ ] test/language/expressions/class/async-method-static/dflt-params-ref-prior.js
+  - [ ] test/language/expressions/class/async-method-static/dflt-params-ref-self.js
+  - [ ] test/language/expressions/class/async-method-static/dflt-params-rest.js
+  - [ ] test/language/expressions/class/async-method-static/dflt-params-trailing-comma.js
+  - [ ] test/language/expressions/class/async-method-static/forbidden-ext/b1/cls-expr-async-meth-static-forbidden-ext-direct-access-prop-arguments.js
+  - [ ] test/language/expressions/class/async-method-static/forbidden-ext/b1/cls-expr-async-meth-static-forbidden-ext-direct-access-prop-caller.js
+  - [ ] test/language/expressions/class/async-method-static/forbidden-ext/b2/cls-expr-async-meth-static-forbidden-ext-indirect-access-own-prop-caller-get.js
+  - [ ] test/language/expressions/class/async-method-static/forbidden-ext/b2/cls-expr-async-meth-static-forbidden-ext-indirect-access-own-prop-caller-value.js
+  - [ ] test/language/expressions/class/async-method-static/forbidden-ext/b2/cls-expr-async-meth-static-forbidden-ext-indirect-access-prop-caller.js
+  - [ ] test/language/expressions/class/async-method-static/object-destructuring-param-strict-body.js
+  - [ ] test/language/expressions/class/async-method-static/params-trailing-comma-multiple.js
+  - [ ] test/language/expressions/class/async-method-static/params-trailing-comma-single.js
+  - [ ] test/language/expressions/class/async-method-static/rest-param-strict-body.js
+  - [ ] test/language/expressions/class/async-method-static/rest-params-trailing-comma-early-error.js
+  - [ ] test/language/expressions/class/async-method-static/returns-async-arrow-returns-arguments-from-parent-function.js
+  - [ ] test/language/expressions/class/async-method-static/returns-async-arrow-returns-newtarget.js
+  - [ ] test/language/expressions/class/async-method-static/returns-async-arrow.js
+  - [ ] test/language/expressions/class/async-method-static/returns-async-function-returns-arguments-from-own-function.js
+  - [ ] test/language/expressions/class/async-method-static/returns-async-function-returns-newtarget.js
+  - [ ] test/language/expressions/class/async-method-static/returns-async-function.js
   - [ ] test/language/expressions/class/class-name-ident-await-escaped-module.js
   - [ ] test/language/expressions/class/class-name-ident-await-escaped.js
   - [ ] test/language/expressions/class/class-name-ident-await-module.js
@@ -15594,85 +15594,6 @@ Sub-category progress
   - [ ] test/language/expressions/class/elements/arrow-body-private-indirect-eval-err-contains-newtarget.js
   - [ ] test/language/expressions/class/elements/arrow-fnc-init-err-contains-arguments.js
   - [ ] test/language/expressions/class/elements/arrow-fnc-init-err-contains-super.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/await-as-binding-identifier-escaped.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/await-as-binding-identifier.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/await-as-identifier-reference-escaped.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/await-as-identifier-reference.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/await-as-label-identifier-escaped.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/await-as-label-identifier.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-as-binding-identifier-escaped.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-as-binding-identifier.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-as-identifier-reference-escaped.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-as-identifier-reference.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-as-label-identifier-escaped.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-as-label-identifier.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-identifier-spread-strict.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-identifier-strict.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-promise-reject-next-catch.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-promise-reject-next-for-await-of-async-iterator.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-promise-reject-next-for-await-of-sync-iterator.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-promise-reject-next-yield-star-async-iterator.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-promise-reject-next-yield-star-sync-iterator.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-promise-reject-next.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-spread-arr-multiple.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-spread-arr-single.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-spread-obj.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-async-next.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-async-return.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-async-throw.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-expr-abrupt.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-async-get-abrupt.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-async-not-callable-boolean-throw.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-async-not-callable-number-throw.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-async-not-callable-object-throw.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-async-not-callable-string-throw.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-async-not-callable-symbol-throw.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-async-null-sync-get-abrupt.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-async-returns-abrupt.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-async-returns-boolean-throw.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-async-returns-null-throw.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-async-returns-number-throw.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-async-returns-string-throw.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-async-returns-symbol-throw.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-async-returns-undefined-throw.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-async-undefined-sync-get-abrupt.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-sync-get-abrupt.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-sync-not-callable-boolean-throw.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-sync-not-callable-number-throw.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-sync-not-callable-object-throw.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-sync-not-callable-string-throw.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-sync-not-callable-symbol-throw.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-sync-returns-abrupt.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-sync-returns-boolean-throw.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-sync-returns-null-throw.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-sync-returns-number-throw.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-sync-returns-string-throw.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-sync-returns-symbol-throw.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-sync-returns-undefined-throw.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-next-call-done-get-abrupt.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-next-call-returns-abrupt.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-next-call-value-get-abrupt.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-next-get-abrupt.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-next-non-object-ignores-then.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-next-not-callable-boolean-throw.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-next-not-callable-null-throw.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-next-not-callable-number-throw.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-next-not-callable-object-throw.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-next-not-callable-string-throw.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-next-not-callable-symbol-throw.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-next-not-callable-undefined-throw.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-next-then-get-abrupt.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-next-then-non-callable-boolean-fulfillpromise.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-next-then-non-callable-null-fulfillpromise.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-next-then-non-callable-number-fulfillpromise.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-next-then-non-callable-object-fulfillpromise.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-next-then-non-callable-string-fulfillpromise.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-next-then-non-callable-symbol-fulfillpromise.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-next-then-non-callable-undefined-fulfillpromise.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-next-then-returns-abrupt.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-sync-next.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-sync-return.js
-  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-sync-throw.js
   - [ ] test/language/expressions/class/elements/async-gen-private-method/await-as-binding-identifier-escaped.js
   - [ ] test/language/expressions/class/elements/async-gen-private-method/await-as-binding-identifier.js
   - [ ] test/language/expressions/class/elements/async-gen-private-method/await-as-identifier-reference-escaped.js
@@ -15752,18 +15673,85 @@ Sub-category progress
   - [ ] test/language/expressions/class/elements/async-gen-private-method/yield-star-sync-next.js
   - [ ] test/language/expressions/class/elements/async-gen-private-method/yield-star-sync-return.js
   - [ ] test/language/expressions/class/elements/async-gen-private-method/yield-star-sync-throw.js
-  - [ ] test/language/expressions/class/elements/async-private-method-static/await-as-binding-identifier-escaped.js
-  - [ ] test/language/expressions/class/elements/async-private-method-static/await-as-binding-identifier.js
-  - [ ] test/language/expressions/class/elements/async-private-method-static/await-as-identifier-reference-escaped.js
-  - [ ] test/language/expressions/class/elements/async-private-method-static/await-as-identifier-reference.js
-  - [ ] test/language/expressions/class/elements/async-private-method-static/await-as-label-identifier-escaped.js
-  - [ ] test/language/expressions/class/elements/async-private-method-static/await-as-label-identifier.js
-  - [ ] test/language/expressions/class/elements/async-private-method-static/returns-async-arrow-returns-arguments-from-parent-function.js
-  - [ ] test/language/expressions/class/elements/async-private-method-static/returns-async-arrow-returns-newtarget.js
-  - [ ] test/language/expressions/class/elements/async-private-method-static/returns-async-arrow.js
-  - [ ] test/language/expressions/class/elements/async-private-method-static/returns-async-function-returns-arguments-from-own-function.js
-  - [ ] test/language/expressions/class/elements/async-private-method-static/returns-async-function-returns-newtarget.js
-  - [ ] test/language/expressions/class/elements/async-private-method-static/returns-async-function.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/await-as-binding-identifier-escaped.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/await-as-binding-identifier.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/await-as-identifier-reference-escaped.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/await-as-identifier-reference.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/await-as-label-identifier-escaped.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/await-as-label-identifier.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-as-binding-identifier-escaped.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-as-binding-identifier.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-as-identifier-reference-escaped.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-as-identifier-reference.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-as-label-identifier-escaped.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-as-label-identifier.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-identifier-spread-strict.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-identifier-strict.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-promise-reject-next-catch.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-promise-reject-next-for-await-of-async-iterator.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-promise-reject-next-for-await-of-sync-iterator.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-promise-reject-next-yield-star-async-iterator.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-promise-reject-next-yield-star-sync-iterator.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-promise-reject-next.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-spread-arr-multiple.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-spread-arr-single.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-spread-obj.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-async-next.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-async-return.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-async-throw.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-expr-abrupt.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-async-get-abrupt.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-async-not-callable-boolean-throw.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-async-not-callable-number-throw.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-async-not-callable-object-throw.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-async-not-callable-string-throw.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-async-not-callable-symbol-throw.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-async-null-sync-get-abrupt.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-async-returns-abrupt.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-async-returns-boolean-throw.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-async-returns-null-throw.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-async-returns-number-throw.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-async-returns-string-throw.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-async-returns-symbol-throw.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-async-returns-undefined-throw.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-async-undefined-sync-get-abrupt.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-sync-get-abrupt.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-sync-not-callable-boolean-throw.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-sync-not-callable-number-throw.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-sync-not-callable-object-throw.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-sync-not-callable-string-throw.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-sync-not-callable-symbol-throw.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-sync-returns-abrupt.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-sync-returns-boolean-throw.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-sync-returns-null-throw.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-sync-returns-number-throw.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-sync-returns-string-throw.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-sync-returns-symbol-throw.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-getiter-sync-returns-undefined-throw.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-next-call-done-get-abrupt.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-next-call-returns-abrupt.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-next-call-value-get-abrupt.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-next-get-abrupt.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-next-non-object-ignores-then.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-next-not-callable-boolean-throw.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-next-not-callable-null-throw.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-next-not-callable-number-throw.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-next-not-callable-object-throw.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-next-not-callable-string-throw.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-next-not-callable-symbol-throw.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-next-not-callable-undefined-throw.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-next-then-get-abrupt.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-next-then-non-callable-boolean-fulfillpromise.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-next-then-non-callable-null-fulfillpromise.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-next-then-non-callable-number-fulfillpromise.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-next-then-non-callable-object-fulfillpromise.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-next-then-non-callable-string-fulfillpromise.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-next-then-non-callable-symbol-fulfillpromise.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-next-then-non-callable-undefined-fulfillpromise.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-next-then-returns-abrupt.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-sync-next.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-sync-return.js
+  - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-sync-throw.js
   - [ ] test/language/expressions/class/elements/async-private-method/await-as-binding-identifier-escaped.js
   - [ ] test/language/expressions/class/elements/async-private-method/await-as-binding-identifier.js
   - [ ] test/language/expressions/class/elements/async-private-method/await-as-identifier-reference-escaped.js
@@ -15776,6 +15764,18 @@ Sub-category progress
   - [ ] test/language/expressions/class/elements/async-private-method/returns-async-function-returns-arguments-from-own-function.js
   - [ ] test/language/expressions/class/elements/async-private-method/returns-async-function-returns-newtarget.js
   - [ ] test/language/expressions/class/elements/async-private-method/returns-async-function.js
+  - [ ] test/language/expressions/class/elements/async-private-method-static/await-as-binding-identifier-escaped.js
+  - [ ] test/language/expressions/class/elements/async-private-method-static/await-as-binding-identifier.js
+  - [ ] test/language/expressions/class/elements/async-private-method-static/await-as-identifier-reference-escaped.js
+  - [ ] test/language/expressions/class/elements/async-private-method-static/await-as-identifier-reference.js
+  - [ ] test/language/expressions/class/elements/async-private-method-static/await-as-label-identifier-escaped.js
+  - [ ] test/language/expressions/class/elements/async-private-method-static/await-as-label-identifier.js
+  - [ ] test/language/expressions/class/elements/async-private-method-static/returns-async-arrow-returns-arguments-from-parent-function.js
+  - [ ] test/language/expressions/class/elements/async-private-method-static/returns-async-arrow-returns-newtarget.js
+  - [ ] test/language/expressions/class/elements/async-private-method-static/returns-async-arrow.js
+  - [ ] test/language/expressions/class/elements/async-private-method-static/returns-async-function-returns-arguments-from-own-function.js
+  - [ ] test/language/expressions/class/elements/async-private-method-static/returns-async-function-returns-newtarget.js
+  - [ ] test/language/expressions/class/elements/async-private-method-static/returns-async-function.js
   - [ ] test/language/expressions/class/elements/class-name-static-initializer-anonymous.js
   - [ ] test/language/expressions/class/elements/class-name-static-initializer-decl.js
   - [ ] test/language/expressions/class/elements/class-name-static-initializer-default-export.js
@@ -15825,17 +15825,6 @@ Sub-category progress
   - [ ] test/language/expressions/class/elements/fields-string-name-propname-constructor.js
   - [ ] test/language/expressions/class/elements/fields-string-name-static-propname-constructor.js
   - [ ] test/language/expressions/class/elements/fields-string-name-static-propname-prototype.js
-  - [ ] test/language/expressions/class/elements/gen-private-method-static/yield-as-binding-identifier-escaped.js
-  - [ ] test/language/expressions/class/elements/gen-private-method-static/yield-as-binding-identifier.js
-  - [ ] test/language/expressions/class/elements/gen-private-method-static/yield-as-identifier-reference-escaped.js
-  - [ ] test/language/expressions/class/elements/gen-private-method-static/yield-as-identifier-reference.js
-  - [ ] test/language/expressions/class/elements/gen-private-method-static/yield-as-label-identifier-escaped.js
-  - [ ] test/language/expressions/class/elements/gen-private-method-static/yield-as-label-identifier.js
-  - [ ] test/language/expressions/class/elements/gen-private-method-static/yield-identifier-spread-strict.js
-  - [ ] test/language/expressions/class/elements/gen-private-method-static/yield-identifier-strict.js
-  - [ ] test/language/expressions/class/elements/gen-private-method-static/yield-spread-arr-multiple.js
-  - [ ] test/language/expressions/class/elements/gen-private-method-static/yield-spread-arr-single.js
-  - [ ] test/language/expressions/class/elements/gen-private-method-static/yield-spread-obj.js
   - [ ] test/language/expressions/class/elements/gen-private-method/yield-as-binding-identifier-escaped.js
   - [ ] test/language/expressions/class/elements/gen-private-method/yield-as-binding-identifier.js
   - [ ] test/language/expressions/class/elements/gen-private-method/yield-as-identifier-reference-escaped.js
@@ -15847,6 +15836,17 @@ Sub-category progress
   - [ ] test/language/expressions/class/elements/gen-private-method/yield-spread-arr-multiple.js
   - [ ] test/language/expressions/class/elements/gen-private-method/yield-spread-arr-single.js
   - [ ] test/language/expressions/class/elements/gen-private-method/yield-spread-obj.js
+  - [ ] test/language/expressions/class/elements/gen-private-method-static/yield-as-binding-identifier-escaped.js
+  - [ ] test/language/expressions/class/elements/gen-private-method-static/yield-as-binding-identifier.js
+  - [ ] test/language/expressions/class/elements/gen-private-method-static/yield-as-identifier-reference-escaped.js
+  - [ ] test/language/expressions/class/elements/gen-private-method-static/yield-as-identifier-reference.js
+  - [ ] test/language/expressions/class/elements/gen-private-method-static/yield-as-label-identifier-escaped.js
+  - [ ] test/language/expressions/class/elements/gen-private-method-static/yield-as-label-identifier.js
+  - [ ] test/language/expressions/class/elements/gen-private-method-static/yield-identifier-spread-strict.js
+  - [ ] test/language/expressions/class/elements/gen-private-method-static/yield-identifier-strict.js
+  - [ ] test/language/expressions/class/elements/gen-private-method-static/yield-spread-arr-multiple.js
+  - [ ] test/language/expressions/class/elements/gen-private-method-static/yield-spread-arr-single.js
+  - [ ] test/language/expressions/class/elements/gen-private-method-static/yield-spread-obj.js
   - [ ] test/language/expressions/class/elements/grammar-private-field-optional-chaining.js
   - [ ] test/language/expressions/class/elements/indirect-eval-contains-arguments.js
   - [ ] test/language/expressions/class/elements/indirect-eval-err-contains-newtarget.js
@@ -16754,6 +16754,37 @@ Sub-category progress
   - [ ] test/language/expressions/class/elements/wrapped-in-sc-static-private-methods-with-fields.js
   - [ ] test/language/expressions/class/elements/wrapped-in-sc-static-private-methods.js
   - [ ] test/language/expressions/class/elements/wrapped-in-sc-string-literal-names.js
+  - [ ] test/language/expressions/class/gen-method/array-destructuring-param-strict-body.js
+  - [ ] test/language/expressions/class/gen-method/dflt-params-abrupt.js
+  - [ ] test/language/expressions/class/gen-method/dflt-params-arg-val-not-undefined.js
+  - [ ] test/language/expressions/class/gen-method/dflt-params-arg-val-undefined.js
+  - [ ] test/language/expressions/class/gen-method/dflt-params-duplicates.js
+  - [ ] test/language/expressions/class/gen-method/dflt-params-ref-later.js
+  - [ ] test/language/expressions/class/gen-method/dflt-params-ref-prior.js
+  - [ ] test/language/expressions/class/gen-method/dflt-params-ref-self.js
+  - [ ] test/language/expressions/class/gen-method/dflt-params-rest.js
+  - [ ] test/language/expressions/class/gen-method/dflt-params-trailing-comma.js
+  - [ ] test/language/expressions/class/gen-method/forbidden-ext/b1/cls-expr-gen-meth-forbidden-ext-direct-access-prop-arguments.js
+  - [ ] test/language/expressions/class/gen-method/forbidden-ext/b1/cls-expr-gen-meth-forbidden-ext-direct-access-prop-caller.js
+  - [ ] test/language/expressions/class/gen-method/forbidden-ext/b2/cls-expr-gen-meth-forbidden-ext-indirect-access-own-prop-caller-get.js
+  - [ ] test/language/expressions/class/gen-method/forbidden-ext/b2/cls-expr-gen-meth-forbidden-ext-indirect-access-own-prop-caller-value.js
+  - [ ] test/language/expressions/class/gen-method/forbidden-ext/b2/cls-expr-gen-meth-forbidden-ext-indirect-access-prop-caller.js
+  - [ ] test/language/expressions/class/gen-method/object-destructuring-param-strict-body.js
+  - [ ] test/language/expressions/class/gen-method/params-trailing-comma-multiple.js
+  - [ ] test/language/expressions/class/gen-method/params-trailing-comma-single.js
+  - [ ] test/language/expressions/class/gen-method/rest-param-strict-body.js
+  - [ ] test/language/expressions/class/gen-method/rest-params-trailing-comma-early-error.js
+  - [ ] test/language/expressions/class/gen-method/yield-as-binding-identifier-escaped.js
+  - [ ] test/language/expressions/class/gen-method/yield-as-binding-identifier.js
+  - [ ] test/language/expressions/class/gen-method/yield-as-identifier-reference-escaped.js
+  - [ ] test/language/expressions/class/gen-method/yield-as-identifier-reference.js
+  - [ ] test/language/expressions/class/gen-method/yield-as-label-identifier-escaped.js
+  - [ ] test/language/expressions/class/gen-method/yield-as-label-identifier.js
+  - [ ] test/language/expressions/class/gen-method/yield-identifier-spread-strict.js
+  - [ ] test/language/expressions/class/gen-method/yield-identifier-strict.js
+  - [ ] test/language/expressions/class/gen-method/yield-spread-arr-multiple.js
+  - [ ] test/language/expressions/class/gen-method/yield-spread-arr-single.js
+  - [ ] test/language/expressions/class/gen-method/yield-spread-obj.js
   - [ ] test/language/expressions/class/gen-method-length-dflt.js
   - [ ] test/language/expressions/class/gen-method-param-dflt-yield.js
   - [ ] test/language/expressions/class/gen-method-static/array-destructuring-param-strict-body.js
@@ -16787,37 +16818,6 @@ Sub-category progress
   - [ ] test/language/expressions/class/gen-method-static/yield-spread-arr-multiple.js
   - [ ] test/language/expressions/class/gen-method-static/yield-spread-arr-single.js
   - [ ] test/language/expressions/class/gen-method-static/yield-spread-obj.js
-  - [ ] test/language/expressions/class/gen-method/array-destructuring-param-strict-body.js
-  - [ ] test/language/expressions/class/gen-method/dflt-params-abrupt.js
-  - [ ] test/language/expressions/class/gen-method/dflt-params-arg-val-not-undefined.js
-  - [ ] test/language/expressions/class/gen-method/dflt-params-arg-val-undefined.js
-  - [ ] test/language/expressions/class/gen-method/dflt-params-duplicates.js
-  - [ ] test/language/expressions/class/gen-method/dflt-params-ref-later.js
-  - [ ] test/language/expressions/class/gen-method/dflt-params-ref-prior.js
-  - [ ] test/language/expressions/class/gen-method/dflt-params-ref-self.js
-  - [ ] test/language/expressions/class/gen-method/dflt-params-rest.js
-  - [ ] test/language/expressions/class/gen-method/dflt-params-trailing-comma.js
-  - [ ] test/language/expressions/class/gen-method/forbidden-ext/b1/cls-expr-gen-meth-forbidden-ext-direct-access-prop-arguments.js
-  - [ ] test/language/expressions/class/gen-method/forbidden-ext/b1/cls-expr-gen-meth-forbidden-ext-direct-access-prop-caller.js
-  - [ ] test/language/expressions/class/gen-method/forbidden-ext/b2/cls-expr-gen-meth-forbidden-ext-indirect-access-own-prop-caller-get.js
-  - [ ] test/language/expressions/class/gen-method/forbidden-ext/b2/cls-expr-gen-meth-forbidden-ext-indirect-access-own-prop-caller-value.js
-  - [ ] test/language/expressions/class/gen-method/forbidden-ext/b2/cls-expr-gen-meth-forbidden-ext-indirect-access-prop-caller.js
-  - [ ] test/language/expressions/class/gen-method/object-destructuring-param-strict-body.js
-  - [ ] test/language/expressions/class/gen-method/params-trailing-comma-multiple.js
-  - [ ] test/language/expressions/class/gen-method/params-trailing-comma-single.js
-  - [ ] test/language/expressions/class/gen-method/rest-param-strict-body.js
-  - [ ] test/language/expressions/class/gen-method/rest-params-trailing-comma-early-error.js
-  - [ ] test/language/expressions/class/gen-method/yield-as-binding-identifier-escaped.js
-  - [ ] test/language/expressions/class/gen-method/yield-as-binding-identifier.js
-  - [ ] test/language/expressions/class/gen-method/yield-as-identifier-reference-escaped.js
-  - [ ] test/language/expressions/class/gen-method/yield-as-identifier-reference.js
-  - [ ] test/language/expressions/class/gen-method/yield-as-label-identifier-escaped.js
-  - [ ] test/language/expressions/class/gen-method/yield-as-label-identifier.js
-  - [ ] test/language/expressions/class/gen-method/yield-identifier-spread-strict.js
-  - [ ] test/language/expressions/class/gen-method/yield-identifier-strict.js
-  - [ ] test/language/expressions/class/gen-method/yield-spread-arr-multiple.js
-  - [ ] test/language/expressions/class/gen-method/yield-spread-arr-single.js
-  - [ ] test/language/expressions/class/gen-method/yield-spread-obj.js
   - [ ] test/language/expressions/class/getter-param-dflt.js
   - [ ] test/language/expressions/class/heritage-arrow-function.js
   - [ ] test/language/expressions/class/heritage-async-arrow-function.js
@@ -16866,6 +16866,26 @@ Sub-category progress
   - [ ] test/language/expressions/class/ident-name-method-def-void-escaped.js
   - [ ] test/language/expressions/class/ident-name-method-def-while-escaped.js
   - [ ] test/language/expressions/class/ident-name-method-def-with-escaped.js
+  - [ ] test/language/expressions/class/method/array-destructuring-param-strict-body.js
+  - [ ] test/language/expressions/class/method/dflt-params-abrupt.js
+  - [ ] test/language/expressions/class/method/dflt-params-arg-val-not-undefined.js
+  - [ ] test/language/expressions/class/method/dflt-params-arg-val-undefined.js
+  - [ ] test/language/expressions/class/method/dflt-params-duplicates.js
+  - [ ] test/language/expressions/class/method/dflt-params-ref-later.js
+  - [ ] test/language/expressions/class/method/dflt-params-ref-prior.js
+  - [ ] test/language/expressions/class/method/dflt-params-ref-self.js
+  - [ ] test/language/expressions/class/method/dflt-params-rest.js
+  - [ ] test/language/expressions/class/method/dflt-params-trailing-comma.js
+  - [ ] test/language/expressions/class/method/forbidden-ext/b1/cls-expr-meth-forbidden-ext-direct-access-prop-arguments.js
+  - [ ] test/language/expressions/class/method/forbidden-ext/b1/cls-expr-meth-forbidden-ext-direct-access-prop-caller.js
+  - [ ] test/language/expressions/class/method/forbidden-ext/b2/cls-expr-meth-forbidden-ext-indirect-access-own-prop-caller-get.js
+  - [ ] test/language/expressions/class/method/forbidden-ext/b2/cls-expr-meth-forbidden-ext-indirect-access-own-prop-caller-value.js
+  - [ ] test/language/expressions/class/method/forbidden-ext/b2/cls-expr-meth-forbidden-ext-indirect-access-prop-caller.js
+  - [ ] test/language/expressions/class/method/object-destructuring-param-strict-body.js
+  - [ ] test/language/expressions/class/method/params-trailing-comma-multiple.js
+  - [ ] test/language/expressions/class/method/params-trailing-comma-single.js
+  - [ ] test/language/expressions/class/method/rest-param-strict-body.js
+  - [ ] test/language/expressions/class/method/rest-params-trailing-comma-early-error.js
   - [ ] test/language/expressions/class/method-length-dflt.js
   - [ ] test/language/expressions/class/method-param-dflt-yield.js
   - [ ] test/language/expressions/class/method-static/array-destructuring-param-strict-body.js
@@ -16888,26 +16908,6 @@ Sub-category progress
   - [ ] test/language/expressions/class/method-static/params-trailing-comma-single.js
   - [ ] test/language/expressions/class/method-static/rest-param-strict-body.js
   - [ ] test/language/expressions/class/method-static/rest-params-trailing-comma-early-error.js
-  - [ ] test/language/expressions/class/method/array-destructuring-param-strict-body.js
-  - [ ] test/language/expressions/class/method/dflt-params-abrupt.js
-  - [ ] test/language/expressions/class/method/dflt-params-arg-val-not-undefined.js
-  - [ ] test/language/expressions/class/method/dflt-params-arg-val-undefined.js
-  - [ ] test/language/expressions/class/method/dflt-params-duplicates.js
-  - [ ] test/language/expressions/class/method/dflt-params-ref-later.js
-  - [ ] test/language/expressions/class/method/dflt-params-ref-prior.js
-  - [ ] test/language/expressions/class/method/dflt-params-ref-self.js
-  - [ ] test/language/expressions/class/method/dflt-params-rest.js
-  - [ ] test/language/expressions/class/method/dflt-params-trailing-comma.js
-  - [ ] test/language/expressions/class/method/forbidden-ext/b1/cls-expr-meth-forbidden-ext-direct-access-prop-arguments.js
-  - [ ] test/language/expressions/class/method/forbidden-ext/b1/cls-expr-meth-forbidden-ext-direct-access-prop-caller.js
-  - [ ] test/language/expressions/class/method/forbidden-ext/b2/cls-expr-meth-forbidden-ext-indirect-access-own-prop-caller-get.js
-  - [ ] test/language/expressions/class/method/forbidden-ext/b2/cls-expr-meth-forbidden-ext-indirect-access-own-prop-caller-value.js
-  - [ ] test/language/expressions/class/method/forbidden-ext/b2/cls-expr-meth-forbidden-ext-indirect-access-prop-caller.js
-  - [ ] test/language/expressions/class/method/object-destructuring-param-strict-body.js
-  - [ ] test/language/expressions/class/method/params-trailing-comma-multiple.js
-  - [ ] test/language/expressions/class/method/params-trailing-comma-single.js
-  - [ ] test/language/expressions/class/method/rest-param-strict-body.js
-  - [ ] test/language/expressions/class/method/rest-params-trailing-comma-early-error.js
   - [ ] test/language/expressions/class/name.js
   - [ ] test/language/expressions/class/params-dflt-gen-meth-args-unmapped.js
   - [ ] test/language/expressions/class/params-dflt-gen-meth-ref-arguments.js
@@ -17518,6 +17518,18 @@ Sub-category progress
   - [ ] test/language/expressions/conditional/S11.12_A4_T2.js
   - [ ] test/language/expressions/conditional/S11.12_A4_T3.js
   - [ ] test/language/expressions/conditional/S11.12_A4_T4.js
+  - [ ] test/language/expressions/conditional/ayy-temp-coalesce-case10.js
+  - [ ] test/language/expressions/conditional/ayy-temp-coalesce-case11.js
+  - [ ] test/language/expressions/conditional/ayy-temp-coalesce-case12.js
+  - [ ] test/language/expressions/conditional/ayy-temp-coalesce-case7.js
+  - [ ] test/language/expressions/conditional/ayy-temp-coalesce-case8.js
+  - [ ] test/language/expressions/conditional/ayy-temp-coalesce-case9.js
+  - [ ] test/language/expressions/conditional/ayy-temp-coalesce-first-half.js
+  - [ ] test/language/expressions/conditional/ayy-temp-coalesce-second-half.js
+  - [ ] test/language/expressions/conditional/ayy-temp-in-branch-cond1.js
+  - [ ] test/language/expressions/conditional/ayy-temp-in-branch-cond2.js
+  - [ ] test/language/expressions/conditional/ayy-temp-in-branch-result-only.js
+  - [ ] test/language/expressions/conditional/ayy-temp-in-branch-result.js
   - [ ] test/language/expressions/conditional/coalesce-expr-ternary.js
   - [ ] test/language/expressions/conditional/in-branch-1.js
   - [ ] test/language/expressions/conditional/in-branch-2.js
@@ -17580,6 +17592,9 @@ Sub-category progress
   - [ ] test/language/expressions/delete/S8.12.7_A2_T1.js
   - [ ] test/language/expressions/delete/S8.12.7_A2_T2.js
   - [ ] test/language/expressions/delete/S8.12.7_A3.js
+  - [ ] test/language/expressions/delete/ayy-temp-arguments-delete-param.js
+  - [ ] test/language/expressions/delete/ayy-temp-arguments-delete-read.js
+  - [ ] test/language/expressions/delete/ayy-temp-arguments-delete-result.js
   - [ ] test/language/expressions/delete/delete-unresolvable-base-object-reference-throws-typeerror.js
   - [ ] test/language/expressions/delete/identifier-strict-recursive.js
   - [ ] test/language/expressions/delete/identifier-strict.js
@@ -17929,8 +17944,8 @@ Sub-category progress
   - [ ] test/language/expressions/dynamic-import/import-defer/import-defer-async-module/main.js
   - [ ] test/language/expressions/dynamic-import/import-defer/import-defer-transitive-async-module/main.js
   - [ ] test/language/expressions/dynamic-import/import-defer/import-defer-transitive-async-module/promise-prototype-then-not-called.js
-  - [ ] test/language/expressions/dynamic-import/import-defer/sync-dependency-of-deferred-async-module/main.js
   - [ ] test/language/expressions/dynamic-import/import-defer/sync/main.js
+  - [ ] test/language/expressions/dynamic-import/import-defer/sync-dependency-of-deferred-async-module/main.js
   - [ ] test/language/expressions/dynamic-import/import-errored-module.js
   - [ ] test/language/expressions/dynamic-import/imported-self-update.js
   - [ ] test/language/expressions/dynamic-import/indirect-resolution.js
@@ -18509,7 +18524,6 @@ Sub-category progress
   - [ ] test/language/expressions/dynamic-import/syntax/valid/top-level-nested-imports.js
   - [ ] test/language/expressions/dynamic-import/syntax/valid/top-level-script-code-valid.js
   - [ ] test/language/expressions/dynamic-import/update-to-dynamic-import.js
-  - [ ] test/language/expressions/dynamic-import/usage-from-eval.js
   - [ ] test/language/expressions/dynamic-import/usage/nested-arrow-assignment-expression-eval-gtbndng-indirect-update-dflt.js
   - [ ] test/language/expressions/dynamic-import/usage/nested-arrow-assignment-expression-eval-gtbndng-indirect-update.js
   - [ ] test/language/expressions/dynamic-import/usage/nested-arrow-assignment-expression-eval-script-code-host-resolves-module-code.js
@@ -18618,6 +18632,7 @@ Sub-category progress
   - [ ] test/language/expressions/dynamic-import/usage/top-level-import-then-is-call-expression-square-brackets.js
   - [ ] test/language/expressions/dynamic-import/usage/top-level-import-then-returns-thenable.js
   - [ ] test/language/expressions/dynamic-import/usage/top-level-import-then-specifier-tostring.js
+  - [ ] test/language/expressions/dynamic-import/usage-from-eval.js
   - [ ] test/language/expressions/equals/S11.9.1_A1.js
   - [ ] test/language/expressions/equals/S11.9.1_A2.1_T1.js
   - [ ] test/language/expressions/equals/S11.9.1_A2.1_T2.js
@@ -19263,49 +19278,6 @@ Sub-category progress
   - [ ] test/language/expressions/generators/yield-star-after-newline.js
   - [ ] test/language/expressions/generators/yield-star-before-newline.js
   - [ ] test/language/expressions/generators/yield-weak-binding.js
-  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A1.js
-  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A2.1_T1.js
-  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A2.1_T2.js
-  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A2.1_T3.js
-  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A2.2_T1.js
-  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A2.3_T1.js
-  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A2.4_T1.js
-  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A2.4_T2.js
-  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A2.4_T3.js
-  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A2.4_T4.js
-  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A3.1_T1.1.js
-  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A3.1_T1.2.js
-  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A3.1_T1.3.js
-  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A3.1_T2.1.js
-  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A3.1_T2.2.js
-  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A3.1_T2.3.js
-  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A3.1_T2.4.js
-  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A3.1_T2.5.js
-  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A3.1_T2.6.js
-  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A3.1_T2.7.js
-  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A3.1_T2.8.js
-  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A3.1_T2.9.js
-  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A3.2_T1.1.js
-  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A3.2_T1.2.js
-  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A4.1.js
-  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A4.10.js
-  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A4.11.js
-  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A4.12_T1.js
-  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A4.12_T2.js
-  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A4.2.js
-  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A4.3.js
-  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A4.4.js
-  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A4.5.js
-  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A4.6.js
-  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A4.7.js
-  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A4.8.js
-  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A4.9.js
-  - [ ] test/language/expressions/greater-than-or-equal/bigint-and-bigint.js
-  - [ ] test/language/expressions/greater-than-or-equal/bigint-and-incomparable-string.js
-  - [ ] test/language/expressions/greater-than-or-equal/bigint-and-non-finite.js
-  - [ ] test/language/expressions/greater-than-or-equal/bigint-and-number-extremes.js
-  - [ ] test/language/expressions/greater-than-or-equal/bigint-and-number.js
-  - [ ] test/language/expressions/greater-than-or-equal/bigint-and-string.js
   - [ ] test/language/expressions/greater-than/11.8.2-1.js
   - [ ] test/language/expressions/greater-than/11.8.2-2.js
   - [ ] test/language/expressions/greater-than/11.8.2-3.js
@@ -19355,6 +19327,49 @@ Sub-category progress
   - [ ] test/language/expressions/greater-than/bigint-and-number.js
   - [ ] test/language/expressions/greater-than/bigint-and-string.js
   - [ ] test/language/expressions/greater-than/bigint-and-symbol.js
+  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A1.js
+  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A2.1_T1.js
+  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A2.1_T2.js
+  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A2.1_T3.js
+  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A2.2_T1.js
+  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A2.3_T1.js
+  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A2.4_T1.js
+  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A2.4_T2.js
+  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A2.4_T3.js
+  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A2.4_T4.js
+  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A3.1_T1.1.js
+  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A3.1_T1.2.js
+  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A3.1_T1.3.js
+  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A3.1_T2.1.js
+  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A3.1_T2.2.js
+  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A3.1_T2.3.js
+  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A3.1_T2.4.js
+  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A3.1_T2.5.js
+  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A3.1_T2.6.js
+  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A3.1_T2.7.js
+  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A3.1_T2.8.js
+  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A3.1_T2.9.js
+  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A3.2_T1.1.js
+  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A3.2_T1.2.js
+  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A4.1.js
+  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A4.10.js
+  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A4.11.js
+  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A4.12_T1.js
+  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A4.12_T2.js
+  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A4.2.js
+  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A4.3.js
+  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A4.4.js
+  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A4.5.js
+  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A4.6.js
+  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A4.7.js
+  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A4.8.js
+  - [ ] test/language/expressions/greater-than-or-equal/S11.8.4_A4.9.js
+  - [ ] test/language/expressions/greater-than-or-equal/bigint-and-bigint.js
+  - [ ] test/language/expressions/greater-than-or-equal/bigint-and-incomparable-string.js
+  - [ ] test/language/expressions/greater-than-or-equal/bigint-and-non-finite.js
+  - [ ] test/language/expressions/greater-than-or-equal/bigint-and-number-extremes.js
+  - [ ] test/language/expressions/greater-than-or-equal/bigint-and-number.js
+  - [ ] test/language/expressions/greater-than-or-equal/bigint-and-string.js
   - [ ] test/language/expressions/grouping/S11.1.6_A1.js
   - [ ] test/language/expressions/grouping/S11.1.6_A2_T1.js
   - [ ] test/language/expressions/grouping/S11.1.6_A2_T2.js
@@ -19364,6 +19379,14 @@ Sub-category progress
   - [ ] test/language/expressions/grouping/S11.1.6_A3_T4.js
   - [ ] test/language/expressions/grouping/S11.1.6_A3_T6.js
   - [ ] test/language/expressions/grouping/S11.1.6_A3_T7.js
+  - [ ] test/language/expressions/import.meta/ayy-debug-descriptor-initial.js
+  - [ ] test/language/expressions/import.meta/ayy-debug-extensible.js
+  - [ ] test/language/expressions/import.meta/ayy-debug-freeze.js
+  - [ ] test/language/expressions/import.meta/ayy-debug-prevent-extensions.js
+  - [ ] test/language/expressions/import.meta/ayy-debug-property-add-read.js
+  - [ ] test/language/expressions/import.meta/ayy-debug-property-delete.js
+  - [ ] test/language/expressions/import.meta/ayy-debug-prototype-set-get.js
+  - [ ] test/language/expressions/import.meta/ayy-debug-seal.js
   - [ ] test/language/expressions/import.meta/distinct-for-each-module.js
   - [ ] test/language/expressions/import.meta/import-meta-is-an-ordinary-object.js
   - [ ] test/language/expressions/import.meta/not-accessible-from-direct-eval.js
@@ -19510,6 +19533,51 @@ Sub-category progress
   - [ ] test/language/expressions/left-shift/bigint-wrapped-values.js
   - [ ] test/language/expressions/left-shift/bigint.js
   - [ ] test/language/expressions/left-shift/order-of-evaluation.js
+  - [ ] test/language/expressions/less-than/S11.8.1_A1.js
+  - [ ] test/language/expressions/less-than/S11.8.1_A2.1_T1.js
+  - [ ] test/language/expressions/less-than/S11.8.1_A2.1_T2.js
+  - [ ] test/language/expressions/less-than/S11.8.1_A2.1_T3.js
+  - [ ] test/language/expressions/less-than/S11.8.1_A2.2_T1.js
+  - [ ] test/language/expressions/less-than/S11.8.1_A2.3_T1.js
+  - [ ] test/language/expressions/less-than/S11.8.1_A2.4_T1.js
+  - [ ] test/language/expressions/less-than/S11.8.1_A2.4_T2.js
+  - [ ] test/language/expressions/less-than/S11.8.1_A2.4_T3.js
+  - [ ] test/language/expressions/less-than/S11.8.1_A2.4_T4.js
+  - [ ] test/language/expressions/less-than/S11.8.1_A3.1_T1.1.js
+  - [ ] test/language/expressions/less-than/S11.8.1_A3.1_T1.2.js
+  - [ ] test/language/expressions/less-than/S11.8.1_A3.1_T1.3.js
+  - [ ] test/language/expressions/less-than/S11.8.1_A3.1_T2.1.js
+  - [ ] test/language/expressions/less-than/S11.8.1_A3.1_T2.2.js
+  - [ ] test/language/expressions/less-than/S11.8.1_A3.1_T2.3.js
+  - [ ] test/language/expressions/less-than/S11.8.1_A3.1_T2.4.js
+  - [ ] test/language/expressions/less-than/S11.8.1_A3.1_T2.5.js
+  - [ ] test/language/expressions/less-than/S11.8.1_A3.1_T2.6.js
+  - [ ] test/language/expressions/less-than/S11.8.1_A3.1_T2.7.js
+  - [ ] test/language/expressions/less-than/S11.8.1_A3.1_T2.8.js
+  - [ ] test/language/expressions/less-than/S11.8.1_A3.1_T2.9.js
+  - [ ] test/language/expressions/less-than/S11.8.1_A3.2_T1.1.js
+  - [ ] test/language/expressions/less-than/S11.8.1_A3.2_T1.2.js
+  - [ ] test/language/expressions/less-than/S11.8.1_A4.1.js
+  - [ ] test/language/expressions/less-than/S11.8.1_A4.10.js
+  - [ ] test/language/expressions/less-than/S11.8.1_A4.11.js
+  - [ ] test/language/expressions/less-than/S11.8.1_A4.12_T1.js
+  - [ ] test/language/expressions/less-than/S11.8.1_A4.12_T2.js
+  - [ ] test/language/expressions/less-than/S11.8.1_A4.2.js
+  - [ ] test/language/expressions/less-than/S11.8.1_A4.3.js
+  - [ ] test/language/expressions/less-than/S11.8.1_A4.4.js
+  - [ ] test/language/expressions/less-than/S11.8.1_A4.5.js
+  - [ ] test/language/expressions/less-than/S11.8.1_A4.6.js
+  - [ ] test/language/expressions/less-than/S11.8.1_A4.7.js
+  - [ ] test/language/expressions/less-than/S11.8.1_A4.8.js
+  - [ ] test/language/expressions/less-than/S11.8.1_A4.9.js
+  - [ ] test/language/expressions/less-than/bigint-and-bigint.js
+  - [ ] test/language/expressions/less-than/bigint-and-boolean.js
+  - [ ] test/language/expressions/less-than/bigint-and-incomparable-string.js
+  - [ ] test/language/expressions/less-than/bigint-and-non-finite.js
+  - [ ] test/language/expressions/less-than/bigint-and-number-extremes.js
+  - [ ] test/language/expressions/less-than/bigint-and-number.js
+  - [ ] test/language/expressions/less-than/bigint-and-string.js
+  - [ ] test/language/expressions/less-than/bigint-and-symbol.js
   - [ ] test/language/expressions/less-than-or-equal/11.8.3-1.js
   - [ ] test/language/expressions/less-than-or-equal/11.8.3-2.js
   - [ ] test/language/expressions/less-than-or-equal/11.8.3-3.js
@@ -19557,51 +19625,6 @@ Sub-category progress
   - [ ] test/language/expressions/less-than-or-equal/bigint-and-number-extremes.js
   - [ ] test/language/expressions/less-than-or-equal/bigint-and-number.js
   - [ ] test/language/expressions/less-than-or-equal/bigint-and-string.js
-  - [ ] test/language/expressions/less-than/S11.8.1_A1.js
-  - [ ] test/language/expressions/less-than/S11.8.1_A2.1_T1.js
-  - [ ] test/language/expressions/less-than/S11.8.1_A2.1_T2.js
-  - [ ] test/language/expressions/less-than/S11.8.1_A2.1_T3.js
-  - [ ] test/language/expressions/less-than/S11.8.1_A2.2_T1.js
-  - [ ] test/language/expressions/less-than/S11.8.1_A2.3_T1.js
-  - [ ] test/language/expressions/less-than/S11.8.1_A2.4_T1.js
-  - [ ] test/language/expressions/less-than/S11.8.1_A2.4_T2.js
-  - [ ] test/language/expressions/less-than/S11.8.1_A2.4_T3.js
-  - [ ] test/language/expressions/less-than/S11.8.1_A2.4_T4.js
-  - [ ] test/language/expressions/less-than/S11.8.1_A3.1_T1.1.js
-  - [ ] test/language/expressions/less-than/S11.8.1_A3.1_T1.2.js
-  - [ ] test/language/expressions/less-than/S11.8.1_A3.1_T1.3.js
-  - [ ] test/language/expressions/less-than/S11.8.1_A3.1_T2.1.js
-  - [ ] test/language/expressions/less-than/S11.8.1_A3.1_T2.2.js
-  - [ ] test/language/expressions/less-than/S11.8.1_A3.1_T2.3.js
-  - [ ] test/language/expressions/less-than/S11.8.1_A3.1_T2.4.js
-  - [ ] test/language/expressions/less-than/S11.8.1_A3.1_T2.5.js
-  - [ ] test/language/expressions/less-than/S11.8.1_A3.1_T2.6.js
-  - [ ] test/language/expressions/less-than/S11.8.1_A3.1_T2.7.js
-  - [ ] test/language/expressions/less-than/S11.8.1_A3.1_T2.8.js
-  - [ ] test/language/expressions/less-than/S11.8.1_A3.1_T2.9.js
-  - [ ] test/language/expressions/less-than/S11.8.1_A3.2_T1.1.js
-  - [ ] test/language/expressions/less-than/S11.8.1_A3.2_T1.2.js
-  - [ ] test/language/expressions/less-than/S11.8.1_A4.1.js
-  - [ ] test/language/expressions/less-than/S11.8.1_A4.10.js
-  - [ ] test/language/expressions/less-than/S11.8.1_A4.11.js
-  - [ ] test/language/expressions/less-than/S11.8.1_A4.12_T1.js
-  - [ ] test/language/expressions/less-than/S11.8.1_A4.12_T2.js
-  - [ ] test/language/expressions/less-than/S11.8.1_A4.2.js
-  - [ ] test/language/expressions/less-than/S11.8.1_A4.3.js
-  - [ ] test/language/expressions/less-than/S11.8.1_A4.4.js
-  - [ ] test/language/expressions/less-than/S11.8.1_A4.5.js
-  - [ ] test/language/expressions/less-than/S11.8.1_A4.6.js
-  - [ ] test/language/expressions/less-than/S11.8.1_A4.7.js
-  - [ ] test/language/expressions/less-than/S11.8.1_A4.8.js
-  - [ ] test/language/expressions/less-than/S11.8.1_A4.9.js
-  - [ ] test/language/expressions/less-than/bigint-and-bigint.js
-  - [ ] test/language/expressions/less-than/bigint-and-boolean.js
-  - [ ] test/language/expressions/less-than/bigint-and-incomparable-string.js
-  - [ ] test/language/expressions/less-than/bigint-and-non-finite.js
-  - [ ] test/language/expressions/less-than/bigint-and-number-extremes.js
-  - [ ] test/language/expressions/less-than/bigint-and-number.js
-  - [ ] test/language/expressions/less-than/bigint-and-string.js
-  - [ ] test/language/expressions/less-than/bigint-and-symbol.js
   - [ ] test/language/expressions/logical-and/S11.11.1_A1.js
   - [ ] test/language/expressions/logical-and/S11.11.1_A2.1_T1.js
   - [ ] test/language/expressions/logical-and/S11.11.1_A2.1_T2.js
@@ -19816,20 +19839,6 @@ Sub-category progress
   - [ ] test/language/expressions/multiplication/bigint-wrapped-values.js
   - [ ] test/language/expressions/multiplication/line-terminator.js
   - [ ] test/language/expressions/multiplication/order-of-evaluation.js
-  - [ ] test/language/expressions/new.target/asi.js
-  - [ ] test/language/expressions/new.target/escaped-new.js
-  - [ ] test/language/expressions/new.target/escaped-target.js
-  - [ ] test/language/expressions/new.target/unary-expr.js
-  - [ ] test/language/expressions/new.target/value-via-call.js
-  - [ ] test/language/expressions/new.target/value-via-fpapply.js
-  - [ ] test/language/expressions/new.target/value-via-fpcall.js
-  - [ ] test/language/expressions/new.target/value-via-member.js
-  - [ ] test/language/expressions/new.target/value-via-new.js
-  - [ ] test/language/expressions/new.target/value-via-reflect-apply.js
-  - [ ] test/language/expressions/new.target/value-via-reflect-construct.js
-  - [ ] test/language/expressions/new.target/value-via-super-call.js
-  - [ ] test/language/expressions/new.target/value-via-super-property.js
-  - [ ] test/language/expressions/new.target/value-via-tagged-template.js
   - [ ] test/language/expressions/new/S11.2.2_A1.1.js
   - [ ] test/language/expressions/new/S11.2.2_A1.2.js
   - [ ] test/language/expressions/new/S11.2.2_A2.js
@@ -19889,6 +19898,20 @@ Sub-category progress
   - [ ] test/language/expressions/new/spread-sngl-iter.js
   - [ ] test/language/expressions/new/spread-sngl-literal.js
   - [ ] test/language/expressions/new/spread-sngl-obj-ident.js
+  - [ ] test/language/expressions/new.target/asi.js
+  - [ ] test/language/expressions/new.target/escaped-new.js
+  - [ ] test/language/expressions/new.target/escaped-target.js
+  - [ ] test/language/expressions/new.target/unary-expr.js
+  - [ ] test/language/expressions/new.target/value-via-call.js
+  - [ ] test/language/expressions/new.target/value-via-fpapply.js
+  - [ ] test/language/expressions/new.target/value-via-fpcall.js
+  - [ ] test/language/expressions/new.target/value-via-member.js
+  - [ ] test/language/expressions/new.target/value-via-new.js
+  - [ ] test/language/expressions/new.target/value-via-reflect-apply.js
+  - [ ] test/language/expressions/new.target/value-via-reflect-construct.js
+  - [ ] test/language/expressions/new.target/value-via-super-call.js
+  - [ ] test/language/expressions/new.target/value-via-super-property.js
+  - [ ] test/language/expressions/new.target/value-via-tagged-template.js
   - [ ] test/language/expressions/object/11.1.5-0-1.js
   - [ ] test/language/expressions/object/11.1.5-0-2.js
   - [ ] test/language/expressions/object/11.1.5-1gs.js
@@ -21745,7 +21768,7 @@ Sub-category progress
   - [ ] test/language/expressions/yield/star-throw-is-null.js
   - [ ] test/language/expressions/yield/then-return.js
   - [ ] test/language/expressions/yield/within-for.js
-- [ ] types (113 tests)
+- [ ] types
   - [ ] test/language/types/boolean/S8.3_A1_T1.js
   - [ ] test/language/types/boolean/S8.3_A1_T2.js
   - [ ] test/language/types/boolean/S8.3_A2.1.js
@@ -21859,7 +21882,7 @@ Sub-category progress
   - [ ] test/language/types/undefined/S8.1_A3_T2.js
   - [ ] test/language/types/undefined/S8.1_A4.js
   - [ ] test/language/types/undefined/S8.1_A5.js
-- [ ] function-code (217 tests)
+- [ ] function-code
   - [ ] test/language/function-code/10.4.3-1-1-s.js
   - [ ] test/language/function-code/10.4.3-1-10-s.js
   - [ ] test/language/function-code/10.4.3-1-100-s.js
@@ -22077,7 +22100,7 @@ Sub-category progress
   - [ ] test/language/function-code/eval-param-env-with-prop-initializer.js
   - [ ] test/language/function-code/switch-case-decl-onlystrict.js
   - [ ] test/language/function-code/switch-dflt-decl-onlystrict.js
-- [ ] global-code (42 tests)
+- [ ] global-code
   - [ ] test/language/global-code/S10.1.7_A1_T1.js
   - [ ] test/language/global-code/S10.4.1_A1_T1.js
   - [ ] test/language/global-code/S10.4.1_A1_T2.js
@@ -22120,7 +22143,7 @@ Sub-category progress
   - [ ] test/language/global-code/unscopables-ignored.js
   - [ ] test/language/global-code/yield-non-strict.js
   - [ ] test/language/global-code/yield-strict.js
-- [ ] arguments-object (263 tests)
+- [ ] arguments-object
   - [ ] test/language/arguments-object/10.5-1-s.js
   - [ ] test/language/arguments-object/10.5-1gs.js
   - [ ] test/language/arguments-object/10.5-7-b-1-s.js
@@ -22384,7 +22407,7 @@ Sub-category progress
   - [ ] test/language/arguments-object/unmapped/via-params-dstr.js
   - [ ] test/language/arguments-object/unmapped/via-params-rest.js
   - [ ] test/language/arguments-object/unmapped/via-strict.js
-- [ ] rest-parameters (11 tests)
+- [ ] rest-parameters
   - [ ] test/language/rest-parameters/array-pattern.js
   - [ ] test/language/rest-parameters/arrow-function.js
   - [ ] test/language/rest-parameters/expected-argument-count.js
@@ -22396,7 +22419,7 @@ Sub-category progress
   - [ ] test/language/rest-parameters/rest-parameters-call.js
   - [ ] test/language/rest-parameters/rest-parameters-produce-an-array.js
   - [ ] test/language/rest-parameters/with-new-target.js
-- [ ] block-scope (145 tests)
+- [ ] block-scope
   - [ ] test/language/block-scope/leave/finally-block-let-declaration-only-shadows-outer-parameter-value-1.js
   - [ ] test/language/block-scope/leave/finally-block-let-declaration-only-shadows-outer-parameter-value-2.js
   - [ ] test/language/block-scope/leave/for-loop-block-let-declaration-only-shadows-outer-parameter-value-1.js
@@ -22444,9 +22467,6 @@ Sub-category progress
   - [ ] test/language/block-scope/syntax/function-declarations/in-statement-position-if-expression-statement-else-statement.js
   - [ ] test/language/block-scope/syntax/function-declarations/in-statement-position-if-expression-statement.js
   - [ ] test/language/block-scope/syntax/function-declarations/in-statement-position-while-expression-statement.js
-  - [ ] test/language/block-scope/syntax/redeclaration-global/allowed-to-declare-function-with-function-declaration.js
-  - [ ] test/language/block-scope/syntax/redeclaration-global/allowed-to-redeclare-function-declaration-with-var.js
-  - [ ] test/language/block-scope/syntax/redeclaration-global/allowed-to-redeclare-var-with-function-declaration.js
   - [ ] test/language/block-scope/syntax/redeclaration/async-function-name-redeclaration-attempt-with-async-function.js
   - [ ] test/language/block-scope/syntax/redeclaration/async-function-name-redeclaration-attempt-with-async-generator.js
   - [ ] test/language/block-scope/syntax/redeclaration/async-function-name-redeclaration-attempt-with-class.js
@@ -22542,7 +22562,10 @@ Sub-category progress
   - [ ] test/language/block-scope/syntax/redeclaration/var-redeclaration-attempt-after-function.js
   - [ ] test/language/block-scope/syntax/redeclaration/var-redeclaration-attempt-after-generator.js
   - [ ] test/language/block-scope/syntax/redeclaration/var-redeclaration-attempt-after-let.js
-- [ ] identifier-resolution (14 tests)
+  - [ ] test/language/block-scope/syntax/redeclaration-global/allowed-to-declare-function-with-function-declaration.js
+  - [ ] test/language/block-scope/syntax/redeclaration-global/allowed-to-redeclare-function-declaration-with-var.js
+  - [ ] test/language/block-scope/syntax/redeclaration-global/allowed-to-redeclare-var-with-function-declaration.js
+- [ ] identifier-resolution
   - [ ] test/language/identifier-resolution/S10.2.2_A1_T1.js
   - [ ] test/language/identifier-resolution/S10.2.2_A1_T2.js
   - [ ] test/language/identifier-resolution/S10.2.2_A1_T3.js
@@ -22557,7 +22580,7 @@ Sub-category progress
   - [ ] test/language/identifier-resolution/assign-to-global-undefined.js
   - [ ] test/language/identifier-resolution/static-init-invalid-await.js
   - [ ] test/language/identifier-resolution/unscopables.js
-- [ ] computed-property-names (48 tests)
+- [ ] computed-property-names
   - [ ] test/language/computed-property-names/basics/number.js
   - [ ] test/language/computed-property-names/basics/string.js
   - [ ] test/language/computed-property-names/basics/symbol.js
@@ -22606,7 +22629,7 @@ Sub-category progress
   - [ ] test/language/computed-property-names/to-name-side-effects/numbers-class.js
   - [ ] test/language/computed-property-names/to-name-side-effects/numbers-object.js
   - [ ] test/language/computed-property-names/to-name-side-effects/object.js
-- [ ] destructuring (19 tests)
+- [ ] destructuring
   - [ ] test/language/destructuring/binding/initialization-requires-object-coercible-null.js
   - [ ] test/language/destructuring/binding/initialization-requires-object-coercible-undefined.js
   - [ ] test/language/destructuring/binding/initialization-returns-normal-completion-for-empty-objects.js
@@ -22626,7 +22649,7 @@ Sub-category progress
   - [ ] test/language/destructuring/binding/syntax/property-list-with-property-list.js
   - [ ] test/language/destructuring/binding/syntax/recursive-array-and-object-patterns.js
   - [ ] test/language/destructuring/binding/typedarray-backed-by-resizable-buffer.js
-- [ ] eval-code (347 tests)
+- [ ] eval-code
   - [ ] test/language/eval-code/direct/arrow-fn-a-following-parameter-is-named-arguments-arrow-func-declare-arguments-assign-incl-def-param-arrow-arguments.js
   - [ ] test/language/eval-code/direct/arrow-fn-a-following-parameter-is-named-arguments-arrow-func-declare-arguments-assign.js
   - [ ] test/language/eval-code/direct/arrow-fn-a-preceding-parameter-is-named-arguments-arrow-func-declare-arguments-assign-incl-def-param-arrow-arguments.js
@@ -22974,7 +22997,7 @@ Sub-category progress
   - [ ] test/language/eval-code/indirect/var-env-var-init-global-new.js
   - [ ] test/language/eval-code/indirect/var-env-var-non-strict.js
   - [ ] test/language/eval-code/indirect/var-env-var-strict.js
-- [ ] import (127 tests)
+- [ ] import
   - [ ] test/language/import/dup-bound-names.js
   - [ ] test/language/import/escaped-as-import-specifier.js
   - [ ] test/language/import/escaped-as-namespace-import.js
@@ -23005,10 +23028,10 @@ Sub-category progress
   - [ ] test/language/import/import-defer/deferred-namespace-object/identity.js
   - [ ] test/language/import/import-defer/deferred-namespace-object/reexport-deferred-ns-evaluation.js
   - [ ] test/language/import/import-defer/deferred-namespace-object/to-string-tag.js
-  - [ ] test/language/import/import-defer/errors/get-other-while-dep-evaluating-async/main.js
   - [ ] test/language/import/import-defer/errors/get-other-while-dep-evaluating/main.js
-  - [ ] test/language/import/import-defer/errors/get-other-while-evaluating-async/main.js
+  - [ ] test/language/import/import-defer/errors/get-other-while-dep-evaluating-async/main.js
   - [ ] test/language/import/import-defer/errors/get-other-while-evaluating/main.js
+  - [ ] test/language/import/import-defer/errors/get-other-while-evaluating-async/main.js
   - [ ] test/language/import/import-defer/errors/get-self-while-defer-evaluating/main.js
   - [ ] test/language/import/import-defer/errors/get-self-while-evaluating-async/main.js
   - [ ] test/language/import/import-defer/errors/get-self-while-evaluating.js
@@ -23032,6 +23055,7 @@ Sub-category progress
   - [ ] test/language/import/import-defer/evaluation-triggers/ignore-exported-then-hasProperty.js
   - [ ] test/language/import/import-defer/evaluation-triggers/ignore-exported-then-super-get.js
   - [ ] test/language/import/import-defer/evaluation-triggers/ignore-exported-then-super-property-define.js
+  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-exported-then-super-property-set-exported.js
   - [ ] test/language/import/import-defer/evaluation-triggers/ignore-getPrototypeOf.js
   - [ ] test/language/import/import-defer/evaluation-triggers/ignore-isExtensible.js
   - [ ] test/language/import/import-defer/evaluation-triggers/ignore-not-exported-then-defineOwnProperty.js
@@ -23043,13 +23067,12 @@ Sub-category progress
   - [ ] test/language/import/import-defer/evaluation-triggers/ignore-not-exported-then-hasProperty.js
   - [ ] test/language/import/import-defer/evaluation-triggers/ignore-not-exported-then-super-get.js
   - [ ] test/language/import/import-defer/evaluation-triggers/ignore-not-exported-then-super-property-define.js
+  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-not-exported-then-super-property-set-exported.js
   - [ ] test/language/import/import-defer/evaluation-triggers/ignore-preventExtensions.js
   - [ ] test/language/import/import-defer/evaluation-triggers/ignore-private-name-access.js
   - [ ] test/language/import/import-defer/evaluation-triggers/ignore-set-string-exported.js
   - [ ] test/language/import/import-defer/evaluation-triggers/ignore-set-string-not-exported.js
   - [ ] test/language/import/import-defer/evaluation-triggers/ignore-setPrototypeOf.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-exported-then-super-property-set-exported.js
-  - [ ] test/language/import/import-defer/evaluation-triggers/ignore-not-exported-then-super-property-set-exported.js
   - [ ] test/language/import/import-defer/evaluation-triggers/ignore-symbol-other-defineOwnProperty.js
   - [ ] test/language/import/import-defer/evaluation-triggers/ignore-symbol-other-delete.js
   - [ ] test/language/import/import-defer/evaluation-triggers/ignore-symbol-other-get-in-prototype.js
@@ -23102,11 +23125,11 @@ Sub-category progress
   - [ ] test/language/import/import-defer/syntax/invalid-export-defer-namespace.js
   - [ ] test/language/import/import-defer/syntax/valid-default-binding-named-defer.js
   - [ ] test/language/import/import-defer/syntax/valid-defer-namespace.js
-- [ ] export (3 tests)
+- [ ] export
   - [ ] test/language/export/escaped-as-export-specifier.js
   - [ ] test/language/export/escaped-default.js
   - [ ] test/language/export/escaped-from.js
-- [ ] module-code (596 tests)
+- [ ] module-code
   - [ ] test/language/module-code/ambiguous-export-bindings/error-export-from-named-as.js
   - [ ] test/language/module-code/ambiguous-export-bindings/error-export-from-named.js
   - [ ] test/language/module-code/ambiguous-export-bindings/error-import-named-as.js
