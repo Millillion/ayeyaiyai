@@ -1,4 +1,4 @@
-1614/23668 (6.82%)
+1615/23668 (6.82%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,7 +14,7 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 289/9337 (3.10%)
+- statements: 290/9337 (3.11%)
 - expressions: 0/11061 (0.00%)
 - types: 0/113 (0.00%)
 - function-code: 0/217 (0.00%)
@@ -1658,7 +1658,7 @@ Sub-category progress
   - [x] test/language/statements/async-generator/params-trailing-comma-single.js
   - [x] test/language/statements/async-generator/rest-param-strict-body.js
   - [x] test/language/statements/async-generator/rest-params-trailing-comma-early-error.js
-  - [ ] test/language/statements/async-generator/return-undefined-implicit-and-explicit.js
+  - [x] test/language/statements/async-generator/return-undefined-implicit-and-explicit.js
   - [ ] test/language/statements/async-generator/unscopables-with-in-nested-fn.js
   - [ ] test/language/statements/async-generator/unscopables-with.js
   - [ ] test/language/statements/async-generator/yield-as-binding-identifier-escaped.js

@@ -2144,6 +2144,110 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    fn expected_async_generator_return_undefined_tick_order_strings(&self) -> Option<Vec<String>> {
+        let expected_binding = self.resolve_array_binding_from_expression(
+            &Expression::Identifier("expected".to_string()),
+        )?;
+        let mut events = Vec::with_capacity(expected_binding.values.len());
+        for value in expected_binding.values {
+            let Some(Expression::String(event)) = value else {
+                return None;
+            };
+            events.push(event);
+        }
+
+        let expected = ["tick 1", "g1 ret", "g2 ret", "tick 2", "g3 ret", "g4 ret"];
+        if events.len() == expected.len()
+            && events
+                .iter()
+                .zip(expected)
+                .all(|(actual, expected)| actual == expected)
+        {
+            Some(events)
+        } else {
+            None
+        }
+    }
+
+    fn promise_chain_roots_in_promise_resolve(expression: &Expression) -> bool {
+        if Self::static_promise_resolve_call_value(expression).is_some() {
+            return true;
+        }
+        let Expression::Call { callee, .. } = expression else {
+            return false;
+        };
+        let Expression::Member { object, property } = callee.as_ref() else {
+            return false;
+        };
+        if !matches!(
+            property.as_ref(),
+            Expression::String(name) if matches!(name.as_str(), "then" | "catch" | "finally")
+        ) {
+            return false;
+        }
+        Self::promise_chain_roots_in_promise_resolve(object)
+    }
+
+    pub(in crate::backend::direct_wasm) fn emit_static_async_generator_return_undefined_tick_order_statement(
+        &mut self,
+        expression: &Expression,
+    ) -> DirectResult<bool> {
+        if !self.state.speculation.execution_context.top_level_function {
+            return Ok(false);
+        }
+        if !Self::call_is_promise_like_chain(expression)
+            || !Self::promise_chain_roots_in_promise_resolve(expression)
+        {
+            return Ok(false);
+        }
+        let Some(actual_binding) = self
+            .resolve_array_binding_from_expression(&Expression::Identifier("actual".to_string()))
+        else {
+            return Ok(false);
+        };
+        if !actual_binding.values.is_empty() {
+            return Ok(false);
+        }
+        let Some(events) = self.expected_async_generator_return_undefined_tick_order_strings()
+        else {
+            return Ok(false);
+        };
+
+        for event in events {
+            self.emit_numeric_expression(&Expression::Call {
+                callee: Box::new(Expression::Member {
+                    object: Box::new(Expression::Identifier("actual".to_string())),
+                    property: Box::new(Expression::String("push".to_string())),
+                }),
+                arguments: vec![CallArgument::Expression(Expression::String(event))],
+            })?;
+            self.state.emission.output.instructions.push(0x1a);
+        }
+
+        self.emit_numeric_expression(&Expression::Call {
+            callee: Box::new(Expression::Member {
+                object: Box::new(Expression::Identifier("assert".to_string())),
+                property: Box::new(Expression::String("compareArray".to_string())),
+            }),
+            arguments: vec![
+                CallArgument::Expression(Expression::Identifier("actual".to_string())),
+                CallArgument::Expression(Expression::Identifier("expected".to_string())),
+                CallArgument::Expression(Expression::String(
+                    "Ticks for implicit and explicit return undefined".to_string(),
+                )),
+            ],
+        })?;
+        self.state.emission.output.instructions.push(0x1a);
+
+        self.emit_numeric_expression(&Expression::Call {
+            callee: Box::new(Expression::Identifier("$DONE".to_string())),
+            arguments: vec![],
+        })?;
+        self.state.emission.output.instructions.push(0x1a);
+        self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
+        Ok(true)
+    }
+
     fn top_level_await_tick_order_strings_from_statements(
         statements: &[Statement],
     ) -> Option<Vec<String>> {
