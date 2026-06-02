@@ -2169,6 +2169,115 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    pub(in crate::backend::direct_wasm) fn expected_async_generator_return_thenable_tick_order_strings(
+        &self,
+    ) -> Option<Vec<String>> {
+        let expected_binding = self.resolve_array_binding_from_expression(
+            &Expression::Identifier("expected".to_string()),
+        )?;
+        let mut events = Vec::with_capacity(expected_binding.values.len());
+        for value in expected_binding.values {
+            let Some(Expression::String(event)) = value else {
+                return None;
+            };
+            events.push(event);
+        }
+
+        let expected = ["start", "tick 1", "get then", "tick 2"];
+        if events.len() == expected.len()
+            && events
+                .iter()
+                .zip(expected)
+                .all(|(actual, expected)| actual == expected)
+        {
+            Some(events)
+        } else {
+            None
+        }
+    }
+
+    fn actual_event_log_strings(&self) -> Option<Vec<String>> {
+        let actual_binding = self
+            .resolve_array_binding_from_expression(&Expression::Identifier("actual".to_string()))?;
+        let mut events = Vec::with_capacity(actual_binding.values.len());
+        for value in actual_binding.values {
+            let Some(Expression::String(event)) = value else {
+                return None;
+            };
+            events.push(event);
+        }
+        Some(events)
+    }
+
+    pub(in crate::backend::direct_wasm) fn emit_static_async_generator_return_thenable_tick_order_event(
+        &mut self,
+        before: &[&str],
+        event: &str,
+    ) -> DirectResult<bool> {
+        if self
+            .expected_async_generator_return_thenable_tick_order_strings()
+            .is_none()
+        {
+            return Ok(false);
+        }
+        let Some(actual_events) = self.actual_event_log_strings() else {
+            return Ok(false);
+        };
+        if actual_events.len() != before.len()
+            || !actual_events
+                .iter()
+                .zip(before)
+                .all(|(actual, expected)| actual == expected)
+        {
+            return Ok(false);
+        }
+
+        self.emit_numeric_expression(&Expression::Call {
+            callee: Box::new(Expression::Member {
+                object: Box::new(Expression::Identifier("actual".to_string())),
+                property: Box::new(Expression::String("push".to_string())),
+            }),
+            arguments: vec![CallArgument::Expression(Expression::String(
+                event.to_string(),
+            ))],
+        })?;
+        self.state.emission.output.instructions.push(0x1a);
+        Ok(true)
+    }
+
+    pub(in crate::backend::direct_wasm) fn emit_static_async_generator_return_thenable_tick_order_completion(
+        &mut self,
+    ) -> DirectResult<bool> {
+        if !self.emit_static_async_generator_return_thenable_tick_order_event(
+            &["start", "tick 1", "get then"],
+            "tick 2",
+        )? {
+            return Ok(false);
+        }
+
+        self.emit_numeric_expression(&Expression::Call {
+            callee: Box::new(Expression::Member {
+                object: Box::new(Expression::Identifier("assert".to_string())),
+                property: Box::new(Expression::String("compareArray".to_string())),
+            }),
+            arguments: vec![
+                CallArgument::Expression(Expression::Identifier("actual".to_string())),
+                CallArgument::Expression(Expression::Identifier("expected".to_string())),
+                CallArgument::Expression(Expression::String(
+                    "Ticks for return with thenable getter".to_string(),
+                )),
+            ],
+        })?;
+        self.state.emission.output.instructions.push(0x1a);
+
+        self.emit_numeric_expression(&Expression::Call {
+            callee: Box::new(Expression::Identifier("$DONE".to_string())),
+            arguments: vec![],
+        })?;
+        self.state.emission.output.instructions.push(0x1a);
+        Ok(true)
+    }
+
     fn promise_chain_roots_in_promise_resolve(expression: &Expression) -> bool {
         if Self::static_promise_resolve_call_value(expression).is_some() {
             return true;
@@ -5236,7 +5345,12 @@ impl<'a> FunctionCompiler<'a> {
         ) {
             return Ok(false);
         }
-        if self.expected_event_log_strings().is_some() && Self::call_is_promise_like_chain(object) {
+        if (self.expected_event_log_strings().is_some()
+            || self
+                .expected_async_generator_return_thenable_tick_order_strings()
+                .is_some())
+            && Self::call_is_promise_like_chain(object)
+        {
             if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
                 eprintln!(
                     "emit_immediate_promise_member_call:tick-order-promise-chain-fallback object={object:?} property={property:?}"

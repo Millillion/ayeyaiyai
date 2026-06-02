@@ -14154,6 +14154,82 @@ fn async_generator_return_undefined_tick_order_reports_completion() {
 }
 
 #[test]
+fn async_generator_return_thenable_getter_tick_order_reports_completion() {
+    let tempdir = tempdir().unwrap();
+    let input = tempdir
+        .path()
+        .join("async-generator-return-thenable-getter-tick-order.js");
+    let output = tempdir
+        .path()
+        .join("async-generator-return-thenable-getter-tick-order.wasm");
+
+    fs::write(
+        &input,
+        r#"
+        var expected = [
+          "start",
+          "tick 1",
+          "get then",
+          "tick 2",
+        ];
+
+        var actual = [];
+
+        async function* f() {
+          actual.push("start");
+          yield 123;
+          actual.push("stop - never reached");
+        }
+
+        Promise.resolve(0)
+          .then(() => actual.push("tick 1"))
+          .then(() => actual.push("tick 2"))
+          .then(() => {
+            assert.compareArray(actual, expected, "Ticks for return with thenable getter");
+        }).then($DONE, $DONE);
+
+        var it = f();
+
+        it.next();
+
+        it.return({
+          get then() {
+            actual.push("get then");
+          }
+        });
+        "#,
+    )
+    .unwrap();
+
+    let compile = Command::new(env!("CARGO_BIN_EXE_ayeyaiyai"))
+        .arg(&input)
+        .arg("-o")
+        .arg(&output)
+        .output()
+        .unwrap();
+
+    assert!(
+        compile.status.success(),
+        "compiler failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&compile.stdout),
+        String::from_utf8_lossy(&compile.stderr),
+    );
+
+    let run = Command::new("wasmtime").arg(&output).output().unwrap();
+
+    assert!(
+        run.status.success(),
+        "wasmtime failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&run.stdout),
+        String::from_utf8_lossy(&run.stderr),
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&run.stdout),
+        "Test262:AsyncTestComplete\n"
+    );
+}
+
+#[test]
 fn async_generator_nested_unscopables_function_replay_reports_completion() {
     let tempdir = tempdir().unwrap();
     let input = tempdir

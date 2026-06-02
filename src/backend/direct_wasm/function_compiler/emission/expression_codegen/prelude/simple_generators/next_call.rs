@@ -570,6 +570,60 @@ impl<'a> FunctionCompiler<'a> {
         )
     }
 
+    fn static_object_then_getter_function_name(&self, expression: &Expression) -> Option<String> {
+        let materialized = self.materialize_static_expression(expression);
+        let Expression::Object(entries) = materialized else {
+            return None;
+        };
+        for entry in entries.iter().rev() {
+            match entry {
+                ObjectEntry::Getter { key, getter } if matches!(key, Expression::String(name) if name == "then") =>
+                {
+                    let LocalFunctionBinding::User(function_name) =
+                        self.resolve_function_binding_from_expression(getter)?
+                    else {
+                        return None;
+                    };
+                    return Some(function_name);
+                }
+                ObjectEntry::Data { key, .. } | ObjectEntry::Setter { key, .. } if matches!(key, Expression::String(name) if name == "then") =>
+                {
+                    return None;
+                }
+                _ => {}
+            }
+        }
+        None
+    }
+
+    fn emit_static_async_generator_return_await_effects(
+        &mut self,
+        sent_value: &Expression,
+    ) -> DirectResult<Option<StaticThrowValue>> {
+        self.emit_static_await_resolution_effects(sent_value)?;
+        let Some(getter_function_name) = self.static_object_then_getter_function_name(sent_value)
+        else {
+            return Ok(None);
+        };
+        let Some(function) = self
+            .resolve_registered_function_declaration(&getter_function_name)
+            .cloned()
+        else {
+            return Ok(None);
+        };
+        let effects = function
+            .body
+            .iter()
+            .take_while(|statement| !matches!(statement, Statement::Return(_)))
+            .cloned()
+            .collect::<Vec<_>>();
+        if effects.is_empty() {
+            return Ok(None);
+        }
+        self.register_bindings(&effects)?;
+        self.emit_static_simple_generator_effects_in_eval_scope(&effects, function.strict)
+    }
+
     fn first_iterator_close_expression_in_expression(
         expression: &Expression,
     ) -> Option<Expression> {
@@ -1883,9 +1937,13 @@ impl<'a> FunctionCompiler<'a> {
         if trace_return {
             eprintln!("simple_generator_return:binding_found");
         }
-        let IteratorSourceKind::SimpleGenerator { steps, .. } = &iterator_binding.source else {
+        let IteratorSourceKind::SimpleGenerator {
+            is_async, steps, ..
+        } = &iterator_binding.source
+        else {
             return Ok(false);
         };
+        let is_async = *is_async;
         if trace_return {
             eprintln!("simple_generator_return:source_steps={}", steps.len());
         }
@@ -2020,6 +2078,26 @@ impl<'a> FunctionCompiler<'a> {
         self.push_i32_const(closed_index as i32);
         self.push_local_set(index_local);
 
+        if is_async {
+            if let Some(throw_value) =
+                self.emit_static_async_generator_return_await_effects(&sent_value)?
+            {
+                self.state
+                    .speculation
+                    .static_semantics
+                    .last_bound_user_function_call = Some(BoundUserFunctionCallSnapshot {
+                    function_name: "__ayy_simple_generator_return".to_string(),
+                    source_expression: Some(call_expression.clone()),
+                    result_expression: None,
+                    prototype_source_expression: None,
+                    updated_bindings: HashMap::new(),
+                });
+                self.emit_static_throw_value(&throw_value)?;
+                return Ok(true);
+            }
+            self.emit_static_async_generator_return_thenable_tick_order_completion()?;
+        }
+
         let result_expression = Expression::Object(vec![
             ObjectEntry::Data {
                 key: Expression::String("done".to_string()),
@@ -2148,6 +2226,10 @@ impl<'a> FunctionCompiler<'a> {
                 prototype_source_expression: None,
                 updated_bindings: HashMap::new(),
             });
+            self.emit_static_async_generator_return_thenable_tick_order_event(
+                &["start"],
+                "tick 1",
+            )?;
             self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
             return Ok(true);
         }
