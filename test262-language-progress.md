@@ -1,4 +1,4 @@
-1605/23668 (6.78%)
+1614/23668 (6.82%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,7 +14,7 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 280/9337 (3.00%)
+- statements: 289/9337 (3.10%)
 - expressions: 0/11061 (0.00%)
 - types: 0/113 (0.00%)
 - function-code: 0/217 (0.00%)
@@ -1649,15 +1649,15 @@ Sub-category progress
   - [x] test/language/statements/async-generator/eval-var-scope-syntax-err.js
   - [x] test/language/statements/async-generator/forbidden-ext/b1/async-gen-func-decl-forbidden-ext-direct-access-prop-arguments.js
   - [x] test/language/statements/async-generator/forbidden-ext/b1/async-gen-func-decl-forbidden-ext-direct-access-prop-caller.js
-  - [ ] test/language/statements/async-generator/forbidden-ext/b2/async-gen-func-decl-forbidden-ext-indirect-access-own-prop-caller-get.js
-  - [ ] test/language/statements/async-generator/forbidden-ext/b2/async-gen-func-decl-forbidden-ext-indirect-access-own-prop-caller-value.js
-  - [ ] test/language/statements/async-generator/forbidden-ext/b2/async-gen-func-decl-forbidden-ext-indirect-access-prop-caller.js
-  - [ ] test/language/statements/async-generator/generator-created-after-decl-inst.js
-  - [ ] test/language/statements/async-generator/object-destructuring-param-strict-body.js
-  - [ ] test/language/statements/async-generator/params-trailing-comma-multiple.js
-  - [ ] test/language/statements/async-generator/params-trailing-comma-single.js
-  - [ ] test/language/statements/async-generator/rest-param-strict-body.js
-  - [ ] test/language/statements/async-generator/rest-params-trailing-comma-early-error.js
+  - [x] test/language/statements/async-generator/forbidden-ext/b2/async-gen-func-decl-forbidden-ext-indirect-access-own-prop-caller-get.js
+  - [x] test/language/statements/async-generator/forbidden-ext/b2/async-gen-func-decl-forbidden-ext-indirect-access-own-prop-caller-value.js
+  - [x] test/language/statements/async-generator/forbidden-ext/b2/async-gen-func-decl-forbidden-ext-indirect-access-prop-caller.js
+  - [x] test/language/statements/async-generator/generator-created-after-decl-inst.js
+  - [x] test/language/statements/async-generator/object-destructuring-param-strict-body.js
+  - [x] test/language/statements/async-generator/params-trailing-comma-multiple.js
+  - [x] test/language/statements/async-generator/params-trailing-comma-single.js
+  - [x] test/language/statements/async-generator/rest-param-strict-body.js
+  - [x] test/language/statements/async-generator/rest-params-trailing-comma-early-error.js
   - [ ] test/language/statements/async-generator/return-undefined-implicit-and-explicit.js
   - [ ] test/language/statements/async-generator/unscopables-with-in-nested-fn.js
   - [ ] test/language/statements/async-generator/unscopables-with.js

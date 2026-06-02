@@ -1,5 +1,11 @@
 use super::*;
 
+#[derive(Clone, Copy)]
+enum MemberAccessorKind {
+    Getter,
+    Setter,
+}
+
 impl<'a> FunctionCompiler<'a> {
     fn expression_is_static_undefined_value(value: &Expression) -> bool {
         matches!(value, Expression::Undefined)
@@ -128,15 +134,16 @@ impl<'a> FunctionCompiler<'a> {
             .is_some_and(|value| !Self::expression_is_static_undefined_value(value))
     }
 
-    fn runtime_shadow_has_accessor_descriptor(
+    fn runtime_shadow_callable_accessor_descriptor_state(
         &self,
         object: &Expression,
         property: &Expression,
-    ) -> bool {
+        kind: MemberAccessorKind,
+    ) -> Option<bool> {
         let Some(shadow_binding_name) =
             self.runtime_object_property_shadow_binding_name_for_expression(object, property)
         else {
-            return false;
+            return None;
         };
         self.backend
             .global_property_descriptor(&shadow_binding_name)
@@ -146,24 +153,30 @@ impl<'a> FunctionCompiler<'a> {
                     .values
                     .property_descriptor(&shadow_binding_name)
             })
-            .is_some_and(|descriptor| {
-                descriptor.has_get
-                    || descriptor.has_set
-                    || descriptor.getter.is_some()
-                    || descriptor.setter.is_some()
+            .map(|descriptor| {
+                let accessor = match kind {
+                    MemberAccessorKind::Getter => descriptor.getter.as_ref(),
+                    MemberAccessorKind::Setter => descriptor.setter.as_ref(),
+                };
+                accessor
+                    .and_then(|accessor| self.resolve_function_binding_from_expression(accessor))
+                    .is_some()
             })
     }
 
-    fn object_has_own_non_getter_property_binding(
+    fn object_has_own_non_accessor_property_binding(
         &self,
         object: &Expression,
         property: &Expression,
+        kind: MemberAccessorKind,
     ) -> bool {
+        if let Some(has_callable_accessor) =
+            self.runtime_shadow_callable_accessor_descriptor_state(object, property, kind)
+        {
+            return !has_callable_accessor;
+        }
         if self.runtime_shadow_has_own_non_accessor_data_value(object, property) {
             return true;
-        }
-        if self.runtime_shadow_has_accessor_descriptor(object, property) {
-            return false;
         }
 
         let resolved_object = self
@@ -221,7 +234,11 @@ impl<'a> FunctionCompiler<'a> {
                                 )
                             })
                     {
-                        if descriptor.getter.is_none() {
+                        let accessor = match kind {
+                            MemberAccessorKind::Getter => descriptor.getter.as_ref(),
+                            MemberAccessorKind::Setter => descriptor.setter.as_ref(),
+                        };
+                        if accessor.is_none() {
                             return true;
                         }
                         let data_value =
@@ -245,6 +262,30 @@ impl<'a> FunctionCompiler<'a> {
         }
 
         false
+    }
+
+    fn object_has_own_non_getter_property_binding(
+        &self,
+        object: &Expression,
+        property: &Expression,
+    ) -> bool {
+        self.object_has_own_non_accessor_property_binding(
+            object,
+            property,
+            MemberAccessorKind::Getter,
+        )
+    }
+
+    fn object_has_own_non_setter_property_binding(
+        &self,
+        object: &Expression,
+        property: &Expression,
+    ) -> bool {
+        self.object_has_own_non_accessor_property_binding(
+            object,
+            property,
+            MemberAccessorKind::Setter,
+        )
     }
 
     fn function_binding_has_synthetic_own_data_property(
@@ -608,7 +649,7 @@ impl<'a> FunctionCompiler<'a> {
             }
             return Some(binding);
         }
-        if self.object_has_own_non_getter_property_binding(object, property) {
+        if self.object_has_own_non_setter_property_binding(object, property) {
             if trace_member_bindings {
                 eprintln!(
                     "member_setter_binding:own_non_setter_blocks_inherited object={object:?} property={property:?}"

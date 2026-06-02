@@ -14000,6 +14000,78 @@ fn async_indirect_caller_getter_reports_completion() {
 }
 
 #[test]
+fn async_generator_indirect_caller_getter_reports_completion() {
+    let tempdir = tempdir().unwrap();
+    let input = tempdir
+        .path()
+        .join("async-generator-indirect-caller-getter.js");
+    let output = tempdir
+        .path()
+        .join("async-generator-indirect-caller-getter.wasm");
+
+    fs::write(
+        &input,
+        r#"
+        var CALLER_OWN_PROPERTY_DOES_NOT_EXIST = Symbol();
+        function inner() {
+          return inner.hasOwnProperty("caller")
+            ? inner.caller
+            : CALLER_OWN_PROPERTY_DOES_NOT_EXIST;
+        }
+
+        var callCount = 0;
+        async function* f() {
+          "use strict";
+          let descriptor = Object.getOwnPropertyDescriptor(inner, "caller");
+          if (descriptor && descriptor.configurable && true) {
+            Object.defineProperty(inner, "caller", {get(){return 1}});
+          }
+          var result = inner();
+          if (descriptor && descriptor.configurable && true) {
+            assert.sameValue(result, 1, "get accessor result");
+          }
+          if (result !== CALLER_OWN_PROPERTY_DOES_NOT_EXIST) {
+            assert.notSameValue(result, f);
+          }
+          callCount++;
+        }
+
+        f().next().then(function() {
+          assert.sameValue(callCount, 1, "function body evaluated");
+        }, $DONE).then($DONE, $DONE);
+        "#,
+    )
+    .unwrap();
+
+    let compile = Command::new(env!("CARGO_BIN_EXE_ayeyaiyai"))
+        .arg(&input)
+        .arg("-o")
+        .arg(&output)
+        .output()
+        .unwrap();
+
+    assert!(
+        compile.status.success(),
+        "compiler failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&compile.stdout),
+        String::from_utf8_lossy(&compile.stderr),
+    );
+
+    let run = Command::new("wasmtime").arg(&output).output().unwrap();
+
+    assert!(
+        run.status.success(),
+        "wasmtime failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&run.stdout),
+        String::from_utf8_lossy(&run.stderr),
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&run.stdout),
+        "Test262:AsyncTestComplete\n"
+    );
+}
+
+#[test]
 fn object_spread_keeps_symbol_values_and_own_key_order() {
     let tempdir = tempdir().unwrap();
     let input = tempdir.path().join("object-spread-symbols.js");
