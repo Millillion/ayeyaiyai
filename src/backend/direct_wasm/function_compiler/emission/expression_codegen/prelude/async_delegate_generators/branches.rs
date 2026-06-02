@@ -16,10 +16,9 @@ impl<'a> FunctionCompiler<'a> {
         index_local: u32,
     ) -> DirectResult<()> {
         self.with_current_user_function_name(Some(plan.function_name.clone()), |compiler| {
-            if property_name != "return"
-                && let Some(completion_expression) = delegate_snapshot_bindings
-                    .and_then(|snapshot_bindings| snapshot_bindings.get(delegate_completion_name))
-                    .cloned()
+            if let Some(completion_expression) = delegate_snapshot_bindings
+                .and_then(|snapshot_bindings| snapshot_bindings.get(delegate_completion_name))
+                .cloned()
             {
                 compiler.emit_statement(&Statement::Assign {
                     name: delegate_completion_name.to_string(),

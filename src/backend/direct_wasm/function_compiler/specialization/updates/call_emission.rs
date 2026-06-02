@@ -21,6 +21,15 @@ impl<'a> FunctionCompiler<'a> {
             }
             return Ok(false);
         }
+        if let Expression::Member { object, property } = callee
+            && matches!(
+                property.as_ref(),
+                Expression::String(name) if matches!(name.as_str(), "return" | "throw")
+            )
+            && self.is_async_generator_iterator_expression(object)
+        {
+            return Ok(false);
+        }
         if let Some(specialized) = self.resolve_specialized_function_value_from_expression(callee) {
             if trace_capture_bindings {
                 eprintln!(

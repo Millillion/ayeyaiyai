@@ -211,6 +211,14 @@ impl<'a> FunctionCompiler<'a> {
         object: &Expression,
         property: &Expression,
     ) -> Expression {
+        let expression = Expression::Member {
+            object: Box::new(object.clone()),
+            property: Box::new(property.clone()),
+        };
+        if self.well_known_symbol_name(&expression).is_some() {
+            return expression;
+        }
+
         if let Some(value) =
             self.resolve_module_namespace_live_binding_member_value(object, property)
         {

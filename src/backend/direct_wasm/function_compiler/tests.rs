@@ -5531,7 +5531,7 @@ fn resolves_async_generator_yield_delegate_non_callable_sync_iterator_as_throw_s
     )
     .expect("function compiler should construct");
 
-    let (steps, completion_effects) = function_compiler
+    let (steps, completion_effects, _completion_value) = function_compiler
         .resolve_simple_yield_delegate_source(&Expression::Identifier("obj".to_string()), true)
         .expect("expected sync iterator delegate source");
 
@@ -5692,7 +5692,7 @@ fn resolves_async_generator_yield_delegate_async_iterator_non_callable_then_as_y
     )
     .expect("function compiler should construct");
 
-    let (steps, completion_effects) = function_compiler
+    let (steps, completion_effects, _completion_value) = function_compiler
         .resolve_simple_yield_delegate_source(&Expression::Identifier("obj".to_string()), true)
         .expect("expected async iterator delegate source");
 
@@ -5700,9 +5700,12 @@ fn resolves_async_generator_yield_delegate_async_iterator_non_callable_then_as_y
     assert!(completion_effects.is_empty());
     match &steps[0].outcome {
         SimpleGeneratorStepOutcome::Yield(Expression::Number(value))
-            if (*value - 42.0).abs() < f64::EPSILON => {}
+            if (value - 42.0).abs() < f64::EPSILON => {}
         SimpleGeneratorStepOutcome::Yield(value) => {
             panic!("expected yield 42, got yield {value:?}");
+        }
+        SimpleGeneratorStepOutcome::YieldResult(value) => {
+            panic!("expected yield 42, got yield result {value:?}");
         }
         SimpleGeneratorStepOutcome::Throw(value) => {
             panic!("expected yield 42, got throw {value:?}");
@@ -16952,8 +16955,17 @@ fn stores_private_async_generator_yield_star_non_callable_async_iterator_as_thro
         SimpleGeneratorStepOutcome::Yield(other) => {
             panic!("expected direct async delegate source to throw TypeError, got yield={other:?}")
         }
+        SimpleGeneratorStepOutcome::YieldResult(other) => {
+            panic!(
+                "expected direct async delegate source to throw TypeError, got yield result={other:?}"
+            )
+        }
     }
-    let (direct_delegate_steps, direct_delegate_completion_effects) = function_compiler
+    let (
+        direct_delegate_steps,
+        direct_delegate_completion_effects,
+        _direct_delegate_completion_value,
+    ) = function_compiler
         .resolve_simple_yield_delegate_source(&Expression::Identifier("obj".to_string()), true)
         .expect("expected direct delegate source");
     assert!(direct_delegate_completion_effects.is_empty());
@@ -16966,6 +16978,9 @@ fn stores_private_async_generator_yield_star_non_callable_async_iterator_as_thro
         }
         SimpleGeneratorStepOutcome::Yield(other) => {
             panic!("expected direct delegate source to throw TypeError, got yield={other:?}")
+        }
+        SimpleGeneratorStepOutcome::YieldResult(other) => {
+            panic!("expected direct delegate source to throw TypeError, got yield result={other:?}")
         }
     }
     let (resolved_user_function, _) = function_compiler
@@ -16991,6 +17006,11 @@ fn stores_private_async_generator_yield_star_non_callable_async_iterator_as_thro
         SimpleGeneratorStepOutcome::Yield(other) => {
             panic!("expected resolved generator source to throw TypeError, got yield={other:?}")
         }
+        SimpleGeneratorStepOutcome::YieldResult(other) => {
+            panic!(
+                "expected resolved generator source to throw TypeError, got yield result={other:?}"
+            )
+        }
     }
     let Some(IteratorSourceKind::SimpleGenerator {
         is_async: local_source_is_async,
@@ -17013,6 +17033,9 @@ fn stores_private_async_generator_yield_star_non_callable_async_iterator_as_thro
         }
         SimpleGeneratorStepOutcome::Yield(other) => {
             panic!("expected local iterator source to throw TypeError, got yield={other:?}")
+        }
+        SimpleGeneratorStepOutcome::YieldResult(other) => {
+            panic!("expected local iterator source to throw TypeError, got yield result={other:?}")
         }
     }
 
@@ -17049,6 +17072,9 @@ fn stores_private_async_generator_yield_star_non_callable_async_iterator_as_thro
         }
         SimpleGeneratorStepOutcome::Yield(other) => {
             panic!("expected throwing TypeError step, got yield={other:?}")
+        }
+        SimpleGeneratorStepOutcome::YieldResult(other) => {
+            panic!("expected throwing TypeError step, got yield result={other:?}")
         }
     }
 }

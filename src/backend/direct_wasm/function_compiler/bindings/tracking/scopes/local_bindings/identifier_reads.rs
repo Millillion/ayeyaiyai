@@ -233,6 +233,12 @@ impl<'a> FunctionCompiler<'a> {
             if trace_identifier_reads {
                 eprintln!("identifier_read:fallback:path eval_local_function name={name}");
             }
+        } else if name == "assert" && self.user_function_capture_source_is_unshadowed_builtin(name)
+        {
+            if trace_identifier_reads {
+                eprintln!("identifier_read:fallback:path harness_assert name={name}");
+            }
+            self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
         } else if name == "NaN" && self.is_unshadowed_builtin_identifier(name) {
             if trace_identifier_reads {
                 eprintln!("identifier_read:fallback:path nan name={name}");
@@ -340,6 +346,13 @@ impl<'a> FunctionCompiler<'a> {
         {
             if trace_identifier_reads {
                 eprintln!("identifier_read:path direct_fallback name={name}");
+            }
+            return self.emit_plain_identifier_read_fallback(name);
+        }
+
+        if name == "assert" && self.user_function_capture_source_is_unshadowed_builtin(name) {
+            if trace_identifier_reads {
+                eprintln!("identifier_read:path harness_assert name={name}");
             }
             return self.emit_plain_identifier_read_fallback(name);
         }

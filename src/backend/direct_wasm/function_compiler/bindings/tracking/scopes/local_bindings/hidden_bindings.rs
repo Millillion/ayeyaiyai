@@ -212,12 +212,44 @@ impl<'a> FunctionCompiler<'a> {
             self.push_control_frame();
             self.push_global_get(binding.value_index);
             self.state.emission.output.instructions.push(0x05);
-            self.emit_named_error_throw("ReferenceError")?;
+            if !self.emit_global_capture_builtin_fallback_value(source_name)? {
+                self.emit_named_error_throw("ReferenceError")?;
+            }
             self.state.emission.output.instructions.push(0x0b);
             self.pop_control_frame();
             return Ok(());
         }
+        if self.emit_global_capture_builtin_fallback_value(source_name)? {
+            return Ok(());
+        }
         self.emit_named_error_throw("ReferenceError")
+    }
+
+    fn emit_global_capture_builtin_fallback_value(
+        &mut self,
+        source_name: &str,
+    ) -> DirectResult<bool> {
+        if matches!(source_name, "assert" | "$DONE")
+            && self.resolve_current_local_binding(source_name).is_none()
+            && self
+                .state
+                .speculation
+                .static_semantics
+                .local_function_binding(source_name)
+                .is_none()
+            && self
+                .resolve_eval_local_function_hidden_name(source_name)
+                .is_none()
+        {
+            let value = match source_name {
+                "assert" => JS_TYPEOF_OBJECT_TAG,
+                "$DONE" => JS_TYPEOF_FUNCTION_TAG,
+                _ => unreachable!("filtered above"),
+            };
+            self.push_i32_const(value);
+            return Ok(true);
+        }
+        Ok(false)
     }
 
     fn emit_global_capture_fallback_store_from_local(

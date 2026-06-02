@@ -21,8 +21,7 @@ impl<'a> FunctionCompiler<'a> {
         let updated_bindings = None;
         let assigned_nonlocal_bindings =
             self.collect_user_function_assigned_nonlocal_bindings(user_function);
-        let mut call_effect_nonlocal_bindings =
-            self.collect_user_function_call_effect_nonlocal_bindings(user_function);
+        let mut call_effect_nonlocal_bindings = assigned_nonlocal_bindings.clone();
         call_effect_nonlocal_bindings.extend(
             self.collect_user_function_argument_call_effect_nonlocal_bindings(
                 user_function,

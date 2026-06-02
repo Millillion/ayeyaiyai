@@ -20,10 +20,16 @@ impl<'a> FunctionCompiler<'a> {
         let Some(getter_user_function) = self.user_function(&getter_name).cloned() else {
             return Ok(false);
         };
-        let capture_slots = self.resolve_member_function_capture_slots(
-            &static_step_result_expression,
-            &property_expression,
-        );
+        let capture_slots = self
+            .resolve_member_function_capture_slots(
+                &static_step_result_expression,
+                &property_expression,
+            )
+            .or_else(|| {
+                self.resolve_function_expression_capture_slots(&Expression::Identifier(
+                    getter_name.clone(),
+                ))
+            });
         if let Some(capture_slots) = capture_slots.as_ref() {
             if snapshot_bindings.is_some() {
                 self.emit_user_function_call_with_new_target_and_this_expression_and_bound_captures_without_static_snapshot(

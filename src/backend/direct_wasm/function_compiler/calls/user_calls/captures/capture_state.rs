@@ -33,6 +33,23 @@ impl<'a> FunctionCompiler<'a> {
             && self.is_unshadowed_builtin_identifier(source_name)
     }
 
+    fn user_function_capture_source_is_unshadowed_harness_fallback(
+        &self,
+        source_name: &str,
+    ) -> bool {
+        matches!(source_name, "assert" | "$DONE")
+            && self.resolve_current_local_binding(source_name).is_none()
+            && self
+                .state
+                .speculation
+                .static_semantics
+                .local_function_binding(source_name)
+                .is_none()
+            && self
+                .resolve_eval_local_function_hidden_name(source_name)
+                .is_none()
+    }
+
     pub(in crate::backend::direct_wasm) fn emit_unshadowed_builtin_capture_source_value(
         &mut self,
         source_name: &str,
@@ -324,6 +341,9 @@ impl<'a> FunctionCompiler<'a> {
             self.push_i32_const(runtime_value);
             return Ok(());
         }
+        if self.emit_user_function_capture_harness_fallback_source_value(source_name)? {
+            return Ok(());
+        }
         if prefer_global_source {
             if let Some(global_index) = self.resolve_global_binding_index(source_name) {
                 return self.emit_declared_global_binding_read(source_name, global_index);
@@ -344,6 +364,12 @@ impl<'a> FunctionCompiler<'a> {
         if self.emit_unshadowed_builtin_capture_source_value(source_name)? {
             return Ok(());
         }
+        if self.resolve_current_local_binding(source_name).is_none()
+            && self.is_async_generator_iterator_expression(source_expression)
+        {
+            self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
+            return Ok(());
+        }
         if source_name.starts_with("__ayy_class_brand_")
             && self.emit_private_brand_runtime_value_for_binding_name(source_name)?
         {
@@ -355,6 +381,22 @@ impl<'a> FunctionCompiler<'a> {
             );
         }
         self.emit_numeric_expression(source_expression)
+    }
+
+    fn emit_user_function_capture_harness_fallback_source_value(
+        &mut self,
+        source_name: &str,
+    ) -> DirectResult<bool> {
+        if !self.user_function_capture_source_is_unshadowed_harness_fallback(source_name) {
+            return Ok(false);
+        }
+        let value = match source_name {
+            "assert" => JS_TYPEOF_OBJECT_TAG,
+            "$DONE" => JS_TYPEOF_FUNCTION_TAG,
+            _ => unreachable!("filtered above"),
+        };
+        self.push_i32_const(value);
+        Ok(true)
     }
 
     fn sync_user_function_capture_runtime_object_shadows_for_source(
@@ -480,6 +522,9 @@ impl<'a> FunctionCompiler<'a> {
                     || self
                         .resolve_user_function_capture_hidden_name(&capture_source_name)
                         .is_some()
+                    || self.user_function_capture_source_is_unshadowed_harness_fallback(
+                        &capture_source_name,
+                    )
                     || (!capture_originates_in_enclosing_local
                         && (self.global_has_binding(&capture_source_name)
                             || self
@@ -623,6 +668,7 @@ impl<'a> FunctionCompiler<'a> {
             || self
                 .resolve_user_function_capture_hidden_name(name)
                 .is_some()
+            || self.user_function_capture_source_is_unshadowed_harness_fallback(name)
             || self.global_has_binding(name)
             || self.global_has_implicit_binding(name)
             || self.user_function_capture_source_is_unshadowed_builtin(name)
@@ -801,12 +847,19 @@ impl<'a> FunctionCompiler<'a> {
             if !self.user_function_capture_source_is_locally_bound(&binding.source_name) {
                 continue;
             }
+            let source_expression = Expression::Identifier(binding.source_name.clone());
+            if self
+                .resolve_current_local_binding(&binding.source_name)
+                .is_none()
+                && self.is_async_generator_iterator_expression(&source_expression)
+            {
+                continue;
+            }
             let source_aliases_this = if binding.source_name == "this"
                 || binding.source_name.starts_with("__ayy_class_brand_")
             {
                 false
             } else {
-                let source_expression = Expression::Identifier(binding.source_name.clone());
                 self.resolve_bound_alias_expression(&source_expression)
                     .is_some_and(|resolved| match resolved {
                         Expression::This => true,

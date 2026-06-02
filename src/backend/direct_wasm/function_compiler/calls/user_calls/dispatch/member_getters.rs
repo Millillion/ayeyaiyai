@@ -553,6 +553,13 @@ impl<'a> FunctionCompiler<'a> {
         if self.promise_member_call_requires_runtime_fallback(object, property, arguments) {
             return Ok(false);
         }
+        if matches!(
+            property,
+            Expression::String(name) if matches!(name.as_str(), "return" | "throw")
+        ) && self.is_async_generator_iterator_expression(object)
+        {
+            return Ok(false);
+        }
         let Some(LocalFunctionBinding::User(getter_function_name)) =
             self.resolve_member_getter_binding(object, property)
         else {

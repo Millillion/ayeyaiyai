@@ -175,6 +175,40 @@ impl VisibleRuntimeBindingSnapshot {
             .collect::<Vec<_>>();
         visible_bindings.sort_by(|left, right| left.0.cmp(&right.0));
         for (name, value) in visible_bindings {
+            let primitive_kind = match &value {
+                Expression::Undefined => Some(StaticValueKind::Undefined),
+                Expression::Null => Some(StaticValueKind::Null),
+                Expression::Bool(_) => Some(StaticValueKind::Bool),
+                Expression::Number(_) => Some(StaticValueKind::Number),
+                Expression::String(_) => Some(StaticValueKind::String),
+                Expression::BigInt(_) => Some(StaticValueKind::BigInt),
+                _ => None,
+            };
+            if name.starts_with("__ayy_async_delegate_")
+                && let Some(primitive_kind) = primitive_kind
+            {
+                let synced_value = value.clone();
+                let value_local = compiler.allocate_temp_local();
+                compiler.emit_numeric_expression(&synced_value)?;
+                compiler.push_local_set(value_local);
+                compiler.emit_sync_identifier_runtime_value_from_local(&name, value_local)?;
+                compiler.state.set_local_static_binding(
+                    &name,
+                    synced_value,
+                    None,
+                    None,
+                    Some(primitive_kind),
+                );
+                continue;
+            }
+            if compiler
+                .runtime_array_binding_name_for_expression(&Expression::Identifier(name.clone()))
+                .is_some()
+                && let Some(current_value) = Self::direct_visible_binding_value(compiler, &name)
+                && static_expression_matches(&current_value, &value)
+            {
+                continue;
+            }
             if matches!(&value, Expression::Identifier(identifier_name) if identifier_name == &name)
                 && compiler
                     .runtime_array_binding_name_for_expression(&value)
@@ -233,8 +267,32 @@ impl VisibleRuntimeBindingSnapshot {
             let materialized_value = compiler.materialize_static_expression(value);
             compiler.emit_numeric_expression(&materialized_value)?;
             compiler.push_local_set(scoped_local);
-            compiler
-                .update_capture_slot_binding_from_expression(&scoped_name, &materialized_value)?;
+            let primitive_kind = match &materialized_value {
+                Expression::Undefined => Some(StaticValueKind::Undefined),
+                Expression::Null => Some(StaticValueKind::Null),
+                Expression::Bool(_) => Some(StaticValueKind::Bool),
+                Expression::Number(_) => Some(StaticValueKind::Number),
+                Expression::String(_) => Some(StaticValueKind::String),
+                Expression::BigInt(_) => Some(StaticValueKind::BigInt),
+                _ => None,
+            };
+            let (array_binding, object_binding, kind) = if let Some(primitive_kind) = primitive_kind
+            {
+                (None, None, Some(primitive_kind))
+            } else {
+                (
+                    compiler.resolve_array_binding_from_expression(&materialized_value),
+                    compiler.resolve_object_binding_from_expression(&materialized_value),
+                    compiler.infer_value_kind(&materialized_value),
+                )
+            };
+            compiler.state.set_local_static_binding(
+                &scoped_name,
+                materialized_value,
+                array_binding,
+                object_binding,
+                kind,
+            );
             compiler
                 .state
                 .emission

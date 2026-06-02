@@ -5336,10 +5336,15 @@ impl<'a> FunctionCompiler<'a> {
                                 && Self::expression_contains_dynamic_import_call(return_expression)
                         });
                 if !return_path_will_emit_chain {
+                    let allow_inline_handler = !handlers_require_runtime_chain
+                        || self.can_inline_immediate_promise_callback_in_current_frame(
+                            &handler,
+                            handler_argument,
+                        );
                     self.emit_immediate_promise_callback(
                         &handler,
                         handler_argument,
-                        !handlers_require_runtime_chain,
+                        allow_inline_handler,
                     )?;
                 } else if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
                     eprintln!(
