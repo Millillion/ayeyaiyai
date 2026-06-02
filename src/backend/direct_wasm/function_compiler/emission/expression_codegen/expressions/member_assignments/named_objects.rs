@@ -2495,6 +2495,14 @@ impl<'a> FunctionCompiler<'a> {
         if matches!(object, Expression::This) {
             self.seed_local_this_object_binding();
         }
+        if matches!(object, Expression::Identifier(name) if name == "globalThis" && self.is_unshadowed_builtin_identifier(name))
+            && self.global_object_binding("globalThis").is_none()
+        {
+            self.backend
+                .sync_global_object_binding("globalThis", Some(empty_object_value_binding()));
+            self.backend
+                .set_global_binding_kind("globalThis", StaticValueKind::Object);
+        }
 
         if let Expression::Member {
             object: prototype_object,
@@ -3421,6 +3429,7 @@ impl<'a> FunctionCompiler<'a> {
         if trace_member_assignment {
             eprintln!("named_member_assignment:global_object_binding:start");
         }
+        let sync_shared_global_object_binding = self.current_function_name().is_none();
         if let Some(object_binding) = self
             .backend
             .global_semantics
@@ -3434,6 +3443,20 @@ impl<'a> FunctionCompiler<'a> {
                     resolved_property.clone(),
                     materialized.clone(),
                 );
+                if sync_shared_global_object_binding {
+                    let shared_binding = self
+                        .backend
+                        .shared_global_semantics
+                        .values
+                        .object_bindings
+                        .entry(name.to_string())
+                        .or_insert_with(empty_object_value_binding);
+                    object_binding_set_property(
+                        shared_binding,
+                        resolved_property.clone(),
+                        materialized.clone(),
+                    );
+                }
             } else {
                 for property_name in &dynamic_property_candidates {
                     object_binding_set_property(
@@ -3441,6 +3464,20 @@ impl<'a> FunctionCompiler<'a> {
                         Expression::String(property_name.clone()),
                         materialized.clone(),
                     );
+                    if sync_shared_global_object_binding {
+                        let shared_binding = self
+                            .backend
+                            .shared_global_semantics
+                            .values
+                            .object_bindings
+                            .entry(name.to_string())
+                            .or_insert_with(empty_object_value_binding);
+                        object_binding_set_property(
+                            shared_binding,
+                            Expression::String(property_name.clone()),
+                            materialized.clone(),
+                        );
+                    }
                 }
             }
             self.clear_runtime_object_property_shadow_deleted_binding(object, &resolved_property);

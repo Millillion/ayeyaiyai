@@ -135,6 +135,12 @@ impl<'a> FunctionCompiler<'a> {
             Statement::Block { body } => body
                 .iter()
                 .any(Self::statement_contains_identifier_callee_call),
+            Statement::With { object, body } => {
+                Self::expression_contains_identifier_callee_call(object)
+                    || body
+                        .iter()
+                        .any(Self::statement_contains_identifier_callee_call)
+            }
             _ => false,
         }
     }
@@ -174,30 +180,45 @@ impl<'a> FunctionCompiler<'a> {
         let Some(user_function) = self.user_function(&function_name) else {
             return false;
         };
-        !self.current_function_contains_try_statement()
-            && self.state.emission.control_flow.try_stack.is_empty()
-            && call_arguments
-                .iter()
-                .all(|argument| self.inline_safe_argument_expression(argument))
-            && !call_arguments
-                .iter()
-                .any(|argument| self.inline_argument_mentions_shadowed_implicit_global(argument))
-            && !user_function.is_async()
-            && !user_function.is_generator()
-            && !user_function.has_parameter_defaults()
+        let no_try = !self.current_function_contains_try_statement()
+            && self.state.emission.control_flow.try_stack.is_empty();
+        let arguments_inline_safe = call_arguments
+            .iter()
+            .all(|argument| self.inline_safe_argument_expression(argument));
+        let arguments_no_shadowed_implicit_global = !call_arguments
+            .iter()
+            .any(|argument| self.inline_argument_mentions_shadowed_implicit_global(argument));
+        let no_async_generator = !user_function.is_async() && !user_function.is_generator();
+        let parameters_supported = !user_function.has_parameter_defaults()
             && !user_function.has_lowered_pattern_parameters()
-            && user_function.extra_argument_indices.is_empty()
-            && !self.user_function_mentions_private_member_access(user_function)
-            && !self.user_function_mentions_direct_eval(user_function)
-            && !self.user_function_contains_identifier_callee_call(user_function)
-            && !self
-                .backend
-                .function_registry
-                .analysis
-                .user_function_capture_bindings
-                .contains_key(&user_function.name)
-            && !self.user_function_references_captured_user_function(user_function)
-            && self.user_function_has_explicit_call_frame_inlineable_terminal_body(user_function)
+            && user_function.extra_argument_indices.is_empty();
+        let no_private = !self.user_function_mentions_private_member_access(user_function);
+        let no_direct_eval = !self.user_function_mentions_direct_eval(user_function);
+        let no_identifier_callee_calls =
+            !self.user_function_contains_identifier_callee_call(user_function);
+        let no_capture_bindings = !self
+            .backend
+            .function_registry
+            .analysis
+            .user_function_capture_bindings
+            .contains_key(&user_function.name);
+        let capture_bindings_supported = no_capture_bindings || call_arguments.is_empty();
+        let no_captured_user_function_refs =
+            !self.user_function_references_captured_user_function(user_function);
+        let terminal_body =
+            self.user_function_has_explicit_call_frame_inlineable_terminal_body(user_function);
+        let safe = no_try
+            && arguments_inline_safe
+            && arguments_no_shadowed_implicit_global
+            && no_async_generator
+            && parameters_supported
+            && no_private
+            && no_direct_eval
+            && no_identifier_callee_calls
+            && capture_bindings_supported
+            && no_captured_user_function_refs
+            && terminal_body;
+        safe
     }
 
     fn expression_identifier_callee_calls_are_direct_async_safe(
@@ -449,6 +470,17 @@ impl<'a> FunctionCompiler<'a> {
                     current_function_name,
                 )
             }),
+            Statement::With { object, body } => {
+                self.expression_identifier_callee_calls_are_direct_async_safe(
+                    object,
+                    current_function_name,
+                ) && body.iter().all(|statement| {
+                    self.statement_identifier_callee_calls_are_direct_async_safe(
+                        statement,
+                        current_function_name,
+                    )
+                })
+            }
             _ => false,
         }
     }
@@ -462,6 +494,457 @@ impl<'a> FunctionCompiler<'a> {
                 function.body.iter().all(|statement| {
                     self.statement_identifier_callee_calls_are_direct_async_safe(
                         statement,
+                        Some(user_function.name.as_str()),
+                    )
+                })
+            })
+    }
+
+    fn expression_references_only_direct_async_safe_captured_user_function_calls(
+        &self,
+        expression: &Expression,
+        captured_user_function_names: &HashSet<String>,
+        current_function_name: Option<&str>,
+    ) -> bool {
+        match expression {
+            Expression::Identifier(name) => !captured_user_function_names.contains(name),
+            Expression::Call { callee, arguments } => {
+                if let Expression::Identifier(name) = callee.as_ref()
+                    && captured_user_function_names.contains(name)
+                {
+                    return self.identifier_callee_call_is_direct_async_safe(
+                        name,
+                        arguments,
+                        current_function_name,
+                    ) && arguments.iter().all(|argument| match argument {
+                        CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                            self.expression_references_only_direct_async_safe_captured_user_function_calls(
+                                expression,
+                                captured_user_function_names,
+                                current_function_name,
+                            )
+                        }
+                    });
+                }
+                self.expression_references_only_direct_async_safe_captured_user_function_calls(
+                    callee,
+                    captured_user_function_names,
+                    current_function_name,
+                ) && arguments.iter().all(|argument| match argument {
+                    CallArgument::Expression(expression) | CallArgument::Spread(expression) => self
+                        .expression_references_only_direct_async_safe_captured_user_function_calls(
+                            expression,
+                            captured_user_function_names,
+                            current_function_name,
+                        ),
+                })
+            }
+            Expression::SuperCall { callee, arguments } | Expression::New { callee, arguments } => {
+                self.expression_references_only_direct_async_safe_captured_user_function_calls(
+                    callee,
+                    captured_user_function_names,
+                    current_function_name,
+                ) && arguments.iter().all(|argument| match argument {
+                    CallArgument::Expression(expression) | CallArgument::Spread(expression) => self
+                        .expression_references_only_direct_async_safe_captured_user_function_calls(
+                            expression,
+                            captured_user_function_names,
+                            current_function_name,
+                        ),
+                })
+            }
+            Expression::Array(elements) => elements.iter().all(|element| match element {
+                ArrayElement::Expression(expression) | ArrayElement::Spread(expression) => self
+                    .expression_references_only_direct_async_safe_captured_user_function_calls(
+                        expression,
+                        captured_user_function_names,
+                        current_function_name,
+                    ),
+            }),
+            Expression::Object(entries) => entries.iter().all(|entry| match entry {
+                ObjectEntry::Data { key, value } => {
+                    self.expression_references_only_direct_async_safe_captured_user_function_calls(
+                        key,
+                        captured_user_function_names,
+                        current_function_name,
+                    ) && self
+                        .expression_references_only_direct_async_safe_captured_user_function_calls(
+                            value,
+                            captured_user_function_names,
+                            current_function_name,
+                        )
+                }
+                ObjectEntry::Getter { key, getter } => {
+                    self.expression_references_only_direct_async_safe_captured_user_function_calls(
+                        key,
+                        captured_user_function_names,
+                        current_function_name,
+                    ) && self
+                        .expression_references_only_direct_async_safe_captured_user_function_calls(
+                            getter,
+                            captured_user_function_names,
+                            current_function_name,
+                        )
+                }
+                ObjectEntry::Setter { key, setter } => {
+                    self.expression_references_only_direct_async_safe_captured_user_function_calls(
+                        key,
+                        captured_user_function_names,
+                        current_function_name,
+                    ) && self
+                        .expression_references_only_direct_async_safe_captured_user_function_calls(
+                            setter,
+                            captured_user_function_names,
+                            current_function_name,
+                        )
+                }
+                ObjectEntry::Spread(expression) => self
+                    .expression_references_only_direct_async_safe_captured_user_function_calls(
+                        expression,
+                        captured_user_function_names,
+                        current_function_name,
+                    ),
+            }),
+            Expression::Member { object, property } => {
+                self.expression_references_only_direct_async_safe_captured_user_function_calls(
+                    object,
+                    captured_user_function_names,
+                    current_function_name,
+                ) && self.expression_references_only_direct_async_safe_captured_user_function_calls(
+                    property,
+                    captured_user_function_names,
+                    current_function_name,
+                )
+            }
+            Expression::SuperMember { property } => self
+                .expression_references_only_direct_async_safe_captured_user_function_calls(
+                    property,
+                    captured_user_function_names,
+                    current_function_name,
+                ),
+            Expression::Assign { value, .. }
+            | Expression::Await(value)
+            | Expression::EnumerateKeys(value)
+            | Expression::GetIterator(value)
+            | Expression::IteratorClose(value)
+            | Expression::Unary {
+                expression: value, ..
+            } => self.expression_references_only_direct_async_safe_captured_user_function_calls(
+                value,
+                captured_user_function_names,
+                current_function_name,
+            ),
+            Expression::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                self.expression_references_only_direct_async_safe_captured_user_function_calls(
+                    object,
+                    captured_user_function_names,
+                    current_function_name,
+                ) && self.expression_references_only_direct_async_safe_captured_user_function_calls(
+                    property,
+                    captured_user_function_names,
+                    current_function_name,
+                ) && self.expression_references_only_direct_async_safe_captured_user_function_calls(
+                    value,
+                    captured_user_function_names,
+                    current_function_name,
+                )
+            }
+            Expression::AssignSuperMember { property, value } => {
+                self.expression_references_only_direct_async_safe_captured_user_function_calls(
+                    property,
+                    captured_user_function_names,
+                    current_function_name,
+                ) && self.expression_references_only_direct_async_safe_captured_user_function_calls(
+                    value,
+                    captured_user_function_names,
+                    current_function_name,
+                )
+            }
+            Expression::Binary { left, right, .. } => {
+                self.expression_references_only_direct_async_safe_captured_user_function_calls(
+                    left,
+                    captured_user_function_names,
+                    current_function_name,
+                ) && self.expression_references_only_direct_async_safe_captured_user_function_calls(
+                    right,
+                    captured_user_function_names,
+                    current_function_name,
+                )
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                self.expression_references_only_direct_async_safe_captured_user_function_calls(
+                    condition,
+                    captured_user_function_names,
+                    current_function_name,
+                ) && self.expression_references_only_direct_async_safe_captured_user_function_calls(
+                    then_expression,
+                    captured_user_function_names,
+                    current_function_name,
+                ) && self.expression_references_only_direct_async_safe_captured_user_function_calls(
+                    else_expression,
+                    captured_user_function_names,
+                    current_function_name,
+                )
+            }
+            Expression::Sequence(expressions) => expressions.iter().all(|expression| {
+                self.expression_references_only_direct_async_safe_captured_user_function_calls(
+                    expression,
+                    captured_user_function_names,
+                    current_function_name,
+                )
+            }),
+            Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined
+            | Expression::NewTarget
+            | Expression::This
+            | Expression::Sent
+            | Expression::Update { .. } => true,
+        }
+    }
+
+    fn statement_references_only_direct_async_safe_captured_user_function_calls(
+        &self,
+        statement: &Statement,
+        captured_user_function_names: &HashSet<String>,
+        current_function_name: Option<&str>,
+    ) -> bool {
+        match statement {
+            Statement::Declaration { body }
+            | Statement::Block { body }
+            | Statement::Labeled { body, .. } => body.iter().all(|statement| {
+                self.statement_references_only_direct_async_safe_captured_user_function_calls(
+                    statement,
+                    captured_user_function_names,
+                    current_function_name,
+                )
+            }),
+            Statement::Var { value, .. }
+            | Statement::Let { value, .. }
+            | Statement::Assign { value, .. }
+            | Statement::Expression(value)
+            | Statement::Throw(value)
+            | Statement::Return(value)
+            | Statement::Yield { value }
+            | Statement::YieldDelegate { value } => self
+                .expression_references_only_direct_async_safe_captured_user_function_calls(
+                    value,
+                    captured_user_function_names,
+                    current_function_name,
+                ),
+            Statement::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                self.expression_references_only_direct_async_safe_captured_user_function_calls(
+                    object,
+                    captured_user_function_names,
+                    current_function_name,
+                ) && self.expression_references_only_direct_async_safe_captured_user_function_calls(
+                    property,
+                    captured_user_function_names,
+                    current_function_name,
+                ) && self.expression_references_only_direct_async_safe_captured_user_function_calls(
+                    value,
+                    captured_user_function_names,
+                    current_function_name,
+                )
+            }
+            Statement::Print { values } => values.iter().all(|value| {
+                self.expression_references_only_direct_async_safe_captured_user_function_calls(
+                    value,
+                    captured_user_function_names,
+                    current_function_name,
+                )
+            }),
+            Statement::With { object, body } => {
+                self.expression_references_only_direct_async_safe_captured_user_function_calls(
+                    object,
+                    captured_user_function_names,
+                    current_function_name,
+                ) && body.iter().all(|statement| {
+                    self.statement_references_only_direct_async_safe_captured_user_function_calls(
+                        statement,
+                        captured_user_function_names,
+                        current_function_name,
+                    )
+                })
+            }
+            Statement::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                self.expression_references_only_direct_async_safe_captured_user_function_calls(
+                    condition,
+                    captured_user_function_names,
+                    current_function_name,
+                ) && then_branch.iter().all(|statement| {
+                    self.statement_references_only_direct_async_safe_captured_user_function_calls(
+                        statement,
+                        captured_user_function_names,
+                        current_function_name,
+                    )
+                }) && else_branch.iter().all(|statement| {
+                    self.statement_references_only_direct_async_safe_captured_user_function_calls(
+                        statement,
+                        captured_user_function_names,
+                        current_function_name,
+                    )
+                })
+            }
+            Statement::Try {
+                body,
+                catch_setup,
+                catch_body,
+                ..
+            } => body
+                .iter()
+                .chain(catch_setup.iter())
+                .chain(catch_body.iter())
+                .all(|statement| {
+                    self.statement_references_only_direct_async_safe_captured_user_function_calls(
+                        statement,
+                        captured_user_function_names,
+                        current_function_name,
+                    )
+                }),
+            Statement::Switch {
+                discriminant,
+                cases,
+                ..
+            } => self.expression_references_only_direct_async_safe_captured_user_function_calls(
+                discriminant,
+                captured_user_function_names,
+                current_function_name,
+            ) && cases.iter().all(|case| {
+                case.test.as_ref().is_none_or(|test| {
+                    self.expression_references_only_direct_async_safe_captured_user_function_calls(
+                        test,
+                        captured_user_function_names,
+                        current_function_name,
+                    )
+                }) && case.body.iter().all(|statement| {
+                    self.statement_references_only_direct_async_safe_captured_user_function_calls(
+                        statement,
+                        captured_user_function_names,
+                        current_function_name,
+                    )
+                })
+            }),
+            Statement::For {
+                init,
+                condition,
+                update,
+                break_hook,
+                body,
+                ..
+            } => {
+                init.iter().all(|statement| {
+                    self.statement_references_only_direct_async_safe_captured_user_function_calls(
+                        statement,
+                        captured_user_function_names,
+                        current_function_name,
+                    )
+                }) && condition.as_ref().is_none_or(|condition| {
+                    self.expression_references_only_direct_async_safe_captured_user_function_calls(
+                        condition,
+                        captured_user_function_names,
+                        current_function_name,
+                    )
+                }) && update.as_ref().is_none_or(|update| {
+                    self.expression_references_only_direct_async_safe_captured_user_function_calls(
+                        update,
+                        captured_user_function_names,
+                        current_function_name,
+                    )
+                }) && break_hook.as_ref().is_none_or(|break_hook| {
+                    self.expression_references_only_direct_async_safe_captured_user_function_calls(
+                        break_hook,
+                        captured_user_function_names,
+                        current_function_name,
+                    )
+                }) && body.iter().all(|statement| {
+                    self.statement_references_only_direct_async_safe_captured_user_function_calls(
+                        statement,
+                        captured_user_function_names,
+                        current_function_name,
+                    )
+                })
+            }
+            Statement::While {
+                condition,
+                break_hook,
+                body,
+                ..
+            }
+            | Statement::DoWhile {
+                condition,
+                break_hook,
+                body,
+                ..
+            } => {
+                self.expression_references_only_direct_async_safe_captured_user_function_calls(
+                    condition,
+                    captured_user_function_names,
+                    current_function_name,
+                ) && break_hook.as_ref().is_none_or(|break_hook| {
+                    self.expression_references_only_direct_async_safe_captured_user_function_calls(
+                        break_hook,
+                        captured_user_function_names,
+                        current_function_name,
+                    )
+                }) && body.iter().all(|statement| {
+                    self.statement_references_only_direct_async_safe_captured_user_function_calls(
+                        statement,
+                        captured_user_function_names,
+                        current_function_name,
+                    )
+                })
+            }
+            Statement::Break { .. } | Statement::Continue { .. } => true,
+        }
+    }
+
+    pub(in crate::backend::direct_wasm) fn user_function_references_only_direct_async_safe_captured_user_function_calls(
+        &self,
+        user_function: &UserFunction,
+    ) -> bool {
+        if self
+            .backend
+            .function_registry
+            .analysis
+            .user_function_capture_bindings
+            .is_empty()
+        {
+            return true;
+        }
+        let captured_user_function_names = self
+            .backend
+            .function_registry
+            .analysis
+            .user_function_capture_bindings
+            .keys()
+            .cloned()
+            .collect::<HashSet<_>>();
+        self.resolve_registered_function_declaration(&user_function.name)
+            .is_some_and(|function| {
+                function.body.iter().all(|statement| {
+                    self.statement_references_only_direct_async_safe_captured_user_function_calls(
+                        statement,
+                        &captured_user_function_names,
                         Some(user_function.name.as_str()),
                     )
                 })

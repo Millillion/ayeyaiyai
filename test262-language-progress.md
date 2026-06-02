@@ -1,4 +1,4 @@
-1393/23645 (5.89%)
+1394/23645 (5.90%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,7 +14,7 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 72/9337 (0.77%)
+- statements: 73/9337 (0.78%)
 - expressions: 0/11038 (0.00%)
 - types: 0/113 (0.00%)
 - function-code: 0/217 (0.00%)
@@ -1441,7 +1441,7 @@ Sub-category progress
   - [x] test/language/statements/async-function/try-throw-finally-reject.js
   - [x] test/language/statements/async-function/try-throw-finally-return.js
   - [x] test/language/statements/async-function/try-throw-finally-throw.js
-  - [ ] test/language/statements/async-function/unscopables-with-in-nested-fn.js
+  - [x] test/language/statements/async-function/unscopables-with-in-nested-fn.js
   - [ ] test/language/statements/async-function/unscopables-with.js
   - [ ] test/language/statements/async-generator/array-destructuring-param-strict-body.js
   - [ ] test/language/statements/async-generator/await-as-binding-identifier-escaped.js

@@ -1,7 +1,30 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn user_function_capture_source_is_unshadowed_assert_harness_object(
+        &self,
+        source_name: &str,
+    ) -> bool {
+        source_name == "assert"
+            && self.resolve_current_local_binding(source_name).is_none()
+            && self
+                .resolve_user_function_capture_hidden_name(source_name)
+                .is_none()
+            && self
+                .state
+                .speculation
+                .static_semantics
+                .local_function_binding(source_name)
+                .is_none()
+            && self
+                .resolve_eval_local_function_hidden_name(source_name)
+                .is_none()
+    }
+
     fn user_function_capture_source_is_unshadowed_builtin(&self, source_name: &str) -> bool {
+        if self.user_function_capture_source_is_unshadowed_assert_harness_object(source_name) {
+            return true;
+        }
         (matches!(source_name, "NaN" | "Infinity" | "undefined")
             || builtin_function_runtime_value(source_name).is_some())
             && self.is_unshadowed_builtin_identifier(source_name)
@@ -289,6 +312,10 @@ impl<'a> FunctionCompiler<'a> {
                 return Ok(());
             }
             match source_name {
+                "assert" => {
+                    self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
+                    return Ok(());
+                }
                 "NaN" => {
                     self.push_i32_const(JS_NAN_TAG);
                     return Ok(());

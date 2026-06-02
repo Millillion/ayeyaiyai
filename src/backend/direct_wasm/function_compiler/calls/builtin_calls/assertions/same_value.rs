@@ -275,6 +275,112 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    fn same_value_expression_contains_live_global_this_descriptor(
+        &self,
+        expression: &Expression,
+    ) -> bool {
+        match expression {
+            Expression::Member { object, property } => {
+                if matches!(object.as_ref(), Expression::Identifier(name) if name == "globalThis" && self.is_unshadowed_builtin_identifier(name))
+                    && let Some(property_name) = static_property_name_from_expression(property)
+                {
+                    let descriptor = self.backend.global_property_descriptor(&property_name);
+                    if self.global_has_binding(&property_name)
+                        || (descriptor.is_some_and(|descriptor| {
+                            matches!(descriptor.value, Expression::Undefined)
+                        }) && (self.global_value_binding(&property_name).is_some()
+                            || self.resolve_global_binding_index(&property_name).is_some()))
+                    {
+                        return true;
+                    }
+                }
+                self.same_value_expression_contains_live_global_this_descriptor(object)
+                    || self.same_value_expression_contains_live_global_this_descriptor(property)
+            }
+            Expression::SuperMember { property } => {
+                self.same_value_expression_contains_live_global_this_descriptor(property)
+            }
+            Expression::Assign { value, .. }
+            | Expression::Await(value)
+            | Expression::EnumerateKeys(value)
+            | Expression::GetIterator(value)
+            | Expression::IteratorClose(value)
+            | Expression::Unary {
+                expression: value, ..
+            } => self.same_value_expression_contains_live_global_this_descriptor(value),
+            Expression::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                self.same_value_expression_contains_live_global_this_descriptor(object)
+                    || self.same_value_expression_contains_live_global_this_descriptor(property)
+                    || self.same_value_expression_contains_live_global_this_descriptor(value)
+            }
+            Expression::AssignSuperMember { property, value } => {
+                self.same_value_expression_contains_live_global_this_descriptor(property)
+                    || self.same_value_expression_contains_live_global_this_descriptor(value)
+            }
+            Expression::Binary { left, right, .. } => {
+                self.same_value_expression_contains_live_global_this_descriptor(left)
+                    || self.same_value_expression_contains_live_global_this_descriptor(right)
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                self.same_value_expression_contains_live_global_this_descriptor(condition)
+                    || self
+                        .same_value_expression_contains_live_global_this_descriptor(then_expression)
+                    || self
+                        .same_value_expression_contains_live_global_this_descriptor(else_expression)
+            }
+            Expression::Sequence(expressions) => expressions.iter().any(|expression| {
+                self.same_value_expression_contains_live_global_this_descriptor(expression)
+            }),
+            Expression::Call { callee, arguments }
+            | Expression::SuperCall { callee, arguments }
+            | Expression::New { callee, arguments } => {
+                self.same_value_expression_contains_live_global_this_descriptor(callee)
+                    || arguments.iter().any(|argument| match argument {
+                        CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                            self.same_value_expression_contains_live_global_this_descriptor(
+                                expression,
+                            )
+                        }
+                    })
+            }
+            Expression::Array(elements) => elements.iter().any(|element| match element {
+                ArrayElement::Expression(expression) | ArrayElement::Spread(expression) => {
+                    self.same_value_expression_contains_live_global_this_descriptor(expression)
+                }
+            }),
+            Expression::Object(entries) => entries.iter().any(|entry| match entry {
+                ObjectEntry::Data { key, value }
+                | ObjectEntry::Getter { key, getter: value }
+                | ObjectEntry::Setter { key, setter: value } => {
+                    self.same_value_expression_contains_live_global_this_descriptor(key)
+                        || self.same_value_expression_contains_live_global_this_descriptor(value)
+                }
+                ObjectEntry::Spread(expression) => {
+                    self.same_value_expression_contains_live_global_this_descriptor(expression)
+                }
+            }),
+            Expression::Identifier(_)
+            | Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined
+            | Expression::This
+            | Expression::NewTarget
+            | Expression::Sent
+            | Expression::Update { .. } => false,
+        }
+    }
+
     fn same_value_operand_static_evaluation_safe(&self, expression: &Expression) -> bool {
         if matches!(
             expression,
@@ -648,6 +754,103 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    fn same_value_assertion_global_static_value(
+        &self,
+        expression: &Expression,
+        depth: usize,
+    ) -> Option<Expression> {
+        if depth == 0 {
+            return None;
+        }
+        match expression {
+            Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined => Some(expression.clone()),
+            Expression::Identifier(name)
+                if matches!(name.as_str(), "undefined" | "NaN" | "Infinity")
+                    && self.is_unshadowed_builtin_identifier(name) =>
+            {
+                match name.as_str() {
+                    "undefined" => Some(Expression::Undefined),
+                    "NaN" => Some(Expression::Number(f64::NAN)),
+                    "Infinity" => Some(Expression::Number(f64::INFINITY)),
+                    _ => None,
+                }
+            }
+            Expression::Identifier(name) => self
+                .global_value_binding(name)
+                .filter(|value| !static_expression_matches(value, expression))
+                .and_then(|value| {
+                    self.same_value_assertion_global_static_value(value, depth - 1)
+                        .or_else(|| Some(value.clone()))
+                }),
+            Expression::Member { object, property } => {
+                let resolved_property = self.same_value_resolved_property_key(property);
+                self.same_value_assertion_global_this_descriptor_static_value(
+                    object,
+                    &resolved_property,
+                    depth - 1,
+                )
+                .flatten()
+            }
+            Expression::Binary { op, left, right } => {
+                let left_value = self.same_value_assertion_global_static_value(left, depth - 1)?;
+                let right_value =
+                    self.same_value_assertion_global_static_value(right, depth - 1)?;
+                Self::same_value_static_binary_expression_value(*op, &left_value, &right_value)
+            }
+            _ => None,
+        }
+    }
+
+    fn same_value_assertion_global_this_descriptor_static_value(
+        &self,
+        object: &Expression,
+        property: &Expression,
+        depth: usize,
+    ) -> Option<Option<Expression>> {
+        if depth == 0 {
+            return Some(None);
+        }
+        if !matches!(object, Expression::Identifier(name) if name == "globalThis" && self.is_unshadowed_builtin_identifier(name))
+        {
+            return None;
+        }
+        let property_name = static_property_name_from_expression(property)?;
+        let descriptor = self.backend.global_property_descriptor(&property_name)?;
+        if descriptor.has_get || descriptor.getter.is_some() {
+            return Some(None);
+        }
+        if matches!(&descriptor.value, Expression::Undefined)
+            && (self.global_has_binding(&property_name)
+                || self.global_value_binding(&property_name).is_some()
+                || self.resolve_global_binding_index(&property_name).is_some())
+        {
+            return Some(None);
+        }
+        let descriptor_value = if matches!(
+            &descriptor.value,
+            Expression::Identifier(name) if name == &property_name
+        ) {
+            self.global_value_binding(&property_name)
+                .unwrap_or(&descriptor.value)
+        } else {
+            &descriptor.value
+        };
+        if let Some(value) =
+            self.same_value_assertion_global_static_value(descriptor_value, depth - 1)
+        {
+            return Some(Some(value));
+        }
+        if matches!(descriptor_value, Expression::Identifier(_)) {
+            return Some(None);
+        }
+        Some(Some(descriptor_value.clone()))
+    }
+
     fn same_value_assertion_fast_object_property(
         &self,
         object: &Expression,
@@ -749,6 +952,15 @@ impl<'a> FunctionCompiler<'a> {
                         .is_some()
                 {
                     return Some(Expression::String("Deferred Module".to_string()));
+                }
+                if let Some(value) = self.same_value_assertion_global_this_descriptor_static_value(
+                    object,
+                    &resolved_property,
+                    depth - 1,
+                ) {
+                    return value.and_then(|value| {
+                        self.same_value_assertion_fast_primitive_value(&value, depth - 1)
+                    });
                 }
                 if matches!(
                     static_property_name_from_expression(&resolved_property).as_deref(),
@@ -1990,6 +2202,13 @@ impl<'a> FunctionCompiler<'a> {
                         .same_value_assertion_direct_static_value(&value, depth - 1)
                         .or(Some(value));
                 }
+                if let Some(value) = self.same_value_assertion_global_this_descriptor_static_value(
+                    object,
+                    property,
+                    depth - 1,
+                ) {
+                    return value;
+                }
                 if Self::same_value_property_can_be_typed_array_or_array_buffer_member(property)
                     && let Some(value) = self
                         .resolve_static_typed_array_or_array_buffer_member_value(object, property)
@@ -3092,6 +3311,17 @@ impl<'a> FunctionCompiler<'a> {
             )?;
             return Ok(true);
         }
+        if self.same_value_expression_contains_live_global_this_descriptor(actual)
+            || self.same_value_expression_contains_live_global_this_descriptor(expected)
+        {
+            self.emit_same_value_assertion_runtime_compare(
+                arguments,
+                actual,
+                expected,
+                assertion_failure,
+            )?;
+            return Ok(true);
+        }
         let fast_extra_arguments_side_effect_free =
             arguments.iter().skip(2).all(|argument| match argument {
                 CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
@@ -3265,7 +3495,12 @@ impl<'a> FunctionCompiler<'a> {
         let operands_static_evaluation_safe = self
             .same_value_operand_static_evaluation_safe(actual)
             && self.same_value_operand_static_evaluation_safe(expected);
+        let operands_contain_live_global_this_descriptor = self
+            .same_value_expression_contains_live_global_this_descriptor(actual)
+            || self.same_value_expression_contains_live_global_this_descriptor(expected);
         let direct_static_result = if operands_contain_dynamic_descriptor_member {
+            None
+        } else if operands_contain_live_global_this_descriptor {
             None
         } else {
             self.same_value_assertion_direct_static_result(actual, expected)
@@ -3306,8 +3541,9 @@ impl<'a> FunctionCompiler<'a> {
         }
         let has_static_reference_identity =
             actual_reference_identity.is_some() && expected_reference_identity.is_some();
-        let needs_runtime_identifier_check =
-            self.same_value_assertion_needs_runtime_identifier_check(actual, expected);
+        let needs_runtime_identifier_check = self
+            .same_value_assertion_needs_runtime_identifier_check(actual, expected)
+            || operands_contain_live_global_this_descriptor;
         let identifier_operands_are_unshadowed_primitives =
             [actual, expected].iter().all(|expression| {
                 !matches!(expression, Expression::Identifier(_))

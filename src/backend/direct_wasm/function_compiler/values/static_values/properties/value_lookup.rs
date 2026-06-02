@@ -437,6 +437,9 @@ impl<'a> FunctionCompiler<'a> {
         let requested_symbol = self
             .resolve_symbol_identity_expression(&canonical_property)
             .or_else(|| self.resolve_symbol_identity_expression(property));
+        let requested_well_known_symbol = self
+            .well_known_symbol_name(&canonical_property)
+            .or_else(|| self.well_known_symbol_name(property));
         if object_binding.runtime_symbol_properties && requested_symbol.is_some() {
             return None;
         }
@@ -444,16 +447,23 @@ impl<'a> FunctionCompiler<'a> {
             return Some(value.clone());
         }
 
-        let requested_symbol = requested_symbol?;
         object_binding
             .symbol_properties
             .iter()
             .find_map(|(existing_key, value)| {
+                if let Some(requested_name) = requested_well_known_symbol.as_ref()
+                    && self
+                        .well_known_symbol_name(existing_key)
+                        .is_some_and(|existing_name| existing_name == *requested_name)
+                {
+                    return Some(value.clone());
+                }
+                let requested_symbol = requested_symbol.as_ref()?;
                 let canonical_existing = self
                     .resolve_symbol_identity_expression(existing_key)
                     .unwrap_or_else(|| existing_key.clone());
-                (static_expression_matches(&canonical_existing, &requested_symbol)
-                    || static_expression_matches(existing_key, &requested_symbol))
+                (static_expression_matches(&canonical_existing, requested_symbol)
+                    || static_expression_matches(existing_key, requested_symbol))
                 .then(|| value.clone())
             })
     }

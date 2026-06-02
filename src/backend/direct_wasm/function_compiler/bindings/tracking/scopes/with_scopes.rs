@@ -77,14 +77,17 @@ impl<'a> FunctionCompiler<'a> {
                     .is_some_and(|object| has_property(object))
                     || matches!(
                         scope_object,
-                        Expression::Identifier(name)
-                            if self.global_object_binding(name).is_some_and(|object_binding| {
+                        Expression::Identifier(scope_name)
+                            if (scope_name == "globalThis"
+                                && self.is_unshadowed_builtin_identifier(scope_name)
+                                && self.backend.global_property_descriptor(name).is_some())
+                                || self.global_object_binding(scope_name).is_some_and(|object_binding| {
                                 object_binding_has_property(object_binding, &property)
                             }) || self
                                 .backend
                                 .shared_global_semantics
                                 .values
-                                .object_binding(name)
+                                .object_binding(scope_name)
                                 .is_some_and(|object_binding| {
                                     object_binding_has_property(object_binding, &property)
                             })
@@ -154,15 +157,15 @@ impl<'a> FunctionCompiler<'a> {
             let blocked = if let Some(return_value) = return_value {
                 self.resolve_object_binding_from_expression(&return_value)
                     .and_then(|unscopables_object| {
-                        object_binding_lookup_value(&unscopables_object, &property)
-                            .and_then(|value| self.resolve_static_boolean_expression(value))
+                        self.resolve_object_binding_property_value(&unscopables_object, &property)
+                            .and_then(|value| self.resolve_static_boolean_expression(&value))
                     })
                     .unwrap_or(false)
             } else if let Some(unscopables_object) =
                 self.resolve_function_binding_static_return_object_binding(&getter_binding, &[])
             {
-                object_binding_lookup_value(&unscopables_object, &property)
-                    .and_then(|value| self.resolve_static_boolean_expression(value))
+                self.resolve_object_binding_property_value(&unscopables_object, &property)
+                    .and_then(|value| self.resolve_static_boolean_expression(&value))
                     .unwrap_or(false)
             } else {
                 self.emit_function_binding_side_effects_with_arguments(&getter_binding, &[])?;
@@ -175,9 +178,11 @@ impl<'a> FunctionCompiler<'a> {
         let Some(scope_binding) = self.resolve_object_binding_from_expression(scope_object) else {
             return Ok(false);
         };
-        let Some(unscopables_value) =
-            object_binding_lookup_value(&scope_binding, &unscopables_key).cloned()
-        else {
+        let Some(unscopables_value) = self.resolve_with_scope_unscopables_value(
+            scope_object,
+            &scope_binding,
+            &unscopables_key,
+        ) else {
             return Ok(false);
         };
         let unscopables_member = Expression::Member {
@@ -213,9 +218,35 @@ impl<'a> FunctionCompiler<'a> {
             self.emit_function_binding_side_effects_with_arguments(&getter_binding, &[])?;
             return Ok(blocked);
         }
-        Ok(object_binding_lookup_value(&unscopables_object, &property)
-            .and_then(|value| self.resolve_static_boolean_expression(value))
+        Ok(self
+            .resolve_object_binding_property_value(&unscopables_object, &property)
+            .and_then(|value| self.resolve_static_boolean_expression(&value))
             .unwrap_or(false))
+    }
+
+    pub(in crate::backend::direct_wasm) fn resolve_with_scope_unscopables_value(
+        &self,
+        scope_object: &Expression,
+        scope_binding: &ObjectValueBinding,
+        unscopables_key: &Expression,
+    ) -> Option<Expression> {
+        self.resolve_object_binding_property_value(scope_binding, unscopables_key)
+            .or_else(|| {
+                let Expression::Identifier(scope_name) = scope_object else {
+                    return None;
+                };
+                if scope_name != "globalThis" || !self.is_unshadowed_builtin_identifier(scope_name)
+                {
+                    return None;
+                }
+                self.backend
+                    .shared_global_semantics
+                    .values
+                    .object_binding(scope_name)
+                    .and_then(|binding| {
+                        self.resolve_object_binding_property_value(binding, unscopables_key)
+                    })
+            })
     }
 
     fn emit_proxy_with_scope_unscopables_block_check(

@@ -11,6 +11,11 @@ impl<'a> FunctionCompiler<'a> {
     ) -> DirectResult<bool> {
         if user_function.has_lowered_pattern_parameters()
             || self.user_function_contains_local_declaration(user_function)
+            || (self.user_function_references_captured_user_function(user_function)
+                && self
+                    .user_function_references_only_direct_async_safe_captured_user_function_calls(
+                        user_function,
+                    ))
             || self.user_function_creates_descriptor_binding_with_explicit_call_frame(
                 user_function,
                 arguments,

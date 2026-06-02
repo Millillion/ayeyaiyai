@@ -893,6 +893,12 @@ impl<'a> FunctionCompiler<'a> {
             Statement::Print { values } => values
                 .iter()
                 .all(|value| !Self::expression_contains_await_for_user_call_runtime(value)),
+            Statement::With { object, body } => {
+                !Self::expression_contains_await_for_user_call_runtime(object)
+                    && body
+                        .iter()
+                        .all(Self::direct_async_implicit_completion_statement_supported)
+            }
             Statement::Block { body } => body
                 .iter()
                 .all(Self::direct_async_implicit_completion_statement_supported),
@@ -943,7 +949,11 @@ impl<'a> FunctionCompiler<'a> {
             && (!self.user_function_references_captured_user_function(user_function)
                 || self.user_function_references_only_supported_self_function_has_own_property(
                     user_function,
-                ))
+                )
+                || self
+                    .user_function_references_only_direct_async_safe_captured_user_function_calls(
+                        user_function,
+                    ))
             && self.user_function_has_explicit_call_frame_inlineable_terminal_body(user_function)
             && self
                 .resolve_registered_function_declaration(&user_function.name)
@@ -5093,6 +5103,14 @@ impl<'a> FunctionCompiler<'a> {
                     eprintln!(
                         "emit_immediate_promise_member_call:promise-like-fallback object={object:?} property={property:?}"
                     );
+                }
+                if self.expression_is_direct_async_function_call(object)
+                    && self
+                        .consume_direct_async_function_implicit_completion(object)?
+                        .is_some()
+                {
+                    self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
+                    return Ok(true);
                 }
                 self.emit_numeric_expression(object)?;
                 self.state.emission.output.instructions.push(0x1a);

@@ -54,7 +54,7 @@ impl<'a> FunctionCompiler<'a> {
         })
     }
 
-    fn prepare_inline_summary_local_bindings(
+    pub(in crate::backend::direct_wasm) fn prepare_inline_summary_local_bindings(
         &mut self,
         inline_local_bindings: &[String],
     ) -> Vec<String> {

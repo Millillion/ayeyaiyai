@@ -726,17 +726,20 @@ impl<'a> FunctionCompiler<'a> {
         let Some(scope_binding) = self.resolve_object_binding_from_expression(scope_object) else {
             return false;
         };
-        let Some(unscopables_value) = object_binding_lookup_value(&scope_binding, &unscopables_key)
-        else {
+        let Some(unscopables_value) = self.resolve_with_scope_unscopables_value(
+            scope_object,
+            &scope_binding,
+            &unscopables_key,
+        ) else {
             return false;
         };
         let Some(unscopables_object) =
-            self.resolve_object_binding_from_expression(unscopables_value)
+            self.resolve_object_binding_from_expression(&unscopables_value)
         else {
             return false;
         };
-        object_binding_lookup_value(&unscopables_object, &property)
-            .and_then(|value| self.resolve_static_boolean_expression(value))
+        self.resolve_object_binding_property_value(&unscopables_object, &property)
+            .and_then(|value| self.resolve_static_boolean_expression(&value))
             .unwrap_or(false)
     }
 

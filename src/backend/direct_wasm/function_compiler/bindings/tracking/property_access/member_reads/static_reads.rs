@@ -6,7 +6,9 @@ impl<'a> FunctionCompiler<'a> {
         property_name: &str,
         value: &Expression,
     ) -> DirectResult<()> {
-        if matches!(value, Expression::Identifier(source_name) if source_name == property_name) {
+        if matches!(value, Expression::Identifier(source_name) if source_name == property_name)
+            || matches!(value, Expression::Undefined)
+        {
             if let Some(global_index) = self.resolve_global_binding_index(property_name) {
                 self.emit_declared_global_binding_read(property_name, global_index)?;
                 return Ok(());
@@ -51,6 +53,12 @@ impl<'a> FunctionCompiler<'a> {
             .cloned()
         {
             self.emit_global_object_property_descriptor_value(&property_name, &state.value)?;
+            return Ok(true);
+        }
+        if self.global_has_binding(&property_name)
+            && let Some(global_index) = self.resolve_global_binding_index(&property_name)
+        {
+            self.emit_declared_global_binding_read(&property_name, global_index)?;
             return Ok(true);
         }
         if property_name == "NaN" {

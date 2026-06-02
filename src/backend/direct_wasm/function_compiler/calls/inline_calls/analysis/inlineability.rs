@@ -684,6 +684,12 @@ impl<'a> FunctionCompiler<'a> {
             Statement::Print { values } => values
                 .iter()
                 .all(|value| !expression_mentions_unsupported_explicit_call_frame_state(value)),
+            Statement::With { object, body } => {
+                !expression_mentions_unsupported_explicit_call_frame_state(object)
+                    && body
+                        .iter()
+                        .all(Self::explicit_call_frame_inlineable_effect_statement)
+            }
             Statement::Expression(expression) | Statement::Throw(expression) => {
                 !expression_mentions_unsupported_explicit_call_frame_state(expression)
             }
@@ -805,6 +811,12 @@ impl<'a> FunctionCompiler<'a> {
             Statement::Print { values } => values
                 .iter()
                 .all(|value| !expression_mentions_unsupported_explicit_call_frame_state(value)),
+            Statement::With { object, body } => {
+                !expression_mentions_unsupported_explicit_call_frame_state(object)
+                    && body
+                        .iter()
+                        .all(Self::explicit_call_frame_inlineable_effect_statement)
+            }
             Statement::Block { body } if body.is_empty() => true,
             Statement::Expression(expression) => {
                 !expression_mentions_unsupported_explicit_call_frame_state(expression)
