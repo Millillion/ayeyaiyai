@@ -4026,20 +4026,20 @@ impl<'a> FunctionCompiler<'a> {
             "then" => {
                 if let Some(handler) = self.promise_handler_expression(arguments.first()) {
                     self.emit_immediate_promise_callback(&handler, &Expression::Undefined, true)?;
-                    self.emit_ignored_call_arguments(&arguments[1..])?;
+                    self.emit_ignored_promise_handler_arguments(&arguments[1..])?;
                 } else {
-                    self.emit_ignored_call_arguments(arguments)?;
+                    self.emit_ignored_promise_handler_arguments(arguments)?;
                 }
             }
             "catch" => {
-                self.emit_ignored_call_arguments(arguments)?;
+                self.emit_ignored_promise_handler_arguments(arguments)?;
             }
             "finally" => {
                 if let Some(handler) = self.promise_handler_expression(arguments.first()) {
                     self.emit_immediate_promise_callback(&handler, &Expression::Undefined, true)?;
-                    self.emit_ignored_call_arguments(&arguments[1..])?;
+                    self.emit_ignored_promise_handler_arguments(&arguments[1..])?;
                 } else {
-                    self.emit_ignored_call_arguments(arguments)?;
+                    self.emit_ignored_promise_handler_arguments(arguments)?;
                 }
             }
             _ => unreachable!("filtered above"),
@@ -4047,6 +4047,23 @@ impl<'a> FunctionCompiler<'a> {
 
         self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
         Ok(true)
+    }
+
+    fn emit_ignored_promise_handler_arguments(
+        &mut self,
+        arguments: &[CallArgument],
+    ) -> DirectResult<()> {
+        for argument in arguments {
+            match argument {
+                CallArgument::Expression(Expression::Identifier(name))
+                    if name == "$DONE" || name.contains("$DONE") => {}
+                CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                    self.emit_numeric_expression(expression)?;
+                    self.state.emission.output.instructions.push(0x1a);
+                }
+            }
+        }
+        Ok(())
     }
 
     fn expression_is_lossy_promise_protocol_receiver(&self, expression: &Expression) -> bool {
@@ -4057,6 +4074,41 @@ impl<'a> FunctionCompiler<'a> {
             return false;
         }
         name.to_ascii_lowercase().contains("promise")
+    }
+
+    fn expression_is_async_generator_call_receiver(&self, expression: &Expression) -> bool {
+        let Expression::Call { callee, .. } = expression else {
+            return false;
+        };
+        let Some(LocalFunctionBinding::User(function_name)) =
+            self.resolve_function_binding_from_expression(callee)
+        else {
+            return false;
+        };
+        self.user_function(&function_name)
+            .is_some_and(|function| matches!(function.kind, FunctionKind::AsyncGenerator))
+    }
+
+    fn promise_like_chain_roots_in_async_generator_next(&self, expression: &Expression) -> bool {
+        let Expression::Call { callee, .. } = expression else {
+            return false;
+        };
+        let Expression::Member { object, property } = callee.as_ref() else {
+            return false;
+        };
+        let Expression::String(property_name) = property.as_ref() else {
+            return false;
+        };
+        match property_name.as_str() {
+            "then" | "catch" | "finally" => {
+                self.promise_like_chain_roots_in_async_generator_next(object)
+            }
+            "next" => {
+                self.expression_is_async_generator_call_receiver(object)
+                    || self.is_async_generator_iterator_expression(object)
+            }
+            _ => false,
+        }
     }
 
     pub(in crate::backend::direct_wasm) fn consume_immediate_promise_outcome(
@@ -4135,26 +4187,14 @@ impl<'a> FunctionCompiler<'a> {
                 return Ok(Some(outcome));
             }
         }
-        let is_then_or_catch_chain = matches!(
-            expression,
-            Expression::Call { callee, .. }
-                if matches!(
-                    callee.as_ref(),
-                    Expression::Member { property, .. }
-                        if matches!(
-                            property.as_ref(),
-                            Expression::String(name)
-                                if matches!(name.as_str(), "then" | "catch" | "finally")
-                        )
-                )
-        );
-        if !is_then_or_catch_chain
+        let is_promise_like_chain = Self::call_is_promise_like_chain(expression);
+        if !is_promise_like_chain
             && let Some(outcome) = self.direct_async_function_call_outcome(expression)
         {
             self.emit_direct_async_function_call_await_effects(expression)?;
             return Ok(Some(outcome));
         }
-        if !is_then_or_catch_chain
+        if !is_promise_like_chain
             && let Some(outcome) =
                 self.consume_direct_async_function_implicit_completion(expression)?
         {
@@ -5093,8 +5133,11 @@ impl<'a> FunctionCompiler<'a> {
             if property_name == "withResolvers" {
                 return Ok(false);
             }
-            if Self::call_is_promise_like_chain(object)
-                || self.expression_is_direct_async_function_call(object)
+            let object_is_promise_like_chain = Self::call_is_promise_like_chain(object);
+            let object_is_direct_async_function_call = !object_is_promise_like_chain
+                && self.expression_is_direct_async_function_call(object);
+            if object_is_promise_like_chain
+                || object_is_direct_async_function_call
                 || Self::expression_is_dynamic_import_call(object)
                 || self.expression_is_dynamic_import_promise_reference(object)
                 || self.expression_is_async_function_prototype_call(object)
@@ -5104,12 +5147,22 @@ impl<'a> FunctionCompiler<'a> {
                         "emit_immediate_promise_member_call:promise-like-fallback object={object:?} property={property:?}"
                     );
                 }
-                if self.expression_is_direct_async_function_call(object)
+                if object_is_direct_async_function_call
                     && self
                         .consume_direct_async_function_implicit_completion(object)?
                         .is_some()
                 {
                     self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
+                    return Ok(true);
+                }
+                if object_is_promise_like_chain
+                    && self.promise_like_chain_roots_in_async_generator_next(object)
+                    && self.emit_fulfilled_promise_protocol_member_call(
+                        object,
+                        property_name,
+                        arguments,
+                    )?
+                {
                     return Ok(true);
                 }
                 self.emit_numeric_expression(object)?;

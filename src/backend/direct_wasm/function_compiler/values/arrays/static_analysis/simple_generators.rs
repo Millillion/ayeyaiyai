@@ -171,7 +171,8 @@ impl<'a> FunctionCompiler<'a> {
             return None;
         };
         let source = self
-            .simple_generator_effect_expression(source, prior_effects)
+            .simple_generator_current_static_array_expression_for_identifier(source)
+            .or_else(|| self.simple_generator_effect_expression(source, prior_effects))
             .or_else(|| match source.as_ref() {
                 Expression::Identifier(name) => self.simple_generator_static_array_expression(name),
                 _ => None,
@@ -376,6 +377,36 @@ impl<'a> FunctionCompiler<'a> {
                 })
                 .collect(),
         ))
+    }
+
+    fn simple_generator_current_static_array_expression_for_identifier(
+        &self,
+        expression: &Expression,
+    ) -> Option<Expression> {
+        let Expression::Identifier(name) = expression else {
+            return None;
+        };
+        if let Some(value) = self.simple_generator_static_array_expression(name) {
+            return Some(value);
+        }
+        let resolved_name = self
+            .resolve_current_local_binding(name)
+            .map(|(resolved_name, _)| resolved_name)
+            .unwrap_or_else(|| name.clone());
+        let value = self
+            .state
+            .speculation
+            .static_semantics
+            .local_value_binding(&resolved_name)
+            .or_else(|| {
+                self.state
+                    .speculation
+                    .static_semantics
+                    .local_value_binding(name)
+            })
+            .or_else(|| self.global_value_binding(name))?;
+        let value = self.materialize_static_expression(value);
+        matches!(value, Expression::Array(_)).then_some(value)
     }
 
     fn simple_generator_effect_iterator_step_object(

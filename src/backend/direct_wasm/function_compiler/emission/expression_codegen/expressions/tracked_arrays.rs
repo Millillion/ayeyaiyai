@@ -309,7 +309,7 @@ impl<'a> FunctionCompiler<'a> {
             old_length = Some(array_binding.values.len() as u32);
             array_binding
                 .values
-                .extend(materialized_arguments.into_iter().map(Some));
+                .extend(materialized_arguments.iter().cloned().map(Some));
             synced_array_binding = Some(array_binding.clone());
             new_length = Some(array_binding.values.len() as i32);
         } else if let Some(array_binding) = self
@@ -321,7 +321,7 @@ impl<'a> FunctionCompiler<'a> {
             old_length = Some(array_binding.values.len() as u32);
             array_binding
                 .values
-                .extend(materialized_arguments.into_iter().map(Some));
+                .extend(materialized_arguments.iter().cloned().map(Some));
             synced_array_binding = Some(array_binding.clone());
             new_length = Some(array_binding.values.len() as i32);
         } else if let Some(mut array_binding) = self
@@ -334,9 +334,25 @@ impl<'a> FunctionCompiler<'a> {
             old_length = Some(array_binding.values.len() as u32);
             array_binding
                 .values
-                .extend(materialized_arguments.into_iter().map(Some));
+                .extend(materialized_arguments.iter().cloned().map(Some));
             synced_array_binding = Some(array_binding.clone());
             new_length = Some(array_binding.values.len() as i32);
+        }
+        if old_length.is_none()
+            && has_runtime_array_state
+            && binding_name.starts_with("__ayy_array_rest_")
+        {
+            let mut array_binding = ArrayValueBinding { values: Vec::new() };
+            old_length = Some(0);
+            array_binding
+                .values
+                .extend(materialized_arguments.iter().cloned().map(Some));
+            synced_array_binding = Some(array_binding.clone());
+            new_length = Some(array_binding.values.len() as i32);
+            self.state
+                .speculation
+                .static_semantics
+                .set_local_array_binding(&binding_name, array_binding);
         }
         if self.binding_name_is_global(&binding_name) || is_named_global_array {
             self.backend

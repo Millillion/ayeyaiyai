@@ -500,6 +500,16 @@ impl<'a> FunctionCompiler<'a> {
         )
     }
 
+    fn assert_throws_expected_constructor_is_static(&self, expected_error: &Expression) -> bool {
+        matches!(
+            expected_error,
+            Expression::Identifier(name)
+                if name == "Test262Error"
+                    || (native_error_runtime_value(name).is_some()
+                        && self.is_unshadowed_builtin_identifier(name))
+        )
+    }
+
     fn assert_throws_module_namespace_object_define_property_parts(
         &self,
         callback: &Expression,
@@ -1371,8 +1381,10 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(true);
         }
 
-        self.emit_numeric_expression(expected_error)?;
-        self.state.emission.output.instructions.push(0x1a);
+        if !self.assert_throws_expected_constructor_is_static(expected_error) {
+            self.emit_numeric_expression(expected_error)?;
+            self.state.emission.output.instructions.push(0x1a);
+        }
         for argument in rest {
             match argument {
                 CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
@@ -1483,8 +1495,10 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(true);
         }
 
-        self.emit_numeric_expression(expected_error)?;
-        self.state.emission.output.instructions.push(0x1a);
+        if !self.assert_throws_expected_constructor_is_static(expected_error) {
+            self.emit_numeric_expression(expected_error)?;
+            self.state.emission.output.instructions.push(0x1a);
+        }
         for argument in rest {
             match argument {
                 CallArgument::Expression(expression) | CallArgument::Spread(expression) => {

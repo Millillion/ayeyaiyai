@@ -133,10 +133,6 @@ impl<'a> FunctionCompiler<'a> {
                 if self
                     .try_emit_static_simple_generator_rest_collection_loop_statement(statement)?
                 {
-                    self.sync_static_executable_statement_tracking_effects_from_environment(
-                        statement,
-                        environment,
-                    );
                     Ok(())
                 } else {
                     self.emit_while(condition, break_hook.as_ref(), labels, body)?;

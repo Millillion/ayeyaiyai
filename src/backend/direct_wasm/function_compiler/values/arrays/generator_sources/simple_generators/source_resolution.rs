@@ -268,11 +268,12 @@ impl<'a> FunctionCompiler<'a> {
         }
         let prefix_effects =
             self.simple_generator_prefix_effects_before_terminal_throw(&prefix_effects);
-        self.register_bindings(prefix_effects)?;
-        self.sync_visible_runtime_bindings_for_statements(prefix_effects)?;
-        for statement in prefix_effects {
-            self.emit_statement(statement)?;
+        if std::env::var_os("AYY_TRACE_SIMPLE_GENERATORS").is_some() {
+            eprintln!(
+                "simple_generator_call_time_prefix expression={expression:?} effects={prefix_effects:#?}"
+            );
         }
+        self.emit_static_lowered_pattern_inline_body(prefix_effects)?;
         Ok(())
     }
 

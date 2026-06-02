@@ -40,6 +40,19 @@ impl<'a> FunctionCompiler<'a> {
         property_name: &str,
         arguments: &[CallArgument],
     ) -> DirectResult<Option<StaticEvalOutcome>> {
+        if let Expression::Call { callee, .. } = object
+            && let Some(LocalFunctionBinding::User(function_name)) =
+                self.resolve_function_binding_from_expression(callee)
+            && let Some(user_function) = self.user_function(&function_name)
+            && matches!(user_function.kind, FunctionKind::AsyncGenerator)
+            && (user_function.has_parameter_defaults()
+                || user_function.has_lowered_pattern_parameters()
+                || !self
+                    .user_function_parameter_iterator_consumption_indices(user_function)
+                    .is_empty())
+        {
+            return Ok(None);
+        }
         if !matches!(object, Expression::Identifier(_))
             && self.resolve_simple_generator_source(object).is_none()
             && let Some(source @ IteratorSourceKind::AsyncYieldDelegateGenerator { .. }) =

@@ -155,6 +155,7 @@ impl<'a> FunctionCompiler<'a> {
         self.with_scoped_lexical_bindings_cleanup(scoped_source_names, |compiler| {
             let mut prior_effects = Vec::new();
             for effect in &substituted_effects {
+                let mut consumed_no_throw = false;
                 match compiler.consume_throwing_simple_generator_next_effect_with_prior(
                     effect,
                     &prior_effects,
@@ -163,7 +164,9 @@ impl<'a> FunctionCompiler<'a> {
                     SimpleGeneratorNextEffectConsumption::Threw(throw_value) => {
                         compiler.emit_static_throw_value(&throw_value)?;
                     }
-                    SimpleGeneratorNextEffectConsumption::EmittedNoThrow => {}
+                    SimpleGeneratorNextEffectConsumption::EmittedNoThrow => {
+                        consumed_no_throw = true;
+                    }
                     SimpleGeneratorNextEffectConsumption::NotApplicable => {
                         if compiler.try_emit_static_simple_generator_binding_effect(
                             effect,
@@ -191,7 +194,11 @@ impl<'a> FunctionCompiler<'a> {
                         compiler.emit_statement(effect)?;
                     }
                 }
-                prior_effects.push(effect.clone());
+                Self::record_simple_generator_prior_effect_after_consumption(
+                    &mut prior_effects,
+                    effect,
+                    consumed_no_throw,
+                );
             }
             Ok(())
         })
@@ -274,11 +281,8 @@ impl<'a> FunctionCompiler<'a> {
         prior_effects: &[Statement],
     ) -> Option<StaticThrowValue> {
         let mut iterator_target = self
-            .simple_generator_effect_expression(source, prior_effects)
-            .or_else(|| match source {
-                Expression::Identifier(name) => self.static_array_binding_expression(name),
-                _ => None,
-            })
+            .current_static_array_expression_for_identifier(source)
+            .or_else(|| self.simple_generator_effect_expression(source, prior_effects))
             .or_else(|| self.resolve_static_iterator_step_member_value_expression(source))
             .unwrap_or_else(|| self.materialize_static_expression(source));
         if let Some(outcome) = self.resolve_static_await_resolution_outcome(&iterator_target) {
@@ -424,17 +428,43 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    fn resolve_static_zero_arg_user_function_return_value_with_this(
+        &self,
+        binding: &LocalFunctionBinding,
+        this_binding: &Expression,
+    ) -> Option<Expression> {
+        let LocalFunctionBinding::User(function_name) = binding else {
+            return None;
+        };
+        let user_function = self.user_function(function_name)?;
+        if self.user_function_mentions_private_member_access(user_function)
+            || self.user_function_mentions_direct_eval(user_function)
+            || user_function.has_parameter_defaults()
+        {
+            return None;
+        }
+        let function = self.resolve_registered_function_declaration(function_name)?;
+        let [Statement::Return(value)] = function.body.as_slice() else {
+            return None;
+        };
+        let arguments_binding = Expression::Array(Vec::new());
+        Some(self.substitute_user_function_call_frame_bindings(
+            value,
+            user_function,
+            &[],
+            this_binding,
+            &arguments_binding,
+        ))
+    }
+
     pub(in crate::backend::direct_wasm) fn resolve_static_get_iterator_value(
         &self,
         source: &Expression,
         prior_effects: &[Statement],
     ) -> Option<Expression> {
         let mut iterator_target = self
-            .simple_generator_effect_expression(source, prior_effects)
-            .or_else(|| match source {
-                Expression::Identifier(name) => self.static_array_binding_expression(name),
-                _ => None,
-            })
+            .current_static_array_expression_for_identifier(source)
+            .or_else(|| self.simple_generator_effect_expression(source, prior_effects))
             .unwrap_or_else(|| self.materialize_static_expression(source));
         if let Some(outcome) = self.resolve_static_await_resolution_outcome(&iterator_target) {
             match outcome {
@@ -501,6 +531,12 @@ impl<'a> FunctionCompiler<'a> {
         if let Some(function_binding) =
             self.resolve_member_function_binding(&iterator_target, &iterator_property)
         {
+            if let Some(value) = self.resolve_static_zero_arg_user_function_return_value_with_this(
+                &function_binding,
+                &iterator_target,
+            ) {
+                return Some(value);
+            }
             return match self.resolve_static_function_outcome_from_binding_with_context(
                 &function_binding,
                 &[],
@@ -875,6 +911,204 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    fn statement_is_iterator_next_call_for(statement: &Statement, iterator_name: &str) -> bool {
+        let expression = match statement {
+            Statement::Let { value, .. }
+            | Statement::Var { value, .. }
+            | Statement::Assign { value, .. }
+            | Statement::Expression(value) => value,
+            _ => return false,
+        };
+        let Expression::Call { callee, arguments } = expression else {
+            return false;
+        };
+        if !arguments.is_empty() {
+            return false;
+        }
+        let Expression::Member { object, property } = callee.as_ref() else {
+            return false;
+        };
+        matches!(object.as_ref(), Expression::Identifier(name) if name == iterator_name)
+            && matches!(property.as_ref(), Expression::String(name) if name == "next")
+    }
+
+    fn prior_iterator_step_yield_result_expression(
+        &self,
+        step_name: &str,
+        prior_effects: &[Statement],
+    ) -> Option<Expression> {
+        for (effect_index, effect) in prior_effects.iter().enumerate().rev() {
+            let (effect_name, value) = match effect {
+                Statement::Let { name, value, .. }
+                | Statement::Var { name, value }
+                | Statement::Assign { name, value } => (name, value),
+                _ => continue,
+            };
+            if effect_name != step_name {
+                continue;
+            }
+            let Expression::Call { callee, arguments } = value else {
+                return None;
+            };
+            if !arguments.is_empty() {
+                return None;
+            }
+            let Expression::Member { object, property } = callee.as_ref() else {
+                return None;
+            };
+            if !matches!(property.as_ref(), Expression::String(name) if name == "next") {
+                return None;
+            }
+            let Expression::Identifier(iterator_name) = object.as_ref() else {
+                return None;
+            };
+            let step_index = prior_effects[..=effect_index]
+                .iter()
+                .filter(|effect| Self::statement_is_iterator_next_call_for(effect, iterator_name))
+                .count()
+                .saturating_sub(1);
+            if let Some(iterator_binding) = self
+                .state
+                .speculation
+                .static_semantics
+                .local_array_iterator_binding(
+                    &self
+                        .resolve_local_array_iterator_binding_name(iterator_name)
+                        .unwrap_or_else(|| iterator_name.clone()),
+                )
+                && let IteratorSourceKind::SimpleGenerator { steps, .. } = &iterator_binding.source
+                && let Some(step) = steps.get(step_index)
+                && let SimpleGeneratorStepOutcome::YieldResult(result) = &step.outcome
+            {
+                return Some(Self::substitute_sent_expression(
+                    result,
+                    &Expression::Undefined,
+                ));
+            }
+            let iterator_target =
+                self.resolve_static_iterator_close_target(object, &prior_effects[..effect_index])?;
+            if let Some(IteratorSourceKind::SimpleGenerator { steps, .. }) =
+                self.resolve_iterator_source_kind(&iterator_target)
+                && let Some(step) = steps.get(step_index)
+                && let SimpleGeneratorStepOutcome::YieldResult(result) = &step.outcome
+            {
+                return Some(Self::substitute_sent_expression(
+                    result,
+                    &Expression::Undefined,
+                ));
+            }
+            if step_index == 0 {
+                let next_property = Expression::String("next".to_string());
+                if let Some(next_binding) =
+                    self.resolve_member_function_binding(&iterator_target, &next_property)
+                {
+                    if let Some(value) = self
+                        .resolve_static_zero_arg_user_function_return_value_with_this(
+                            &next_binding,
+                            &iterator_target,
+                        )
+                    {
+                        return Some(value);
+                    }
+                    return match self
+                        .resolve_static_function_outcome_from_binding_with_call_frame_and_context(
+                            &next_binding,
+                            &[],
+                            &iterator_target,
+                            self.current_function_name(),
+                        ) {
+                        Some(StaticEvalOutcome::Value(value)) => Some(value),
+                        Some(StaticEvalOutcome::Throw(_)) | None => None,
+                    };
+                }
+            }
+            return None;
+        }
+        None
+    }
+
+    fn prior_iterator_step_member_getter_throw_value(
+        &self,
+        object: &Expression,
+        property: &Expression,
+        prior_effects: &[Statement],
+    ) -> Option<StaticThrowValue> {
+        let Expression::Identifier(step_name) = object else {
+            return None;
+        };
+        if !Self::is_static_iterator_step_binding_name(step_name) {
+            return None;
+        }
+        let step_result =
+            self.prior_iterator_step_yield_result_expression(step_name, prior_effects)?;
+        self.static_member_getter_throw_value(&Expression::Member {
+            object: Box::new(step_result),
+            property: Box::new(self.materialize_static_expression(property)),
+        })
+    }
+
+    fn static_member_getter_throw_value_with_prior(
+        &self,
+        expression: &Expression,
+        prior_effects: &[Statement],
+    ) -> Option<StaticThrowValue> {
+        match expression {
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                let condition = self
+                    .simple_generator_effect_expression(condition, prior_effects)
+                    .or_else(|| self.resolve_static_simple_generator_effect_expression(condition))
+                    .unwrap_or_else(|| self.materialize_static_expression(condition));
+                match condition {
+                    Expression::Bool(true) => self.static_member_getter_throw_value_with_prior(
+                        then_expression,
+                        prior_effects,
+                    ),
+                    Expression::Bool(false) => self.static_member_getter_throw_value_with_prior(
+                        else_expression,
+                        prior_effects,
+                    ),
+                    _ => None,
+                }
+            }
+            Expression::Member { object, property } => self
+                .prior_iterator_step_member_getter_throw_value(object, property, prior_effects)
+                .or_else(|| self.static_member_getter_throw_value(expression))
+                .or_else(|| {
+                    let object = self
+                        .simple_generator_effect_expression(object, prior_effects)
+                        .or_else(|| self.resolve_static_simple_generator_effect_expression(object))
+                        .unwrap_or_else(|| self.materialize_static_expression(object));
+                    let property = self
+                        .simple_generator_effect_expression(property, prior_effects)
+                        .or_else(|| {
+                            self.resolve_static_simple_generator_effect_expression(property)
+                        })
+                        .unwrap_or_else(|| self.materialize_static_expression(property));
+                    self.static_member_getter_throw_value(&Expression::Member {
+                        object: Box::new(object),
+                        property: Box::new(property),
+                    })
+                }),
+            Expression::Call { callee, arguments } => self
+                .static_member_getter_throw_value_with_prior(callee, prior_effects)
+                .or_else(|| {
+                    arguments.iter().find_map(|argument| match argument {
+                        CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                            self.static_member_getter_throw_value_with_prior(
+                                expression,
+                                prior_effects,
+                            )
+                        }
+                    })
+                }),
+            _ => None,
+        }
+    }
+
     fn static_member_getter_throw_value_from_statement(
         &self,
         statement: &Statement,
@@ -886,6 +1120,17 @@ impl<'a> FunctionCompiler<'a> {
             | Statement::Expression(value) => self.static_member_getter_throw_value(value),
             _ => None,
         }
+    }
+
+    fn record_simple_generator_prior_effect_after_consumption(
+        prior_effects: &mut Vec<Statement>,
+        statement: &Statement,
+        consumed_no_throw: bool,
+    ) {
+        if consumed_no_throw && matches!(statement, Statement::While { .. }) {
+            return;
+        }
+        prior_effects.push(statement.clone());
     }
 
     pub(in crate::backend::direct_wasm) fn resolve_static_effect_member_value(
@@ -1022,6 +1267,26 @@ impl<'a> FunctionCompiler<'a> {
         match (left, right) {
             (Expression::Undefined, Expression::Undefined)
             | (Expression::Null, Expression::Null) => Some(true),
+            (Expression::Undefined, Expression::Null)
+            | (Expression::Null, Expression::Undefined) => Some(false),
+            (
+                Expression::Undefined | Expression::Null,
+                Expression::Bool(_)
+                | Expression::Number(_)
+                | Expression::String(_)
+                | Expression::BigInt(_)
+                | Expression::Array(_)
+                | Expression::Object(_),
+            )
+            | (
+                Expression::Bool(_)
+                | Expression::Number(_)
+                | Expression::String(_)
+                | Expression::BigInt(_)
+                | Expression::Array(_)
+                | Expression::Object(_),
+                Expression::Undefined | Expression::Null,
+            ) => Some(false),
             (Expression::Bool(left), Expression::Bool(right)) => Some(left == right),
             (Expression::Number(left), Expression::Number(right)) => Some(left == right),
             (Expression::String(left), Expression::String(right)) => Some(left == right),
@@ -1055,6 +1320,36 @@ impl<'a> FunctionCompiler<'a> {
                 })
                 .collect(),
         ))
+    }
+
+    fn current_static_array_expression_for_identifier(
+        &self,
+        expression: &Expression,
+    ) -> Option<Expression> {
+        let Expression::Identifier(name) = expression else {
+            return None;
+        };
+        if let Some(value) = self.static_array_binding_expression(name) {
+            return Some(value);
+        }
+        let resolved_name = self
+            .resolve_current_local_binding(name)
+            .map(|(resolved_name, _)| resolved_name)
+            .unwrap_or_else(|| name.clone());
+        let value = self
+            .state
+            .speculation
+            .static_semantics
+            .local_value_binding(&resolved_name)
+            .or_else(|| {
+                self.state
+                    .speculation
+                    .static_semantics
+                    .local_value_binding(name)
+            })
+            .or_else(|| self.global_value_binding(name))?;
+        let value = self.materialize_static_expression(value);
+        matches!(value, Expression::Array(_)).then_some(value)
     }
 
     fn static_array_member_expression(
@@ -1323,6 +1618,12 @@ impl<'a> FunctionCompiler<'a> {
             | Statement::Assign { name, value } => self
                 .resolve_static_iterator_next_result(value, prior_effects)?
                 .or_else(|| match value {
+                    Expression::Identifier(value_name) => {
+                        self.static_array_binding_expression(value_name)
+                    }
+                    _ => None,
+                })
+                .or_else(|| match value {
                     Expression::GetIterator(source) => self
                         .resolve_static_get_iterator_value(source, prior_effects)
                         .map(|resolved_source| {
@@ -1335,6 +1636,13 @@ impl<'a> FunctionCompiler<'a> {
                                 resolved_source
                             }
                         }),
+                    _ => None,
+                })
+                .or_else(|| match value {
+                    Expression::Member { object, property } => {
+                        let property = self.materialize_static_expression(property);
+                        self.static_array_member_expression(object, &property)
+                    }
                     _ => None,
                 })
                 .or_else(|| {
@@ -1360,12 +1668,6 @@ impl<'a> FunctionCompiler<'a> {
                         return None;
                     }
                     (!static_expression_matches(&resolved, &identifier)).then_some(resolved)
-                })
-                .or_else(|| match value {
-                    Expression::Identifier(value_name) => {
-                        self.static_array_binding_expression(value_name)
-                    }
-                    _ => None,
                 })
                 .or_else(|| self.resolve_static_simple_generator_effect_expression(value)),
             _ => None,
@@ -1701,6 +2003,29 @@ impl<'a> FunctionCompiler<'a> {
         })
     }
 
+    fn static_rest_collection_iterator_binding_exhausted(
+        &self,
+        iterator_binding_name: &str,
+    ) -> bool {
+        let Some(iterator_binding) = self
+            .state
+            .speculation
+            .static_semantics
+            .local_array_iterator_binding(&iterator_binding_name)
+        else {
+            return false;
+        };
+        match &iterator_binding.source {
+            IteratorSourceKind::StaticArray { values, .. } => iterator_binding
+                .static_index
+                .is_some_and(|index| index > values.len()),
+            IteratorSourceKind::SimpleGenerator { steps, .. } => iterator_binding
+                .static_index
+                .is_some_and(|index| index > steps.len()),
+            _ => false,
+        }
+    }
+
     fn consume_static_simple_generator_rest_collection_loop(
         &mut self,
         statement: &Statement,
@@ -1716,17 +2041,24 @@ impl<'a> FunctionCompiler<'a> {
         else {
             return Ok(None);
         };
+        let Some(iterator_name) = Self::static_rest_collection_loop_iterator_name(statement) else {
+            return Ok(None);
+        };
+        let iterator_binding_name = self
+            .resolve_local_array_iterator_binding_name(iterator_name)
+            .unwrap_or_else(|| iterator_name.to_string());
         let mut loop_prior_effects = prior_effects.to_vec();
         let mut iterations = 0usize;
         loop {
+            if self.static_rest_collection_iterator_binding_exhausted(&iterator_binding_name) {
+                return Ok(Some(SimpleGeneratorNextEffectConsumption::EmittedNoThrow));
+            }
             let condition = self
-                .resolve_static_simple_generator_effect_expression(condition)
-                .or_else(|| {
-                    self.resolve_static_simple_generator_condition_with_prior(
-                        condition,
-                        &loop_prior_effects,
-                    )
-                });
+                .resolve_static_simple_generator_condition_with_prior(
+                    condition,
+                    &loop_prior_effects,
+                )
+                .or_else(|| self.resolve_static_simple_generator_effect_expression(condition));
             match condition {
                 Some(Expression::Bool(false)) => {
                     return Ok(Some(SimpleGeneratorNextEffectConsumption::EmittedNoThrow));
@@ -1740,7 +2072,7 @@ impl<'a> FunctionCompiler<'a> {
                     "static simple generator rest collection exceeded unroll limit",
                 ));
             }
-            for effect in body {
+            for effect in body.iter().take(2) {
                 match self.consume_throwing_simple_generator_next_effect_with_prior(
                     effect,
                     &loop_prior_effects,
@@ -1782,6 +2114,55 @@ impl<'a> FunctionCompiler<'a> {
                 }
                 loop_prior_effects.push(effect.clone());
             }
+            if self.static_rest_collection_iterator_binding_exhausted(&iterator_binding_name) {
+                return Ok(Some(SimpleGeneratorNextEffectConsumption::EmittedNoThrow));
+            }
+            let Statement::If { then_branch, .. } = &body[2] else {
+                return Ok(None);
+            };
+            let Some(push_effect) = then_branch.first() else {
+                return Ok(None);
+            };
+            match self.consume_throwing_simple_generator_next_effect_with_prior(
+                push_effect,
+                &loop_prior_effects,
+                strict_mode,
+            )? {
+                SimpleGeneratorNextEffectConsumption::Threw(throw_value) => {
+                    return Ok(Some(SimpleGeneratorNextEffectConsumption::Threw(
+                        throw_value,
+                    )));
+                }
+                SimpleGeneratorNextEffectConsumption::EmittedNoThrow => {}
+                SimpleGeneratorNextEffectConsumption::NotApplicable => {
+                    if self.try_emit_static_simple_generator_binding_effect(
+                        push_effect,
+                        &loop_prior_effects,
+                    )? {
+                        loop_prior_effects.push(push_effect.clone());
+                        continue;
+                    }
+                    if self.try_emit_static_simple_generator_call_effect(
+                        push_effect,
+                        &loop_prior_effects,
+                    )? {
+                        loop_prior_effects.push(push_effect.clone());
+                        continue;
+                    }
+                    if self.try_emit_static_simple_generator_member_assignment_effect(
+                        push_effect,
+                        &loop_prior_effects,
+                    )? {
+                        loop_prior_effects.push(push_effect.clone());
+                        continue;
+                    }
+                    self.sync_visible_runtime_bindings_for_statements(std::slice::from_ref(
+                        push_effect,
+                    ))?;
+                    self.emit_statement(push_effect)?;
+                }
+            }
+            loop_prior_effects.push(push_effect.clone());
         }
     }
 
@@ -2409,6 +2790,7 @@ impl<'a> FunctionCompiler<'a> {
             };
             let mut branch_prior_effects = prior_effects.to_vec();
             for effect in branch {
+                let mut consumed_no_throw = false;
                 match self.consume_throwing_simple_generator_next_effect_with_prior(
                     effect,
                     &branch_prior_effects,
@@ -2417,7 +2799,9 @@ impl<'a> FunctionCompiler<'a> {
                     SimpleGeneratorNextEffectConsumption::Threw(throw_value) => {
                         return Ok(SimpleGeneratorNextEffectConsumption::Threw(throw_value));
                     }
-                    SimpleGeneratorNextEffectConsumption::EmittedNoThrow => {}
+                    SimpleGeneratorNextEffectConsumption::EmittedNoThrow => {
+                        consumed_no_throw = true;
+                    }
                     SimpleGeneratorNextEffectConsumption::NotApplicable => {
                         if self.try_emit_static_simple_generator_binding_effect(
                             effect,
@@ -2446,7 +2830,11 @@ impl<'a> FunctionCompiler<'a> {
                         self.emit_statement(effect)?;
                     }
                 }
-                branch_prior_effects.push(effect.clone());
+                Self::record_simple_generator_prior_effect_after_consumption(
+                    &mut branch_prior_effects,
+                    effect,
+                    consumed_no_throw,
+                );
             }
             return Ok(SimpleGeneratorNextEffectConsumption::EmittedNoThrow);
         }
@@ -2515,7 +2903,8 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(SimpleGeneratorNextEffectConsumption::Threw(throw_value));
         }
         if let Some(expression) = statement_expression
-            && let Some(throw_value) = self.static_member_getter_throw_value(expression)
+            && let Some(throw_value) =
+                self.static_member_getter_throw_value_with_prior(expression, prior_effects)
         {
             return Ok(SimpleGeneratorNextEffectConsumption::Threw(throw_value));
         }
@@ -2599,6 +2988,7 @@ impl<'a> FunctionCompiler<'a> {
         self.register_bindings(body)?;
         let mut prior_effects = Vec::new();
         for statement in body {
+            let mut consumed_no_throw = false;
             match self.consume_throwing_simple_generator_next_effect_with_prior(
                 statement,
                 &prior_effects,
@@ -2608,7 +2998,9 @@ impl<'a> FunctionCompiler<'a> {
                     self.emit_static_throw_value(&throw_value)?;
                     return Ok(true);
                 }
-                SimpleGeneratorNextEffectConsumption::EmittedNoThrow => {}
+                SimpleGeneratorNextEffectConsumption::EmittedNoThrow => {
+                    consumed_no_throw = true;
+                }
                 SimpleGeneratorNextEffectConsumption::NotApplicable => {
                     if self.try_emit_static_simple_generator_binding_effect(
                         statement,
@@ -2633,7 +3025,11 @@ impl<'a> FunctionCompiler<'a> {
                     self.emit_statement(statement)?;
                 }
             }
-            prior_effects.push(statement.clone());
+            Self::record_simple_generator_prior_effect_after_consumption(
+                &mut prior_effects,
+                statement,
+                consumed_no_throw,
+            );
         }
         Ok(false)
     }
