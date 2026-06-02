@@ -314,7 +314,7 @@ impl<'a> FunctionCompiler<'a> {
         Ok(true)
     }
 
-    fn emit_no_arg_captured_user_function_effects_in_current_call_frame(
+    pub(in crate::backend::direct_wasm) fn emit_no_arg_captured_user_function_effects_in_current_call_frame(
         &mut self,
         called_function: &UserFunction,
     ) -> DirectResult<bool> {

@@ -1778,6 +1778,21 @@ impl<'a> FunctionCompiler<'a> {
         let Statement::Expression(Expression::Call { callee, arguments }) = statement else {
             return Ok(false);
         };
+        if arguments.is_empty()
+            && let Some(user_function) = self.resolve_user_function_from_expression(callee).cloned()
+            && self
+                .backend
+                .function_registry
+                .analysis
+                .user_function_capture_bindings
+                .contains_key(&user_function.name)
+            && !user_function.is_async()
+            && !user_function.is_generator()
+            && self
+                .emit_no_arg_captured_user_function_effects_in_current_call_frame(&user_function)?
+        {
+            return Ok(true);
+        }
         let Expression::Member { object, property } = callee.as_ref() else {
             return Ok(false);
         };
