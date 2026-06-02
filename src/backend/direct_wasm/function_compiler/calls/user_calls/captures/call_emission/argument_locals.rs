@@ -168,11 +168,14 @@ impl<'a> FunctionCompiler<'a> {
         };
 
         self.emit_prepare_bound_user_function_capture_globals(&prepared_capture_bindings)?;
-        let static_argument_member_writebacks = self
-            .user_function_static_argument_object_member_writeback_values(
+        let static_argument_member_writebacks = if runtime_only_parameter_iterator_call {
+            Vec::new()
+        } else {
+            self.user_function_static_argument_object_member_writeback_values(
                 user_function,
                 &bound_argument_expressions,
-            );
+            )
+        };
         self.predeclare_static_argument_object_member_writeback_properties(
             &static_argument_member_writebacks,
         );

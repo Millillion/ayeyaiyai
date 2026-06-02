@@ -122,8 +122,8 @@ impl<'a> FunctionCompiler<'a> {
                 skip_static_call_effect_analysis
             );
         }
-        let allow_static_snapshot = !self
-            .user_function_mentions_private_member_access(user_function)
+        let allow_static_snapshot = enable_static_snapshot
+            && !self.user_function_mentions_private_member_access(user_function)
             && !self.user_function_contains_self_callee_reference(&user_function.name);
         if trace_user_calls {
             eprintln!(

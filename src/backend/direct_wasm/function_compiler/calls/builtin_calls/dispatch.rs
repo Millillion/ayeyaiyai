@@ -293,6 +293,13 @@ impl<'a> FunctionCompiler<'a> {
         user_function: &UserFunction,
         arguments: &[Expression],
     ) {
+        if user_function.has_lowered_pattern_parameters()
+            || !self
+                .user_function_parameter_iterator_consumption_indices(user_function)
+                .is_empty()
+        {
+            return;
+        }
         let mut active_functions = HashSet::new();
         self.sync_direct_arguments_assignments_from_static_user_call_inner(
             user_function,

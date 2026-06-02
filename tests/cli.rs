@@ -14584,6 +14584,69 @@ fn compiles_async_generator_rejected_yield_next_catch_chain() {
 }
 
 #[test]
+fn compiles_async_generator_rejected_yield_next_catch_keeps_closed_cursor() {
+    let tempdir = tempdir().unwrap();
+    let input = tempdir
+        .path()
+        .join("async-generator-rejected-yield-next-catch-closed-cursor.js");
+    let output = tempdir
+        .path()
+        .join("async-generator-rejected-yield-next-catch-closed-cursor.wasm");
+
+    fs::write(
+        &input,
+        r#"
+        let error = new Error("boom");
+        var callCount = 0;
+
+        async function* gen() {
+          callCount += 1;
+          yield Promise.reject(error);
+          yield "unreachable";
+        }
+
+        var iter = gen();
+        iter.next().then(function() {
+          throw new Error("resolved");
+        }).catch(function(rejectValue) {
+          console.log("caught", rejectValue === error, callCount);
+          iter.next().then(function({done, value}) {
+            console.log("next2", done === true, value === undefined, callCount);
+          });
+        });
+        "#,
+    )
+    .unwrap();
+
+    let compile = Command::new(env!("CARGO_BIN_EXE_ayeyaiyai"))
+        .arg(&input)
+        .arg("-o")
+        .arg(&output)
+        .output()
+        .unwrap();
+
+    assert!(
+        compile.status.success(),
+        "compiler failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&compile.stdout),
+        String::from_utf8_lossy(&compile.stderr),
+    );
+
+    let run = Command::new("wasmtime").arg(&output).output().unwrap();
+
+    assert!(
+        run.status.success(),
+        "wasmtime failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&run.stdout),
+        String::from_utf8_lossy(&run.stderr),
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&run.stdout),
+        "caught true 1\nnext2 true true 1\n"
+    );
+}
+
+#[test]
 fn compiles_for_await_async_generator_rejection_then_completion() {
     let tempdir = tempdir().unwrap();
     let input = tempdir

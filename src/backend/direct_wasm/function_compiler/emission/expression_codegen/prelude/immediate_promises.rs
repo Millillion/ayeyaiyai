@@ -3718,6 +3718,23 @@ impl<'a> FunctionCompiler<'a> {
             && self.user_function_has_explicit_call_frame_inlineable_terminal_body(user_function)
     }
 
+    fn can_inline_immediate_promise_callback_in_current_frame(
+        &self,
+        callback: &Expression,
+        argument: &Expression,
+    ) -> bool {
+        self.inline_safe_argument_expression(argument)
+            && self
+                .resolve_user_function_from_expression(callback)
+                .is_some_and(|user_function| {
+                    self.can_inline_immediate_promise_callback_body_with_explicit_call_frame(
+                        user_function,
+                        std::slice::from_ref(argument),
+                        &Expression::Undefined,
+                    )
+                })
+    }
+
     fn resolve_promise_all_element_outcome(
         &mut self,
         expression: &Expression,
@@ -3842,7 +3859,9 @@ impl<'a> FunctionCompiler<'a> {
             }
         }
         let materialized_argument = self.materialize_static_expression(argument);
-        let materialized_argument =
+        let materialized_argument = if matches!(materialized_argument, Expression::Object(_)) {
+            materialized_argument
+        } else {
             match self.immediate_await_resolution_outcome_with_captures(&materialized_argument)? {
                 Some(StaticEvalOutcome::Value(value)) => value,
                 Some(StaticEvalOutcome::Throw(throw_value)) => {
@@ -3850,7 +3869,8 @@ impl<'a> FunctionCompiler<'a> {
                     Expression::Undefined
                 }
                 None => materialized_argument,
-            };
+            }
+        };
         let effective_argument = if !static_expression_matches(&materialized_argument, argument) {
             materialized_argument
         } else {
@@ -3915,7 +3935,10 @@ impl<'a> FunctionCompiler<'a> {
                     bound_capture_slots.is_some()
                 );
             }
-            if allow_callback_inline && inline_safe_argument {
+            let lowered_pattern_with_bound_captures =
+                user_function.has_lowered_pattern_parameters() && bound_capture_slots.is_some();
+            if allow_callback_inline && inline_safe_argument && !lowered_pattern_with_bound_captures
+            {
                 if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
                     eprintln!(
                         "emit_immediate_promise_callback:check-explicit-call-frame-inline name={}",
@@ -5110,10 +5133,14 @@ impl<'a> FunctionCompiler<'a> {
                         };
                         self.clear_local_throw_state();
                         self.clear_global_throw_state();
+                        let allow_inline_handler = !handlers_require_runtime_chain
+                            || self.can_inline_immediate_promise_callback_in_current_frame(
+                                &handler, &value,
+                            );
                         self.emit_immediate_promise_callback(
                             &handler,
                             &value,
-                            !handlers_require_runtime_chain,
+                            allow_inline_handler,
                         )?;
                         if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
                             eprintln!(

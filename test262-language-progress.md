@@ -1,4 +1,4 @@
-1627/23668 (6.87%)
+1633/23668 (6.90%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,7 +14,7 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 302/9337 (3.23%)
+- statements: 308/9337 (3.30%)
 - expressions: 0/11061 (0.00%)
 - types: 0/113 (0.00%)
 - function-code: 0/217 (0.00%)
@@ -1671,12 +1671,12 @@ Sub-category progress
   - [x] test/language/statements/async-generator/yield-identifier-spread-non-strict.js
   - [x] test/language/statements/async-generator/yield-identifier-spread-strict.js
   - [x] test/language/statements/async-generator/yield-identifier-strict.js
-  - [ ] test/language/statements/async-generator/yield-promise-reject-next-catch.js
-  - [ ] test/language/statements/async-generator/yield-promise-reject-next-for-await-of-async-iterator.js
-  - [ ] test/language/statements/async-generator/yield-promise-reject-next-for-await-of-sync-iterator.js
-  - [ ] test/language/statements/async-generator/yield-promise-reject-next-yield-star-async-iterator.js
-  - [ ] test/language/statements/async-generator/yield-promise-reject-next-yield-star-sync-iterator.js
-  - [ ] test/language/statements/async-generator/yield-promise-reject-next.js
+  - [x] test/language/statements/async-generator/yield-promise-reject-next-catch.js
+  - [x] test/language/statements/async-generator/yield-promise-reject-next-for-await-of-async-iterator.js
+  - [x] test/language/statements/async-generator/yield-promise-reject-next-for-await-of-sync-iterator.js
+  - [x] test/language/statements/async-generator/yield-promise-reject-next-yield-star-async-iterator.js
+  - [x] test/language/statements/async-generator/yield-promise-reject-next-yield-star-sync-iterator.js
+  - [x] test/language/statements/async-generator/yield-promise-reject-next.js
   - [ ] test/language/statements/async-generator/yield-return-then-getter-ticks.js
   - [ ] test/language/statements/async-generator/yield-spread-arr-multiple.js
   - [ ] test/language/statements/async-generator/yield-spread-arr-single.js
