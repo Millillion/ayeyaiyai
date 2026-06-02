@@ -2,6 +2,93 @@ use super::*;
 use crate::ir::hir::SwitchCase;
 
 impl<'a> FunctionCompiler<'a> {
+    fn bound_snapshot_static_throw_expression(
+        &self,
+        throw_value: &StaticThrowValue,
+    ) -> Option<Expression> {
+        self.resolve_static_throw_value_expression(throw_value)
+            .map(|value| self.materialize_static_expression(&value))
+    }
+
+    fn evaluate_bound_snapshot_statement_value(
+        &self,
+        value: &Expression,
+        bindings: &mut HashMap<String, Expression>,
+        current_function_name: Option<&str>,
+    ) -> Option<Result<Expression, Expression>> {
+        if let Expression::Await(awaited) = value {
+            let awaited_outcome = self
+                .resolve_static_await_resolution_outcome(value)
+                .or_else(|| {
+                    let evaluated = self.evaluate_bound_snapshot_expression(
+                        awaited,
+                        bindings,
+                        current_function_name,
+                    )?;
+                    self.resolve_static_await_resolution_outcome(&Expression::Await(Box::new(
+                        evaluated,
+                    )))
+                })?;
+            return Some(match awaited_outcome {
+                StaticEvalOutcome::Value(value) => Ok(value),
+                StaticEvalOutcome::Throw(throw_value) => {
+                    Err(self.bound_snapshot_static_throw_expression(&throw_value)?)
+                }
+            });
+        }
+        Some(Ok(self.evaluate_bound_snapshot_expression(
+            value,
+            bindings,
+            current_function_name,
+        )?))
+    }
+
+    fn execute_bound_snapshot_try_statement(
+        &self,
+        body: &[Statement],
+        catch_binding: Option<&String>,
+        catch_setup: &[Statement],
+        catch_body: &[Statement],
+        bindings: &mut HashMap<String, Expression>,
+        current_function_name: Option<&str>,
+    ) -> Option<BoundSnapshotControlFlow> {
+        let mut try_bindings = bindings.clone();
+        match self.execute_bound_snapshot_statements(
+            body,
+            &mut try_bindings,
+            current_function_name,
+        )? {
+            BoundSnapshotControlFlow::Throw(value) => {
+                if let Some(catch_binding) = catch_binding {
+                    let resolved_catch_binding = self
+                        .resolve_bound_snapshot_binding_name(catch_binding, &try_bindings)
+                        .to_string();
+                    try_bindings.insert(resolved_catch_binding, value);
+                }
+                let setup_result = self.execute_bound_snapshot_statements(
+                    catch_setup,
+                    &mut try_bindings,
+                    current_function_name,
+                )?;
+                if !matches!(setup_result, BoundSnapshotControlFlow::None) {
+                    *bindings = try_bindings;
+                    return Some(setup_result);
+                }
+                let catch_result = self.execute_bound_snapshot_statements(
+                    catch_body,
+                    &mut try_bindings,
+                    current_function_name,
+                )?;
+                *bindings = try_bindings;
+                Some(catch_result)
+            }
+            other => {
+                *bindings = try_bindings;
+                Some(other)
+            }
+        }
+    }
+
     fn bound_snapshot_strict_equal(left: &Expression, right: &Expression) -> Option<bool> {
         match (left, right) {
             (Expression::Bool(lhs), Expression::Bool(rhs)) => Some(lhs == rhs),
@@ -200,13 +287,17 @@ impl<'a> FunctionCompiler<'a> {
                     }
                 }
                 Statement::Return(value) => {
-                    return Some(BoundSnapshotControlFlow::Return(
-                        self.evaluate_bound_snapshot_expression(
-                            value,
-                            bindings,
-                            current_function_name,
-                        )?,
-                    ));
+                    let value = match self.evaluate_bound_snapshot_statement_value(
+                        value,
+                        bindings,
+                        current_function_name,
+                    )? {
+                        Ok(value) => value,
+                        Err(throw_value) => {
+                            return Some(BoundSnapshotControlFlow::Throw(throw_value));
+                        }
+                    };
+                    return Some(BoundSnapshotControlFlow::Return(value));
                 }
                 Statement::Throw(value) => {
                     let throw_value = if let Expression::Identifier(name) = value {
@@ -232,22 +323,32 @@ impl<'a> FunctionCompiler<'a> {
                     {
                         continue;
                     }
-                    let evaluated_value = self.evaluate_bound_snapshot_expression(
+                    let evaluated_value = match self.evaluate_bound_snapshot_statement_value(
                         value,
                         bindings,
                         current_function_name,
-                    )?;
+                    )? {
+                        Ok(value) => value,
+                        Err(throw_value) => {
+                            return Some(BoundSnapshotControlFlow::Throw(throw_value));
+                        }
+                    };
                     bindings.insert(resolved_name, evaluated_value);
                 }
                 Statement::Let { name, value, .. } | Statement::Assign { name, value } => {
                     let resolved_name = self
                         .resolve_bound_snapshot_binding_name(name, bindings)
                         .to_string();
-                    let evaluated_value = self.evaluate_bound_snapshot_expression(
+                    let evaluated_value = match self.evaluate_bound_snapshot_statement_value(
                         value,
                         bindings,
                         current_function_name,
-                    )?;
+                    )? {
+                        Ok(value) => value,
+                        Err(throw_value) => {
+                            return Some(BoundSnapshotControlFlow::Throw(throw_value));
+                        }
+                    };
                     let value = if let Expression::Identifier(value_name) = value
                         && matches!(
                             evaluated_value,
@@ -278,19 +379,41 @@ impl<'a> FunctionCompiler<'a> {
                     )?;
                 }
                 Statement::Expression(expression) => {
-                    self.evaluate_bound_snapshot_expression(
+                    if let Err(throw_value) = self.evaluate_bound_snapshot_statement_value(
                         expression,
                         bindings,
                         current_function_name,
-                    )?;
+                    )? {
+                        return Some(BoundSnapshotControlFlow::Throw(throw_value));
+                    }
                 }
                 Statement::Print { values } => {
                     for value in values {
-                        self.evaluate_bound_snapshot_expression(
+                        if let Err(throw_value) = self.evaluate_bound_snapshot_statement_value(
                             value,
                             bindings,
                             current_function_name,
-                        )?;
+                        )? {
+                            return Some(BoundSnapshotControlFlow::Throw(throw_value));
+                        }
+                    }
+                }
+                Statement::Try {
+                    body,
+                    catch_binding,
+                    catch_setup,
+                    catch_body,
+                } => {
+                    let result = self.execute_bound_snapshot_try_statement(
+                        body,
+                        catch_binding.as_ref(),
+                        catch_setup,
+                        catch_body,
+                        bindings,
+                        current_function_name,
+                    )?;
+                    if !matches!(result, BoundSnapshotControlFlow::None) {
+                        return Some(result);
                     }
                 }
                 Statement::Break { label } => {
