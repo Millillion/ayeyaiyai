@@ -121,6 +121,21 @@ impl<'a> FunctionCompiler<'a> {
                         )
                     })
                 {
+                    if let Some(value) = self
+                        .resolve_static_accessor_runtime_object_property_shadow_value(
+                            object, property,
+                        )
+                    {
+                        if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+                            eprintln!(
+                                "runtime_shadow_primitive_accessor object={object:?} property={property:?} shadow_name={shadow_binding_name} value={value:?}"
+                            );
+                        }
+                        return self.resolve_static_primitive_expression_with_context(
+                            &value,
+                            current_function_name,
+                        );
+                    }
                     if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
                         eprintln!(
                             "runtime_shadow_primitive_defer object={object:?} property={property:?} shadow_name={shadow_binding_name}"

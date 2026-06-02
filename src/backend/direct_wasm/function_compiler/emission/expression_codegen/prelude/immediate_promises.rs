@@ -938,7 +938,7 @@ impl<'a> FunctionCompiler<'a> {
                 .any(|argument| self.inline_argument_mentions_shadowed_implicit_global(argument))
             && !self.user_function_mentions_private_member_access(user_function)
             && !self.user_function_mentions_direct_eval(user_function)
-            && !self.user_function_contains_identifier_callee_call(user_function)
+            && self.user_function_identifier_callee_calls_are_direct_async_safe(user_function)
             && !self.user_function_may_read_restricted_function_property(user_function)
             && (!self.user_function_references_captured_user_function(user_function)
                 || self.user_function_references_only_supported_self_function_has_own_property(

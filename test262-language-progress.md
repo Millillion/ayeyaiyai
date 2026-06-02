@@ -1,4 +1,4 @@
-1366/23645 (5.78%)
+1384/23645 (5.85%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,7 +14,7 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 45/9337 (0.48%)
+- statements: 63/9337 (0.67%)
 - expressions: 0/11038 (0.00%)
 - types: 0/113 (0.00%)
 - function-code: 0/217 (0.00%)
@@ -1414,24 +1414,24 @@ Sub-category progress
   - [x] test/language/statements/async-function/evaluation-unmapped-arguments.js
   - [x] test/language/statements/async-function/forbidden-ext/b1/async-func-decl-forbidden-ext-direct-access-prop-arguments.js
   - [x] test/language/statements/async-function/forbidden-ext/b1/async-func-decl-forbidden-ext-direct-access-prop-caller.js
-  - [ ] test/language/statements/async-function/forbidden-ext/b2/async-func-decl-forbidden-ext-indirect-access-own-prop-caller-get.js
-  - [ ] test/language/statements/async-function/forbidden-ext/b2/async-func-decl-forbidden-ext-indirect-access-own-prop-caller-value.js
-  - [ ] test/language/statements/async-function/forbidden-ext/b2/async-func-decl-forbidden-ext-indirect-access-prop-caller.js
-  - [ ] test/language/statements/async-function/let-newline-await-in-async-function.js
-  - [ ] test/language/statements/async-function/object-destructuring-param-strict-body.js
-  - [ ] test/language/statements/async-function/params-trailing-comma-multiple.js
-  - [ ] test/language/statements/async-function/params-trailing-comma-single.js
-  - [ ] test/language/statements/async-function/rest-param-strict-body.js
-  - [ ] test/language/statements/async-function/rest-params-trailing-comma-early-error.js
-  - [ ] test/language/statements/async-function/returns-async-arrow-returns-arguments-from-parent-function.js
-  - [ ] test/language/statements/async-function/returns-async-arrow-returns-newtarget.js
-  - [ ] test/language/statements/async-function/returns-async-arrow.js
-  - [ ] test/language/statements/async-function/returns-async-function-returns-arguments-from-own-function.js
-  - [ ] test/language/statements/async-function/returns-async-function-returns-newtarget.js
-  - [ ] test/language/statements/async-function/returns-async-function.js
-  - [ ] test/language/statements/async-function/syntax-declaration-line-terminators-allowed.js
-  - [ ] test/language/statements/async-function/syntax-declaration-no-line-terminator.js
-  - [ ] test/language/statements/async-function/syntax-declaration.js
+  - [x] test/language/statements/async-function/forbidden-ext/b2/async-func-decl-forbidden-ext-indirect-access-own-prop-caller-get.js
+  - [x] test/language/statements/async-function/forbidden-ext/b2/async-func-decl-forbidden-ext-indirect-access-own-prop-caller-value.js
+  - [x] test/language/statements/async-function/forbidden-ext/b2/async-func-decl-forbidden-ext-indirect-access-prop-caller.js
+  - [x] test/language/statements/async-function/let-newline-await-in-async-function.js
+  - [x] test/language/statements/async-function/object-destructuring-param-strict-body.js
+  - [x] test/language/statements/async-function/params-trailing-comma-multiple.js
+  - [x] test/language/statements/async-function/params-trailing-comma-single.js
+  - [x] test/language/statements/async-function/rest-param-strict-body.js
+  - [x] test/language/statements/async-function/rest-params-trailing-comma-early-error.js
+  - [x] test/language/statements/async-function/returns-async-arrow-returns-arguments-from-parent-function.js
+  - [x] test/language/statements/async-function/returns-async-arrow-returns-newtarget.js
+  - [x] test/language/statements/async-function/returns-async-arrow.js
+  - [x] test/language/statements/async-function/returns-async-function-returns-arguments-from-own-function.js
+  - [x] test/language/statements/async-function/returns-async-function-returns-newtarget.js
+  - [x] test/language/statements/async-function/returns-async-function.js
+  - [x] test/language/statements/async-function/syntax-declaration-line-terminators-allowed.js
+  - [x] test/language/statements/async-function/syntax-declaration-no-line-terminator.js
+  - [x] test/language/statements/async-function/syntax-declaration.js
   - [ ] test/language/statements/async-function/try-reject-finally-reject.js
   - [ ] test/language/statements/async-function/try-reject-finally-return.js
   - [ ] test/language/statements/async-function/try-reject-finally-throw.js

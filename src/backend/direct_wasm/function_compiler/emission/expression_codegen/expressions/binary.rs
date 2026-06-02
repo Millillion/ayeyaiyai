@@ -3119,6 +3119,27 @@ impl<'a> FunctionCompiler<'a> {
                 "conditional_emit:start condition={condition:?} then={then_expression:?} else={else_expression:?}"
             );
         }
+        if let Some(condition_value) = self.resolve_static_if_condition_value(condition) {
+            if trace_conditional {
+                eprintln!("conditional_emit:static condition_value={condition_value}");
+            }
+            if !self.static_if_condition_side_effects_can_be_skipped(condition) {
+                self.emit_truthy_expression(condition)?;
+                self.state.emission.output.instructions.push(0x1a);
+            }
+            let selected_expression = if condition_value {
+                then_expression
+            } else {
+                else_expression
+            };
+            let selected_value = self
+                .resolve_static_primitive_expression_with_context(
+                    selected_expression,
+                    self.current_function_name(),
+                )
+                .unwrap_or_else(|| selected_expression.clone());
+            return self.emit_numeric_expression(&selected_value);
+        }
         if trace_conditional {
             eprintln!("conditional_emit:condition:start");
         }

@@ -742,7 +742,10 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
-    fn static_if_condition_side_effects_can_be_skipped(&self, expression: &Expression) -> bool {
+    pub(in crate::backend::direct_wasm) fn static_if_condition_side_effects_can_be_skipped(
+        &self,
+        expression: &Expression,
+    ) -> bool {
         if inline_summary_side_effect_free_expression(expression) {
             return true;
         }
@@ -759,7 +762,6 @@ impl<'a> FunctionCompiler<'a> {
                 }
                 self.resolve_static_has_own_property_call_result(expression)
                     .is_some()
-                    && self.static_if_condition_side_effects_can_be_skipped(callee)
                     && arguments.iter().all(|argument| match argument {
                         CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
                             self.static_if_condition_side_effects_can_be_skipped(expression)

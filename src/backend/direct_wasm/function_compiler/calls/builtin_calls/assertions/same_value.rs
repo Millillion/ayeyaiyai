@@ -570,6 +570,30 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    fn same_value_assertion_primitive_object_kind_result(
+        &self,
+        actual: &Expression,
+        expected: &Expression,
+    ) -> Option<bool> {
+        let actual_is_primitive = self
+            .static_expression_is_non_object_primitive(actual)
+            .or_else(|| {
+                let materialized = self.materialize_static_expression(actual);
+                (!static_expression_matches(&materialized, actual))
+                    .then(|| self.static_expression_is_non_object_primitive(&materialized))
+                    .flatten()
+            })?;
+        let expected_is_primitive = self
+            .static_expression_is_non_object_primitive(expected)
+            .or_else(|| {
+                let materialized = self.materialize_static_expression(expected);
+                (!static_expression_matches(&materialized, expected))
+                    .then(|| self.static_expression_is_non_object_primitive(&materialized))
+                    .flatten()
+            })?;
+        (actual_is_primitive != expected_is_primitive).then_some(false)
+    }
+
     fn same_value_property_can_be_typed_array_or_array_buffer_member(
         property: &Expression,
     ) -> bool {
@@ -3295,6 +3319,22 @@ impl<'a> FunctionCompiler<'a> {
                     )
             });
         let extra_arguments_side_effect_free = fast_extra_arguments_side_effect_free;
+        if extra_arguments_side_effect_free
+            && !operands_contain_dynamic_descriptor_member
+            && !needs_runtime_identifier_check
+            && let Some(static_result) =
+                self.same_value_assertion_primitive_object_kind_result(actual, expected)
+        {
+            let assertion_passes = match assertion_failure {
+                BinaryOp::NotEqual => static_result,
+                BinaryOp::Equal => !static_result,
+                _ => false,
+            };
+            if assertion_passes {
+                self.push_i32_const(JS_UNDEFINED_TAG);
+                return Ok(true);
+            }
+        }
         let materialized_skip_static_result = if skip_broad_static_result
             && !operands_contain_dynamic_descriptor_member
             && operands_static_evaluation_safe

@@ -5910,6 +5910,60 @@ fn compiles_strict_directive_after_other_directives() {
 }
 
 #[test]
+fn compiles_strict_getter_unresolvable_assignment_as_reference_error() {
+    let tempdir = tempdir().unwrap();
+    let input = tempdir.path().join("strict-getter-reference-error.js");
+    let output = tempdir.path().join("strict-getter-reference-error.wasm");
+
+    fs::write(
+        &input,
+        r#"
+        try {
+          (function() {
+            "use strict";
+            var obj = {};
+            Object.defineProperty(obj, "accProperty", {
+              get: function() {
+                test262unresolvable = null;
+                return 11;
+              }
+            });
+            var temp = obj.accProperty === 11;
+          })();
+          console.log("caught", false);
+        } catch (error) {
+          console.log("caught", error instanceof ReferenceError);
+        }
+        "#,
+    )
+    .unwrap();
+
+    let compile = Command::new(env!("CARGO_BIN_EXE_ayeyaiyai"))
+        .arg(&input)
+        .arg("-o")
+        .arg(&output)
+        .output()
+        .unwrap();
+
+    assert!(
+        compile.status.success(),
+        "compiler failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&compile.stdout),
+        String::from_utf8_lossy(&compile.stderr),
+    );
+
+    let run = Command::new("wasmtime").arg(&output).output().unwrap();
+
+    assert!(
+        run.status.success(),
+        "wasmtime failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&run.stdout),
+        String::from_utf8_lossy(&run.stderr),
+    );
+    assert_eq!(String::from_utf8_lossy(&run.stdout), "caught true\n");
+}
+
+#[test]
 fn does_not_treat_escaped_use_strict_as_a_directive() {
     let tempdir = tempdir().unwrap();
     let input = tempdir.path().join("escaped-use-strict.js");
@@ -13845,6 +13899,74 @@ fn async_self_has_own_restricted_properties_reports_completion() {
           .then(function() {
             assert.sameValue(callCount, 1, "function body evaluated");
           }, $DONE).then($DONE, $DONE);
+        "#,
+    )
+    .unwrap();
+
+    let compile = Command::new(env!("CARGO_BIN_EXE_ayeyaiyai"))
+        .arg(&input)
+        .arg("-o")
+        .arg(&output)
+        .output()
+        .unwrap();
+
+    assert!(
+        compile.status.success(),
+        "compiler failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&compile.stdout),
+        String::from_utf8_lossy(&compile.stderr),
+    );
+
+    let run = Command::new("wasmtime").arg(&output).output().unwrap();
+
+    assert!(
+        run.status.success(),
+        "wasmtime failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&run.stdout),
+        String::from_utf8_lossy(&run.stderr),
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&run.stdout),
+        "Test262:AsyncTestComplete\n"
+    );
+}
+
+#[test]
+fn async_indirect_caller_getter_reports_completion() {
+    let tempdir = tempdir().unwrap();
+    let input = tempdir.path().join("async-indirect-caller-getter.js");
+    let output = tempdir.path().join("async-indirect-caller-getter.wasm");
+
+    fs::write(
+        &input,
+        r#"
+        var CALLER_OWN_PROPERTY_DOES_NOT_EXIST = Symbol();
+        function inner() {
+          return inner.hasOwnProperty("caller")
+            ? inner.caller
+            : CALLER_OWN_PROPERTY_DOES_NOT_EXIST;
+        }
+
+        var callCount = 0;
+        async function f() {
+          "use strict";
+          let descriptor = Object.getOwnPropertyDescriptor(inner, "caller");
+          if (descriptor && descriptor.configurable && true) {
+            Object.defineProperty(inner, "caller", {get(){return 1}});
+          }
+          var result = inner();
+          if (descriptor && descriptor.configurable && true) {
+            assert.sameValue(result, 1, "get accessor result");
+          }
+          if (result !== CALLER_OWN_PROPERTY_DOES_NOT_EXIST) {
+            assert.notSameValue(result, f);
+          }
+          callCount++;
+        }
+
+        f().then(function() {
+          assert.sameValue(callCount, 1, "function body evaluated");
+        }, $DONE).then($DONE, $DONE);
         "#,
     )
     .unwrap();

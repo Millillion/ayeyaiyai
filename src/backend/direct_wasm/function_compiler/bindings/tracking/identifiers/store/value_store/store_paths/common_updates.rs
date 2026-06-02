@@ -1001,25 +1001,27 @@ impl<'a> FunctionCompiler<'a> {
                 if let Some(getter_binding) =
                     self.resolve_member_getter_binding(&source_expression, property)
                 {
-                    let context = self.static_eval_context();
-                    let mut environment = self.snapshot_static_resolution_environment();
-                    if let Some(value) = execute_static_user_function_binding_in_environment(
-                        &context,
-                        &getter_binding,
-                        &[],
-                        &mut environment,
-                        StaticFunctionEffectMode::Discard,
-                    ) {
-                        return self.materialize_static_expression(&value);
-                    }
-                    if let Some(value) = self
-                        .resolve_function_binding_static_return_expression_with_call_frame(
+                    if self.static_getter_binding_value_can_be_used(&getter_binding) {
+                        let context = self.static_eval_context();
+                        let mut environment = self.snapshot_static_resolution_environment();
+                        if let Some(value) = execute_static_user_function_binding_in_environment(
+                            &context,
                             &getter_binding,
                             &[],
-                            &source_expression,
-                        )
-                    {
-                        return self.materialize_static_expression(&value);
+                            &mut environment,
+                            StaticFunctionEffectMode::Discard,
+                        ) {
+                            return self.materialize_static_expression(&value);
+                        }
+                        if let Some(value) = self
+                            .resolve_function_binding_static_return_expression_with_call_frame(
+                                &getter_binding,
+                                &[],
+                                &source_expression,
+                            )
+                        {
+                            return self.materialize_static_expression(&value);
+                        }
                     }
                 }
                 return Expression::Undefined;
@@ -1038,6 +1040,9 @@ impl<'a> FunctionCompiler<'a> {
         getter_binding: &LocalFunctionBinding,
         source_expression: &Expression,
     ) -> Option<Expression> {
+        if !self.static_getter_binding_value_can_be_used(getter_binding) {
+            return None;
+        }
         if let Some(value) = self.resolve_function_binding_static_return_expression_with_call_frame(
             getter_binding,
             &[],

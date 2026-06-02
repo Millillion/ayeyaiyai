@@ -2288,6 +2288,33 @@ impl<'a> FunctionCompiler<'a> {
             && self.runtime_object_property_shadow_binding_has_static_metadata(shadow_binding_name)
     }
 
+    pub(in crate::backend::direct_wasm) fn resolve_static_accessor_runtime_object_property_shadow_value(
+        &self,
+        object: &Expression,
+        property: &Expression,
+    ) -> Option<Expression> {
+        let property = self.canonical_object_property_expression(property);
+        let shadow_binding_name =
+            self.runtime_object_property_shadow_binding_name_for_expression(object, &property)?;
+        let descriptor = self
+            .backend
+            .global_property_descriptor(&shadow_binding_name)?;
+        let is_accessor = descriptor.has_get
+            || descriptor.has_set
+            || descriptor.getter.is_some()
+            || descriptor.setter.is_some();
+        if !is_accessor || descriptor.getter.is_none() {
+            return None;
+        }
+        let value = self.global_value_binding(&shadow_binding_name)?;
+        if matches!(value, Expression::Undefined)
+            || matches!(value, Expression::Number(number) if *number == JS_UNDEFINED_TAG as f64)
+        {
+            return None;
+        }
+        Some(value.clone())
+    }
+
     pub(in crate::backend::direct_wasm) fn runtime_object_property_shadow_deletion_may_hide_static_property(
         &self,
         object: &Expression,
@@ -2856,21 +2883,25 @@ impl<'a> FunctionCompiler<'a> {
             self.object_runtime_shadow_entries_from_binding(object_binding)
         {
             let descriptor = object_binding_lookup_descriptor(object_binding, &property);
+            let getter_this_binding = if target_owner == "this" {
+                Expression::This
+            } else {
+                Expression::Identifier(target_owner.to_string())
+            };
             let getter_return_value =
                 if descriptor.is_some_and(Self::property_descriptor_is_accessor) {
-                    None
-                } else {
                     descriptor
                         .and_then(|descriptor| descriptor.getter.as_ref())
-                        .and_then(|getter| match getter {
-                            Expression::Identifier(function_name) => self
-                                .resolve_static_return_expression_from_user_function_call(
-                                    function_name,
-                                    &[],
-                                    None,
-                                ),
-                            _ => None,
+                        .and_then(|getter| self.resolve_function_binding_from_expression(getter))
+                        .and_then(|getter_binding| {
+                            self.resolve_static_getter_value_from_binding_with_context(
+                                &getter_binding,
+                                &getter_this_binding,
+                                self.current_function_name(),
+                            )
                         })
+                } else {
+                    None
                 };
             let fallback_value = getter_return_value.as_ref().unwrap_or(&fallback_value);
             let fallback_value =

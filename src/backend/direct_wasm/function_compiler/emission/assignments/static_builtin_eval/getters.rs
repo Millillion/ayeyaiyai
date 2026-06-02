@@ -1,6 +1,19 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    pub(in crate::backend::direct_wasm) fn static_getter_binding_value_can_be_used(
+        &self,
+        binding: &LocalFunctionBinding,
+    ) -> bool {
+        match binding {
+            LocalFunctionBinding::User(function_name) => self
+                .user_function(function_name)
+                .and_then(|user_function| user_function.inline_summary.as_ref())
+                .is_some_and(|summary| summary.effects.is_empty()),
+            LocalFunctionBinding::Builtin(_) => true,
+        }
+    }
+
     pub(in crate::backend::direct_wasm) fn resolve_static_getter_value_from_binding_with_context(
         &self,
         binding: &LocalFunctionBinding,
@@ -19,6 +32,9 @@ impl<'a> FunctionCompiler<'a> {
                     self.user_function_mentions_private_member_access(user_function)
                 })
         {
+            return None;
+        }
+        if !self.static_getter_binding_value_can_be_used(binding) {
             return None;
         }
 
@@ -64,7 +80,9 @@ impl<'a> FunctionCompiler<'a> {
         property: &Expression,
         current_function_name: Option<&str>,
     ) -> Option<Expression> {
-        let getter_binding = self.resolve_member_getter_binding(object, property)?;
+        let getter_binding = self
+            .resolve_member_getter_binding(object, property)
+            .or_else(|| self.resolve_member_getter_binding_shallow(object, property))?;
         self.resolve_static_getter_value_from_binding_with_context(
             &getter_binding,
             object,
