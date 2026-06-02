@@ -2459,6 +2459,49 @@ impl<'a> FunctionCompiler<'a> {
             })
     }
 
+    fn same_value_assertion_is_direct_tracked_array_index_member(
+        &self,
+        expression: &Expression,
+    ) -> bool {
+        let Expression::Member { object, property } = expression else {
+            return false;
+        };
+        if argument_index_from_expression(property).is_none() {
+            return false;
+        }
+        let Expression::Identifier(name) = object.as_ref() else {
+            return false;
+        };
+        self.resolve_runtime_array_binding_name(name).is_some()
+            || self.backend.global_array_binding(name).is_some()
+            || self
+                .backend
+                .shared_global_semantics
+                .values
+                .array_bindings
+                .contains_key(name)
+            || (self.is_named_global_array_binding(name)
+                && (self.uses_global_runtime_array_state(name)
+                    || self.backend.global_array_binding(name).is_some()))
+    }
+
+    fn same_value_assertion_has_direct_tracked_array_element_base(
+        &self,
+        expression: &Expression,
+    ) -> bool {
+        match expression {
+            Expression::Member { object, .. } => {
+                self.same_value_assertion_is_direct_tracked_array_index_member(object)
+                    || self.same_value_assertion_has_direct_tracked_array_element_base(object)
+            }
+            Expression::Unary {
+                op: UnaryOp::TypeOf,
+                expression,
+            } => self.same_value_assertion_has_direct_tracked_array_element_base(expression),
+            _ => false,
+        }
+    }
+
     fn same_value_assertion_has_tracked_array_element_base(&self, expression: &Expression) -> bool {
         match expression {
             Expression::Member { object, .. } => {
@@ -2502,7 +2545,7 @@ impl<'a> FunctionCompiler<'a> {
             return None;
         };
         let binding_name = self
-            .runtime_array_binding_name_for_expression(object)
+            .resolve_runtime_array_binding_name(name)
             .unwrap_or_else(|| name.clone());
         self.same_value_assertion_tracked_array_snapshot_binding(&binding_name)
             .or_else(|| self.same_value_assertion_tracked_array_snapshot_binding(name))?
@@ -2520,7 +2563,7 @@ impl<'a> FunctionCompiler<'a> {
             return None;
         };
         let binding_name = self
-            .runtime_array_binding_name_for_expression(object)
+            .resolve_runtime_array_binding_name(name)
             .unwrap_or_else(|| name.clone());
         let length = self
             .same_value_assertion_tracked_array_snapshot_binding(&binding_name)
@@ -2676,20 +2719,176 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    fn same_value_assertion_snapshot_lightweight_primitive_value(
+        &self,
+        expression: &Expression,
+    ) -> Option<Expression> {
+        match expression {
+            Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined => Some(expression.clone()),
+            Expression::Identifier(name)
+                if matches!(name.as_str(), "undefined" | "NaN" | "Infinity")
+                    && self.is_unshadowed_builtin_identifier(name) =>
+            {
+                match name.as_str() {
+                    "undefined" => Some(Expression::Undefined),
+                    "NaN" => Some(Expression::Number(f64::NAN)),
+                    "Infinity" => Some(Expression::Number(f64::INFINITY)),
+                    _ => None,
+                }
+            }
+            Expression::Unary {
+                op: UnaryOp::Void, ..
+            } => Some(Expression::Undefined),
+            _ => None,
+        }
+    }
+
+    fn same_value_assertion_snapshot_reference_identity_key(
+        &self,
+        expression: &Expression,
+    ) -> Option<String> {
+        if matches!(expression, Expression::This) {
+            return Some("this".to_string());
+        }
+        if matches!(expression, Expression::Identifier(name) if name == "globalThis" && self.is_unshadowed_builtin_identifier(name))
+        {
+            return Some("this".to_string());
+        }
+        let Expression::Identifier(name) = expression else {
+            return None;
+        };
+        let current_local_binding = self.resolve_current_local_binding(name);
+        let resolved_name = current_local_binding
+            .as_ref()
+            .map(|(resolved_name, _)| resolved_name.as_str())
+            .unwrap_or(name.as_str());
+        if let Some(binding) = self
+            .state
+            .speculation
+            .static_semantics
+            .local_function_binding(resolved_name)
+            .or_else(|| {
+                self.state
+                    .speculation
+                    .static_semantics
+                    .local_function_binding(name)
+            })
+        {
+            return Some(match binding {
+                LocalFunctionBinding::User(function_name) => {
+                    format!("user-function:{function_name}")
+                }
+                LocalFunctionBinding::Builtin(function_name) => {
+                    format!("builtin-function:{function_name}")
+                }
+            });
+        }
+        if self
+            .state
+            .speculation
+            .static_semantics
+            .has_local_array_binding(resolved_name)
+            || self
+                .state
+                .speculation
+                .static_semantics
+                .has_local_object_binding(resolved_name)
+            || self
+                .state
+                .speculation
+                .static_semantics
+                .has_local_function_binding(resolved_name)
+        {
+            return Some(format!("local:{resolved_name}"));
+        }
+        if self
+            .state
+            .speculation
+            .static_semantics
+            .has_local_array_binding(name)
+            || self
+                .state
+                .speculation
+                .static_semantics
+                .has_local_object_binding(name)
+            || self
+                .state
+                .speculation
+                .static_semantics
+                .has_local_function_binding(name)
+        {
+            return Some(format!("local:{name}"));
+        }
+        if let Some(binding) = self.backend.global_function_binding(name) {
+            return Some(match binding {
+                LocalFunctionBinding::User(function_name) => {
+                    format!("user-function:{function_name}")
+                }
+                LocalFunctionBinding::Builtin(function_name) => {
+                    format!("builtin-function:{function_name}")
+                }
+            });
+        }
+        if self.is_unshadowed_builtin_identifier(name)
+            && builtin_identifier_kind(name) == Some(StaticValueKind::Function)
+        {
+            return Some(format!("builtin-function:{name}"));
+        }
+        if self.backend.global_array_binding(name).is_some()
+            || self.backend.global_object_binding(name).is_some()
+        {
+            return Some(format!("global:{name}"));
+        }
+        None
+    }
+
     fn same_value_assertion_tracked_array_snapshot_result(
         &self,
         actual: &Expression,
         expected: &Expression,
     ) -> Option<bool> {
-        if !self.same_value_assertion_has_tracked_array_element_base(actual)
-            && !self.same_value_assertion_has_tracked_array_element_base(expected)
-        {
+        let actual_uses_snapshot = self
+            .same_value_assertion_is_direct_tracked_array_index_member(actual)
+            || self.same_value_assertion_has_direct_tracked_array_element_base(actual);
+        let expected_uses_snapshot = self
+            .same_value_assertion_is_direct_tracked_array_index_member(expected)
+            || self.same_value_assertion_has_direct_tracked_array_element_base(expected);
+        if !actual_uses_snapshot && !expected_uses_snapshot {
             return None;
         }
-        let actual_value = self.same_value_assertion_tracked_array_snapshot_value(actual, 10)?;
-        let expected_value =
-            self.same_value_assertion_tracked_array_snapshot_value(expected, 10)?;
-        self.same_value_assertion_primitive_result(&actual_value, &expected_value)
+        let actual_value = if actual_uses_snapshot {
+            self.same_value_assertion_tracked_array_snapshot_value(actual, 10)?
+        } else {
+            actual.clone()
+        };
+        let expected_value = if expected_uses_snapshot {
+            self.same_value_assertion_tracked_array_snapshot_value(expected, 10)?
+        } else {
+            expected.clone()
+        };
+        if static_expression_matches(&actual_value, &expected_value) {
+            return Some(true);
+        }
+        let actual_primitive = self
+            .same_value_assertion_snapshot_lightweight_primitive_value(&actual_value)
+            .unwrap_or_else(|| actual_value.clone());
+        let expected_primitive = self
+            .same_value_assertion_snapshot_lightweight_primitive_value(&expected_value)
+            .unwrap_or_else(|| expected_value.clone());
+        if static_expression_matches(&actual_primitive, &expected_primitive) {
+            return Some(true);
+        }
+        self.same_value_assertion_primitive_result(&actual_primitive, &expected_primitive)
+            .or_else(|| {
+                self.same_value_assertion_snapshot_reference_identity_key(&actual_value)
+                    .zip(self.same_value_assertion_snapshot_reference_identity_key(&expected_value))
+                    .map(|(actual_key, expected_key)| actual_key == expected_key)
+            })
     }
 
     fn emit_same_value_assertion_runtime_compare(
@@ -2998,8 +3197,13 @@ impl<'a> FunctionCompiler<'a> {
     ) -> bool {
         match expression {
             Expression::Member { object, property } => {
-                self.deferred_module_namespace_materialized_member_access(object, property)
-                    .is_some()
+                let uses_tracked_array_snapshot = self
+                    .same_value_assertion_is_direct_tracked_array_index_member(expression)
+                    || self.same_value_assertion_has_direct_tracked_array_element_base(expression);
+                (!uses_tracked_array_snapshot
+                    && self
+                        .deferred_module_namespace_materialized_member_access(object, property)
+                        .is_some())
                     || self.same_value_expression_contains_deferred_namespace_eval_member(object)
                     || self.same_value_expression_contains_deferred_namespace_eval_member(property)
             }
@@ -3298,10 +3502,17 @@ impl<'a> FunctionCompiler<'a> {
                 self.current_function_name()
             );
         }
-        if Self::expression_contains_await_for_user_call_runtime(actual)
-            || Self::expression_contains_await_for_user_call_runtime(expected)
-            || self.same_value_expression_contains_deferred_namespace_eval_member(actual)
-            || self.same_value_expression_contains_deferred_namespace_eval_member(expected)
+        let actual_contains_await = Self::expression_contains_await_for_user_call_runtime(actual);
+        let expected_contains_await =
+            Self::expression_contains_await_for_user_call_runtime(expected);
+        let actual_contains_deferred =
+            self.same_value_expression_contains_deferred_namespace_eval_member(actual);
+        let expected_contains_deferred =
+            self.same_value_expression_contains_deferred_namespace_eval_member(expected);
+        if actual_contains_await
+            || expected_contains_await
+            || actual_contains_deferred
+            || expected_contains_deferred
         {
             self.emit_same_value_assertion_runtime_compare(
                 arguments,
@@ -3331,6 +3542,11 @@ impl<'a> FunctionCompiler<'a> {
         let operands_contain_dynamic_descriptor_member = self
             .same_value_expression_contains_dynamic_descriptor_member(actual)
             || self.same_value_expression_contains_dynamic_descriptor_member(expected);
+        let operands_use_direct_tracked_array_snapshot = self
+            .same_value_assertion_is_direct_tracked_array_index_member(actual)
+            || self.same_value_assertion_has_direct_tracked_array_element_base(actual)
+            || self.same_value_assertion_is_direct_tracked_array_index_member(expected)
+            || self.same_value_assertion_has_direct_tracked_array_element_base(expected);
         if fast_extra_arguments_side_effect_free
             && operands_contain_dynamic_descriptor_member
             && let Some(static_result) =
@@ -3368,6 +3584,7 @@ impl<'a> FunctionCompiler<'a> {
         }
         if fast_extra_arguments_side_effect_free
             && !operands_contain_dynamic_descriptor_member
+            && !operands_use_direct_tracked_array_snapshot
             && let Some(static_result) =
                 self.same_value_assertion_bytes_import_primitive_result(actual, expected)
         {
@@ -3389,6 +3606,7 @@ impl<'a> FunctionCompiler<'a> {
         }
         if fast_extra_arguments_side_effect_free
             && !operands_contain_dynamic_descriptor_member
+            && !operands_use_direct_tracked_array_snapshot
             && let Some(static_result) =
                 self.same_value_assertion_namespace_descriptor_result(actual, expected)
         {
@@ -3410,6 +3628,7 @@ impl<'a> FunctionCompiler<'a> {
         }
         if fast_extra_arguments_side_effect_free
             && !operands_contain_dynamic_descriptor_member
+            && !operands_use_direct_tracked_array_snapshot
             && let Some(static_result) =
                 self.same_value_assertion_fast_object_names_length_result(actual, expected)
         {
@@ -3426,6 +3645,7 @@ impl<'a> FunctionCompiler<'a> {
         if fast_extra_arguments_side_effect_free
             && !operands_contain_dynamic_descriptor_member
             && !self.assertion_requires_runtime_same_value_fallback()
+            && !operands_use_direct_tracked_array_snapshot
             && let Some(static_result) =
                 self.same_value_assertion_fast_reference_result(actual, expected)
         {
@@ -3448,6 +3668,7 @@ impl<'a> FunctionCompiler<'a> {
         if fast_extra_arguments_side_effect_free
             && !operands_contain_dynamic_descriptor_member
             && !self.assertion_requires_runtime_same_value_fallback()
+            && !operands_use_direct_tracked_array_snapshot
             && let Some(static_result) =
                 self.same_value_assertion_fast_primitive_result(actual, expected)
         {

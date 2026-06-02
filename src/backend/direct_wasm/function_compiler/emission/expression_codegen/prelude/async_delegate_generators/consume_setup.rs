@@ -10,18 +10,16 @@ impl<'a> FunctionCompiler<'a> {
         let Expression::Identifier(name) = object else {
             return Ok(AsyncDelegateConsumptionPreparation::NotApplicable);
         };
-        let Some(binding_name) = self.resolve_local_array_iterator_binding_name(name) else {
-            return Ok(AsyncDelegateConsumptionPreparation::NotApplicable);
-        };
-        let Some(binding) = self
+        let direct_binding = self
             .state
             .speculation
             .static_semantics
-            .local_array_iterator_binding(&binding_name)
-            .cloned()
-        else {
+            .local_array_iterator_binding(name)
+            .cloned();
+        let Some(binding) = direct_binding else {
             return Ok(AsyncDelegateConsumptionPreparation::NotApplicable);
         };
+        let binding_name = name.to_string();
         let current_static_index = binding.static_index;
         let IteratorSourceKind::AsyncYieldDelegateGenerator {
             plan,

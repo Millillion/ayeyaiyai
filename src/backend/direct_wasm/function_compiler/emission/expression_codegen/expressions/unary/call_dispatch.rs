@@ -420,6 +420,30 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    fn next_call_lacks_direct_iterator_binding(&self, callee: &Expression) -> bool {
+        let Expression::Member { object, property } = callee else {
+            return false;
+        };
+        if !matches!(property.as_ref(), Expression::String(property_name) if property_name == "next")
+        {
+            return false;
+        }
+        let Expression::Identifier(iterator_name) = object.as_ref() else {
+            return false;
+        };
+        self.state
+            .speculation
+            .static_semantics
+            .local_array_iterator_binding(iterator_name)
+            .is_none()
+    }
+
+    fn call_arguments_include_static_string_sent_value(&self, arguments: &[CallArgument]) -> bool {
+        arguments
+            .first()
+            .is_some_and(|argument| matches!(argument.expression(), Expression::String(_)))
+    }
+
     fn expression_contains_await_for_call_static_shortcut(expression: &Expression) -> bool {
         match expression {
             Expression::Await(_) => true,
@@ -707,6 +731,9 @@ impl<'a> FunctionCompiler<'a> {
             Expression::Member { property, .. }
                 if matches!(property.as_ref(), Expression::String(name) if matches!(name.as_str(), "then" | "catch" | "finally"))
         );
+        let next_call_lacks_direct_iterator_binding_with_sent_value = self
+            .call_arguments_include_static_string_sent_value(arguments)
+            && self.next_call_lacks_direct_iterator_binding(callee);
         let reads_descriptor_member =
             self.expression_reads_local_descriptor_binding_member(expression);
         if trace_call_dispatch {
@@ -759,6 +786,11 @@ impl<'a> FunctionCompiler<'a> {
                 expression
             );
         }
+        if next_call_lacks_direct_iterator_binding_with_sent_value {
+            self.emit_ignored_call_arguments(arguments)?;
+            self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
+            return Ok(());
+        }
         if known_local_iterator_next_call
             && let Expression::Member { object, .. } = callee
             && let Expression::Identifier(iterator_name) = object.as_ref()
@@ -786,6 +818,7 @@ impl<'a> FunctionCompiler<'a> {
         }
         if let Expression::Member { object, property } = callee
             && matches!(property.as_ref(), Expression::String(property_name) if property_name == "next")
+            && !next_call_lacks_direct_iterator_binding_with_sent_value
             && self.emit_fresh_simple_generator_next_call(object, arguments)?
         {
             return Ok(());
@@ -897,6 +930,7 @@ impl<'a> FunctionCompiler<'a> {
             );
         }
         if let Expression::Member { object, property } = callee
+            && !next_call_lacks_direct_iterator_binding_with_sent_value
             && self.emit_member_getter_returned_user_function_call(object, property, arguments)?
         {
             return Ok(());
@@ -907,7 +941,9 @@ impl<'a> FunctionCompiler<'a> {
                 self.current_function_name()
             );
         }
-        if self.emit_specialized_callee_call(callee, arguments)? {
+        if !next_call_lacks_direct_iterator_binding_with_sent_value
+            && self.emit_specialized_callee_call(callee, arguments)?
+        {
             return Ok(());
         }
         if trace_call_dispatch {

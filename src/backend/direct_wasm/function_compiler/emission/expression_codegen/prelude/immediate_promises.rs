@@ -1,6 +1,41 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn immediate_promise_next_call_lacks_direct_iterator_binding_with_sent_value(
+        &self,
+        expression: &Expression,
+    ) -> bool {
+        let Expression::Call { callee, arguments } = expression else {
+            return false;
+        };
+        let Some(argument) = arguments.first() else {
+            return false;
+        };
+        let has_sent_value = !matches!(argument.expression(), Expression::Undefined)
+            && !matches!(
+                argument.expression(),
+                Expression::Identifier(name)
+                    if name == "undefined" && self.is_unshadowed_builtin_identifier(name)
+            );
+        if !has_sent_value {
+            return false;
+        }
+        let Expression::Member { object, property } = callee.as_ref() else {
+            return false;
+        };
+        if !matches!(property.as_ref(), Expression::String(name) if name == "next") {
+            return false;
+        }
+        let Expression::Identifier(name) = object.as_ref() else {
+            return false;
+        };
+        self.state
+            .speculation
+            .static_semantics
+            .local_array_iterator_binding(name)
+            .is_none()
+    }
+
     fn expression_references_module_dependency_namespace_for_promise_stmt(
         expression: &Expression,
     ) -> bool {
@@ -4254,6 +4289,9 @@ impl<'a> FunctionCompiler<'a> {
                 "emit_fulfilled_promise_protocol_member_call object={object:?} property={property_name} arguments={arguments:?}"
             );
         }
+        if self.immediate_promise_next_call_lacks_direct_iterator_binding_with_sent_value(object) {
+            return Ok(false);
+        }
 
         self.emit_numeric_expression(object)?;
         self.state.emission.output.instructions.push(0x1a);
@@ -4450,6 +4488,11 @@ impl<'a> FunctionCompiler<'a> {
         }
         if let Some(outcome) = self.consume_immediate_promise_outcome_unmaterialized(expression)? {
             return Ok(Some(outcome));
+        }
+        if self
+            .immediate_promise_next_call_lacks_direct_iterator_binding_with_sent_value(expression)
+        {
+            return Ok(None);
         }
         if let Expression::Call { callee, .. } = expression
             && matches!(callee.as_ref(), Expression::Call { .. })
@@ -5057,21 +5100,37 @@ impl<'a> FunctionCompiler<'a> {
                 };
                 self.consume_immediate_promise_outcome(&then_call)
             }
-            "next" | "return" | "throw" => self
-                .consume_async_yield_delegate_generator_promise_outcome(
+            "next" | "return" | "throw" => {
+                let outcome = self.consume_async_yield_delegate_generator_promise_outcome(
                     object,
                     property_name,
                     arguments,
-                )
-                .and_then(|outcome| {
-                    if outcome.is_some() {
-                        Ok(outcome)
-                    } else if property_name == "next" {
-                        self.consume_simple_async_generator_next_promise_outcome(object, arguments)
-                    } else {
-                        Ok(None)
-                    }
-                }),
+                )?;
+                let next_has_sent_value = arguments.first().is_some_and(|argument| {
+                    !matches!(argument.expression(), Expression::Undefined)
+                        && !matches!(
+                            argument.expression(),
+                            Expression::Identifier(name)
+                                if name == "undefined" && self.is_unshadowed_builtin_identifier(name)
+                        )
+                });
+                let missing_direct_next_binding_with_sent_value = property_name == "next"
+                    && next_has_sent_value
+                    && matches!(object.as_ref(), Expression::Identifier(name)
+                        if self
+                            .state
+                            .speculation
+                            .static_semantics
+                            .local_array_iterator_binding(name)
+                            .is_none());
+                if outcome.is_some() || missing_direct_next_binding_with_sent_value {
+                    Ok(outcome)
+                } else if property_name == "next" {
+                    self.consume_simple_async_generator_next_promise_outcome(object, arguments)
+                } else {
+                    Ok(None)
+                }
+            }
             "all" => {
                 if !matches!(object.as_ref(), Expression::Identifier(name) if name == "Promise") {
                     return Ok(None);

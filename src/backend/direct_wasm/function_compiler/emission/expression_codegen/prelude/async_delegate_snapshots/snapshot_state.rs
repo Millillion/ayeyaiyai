@@ -6,6 +6,116 @@ struct VisibleRuntimeBindingSnapshot {
 }
 
 impl VisibleRuntimeBindingSnapshot {
+    fn binding_candidates(compiler: &FunctionCompiler<'_>, name: &str) -> Vec<String> {
+        let mut candidates = Vec::new();
+        if let Some((resolved_name, _)) = compiler.resolve_current_local_binding(name) {
+            candidates.push(resolved_name);
+        }
+        if !candidates.iter().any(|candidate| candidate == name) {
+            candidates.push(name.to_string());
+        }
+        candidates
+    }
+
+    fn direct_array_binding(
+        compiler: &FunctionCompiler<'_>,
+        name: &str,
+    ) -> Option<ArrayValueBinding> {
+        Self::binding_candidates(compiler, name)
+            .into_iter()
+            .find_map(|candidate| {
+                compiler
+                    .state
+                    .speculation
+                    .static_semantics
+                    .local_array_binding(&candidate)
+                    .cloned()
+                    .or_else(|| compiler.global_array_binding(&candidate).cloned())
+                    .or_else(|| {
+                        compiler
+                            .backend
+                            .shared_global_semantics
+                            .values
+                            .array_binding(&candidate)
+                            .cloned()
+                    })
+            })
+    }
+
+    fn direct_object_binding(
+        compiler: &FunctionCompiler<'_>,
+        name: &str,
+    ) -> Option<ObjectValueBinding> {
+        Self::binding_candidates(compiler, name)
+            .into_iter()
+            .find_map(|candidate| {
+                compiler
+                    .state
+                    .speculation
+                    .static_semantics
+                    .local_object_binding(&candidate)
+                    .cloned()
+                    .or_else(|| compiler.global_object_binding(&candidate).cloned())
+            })
+    }
+
+    fn direct_function_binding(compiler: &FunctionCompiler<'_>, name: &str) -> bool {
+        Self::binding_candidates(compiler, name)
+            .into_iter()
+            .any(|candidate| {
+                compiler
+                    .state
+                    .speculation
+                    .static_semantics
+                    .local_function_binding(&candidate)
+                    .is_some()
+                    || compiler
+                        .backend
+                        .global_function_binding(&candidate)
+                        .is_some()
+                    || (compiler.is_unshadowed_builtin_identifier(&candidate)
+                        && builtin_identifier_kind(&candidate) == Some(StaticValueKind::Function))
+            })
+    }
+
+    fn direct_visible_binding_value(
+        compiler: &FunctionCompiler<'_>,
+        name: &str,
+    ) -> Option<Expression> {
+        if Self::direct_function_binding(compiler, name) {
+            return None;
+        }
+        if let Some(array_binding) = Self::direct_array_binding(compiler, name) {
+            return Some(Expression::Array(
+                array_binding
+                    .values
+                    .into_iter()
+                    .map(|value| ArrayElement::Expression(value.unwrap_or(Expression::Undefined)))
+                    .collect(),
+            ));
+        }
+        Self::direct_object_binding(compiler, name)
+            .map(|object_binding| object_binding_to_expression(&object_binding))
+    }
+
+    fn expression_is_direct_reference_identifier(
+        compiler: &FunctionCompiler<'_>,
+        expression: &Expression,
+    ) -> bool {
+        if matches!(expression, Expression::This) {
+            return true;
+        }
+        let Expression::Identifier(name) = expression else {
+            return false;
+        };
+        if Self::direct_array_binding(compiler, name).is_some()
+            || Self::direct_object_binding(compiler, name).is_some()
+        {
+            return true;
+        }
+        Self::direct_function_binding(compiler, name)
+    }
+
     fn from_existing(bindings: &HashMap<String, Expression>) -> VisibleRuntimeBindingSnapshot {
         VisibleRuntimeBindingSnapshot {
             bindings: bindings.clone(),
@@ -22,8 +132,10 @@ impl VisibleRuntimeBindingSnapshot {
             .map(|name| {
                 let identifier = Expression::Identifier(name.clone());
                 (
-                    name,
-                    compiler.reference_preserving_static_value_expression(&identifier),
+                    name.clone(),
+                    Self::direct_visible_binding_value(compiler, &name).unwrap_or_else(|| {
+                        compiler.reference_preserving_static_value_expression(&identifier)
+                    }),
                 )
             })
             .collect::<HashMap<_, _>>();
@@ -39,22 +151,9 @@ impl VisibleRuntimeBindingSnapshot {
                 continue;
             }
             let identifier = Expression::Identifier(name.clone());
-            let refreshed = if let Some(array_binding) =
-                compiler.resolve_array_binding_from_expression(&identifier)
+            let refreshed = if let Some(value) = Self::direct_visible_binding_value(compiler, &name)
             {
-                Expression::Array(
-                    array_binding
-                        .values
-                        .into_iter()
-                        .map(|value| {
-                            ArrayElement::Expression(value.unwrap_or(Expression::Undefined))
-                        })
-                        .collect(),
-                )
-            } else if let Some(object_binding) =
-                compiler.resolve_object_binding_from_expression(&identifier)
-            {
-                object_binding_to_expression(&object_binding)
+                value
             } else if let Some(resolved) = compiler
                 .resolve_bound_alias_expression(&identifier)
                 .filter(|resolved| !static_expression_matches(resolved, &identifier))
@@ -83,10 +182,7 @@ impl VisibleRuntimeBindingSnapshot {
             {
                 continue;
             }
-            let synced_value = if matches!(value, Expression::Identifier(_))
-                && compiler
-                    .resolve_static_reference_identity_key(&value)
-                    .is_some()
+            let synced_value = if Self::expression_is_direct_reference_identifier(compiler, &value)
             {
                 value.clone()
             } else {

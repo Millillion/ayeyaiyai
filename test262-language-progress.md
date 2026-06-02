@@ -1,4 +1,4 @@
-1638/23668 (6.92%)
+1639/23668 (6.92%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,7 +14,7 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 313/9337 (3.35%)
+- statements: 314/9337 (3.36%)
 - expressions: 0/11061 (0.00%)
 - types: 0/113 (0.00%)
 - function-code: 0/217 (0.00%)
@@ -1682,7 +1682,7 @@ Sub-category progress
   - [x] test/language/statements/async-generator/yield-spread-arr-single.js
   - [x] test/language/statements/async-generator/yield-spread-obj.js
   - [x] test/language/statements/async-generator/yield-star-async-from-sync-iterator-inaccessible.js
-  - [ ] test/language/statements/async-generator/yield-star-async-next.js
+  - [x] test/language/statements/async-generator/yield-star-async-next.js
   - [ ] test/language/statements/async-generator/yield-star-async-return.js
   - [ ] test/language/statements/async-generator/yield-star-async-throw.js
   - [ ] test/language/statements/async-generator/yield-star-expr-abrupt.js
