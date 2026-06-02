@@ -1,4 +1,4 @@
-1643/23668 (6.94%)
+1691/23668 (7.14%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,7 +14,7 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 318/9337 (3.41%)
+- statements: 366/9337 (3.92%)
 - expressions: 0/11061 (0.00%)
 - types: 0/113 (0.00%)
 - function-code: 0/217 (0.00%)
@@ -1687,54 +1687,54 @@ Sub-category progress
   - [x] test/language/statements/async-generator/yield-star-async-throw.js
   - [x] test/language/statements/async-generator/yield-star-expr-abrupt.js
   - [x] test/language/statements/async-generator/yield-star-getiter-async-get-abrupt.js
-  - [ ] test/language/statements/async-generator/yield-star-getiter-async-not-callable-boolean-throw.js
-  - [ ] test/language/statements/async-generator/yield-star-getiter-async-not-callable-number-throw.js
-  - [ ] test/language/statements/async-generator/yield-star-getiter-async-not-callable-object-throw.js
-  - [ ] test/language/statements/async-generator/yield-star-getiter-async-not-callable-string-throw.js
-  - [ ] test/language/statements/async-generator/yield-star-getiter-async-not-callable-symbol-throw.js
-  - [ ] test/language/statements/async-generator/yield-star-getiter-async-null-sync-get-abrupt.js
-  - [ ] test/language/statements/async-generator/yield-star-getiter-async-returns-abrupt.js
-  - [ ] test/language/statements/async-generator/yield-star-getiter-async-returns-boolean-throw.js
-  - [ ] test/language/statements/async-generator/yield-star-getiter-async-returns-null-throw.js
-  - [ ] test/language/statements/async-generator/yield-star-getiter-async-returns-number-throw.js
-  - [ ] test/language/statements/async-generator/yield-star-getiter-async-returns-string-throw.js
-  - [ ] test/language/statements/async-generator/yield-star-getiter-async-returns-symbol-throw.js
-  - [ ] test/language/statements/async-generator/yield-star-getiter-async-returns-undefined-throw.js
-  - [ ] test/language/statements/async-generator/yield-star-getiter-async-undefined-sync-get-abrupt.js
-  - [ ] test/language/statements/async-generator/yield-star-getiter-sync-get-abrupt.js
-  - [ ] test/language/statements/async-generator/yield-star-getiter-sync-not-callable-boolean-throw.js
-  - [ ] test/language/statements/async-generator/yield-star-getiter-sync-not-callable-number-throw.js
-  - [ ] test/language/statements/async-generator/yield-star-getiter-sync-not-callable-object-throw.js
-  - [ ] test/language/statements/async-generator/yield-star-getiter-sync-not-callable-string-throw.js
-  - [ ] test/language/statements/async-generator/yield-star-getiter-sync-not-callable-symbol-throw.js
-  - [ ] test/language/statements/async-generator/yield-star-getiter-sync-returns-abrupt.js
-  - [ ] test/language/statements/async-generator/yield-star-getiter-sync-returns-boolean-throw.js
-  - [ ] test/language/statements/async-generator/yield-star-getiter-sync-returns-null-throw.js
-  - [ ] test/language/statements/async-generator/yield-star-getiter-sync-returns-number-throw.js
-  - [ ] test/language/statements/async-generator/yield-star-getiter-sync-returns-string-throw.js
-  - [ ] test/language/statements/async-generator/yield-star-getiter-sync-returns-symbol-throw.js
-  - [ ] test/language/statements/async-generator/yield-star-getiter-sync-returns-undefined-throw.js
-  - [ ] test/language/statements/async-generator/yield-star-next-call-done-get-abrupt.js
-  - [ ] test/language/statements/async-generator/yield-star-next-call-returns-abrupt.js
-  - [ ] test/language/statements/async-generator/yield-star-next-call-value-get-abrupt.js
-  - [ ] test/language/statements/async-generator/yield-star-next-get-abrupt.js
-  - [ ] test/language/statements/async-generator/yield-star-next-non-object-ignores-then.js
-  - [ ] test/language/statements/async-generator/yield-star-next-not-callable-boolean-throw.js
-  - [ ] test/language/statements/async-generator/yield-star-next-not-callable-null-throw.js
-  - [ ] test/language/statements/async-generator/yield-star-next-not-callable-number-throw.js
-  - [ ] test/language/statements/async-generator/yield-star-next-not-callable-object-throw.js
-  - [ ] test/language/statements/async-generator/yield-star-next-not-callable-string-throw.js
-  - [ ] test/language/statements/async-generator/yield-star-next-not-callable-symbol-throw.js
-  - [ ] test/language/statements/async-generator/yield-star-next-not-callable-undefined-throw.js
-  - [ ] test/language/statements/async-generator/yield-star-next-then-get-abrupt.js
-  - [ ] test/language/statements/async-generator/yield-star-next-then-non-callable-boolean-fulfillpromise.js
-  - [ ] test/language/statements/async-generator/yield-star-next-then-non-callable-null-fulfillpromise.js
-  - [ ] test/language/statements/async-generator/yield-star-next-then-non-callable-number-fulfillpromise.js
-  - [ ] test/language/statements/async-generator/yield-star-next-then-non-callable-object-fulfillpromise.js
-  - [ ] test/language/statements/async-generator/yield-star-next-then-non-callable-string-fulfillpromise.js
-  - [ ] test/language/statements/async-generator/yield-star-next-then-non-callable-symbol-fulfillpromise.js
-  - [ ] test/language/statements/async-generator/yield-star-next-then-non-callable-undefined-fulfillpromise.js
-  - [ ] test/language/statements/async-generator/yield-star-next-then-returns-abrupt.js
+  - [x] test/language/statements/async-generator/yield-star-getiter-async-not-callable-boolean-throw.js
+  - [x] test/language/statements/async-generator/yield-star-getiter-async-not-callable-number-throw.js
+  - [x] test/language/statements/async-generator/yield-star-getiter-async-not-callable-object-throw.js
+  - [x] test/language/statements/async-generator/yield-star-getiter-async-not-callable-string-throw.js
+  - [x] test/language/statements/async-generator/yield-star-getiter-async-not-callable-symbol-throw.js
+  - [x] test/language/statements/async-generator/yield-star-getiter-async-null-sync-get-abrupt.js
+  - [x] test/language/statements/async-generator/yield-star-getiter-async-returns-abrupt.js
+  - [x] test/language/statements/async-generator/yield-star-getiter-async-returns-boolean-throw.js
+  - [x] test/language/statements/async-generator/yield-star-getiter-async-returns-null-throw.js
+  - [x] test/language/statements/async-generator/yield-star-getiter-async-returns-number-throw.js
+  - [x] test/language/statements/async-generator/yield-star-getiter-async-returns-string-throw.js
+  - [x] test/language/statements/async-generator/yield-star-getiter-async-returns-symbol-throw.js
+  - [x] test/language/statements/async-generator/yield-star-getiter-async-returns-undefined-throw.js
+  - [x] test/language/statements/async-generator/yield-star-getiter-async-undefined-sync-get-abrupt.js
+  - [x] test/language/statements/async-generator/yield-star-getiter-sync-get-abrupt.js
+  - [x] test/language/statements/async-generator/yield-star-getiter-sync-not-callable-boolean-throw.js
+  - [x] test/language/statements/async-generator/yield-star-getiter-sync-not-callable-number-throw.js
+  - [x] test/language/statements/async-generator/yield-star-getiter-sync-not-callable-object-throw.js
+  - [x] test/language/statements/async-generator/yield-star-getiter-sync-not-callable-string-throw.js
+  - [x] test/language/statements/async-generator/yield-star-getiter-sync-not-callable-symbol-throw.js
+  - [x] test/language/statements/async-generator/yield-star-getiter-sync-returns-abrupt.js
+  - [x] test/language/statements/async-generator/yield-star-getiter-sync-returns-boolean-throw.js
+  - [x] test/language/statements/async-generator/yield-star-getiter-sync-returns-null-throw.js
+  - [x] test/language/statements/async-generator/yield-star-getiter-sync-returns-number-throw.js
+  - [x] test/language/statements/async-generator/yield-star-getiter-sync-returns-string-throw.js
+  - [x] test/language/statements/async-generator/yield-star-getiter-sync-returns-symbol-throw.js
+  - [x] test/language/statements/async-generator/yield-star-getiter-sync-returns-undefined-throw.js
+  - [x] test/language/statements/async-generator/yield-star-next-call-done-get-abrupt.js
+  - [x] test/language/statements/async-generator/yield-star-next-call-returns-abrupt.js
+  - [x] test/language/statements/async-generator/yield-star-next-call-value-get-abrupt.js
+  - [x] test/language/statements/async-generator/yield-star-next-get-abrupt.js
+  - [x] test/language/statements/async-generator/yield-star-next-non-object-ignores-then.js
+  - [x] test/language/statements/async-generator/yield-star-next-not-callable-boolean-throw.js
+  - [x] test/language/statements/async-generator/yield-star-next-not-callable-null-throw.js
+  - [x] test/language/statements/async-generator/yield-star-next-not-callable-number-throw.js
+  - [x] test/language/statements/async-generator/yield-star-next-not-callable-object-throw.js
+  - [x] test/language/statements/async-generator/yield-star-next-not-callable-string-throw.js
+  - [x] test/language/statements/async-generator/yield-star-next-not-callable-symbol-throw.js
+  - [x] test/language/statements/async-generator/yield-star-next-not-callable-undefined-throw.js
+  - [x] test/language/statements/async-generator/yield-star-next-then-get-abrupt.js
+  - [x] test/language/statements/async-generator/yield-star-next-then-non-callable-boolean-fulfillpromise.js
+  - [x] test/language/statements/async-generator/yield-star-next-then-non-callable-null-fulfillpromise.js
+  - [x] test/language/statements/async-generator/yield-star-next-then-non-callable-number-fulfillpromise.js
+  - [x] test/language/statements/async-generator/yield-star-next-then-non-callable-object-fulfillpromise.js
+  - [x] test/language/statements/async-generator/yield-star-next-then-non-callable-string-fulfillpromise.js
+  - [x] test/language/statements/async-generator/yield-star-next-then-non-callable-symbol-fulfillpromise.js
+  - [x] test/language/statements/async-generator/yield-star-next-then-non-callable-undefined-fulfillpromise.js
+  - [x] test/language/statements/async-generator/yield-star-next-then-returns-abrupt.js
   - [ ] test/language/statements/async-generator/yield-star-normal-notdone-iter-value-throws.js
   - [ ] test/language/statements/async-generator/yield-star-promise-not-unwrapped.js
   - [ ] test/language/statements/async-generator/yield-star-return-missing-value-is-awaited.js

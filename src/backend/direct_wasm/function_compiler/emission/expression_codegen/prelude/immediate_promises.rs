@@ -2687,6 +2687,11 @@ impl<'a> FunctionCompiler<'a> {
         let Some(param_name) = user_function.params.first() else {
             return false;
         };
+        if self.promise_handler_requires_runtime_chain(&Expression::Identifier(
+            user_function.name.clone(),
+        )) {
+            return false;
+        }
         if function.body.iter().any(|statement| {
             let (callee, arguments) = match statement {
                 Statement::Expression(Expression::Call { callee, arguments })

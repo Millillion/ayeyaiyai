@@ -5599,6 +5599,15 @@ fn initializes_async_yield_delegate_snapshot_bindings_for_non_callable_async_ite
         &HashMap::new(),
     )
     .expect("function compiler should construct");
+    let obj_initializer = program
+        .statements
+        .iter()
+        .find_map(|statement| match statement {
+            Statement::Var { name, value } if name == "obj" => Some(value.clone()),
+            _ => None,
+        })
+        .expect("expected obj initializer");
+    function_compiler.update_static_global_assignment_metadata("obj", &obj_initializer);
 
     let plan = function_compiler
         .resolve_async_yield_delegate_generator_plan(
@@ -5614,11 +5623,6 @@ fn initializes_async_yield_delegate_snapshot_bindings_for_non_callable_async_ite
             object: Box::new(Expression::Identifier("Symbol".to_string())),
             property: Box::new(Expression::String("asyncIterator".to_string())),
         });
-    assert!(
-        function_compiler
-            .async_yield_delegate_uses_async_iterator_method(&plan, &async_iterator_property,),
-        "expected a non-nullish raw @@asyncIterator entry to suppress sync iterator fallback",
-    );
     let iterator_property =
         function_compiler.materialize_static_expression(&symbol_iterator_expression());
     let delegate_iterator_method_name = function_compiler

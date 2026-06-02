@@ -16,6 +16,15 @@ pub(in crate::backend::direct_wasm) fn object_binding_lookup_value<'a>(
         .iter()
         .find(|(existing_key, _)| existing_key == property)
         .map(|(_, value)| value)
+        .or_else(|| {
+            well_known_symbol_property_name(property).and_then(|property_name| {
+                object_binding
+                    .string_properties
+                    .iter()
+                    .find(|(existing_name, _)| *existing_name == property_name)
+                    .map(|(_, value)| value)
+            })
+        })
 }
 
 pub(in crate::backend::direct_wasm) fn object_binding_lookup_descriptor<'a>(
@@ -44,6 +53,19 @@ pub(in crate::backend::direct_wasm) fn object_binding_is_extensible(
     object_binding: &ObjectValueBinding,
 ) -> bool {
     object_binding.extensible
+}
+
+fn well_known_symbol_property_name(property: &Expression) -> Option<String> {
+    let Expression::Member { object, property } = property else {
+        return None;
+    };
+    if !matches!(object.as_ref(), Expression::Identifier(name) if name == "Symbol") {
+        return None;
+    }
+    let Expression::String(name) = property.as_ref() else {
+        return None;
+    };
+    Some(format!("Symbol.{name}"))
 }
 
 pub(in crate::backend::direct_wasm) fn object_binding_prevent_extensions(

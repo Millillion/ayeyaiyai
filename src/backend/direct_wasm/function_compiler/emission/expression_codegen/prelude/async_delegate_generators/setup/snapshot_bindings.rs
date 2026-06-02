@@ -18,12 +18,32 @@ enum DelegateMethodSnapshotResolution {
 }
 
 impl<'a> FunctionCompiler<'a> {
+    fn resolve_async_delegate_snapshot_object_binding(
+        &self,
+        expression: &Expression,
+    ) -> Option<ObjectValueBinding> {
+        let materialized_expression = self.materialize_static_expression(expression);
+        let effective_expression =
+            if static_expression_matches(&materialized_expression, expression) {
+                expression
+            } else {
+                &materialized_expression
+            };
+        self.resolve_object_binding_from_expression(effective_expression)
+            .or_else(|| {
+                let Expression::Identifier(name) = effective_expression else {
+                    return None;
+                };
+                self.global_object_binding(name).cloned()
+            })
+    }
+
     fn resolve_async_delegate_object_member_value(
         &self,
         expression: &Expression,
         property: &Expression,
     ) -> Option<Expression> {
-        self.resolve_object_binding_from_expression(expression)
+        self.resolve_async_delegate_snapshot_object_binding(expression)
             .and_then(|object_binding| {
                 object_binding_lookup_value(&object_binding, property).cloned()
             })

@@ -1,12 +1,32 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn resolve_async_delegate_object_binding(
+        &self,
+        expression: &Expression,
+    ) -> Option<ObjectValueBinding> {
+        self.resolve_object_binding_from_expression(expression)
+            .or_else(|| {
+                let Expression::Identifier(name) = expression else {
+                    return None;
+                };
+                self.global_object_binding(name).cloned()
+            })
+    }
+
     fn resolve_async_delegate_object_method_value(
         &self,
         expression: &Expression,
         property: &Expression,
     ) -> Option<Expression> {
-        self.resolve_object_binding_from_expression(expression)
+        let materialized_expression = self.materialize_static_expression(expression);
+        let effective_expression =
+            if static_expression_matches(&materialized_expression, expression) {
+                expression
+            } else {
+                &materialized_expression
+            };
+        self.resolve_async_delegate_object_binding(effective_expression)
             .and_then(|object_binding| {
                 object_binding_lookup_value(&object_binding, property).cloned()
             })
@@ -17,22 +37,32 @@ impl<'a> FunctionCompiler<'a> {
         plan: &AsyncYieldDelegateGeneratorPlan,
         async_iterator_property: &Expression,
     ) -> bool {
+        let materialized_delegate_expression =
+            self.materialize_static_expression(&plan.delegate_expression);
+        let delegate_expression = if static_expression_matches(
+            &materialized_delegate_expression,
+            &plan.delegate_expression,
+        ) {
+            &plan.delegate_expression
+        } else {
+            &materialized_delegate_expression
+        };
         if let Some(getter_binding) =
-            self.resolve_member_getter_binding(&plan.delegate_expression, async_iterator_property)
+            self.resolve_member_getter_binding(delegate_expression, async_iterator_property)
         {
             return self
                 .resolve_function_binding_static_return_expression_with_call_frame(
                     &getter_binding,
                     &[],
-                    &plan.delegate_expression,
+                    delegate_expression,
                 )
                 .map(|value| !matches!(value, Expression::Null | Expression::Undefined))
                 .unwrap_or(false);
         }
-        self.resolve_member_function_binding(&plan.delegate_expression, async_iterator_property)
+        self.resolve_member_function_binding(delegate_expression, async_iterator_property)
             .is_some()
             || self
-                .resolve_object_binding_from_expression(&plan.delegate_expression)
+                .resolve_async_delegate_object_binding(delegate_expression)
                 .and_then(|object_binding| {
                     object_binding_lookup_value(&object_binding, async_iterator_property).cloned()
                 })
