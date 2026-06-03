@@ -86,6 +86,57 @@ impl<'a> FunctionCompiler<'a> {
                 && Self::expression_is_await_resume_call(completion_value))
     }
 
+    fn simple_generator_iterator_result_object(done: bool, value: Expression) -> Expression {
+        Expression::Object(vec![
+            ObjectEntry::Data {
+                key: Expression::String("done".to_string()),
+                value: Expression::Bool(done),
+            },
+            ObjectEntry::Data {
+                key: Expression::String("value".to_string()),
+                value,
+            },
+        ])
+    }
+
+    fn first_async_generator_step_rejects_on_next(
+        &self,
+        steps: &[SimpleGeneratorStep],
+        sent_value: &Expression,
+    ) -> bool {
+        let Some(step) = steps.first() else {
+            return false;
+        };
+        let yielded_value = match &step.outcome {
+            SimpleGeneratorStepOutcome::Yield(value) => {
+                let mut yielded_value = Self::substitute_sent_expression(value, sent_value);
+                if let Some(array_binding) =
+                    self.resolve_array_binding_from_expression(&yielded_value)
+                {
+                    yielded_value = Expression::Array(
+                        array_binding
+                            .values
+                            .into_iter()
+                            .map(|value| {
+                                ArrayElement::Expression(value.unwrap_or(Expression::Undefined))
+                            })
+                            .collect(),
+                    );
+                }
+                yielded_value
+            }
+            SimpleGeneratorStepOutcome::YieldResult(value) => {
+                self.simple_generator_yield_result_value(value, sent_value)
+            }
+            SimpleGeneratorStepOutcome::Throw(_) => return true,
+        };
+        !matches!(yielded_value, Expression::Array(_))
+            && matches!(
+                self.resolve_static_await_resolution_outcome(&yielded_value),
+                Some(StaticEvalOutcome::Throw(_))
+            )
+    }
+
     fn initialize_fresh_simple_generator_scoped_var_bindings(&mut self, effects: &[Statement]) {
         let mut scoped_var_names = Vec::new();
         Self::collect_simple_generator_scoped_var_bindings(effects, &mut scoped_var_names);
@@ -3331,6 +3382,36 @@ impl<'a> FunctionCompiler<'a> {
                 .and_then(|binding| binding.static_index)
                 .is_none()
             {
+                let can_initialize_missing_index =
+                    self.state.speculation.execution_context.top_level_function
+                        || self.resolve_current_local_binding(name).is_some();
+                if !can_initialize_missing_index {
+                    let current_function_mentions_promise_chain =
+                        self.current_function_name().is_some_and(|function_name| {
+                            self.registered_function_body_mentions_promise_like_chain(function_name)
+                        });
+                    if current_function_mentions_promise_chain
+                        && self.first_async_generator_step_rejects_on_next(&steps, &sent_value)
+                    {
+                        if std::env::var_os("AYY_TRACE_SIMPLE_GENERATORS").is_some() {
+                            eprintln!(
+                                "simple_async_next:nonlocal-closed-after-rejected-first-step object={object:?} binding={binding_name}"
+                            );
+                        }
+                        return Ok(Some(StaticEvalOutcome::Value(
+                            Self::simple_generator_iterator_result_object(
+                                true,
+                                Expression::Undefined,
+                            ),
+                        )));
+                    }
+                    if std::env::var_os("AYY_TRACE_SIMPLE_GENERATORS").is_some() {
+                        eprintln!(
+                            "simple_async_next:skip-nonlocal-missing-static-index object={object:?} binding={binding_name}"
+                        );
+                    }
+                    return Ok(None);
+                }
                 self.update_local_array_iterator_binding_with_source(
                     &binding_name,
                     Some(IteratorSourceKind::SimpleGenerator {
@@ -3528,16 +3609,10 @@ impl<'a> FunctionCompiler<'a> {
                             "simple_async_next:yield_outcome:return current_index={current_index}"
                         );
                     }
-                    StaticEvalOutcome::Value(Expression::Object(vec![
-                        ObjectEntry::Data {
-                            key: Expression::String("done".to_string()),
-                            value: Expression::Bool(false),
-                        },
-                        ObjectEntry::Data {
-                            key: Expression::String("value".to_string()),
-                            value: yielded_value,
-                        },
-                    ]))
+                    StaticEvalOutcome::Value(Self::simple_generator_iterator_result_object(
+                        false,
+                        yielded_value,
+                    ))
                 }
                 SimpleGeneratorStepOutcome::Throw(value) => {
                     set_binding_index(self, steps.len().saturating_add(1));
@@ -3640,15 +3715,8 @@ impl<'a> FunctionCompiler<'a> {
         } else {
             Expression::Undefined
         };
-        Ok(Some(StaticEvalOutcome::Value(Expression::Object(vec![
-            ObjectEntry::Data {
-                key: Expression::String("done".to_string()),
-                value: Expression::Bool(true),
-            },
-            ObjectEntry::Data {
-                key: Expression::String("value".to_string()),
-                value: completion_result_value,
-            },
-        ]))))
+        Ok(Some(StaticEvalOutcome::Value(
+            Self::simple_generator_iterator_result_object(true, completion_result_value),
+        )))
     }
 }
