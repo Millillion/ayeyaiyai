@@ -1,4 +1,4 @@
-1636/23668 (6.91%)
+1640/23668 (6.93%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,7 +14,7 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 311/9337 (3.33%)
+- statements: 315/9337 (3.37%)
 - expressions: 0/11061 (0.00%)
 - types: 0/113 (0.00%)
 - function-code: 0/217 (0.00%)
@@ -1678,10 +1678,10 @@ Sub-category progress
   - [x] test/language/statements/async-generator/yield-promise-reject-next-yield-star-sync-iterator.js
   - [x] test/language/statements/async-generator/yield-promise-reject-next.js
   - [x] test/language/statements/async-generator/yield-return-then-getter-ticks.js
-  - [ ] test/language/statements/async-generator/yield-spread-arr-multiple.js
-  - [ ] test/language/statements/async-generator/yield-spread-arr-single.js
-  - [ ] test/language/statements/async-generator/yield-spread-obj.js
-  - [ ] test/language/statements/async-generator/yield-star-async-from-sync-iterator-inaccessible.js
+  - [x] test/language/statements/async-generator/yield-spread-arr-multiple.js
+  - [x] test/language/statements/async-generator/yield-spread-arr-single.js
+  - [x] test/language/statements/async-generator/yield-spread-obj.js
+  - [x] test/language/statements/async-generator/yield-star-async-from-sync-iterator-inaccessible.js
   - [ ] test/language/statements/async-generator/yield-star-async-next.js
   - [ ] test/language/statements/async-generator/yield-star-async-return.js
   - [ ] test/language/statements/async-generator/yield-star-async-throw.js

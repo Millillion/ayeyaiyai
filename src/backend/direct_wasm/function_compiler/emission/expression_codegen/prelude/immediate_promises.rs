@@ -4068,7 +4068,14 @@ impl<'a> FunctionCompiler<'a> {
             }
             let callback_body_mentions_promise_chain =
                 self.registered_function_body_mentions_promise_like_chain(&user_function.name);
-            let allow_callback_inline = allow_inline && !callback_body_mentions_promise_chain;
+            let promise_chain_body_inlineable = callback_body_mentions_promise_chain
+                && self.can_inline_immediate_promise_callback_body_with_explicit_call_frame(
+                    &user_function,
+                    std::slice::from_ref(&effective_argument),
+                    &Expression::Undefined,
+                );
+            let allow_callback_inline = allow_inline
+                && (!callback_body_mentions_promise_chain || promise_chain_body_inlineable);
             if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
                 eprintln!(
                     "emit_immediate_promise_callback:user-function name={}",
