@@ -893,6 +893,8 @@ impl<'a> FunctionCompiler<'a> {
                 && matches!(object.as_ref(), Expression::This))
             && inline_summary_side_effect_free_expression(object)
             && let Expression::String(property_name) = property.as_ref()
+            && !(matches!(property_name.as_str(), "return" | "throw")
+                && self.is_async_generator_iterator_expression(object))
             && let Some(outcome) = self.resolve_static_member_call_outcome_with_context(
                 object,
                 property_name,
@@ -1058,7 +1060,17 @@ impl<'a> FunctionCompiler<'a> {
         if self.emit_returned_function_value_call_expression(callee, arguments)? {
             return Ok(());
         }
-        if self.emit_resolved_function_binding_call_expression(expression, callee, arguments)? {
+        let skip_resolved_binding_for_async_generator_return = matches!(
+            callee,
+            Expression::Member { object, property }
+                if matches!(
+                    property.as_ref(),
+                    Expression::String(name) if matches!(name.as_str(), "return" | "throw")
+                ) && self.is_async_generator_iterator_expression(object)
+        );
+        if !skip_resolved_binding_for_async_generator_return
+            && self.emit_resolved_function_binding_call_expression(expression, callee, arguments)?
+        {
             return Ok(());
         }
         if trace_call_dispatch {
@@ -1066,6 +1078,11 @@ impl<'a> FunctionCompiler<'a> {
                 "call_dispatch:after_resolved_binding function={:?}",
                 self.current_function_name()
             );
+        }
+        if skip_resolved_binding_for_async_generator_return
+            && self.emit_dynamic_user_function_call(callee, arguments)?
+        {
+            return Ok(());
         }
         if !matches!(callee, Expression::Member { .. })
             && self.emit_dynamic_user_function_call(callee, arguments)?

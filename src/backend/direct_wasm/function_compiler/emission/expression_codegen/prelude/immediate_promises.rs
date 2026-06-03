@@ -1453,6 +1453,9 @@ impl<'a> FunctionCompiler<'a> {
             if let Some(outcome) = self.immediate_await_resolution_outcome_with_captures(&value)? {
                 return Ok(Some(outcome));
             }
+            if Self::call_is_promise_like_chain(&value) {
+                return Ok(None);
+            }
             return Ok(self
                 .resolve_static_await_resolution_outcome(&value)
                 .or(Some(StaticEvalOutcome::Value(value))));
@@ -1828,6 +1831,9 @@ impl<'a> FunctionCompiler<'a> {
                 self.consume_immediate_promise_outcome_unmaterialized(resolution)?
             {
                 return Ok(Some(outcome));
+            }
+            if Self::call_is_promise_like_chain(resolution) {
+                return Ok(None);
             }
             return Ok(self.resolve_static_await_resolution_outcome(resolution));
         }
@@ -2330,6 +2336,19 @@ impl<'a> FunctionCompiler<'a> {
             return false;
         }
         Self::promise_chain_roots_in_promise_resolve(object)
+    }
+
+    fn promise_chain_has_call_receiver(expression: &Expression) -> bool {
+        let Expression::Call { callee, .. } = expression else {
+            return false;
+        };
+        let Expression::Member { object, property } = callee.as_ref() else {
+            return false;
+        };
+        matches!(
+            property.as_ref(),
+            Expression::String(name) if matches!(name.as_str(), "then" | "catch" | "finally")
+        ) && matches!(object.as_ref(), Expression::Call { .. })
     }
 
     pub(in crate::backend::direct_wasm) fn emit_static_async_generator_return_undefined_tick_order_statement(
@@ -4047,7 +4066,9 @@ impl<'a> FunctionCompiler<'a> {
                 self.state.emission.output.instructions.push(0x1a);
                 return Ok(());
             }
-            let allow_callback_inline = allow_inline;
+            let callback_body_mentions_promise_chain =
+                self.registered_function_body_mentions_promise_like_chain(&user_function.name);
+            let allow_callback_inline = allow_inline && !callback_body_mentions_promise_chain;
             if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
                 eprintln!(
                     "emit_immediate_promise_callback:user-function name={}",
@@ -4220,13 +4241,23 @@ impl<'a> FunctionCompiler<'a> {
                         user_function.name
                     );
                 }
-                self.emit_user_function_call_with_new_target_and_this_expression_and_bound_captures(
-                    &user_function,
-                    &callback_arguments,
-                    JS_UNDEFINED_TAG,
-                    &Expression::Undefined,
-                    bound_capture_slots,
-                )?;
+                if callback_body_mentions_promise_chain {
+                    self.emit_user_function_call_with_new_target_and_this_expression_and_bound_captures_without_static_snapshot(
+                        &user_function,
+                        &callback_arguments,
+                        JS_UNDEFINED_TAG,
+                        &Expression::Undefined,
+                        bound_capture_slots,
+                    )?;
+                } else {
+                    self.emit_user_function_call_with_new_target_and_this_expression_and_bound_captures(
+                        &user_function,
+                        &callback_arguments,
+                        JS_UNDEFINED_TAG,
+                        &Expression::Undefined,
+                        bound_capture_slots,
+                    )?;
+                }
             } else {
                 if allow_callback_inline && inline_safe_argument {
                     if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
@@ -4298,13 +4329,68 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(false);
         }
 
-        self.emit_numeric_expression(object)?;
+        let mut fulfilled_argument = Expression::Undefined;
+        let mut emitted_fresh_protocol_object = false;
+        let emitted_protocol_object = if let Expression::Call {
+            callee,
+            arguments: object_arguments,
+        } = object
+            && let Expression::Member {
+                object: protocol_object,
+                property,
+            } = callee.as_ref()
+            && let Expression::String(protocol_name) = property.as_ref()
+        {
+            let emitted_fresh = match protocol_name.as_str() {
+                "next" => self.emit_fresh_simple_generator_next_call(protocol_object, object_arguments)?,
+                "return" => {
+                    self.emit_fresh_simple_generator_return_call(protocol_object, object_arguments)?
+                        || self
+                            .emit_static_async_generator_delegate_return_after_caught_value_getter_throw(
+                                protocol_object,
+                                object_arguments,
+                            )?
+                }
+                "throw" => {
+                    self.emit_fresh_simple_generator_throw_call(protocol_object, object_arguments)?
+                }
+                _ => false,
+            };
+            if emitted_fresh {
+                emitted_fresh_protocol_object = true;
+                if let Some(result_expression) = self
+                    .state
+                    .speculation
+                    .static_semantics
+                    .last_bound_user_function_call
+                    .as_ref()
+                    .and_then(|snapshot| snapshot.result_expression.as_ref())
+                {
+                    fulfilled_argument = result_expression.clone();
+                }
+                true
+            } else if matches!(protocol_name.as_str(), "return" | "throw") {
+                self.emit_dynamic_user_function_call(callee, object_arguments)?
+            } else {
+                false
+            }
+        } else {
+            false
+        };
+        if !emitted_protocol_object {
+            self.emit_numeric_expression(object)?;
+        }
         self.state.emission.output.instructions.push(0x1a);
 
         match property_name {
             "then" => {
                 if let Some(handler) = self.promise_handler_expression(arguments.first()) {
-                    self.emit_immediate_promise_callback(&handler, &Expression::Undefined, true)?;
+                    let handler_argument = if emitted_fresh_protocol_object {
+                        fulfilled_argument.clone()
+                    } else {
+                        Expression::Undefined
+                    };
+                    self.emit_immediate_promise_callback(&handler, &handler_argument, true)?;
                     self.emit_ignored_promise_handler_arguments(&arguments[1..])?;
                 } else {
                     self.emit_ignored_promise_handler_arguments(arguments)?;
@@ -4368,7 +4454,10 @@ impl<'a> FunctionCompiler<'a> {
             .is_some_and(|function| matches!(function.kind, FunctionKind::AsyncGenerator))
     }
 
-    fn promise_like_chain_roots_in_async_generator_next(&self, expression: &Expression) -> bool {
+    fn promise_like_chain_roots_in_async_generator_protocol_call(
+        &self,
+        expression: &Expression,
+    ) -> bool {
         let Expression::Call { callee, .. } = expression else {
             return false;
         };
@@ -4380,9 +4469,9 @@ impl<'a> FunctionCompiler<'a> {
         };
         match property_name.as_str() {
             "then" | "catch" | "finally" => {
-                self.promise_like_chain_roots_in_async_generator_next(object)
+                self.promise_like_chain_roots_in_async_generator_protocol_call(object)
             }
-            "next" => {
+            "next" | "return" | "throw" => {
                 self.expression_is_async_generator_call_receiver(object)
                     || self.is_async_generator_iterator_expression(object)
             }
@@ -4493,6 +4582,22 @@ impl<'a> FunctionCompiler<'a> {
         }
         if let Some(outcome) = self.consume_immediate_promise_outcome_unmaterialized(expression)? {
             return Ok(Some(outcome));
+        }
+        if let Expression::Call { callee, .. } = expression
+            && let Expression::Member { object, property } = callee.as_ref()
+            && matches!(
+                property.as_ref(),
+                Expression::String(name) if matches!(name.as_str(), "return" | "throw")
+            )
+            && (self.expression_is_async_generator_call_receiver(object)
+                || self.is_async_generator_iterator_expression(object))
+        {
+            if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+                eprintln!(
+                    "consume_immediate_promise_outcome:skip-async-generator-return-materialize expr={expression:?}"
+                );
+            }
+            return Ok(None);
         }
         if self
             .immediate_promise_next_call_lacks_direct_iterator_binding_with_sent_value(expression)
@@ -4868,6 +4973,9 @@ impl<'a> FunctionCompiler<'a> {
             {
                 return Ok(Some(StaticEvalOutcome::Value(Expression::Undefined)));
             }
+            if Self::promise_chain_has_call_receiver(&return_expression) {
+                return Ok(None);
+            }
             if let Some(outcome) =
                 compiler.immediate_await_resolution_outcome_with_captures(&return_expression)?
             {
@@ -5111,6 +5219,20 @@ impl<'a> FunctionCompiler<'a> {
                     property_name,
                     arguments,
                 )?;
+                if outcome.is_some() {
+                    return Ok(outcome);
+                }
+                if matches!(property_name.as_str(), "return" | "throw")
+                    && (self.expression_is_async_generator_call_receiver(object)
+                        || self.is_async_generator_iterator_expression(object))
+                {
+                    if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+                        eprintln!(
+                            "consume_immediate_promise_outcome:skip-async-generator-{property_name}"
+                        );
+                    }
+                    return Ok(None);
+                }
                 let next_has_sent_value = arguments.first().is_some_and(|argument| {
                     !matches!(argument.expression(), Expression::Undefined)
                         && !matches!(
@@ -5340,6 +5462,9 @@ impl<'a> FunctionCompiler<'a> {
                             Self::call_is_promise_like_chain(return_expression)
                                 && Self::expression_contains_dynamic_import_call(return_expression)
                         });
+                let return_path_already_emitted_dynamic_chain = single_return_expression
+                    .as_ref()
+                    .is_some_and(Self::promise_chain_has_call_receiver);
                 if !return_path_will_emit_chain {
                     let allow_inline_handler = !handlers_require_runtime_chain
                         || self.can_inline_immediate_promise_callback_in_current_frame(
@@ -5356,8 +5481,11 @@ impl<'a> FunctionCompiler<'a> {
                         "consume_immediate_promise_outcome:skip-callback-body-return-chain handler={handler:?}"
                     );
                 }
-                let returned_outcome =
-                    self.immediate_promise_callback_return_outcome(&handler, handler_argument)?;
+                let returned_outcome = if return_path_already_emitted_dynamic_chain {
+                    None
+                } else {
+                    self.immediate_promise_callback_return_outcome(&handler, handler_argument)?
+                };
                 if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
                     eprintln!(
                         "consume_immediate_promise_outcome:value-handler-emitted property={property_name}"
@@ -5470,7 +5598,7 @@ impl<'a> FunctionCompiler<'a> {
                     return Ok(true);
                 }
                 if object_is_promise_like_chain
-                    && self.promise_like_chain_roots_in_async_generator_next(object)
+                    && self.promise_like_chain_roots_in_async_generator_protocol_call(object)
                     && self.emit_fulfilled_promise_protocol_member_call(
                         object,
                         property_name,

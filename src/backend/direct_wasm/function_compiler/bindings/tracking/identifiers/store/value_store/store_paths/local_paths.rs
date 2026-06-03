@@ -4,7 +4,56 @@ fn is_internal_iterator_value_binding_name(name: &str) -> bool {
     name.starts_with("__ayy_array_iter_value_") || name.starts_with("__ayy_for_of_iter_value_")
 }
 
+fn expression_is_static_promise_source_call(expression: &Expression) -> bool {
+    let Expression::Call { callee, .. } = expression else {
+        return false;
+    };
+    let Expression::Member { object, property } = callee.as_ref() else {
+        return false;
+    };
+    matches!(object.as_ref(), Expression::Identifier(name) if name == "Promise")
+        && matches!(
+            property.as_ref(),
+            Expression::String(name)
+                if matches!(
+                    name.as_str(),
+                    "resolve" | "reject" | "all" | "allSettled" | "any" | "race"
+                )
+        )
+}
+
+fn expression_is_static_promise_then_call(expression: &Expression) -> bool {
+    let Expression::Call { callee, .. } = expression else {
+        return false;
+    };
+    let Expression::Member { object, property } = callee.as_ref() else {
+        return false;
+    };
+    matches!(property.as_ref(), Expression::String(name) if name == "then")
+        && (expression_is_static_promise_source_call(object)
+            || expression_is_static_promise_then_call(object))
+}
+
 impl<'a> FunctionCompiler<'a> {
+    fn resolved_static_promise_then_expression(
+        &self,
+        expression: &Expression,
+    ) -> Option<Expression> {
+        if expression_is_static_promise_then_call(expression) {
+            return Some(expression.clone());
+        }
+        let Expression::Identifier(name) = expression else {
+            return None;
+        };
+        self.state
+            .speculation
+            .static_semantics
+            .local_value_binding(name)
+            .or_else(|| self.global_value_binding(name))
+            .filter(|value| expression_is_static_promise_then_call(value))
+            .cloned()
+    }
+
     fn identifier_store_state_contains_await(state: &PreparedIdentifierStoreState) -> bool {
         if state.opaque_runtime_value {
             return true;
@@ -41,6 +90,12 @@ impl<'a> FunctionCompiler<'a> {
             return StaticValueKind::Unknown;
         }
         let static_value = self.local_store_static_value_expression(resolved_name, state);
+        if self
+            .resolved_static_promise_then_expression(static_value)
+            .is_some()
+        {
+            return state.kind.unwrap_or(StaticValueKind::Object);
+        }
         self.infer_value_kind(static_value)
             .or(state.kind)
             .unwrap_or(StaticValueKind::Unknown)
@@ -60,7 +115,14 @@ impl<'a> FunctionCompiler<'a> {
         }
         let static_value_expression =
             self.local_store_static_value_expression(resolved_name, state);
-        if is_internal_iterator_value_binding_name(resolved_name)
+        if let Some(promise_then_expression) =
+            self.resolved_static_promise_then_expression(static_value_expression)
+        {
+            self.state
+                .speculation
+                .static_semantics
+                .set_local_value_binding(resolved_name, promise_then_expression);
+        } else if is_internal_iterator_value_binding_name(resolved_name)
             && matches!(
                 static_value_expression,
                 Expression::Identifier(_) | Expression::This
@@ -171,6 +233,15 @@ impl<'a> FunctionCompiler<'a> {
         fallback_owner: &str,
         state: &PreparedIdentifierStoreState,
     ) -> DirectResult<()> {
+        if self
+            .resolved_static_promise_then_expression(&state.module_assignment_expression)
+            .is_some()
+        {
+            if std::env::var_os("AYY_TRACE_IDENTIFIER_STORE").is_some() {
+                eprintln!("identifier_store:{name}:runtime_shadows skipped_promise_then");
+            }
+            return Ok(());
+        }
         if is_internal_assignment_temp(name) {
             if std::env::var_os("AYY_TRACE_IDENTIFIER_STORE").is_some() {
                 eprintln!(

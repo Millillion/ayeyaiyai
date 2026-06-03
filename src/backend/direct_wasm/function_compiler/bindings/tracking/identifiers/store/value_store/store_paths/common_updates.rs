@@ -109,6 +109,36 @@ fn expression_is_promise_all_call(expression: &Expression) -> bool {
     )
 }
 
+fn expression_is_static_promise_source_call(expression: &Expression) -> bool {
+    let Expression::Call { callee, .. } = expression else {
+        return false;
+    };
+    let Expression::Member { object, property } = callee.as_ref() else {
+        return false;
+    };
+    matches!(object.as_ref(), Expression::Identifier(name) if name == "Promise")
+        && matches!(
+            property.as_ref(),
+            Expression::String(name)
+                if matches!(
+                    name.as_str(),
+                    "resolve" | "reject" | "all" | "allSettled" | "any" | "race"
+                )
+        )
+}
+
+fn expression_is_static_promise_then_call(expression: &Expression) -> bool {
+    let Expression::Call { callee, .. } = expression else {
+        return false;
+    };
+    let Expression::Member { object, property } = callee.as_ref() else {
+        return false;
+    };
+    matches!(property.as_ref(), Expression::String(name) if name == "then")
+        && (expression_is_static_promise_source_call(object)
+            || expression_is_static_promise_then_call(object))
+}
+
 fn expression_is_unresolved_constructor_instance(expression: &Expression) -> bool {
     matches!(
         expression,
@@ -1425,6 +1455,15 @@ impl<'a> FunctionCompiler<'a> {
             self.resolve_internal_array_iterator_typed_array_source_for_store(state)
         {
             return Some(source);
+        }
+        if expression_is_static_promise_then_call(&state.canonical_value_expression)
+            || expression_is_static_promise_then_call(&state.tracked_value_expression)
+            || state
+                .call_source_snapshot_expression
+                .as_ref()
+                .is_some_and(expression_is_static_promise_then_call)
+        {
+            return None;
         }
         let primary_expression = state
             .call_source_snapshot_expression

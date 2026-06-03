@@ -1,6 +1,87 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn resolve_caught_async_yield_delegate_generator_plan(
+        &self,
+        user_function: &UserFunction,
+        substituted_body: &[Statement],
+        completion_binding_name: &str,
+    ) -> Option<AsyncYieldDelegateGeneratorPlan> {
+        let (return_statement, body_before_return) = substituted_body.split_last()?;
+        let Statement::Return(Expression::Identifier(returned_binding)) = return_statement else {
+            return None;
+        };
+        let (try_index, delegate_expression) =
+            body_before_return
+                .iter()
+                .enumerate()
+                .find_map(|(index, statement)| {
+                    let Statement::Try {
+                        body,
+                        catch_binding: Some(catch_binding),
+                        catch_setup,
+                        catch_body,
+                        ..
+                    } = statement
+                    else {
+                        return None;
+                    };
+                    let [Statement::YieldDelegate { value }] = body.as_slice() else {
+                        return None;
+                    };
+                    if !catch_setup.is_empty() {
+                        return None;
+                    }
+                    let catch_assigns_returned_binding = catch_body.iter().any(|statement| {
+                        matches!(
+                            statement,
+                            Statement::Assign {
+                                name,
+                                value: Expression::Identifier(value_name),
+                            } if name == returned_binding && value_name == catch_binding
+                        )
+                    });
+                    catch_assigns_returned_binding.then(|| (index, value.clone()))
+                })?;
+
+        let prefix_effects = body_before_return[..try_index].to_vec();
+        if prefix_effects
+            .iter()
+            .any(Self::statement_contains_generator_yield)
+        {
+            return None;
+        }
+        let tail = body_before_return[try_index + 1..].to_vec();
+        if tail.iter().any(|statement| {
+            Self::statement_contains_generator_yield(statement)
+                || matches!(statement, Statement::Return(_) | Statement::Throw(_))
+        }) {
+            return None;
+        }
+
+        let completion_placeholder = Expression::Identifier(completion_binding_name.to_string());
+        let mut scope_bindings = user_function
+            .scope_bindings
+            .iter()
+            .cloned()
+            .collect::<Vec<_>>();
+        scope_bindings.sort();
+        Some(AsyncYieldDelegateGeneratorPlan {
+            function_name: user_function.name.clone(),
+            prefix_effects,
+            delegate_expression,
+            completion_effects: tail
+                .iter()
+                .map(|statement| {
+                    Self::substitute_sent_statement(statement, &completion_placeholder)
+                })
+                .collect(),
+            completion_value: Expression::Identifier(returned_binding.clone()),
+            completion_throw_value: None,
+            scope_bindings,
+        })
+    }
+
     pub(in crate::backend::direct_wasm) fn resolve_async_yield_delegate_generator_plan(
         &self,
         expression: &Expression,
@@ -9,6 +90,9 @@ impl<'a> FunctionCompiler<'a> {
         let Expression::Call { callee, arguments } = expression else {
             return None;
         };
+        if !matches!(callee.as_ref(), Expression::Identifier(_)) {
+            return None;
+        }
         let Some(LocalFunctionBinding::User(function_name)) =
             self.resolve_function_binding_from_expression(callee)
         else {
@@ -48,6 +132,14 @@ impl<'a> FunctionCompiler<'a> {
                 &analysis_this_binding,
             )
             .unwrap_or_else(|| function.body.clone());
+
+        if let Some(plan) = self.resolve_caught_async_yield_delegate_generator_plan(
+            user_function,
+            &substituted_body,
+            completion_binding_name,
+        ) {
+            return Some(plan);
+        }
 
         let mut prefix_effects = Vec::new();
         let mut tail = Vec::new();

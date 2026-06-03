@@ -41,6 +41,36 @@ fn expression_is_promise_all_call(expression: &Expression) -> bool {
         && matches!(property.as_ref(), Expression::String(name) if name == "all")
 }
 
+fn expression_is_static_promise_source_call(expression: &Expression) -> bool {
+    let Expression::Call { callee, .. } = expression else {
+        return false;
+    };
+    let Expression::Member { object, property } = callee.as_ref() else {
+        return false;
+    };
+    matches!(object.as_ref(), Expression::Identifier(name) if name == "Promise")
+        && matches!(
+            property.as_ref(),
+            Expression::String(name)
+                if matches!(
+                    name.as_str(),
+                    "resolve" | "reject" | "all" | "allSettled" | "any" | "race"
+                )
+        )
+}
+
+fn expression_is_static_promise_then_call(expression: &Expression) -> bool {
+    let Expression::Call { callee, .. } = expression else {
+        return false;
+    };
+    let Expression::Member { object, property } = callee.as_ref() else {
+        return false;
+    };
+    matches!(property.as_ref(), Expression::String(name) if name == "then")
+        && (expression_is_static_promise_source_call(object)
+            || expression_is_static_promise_then_call(object))
+}
+
 fn expression_is_static_promise_with_resolvers_record(expression: &Expression) -> bool {
     let Expression::Object(entries) = expression else {
         return false;
@@ -537,6 +567,7 @@ impl<'a> FunctionCompiler<'a> {
         value: &Expression,
     ) {
         if expression_is_promise_all_call(value)
+            || expression_is_static_promise_then_call(value)
             || expression_is_promise_with_resolvers_call(value)
             || expression_is_static_promise_with_resolvers_record(value)
         {

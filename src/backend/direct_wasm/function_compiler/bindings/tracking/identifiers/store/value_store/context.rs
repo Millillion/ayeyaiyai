@@ -112,6 +112,36 @@ fn expression_is_promise_all_call(expression: &Expression) -> bool {
     )
 }
 
+fn expression_is_static_promise_source_call(expression: &Expression) -> bool {
+    let Expression::Call { callee, .. } = expression else {
+        return false;
+    };
+    let Expression::Member { object, property } = callee.as_ref() else {
+        return false;
+    };
+    matches!(object.as_ref(), Expression::Identifier(name) if name == "Promise")
+        && matches!(
+            property.as_ref(),
+            Expression::String(name)
+                if matches!(
+                    name.as_str(),
+                    "resolve" | "reject" | "all" | "allSettled" | "any" | "race"
+                )
+        )
+}
+
+fn expression_is_static_promise_then_call(expression: &Expression) -> bool {
+    let Expression::Call { callee, .. } = expression else {
+        return false;
+    };
+    let Expression::Member { object, property } = callee.as_ref() else {
+        return false;
+    };
+    matches!(property.as_ref(), Expression::String(name) if name == "then")
+        && (expression_is_static_promise_source_call(object)
+            || expression_is_static_promise_then_call(object))
+}
+
 pub(in crate::backend::direct_wasm) fn expression_is_dynamic_module_namespace_descriptor_call(
     compiler: &FunctionCompiler<'_>,
     expression: &Expression,
@@ -1513,6 +1543,32 @@ impl<'a> FunctionCompiler<'a> {
                                 )
                         )
             );
+        if expression_is_static_promise_then_call(&canonical_value_expression) {
+            if trace_identifier_store {
+                eprintln!("identifier_store:{name}:promise_then_call");
+            }
+            return PreparedIdentifierValueStore {
+                canonical_value_expression: canonical_value_expression.clone(),
+                tracked_value_expression: canonical_value_expression.clone(),
+                descriptor_binding_expression: Expression::Undefined,
+                tracked_object_expression: Expression::Undefined,
+                call_source_snapshot_expression: None,
+                prototype_source_snapshot_expression: None,
+                function_binding_expression: Expression::Undefined,
+                function_binding: None,
+                object_binding_expression: Expression::Undefined,
+                object_binding: None,
+                kind: Some(StaticValueKind::Object),
+                static_string_value: None,
+                exact_static_number: None,
+                array_binding: None,
+                module_assignment_expression: canonical_value_expression,
+                resolved_local_binding,
+                returned_descriptor_binding: None,
+                runtime_value_override: None,
+                opaque_runtime_value: false,
+            };
+        }
         let tracked_value_expression = match &canonical_value_expression {
             Expression::Call { callee, arguments } => {
                 let preserve_canonical_call_expression = local_array_iterator_next_call

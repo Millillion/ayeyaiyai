@@ -659,6 +659,14 @@ impl<'a> FunctionCompiler<'a> {
         callee: &Expression,
         arguments: &[CallArgument],
     ) -> DirectResult<bool> {
+        let terminal_protocol_member_callee = matches!(
+            callee,
+            Expression::Member { property, .. }
+                if matches!(
+                    property.as_ref(),
+                    Expression::String(name) if matches!(name.as_str(), "return" | "throw")
+                )
+        );
         if self
             .current_function_name()
             .is_some_and(|name| name == "__ayyAssertThrows")
@@ -668,7 +676,7 @@ impl<'a> FunctionCompiler<'a> {
             self.push_i32_const(JS_UNDEFINED_TAG);
             return Ok(true);
         }
-        if self.expression_is_done_callback_callee(callee) {
+        if !terminal_protocol_member_callee && self.expression_is_done_callback_callee(callee) {
             self.emit_done_callback_dynamic_call(arguments)?;
             return Ok(true);
         }
@@ -694,7 +702,8 @@ impl<'a> FunctionCompiler<'a> {
             self.push_i32_const(JS_UNDEFINED_TAG);
             return Ok(true);
         }
-        if self.expression_resolves_to_test262_create_realm_builtin(callee, 0)
+        if !terminal_protocol_member_callee
+            && self.expression_resolves_to_test262_create_realm_builtin(callee, 0)
             && self.emit_builtin_call_for_callee(
                 callee,
                 TEST262_CREATE_REALM_BUILTIN,

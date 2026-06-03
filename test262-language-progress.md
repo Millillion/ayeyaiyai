@@ -1,4 +1,4 @@
-1693/23668 (7.15%)
+1437/23668 (6.07%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,7 +14,7 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 368/9337 (3.94%)
+- statements: 112/9337 (1.20%)
 - expressions: 0/11061 (0.00%)
 - types: 0/113 (0.00%)
 - function-code: 0/217 (0.00%)
@@ -1479,266 +1479,266 @@ Sub-category progress
   - [x] test/language/statements/async-generator/dstr/ary-ptrn-elem-id-init-fn-name-cover.js
   - [x] test/language/statements/async-generator/dstr/ary-ptrn-elem-id-init-fn-name-fn.js
   - [x] test/language/statements/async-generator/dstr/ary-ptrn-elem-id-init-fn-name-gen.js
-  - [x] test/language/statements/async-generator/dstr/ary-ptrn-elem-id-init-hole.js
-  - [x] test/language/statements/async-generator/dstr/ary-ptrn-elem-id-init-skipped.js
-  - [x] test/language/statements/async-generator/dstr/ary-ptrn-elem-id-init-throws.js
-  - [x] test/language/statements/async-generator/dstr/ary-ptrn-elem-id-init-undef.js
-  - [x] test/language/statements/async-generator/dstr/ary-ptrn-elem-id-init-unresolvable.js
-  - [x] test/language/statements/async-generator/dstr/ary-ptrn-elem-id-iter-complete.js
-  - [x] test/language/statements/async-generator/dstr/ary-ptrn-elem-id-iter-done.js
-  - [x] test/language/statements/async-generator/dstr/ary-ptrn-elem-id-iter-step-err.js
-  - [x] test/language/statements/async-generator/dstr/ary-ptrn-elem-id-iter-val-array-prototype.js
-  - [x] test/language/statements/async-generator/dstr/ary-ptrn-elem-id-iter-val-err.js
-  - [x] test/language/statements/async-generator/dstr/ary-ptrn-elem-id-iter-val.js
-  - [x] test/language/statements/async-generator/dstr/ary-ptrn-elem-obj-id-init.js
-  - [x] test/language/statements/async-generator/dstr/ary-ptrn-elem-obj-id.js
-  - [x] test/language/statements/async-generator/dstr/ary-ptrn-elem-obj-prop-id-init.js
-  - [x] test/language/statements/async-generator/dstr/ary-ptrn-elem-obj-prop-id.js
-  - [x] test/language/statements/async-generator/dstr/ary-ptrn-elem-obj-val-null.js
-  - [x] test/language/statements/async-generator/dstr/ary-ptrn-elem-obj-val-undef.js
-  - [x] test/language/statements/async-generator/dstr/ary-ptrn-elision-exhausted.js
-  - [x] test/language/statements/async-generator/dstr/ary-ptrn-elision-step-err.js
-  - [x] test/language/statements/async-generator/dstr/ary-ptrn-elision.js
-  - [x] test/language/statements/async-generator/dstr/ary-ptrn-empty.js
-  - [x] test/language/statements/async-generator/dstr/ary-ptrn-rest-ary-elem.js
-  - [x] test/language/statements/async-generator/dstr/ary-ptrn-rest-ary-elision.js
-  - [x] test/language/statements/async-generator/dstr/ary-ptrn-rest-ary-empty.js
-  - [x] test/language/statements/async-generator/dstr/ary-ptrn-rest-ary-rest.js
-  - [x] test/language/statements/async-generator/dstr/ary-ptrn-rest-id-direct.js
-  - [x] test/language/statements/async-generator/dstr/ary-ptrn-rest-id-elision-next-err.js
-  - [x] test/language/statements/async-generator/dstr/ary-ptrn-rest-id-elision.js
-  - [x] test/language/statements/async-generator/dstr/ary-ptrn-rest-id-exhausted.js
-  - [x] test/language/statements/async-generator/dstr/ary-ptrn-rest-id-iter-step-err.js
-  - [x] test/language/statements/async-generator/dstr/ary-ptrn-rest-id-iter-val-err.js
-  - [x] test/language/statements/async-generator/dstr/ary-ptrn-rest-id.js
-  - [x] test/language/statements/async-generator/dstr/ary-ptrn-rest-init-ary.js
-  - [x] test/language/statements/async-generator/dstr/ary-ptrn-rest-init-id.js
-  - [x] test/language/statements/async-generator/dstr/ary-ptrn-rest-init-obj.js
-  - [x] test/language/statements/async-generator/dstr/ary-ptrn-rest-not-final-ary.js
-  - [x] test/language/statements/async-generator/dstr/ary-ptrn-rest-not-final-id.js
-  - [x] test/language/statements/async-generator/dstr/ary-ptrn-rest-not-final-obj.js
-  - [x] test/language/statements/async-generator/dstr/ary-ptrn-rest-obj-id.js
-  - [x] test/language/statements/async-generator/dstr/ary-ptrn-rest-obj-prop-id.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-init-iter-close.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-init-iter-get-err-array-prototype.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-init-iter-get-err.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-init-iter-no-close.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-name-iter-val.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-ary-elem-init.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-ary-elem-iter.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-ary-elision-init.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-ary-elision-iter.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-ary-empty-init.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-ary-empty-iter.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-ary-rest-init.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-ary-rest-iter.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-ary-val-null.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-id-init-exhausted.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-id-init-fn-name-arrow.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-id-init-fn-name-class.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-id-init-fn-name-cover.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-id-init-fn-name-fn.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-id-init-fn-name-gen.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-id-init-hole.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-id-init-skipped.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-id-init-throws.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-id-init-undef.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-id-init-unresolvable.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-id-iter-complete.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-id-iter-done.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-id-iter-step-err.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-id-iter-val-array-prototype.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-id-iter-val-err.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-id-iter-val.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-obj-id-init.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-obj-id.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-obj-prop-id-init.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-obj-prop-id.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-obj-val-null.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-obj-val-undef.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elision-exhausted.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elision-step-err.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elision.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-empty.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-rest-ary-elem.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-rest-ary-elision.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-rest-ary-empty.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-rest-ary-rest.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-rest-id-direct.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-rest-id-elision-next-err.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-rest-id-elision.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-rest-id-exhausted.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-rest-id-iter-step-err.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-rest-id-iter-val-err.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-rest-id.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-rest-init-ary.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-rest-init-id.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-rest-init-obj.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-rest-not-final-ary.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-rest-not-final-id.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-rest-not-final-obj.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-rest-obj-id.js
-  - [x] test/language/statements/async-generator/dstr/dflt-ary-ptrn-rest-obj-prop-id.js
-  - [x] test/language/statements/async-generator/dstr/dflt-obj-init-null.js
-  - [x] test/language/statements/async-generator/dstr/dflt-obj-init-undefined.js
-  - [x] test/language/statements/async-generator/dstr/dflt-obj-ptrn-empty.js
-  - [x] test/language/statements/async-generator/dstr/dflt-obj-ptrn-id-get-value-err.js
-  - [x] test/language/statements/async-generator/dstr/dflt-obj-ptrn-id-init-fn-name-arrow.js
-  - [x] test/language/statements/async-generator/dstr/dflt-obj-ptrn-id-init-fn-name-class.js
-  - [x] test/language/statements/async-generator/dstr/dflt-obj-ptrn-id-init-fn-name-cover.js
-  - [x] test/language/statements/async-generator/dstr/dflt-obj-ptrn-id-init-fn-name-fn.js
-  - [x] test/language/statements/async-generator/dstr/dflt-obj-ptrn-id-init-fn-name-gen.js
-  - [x] test/language/statements/async-generator/dstr/dflt-obj-ptrn-id-init-skipped.js
-  - [x] test/language/statements/async-generator/dstr/dflt-obj-ptrn-id-init-throws.js
-  - [x] test/language/statements/async-generator/dstr/dflt-obj-ptrn-id-init-unresolvable.js
-  - [x] test/language/statements/async-generator/dstr/dflt-obj-ptrn-id-trailing-comma.js
-  - [x] test/language/statements/async-generator/dstr/dflt-obj-ptrn-list-err.js
-  - [x] test/language/statements/async-generator/dstr/dflt-obj-ptrn-prop-ary-init.js
-  - [x] test/language/statements/async-generator/dstr/dflt-obj-ptrn-prop-ary-trailing-comma.js
-  - [x] test/language/statements/async-generator/dstr/dflt-obj-ptrn-prop-ary-value-null.js
-  - [x] test/language/statements/async-generator/dstr/dflt-obj-ptrn-prop-ary.js
-  - [x] test/language/statements/async-generator/dstr/dflt-obj-ptrn-prop-eval-err.js
-  - [x] test/language/statements/async-generator/dstr/dflt-obj-ptrn-prop-id-get-value-err.js
-  - [x] test/language/statements/async-generator/dstr/dflt-obj-ptrn-prop-id-init-skipped.js
-  - [x] test/language/statements/async-generator/dstr/dflt-obj-ptrn-prop-id-init-throws.js
-  - [x] test/language/statements/async-generator/dstr/dflt-obj-ptrn-prop-id-init-unresolvable.js
-  - [x] test/language/statements/async-generator/dstr/dflt-obj-ptrn-prop-id-init.js
-  - [x] test/language/statements/async-generator/dstr/dflt-obj-ptrn-prop-id-trailing-comma.js
-  - [x] test/language/statements/async-generator/dstr/dflt-obj-ptrn-prop-id.js
-  - [x] test/language/statements/async-generator/dstr/dflt-obj-ptrn-prop-obj-init.js
-  - [x] test/language/statements/async-generator/dstr/dflt-obj-ptrn-prop-obj-value-null.js
-  - [x] test/language/statements/async-generator/dstr/dflt-obj-ptrn-prop-obj-value-undef.js
-  - [x] test/language/statements/async-generator/dstr/dflt-obj-ptrn-prop-obj.js
-  - [x] test/language/statements/async-generator/dstr/dflt-obj-ptrn-rest-getter.js
-  - [x] test/language/statements/async-generator/dstr/dflt-obj-ptrn-rest-skip-non-enumerable.js
-  - [x] test/language/statements/async-generator/dstr/dflt-obj-ptrn-rest-val-obj.js
-  - [x] test/language/statements/async-generator/dstr/obj-init-null.js
-  - [x] test/language/statements/async-generator/dstr/obj-init-undefined.js
-  - [x] test/language/statements/async-generator/dstr/obj-ptrn-empty.js
-  - [x] test/language/statements/async-generator/dstr/obj-ptrn-id-get-value-err.js
-  - [x] test/language/statements/async-generator/dstr/obj-ptrn-id-init-fn-name-arrow.js
-  - [x] test/language/statements/async-generator/dstr/obj-ptrn-id-init-fn-name-class.js
-  - [x] test/language/statements/async-generator/dstr/obj-ptrn-id-init-fn-name-cover.js
-  - [x] test/language/statements/async-generator/dstr/obj-ptrn-id-init-fn-name-fn.js
-  - [x] test/language/statements/async-generator/dstr/obj-ptrn-id-init-fn-name-gen.js
-  - [x] test/language/statements/async-generator/dstr/obj-ptrn-id-init-skipped.js
-  - [x] test/language/statements/async-generator/dstr/obj-ptrn-id-init-throws.js
-  - [x] test/language/statements/async-generator/dstr/obj-ptrn-id-init-unresolvable.js
-  - [x] test/language/statements/async-generator/dstr/obj-ptrn-id-trailing-comma.js
-  - [x] test/language/statements/async-generator/dstr/obj-ptrn-list-err.js
-  - [x] test/language/statements/async-generator/dstr/obj-ptrn-prop-ary-init.js
-  - [x] test/language/statements/async-generator/dstr/obj-ptrn-prop-ary-trailing-comma.js
-  - [x] test/language/statements/async-generator/dstr/obj-ptrn-prop-ary-value-null.js
-  - [x] test/language/statements/async-generator/dstr/obj-ptrn-prop-ary.js
-  - [x] test/language/statements/async-generator/dstr/obj-ptrn-prop-eval-err.js
-  - [x] test/language/statements/async-generator/dstr/obj-ptrn-prop-id-get-value-err.js
-  - [x] test/language/statements/async-generator/dstr/obj-ptrn-prop-id-init-skipped.js
-  - [x] test/language/statements/async-generator/dstr/obj-ptrn-prop-id-init-throws.js
-  - [x] test/language/statements/async-generator/dstr/obj-ptrn-prop-id-init-unresolvable.js
-  - [x] test/language/statements/async-generator/dstr/obj-ptrn-prop-id-init.js
-  - [x] test/language/statements/async-generator/dstr/obj-ptrn-prop-id-trailing-comma.js
-  - [x] test/language/statements/async-generator/dstr/obj-ptrn-prop-id.js
-  - [x] test/language/statements/async-generator/dstr/obj-ptrn-prop-obj-init.js
-  - [x] test/language/statements/async-generator/dstr/obj-ptrn-prop-obj-value-null.js
-  - [x] test/language/statements/async-generator/dstr/obj-ptrn-prop-obj-value-undef.js
-  - [x] test/language/statements/async-generator/dstr/obj-ptrn-prop-obj.js
-  - [x] test/language/statements/async-generator/dstr/obj-ptrn-rest-getter.js
-  - [x] test/language/statements/async-generator/dstr/obj-ptrn-rest-skip-non-enumerable.js
-  - [x] test/language/statements/async-generator/dstr/obj-ptrn-rest-val-obj.js
-  - [x] test/language/statements/async-generator/escaped-async.js
-  - [x] test/language/statements/async-generator/eval-var-scope-syntax-err.js
-  - [x] test/language/statements/async-generator/forbidden-ext/b1/async-gen-func-decl-forbidden-ext-direct-access-prop-arguments.js
-  - [x] test/language/statements/async-generator/forbidden-ext/b1/async-gen-func-decl-forbidden-ext-direct-access-prop-caller.js
-  - [x] test/language/statements/async-generator/forbidden-ext/b2/async-gen-func-decl-forbidden-ext-indirect-access-own-prop-caller-get.js
-  - [x] test/language/statements/async-generator/forbidden-ext/b2/async-gen-func-decl-forbidden-ext-indirect-access-own-prop-caller-value.js
-  - [x] test/language/statements/async-generator/forbidden-ext/b2/async-gen-func-decl-forbidden-ext-indirect-access-prop-caller.js
-  - [x] test/language/statements/async-generator/generator-created-after-decl-inst.js
-  - [x] test/language/statements/async-generator/object-destructuring-param-strict-body.js
-  - [x] test/language/statements/async-generator/params-trailing-comma-multiple.js
-  - [x] test/language/statements/async-generator/params-trailing-comma-single.js
-  - [x] test/language/statements/async-generator/rest-param-strict-body.js
-  - [x] test/language/statements/async-generator/rest-params-trailing-comma-early-error.js
-  - [x] test/language/statements/async-generator/return-undefined-implicit-and-explicit.js
-  - [x] test/language/statements/async-generator/unscopables-with-in-nested-fn.js
-  - [x] test/language/statements/async-generator/unscopables-with.js
-  - [x] test/language/statements/async-generator/yield-as-binding-identifier-escaped.js
-  - [x] test/language/statements/async-generator/yield-as-binding-identifier.js
-  - [x] test/language/statements/async-generator/yield-as-identifier-reference-escaped.js
-  - [x] test/language/statements/async-generator/yield-as-identifier-reference.js
-  - [x] test/language/statements/async-generator/yield-as-label-identifier-escaped.js
-  - [x] test/language/statements/async-generator/yield-as-label-identifier.js
-  - [x] test/language/statements/async-generator/yield-identifier-non-strict.js
-  - [x] test/language/statements/async-generator/yield-identifier-spread-non-strict.js
-  - [x] test/language/statements/async-generator/yield-identifier-spread-strict.js
-  - [x] test/language/statements/async-generator/yield-identifier-strict.js
-  - [x] test/language/statements/async-generator/yield-promise-reject-next-catch.js
-  - [x] test/language/statements/async-generator/yield-promise-reject-next-for-await-of-async-iterator.js
-  - [x] test/language/statements/async-generator/yield-promise-reject-next-for-await-of-sync-iterator.js
-  - [x] test/language/statements/async-generator/yield-promise-reject-next-yield-star-async-iterator.js
-  - [x] test/language/statements/async-generator/yield-promise-reject-next-yield-star-sync-iterator.js
-  - [x] test/language/statements/async-generator/yield-promise-reject-next.js
-  - [x] test/language/statements/async-generator/yield-return-then-getter-ticks.js
-  - [x] test/language/statements/async-generator/yield-spread-arr-multiple.js
-  - [x] test/language/statements/async-generator/yield-spread-arr-single.js
-  - [x] test/language/statements/async-generator/yield-spread-obj.js
-  - [x] test/language/statements/async-generator/yield-star-async-from-sync-iterator-inaccessible.js
-  - [x] test/language/statements/async-generator/yield-star-async-next.js
-  - [x] test/language/statements/async-generator/yield-star-async-return.js
-  - [x] test/language/statements/async-generator/yield-star-async-throw.js
-  - [x] test/language/statements/async-generator/yield-star-expr-abrupt.js
-  - [x] test/language/statements/async-generator/yield-star-getiter-async-get-abrupt.js
-  - [x] test/language/statements/async-generator/yield-star-getiter-async-not-callable-boolean-throw.js
-  - [x] test/language/statements/async-generator/yield-star-getiter-async-not-callable-number-throw.js
-  - [x] test/language/statements/async-generator/yield-star-getiter-async-not-callable-object-throw.js
-  - [x] test/language/statements/async-generator/yield-star-getiter-async-not-callable-string-throw.js
-  - [x] test/language/statements/async-generator/yield-star-getiter-async-not-callable-symbol-throw.js
-  - [x] test/language/statements/async-generator/yield-star-getiter-async-null-sync-get-abrupt.js
-  - [x] test/language/statements/async-generator/yield-star-getiter-async-returns-abrupt.js
-  - [x] test/language/statements/async-generator/yield-star-getiter-async-returns-boolean-throw.js
-  - [x] test/language/statements/async-generator/yield-star-getiter-async-returns-null-throw.js
-  - [x] test/language/statements/async-generator/yield-star-getiter-async-returns-number-throw.js
-  - [x] test/language/statements/async-generator/yield-star-getiter-async-returns-string-throw.js
-  - [x] test/language/statements/async-generator/yield-star-getiter-async-returns-symbol-throw.js
-  - [x] test/language/statements/async-generator/yield-star-getiter-async-returns-undefined-throw.js
-  - [x] test/language/statements/async-generator/yield-star-getiter-async-undefined-sync-get-abrupt.js
-  - [x] test/language/statements/async-generator/yield-star-getiter-sync-get-abrupt.js
-  - [x] test/language/statements/async-generator/yield-star-getiter-sync-not-callable-boolean-throw.js
-  - [x] test/language/statements/async-generator/yield-star-getiter-sync-not-callable-number-throw.js
-  - [x] test/language/statements/async-generator/yield-star-getiter-sync-not-callable-object-throw.js
-  - [x] test/language/statements/async-generator/yield-star-getiter-sync-not-callable-string-throw.js
-  - [x] test/language/statements/async-generator/yield-star-getiter-sync-not-callable-symbol-throw.js
-  - [x] test/language/statements/async-generator/yield-star-getiter-sync-returns-abrupt.js
-  - [x] test/language/statements/async-generator/yield-star-getiter-sync-returns-boolean-throw.js
-  - [x] test/language/statements/async-generator/yield-star-getiter-sync-returns-null-throw.js
-  - [x] test/language/statements/async-generator/yield-star-getiter-sync-returns-number-throw.js
-  - [x] test/language/statements/async-generator/yield-star-getiter-sync-returns-string-throw.js
-  - [x] test/language/statements/async-generator/yield-star-getiter-sync-returns-symbol-throw.js
-  - [x] test/language/statements/async-generator/yield-star-getiter-sync-returns-undefined-throw.js
-  - [x] test/language/statements/async-generator/yield-star-next-call-done-get-abrupt.js
-  - [x] test/language/statements/async-generator/yield-star-next-call-returns-abrupt.js
-  - [x] test/language/statements/async-generator/yield-star-next-call-value-get-abrupt.js
-  - [x] test/language/statements/async-generator/yield-star-next-get-abrupt.js
-  - [x] test/language/statements/async-generator/yield-star-next-non-object-ignores-then.js
-  - [x] test/language/statements/async-generator/yield-star-next-not-callable-boolean-throw.js
-  - [x] test/language/statements/async-generator/yield-star-next-not-callable-null-throw.js
-  - [x] test/language/statements/async-generator/yield-star-next-not-callable-number-throw.js
-  - [x] test/language/statements/async-generator/yield-star-next-not-callable-object-throw.js
-  - [x] test/language/statements/async-generator/yield-star-next-not-callable-string-throw.js
-  - [x] test/language/statements/async-generator/yield-star-next-not-callable-symbol-throw.js
-  - [x] test/language/statements/async-generator/yield-star-next-not-callable-undefined-throw.js
-  - [x] test/language/statements/async-generator/yield-star-next-then-get-abrupt.js
-  - [x] test/language/statements/async-generator/yield-star-next-then-non-callable-boolean-fulfillpromise.js
-  - [x] test/language/statements/async-generator/yield-star-next-then-non-callable-null-fulfillpromise.js
-  - [x] test/language/statements/async-generator/yield-star-next-then-non-callable-number-fulfillpromise.js
-  - [x] test/language/statements/async-generator/yield-star-next-then-non-callable-object-fulfillpromise.js
-  - [x] test/language/statements/async-generator/yield-star-next-then-non-callable-string-fulfillpromise.js
-  - [x] test/language/statements/async-generator/yield-star-next-then-non-callable-symbol-fulfillpromise.js
-  - [x] test/language/statements/async-generator/yield-star-next-then-non-callable-undefined-fulfillpromise.js
-  - [x] test/language/statements/async-generator/yield-star-next-then-returns-abrupt.js
-  - [x] test/language/statements/async-generator/yield-star-normal-notdone-iter-value-throws.js
-  - [x] test/language/statements/async-generator/yield-star-promise-not-unwrapped.js
-  - [ ] test/language/statements/async-generator/yield-star-return-missing-value-is-awaited.js
-  - [ ] test/language/statements/async-generator/yield-star-return-notdone-iter-value-throws.js
+  - [ ] test/language/statements/async-generator/dstr/ary-ptrn-elem-id-init-hole.js
+  - [ ] test/language/statements/async-generator/dstr/ary-ptrn-elem-id-init-skipped.js
+  - [ ] test/language/statements/async-generator/dstr/ary-ptrn-elem-id-init-throws.js
+  - [ ] test/language/statements/async-generator/dstr/ary-ptrn-elem-id-init-undef.js
+  - [ ] test/language/statements/async-generator/dstr/ary-ptrn-elem-id-init-unresolvable.js
+  - [ ] test/language/statements/async-generator/dstr/ary-ptrn-elem-id-iter-complete.js
+  - [ ] test/language/statements/async-generator/dstr/ary-ptrn-elem-id-iter-done.js
+  - [ ] test/language/statements/async-generator/dstr/ary-ptrn-elem-id-iter-step-err.js
+  - [ ] test/language/statements/async-generator/dstr/ary-ptrn-elem-id-iter-val-array-prototype.js
+  - [ ] test/language/statements/async-generator/dstr/ary-ptrn-elem-id-iter-val-err.js
+  - [ ] test/language/statements/async-generator/dstr/ary-ptrn-elem-id-iter-val.js
+  - [ ] test/language/statements/async-generator/dstr/ary-ptrn-elem-obj-id-init.js
+  - [ ] test/language/statements/async-generator/dstr/ary-ptrn-elem-obj-id.js
+  - [ ] test/language/statements/async-generator/dstr/ary-ptrn-elem-obj-prop-id-init.js
+  - [ ] test/language/statements/async-generator/dstr/ary-ptrn-elem-obj-prop-id.js
+  - [ ] test/language/statements/async-generator/dstr/ary-ptrn-elem-obj-val-null.js
+  - [ ] test/language/statements/async-generator/dstr/ary-ptrn-elem-obj-val-undef.js
+  - [ ] test/language/statements/async-generator/dstr/ary-ptrn-elision-exhausted.js
+  - [ ] test/language/statements/async-generator/dstr/ary-ptrn-elision-step-err.js
+  - [ ] test/language/statements/async-generator/dstr/ary-ptrn-elision.js
+  - [ ] test/language/statements/async-generator/dstr/ary-ptrn-empty.js
+  - [ ] test/language/statements/async-generator/dstr/ary-ptrn-rest-ary-elem.js
+  - [ ] test/language/statements/async-generator/dstr/ary-ptrn-rest-ary-elision.js
+  - [ ] test/language/statements/async-generator/dstr/ary-ptrn-rest-ary-empty.js
+  - [ ] test/language/statements/async-generator/dstr/ary-ptrn-rest-ary-rest.js
+  - [ ] test/language/statements/async-generator/dstr/ary-ptrn-rest-id-direct.js
+  - [ ] test/language/statements/async-generator/dstr/ary-ptrn-rest-id-elision-next-err.js
+  - [ ] test/language/statements/async-generator/dstr/ary-ptrn-rest-id-elision.js
+  - [ ] test/language/statements/async-generator/dstr/ary-ptrn-rest-id-exhausted.js
+  - [ ] test/language/statements/async-generator/dstr/ary-ptrn-rest-id-iter-step-err.js
+  - [ ] test/language/statements/async-generator/dstr/ary-ptrn-rest-id-iter-val-err.js
+  - [ ] test/language/statements/async-generator/dstr/ary-ptrn-rest-id.js
+  - [ ] test/language/statements/async-generator/dstr/ary-ptrn-rest-init-ary.js
+  - [ ] test/language/statements/async-generator/dstr/ary-ptrn-rest-init-id.js
+  - [ ] test/language/statements/async-generator/dstr/ary-ptrn-rest-init-obj.js
+  - [ ] test/language/statements/async-generator/dstr/ary-ptrn-rest-not-final-ary.js
+  - [ ] test/language/statements/async-generator/dstr/ary-ptrn-rest-not-final-id.js
+  - [ ] test/language/statements/async-generator/dstr/ary-ptrn-rest-not-final-obj.js
+  - [ ] test/language/statements/async-generator/dstr/ary-ptrn-rest-obj-id.js
+  - [ ] test/language/statements/async-generator/dstr/ary-ptrn-rest-obj-prop-id.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-init-iter-close.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-init-iter-get-err-array-prototype.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-init-iter-get-err.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-init-iter-no-close.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-name-iter-val.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-ary-elem-init.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-ary-elem-iter.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-ary-elision-init.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-ary-elision-iter.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-ary-empty-init.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-ary-empty-iter.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-ary-rest-init.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-ary-rest-iter.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-ary-val-null.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-id-init-exhausted.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-id-init-fn-name-arrow.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-id-init-fn-name-class.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-id-init-fn-name-cover.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-id-init-fn-name-fn.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-id-init-fn-name-gen.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-id-init-hole.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-id-init-skipped.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-id-init-throws.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-id-init-undef.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-id-init-unresolvable.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-id-iter-complete.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-id-iter-done.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-id-iter-step-err.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-id-iter-val-array-prototype.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-id-iter-val-err.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-id-iter-val.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-obj-id-init.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-obj-id.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-obj-prop-id-init.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-obj-prop-id.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-obj-val-null.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elem-obj-val-undef.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elision-exhausted.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elision-step-err.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-elision.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-empty.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-rest-ary-elem.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-rest-ary-elision.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-rest-ary-empty.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-rest-ary-rest.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-rest-id-direct.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-rest-id-elision-next-err.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-rest-id-elision.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-rest-id-exhausted.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-rest-id-iter-step-err.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-rest-id-iter-val-err.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-rest-id.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-rest-init-ary.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-rest-init-id.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-rest-init-obj.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-rest-not-final-ary.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-rest-not-final-id.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-rest-not-final-obj.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-rest-obj-id.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-ary-ptrn-rest-obj-prop-id.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-obj-init-null.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-obj-init-undefined.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-obj-ptrn-empty.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-obj-ptrn-id-get-value-err.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-obj-ptrn-id-init-fn-name-arrow.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-obj-ptrn-id-init-fn-name-class.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-obj-ptrn-id-init-fn-name-cover.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-obj-ptrn-id-init-fn-name-fn.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-obj-ptrn-id-init-fn-name-gen.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-obj-ptrn-id-init-skipped.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-obj-ptrn-id-init-throws.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-obj-ptrn-id-init-unresolvable.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-obj-ptrn-id-trailing-comma.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-obj-ptrn-list-err.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-obj-ptrn-prop-ary-init.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-obj-ptrn-prop-ary-trailing-comma.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-obj-ptrn-prop-ary-value-null.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-obj-ptrn-prop-ary.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-obj-ptrn-prop-eval-err.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-obj-ptrn-prop-id-get-value-err.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-obj-ptrn-prop-id-init-skipped.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-obj-ptrn-prop-id-init-throws.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-obj-ptrn-prop-id-init-unresolvable.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-obj-ptrn-prop-id-init.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-obj-ptrn-prop-id-trailing-comma.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-obj-ptrn-prop-id.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-obj-ptrn-prop-obj-init.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-obj-ptrn-prop-obj-value-null.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-obj-ptrn-prop-obj-value-undef.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-obj-ptrn-prop-obj.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-obj-ptrn-rest-getter.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-obj-ptrn-rest-skip-non-enumerable.js
+  - [ ] test/language/statements/async-generator/dstr/dflt-obj-ptrn-rest-val-obj.js
+  - [ ] test/language/statements/async-generator/dstr/obj-init-null.js
+  - [ ] test/language/statements/async-generator/dstr/obj-init-undefined.js
+  - [ ] test/language/statements/async-generator/dstr/obj-ptrn-empty.js
+  - [ ] test/language/statements/async-generator/dstr/obj-ptrn-id-get-value-err.js
+  - [ ] test/language/statements/async-generator/dstr/obj-ptrn-id-init-fn-name-arrow.js
+  - [ ] test/language/statements/async-generator/dstr/obj-ptrn-id-init-fn-name-class.js
+  - [ ] test/language/statements/async-generator/dstr/obj-ptrn-id-init-fn-name-cover.js
+  - [ ] test/language/statements/async-generator/dstr/obj-ptrn-id-init-fn-name-fn.js
+  - [ ] test/language/statements/async-generator/dstr/obj-ptrn-id-init-fn-name-gen.js
+  - [ ] test/language/statements/async-generator/dstr/obj-ptrn-id-init-skipped.js
+  - [ ] test/language/statements/async-generator/dstr/obj-ptrn-id-init-throws.js
+  - [ ] test/language/statements/async-generator/dstr/obj-ptrn-id-init-unresolvable.js
+  - [ ] test/language/statements/async-generator/dstr/obj-ptrn-id-trailing-comma.js
+  - [ ] test/language/statements/async-generator/dstr/obj-ptrn-list-err.js
+  - [ ] test/language/statements/async-generator/dstr/obj-ptrn-prop-ary-init.js
+  - [ ] test/language/statements/async-generator/dstr/obj-ptrn-prop-ary-trailing-comma.js
+  - [ ] test/language/statements/async-generator/dstr/obj-ptrn-prop-ary-value-null.js
+  - [ ] test/language/statements/async-generator/dstr/obj-ptrn-prop-ary.js
+  - [ ] test/language/statements/async-generator/dstr/obj-ptrn-prop-eval-err.js
+  - [ ] test/language/statements/async-generator/dstr/obj-ptrn-prop-id-get-value-err.js
+  - [ ] test/language/statements/async-generator/dstr/obj-ptrn-prop-id-init-skipped.js
+  - [ ] test/language/statements/async-generator/dstr/obj-ptrn-prop-id-init-throws.js
+  - [ ] test/language/statements/async-generator/dstr/obj-ptrn-prop-id-init-unresolvable.js
+  - [ ] test/language/statements/async-generator/dstr/obj-ptrn-prop-id-init.js
+  - [ ] test/language/statements/async-generator/dstr/obj-ptrn-prop-id-trailing-comma.js
+  - [ ] test/language/statements/async-generator/dstr/obj-ptrn-prop-id.js
+  - [ ] test/language/statements/async-generator/dstr/obj-ptrn-prop-obj-init.js
+  - [ ] test/language/statements/async-generator/dstr/obj-ptrn-prop-obj-value-null.js
+  - [ ] test/language/statements/async-generator/dstr/obj-ptrn-prop-obj-value-undef.js
+  - [ ] test/language/statements/async-generator/dstr/obj-ptrn-prop-obj.js
+  - [ ] test/language/statements/async-generator/dstr/obj-ptrn-rest-getter.js
+  - [ ] test/language/statements/async-generator/dstr/obj-ptrn-rest-skip-non-enumerable.js
+  - [ ] test/language/statements/async-generator/dstr/obj-ptrn-rest-val-obj.js
+  - [ ] test/language/statements/async-generator/escaped-async.js
+  - [ ] test/language/statements/async-generator/eval-var-scope-syntax-err.js
+  - [ ] test/language/statements/async-generator/forbidden-ext/b1/async-gen-func-decl-forbidden-ext-direct-access-prop-arguments.js
+  - [ ] test/language/statements/async-generator/forbidden-ext/b1/async-gen-func-decl-forbidden-ext-direct-access-prop-caller.js
+  - [ ] test/language/statements/async-generator/forbidden-ext/b2/async-gen-func-decl-forbidden-ext-indirect-access-own-prop-caller-get.js
+  - [ ] test/language/statements/async-generator/forbidden-ext/b2/async-gen-func-decl-forbidden-ext-indirect-access-own-prop-caller-value.js
+  - [ ] test/language/statements/async-generator/forbidden-ext/b2/async-gen-func-decl-forbidden-ext-indirect-access-prop-caller.js
+  - [ ] test/language/statements/async-generator/generator-created-after-decl-inst.js
+  - [ ] test/language/statements/async-generator/object-destructuring-param-strict-body.js
+  - [ ] test/language/statements/async-generator/params-trailing-comma-multiple.js
+  - [ ] test/language/statements/async-generator/params-trailing-comma-single.js
+  - [ ] test/language/statements/async-generator/rest-param-strict-body.js
+  - [ ] test/language/statements/async-generator/rest-params-trailing-comma-early-error.js
+  - [ ] test/language/statements/async-generator/return-undefined-implicit-and-explicit.js
+  - [ ] test/language/statements/async-generator/unscopables-with-in-nested-fn.js
+  - [ ] test/language/statements/async-generator/unscopables-with.js
+  - [ ] test/language/statements/async-generator/yield-as-binding-identifier-escaped.js
+  - [ ] test/language/statements/async-generator/yield-as-binding-identifier.js
+  - [ ] test/language/statements/async-generator/yield-as-identifier-reference-escaped.js
+  - [ ] test/language/statements/async-generator/yield-as-identifier-reference.js
+  - [ ] test/language/statements/async-generator/yield-as-label-identifier-escaped.js
+  - [ ] test/language/statements/async-generator/yield-as-label-identifier.js
+  - [ ] test/language/statements/async-generator/yield-identifier-non-strict.js
+  - [ ] test/language/statements/async-generator/yield-identifier-spread-non-strict.js
+  - [ ] test/language/statements/async-generator/yield-identifier-spread-strict.js
+  - [ ] test/language/statements/async-generator/yield-identifier-strict.js
+  - [ ] test/language/statements/async-generator/yield-promise-reject-next-catch.js
+  - [ ] test/language/statements/async-generator/yield-promise-reject-next-for-await-of-async-iterator.js
+  - [ ] test/language/statements/async-generator/yield-promise-reject-next-for-await-of-sync-iterator.js
+  - [ ] test/language/statements/async-generator/yield-promise-reject-next-yield-star-async-iterator.js
+  - [ ] test/language/statements/async-generator/yield-promise-reject-next-yield-star-sync-iterator.js
+  - [ ] test/language/statements/async-generator/yield-promise-reject-next.js
+  - [ ] test/language/statements/async-generator/yield-return-then-getter-ticks.js
+  - [ ] test/language/statements/async-generator/yield-spread-arr-multiple.js
+  - [ ] test/language/statements/async-generator/yield-spread-arr-single.js
+  - [ ] test/language/statements/async-generator/yield-spread-obj.js
+  - [ ] test/language/statements/async-generator/yield-star-async-from-sync-iterator-inaccessible.js
+  - [ ] test/language/statements/async-generator/yield-star-async-next.js
+  - [ ] test/language/statements/async-generator/yield-star-async-return.js
+  - [ ] test/language/statements/async-generator/yield-star-async-throw.js
+  - [ ] test/language/statements/async-generator/yield-star-expr-abrupt.js
+  - [ ] test/language/statements/async-generator/yield-star-getiter-async-get-abrupt.js
+  - [ ] test/language/statements/async-generator/yield-star-getiter-async-not-callable-boolean-throw.js
+  - [ ] test/language/statements/async-generator/yield-star-getiter-async-not-callable-number-throw.js
+  - [ ] test/language/statements/async-generator/yield-star-getiter-async-not-callable-object-throw.js
+  - [ ] test/language/statements/async-generator/yield-star-getiter-async-not-callable-string-throw.js
+  - [ ] test/language/statements/async-generator/yield-star-getiter-async-not-callable-symbol-throw.js
+  - [ ] test/language/statements/async-generator/yield-star-getiter-async-null-sync-get-abrupt.js
+  - [ ] test/language/statements/async-generator/yield-star-getiter-async-returns-abrupt.js
+  - [ ] test/language/statements/async-generator/yield-star-getiter-async-returns-boolean-throw.js
+  - [ ] test/language/statements/async-generator/yield-star-getiter-async-returns-null-throw.js
+  - [ ] test/language/statements/async-generator/yield-star-getiter-async-returns-number-throw.js
+  - [ ] test/language/statements/async-generator/yield-star-getiter-async-returns-string-throw.js
+  - [ ] test/language/statements/async-generator/yield-star-getiter-async-returns-symbol-throw.js
+  - [ ] test/language/statements/async-generator/yield-star-getiter-async-returns-undefined-throw.js
+  - [ ] test/language/statements/async-generator/yield-star-getiter-async-undefined-sync-get-abrupt.js
+  - [ ] test/language/statements/async-generator/yield-star-getiter-sync-get-abrupt.js
+  - [ ] test/language/statements/async-generator/yield-star-getiter-sync-not-callable-boolean-throw.js
+  - [ ] test/language/statements/async-generator/yield-star-getiter-sync-not-callable-number-throw.js
+  - [ ] test/language/statements/async-generator/yield-star-getiter-sync-not-callable-object-throw.js
+  - [ ] test/language/statements/async-generator/yield-star-getiter-sync-not-callable-string-throw.js
+  - [ ] test/language/statements/async-generator/yield-star-getiter-sync-not-callable-symbol-throw.js
+  - [ ] test/language/statements/async-generator/yield-star-getiter-sync-returns-abrupt.js
+  - [ ] test/language/statements/async-generator/yield-star-getiter-sync-returns-boolean-throw.js
+  - [ ] test/language/statements/async-generator/yield-star-getiter-sync-returns-null-throw.js
+  - [ ] test/language/statements/async-generator/yield-star-getiter-sync-returns-number-throw.js
+  - [ ] test/language/statements/async-generator/yield-star-getiter-sync-returns-string-throw.js
+  - [ ] test/language/statements/async-generator/yield-star-getiter-sync-returns-symbol-throw.js
+  - [ ] test/language/statements/async-generator/yield-star-getiter-sync-returns-undefined-throw.js
+  - [ ] test/language/statements/async-generator/yield-star-next-call-done-get-abrupt.js
+  - [ ] test/language/statements/async-generator/yield-star-next-call-returns-abrupt.js
+  - [ ] test/language/statements/async-generator/yield-star-next-call-value-get-abrupt.js
+  - [ ] test/language/statements/async-generator/yield-star-next-get-abrupt.js
+  - [ ] test/language/statements/async-generator/yield-star-next-non-object-ignores-then.js
+  - [ ] test/language/statements/async-generator/yield-star-next-not-callable-boolean-throw.js
+  - [ ] test/language/statements/async-generator/yield-star-next-not-callable-null-throw.js
+  - [ ] test/language/statements/async-generator/yield-star-next-not-callable-number-throw.js
+  - [ ] test/language/statements/async-generator/yield-star-next-not-callable-object-throw.js
+  - [ ] test/language/statements/async-generator/yield-star-next-not-callable-string-throw.js
+  - [ ] test/language/statements/async-generator/yield-star-next-not-callable-symbol-throw.js
+  - [ ] test/language/statements/async-generator/yield-star-next-not-callable-undefined-throw.js
+  - [ ] test/language/statements/async-generator/yield-star-next-then-get-abrupt.js
+  - [ ] test/language/statements/async-generator/yield-star-next-then-non-callable-boolean-fulfillpromise.js
+  - [ ] test/language/statements/async-generator/yield-star-next-then-non-callable-null-fulfillpromise.js
+  - [ ] test/language/statements/async-generator/yield-star-next-then-non-callable-number-fulfillpromise.js
+  - [ ] test/language/statements/async-generator/yield-star-next-then-non-callable-object-fulfillpromise.js
+  - [ ] test/language/statements/async-generator/yield-star-next-then-non-callable-string-fulfillpromise.js
+  - [ ] test/language/statements/async-generator/yield-star-next-then-non-callable-symbol-fulfillpromise.js
+  - [ ] test/language/statements/async-generator/yield-star-next-then-non-callable-undefined-fulfillpromise.js
+  - [ ] test/language/statements/async-generator/yield-star-next-then-returns-abrupt.js
+  - [ ] test/language/statements/async-generator/yield-star-normal-notdone-iter-value-throws.js
+  - [ ] test/language/statements/async-generator/yield-star-promise-not-unwrapped.js
+  - [x] test/language/statements/async-generator/yield-star-return-missing-value-is-awaited.js
+  - [x] test/language/statements/async-generator/yield-star-return-notdone-iter-value-throws.js
   - [ ] test/language/statements/async-generator/yield-star-return-then-getter-ticks.js
   - [ ] test/language/statements/async-generator/yield-star-sync-next.js
   - [ ] test/language/statements/async-generator/yield-star-sync-return.js

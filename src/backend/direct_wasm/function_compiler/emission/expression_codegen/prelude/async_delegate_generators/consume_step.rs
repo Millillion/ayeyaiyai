@@ -1,6 +1,202 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn static_object_key_may_match_string_property(key: &Expression, property_name: &str) -> bool {
+        match key {
+            Expression::String(key_name) => key_name == property_name,
+            Expression::Sequence(expressions) => expressions.last().map_or(true, |key| {
+                Self::static_object_key_may_match_string_property(key, property_name)
+            }),
+            Expression::Member { object, .. } if matches!(object.as_ref(), Expression::Identifier(name) if name == "Symbol") => {
+                false
+            }
+            Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined => false,
+            _ => true,
+        }
+    }
+
+    fn static_delegate_object_lacks_step_method(
+        &self,
+        expression: &Expression,
+        property: &Expression,
+    ) -> bool {
+        if let Expression::Identifier(name) = expression {
+            if let Some(object_binding) = self
+                .state
+                .speculation
+                .static_semantics
+                .local_object_binding(name)
+                .or_else(|| self.global_object_binding(name))
+            {
+                return object_binding_lookup_value(object_binding, property).is_none()
+                    && object_binding_lookup_descriptor(object_binding, property).is_none();
+            }
+            return false;
+        }
+        let Expression::Object(entries) = expression else {
+            return false;
+        };
+        let Expression::String(property_name) = property else {
+            return false;
+        };
+        for entry in entries {
+            match entry {
+                ObjectEntry::Data { key, .. }
+                | ObjectEntry::Getter { key, .. }
+                | ObjectEntry::Setter { key, .. } => {
+                    if Self::static_object_key_may_match_string_property(key, property_name) {
+                        return false;
+                    }
+                }
+                ObjectEntry::Spread(_) => return false,
+            }
+        }
+        true
+    }
+
+    fn static_delegate_snapshot_value_lacks_step_method(
+        &self,
+        expression: &Expression,
+        property: &Expression,
+        snapshot_bindings: &HashMap<String, Expression>,
+    ) -> bool {
+        if self.static_delegate_object_lacks_step_method(expression, property) {
+            return true;
+        }
+        let Expression::Identifier(name) = expression else {
+            return false;
+        };
+        snapshot_bindings
+            .get(name)
+            .or_else(|| {
+                self.state
+                    .speculation
+                    .static_semantics
+                    .local_value_binding(name)
+            })
+            .or_else(|| self.global_value_binding(name))
+            .is_some_and(|value| {
+                !static_expression_matches(value, expression)
+                    && self.static_delegate_object_lacks_step_method(value, property)
+            })
+    }
+
+    fn direct_static_snapshot_or_value_alias(
+        &self,
+        expression: &Expression,
+        snapshot_bindings: Option<&HashMap<String, Expression>>,
+    ) -> Option<Expression> {
+        let Expression::Identifier(name) = expression else {
+            return None;
+        };
+        snapshot_bindings
+            .and_then(|bindings| bindings.get(name))
+            .or_else(|| {
+                self.state
+                    .speculation
+                    .static_semantics
+                    .local_value_binding(name)
+            })
+            .or_else(|| self.global_value_binding(name))
+            .filter(|value| !static_expression_matches(value, expression))
+            .cloned()
+    }
+
+    fn resolve_static_promise_chain_await_outcome(
+        &self,
+        expression: &Expression,
+        snapshot_bindings: Option<&HashMap<String, Expression>>,
+    ) -> Option<StaticEvalOutcome> {
+        self.resolve_static_promise_chain_await_outcome_with_depth(expression, snapshot_bindings, 0)
+    }
+
+    fn resolve_static_promise_chain_await_outcome_with_depth(
+        &self,
+        expression: &Expression,
+        snapshot_bindings: Option<&HashMap<String, Expression>>,
+        depth: usize,
+    ) -> Option<StaticEvalOutcome> {
+        if depth > 8 {
+            return None;
+        }
+        if let Some(alias) =
+            self.direct_static_snapshot_or_value_alias(expression, snapshot_bindings)
+        {
+            return self.resolve_static_promise_chain_await_outcome_with_depth(
+                &alias,
+                snapshot_bindings,
+                depth + 1,
+            );
+        }
+        let Expression::Call { callee, arguments } = expression else {
+            return Some(StaticEvalOutcome::Value(expression.clone()));
+        };
+        let Expression::Member { object, property } = callee.as_ref() else {
+            return Some(StaticEvalOutcome::Value(expression.clone()));
+        };
+        if matches!(object.as_ref(), Expression::Identifier(name) if name == "Promise") {
+            let Expression::String(property_name) = property.as_ref() else {
+                return Some(StaticEvalOutcome::Value(expression.clone()));
+            };
+            let argument = arguments
+                .first()
+                .map(|argument| argument.expression().clone())
+                .unwrap_or(Expression::Undefined);
+            return match property_name.as_str() {
+                "resolve" => Some(StaticEvalOutcome::Value(argument)),
+                "reject" => Some(StaticEvalOutcome::Throw(StaticThrowValue::Value(argument))),
+                _ => Some(StaticEvalOutcome::Value(expression.clone())),
+            };
+        }
+        let Expression::String(property_name) = property.as_ref() else {
+            return Some(StaticEvalOutcome::Value(expression.clone()));
+        };
+        if property_name != "then" {
+            return Some(StaticEvalOutcome::Value(expression.clone()));
+        }
+        let base_outcome = self.resolve_static_promise_chain_await_outcome_with_depth(
+            object,
+            snapshot_bindings,
+            depth + 1,
+        )?;
+        let handler_index = match base_outcome {
+            StaticEvalOutcome::Value(_) => 0,
+            StaticEvalOutcome::Throw(_) => 1,
+        };
+        let Some(handler) = arguments.get(handler_index).map(CallArgument::expression) else {
+            return Some(base_outcome);
+        };
+        if matches!(handler, Expression::Undefined | Expression::Null) {
+            return Some(base_outcome);
+        }
+        let handler_argument = match &base_outcome {
+            StaticEvalOutcome::Value(value) => value.clone(),
+            StaticEvalOutcome::Throw(throw_value) => {
+                self.resolve_static_throw_value_expression(throw_value)?
+            }
+        };
+        let handler_binding = self.resolve_function_binding_from_expression(handler)?;
+        let handler_outcome = self.resolve_static_function_outcome_from_binding_with_context(
+            &handler_binding,
+            &[CallArgument::Expression(handler_argument)],
+            self.current_function_name(),
+        )?;
+        match handler_outcome {
+            StaticEvalOutcome::Value(value) => self
+                .resolve_static_promise_chain_await_outcome_with_depth(
+                    &value,
+                    snapshot_bindings,
+                    depth + 1,
+                )
+                .or(Some(StaticEvalOutcome::Value(value))),
+            StaticEvalOutcome::Throw(throw_value) => Some(StaticEvalOutcome::Throw(throw_value)),
+        }
+    }
+
     pub(super) fn consume_prepared_async_yield_delegate_generator_promise_outcome(
         &mut self,
         prepared: PreparedAsyncDelegateConsumption,
@@ -138,25 +334,38 @@ impl<'a> FunctionCompiler<'a> {
                 object: Box::new(Expression::Identifier(delegate_iterator_name.clone())),
                 property: Box::new(delegate_property_expression.clone()),
             };
-            if std::env::var_os("AYY_TRACE_ASYNC_DELEGATES").is_some() {
-                eprintln!(
-                    "async_delegate_step_method_lookup property={} iterator_snapshot={:?} identifier_getter={:?}",
-                    property_name,
-                    snapshot_bindings.get(delegate_iterator_name.as_str()),
-                    self.resolve_member_getter_binding(
+            let snapshot_lacks_step_method = delegate_step_getter_resolution.is_none()
+                && snapshot_delegate_step_binding.is_none()
+                && (snapshot_bindings
+                    .get(delegate_iterator_name.as_str())
+                    .is_some_and(|delegate_iterator| {
+                        self.static_delegate_snapshot_value_lacks_step_method(
+                            delegate_iterator,
+                            &delegate_property_expression,
+                            snapshot_bindings,
+                        )
+                    })
+                    || self.static_delegate_snapshot_value_lacks_step_method(
                         &delegate_iterator_expression,
                         &delegate_property_expression,
+                        snapshot_bindings,
                     )
-                );
-            }
+                    || self.static_delegate_snapshot_value_lacks_step_method(
+                        &plan.delegate_expression,
+                        &delegate_property_expression,
+                        snapshot_bindings,
+                    ));
             let mut resolved_method_value = None;
-            if let Some((getter_binding, getter_this_expression)) = delegate_step_getter_resolution
+            if snapshot_lacks_step_method {
+                delegate_step_method_missing = true;
+            } else if let Some((getter_binding, getter_this_expression)) =
+                delegate_step_getter_resolution.as_ref()
             {
                 match self.resolve_bound_snapshot_function_outcome_with_arguments_and_this(
-                    &getter_binding,
+                    getter_binding,
                     snapshot_bindings,
                     &[],
-                    &getter_this_expression,
+                    getter_this_expression,
                 ) {
                     Some((StaticEvalOutcome::Value(method_value), updated_bindings)) => {
                         Self::merge_bound_snapshot_updated_bindings(
@@ -204,7 +413,6 @@ impl<'a> FunctionCompiler<'a> {
                 }
             }
         }
-
         if let Some(throw_value) = delegate_step_method_throw {
             self.persist_async_yield_delegate_generator_snapshot_state(
                 &binding_name,
@@ -217,14 +425,33 @@ impl<'a> FunctionCompiler<'a> {
         }
 
         if delegate_step_method_missing && property_name == "return" {
+            let missing_return_value = match self.resolve_static_promise_chain_await_outcome(
+                &snapshot_current_argument,
+                delegate_snapshot_bindings.as_ref(),
+            ) {
+                Some(StaticEvalOutcome::Value(value)) => value,
+                Some(StaticEvalOutcome::Throw(throw_value)) => {
+                    self.persist_async_yield_delegate_generator_snapshot_state(
+                        &binding_name,
+                        Some(2),
+                        delegate_snapshot_bindings,
+                    );
+                    self.sync_persisted_async_yield_delegate_generator_snapshot_state(
+                        &binding_name,
+                    )?;
+                    self.pop_async_delegate_snapshot_scope_bindings(&scoped_snapshot_names);
+                    return Ok(Some(StaticEvalOutcome::Throw(throw_value)));
+                }
+                None => snapshot_current_argument.clone(),
+            };
             if let Some(snapshot_bindings) = delegate_snapshot_bindings.as_mut() {
                 snapshot_bindings.insert(promise_done_name.clone(), Expression::Bool(true));
-                snapshot_bindings.insert(
-                    promise_value_name.clone(),
-                    snapshot_current_argument.clone(),
-                );
+                snapshot_bindings.insert(promise_value_name.clone(), missing_return_value.clone());
                 self.update_local_value_binding(&promise_done_name, &Expression::Bool(true));
-                self.update_local_value_binding(&promise_value_name, &snapshot_current_argument);
+                self.state
+                    .speculation
+                    .static_semantics
+                    .set_local_value_binding(&promise_value_name, missing_return_value);
             }
             return self.finalize_async_yield_delegate_generator_outcome(
                 &plan,

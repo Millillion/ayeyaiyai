@@ -464,6 +464,66 @@ impl<'a> FunctionCompiler<'a> {
         )
     }
 
+    fn static_async_generator_call_initializer_result(
+        &self,
+        value: &Expression,
+    ) -> Option<Expression> {
+        let Expression::Call { callee, arguments } = value else {
+            return None;
+        };
+        if !arguments.is_empty() {
+            return None;
+        }
+        if !matches!(callee.as_ref(), Expression::Identifier(_)) {
+            return None;
+        }
+        let user_function = self.resolve_user_function_from_expression(callee)?;
+        if !user_function.is_async()
+            || !user_function.is_generator()
+            || !self.async_generator_has_caught_yield_delegate_return_shape(&user_function.name)
+        {
+            return None;
+        }
+        Some(value.clone())
+    }
+
+    fn async_generator_has_caught_yield_delegate_return_shape(&self, function_name: &str) -> bool {
+        let Some(function) = self.resolve_registered_function_declaration(function_name) else {
+            return false;
+        };
+        let Some(Statement::Return(Expression::Identifier(returned_binding))) =
+            function.body.last()
+        else {
+            return false;
+        };
+        function.body.iter().any(|statement| {
+            let Statement::Try {
+                body,
+                catch_binding: Some(catch_binding),
+                catch_body,
+                ..
+            } = statement
+            else {
+                return false;
+            };
+            if !body
+                .iter()
+                .any(|statement| matches!(statement, Statement::YieldDelegate { .. }))
+            {
+                return false;
+            }
+            catch_body.iter().any(|statement| {
+                matches!(
+                    statement,
+                    Statement::Assign {
+                        name,
+                        value: Expression::Identifier(value_name),
+                    } if name == returned_binding && value_name == catch_binding
+                )
+            })
+        })
+    }
+
     fn is_local_array_iterator_next_call(&self, value: &Expression) -> bool {
         let Expression::Call { callee, arguments } = value else {
             return false;
@@ -677,6 +737,13 @@ impl<'a> FunctionCompiler<'a> {
         }
         if let Some(resolved_value) = self.static_class_constructor_call_initializer_result(value) {
             return self.emit_numeric_expression(&resolved_value);
+        }
+        if self
+            .static_async_generator_call_initializer_result(value)
+            .is_some()
+        {
+            self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
+            return Ok(());
         }
         if let Some((_, object, property, arguments)) =
             self.tracked_array_step_initializer_parts(name, value)

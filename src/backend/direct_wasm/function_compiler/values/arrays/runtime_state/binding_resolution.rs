@@ -138,6 +138,30 @@ impl<'a> FunctionCompiler<'a> {
         {
             return Some(name.to_string());
         }
+        if let Some(hidden_name) = self.resolve_user_function_capture_hidden_name(name) {
+            if self
+                .state
+                .speculation
+                .static_semantics
+                .has_local_array_iterator_binding(&hidden_name)
+            {
+                return Some(hidden_name);
+            }
+            if let Some(source_name) = self
+                .state
+                .speculation
+                .static_semantics
+                .capture_slot_source_bindings
+                .get(&hidden_name)
+                && self
+                    .state
+                    .speculation
+                    .static_semantics
+                    .has_local_array_iterator_binding(source_name)
+            {
+                return Some(source_name.clone());
+            }
+        }
         let (resolved_name, _) = self.resolve_current_local_binding(name)?;
         self.state
             .speculation

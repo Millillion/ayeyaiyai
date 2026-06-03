@@ -10,16 +10,18 @@ impl<'a> FunctionCompiler<'a> {
         let Expression::Identifier(name) = object else {
             return Ok(AsyncDelegateConsumptionPreparation::NotApplicable);
         };
+        let binding_name = self
+            .resolve_local_array_iterator_binding_name(name)
+            .unwrap_or_else(|| name.to_string());
         let direct_binding = self
             .state
             .speculation
             .static_semantics
-            .local_array_iterator_binding(name)
+            .local_array_iterator_binding(&binding_name)
             .cloned();
         let Some(binding) = direct_binding else {
             return Ok(AsyncDelegateConsumptionPreparation::NotApplicable);
         };
-        let binding_name = name.to_string();
         let current_static_index = binding.static_index;
         let IteratorSourceKind::AsyncYieldDelegateGenerator {
             plan,
@@ -49,12 +51,6 @@ impl<'a> FunctionCompiler<'a> {
                 self.push_async_delegate_snapshot_scope_bindings(snapshot_bindings)?
             } else {
                 Vec::new()
-            };
-        let snapshot_current_argument =
-            if property_name == "next" && delegate_snapshot_bindings.is_none() {
-                Expression::Undefined
-            } else {
-                self.materialize_static_expression(&self.promise_argument_expression(arguments, 0))
             };
         let step_result_name =
             self.allocate_named_hidden_local("async_delegate_result", StaticValueKind::Object);
@@ -150,14 +146,50 @@ impl<'a> FunctionCompiler<'a> {
                 None => {}
             }
         }
-        if std::env::var_os("AYY_TRACE_ASYNC_DELEGATES").is_some() {
-            eprintln!(
-                "async_delegate_prepare binding={} property={} snapshot={}",
-                binding_name,
-                property_name,
-                delegate_snapshot_bindings.is_some()
-            );
-        }
+        let delegate_return_method_missing = if property_name == "return" {
+            delegate_snapshot_bindings
+                .as_mut()
+                .and_then(|snapshot_bindings| {
+                    self.evaluate_bound_snapshot_expression(
+                        &Expression::Member {
+                            object: Box::new(Expression::Identifier(
+                                delegate_iterator_name.clone(),
+                            )),
+                            property: Box::new(Expression::String("return".to_string())),
+                        },
+                        snapshot_bindings,
+                        Some(&plan.function_name),
+                    )
+                })
+                .is_some_and(|method| matches!(method, Expression::Null | Expression::Undefined))
+        } else {
+            false
+        };
+        let snapshot_current_argument =
+            if property_name == "next" && delegate_snapshot_bindings.is_none() {
+                Expression::Undefined
+            } else if delegate_return_method_missing {
+                match self.resolve_static_await_resolution_outcome(&current_argument_expression) {
+                    Some(StaticEvalOutcome::Value(value)) => value,
+                    Some(StaticEvalOutcome::Throw(throw_value)) => {
+                        self.persist_async_yield_delegate_generator_snapshot_state(
+                            &binding_name,
+                            Some(2),
+                            delegate_snapshot_bindings,
+                        );
+                        self.sync_persisted_async_yield_delegate_generator_snapshot_state(
+                            &binding_name,
+                        )?;
+                        self.pop_async_delegate_snapshot_scope_bindings(&scoped_snapshot_names);
+                        return Ok(AsyncDelegateConsumptionPreparation::Outcome(
+                            StaticEvalOutcome::Throw(throw_value),
+                        ));
+                    }
+                    None => current_argument_expression.clone(),
+                }
+            } else {
+                self.materialize_static_expression(&current_argument_expression)
+            };
 
         if property_name == "next" {
             match current_static_index {

@@ -29,6 +29,20 @@ impl<'a> FunctionCompiler<'a> {
         if !seen.insert(format!("{expression:?}")) {
             return false;
         }
+        if let Expression::Identifier(name) = expression
+            && let Some(binding_name) = self.resolve_local_array_iterator_binding_name(name)
+            && let Some(ArrayIteratorBinding { source, .. }) = self
+                .state
+                .speculation
+                .static_semantics
+                .local_array_iterator_binding(&binding_name)
+        {
+            return matches!(
+                source,
+                IteratorSourceKind::SimpleGenerator { is_async: true, .. }
+                    | IteratorSourceKind::AsyncYieldDelegateGenerator { .. }
+            );
+        }
         if let Some(resolved) = self
             .resolve_bound_alias_expression(expression)
             .filter(|resolved| !static_expression_matches(resolved, expression))
