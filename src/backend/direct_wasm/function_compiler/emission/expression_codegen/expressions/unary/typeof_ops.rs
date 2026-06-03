@@ -5,9 +5,12 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         expression: &Expression,
     ) -> DirectResult<()> {
-        if let Some(text) = self
-            .infer_typeof_operand_kind(expression)
-            .and_then(StaticValueKind::as_typeof_str)
+        let expression_has_runtime_array_base =
+            self.expression_has_direct_runtime_array_state_base(expression);
+        if !expression_has_runtime_array_base
+            && let Some(text) = self
+                .infer_typeof_operand_kind(expression)
+                .and_then(StaticValueKind::as_typeof_str)
         {
             return self.emit_static_string_literal(text);
         }
@@ -64,6 +67,8 @@ impl<'a> FunctionCompiler<'a> {
         if trace_typeof {
             eprintln!("emit_typeof_expression:start expression={expression:?}");
         }
+        let expression_has_runtime_array_base =
+            self.expression_has_direct_runtime_array_state_base(expression);
         if let Expression::Identifier(name) = expression
             && self
                 .state
@@ -137,14 +142,15 @@ impl<'a> FunctionCompiler<'a> {
                             if self.local_binding_is_dynamic_property_descriptor_result(name)
                     )
         );
-        let module_namespace_live_member =
-            self.typeof_operand_is_module_namespace_live_binding_member(expression);
+        let module_namespace_live_member = !expression_has_runtime_array_base
+            && self.typeof_operand_is_module_namespace_live_binding_member(expression);
         if trace_typeof {
             eprintln!(
                 "emit_typeof_expression:function_binding_probe skip={skip_static_function_binding_probe} module_namespace_live={module_namespace_live_member} expression={expression:?}"
             );
         }
-        if !skip_static_function_binding_probe
+        if !expression_has_runtime_array_base
+            && !skip_static_function_binding_probe
             && !module_namespace_live_member
             && self
                 .resolve_function_binding_from_expression(expression)
@@ -219,10 +225,13 @@ impl<'a> FunctionCompiler<'a> {
         if trace_typeof {
             eprintln!("emit_typeof_expression:infer_start expression={expression:?}");
         }
-        let Some(type_tag) = self
-            .infer_typeof_operand_kind(expression)
-            .and_then(StaticValueKind::as_typeof_tag)
-        else {
+        let static_type_tag = if expression_has_runtime_array_base {
+            None
+        } else {
+            self.infer_typeof_operand_kind(expression)
+                .and_then(StaticValueKind::as_typeof_tag)
+        };
+        let Some(type_tag) = static_type_tag else {
             if trace_typeof {
                 eprintln!("emit_typeof_expression:runtime_start expression={expression:?}");
             }

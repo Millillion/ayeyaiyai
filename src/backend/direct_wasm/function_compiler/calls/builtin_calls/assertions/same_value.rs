@@ -2612,6 +2612,37 @@ impl<'a> FunctionCompiler<'a> {
                     || self.backend.global_array_binding(name).is_some()))
     }
 
+    fn same_value_assertion_is_direct_tracked_array_length_member(
+        &self,
+        expression: &Expression,
+    ) -> bool {
+        let Expression::Member { object, property } = expression else {
+            return false;
+        };
+        if !matches!(property.as_ref(), Expression::String(name) if name == "length") {
+            return false;
+        }
+        let Expression::Identifier(name) = object.as_ref() else {
+            return false;
+        };
+        self.resolve_runtime_array_binding_name(name).is_some()
+            || self.backend.global_array_binding(name).is_some()
+            || self
+                .backend
+                .shared_global_semantics
+                .values
+                .array_bindings
+                .contains_key(name)
+            || (self.is_named_global_array_binding(name)
+                && (self.uses_global_runtime_array_state(name)
+                    || self.backend.global_array_binding(name).is_some()))
+    }
+
+    fn same_value_assertion_is_direct_tracked_array_member(&self, expression: &Expression) -> bool {
+        self.same_value_assertion_is_direct_tracked_array_index_member(expression)
+            || self.same_value_assertion_is_direct_tracked_array_length_member(expression)
+    }
+
     fn same_value_assertion_has_direct_tracked_array_element_base(
         &self,
         expression: &Expression,
@@ -2643,25 +2674,6 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
-    fn same_value_assertion_tracked_array_snapshot_binding(
-        &self,
-        name: &str,
-    ) -> Option<ArrayValueBinding> {
-        self.state
-            .speculation
-            .static_semantics
-            .local_array_binding(name)
-            .cloned()
-            .or_else(|| self.backend.global_array_binding(name).cloned())
-            .or_else(|| {
-                self.backend
-                    .shared_global_semantics
-                    .values
-                    .array_binding(name)
-                    .cloned()
-            })
-    }
-
     fn same_value_assertion_tracked_array_snapshot_index_value(
         &self,
         object: &Expression,
@@ -2674,12 +2686,58 @@ impl<'a> FunctionCompiler<'a> {
         let binding_name = self
             .resolve_runtime_array_binding_name(name)
             .unwrap_or_else(|| name.clone());
-        self.same_value_assertion_tracked_array_snapshot_binding(&binding_name)
-            .or_else(|| self.same_value_assertion_tracked_array_snapshot_binding(name))?
-            .values
-            .get(index as usize)
-            .cloned()
-            .flatten()
+        let index = index as usize;
+        let value_from_binding = |binding: &ArrayValueBinding| {
+            binding
+                .values
+                .get(index)
+                .and_then(|value| value.as_ref())
+                .cloned()
+        };
+        let value_from_array_expression = |value: &Expression| {
+            let Expression::Array(elements) = value else {
+                return None;
+            };
+            let Some(ArrayElement::Expression(value)) = elements.get(index) else {
+                return None;
+            };
+            Some(value.clone())
+        };
+        let value_from_name = |candidate: &str| {
+            self.state
+                .speculation
+                .static_semantics
+                .local_array_binding(candidate)
+                .and_then(value_from_binding)
+                .or_else(|| {
+                    self.backend
+                        .global_array_binding(candidate)
+                        .and_then(value_from_binding)
+                })
+                .or_else(|| {
+                    self.backend
+                        .shared_global_semantics
+                        .values
+                        .array_binding(candidate)
+                        .and_then(value_from_binding)
+                })
+                .or_else(|| {
+                    self.state
+                        .speculation
+                        .static_semantics
+                        .local_value_binding(candidate)
+                        .and_then(value_from_array_expression)
+                })
+                .or_else(|| {
+                    self.global_value_binding(candidate)
+                        .and_then(value_from_array_expression)
+                })
+        };
+        value_from_name(&binding_name).or_else(|| {
+            (binding_name.as_str() != name.as_str())
+                .then(|| value_from_name(name))
+                .flatten()
+        })
     }
 
     fn same_value_assertion_tracked_array_snapshot_length(
@@ -2692,11 +2750,43 @@ impl<'a> FunctionCompiler<'a> {
         let binding_name = self
             .resolve_runtime_array_binding_name(name)
             .unwrap_or_else(|| name.clone());
-        let length = self
-            .same_value_assertion_tracked_array_snapshot_binding(&binding_name)
-            .or_else(|| self.same_value_assertion_tracked_array_snapshot_binding(name))?
-            .values
-            .len();
+        let length_from_array_expression = |value: &Expression| {
+            let Expression::Array(elements) = value else {
+                return None;
+            };
+            (!elements.is_empty()).then_some(elements.len())
+        };
+        let length_from_name = |candidate: &str| {
+            self.state
+                .speculation
+                .static_semantics
+                .local_array_binding(candidate)
+                .filter(|binding| !binding.values.is_empty())
+                .or_else(|| self.backend.global_array_binding(candidate))
+                .or_else(|| {
+                    self.backend
+                        .shared_global_semantics
+                        .values
+                        .array_binding(candidate)
+                })
+                .and_then(|binding| (!binding.values.is_empty()).then_some(binding.values.len()))
+                .or_else(|| {
+                    self.state
+                        .speculation
+                        .static_semantics
+                        .local_value_binding(candidate)
+                        .and_then(length_from_array_expression)
+                })
+                .or_else(|| {
+                    self.global_value_binding(candidate)
+                        .and_then(length_from_array_expression)
+                })
+        };
+        let length = length_from_name(&binding_name).or_else(|| {
+            (binding_name.as_str() != name.as_str())
+                .then(|| length_from_name(name))
+                .flatten()
+        })?;
         Some(Expression::Number(length as f64))
     }
 
@@ -2979,11 +3069,10 @@ impl<'a> FunctionCompiler<'a> {
         actual: &Expression,
         expected: &Expression,
     ) -> Option<bool> {
-        let actual_uses_snapshot = self
-            .same_value_assertion_is_direct_tracked_array_index_member(actual)
+        let actual_uses_snapshot = self.same_value_assertion_is_direct_tracked_array_member(actual)
             || self.same_value_assertion_has_direct_tracked_array_element_base(actual);
         let expected_uses_snapshot = self
-            .same_value_assertion_is_direct_tracked_array_index_member(expected)
+            .same_value_assertion_is_direct_tracked_array_member(expected)
             || self.same_value_assertion_has_direct_tracked_array_element_base(expected);
         if !actual_uses_snapshot && !expected_uses_snapshot {
             return None;
@@ -2995,6 +3084,176 @@ impl<'a> FunctionCompiler<'a> {
         };
         let expected_value = if expected_uses_snapshot {
             self.same_value_assertion_tracked_array_snapshot_value(expected, 10)?
+        } else {
+            expected.clone()
+        };
+        if static_expression_matches(&actual_value, &expected_value) {
+            return Some(true);
+        }
+        let actual_primitive = self
+            .same_value_assertion_snapshot_lightweight_primitive_value(&actual_value)
+            .unwrap_or_else(|| actual_value.clone());
+        let expected_primitive = self
+            .same_value_assertion_snapshot_lightweight_primitive_value(&expected_value)
+            .unwrap_or_else(|| expected_value.clone());
+        if static_expression_matches(&actual_primitive, &expected_primitive) {
+            return Some(true);
+        }
+        self.same_value_assertion_primitive_result(&actual_primitive, &expected_primitive)
+            .or_else(|| {
+                self.same_value_assertion_snapshot_reference_identity_key(&actual_value)
+                    .zip(self.same_value_assertion_snapshot_reference_identity_key(&expected_value))
+                    .map(|(actual_key, expected_key)| actual_key == expected_key)
+            })
+    }
+
+    fn same_value_assertion_promise_callback_snapshot_value(
+        &self,
+        expression: &Expression,
+        depth: usize,
+    ) -> Option<Expression> {
+        if depth == 0 {
+            return None;
+        }
+        match expression {
+            Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined
+            | Expression::Array(_)
+            | Expression::Object(_)
+            | Expression::This => Some(expression.clone()),
+            Expression::Identifier(name)
+                if matches!(name.as_str(), "undefined" | "NaN" | "Infinity")
+                    && self.is_unshadowed_builtin_identifier(name) =>
+            {
+                match name.as_str() {
+                    "undefined" => Some(Expression::Undefined),
+                    "NaN" => Some(Expression::Number(f64::NAN)),
+                    "Infinity" => Some(Expression::Number(f64::INFINITY)),
+                    _ => None,
+                }
+            }
+            Expression::Identifier(name) => self
+                .state
+                .speculation
+                .static_semantics
+                .local_value_binding(name)
+                .or_else(|| self.global_value_binding(name))
+                .filter(|value| {
+                    matches!(
+                        value,
+                        Expression::Number(_)
+                            | Expression::BigInt(_)
+                            | Expression::String(_)
+                            | Expression::Bool(_)
+                            | Expression::Null
+                            | Expression::Undefined
+                            | Expression::Array(_)
+                            | Expression::Object(_)
+                    )
+                })
+                .cloned()
+                .or_else(|| Some(expression.clone())),
+            Expression::Unary {
+                op: UnaryOp::TypeOf,
+                expression,
+            } => {
+                let value = self
+                    .same_value_assertion_promise_callback_snapshot_value(expression, depth - 1)?;
+                let type_name = if self.same_value_assertion_direct_value_is_function(&value) {
+                    "function"
+                } else {
+                    match value {
+                        Expression::Number(_) => "number",
+                        Expression::BigInt(_) => "bigint",
+                        Expression::String(_) => "string",
+                        Expression::Bool(_) => "boolean",
+                        Expression::Null => "object",
+                        Expression::Undefined => "undefined",
+                        Expression::Array(_) | Expression::Object(_) | Expression::This => "object",
+                        Expression::Identifier(ref name) => self
+                            .state
+                            .speculation
+                            .static_semantics
+                            .local_kind(name)
+                            .or_else(|| self.global_binding_kind(name))
+                            .or_else(|| builtin_identifier_kind(name))
+                            .and_then(StaticValueKind::as_typeof_str)?,
+                        _ => return None,
+                    }
+                };
+                Some(Expression::String(type_name.to_string()))
+            }
+            Expression::Member { object, property } => {
+                let property = self
+                    .resolve_property_key_expression(property)
+                    .unwrap_or_else(|| property.as_ref().clone());
+                if let Some(value) =
+                    self.same_value_assertion_tracked_array_snapshot_index_value(object, &property)
+                {
+                    return Some(value);
+                }
+                if matches!(property, Expression::String(ref name) if name == "length")
+                    && let Some(length) =
+                        self.same_value_assertion_tracked_array_snapshot_length(object)
+                {
+                    return Some(length);
+                }
+                let object_value =
+                    self.same_value_assertion_promise_callback_snapshot_value(object, depth - 1)?;
+                match object_value {
+                    Expression::Array(elements) => {
+                        if matches!(property, Expression::String(ref name) if name == "length") {
+                            return Some(Expression::Number(elements.len() as f64));
+                        }
+                        let index = argument_index_from_expression(&property)? as usize;
+                        let Some(ArrayElement::Expression(value)) = elements.get(index) else {
+                            return Some(Expression::Undefined);
+                        };
+                        Some(value.clone())
+                    }
+                    Expression::Object(entries) => {
+                        self.same_value_assertion_object_literal_data_member(&entries, &property)
+                    }
+                    Expression::Identifier(name) => self
+                        .state
+                        .speculation
+                        .static_semantics
+                        .local_object_binding(&name)
+                        .or_else(|| self.backend.global_object_binding(&name))
+                        .and_then(|binding| {
+                            self.resolve_object_binding_property_value(binding, &property)
+                        }),
+                    _ => None,
+                }
+            }
+            _ => None,
+        }
+    }
+
+    fn same_value_assertion_promise_callback_tracked_array_snapshot_result(
+        &self,
+        actual: &Expression,
+        expected: &Expression,
+    ) -> Option<bool> {
+        let actual_uses_snapshot = self.same_value_assertion_is_direct_tracked_array_member(actual)
+            || self.same_value_assertion_has_direct_tracked_array_element_base(actual);
+        let expected_uses_snapshot = self
+            .same_value_assertion_is_direct_tracked_array_member(expected)
+            || self.same_value_assertion_has_direct_tracked_array_element_base(expected);
+        if !actual_uses_snapshot && !expected_uses_snapshot {
+            return None;
+        }
+        let actual_value = if actual_uses_snapshot {
+            self.same_value_assertion_promise_callback_snapshot_value(actual, 10)?
+        } else {
+            actual.clone()
+        };
+        let expected_value = if expected_uses_snapshot {
+            self.same_value_assertion_promise_callback_snapshot_value(expected, 10)?
         } else {
             expected.clone()
         };
@@ -3670,10 +3929,39 @@ impl<'a> FunctionCompiler<'a> {
             .same_value_expression_contains_dynamic_descriptor_member(actual)
             || self.same_value_expression_contains_dynamic_descriptor_member(expected);
         let operands_use_direct_tracked_array_snapshot = self
-            .same_value_assertion_is_direct_tracked_array_index_member(actual)
+            .same_value_assertion_is_direct_tracked_array_member(actual)
             || self.same_value_assertion_has_direct_tracked_array_element_base(actual)
-            || self.same_value_assertion_is_direct_tracked_array_index_member(expected)
+            || self.same_value_assertion_is_direct_tracked_array_member(expected)
             || self.same_value_assertion_has_direct_tracked_array_element_base(expected);
+        let skip_tracked_array_snapshot_static_result =
+            self.current_function_name().is_some_and(|function_name| {
+                self.registered_function_body_mentions_promise_like_chain(function_name)
+                    || self.registered_function_is_promise_like_chain_callback(function_name)
+            });
+        if operands_use_direct_tracked_array_snapshot && skip_tracked_array_snapshot_static_result {
+            if let Some(static_result) = self
+                .same_value_assertion_promise_callback_tracked_array_snapshot_result(
+                    actual, expected,
+                )
+            {
+                let assertion_passes = match assertion_failure {
+                    BinaryOp::NotEqual => static_result,
+                    BinaryOp::Equal => !static_result,
+                    _ => false,
+                };
+                if assertion_passes {
+                    self.push_i32_const(JS_UNDEFINED_TAG);
+                    return Ok(true);
+                }
+            }
+            self.emit_same_value_assertion_runtime_compare(
+                arguments,
+                actual,
+                expected,
+                assertion_failure,
+            )?;
+            return Ok(true);
+        }
         if fast_extra_arguments_side_effect_free
             && let Some(static_result) =
                 self.same_value_static_bound_promise_object_result(actual, expected)
@@ -3831,6 +4119,7 @@ impl<'a> FunctionCompiler<'a> {
         }
         if fast_extra_arguments_side_effect_free
             && !operands_contain_dynamic_descriptor_member
+            && !skip_tracked_array_snapshot_static_result
             && let Some(static_result) =
                 self.same_value_assertion_tracked_array_snapshot_result(actual, expected)
         {
@@ -3929,6 +4218,7 @@ impl<'a> FunctionCompiler<'a> {
         let extra_arguments_side_effect_free = fast_extra_arguments_side_effect_free;
         if extra_arguments_side_effect_free
             && !operands_contain_dynamic_descriptor_member
+            && !operands_use_direct_tracked_array_snapshot
             && !needs_runtime_identifier_check
             && let Some(static_result) =
                 self.same_value_assertion_primitive_object_kind_result(actual, expected)
@@ -3947,6 +4237,7 @@ impl<'a> FunctionCompiler<'a> {
             && !operands_contain_dynamic_descriptor_member
             && operands_static_evaluation_safe
             && extra_arguments_side_effect_free
+            && !operands_use_direct_tracked_array_snapshot
             && !needs_runtime_identifier_check
             && !self.assertion_requires_runtime_same_value_fallback()
             && !handled_as_typeof

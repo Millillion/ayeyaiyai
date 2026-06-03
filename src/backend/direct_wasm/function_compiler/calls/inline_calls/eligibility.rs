@@ -211,6 +211,374 @@ impl<'a> FunctionCompiler<'a> {
             })
     }
 
+    fn call_argument_is_identifier(argument: &CallArgument, function_name: &str) -> bool {
+        matches!(
+            argument,
+            CallArgument::Expression(Expression::Identifier(name)) if name == function_name
+        )
+    }
+
+    fn expression_uses_function_as_promise_like_chain_callback(
+        expression: &Expression,
+        function_name: &str,
+    ) -> bool {
+        match expression {
+            Expression::Call { callee, arguments }
+            | Expression::New { callee, arguments }
+            | Expression::SuperCall { callee, arguments } => {
+                (Self::call_is_promise_like_chain(expression)
+                    && arguments
+                        .iter()
+                        .any(|argument| Self::call_argument_is_identifier(argument, function_name)))
+                    || Self::expression_uses_function_as_promise_like_chain_callback(
+                        callee,
+                        function_name,
+                    )
+                    || arguments.iter().any(|argument| match argument {
+                        CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                            Self::expression_uses_function_as_promise_like_chain_callback(
+                                expression,
+                                function_name,
+                            )
+                        }
+                    })
+            }
+            Expression::Member { object, property } => {
+                Self::expression_uses_function_as_promise_like_chain_callback(object, function_name)
+                    || Self::expression_uses_function_as_promise_like_chain_callback(
+                        property,
+                        function_name,
+                    )
+            }
+            Expression::Assign { value, .. }
+            | Expression::Await(value)
+            | Expression::EnumerateKeys(value)
+            | Expression::GetIterator(value)
+            | Expression::IteratorClose(value)
+            | Expression::Unary {
+                expression: value, ..
+            } => {
+                Self::expression_uses_function_as_promise_like_chain_callback(value, function_name)
+            }
+            Expression::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                Self::expression_uses_function_as_promise_like_chain_callback(object, function_name)
+                    || Self::expression_uses_function_as_promise_like_chain_callback(
+                        property,
+                        function_name,
+                    )
+                    || Self::expression_uses_function_as_promise_like_chain_callback(
+                        value,
+                        function_name,
+                    )
+            }
+            Expression::AssignSuperMember { property, value } => {
+                Self::expression_uses_function_as_promise_like_chain_callback(
+                    property,
+                    function_name,
+                ) || Self::expression_uses_function_as_promise_like_chain_callback(
+                    value,
+                    function_name,
+                )
+            }
+            Expression::Binary { left, right, .. } => {
+                Self::expression_uses_function_as_promise_like_chain_callback(left, function_name)
+                    || Self::expression_uses_function_as_promise_like_chain_callback(
+                        right,
+                        function_name,
+                    )
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                Self::expression_uses_function_as_promise_like_chain_callback(
+                    condition,
+                    function_name,
+                ) || Self::expression_uses_function_as_promise_like_chain_callback(
+                    then_expression,
+                    function_name,
+                ) || Self::expression_uses_function_as_promise_like_chain_callback(
+                    else_expression,
+                    function_name,
+                )
+            }
+            Expression::Sequence(expressions) => expressions.iter().any(|expression| {
+                Self::expression_uses_function_as_promise_like_chain_callback(
+                    expression,
+                    function_name,
+                )
+            }),
+            Expression::Array(elements) => elements.iter().any(|element| match element {
+                ArrayElement::Expression(expression) | ArrayElement::Spread(expression) => {
+                    Self::expression_uses_function_as_promise_like_chain_callback(
+                        expression,
+                        function_name,
+                    )
+                }
+            }),
+            Expression::Object(entries) => entries.iter().any(|entry| match entry {
+                ObjectEntry::Data { key, value } => {
+                    Self::expression_uses_function_as_promise_like_chain_callback(
+                        key,
+                        function_name,
+                    ) || Self::expression_uses_function_as_promise_like_chain_callback(
+                        value,
+                        function_name,
+                    )
+                }
+                ObjectEntry::Getter { key, getter } => {
+                    Self::expression_uses_function_as_promise_like_chain_callback(
+                        key,
+                        function_name,
+                    ) || Self::expression_uses_function_as_promise_like_chain_callback(
+                        getter,
+                        function_name,
+                    )
+                }
+                ObjectEntry::Setter { key, setter } => {
+                    Self::expression_uses_function_as_promise_like_chain_callback(
+                        key,
+                        function_name,
+                    ) || Self::expression_uses_function_as_promise_like_chain_callback(
+                        setter,
+                        function_name,
+                    )
+                }
+                ObjectEntry::Spread(value) => {
+                    Self::expression_uses_function_as_promise_like_chain_callback(
+                        value,
+                        function_name,
+                    )
+                }
+            }),
+            _ => false,
+        }
+    }
+
+    fn statement_uses_function_as_promise_like_chain_callback(
+        statement: &Statement,
+        function_name: &str,
+    ) -> bool {
+        match statement {
+            Statement::Block { body }
+            | Statement::Declaration { body }
+            | Statement::Labeled { body, .. } => body.iter().any(|statement| {
+                Self::statement_uses_function_as_promise_like_chain_callback(
+                    statement,
+                    function_name,
+                )
+            }),
+            Statement::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                Self::expression_uses_function_as_promise_like_chain_callback(
+                    condition,
+                    function_name,
+                ) || then_branch.iter().any(|statement| {
+                    Self::statement_uses_function_as_promise_like_chain_callback(
+                        statement,
+                        function_name,
+                    )
+                }) || else_branch.iter().any(|statement| {
+                    Self::statement_uses_function_as_promise_like_chain_callback(
+                        statement,
+                        function_name,
+                    )
+                })
+            }
+            Statement::Var { value, .. }
+            | Statement::Let { value, .. }
+            | Statement::Assign { value, .. }
+            | Statement::Return(value)
+            | Statement::Throw(value)
+            | Statement::Yield { value }
+            | Statement::YieldDelegate { value }
+            | Statement::Expression(value) => {
+                Self::expression_uses_function_as_promise_like_chain_callback(value, function_name)
+            }
+            Statement::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                Self::expression_uses_function_as_promise_like_chain_callback(object, function_name)
+                    || Self::expression_uses_function_as_promise_like_chain_callback(
+                        property,
+                        function_name,
+                    )
+                    || Self::expression_uses_function_as_promise_like_chain_callback(
+                        value,
+                        function_name,
+                    )
+            }
+            Statement::Print { values } => values.iter().any(|expression| {
+                Self::expression_uses_function_as_promise_like_chain_callback(
+                    expression,
+                    function_name,
+                )
+            }),
+            Statement::With { object, body } => {
+                Self::expression_uses_function_as_promise_like_chain_callback(object, function_name)
+                    || body.iter().any(|statement| {
+                        Self::statement_uses_function_as_promise_like_chain_callback(
+                            statement,
+                            function_name,
+                        )
+                    })
+            }
+            Statement::For {
+                init,
+                condition,
+                update,
+                break_hook,
+                body,
+                ..
+            } => {
+                init.iter().any(|statement| {
+                    Self::statement_uses_function_as_promise_like_chain_callback(
+                        statement,
+                        function_name,
+                    )
+                }) || condition.as_ref().is_some_and(|expression| {
+                    Self::expression_uses_function_as_promise_like_chain_callback(
+                        expression,
+                        function_name,
+                    )
+                }) || update.as_ref().is_some_and(|expression| {
+                    Self::expression_uses_function_as_promise_like_chain_callback(
+                        expression,
+                        function_name,
+                    )
+                }) || break_hook.as_ref().is_some_and(|expression| {
+                    Self::expression_uses_function_as_promise_like_chain_callback(
+                        expression,
+                        function_name,
+                    )
+                }) || body.iter().any(|statement| {
+                    Self::statement_uses_function_as_promise_like_chain_callback(
+                        statement,
+                        function_name,
+                    )
+                })
+            }
+            Statement::While {
+                condition,
+                break_hook,
+                body,
+                ..
+            }
+            | Statement::DoWhile {
+                condition,
+                break_hook,
+                body,
+                ..
+            } => {
+                Self::expression_uses_function_as_promise_like_chain_callback(
+                    condition,
+                    function_name,
+                ) || break_hook.as_ref().is_some_and(|expression| {
+                    Self::expression_uses_function_as_promise_like_chain_callback(
+                        expression,
+                        function_name,
+                    )
+                }) || body.iter().any(|statement| {
+                    Self::statement_uses_function_as_promise_like_chain_callback(
+                        statement,
+                        function_name,
+                    )
+                })
+            }
+            Statement::Try {
+                body,
+                catch_setup,
+                catch_body,
+                ..
+            } => {
+                body.iter().any(|statement| {
+                    Self::statement_uses_function_as_promise_like_chain_callback(
+                        statement,
+                        function_name,
+                    )
+                }) || catch_setup.iter().any(|statement| {
+                    Self::statement_uses_function_as_promise_like_chain_callback(
+                        statement,
+                        function_name,
+                    )
+                }) || catch_body.iter().any(|statement| {
+                    Self::statement_uses_function_as_promise_like_chain_callback(
+                        statement,
+                        function_name,
+                    )
+                })
+            }
+            Statement::Switch {
+                discriminant,
+                cases,
+                ..
+            } => {
+                Self::expression_uses_function_as_promise_like_chain_callback(
+                    discriminant,
+                    function_name,
+                ) || cases.iter().any(|case| {
+                    case.test.as_ref().is_some_and(|expression| {
+                        Self::expression_uses_function_as_promise_like_chain_callback(
+                            expression,
+                            function_name,
+                        )
+                    }) || case.body.iter().any(|statement| {
+                        Self::statement_uses_function_as_promise_like_chain_callback(
+                            statement,
+                            function_name,
+                        )
+                    })
+                })
+            }
+            _ => false,
+        }
+    }
+
+    pub(in crate::backend::direct_wasm) fn registered_function_is_promise_like_chain_callback(
+        &self,
+        function_name: &str,
+    ) -> bool {
+        if self
+            .backend
+            .function_registry
+            .catalog
+            .registered_function_declarations
+            .iter()
+            .any(|function| {
+                function.body.iter().any(|statement| {
+                    Self::statement_uses_function_as_promise_like_chain_callback(
+                        statement,
+                        function_name,
+                    )
+                })
+            })
+        {
+            return true;
+        }
+
+        self.user_functions()
+            .iter()
+            .filter_map(|function| self.resolve_registered_function_declaration(&function.name))
+            .any(|function| {
+                function.body.iter().any(|statement| {
+                    Self::statement_uses_function_as_promise_like_chain_callback(
+                        statement,
+                        function_name,
+                    )
+                })
+            })
+    }
+
     fn expression_mentions_direct_eval(expression: &Expression) -> bool {
         match expression {
             Expression::Identifier(_) => false,

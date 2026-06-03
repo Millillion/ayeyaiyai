@@ -723,6 +723,7 @@ impl<'a> FunctionCompiler<'a> {
                 | Expression::SuperCall { .. }
                 | Expression::GetIterator(_)
         ) && !Self::expression_contains_assignment_or_update(value)
+            && !Self::expression_references_internal_assignment_temp(value)
             && inline_summary_side_effect_free_expression(value)
             && let Some(LocalFunctionBinding::User(function_name)) =
                 self.resolve_function_binding_from_expression(value)

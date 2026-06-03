@@ -664,6 +664,7 @@ impl<'a> FunctionCompiler<'a> {
                     || name.starts_with("__ayy_target_object_")
                     || name.starts_with("__ayy_target_property_")
                     || name.starts_with("__ayy_postfix_previous_")
+                    || name.starts_with("__ayy_async_delegate_result_")
             }
             Expression::Unary { expression, .. }
             | Expression::Await(expression)

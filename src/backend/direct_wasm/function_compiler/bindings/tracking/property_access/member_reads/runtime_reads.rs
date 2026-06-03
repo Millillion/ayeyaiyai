@@ -1057,6 +1057,8 @@ impl<'a> FunctionCompiler<'a> {
         }
         let object_uses_internal_assignment_temp =
             Self::expression_references_internal_assignment_temp(object);
+        let object_is_runtime_array_element_base = matches!(object, Expression::Member { .. })
+            && self.expression_has_direct_runtime_array_state_base(object);
         let property_is_arguments_own_property =
             argument_index_from_expression(static_array_property).is_some()
                 || matches!(
@@ -1115,7 +1117,9 @@ impl<'a> FunctionCompiler<'a> {
         if trace_member_reads {
             eprintln!("runtime_or_object_read:before_array");
         }
-        if self.emit_runtime_array_member_read(object, static_array_property)? {
+        if !object_is_runtime_array_element_base
+            && self.emit_runtime_array_member_read(object, static_array_property)?
+        {
             if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
                 eprintln!(
                     "runtime_shadow_member_branch array object={object:?} property={property:?}"
@@ -1154,7 +1158,8 @@ impl<'a> FunctionCompiler<'a> {
         if trace_member_reads {
             eprintln!("runtime_or_object_read:before_shadow");
         }
-        if !dynamic_descriptor_member_read
+        if !object_is_runtime_array_element_base
+            && !dynamic_descriptor_member_read
             && self.emit_runtime_object_shadow_member_read(object, property)?
         {
             if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
@@ -1163,6 +1168,14 @@ impl<'a> FunctionCompiler<'a> {
                 );
             }
             return Ok(true);
+        }
+        if object_is_runtime_array_element_base {
+            if trace_member_reads {
+                eprintln!(
+                    "runtime_or_object_read:runtime_array_element_done_false object={object:?} property={property:?}"
+                );
+            }
+            return Ok(false);
         }
         if trace_member_reads {
             eprintln!("runtime_or_object_read:before_object_binding");

@@ -113,6 +113,318 @@ impl<'a> FunctionCompiler<'a> {
         )
     }
 
+    fn function_body_returns_identifier(function: &FunctionDeclaration, name: &str) -> bool {
+        function
+            .body
+            .iter()
+            .any(|statement| Self::statement_returns_identifier(statement, name))
+    }
+
+    fn statement_returns_identifier(statement: &Statement, name: &str) -> bool {
+        match statement {
+            Statement::Return(Expression::Identifier(identifier)) => identifier == name,
+            Statement::Declaration { body }
+            | Statement::Block { body }
+            | Statement::Labeled { body, .. }
+            | Statement::With { body, .. } => body
+                .iter()
+                .any(|statement| Self::statement_returns_identifier(statement, name)),
+            Statement::If {
+                then_branch,
+                else_branch,
+                ..
+            } => then_branch
+                .iter()
+                .chain(else_branch)
+                .any(|statement| Self::statement_returns_identifier(statement, name)),
+            Statement::Try {
+                body,
+                catch_setup,
+                catch_body,
+                ..
+            } => body
+                .iter()
+                .chain(catch_setup)
+                .chain(catch_body)
+                .any(|statement| Self::statement_returns_identifier(statement, name)),
+            Statement::Switch { cases, .. } => cases.iter().any(|case| {
+                case.body
+                    .iter()
+                    .any(|statement| Self::statement_returns_identifier(statement, name))
+            }),
+            Statement::For { init, body, .. } => init
+                .iter()
+                .chain(body)
+                .any(|statement| Self::statement_returns_identifier(statement, name)),
+            Statement::While { body, .. } | Statement::DoWhile { body, .. } => body
+                .iter()
+                .any(|statement| Self::statement_returns_identifier(statement, name)),
+            _ => false,
+        }
+    }
+
+    fn expression_has_then_getter_from_candidates(
+        expression: &Expression,
+        getter_names: &HashSet<String>,
+    ) -> bool {
+        match expression {
+            Expression::Array(elements) => elements.iter().any(|element| match element {
+                ArrayElement::Expression(expression) | ArrayElement::Spread(expression) => {
+                    Self::expression_has_then_getter_from_candidates(expression, getter_names)
+                }
+            }),
+            Expression::Object(entries) => entries.iter().any(|entry| match entry {
+                ObjectEntry::Getter { key, getter }
+                    if matches!(key, Expression::String(name) if name == "then")
+                        && matches!(getter, Expression::Identifier(name) if getter_names.contains(name)) =>
+                {
+                    true
+                }
+                ObjectEntry::Data { key, value } => {
+                    Self::expression_has_then_getter_from_candidates(key, getter_names)
+                        || Self::expression_has_then_getter_from_candidates(value, getter_names)
+                }
+                ObjectEntry::Getter { key, getter } | ObjectEntry::Setter { key, setter: getter } => {
+                    Self::expression_has_then_getter_from_candidates(key, getter_names)
+                        || Self::expression_has_then_getter_from_candidates(getter, getter_names)
+                }
+                ObjectEntry::Spread(expression) => {
+                    Self::expression_has_then_getter_from_candidates(expression, getter_names)
+                }
+            }),
+            Expression::Member { object, property }
+            | Expression::AssignMember {
+                object, property, ..
+            } => {
+                Self::expression_has_then_getter_from_candidates(object, getter_names)
+                    || Self::expression_has_then_getter_from_candidates(property, getter_names)
+            }
+            Expression::SuperMember { property } => {
+                Self::expression_has_then_getter_from_candidates(property, getter_names)
+            }
+            Expression::Assign { value, .. }
+            | Expression::Await(value)
+            | Expression::EnumerateKeys(value)
+            | Expression::GetIterator(value)
+            | Expression::IteratorClose(value)
+            | Expression::Unary {
+                expression: value, ..
+            } => Self::expression_has_then_getter_from_candidates(value, getter_names),
+            Expression::AssignSuperMember { property, value } => {
+                Self::expression_has_then_getter_from_candidates(property, getter_names)
+                    || Self::expression_has_then_getter_from_candidates(value, getter_names)
+            }
+            Expression::Binary { left, right, .. } => {
+                Self::expression_has_then_getter_from_candidates(left, getter_names)
+                    || Self::expression_has_then_getter_from_candidates(right, getter_names)
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                Self::expression_has_then_getter_from_candidates(condition, getter_names)
+                    || Self::expression_has_then_getter_from_candidates(then_expression, getter_names)
+                    || Self::expression_has_then_getter_from_candidates(else_expression, getter_names)
+            }
+            Expression::Sequence(expressions) => expressions
+                .iter()
+                .any(|expression| Self::expression_has_then_getter_from_candidates(expression, getter_names)),
+            Expression::Call { callee, arguments }
+            | Expression::SuperCall { callee, arguments }
+            | Expression::New { callee, arguments } => {
+                Self::expression_has_then_getter_from_candidates(callee, getter_names)
+                    || arguments.iter().any(|argument| {
+                        Self::expression_has_then_getter_from_candidates(argument.expression(), getter_names)
+                    })
+            }
+            Expression::Update { .. }
+            | Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined
+            | Expression::NewTarget
+            | Expression::Identifier(_)
+            | Expression::This
+            | Expression::Sent => false,
+        }
+    }
+
+    fn statement_has_then_getter_from_candidates(
+        statement: &Statement,
+        getter_names: &HashSet<String>,
+    ) -> bool {
+        match statement {
+            Statement::Declaration { body }
+            | Statement::Block { body }
+            | Statement::Labeled { body, .. }
+            | Statement::With { body, .. } => body.iter().any(|statement| {
+                Self::statement_has_then_getter_from_candidates(statement, getter_names)
+            }),
+            Statement::Var { value, .. }
+            | Statement::Let { value, .. }
+            | Statement::Assign { value, .. }
+            | Statement::Expression(value)
+            | Statement::Throw(value)
+            | Statement::Return(value)
+            | Statement::Yield { value }
+            | Statement::YieldDelegate { value } => {
+                Self::expression_has_then_getter_from_candidates(value, getter_names)
+            }
+            Statement::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                Self::expression_has_then_getter_from_candidates(object, getter_names)
+                    || Self::expression_has_then_getter_from_candidates(property, getter_names)
+                    || Self::expression_has_then_getter_from_candidates(value, getter_names)
+            }
+            Statement::Print { values } => values
+                .iter()
+                .any(|value| Self::expression_has_then_getter_from_candidates(value, getter_names)),
+            Statement::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                Self::expression_has_then_getter_from_candidates(condition, getter_names)
+                    || then_branch.iter().any(|statement| {
+                        Self::statement_has_then_getter_from_candidates(statement, getter_names)
+                    })
+                    || else_branch.iter().any(|statement| {
+                        Self::statement_has_then_getter_from_candidates(statement, getter_names)
+                    })
+            }
+            Statement::Try {
+                body,
+                catch_setup,
+                catch_body,
+                ..
+            } => body
+                .iter()
+                .chain(catch_setup)
+                .chain(catch_body)
+                .any(|statement| {
+                    Self::statement_has_then_getter_from_candidates(statement, getter_names)
+                }),
+            Statement::Switch {
+                discriminant,
+                cases,
+                ..
+            } => {
+                Self::expression_has_then_getter_from_candidates(discriminant, getter_names)
+                    || cases.iter().any(|case| {
+                        case.test.as_ref().is_some_and(|test| {
+                            Self::expression_has_then_getter_from_candidates(test, getter_names)
+                        }) || case.body.iter().any(|statement| {
+                            Self::statement_has_then_getter_from_candidates(statement, getter_names)
+                        })
+                    })
+            }
+            Statement::For {
+                init,
+                condition,
+                update,
+                break_hook,
+                body,
+                ..
+            } => {
+                init.iter().any(|statement| {
+                    Self::statement_has_then_getter_from_candidates(statement, getter_names)
+                }) || condition.as_ref().is_some_and(|condition| {
+                    Self::expression_has_then_getter_from_candidates(condition, getter_names)
+                }) || update.as_ref().is_some_and(|update| {
+                    Self::expression_has_then_getter_from_candidates(update, getter_names)
+                }) || break_hook.as_ref().is_some_and(|break_hook| {
+                    Self::expression_has_then_getter_from_candidates(break_hook, getter_names)
+                }) || body.iter().any(|statement| {
+                    Self::statement_has_then_getter_from_candidates(statement, getter_names)
+                })
+            }
+            Statement::While {
+                condition,
+                break_hook,
+                body,
+                ..
+            }
+            | Statement::DoWhile {
+                condition,
+                break_hook,
+                body,
+                ..
+            } => {
+                Self::expression_has_then_getter_from_candidates(condition, getter_names)
+                    || break_hook.as_ref().is_some_and(|break_hook| {
+                        Self::expression_has_then_getter_from_candidates(break_hook, getter_names)
+                    })
+                    || body.iter().any(|statement| {
+                        Self::statement_has_then_getter_from_candidates(statement, getter_names)
+                    })
+            }
+            Statement::Break { .. } | Statement::Continue { .. } => false,
+        }
+    }
+
+    fn function_body_has_then_getter_from_candidates(
+        function: &FunctionDeclaration,
+        getter_names: &HashSet<String>,
+    ) -> bool {
+        function.body.iter().any(|statement| {
+            Self::statement_has_then_getter_from_candidates(statement, getter_names)
+        })
+    }
+
+    fn current_function_is_returned_from_then_getter(&self) -> bool {
+        let Some(current_function_name) = self.current_function_name() else {
+            return false;
+        };
+        let function_names = self
+            .user_functions()
+            .into_iter()
+            .map(|function| function.name)
+            .collect::<Vec<_>>();
+        let then_getter_names = function_names
+            .iter()
+            .filter_map(|function_name| {
+                let function = self.prepared_function_declaration(function_name)?;
+                Self::function_body_returns_identifier(function, current_function_name)
+                    .then(|| function_name.clone())
+            })
+            .collect::<HashSet<_>>();
+        !then_getter_names.is_empty()
+            && function_names.iter().any(|function_name| {
+                self.prepared_function_declaration(function_name)
+                    .is_some_and(|function| {
+                        Self::function_body_has_then_getter_from_candidates(
+                            function,
+                            &then_getter_names,
+                        )
+                    })
+            })
+    }
+
+    fn expression_is_contextual_promise_resolver_callee(&self, callee: &Expression) -> bool {
+        let Expression::Identifier(name) = callee else {
+            return false;
+        };
+        let Some(function) = self.current_user_function_declaration() else {
+            return false;
+        };
+        let callee_source_name = scoped_binding_source_name(name).unwrap_or(name);
+        let is_resolver_parameter = function.params.iter().take(2).any(|parameter| {
+            let parameter_source_name =
+                scoped_binding_source_name(&parameter.name).unwrap_or(&parameter.name);
+            parameter.name == *name
+                || parameter.name == callee_source_name
+                || parameter_source_name == name
+                || parameter_source_name == callee_source_name
+        });
+        is_resolver_parameter && self.current_function_is_returned_from_then_getter()
+    }
+
     fn expression_is_done_callback_callee(&self, callee: &Expression) -> bool {
         if matches!(callee, Expression::Identifier(name) if Self::is_done_callback_name(name)) {
             return true;
@@ -685,7 +997,9 @@ impl<'a> FunctionCompiler<'a> {
         {
             return Ok(true);
         }
-        if Self::expression_is_known_promise_resolver_callee(callee) {
+        if Self::expression_is_known_promise_resolver_callee(callee)
+            || self.expression_is_contextual_promise_resolver_callee(callee)
+        {
             for argument in arguments {
                 match argument {
                     CallArgument::Expression(expression) | CallArgument::Spread(expression) => {

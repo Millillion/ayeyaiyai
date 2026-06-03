@@ -3004,14 +3004,18 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(SimpleGeneratorNextEffectConsumption::NotApplicable);
         };
 
-        let sent_value = arguments
-            .first()
-            .map(|argument| match argument {
-                CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
-                    self.materialize_static_expression(expression)
-                }
-            })
-            .unwrap_or(Expression::Undefined);
+        let sent_value = if current_index == 0 {
+            Expression::Undefined
+        } else {
+            arguments
+                .first()
+                .map(|argument| match argument {
+                    CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                        self.materialize_static_expression(expression)
+                    }
+                })
+                .unwrap_or(Expression::Undefined)
+        };
         let substituted_effects = step
             .effects
             .iter()
@@ -3364,7 +3368,7 @@ impl<'a> FunctionCompiler<'a> {
         let source_strict = self
             .simple_generator_source_strict(object)
             .unwrap_or(self.state.speculation.execution_context.strict_mode);
-        let sent_value = arguments
+        let provided_sent_value = arguments
             .first()
             .map(|argument| match argument {
                 CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
@@ -3394,7 +3398,10 @@ impl<'a> FunctionCompiler<'a> {
                             self.registered_function_body_mentions_promise_like_chain(function_name)
                         });
                     if current_function_mentions_promise_chain
-                        && self.first_async_generator_step_rejects_on_next(&steps, &sent_value)
+                        && self.first_async_generator_step_rejects_on_next(
+                            &steps,
+                            &Expression::Undefined,
+                        )
                     {
                         if std::env::var_os("AYY_TRACE_SIMPLE_GENERATORS").is_some() {
                             eprintln!(
@@ -3453,6 +3460,11 @@ impl<'a> FunctionCompiler<'a> {
                     .and_then(|binding| binding.static_index)
             })
             .unwrap_or(0);
+        let sent_value = if current_index == 0 {
+            Expression::Undefined
+        } else {
+            provided_sent_value
+        };
         if std::env::var_os("AYY_TRACE_SIMPLE_GENERATORS").is_some() {
             eprintln!(
                 "simple_async_next object={object:?} binding={binding_name:?} current_index={current_index}"

@@ -166,7 +166,9 @@ impl<'a> FunctionCompiler<'a> {
             false
         };
         let snapshot_current_argument =
-            if property_name == "next" && delegate_snapshot_bindings.is_none() {
+            if property_name == "next" && matches!(current_static_index, Some(0)) {
+                Expression::Undefined
+            } else if property_name == "next" && delegate_snapshot_bindings.is_none() {
                 Expression::Undefined
             } else if delegate_return_method_missing {
                 match self.resolve_static_await_resolution_outcome(&current_argument_expression) {

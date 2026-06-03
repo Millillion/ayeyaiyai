@@ -218,6 +218,12 @@ impl<'a> FunctionCompiler<'a> {
         let object_uses_internal_assignment_temp =
             Self::expression_references_internal_assignment_temp(object);
         let object_contains_await = Self::expression_contains_await_for_user_call_runtime(object);
+        let object_has_runtime_array_base =
+            self.expression_has_direct_runtime_array_state_base(object);
+        let object_is_runtime_array_element_base =
+            matches!(object, Expression::Member { .. }) && object_has_runtime_array_base;
+        let object_may_be_module_namespace =
+            self.expression_may_resolve_to_module_namespace_object(object);
         if self.emit_internal_temp_static_string_member_read(object, &static_array_property)? {
             if trace_member_reads {
                 eprintln!(
@@ -235,6 +241,7 @@ impl<'a> FunctionCompiler<'a> {
         if !skip_static_special_for_descriptor_member
             && !object_contains_await
             && !object_uses_internal_assignment_temp
+            && !object_is_runtime_array_element_base
             && self.emit_special_member_read_without_prelude(
                 object,
                 property,
@@ -255,6 +262,7 @@ impl<'a> FunctionCompiler<'a> {
             eprintln!("member_read:before_binding object={object:?} property={property:?}");
         }
         let runtime_array_member_requires_runtime_read = !object_contains_await
+            && !object_is_runtime_array_element_base
             && (argument_index_from_expression(&static_array_property).is_some()
                 || matches!(&static_array_property, Expression::String(name) if name == "length"))
             && self
@@ -262,6 +270,7 @@ impl<'a> FunctionCompiler<'a> {
                 .is_some_and(|name| {
                     self.runtime_array_binding_has_state(&name)
                         || self.uses_global_runtime_array_state(&name)
+                        || object_has_runtime_array_base
                         || self.expression_uses_runtime_array_state(object)
                 });
         if runtime_array_member_requires_runtime_read
@@ -304,6 +313,8 @@ impl<'a> FunctionCompiler<'a> {
         }
         if !object_uses_internal_assignment_temp
             && !object_contains_await
+            && !object_is_runtime_array_element_base
+            && object_may_be_module_namespace
             && let Some(value) = self
                 .resolve_module_namespace_live_binding_member_value(object, &static_array_property)
         {
@@ -317,6 +328,8 @@ impl<'a> FunctionCompiler<'a> {
         }
         if !object_uses_internal_assignment_temp
             && !object_contains_await
+            && !object_is_runtime_array_element_base
+            && object_may_be_module_namespace
             && static_property_name_from_expression(&static_array_property).is_some()
             && self
                 .direct_module_namespace_object_binding(object)
@@ -332,6 +345,7 @@ impl<'a> FunctionCompiler<'a> {
         }
         if !object_uses_internal_assignment_temp
             && !object_contains_await
+            && !object_is_runtime_array_element_base
             && self.runtime_object_property_shadow_deletion_may_affect_property(
                 object,
                 &static_array_property,
@@ -366,6 +380,7 @@ impl<'a> FunctionCompiler<'a> {
         }
         if !object_uses_internal_assignment_temp
             && !object_contains_await
+            && !object_is_runtime_array_element_base
             && !dynamic_descriptor_member_read
             && !nested_assert_helper_member
             && self.emit_member_binding_read_without_prelude(object, property)?
@@ -382,6 +397,7 @@ impl<'a> FunctionCompiler<'a> {
         }
         if !object_uses_internal_assignment_temp
             && !object_contains_await
+            && !object_is_runtime_array_element_base
             && inline_summary_side_effect_free_expression(object)
             && inline_summary_side_effect_free_expression(property)
         {

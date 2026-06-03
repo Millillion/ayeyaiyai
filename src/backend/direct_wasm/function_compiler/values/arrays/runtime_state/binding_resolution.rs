@@ -35,6 +35,35 @@ impl Drop for RuntimeArrayBindingResolutionGuard {
 }
 
 impl<'a> FunctionCompiler<'a> {
+    pub(in crate::backend::direct_wasm) fn expression_has_direct_runtime_array_state_base(
+        &self,
+        expression: &Expression,
+    ) -> bool {
+        match expression {
+            Expression::Identifier(name) => {
+                self.resolve_runtime_array_binding_name(name).is_some()
+                    || self
+                        .state
+                        .speculation
+                        .static_semantics
+                        .runtime_array_length_local(name)
+                        .is_some()
+                    || self
+                        .state
+                        .speculation
+                        .static_semantics
+                        .has_runtime_array_slots(name)
+                    || (self.is_named_global_array_binding(name)
+                        && (self.uses_global_runtime_array_state(name)
+                            || self.backend.global_array_binding(name).is_some()))
+            }
+            Expression::Member { object, .. } => {
+                self.expression_has_direct_runtime_array_state_base(object)
+            }
+            _ => false,
+        }
+    }
+
     pub(in crate::backend::direct_wasm) fn runtime_array_binding_has_state(
         &self,
         name: &str,
@@ -198,7 +227,7 @@ impl<'a> FunctionCompiler<'a> {
             return false;
         }
         if let Expression::Member { object, .. } = expression
-            && self.expression_uses_runtime_array_state(object)
+            && self.expression_has_direct_runtime_array_state_base(object)
         {
             return true;
         }
@@ -218,14 +247,6 @@ impl<'a> FunctionCompiler<'a> {
         let _guard = RuntimeArrayBindingResolutionGuard::enter(expression)?;
 
         if let Expression::Identifier(name) = expression {
-            if let Some(alias_expression) = self.direct_identifier_value_binding(name)
-                && !static_expression_matches(alias_expression, expression)
-                && let Some(alias_binding_name) =
-                    self.runtime_array_binding_name_for_expression(alias_expression)
-                && self.runtime_array_binding_may_have_shared_state(&alias_binding_name)
-            {
-                return Some(alias_binding_name);
-            }
             if let Some(binding_name) = self
                 .resolve_runtime_array_binding_name(name)
                 .or_else(|| {
@@ -251,6 +272,14 @@ impl<'a> FunctionCompiler<'a> {
                 })
             {
                 return Some(binding_name);
+            }
+            if let Some(alias_expression) = self.direct_identifier_value_binding(name)
+                && !static_expression_matches(alias_expression, expression)
+                && let Some(alias_binding_name) =
+                    self.runtime_array_binding_name_for_expression(alias_expression)
+                && self.runtime_array_binding_may_have_shared_state(&alias_binding_name)
+            {
+                return Some(alias_binding_name);
             }
         }
 

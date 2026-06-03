@@ -5,6 +5,7 @@ fn is_internal_assignment_temp(name: &str) -> bool {
         || name.starts_with("__ayy_target_object_")
         || name.starts_with("__ayy_target_property_")
         || name.starts_with("__ayy_postfix_previous_")
+        || name.starts_with("__ayy_async_delegate_result_")
 }
 
 fn is_internal_target_property_temp(name: &str) -> bool {
@@ -73,9 +74,11 @@ impl<'a> FunctionCompiler<'a> {
         let Expression::Member { object, property } = expression else {
             return false;
         };
+        if Self::test262_realm_global_constructor_property_name(property).is_none() {
+            return false;
+        }
         self.resolve_test262_realm_global_id_from_expression(object)
             .is_some()
-            && Self::test262_realm_global_constructor_property_name(property).is_some()
     }
 
     fn emit_test262_realm_global_constructor_member_value(
@@ -83,10 +86,10 @@ impl<'a> FunctionCompiler<'a> {
         object: &Expression,
         property: &Expression,
     ) -> DirectResult<bool> {
-        if self
-            .resolve_test262_realm_global_id_from_expression(object)
-            .is_some()
-            && Self::test262_realm_global_constructor_property_name(property).is_some()
+        if Self::test262_realm_global_constructor_property_name(property).is_some()
+            && self
+                .resolve_test262_realm_global_id_from_expression(object)
+                .is_some()
         {
             self.push_i32_const(JS_TYPEOF_FUNCTION_TAG);
             return Ok(true);
@@ -1376,6 +1379,10 @@ impl<'a> FunctionCompiler<'a> {
             object: Box::new(object.clone()),
             property: Box::new(property.clone()),
         };
+        let object_uses_runtime_array_state = self.expression_uses_runtime_array_state(object)
+            || self.expression_has_direct_runtime_array_state_base(object);
+        let object_may_be_module_namespace =
+            self.expression_may_resolve_to_module_namespace_object(object);
         let static_array_property = self
             .resolve_property_key_expression(property)
             .unwrap_or_else(|| self.materialize_static_expression(property));
@@ -1423,6 +1430,7 @@ impl<'a> FunctionCompiler<'a> {
         }
         if !object_is_internal_assignment_temp
             && !object_contains_await
+            && !object_uses_runtime_array_state
             && matches!(object, Expression::Member { .. })
             && self.emit_deferred_module_namespace_prototype_member_read(object, property)?
         {
@@ -1504,6 +1512,8 @@ impl<'a> FunctionCompiler<'a> {
         }
         if !object_is_internal_assignment_temp
             && !object_contains_await
+            && !object_uses_runtime_array_state
+            && object_may_be_module_namespace
             && self
                 .deferred_module_namespace_materialized_member_access(object, property)
                 .is_none()
@@ -1516,6 +1526,8 @@ impl<'a> FunctionCompiler<'a> {
         }
         if !object_is_internal_assignment_temp
             && !object_contains_await
+            && !object_uses_runtime_array_state
+            && object_may_be_module_namespace
             && self
                 .deferred_module_namespace_materialized_member_access(object, property)
                 .is_none()
@@ -1527,6 +1539,7 @@ impl<'a> FunctionCompiler<'a> {
         }
         if !object_is_internal_assignment_temp
             && !object_contains_await
+            && !object_uses_runtime_array_state
             && !nested_assert_helper_member
             && !matches!(property, Expression::Member { .. })
             && let Some(function_binding) =
@@ -1556,6 +1569,7 @@ impl<'a> FunctionCompiler<'a> {
         }
         if !object_is_internal_assignment_temp
             && !object_contains_await
+            && !object_uses_runtime_array_state
             && matches!(property, Expression::String(property_name) if property_name == "prototype")
         {
             let resolved_object = self
@@ -1618,10 +1632,13 @@ impl<'a> FunctionCompiler<'a> {
         let read_object = self
             .private_member_read_receiver_after_evaluation(object, effective_property)
             .unwrap_or_else(|| object.clone());
-        if self.emit_deferred_module_namespace_prototype_member_read(
-            &read_object,
-            effective_property,
-        )? {
+        if !object_uses_runtime_array_state
+            && object_may_be_module_namespace
+            && self.emit_deferred_module_namespace_prototype_member_read(
+                &read_object,
+                effective_property,
+            )?
+        {
             return Ok(());
         }
         if !object_contains_await && !assert_helper_member {
@@ -1917,6 +1934,25 @@ impl<'a> FunctionCompiler<'a> {
             }
         }
         None
+    }
+
+    pub(in crate::backend::direct_wasm) fn expression_may_resolve_to_module_namespace_object(
+        &self,
+        expression: &Expression,
+    ) -> bool {
+        match expression {
+            Expression::Identifier(name) => {
+                Self::module_index_from_namespace_like_identifier(name).is_some()
+                    || self
+                        .deferred_module_namespace_candidate_module_index(name)
+                        .is_some()
+                    || self
+                        .direct_module_namespace_object_binding(expression)
+                        .is_some()
+            }
+            Expression::Member { .. } | Expression::This => true,
+            _ => false,
+        }
     }
 
     fn private_member_read_receiver_after_evaluation(

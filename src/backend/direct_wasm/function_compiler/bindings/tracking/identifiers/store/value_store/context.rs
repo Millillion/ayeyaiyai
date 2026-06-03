@@ -243,6 +243,24 @@ fn expression_is_static_promise_with_resolvers_record(expression: &Expression) -
     has_promise && has_resolve && has_reject
 }
 
+fn async_delegate_result_member_kind(expression: &Expression) -> Option<StaticValueKind> {
+    let Expression::Member { object, property } = expression else {
+        return None;
+    };
+    if !matches!(object.as_ref(), Expression::Identifier(name) if name.starts_with("__ayy_async_delegate_result_"))
+    {
+        return None;
+    }
+    let Expression::String(property_name) = property.as_ref() else {
+        return None;
+    };
+    match property_name.as_str() {
+        "done" => Some(StaticValueKind::Bool),
+        "value" => Some(StaticValueKind::Unknown),
+        _ => None,
+    }
+}
+
 fn expression_is_non_prototype_nested_member(expression: &Expression) -> bool {
     matches!(
         expression,
@@ -1635,6 +1653,32 @@ impl<'a> FunctionCompiler<'a> {
         };
         if trace_identifier_store {
             eprintln!("identifier_store:{name}:tracked {tracked_value_expression:?}");
+        }
+        if let Some(kind) = async_delegate_result_member_kind(&canonical_value_expression) {
+            if trace_identifier_store {
+                eprintln!("identifier_store:{name}:async_delegate_result_member");
+            }
+            return PreparedIdentifierValueStore {
+                canonical_value_expression: canonical_value_expression.clone(),
+                tracked_value_expression: tracked_value_expression.clone(),
+                descriptor_binding_expression: Expression::Undefined,
+                tracked_object_expression: Expression::Undefined,
+                call_source_snapshot_expression: None,
+                prototype_source_snapshot_expression: None,
+                function_binding_expression: Expression::Undefined,
+                function_binding: None,
+                object_binding_expression: Expression::Undefined,
+                object_binding: None,
+                kind: Some(kind),
+                static_string_value: None,
+                exact_static_number: None,
+                array_binding: None,
+                module_assignment_expression: canonical_value_expression.clone(),
+                resolved_local_binding,
+                returned_descriptor_binding: None,
+                runtime_value_override: None,
+                opaque_runtime_value: true,
+            };
         }
         if static_expression_matches(&tracked_value_expression, &canonical_value_expression)
             && expression_is_non_prototype_nested_member(&canonical_value_expression)
