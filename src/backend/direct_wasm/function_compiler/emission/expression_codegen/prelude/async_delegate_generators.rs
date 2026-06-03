@@ -34,6 +34,83 @@ pub(super) struct PreparedAsyncDelegateConsumption {
 }
 
 impl<'a> FunctionCompiler<'a> {
+    fn statement_allows_async_generator_simple_source_probe(statement: &Statement) -> bool {
+        match statement {
+            Statement::YieldDelegate { value } => matches!(value, Expression::Array(_)),
+            Statement::Declaration { body }
+            | Statement::Block { body }
+            | Statement::Labeled { body, .. }
+            | Statement::With { body, .. }
+            | Statement::While { body, .. }
+            | Statement::DoWhile { body, .. } => {
+                Self::statements_allow_async_generator_simple_source_probe(body)
+            }
+            Statement::If {
+                then_branch,
+                else_branch,
+                ..
+            } => {
+                Self::statements_allow_async_generator_simple_source_probe(then_branch)
+                    && Self::statements_allow_async_generator_simple_source_probe(else_branch)
+            }
+            Statement::Try {
+                body,
+                catch_setup,
+                catch_body,
+                ..
+            } => {
+                Self::statements_allow_async_generator_simple_source_probe(body)
+                    && Self::statements_allow_async_generator_simple_source_probe(catch_setup)
+                    && Self::statements_allow_async_generator_simple_source_probe(catch_body)
+            }
+            Statement::Switch { cases, .. } => cases
+                .iter()
+                .all(|case| Self::statements_allow_async_generator_simple_source_probe(&case.body)),
+            Statement::For { init, body, .. } => {
+                Self::statements_allow_async_generator_simple_source_probe(init)
+                    && Self::statements_allow_async_generator_simple_source_probe(body)
+            }
+            Statement::Var { .. }
+            | Statement::Let { .. }
+            | Statement::Assign { .. }
+            | Statement::AssignMember { .. }
+            | Statement::Print { .. }
+            | Statement::Expression(_)
+            | Statement::Throw(_)
+            | Statement::Return(_)
+            | Statement::Break { .. }
+            | Statement::Continue { .. }
+            | Statement::Yield { .. } => true,
+        }
+    }
+
+    fn statements_allow_async_generator_simple_source_probe(statements: &[Statement]) -> bool {
+        statements
+            .iter()
+            .all(Self::statement_allows_async_generator_simple_source_probe)
+    }
+
+    fn async_generator_call_allows_simple_source_probe(&self, expression: &Expression) -> bool {
+        let Expression::Call { callee, .. } = expression else {
+            return true;
+        };
+        let Some(LocalFunctionBinding::User(function_name)) =
+            self.resolve_function_binding_from_expression(callee)
+        else {
+            return true;
+        };
+        let Some(user_function) = self.user_function(&function_name) else {
+            return true;
+        };
+        if !matches!(user_function.kind, FunctionKind::AsyncGenerator) {
+            return true;
+        }
+        self.resolve_registered_function_declaration(&function_name)
+            .is_some_and(|function| {
+                Self::statements_allow_async_generator_simple_source_probe(&function.body)
+            })
+    }
+
     pub(in crate::backend::direct_wasm) fn consume_async_yield_delegate_generator_promise_outcome(
         &mut self,
         object: &Expression,
@@ -53,8 +130,10 @@ impl<'a> FunctionCompiler<'a> {
         {
             return Ok(None);
         }
+        let has_simple_source = self.async_generator_call_allows_simple_source_probe(object)
+            && self.resolve_simple_generator_source(object).is_some();
         if !matches!(object, Expression::Identifier(_))
-            && self.resolve_simple_generator_source(object).is_none()
+            && !has_simple_source
             && let Some(source @ IteratorSourceKind::AsyncYieldDelegateGenerator { .. }) =
                 self.resolve_local_array_iterator_source(object)
         {

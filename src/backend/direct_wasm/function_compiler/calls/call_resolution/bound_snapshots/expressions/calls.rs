@@ -164,6 +164,19 @@ impl<'a> FunctionCompiler<'a> {
             return bound_snapshot_builtin_number_argument(&value)
                 .map(|number| Expression::Bool(number.is_nan()));
         }
+        if let Expression::Member { object, property } = effective_callee
+            && matches!(object.as_ref(), Expression::Identifier(name) if name == "Promise" && self.is_unshadowed_builtin_identifier(name))
+            && matches!(
+                property.as_ref(),
+                Expression::String(name)
+                    if matches!(name.as_str(), "resolve" | "reject" | "all" | "withResolvers")
+            )
+        {
+            return Some(Expression::Call {
+                callee: Box::new(effective_callee.clone()),
+                arguments: arguments.to_vec(),
+            });
+        }
         let binding = self.resolve_function_binding_from_expression_with_context(
             effective_callee,
             current_function_name,

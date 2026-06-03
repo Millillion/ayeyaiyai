@@ -83,9 +83,10 @@ impl<'a> FunctionCompiler<'a> {
                     if symbol_name == "Symbol" && self.is_unshadowed_builtin_identifier(symbol_name))
         );
         let preserve_reference_alias = preserve_private_brand_identifier
-            || self
-                .resolve_iterator_source_kind(metadata_source_value)
-                .is_some()
+            || (!matches!(metadata_source_value, Expression::Object(_))
+                && self
+                    .resolve_iterator_source_kind(metadata_source_value)
+                    .is_some())
             || function_binding.is_some()
             || matches!(&snapshot_value, Expression::Identifier(name) if self.lookup_identifier_kind(name) == Some(StaticValueKind::Symbol))
             || preserve_symbol_call_binding

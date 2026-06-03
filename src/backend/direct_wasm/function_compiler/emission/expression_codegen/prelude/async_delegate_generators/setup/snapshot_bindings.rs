@@ -111,18 +111,10 @@ impl<'a> FunctionCompiler<'a> {
                         Some(function_name),
                     )
             {
-                return match outcome {
-                    StaticEvalOutcome::Value(value) => Some(
-                        self.resolve_static_await_resolution_outcome(&value)
-                            .unwrap_or(StaticEvalOutcome::Value(value)),
-                    ),
-                    StaticEvalOutcome::Throw(throw_value) => {
-                        Some(StaticEvalOutcome::Throw(throw_value))
-                    }
-                };
+                return Some(outcome);
             }
         }
-        self.resolve_static_await_resolution_outcome(expression)
+        None
     }
 
     fn resolve_async_delegate_method_snapshot_resolution(

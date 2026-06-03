@@ -46,13 +46,15 @@ impl<'a> FunctionCompiler<'a> {
             }
             _ => return None,
         };
-        if let Some(source) = self.resolve_iterator_source_kind(source_expression) {
-            return Some(source);
-        }
-        if let Some(source) =
-            self.resolve_for_await_step_value_iterator_source_kind(source_expression)
-        {
-            return Some(source);
+        if !self.is_async_generator_call_expression(source_expression) {
+            if let Some(source) = self.resolve_iterator_source_kind(source_expression) {
+                return Some(source);
+            }
+            if let Some(source) =
+                self.resolve_for_await_step_value_iterator_source_kind(source_expression)
+            {
+                return Some(source);
+            }
         }
         if let Expression::GetIterator(iterated) = value
             && let Some((steps, completion_effects, _)) = self

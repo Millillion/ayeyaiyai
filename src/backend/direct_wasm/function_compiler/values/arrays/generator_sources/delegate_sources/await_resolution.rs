@@ -14,6 +14,9 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         expression: &Expression,
     ) -> bool {
+        if matches!(expression, Expression::Object(_) | Expression::Array(_)) {
+            return true;
+        }
         self.resolve_iterator_source_kind(expression).is_some()
             || self
                 .resolve_object_binding_from_expression(expression)

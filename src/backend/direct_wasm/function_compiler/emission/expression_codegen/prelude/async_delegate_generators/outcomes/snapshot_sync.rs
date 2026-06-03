@@ -15,7 +15,84 @@ impl<'a> FunctionCompiler<'a> {
         static_step_result_has_accessor_properties: bool,
     ) {
         let delegate_function_name = Some(plan.function_name.as_str());
-        if snapshot_bindings.contains_key(promise_done_name)
+        if !static_step_result_has_accessor_properties
+            && !snapshot_bindings.contains_key(promise_done_name)
+            && let Some(Expression::Object(entries)) =
+                snapshot_bindings.get(step_result_name).cloned()
+            && let Some(StaticEvalOutcome::Value(done_value)) = self
+                .resolve_bound_snapshot_object_member_outcome(
+                    &entries,
+                    &Expression::String("done".to_string()),
+                    snapshot_bindings,
+                    delegate_function_name,
+                )
+        {
+            snapshot_bindings.insert(promise_done_name.to_string(), done_value.clone());
+            self.update_local_value_binding(promise_done_name, &done_value);
+            if let Some(done) = self.resolve_static_boolean_expression(&done_value) {
+                if done {
+                    if let Some(StaticEvalOutcome::Value(completion_value)) = self
+                        .resolve_bound_snapshot_object_member_outcome(
+                            &entries,
+                            &Expression::String("value".to_string()),
+                            snapshot_bindings,
+                            delegate_function_name,
+                        )
+                    {
+                        snapshot_bindings.insert(
+                            delegate_completion_name.to_string(),
+                            completion_value.clone(),
+                        );
+                        self.update_local_value_binding(
+                            delegate_completion_name,
+                            &completion_value,
+                        );
+                        if property_name != "return" {
+                            self.execute_bound_snapshot_statements(
+                                &plan.completion_effects,
+                                snapshot_bindings,
+                                Some(&plan.function_name),
+                            );
+                        }
+                    }
+                    let promise_value = match property_name {
+                        "return" => snapshot_bindings
+                            .get(delegate_completion_name)
+                            .cloned()
+                            .unwrap_or(Expression::Identifier(
+                                delegate_completion_name.to_string(),
+                            )),
+                        "next" | "throw" => self
+                            .evaluate_bound_snapshot_expression(
+                                &plan.completion_value,
+                                snapshot_bindings,
+                                delegate_function_name,
+                            )
+                            .unwrap_or_else(|| plan.completion_value.clone()),
+                        _ => Expression::Undefined,
+                    };
+                    snapshot_bindings.insert(promise_value_name.to_string(), promise_value.clone());
+                    self.update_local_value_binding(promise_value_name, &promise_value);
+                } else if let Some(StaticEvalOutcome::Value(yield_value)) = self
+                    .resolve_bound_snapshot_object_member_outcome(
+                        &entries,
+                        &Expression::String("value".to_string()),
+                        snapshot_bindings,
+                        delegate_function_name,
+                    )
+                    && !self.async_yield_delegate_step_value_is_placeholder(
+                        &yield_value,
+                        delegate_iterator_name,
+                        property_name,
+                    )
+                {
+                    snapshot_bindings.insert(promise_value_name.to_string(), yield_value.clone());
+                    self.update_local_value_binding(promise_value_name, &yield_value);
+                }
+            }
+        }
+        if !static_step_result_has_accessor_properties
+            && snapshot_bindings.contains_key(promise_done_name)
             && self.resolve_static_boolean_expression(
                 snapshot_bindings
                     .get(promise_done_name)
@@ -96,7 +173,9 @@ impl<'a> FunctionCompiler<'a> {
             }
         }
 
-        if !snapshot_bindings.contains_key(promise_done_name) {
+        if !static_step_result_has_accessor_properties
+            && !snapshot_bindings.contains_key(promise_done_name)
+        {
             let done_member = Expression::Member {
                 object: Box::new(Expression::Identifier(step_result_name.to_string())),
                 property: Box::new(Expression::String("done".to_string())),

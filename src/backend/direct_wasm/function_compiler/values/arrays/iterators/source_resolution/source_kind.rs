@@ -6,6 +6,24 @@ fn is_internal_declaration_array_binding_name(name: &str) -> bool {
 }
 
 impl<'a> FunctionCompiler<'a> {
+    fn expression_is_direct_promise_object_call(expression: &Expression) -> bool {
+        let Expression::Call { callee, .. } = expression else {
+            return false;
+        };
+        let Expression::Member { object, property } = callee.as_ref() else {
+            return false;
+        };
+        matches!(object.as_ref(), Expression::Identifier(name) if name == "Promise")
+            && matches!(
+                property.as_ref(),
+                Expression::String(name)
+                    if matches!(
+                        name.as_str(),
+                        "resolve" | "reject" | "all" | "withResolvers"
+                    )
+            )
+    }
+
     fn typed_array_view_source_name_for_iterator_alias_with_depth(
         &self,
         expression: &Expression,
@@ -285,6 +303,16 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         expression: &Expression,
     ) -> Option<IteratorSourceKind> {
+        if matches!(
+            expression,
+            Expression::Member { object, .. }
+                if matches!(object.as_ref(), Expression::Identifier(name) if name == "Symbol")
+        ) {
+            return None;
+        }
+        if Self::expression_is_direct_promise_object_call(expression) {
+            return None;
+        }
         let structural_key = format!("{expression:?}");
         let trace_focus = std::env::var("AYY_TRACE_ITERATOR_SOURCE_FOCUS").ok();
         let trace_iterator_source = std::env::var_os("AYY_TRACE_ITERATOR_SOURCE_KIND").is_some()

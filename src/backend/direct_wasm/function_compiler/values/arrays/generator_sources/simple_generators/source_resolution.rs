@@ -443,10 +443,6 @@ impl<'a> FunctionCompiler<'a> {
         Vec<Statement>,
         Expression,
     )> {
-        let trace_source = std::env::var_os("AYY_TRACE_SIMPLE_GENERATOR_SOURCE").is_some();
-        if trace_source {
-            eprintln!("simple_generator_source:start expression={expression:?}");
-        }
         if let Expression::Call { callee, .. } = expression
             && let Expression::Member { object, property } = callee.as_ref()
             && matches!(
@@ -482,16 +478,7 @@ impl<'a> FunctionCompiler<'a> {
                 self.resolve_function_binding_from_expression(callee)
             && let Some(user_function) = self.user_function(&function_name)
         {
-            if trace_source {
-                eprintln!(
-                    "simple_generator_source:user function={function_name} kind={:?}",
-                    user_function.kind
-                );
-            }
             if !user_function.is_generator() {
-                if trace_source {
-                    eprintln!("simple_generator_source:not-generator function={function_name}");
-                }
                 return None;
             }
             let function = self.resolve_registered_function_declaration(&function_name)?;
@@ -606,11 +593,6 @@ impl<'a> FunctionCompiler<'a> {
                 self.expand_static_lowered_for_of_completion_effects(&substituted_body);
             let (substituted_body, completion_value) =
                 self.split_simple_generator_completion(substituted_body)?;
-            if trace_source {
-                eprintln!(
-                    "simple_generator_source:analyze function={function_name} body={substituted_body:#?} completion={completion_value:?}"
-                );
-            }
             let mut steps = Vec::new();
             let mut effects = Vec::new();
             if self
@@ -622,18 +604,8 @@ impl<'a> FunctionCompiler<'a> {
                 )
                 .is_none()
             {
-                if trace_source {
-                    eprintln!("simple_generator_source:analyze-failed function={function_name}");
-                }
                 store_simple_generator_source_cache(cache_key, None);
                 return None;
-            }
-            if trace_source {
-                eprintln!(
-                    "simple_generator_source:ok function={function_name} steps={} effects={}",
-                    steps.len(),
-                    effects.len()
-                );
             }
             let result = Some((prefix_effects, steps, effects, completion_value));
             store_simple_generator_source_cache(cache_key, result.clone());

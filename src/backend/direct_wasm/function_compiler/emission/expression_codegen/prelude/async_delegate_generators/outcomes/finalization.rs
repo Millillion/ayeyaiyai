@@ -104,26 +104,6 @@ impl<'a> FunctionCompiler<'a> {
             returned_value_expression = materialized_returned_value_expression;
         }
 
-        let awaited_yield_outcome = match self
-            .resolve_static_boolean_expression(&returned_done_expression)
-        {
-            Some(false) => self.resolve_static_await_resolution_outcome(&returned_value_expression),
-            _ => None,
-        };
-        if let Some(StaticEvalOutcome::Throw(throw_value)) = awaited_yield_outcome {
-            self.persist_async_yield_delegate_generator_snapshot_state(
-                binding_name,
-                Some(2),
-                delegate_snapshot_bindings,
-            );
-            self.sync_persisted_async_yield_delegate_generator_snapshot_state(binding_name)?;
-            self.pop_async_delegate_snapshot_scope_bindings(scoped_snapshot_names);
-            return Ok(Some(StaticEvalOutcome::Throw(throw_value)));
-        }
-        if let Some(StaticEvalOutcome::Value(awaited_value)) = awaited_yield_outcome {
-            returned_value_expression = awaited_value;
-        }
-
         let next_static_index = match current_static_index {
             Some(index) if index >= 2 => Some(2),
             Some(_) => match self.resolve_static_boolean_expression(&returned_done_expression) {

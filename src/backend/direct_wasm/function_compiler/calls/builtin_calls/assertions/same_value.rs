@@ -1,6 +1,124 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn same_value_expression_is_direct_promise_object_call(expression: &Expression) -> bool {
+        let Expression::Call { callee, .. } = expression else {
+            return false;
+        };
+        let Expression::Member { object, property } = callee.as_ref() else {
+            return false;
+        };
+        matches!(object.as_ref(), Expression::Identifier(name) if name == "Promise")
+            && matches!(
+                property.as_ref(),
+                Expression::String(name)
+                    if matches!(name.as_str(), "resolve" | "reject" | "all" | "withResolvers")
+            )
+    }
+
+    fn same_value_static_promise_binding_identity_key(
+        &self,
+        expression: &Expression,
+    ) -> Option<String> {
+        if let Expression::Identifier(name) = expression {
+            let resolved_name = self
+                .resolve_current_local_binding(name)
+                .map(|(resolved_name, _)| resolved_name)
+                .unwrap_or_else(|| name.clone());
+            if let Some(value) = self
+                .state
+                .speculation
+                .static_semantics
+                .local_value_binding(&resolved_name)
+                .or_else(|| {
+                    self.state
+                        .speculation
+                        .static_semantics
+                        .local_value_binding(name)
+                })
+                && Self::same_value_expression_is_direct_promise_object_call(value)
+            {
+                return Some(format!("local:{resolved_name}"));
+            }
+            if let Some(value) = self.global_value_binding(name)
+                && Self::same_value_expression_is_direct_promise_object_call(value)
+            {
+                return Some(format!("global:{name}"));
+            }
+            return None;
+        }
+
+        None
+    }
+
+    fn same_value_static_bound_promise_object_value(
+        &self,
+        expression: &Expression,
+    ) -> Option<Expression> {
+        if let Expression::Identifier(name) = expression {
+            let resolved_name = self
+                .resolve_current_local_binding(name)
+                .map(|(resolved_name, _)| resolved_name)
+                .unwrap_or_else(|| name.clone());
+            return self
+                .state
+                .speculation
+                .static_semantics
+                .local_value_binding(&resolved_name)
+                .or_else(|| {
+                    self.state
+                        .speculation
+                        .static_semantics
+                        .local_value_binding(name)
+                })
+                .or_else(|| self.global_value_binding(name))
+                .filter(|value| Self::same_value_expression_is_direct_promise_object_call(value))
+                .cloned();
+        }
+
+        if let Expression::Member { object, property } = expression {
+            let resolved_property = self.same_value_resolved_property_key(property);
+            if let Some(shadow_binding_name) = self
+                .runtime_object_property_shadow_binding_name_for_expression(
+                    object,
+                    &resolved_property,
+                )
+                && let Some(value) = self.global_value_binding(&shadow_binding_name)
+                && Self::same_value_expression_is_direct_promise_object_call(value)
+            {
+                return Some(value.clone());
+            }
+            if let Some(object_binding) = self.resolve_object_binding_from_expression(object)
+                && let Some(value) =
+                    self.resolve_object_binding_property_value(&object_binding, &resolved_property)
+                && Self::same_value_expression_is_direct_promise_object_call(&value)
+            {
+                return Some(value);
+            }
+        }
+
+        None
+    }
+
+    fn same_value_static_bound_promise_object_result(
+        &self,
+        actual: &Expression,
+        expected: &Expression,
+    ) -> Option<bool> {
+        if self
+            .same_value_static_promise_binding_identity_key(actual)
+            .is_none()
+            && self
+                .same_value_static_promise_binding_identity_key(expected)
+                .is_none()
+        {
+            return None;
+        }
+        let actual_value = self.same_value_static_bound_promise_object_value(actual)?;
+        let expected_value = self.same_value_static_bound_promise_object_value(expected)?;
+        Some(static_expression_matches(&actual_value, &expected_value))
+    }
+
     fn emit_same_value_operand(&mut self, expression: &Expression) -> DirectResult<()> {
         self.emit_numeric_expression(expression)
     }
@@ -1472,6 +1590,12 @@ impl<'a> FunctionCompiler<'a> {
         if depth == 0 {
             return None;
         }
+        if let Some(key) = self.same_value_static_promise_binding_identity_key(expression) {
+            return Some(key);
+        }
+        if Self::same_value_expression_is_direct_promise_object_call(expression) {
+            return None;
+        }
         if let Some(key) = Self::same_value_import_meta_identity_key(expression) {
             return Some(key);
         }
@@ -2082,6 +2206,9 @@ impl<'a> FunctionCompiler<'a> {
     ) -> Option<Expression> {
         if depth == 0 {
             return None;
+        }
+        if Self::same_value_expression_is_direct_promise_object_call(expression) {
+            return Some(expression.clone());
         }
         match expression {
             Expression::Number(_)
@@ -3548,6 +3675,20 @@ impl<'a> FunctionCompiler<'a> {
             || self.same_value_assertion_is_direct_tracked_array_index_member(expected)
             || self.same_value_assertion_has_direct_tracked_array_element_base(expected);
         if fast_extra_arguments_side_effect_free
+            && let Some(static_result) =
+                self.same_value_static_bound_promise_object_result(actual, expected)
+        {
+            let assertion_passes = match assertion_failure {
+                BinaryOp::NotEqual => static_result,
+                BinaryOp::Equal => !static_result,
+                _ => false,
+            };
+            if assertion_passes {
+                self.push_i32_const(JS_UNDEFINED_TAG);
+                return Ok(true);
+            }
+        }
+        if fast_extra_arguments_side_effect_free
             && operands_contain_dynamic_descriptor_member
             && let Some(static_result) =
                 self.same_value_dynamic_descriptor_undefined_accessor_result(actual, expected)
@@ -3747,9 +3888,19 @@ impl<'a> FunctionCompiler<'a> {
             {
                 (
                     Self::same_value_import_meta_identity_key(actual)
-                        .or_else(|| self.resolve_static_reference_identity_key(actual)),
+                        .or_else(|| self.same_value_static_promise_binding_identity_key(actual))
+                        .or_else(|| {
+                            (!Self::same_value_expression_is_direct_promise_object_call(actual))
+                                .then(|| self.resolve_static_reference_identity_key(actual))
+                                .flatten()
+                        }),
                     Self::same_value_import_meta_identity_key(expected)
-                        .or_else(|| self.resolve_static_reference_identity_key(expected)),
+                        .or_else(|| self.same_value_static_promise_binding_identity_key(expected))
+                        .or_else(|| {
+                            (!Self::same_value_expression_is_direct_promise_object_call(expected))
+                                .then(|| self.resolve_static_reference_identity_key(expected))
+                                .flatten()
+                        }),
                 )
             } else {
                 (None, None)

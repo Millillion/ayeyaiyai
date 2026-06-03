@@ -42,6 +42,25 @@ impl<'a> FunctionCompiler<'a> {
                         &delegate_next_expression,
                         Some(&plan.function_name),
                     )
+                })
+                .or_else(|| {
+                    delegate_snapshot_bindings
+                        .as_ref()
+                        .and_then(|snapshot_bindings| {
+                            snapshot_bindings.get(delegate_iterator_name.as_str())
+                        })
+                        .and_then(|delegate_iterator| {
+                            self.resolve_member_function_binding(
+                                delegate_iterator,
+                                &delegate_property_expression,
+                            )
+                        })
+                })
+                .or_else(|| {
+                    self.resolve_member_function_binding(
+                        &delegate_iterator_expression,
+                        &delegate_property_expression,
+                    )
                 }),
             "return" | "throw" => delegate_snapshot_bindings
                 .as_ref()
@@ -67,6 +86,19 @@ impl<'a> FunctionCompiler<'a> {
         let value_property = Expression::String("value".to_string());
         let step_result_has_accessor_properties =
             |compiler: &FunctionCompiler<'a>, expression: &Expression| {
+                if let Expression::Object(entries) = expression {
+                    return entries.iter().any(|entry| {
+                        let ObjectEntry::Getter { key, .. } = entry else {
+                            return false;
+                        };
+                        compiler
+                            .resolve_property_key_expression(key)
+                            .is_some_and(|key| {
+                                static_expression_matches(&key, &done_property)
+                                    || static_expression_matches(&key, &value_property)
+                            })
+                    });
+                }
                 compiler
                     .resolve_member_getter_binding(expression, &done_property)
                     .is_some()
@@ -276,7 +308,7 @@ impl<'a> FunctionCompiler<'a> {
         }
 
         let (
-            _static_step_result_expression,
+            static_step_result_expression,
             static_step_result_has_accessor_properties,
             needs_runtime_step_result_call,
         ) = if let Some(snapshot_bindings) = delegate_snapshot_bindings.as_mut() {
@@ -418,11 +450,45 @@ impl<'a> FunctionCompiler<'a> {
                 static_step_result_has_accessor_properties,
             );
         }
-        if let Some(done_expression) = delegate_snapshot_bindings
-            .as_ref()
-            .and_then(|snapshot_bindings| snapshot_bindings.get(&promise_done_name))
-            .cloned()
-        {
+        let mut pre_resolved_done_expression = None;
+        let mut pre_resolved_done_throw = None;
+        if let (Expression::Object(entries), Some(snapshot_bindings)) = (
+            &static_step_result_expression,
+            delegate_snapshot_bindings.as_mut(),
+        ) {
+            match self.resolve_bound_snapshot_object_member_outcome(
+                entries,
+                &done_property,
+                snapshot_bindings,
+                Some(&plan.function_name),
+            ) {
+                Some(StaticEvalOutcome::Value(done_value)) => {
+                    snapshot_bindings.insert(promise_done_name.clone(), done_value.clone());
+                    self.update_local_value_binding(&promise_done_name, &done_value);
+                    pre_resolved_done_expression = Some(done_value);
+                }
+                Some(StaticEvalOutcome::Throw(throw_value)) => {
+                    pre_resolved_done_throw = Some(throw_value);
+                }
+                None => {}
+            }
+        }
+        if let Some(throw_value) = pre_resolved_done_throw {
+            self.persist_async_yield_delegate_generator_snapshot_state(
+                &binding_name,
+                Some(2),
+                delegate_snapshot_bindings,
+            );
+            self.sync_persisted_async_yield_delegate_generator_snapshot_state(&binding_name)?;
+            self.pop_async_delegate_snapshot_scope_bindings(&scoped_snapshot_names);
+            return Ok(Some(StaticEvalOutcome::Throw(throw_value)));
+        }
+        if let Some(done_expression) = pre_resolved_done_expression.or_else(|| {
+            delegate_snapshot_bindings
+                .as_ref()
+                .and_then(|snapshot_bindings| snapshot_bindings.get(&promise_done_name))
+                .cloned()
+        }) {
             self.emit_statement(&Statement::Assign {
                 name: promise_done_name.clone(),
                 value: done_expression,
@@ -443,28 +509,174 @@ impl<'a> FunctionCompiler<'a> {
                 },
             })?;
         }
-        let static_done = self
+        let mut static_done = self
             .resolve_static_boolean_expression(&Expression::Identifier(promise_done_name.clone()));
+        if static_done.is_none() {
+            let mut static_done_throw = None;
+            let static_done_outcome =
+                if let (Expression::Object(entries), Some(snapshot_bindings)) = (
+                    &static_step_result_expression,
+                    delegate_snapshot_bindings.as_mut(),
+                ) {
+                    self.resolve_bound_snapshot_object_member_outcome(
+                        entries,
+                        &done_property,
+                        snapshot_bindings,
+                        Some(&plan.function_name),
+                    )
+                } else {
+                    self.resolve_static_property_get_outcome(
+                        &static_step_result_expression,
+                        &done_property,
+                    )
+                };
+            match static_done_outcome {
+                Some(StaticEvalOutcome::Value(done_value)) => {
+                    static_done = self.resolve_static_boolean_expression(&done_value);
+                    if static_done.is_some()
+                        && let Some(snapshot_bindings) = delegate_snapshot_bindings.as_mut()
+                    {
+                        snapshot_bindings.insert(promise_done_name.clone(), done_value.clone());
+                        self.update_local_value_binding(&promise_done_name, &done_value);
+                    }
+                }
+                Some(StaticEvalOutcome::Throw(throw_value)) => {
+                    static_done_throw = Some(throw_value);
+                }
+                None => {}
+            }
+            if let Some(throw_value) = static_done_throw {
+                self.persist_async_yield_delegate_generator_snapshot_state(
+                    &binding_name,
+                    Some(2),
+                    delegate_snapshot_bindings,
+                );
+                self.sync_persisted_async_yield_delegate_generator_snapshot_state(&binding_name)?;
+                self.pop_async_delegate_snapshot_scope_bindings(&scoped_snapshot_names);
+                return Ok(Some(StaticEvalOutcome::Throw(throw_value)));
+            }
+        }
         match static_done {
-            Some(true) => self.emit_async_yield_delegate_done_branch(
-                &plan,
-                delegate_snapshot_bindings.as_ref(),
-                &runtime_step_result_expression,
-                &step_result_name,
-                &delegate_completion_name,
-                &delegate_completion_expression,
-                &promise_value_name,
-                &promise_done_name,
-                property_name.as_str(),
-                index_local,
-            )?,
-            Some(false) => self.emit_async_yield_delegate_not_done_branch(
-                delegate_snapshot_bindings.as_ref(),
-                &runtime_step_result_expression,
-                &step_result_name,
-                &promise_value_name,
-                &promise_done_name,
-            )?,
+            Some(true) => {
+                let static_value_outcome =
+                    if let (Expression::Object(entries), Some(snapshot_bindings)) = (
+                        &static_step_result_expression,
+                        delegate_snapshot_bindings.as_mut(),
+                    ) {
+                        self.resolve_bound_snapshot_object_member_outcome(
+                            entries,
+                            &value_property,
+                            snapshot_bindings,
+                            Some(&plan.function_name),
+                        )
+                    } else {
+                        self.resolve_static_property_get_outcome(
+                            &static_step_result_expression,
+                            &value_property,
+                        )
+                    };
+                match static_value_outcome {
+                    Some(StaticEvalOutcome::Value(value)) => {
+                        if let Some(snapshot_bindings) = delegate_snapshot_bindings.as_mut() {
+                            snapshot_bindings
+                                .insert(delegate_completion_name.clone(), value.clone());
+                            self.update_local_value_binding(&delegate_completion_name, &value);
+                        }
+                    }
+                    Some(StaticEvalOutcome::Throw(throw_value)) => {
+                        self.persist_async_yield_delegate_generator_snapshot_state(
+                            &binding_name,
+                            Some(2),
+                            delegate_snapshot_bindings,
+                        );
+                        self.sync_persisted_async_yield_delegate_generator_snapshot_state(
+                            &binding_name,
+                        )?;
+                        self.pop_async_delegate_snapshot_scope_bindings(&scoped_snapshot_names);
+                        return Ok(Some(StaticEvalOutcome::Throw(throw_value)));
+                    }
+                    None => {}
+                }
+                if static_step_result_has_accessor_properties
+                    && matches!(property_name.as_str(), "next" | "throw")
+                    && let Some(snapshot_bindings) = delegate_snapshot_bindings.as_mut()
+                    && snapshot_bindings.contains_key(&delegate_completion_name)
+                {
+                    self.execute_bound_snapshot_statements(
+                        &plan.completion_effects,
+                        snapshot_bindings,
+                        Some(&plan.function_name),
+                    );
+                    let promise_value = self
+                        .evaluate_bound_snapshot_expression(
+                            &plan.completion_value,
+                            snapshot_bindings,
+                            Some(&plan.function_name),
+                        )
+                        .unwrap_or_else(|| plan.completion_value.clone());
+                    snapshot_bindings.insert(promise_value_name.clone(), promise_value.clone());
+                    self.update_local_value_binding(&promise_value_name, &promise_value);
+                }
+                self.emit_async_yield_delegate_done_branch(
+                    &plan,
+                    delegate_snapshot_bindings.as_ref(),
+                    &runtime_step_result_expression,
+                    &step_result_name,
+                    &delegate_completion_name,
+                    &delegate_completion_expression,
+                    &promise_value_name,
+                    &promise_done_name,
+                    property_name.as_str(),
+                    index_local,
+                )?
+            }
+            Some(false) => {
+                let static_value_outcome =
+                    if let (Expression::Object(entries), Some(snapshot_bindings)) = (
+                        &static_step_result_expression,
+                        delegate_snapshot_bindings.as_mut(),
+                    ) {
+                        self.resolve_bound_snapshot_object_member_outcome(
+                            entries,
+                            &value_property,
+                            snapshot_bindings,
+                            Some(&plan.function_name),
+                        )
+                    } else {
+                        self.resolve_static_property_get_outcome(
+                            &static_step_result_expression,
+                            &value_property,
+                        )
+                    };
+                match static_value_outcome {
+                    Some(StaticEvalOutcome::Value(value)) => {
+                        if let Some(snapshot_bindings) = delegate_snapshot_bindings.as_mut() {
+                            snapshot_bindings.insert(promise_value_name.clone(), value.clone());
+                            self.update_local_value_binding(&promise_value_name, &value);
+                        }
+                    }
+                    Some(StaticEvalOutcome::Throw(throw_value)) => {
+                        self.persist_async_yield_delegate_generator_snapshot_state(
+                            &binding_name,
+                            Some(2),
+                            delegate_snapshot_bindings,
+                        );
+                        self.sync_persisted_async_yield_delegate_generator_snapshot_state(
+                            &binding_name,
+                        )?;
+                        self.pop_async_delegate_snapshot_scope_bindings(&scoped_snapshot_names);
+                        return Ok(Some(StaticEvalOutcome::Throw(throw_value)));
+                    }
+                    None => {}
+                }
+                self.emit_async_yield_delegate_not_done_branch(
+                    delegate_snapshot_bindings.as_ref(),
+                    &runtime_step_result_expression,
+                    &step_result_name,
+                    &promise_value_name,
+                    &promise_done_name,
+                )?
+            }
             None => {
                 self.emit_numeric_expression(&Expression::Identifier(promise_done_name.clone()))?;
                 self.state.emission.output.instructions.push(0x04);

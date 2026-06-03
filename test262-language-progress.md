@@ -1,4 +1,4 @@
-1691/23668 (7.14%)
+1693/23668 (7.15%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,7 +14,7 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 366/9337 (3.92%)
+- statements: 368/9337 (3.94%)
 - expressions: 0/11061 (0.00%)
 - types: 0/113 (0.00%)
 - function-code: 0/217 (0.00%)
@@ -1735,8 +1735,8 @@ Sub-category progress
   - [x] test/language/statements/async-generator/yield-star-next-then-non-callable-symbol-fulfillpromise.js
   - [x] test/language/statements/async-generator/yield-star-next-then-non-callable-undefined-fulfillpromise.js
   - [x] test/language/statements/async-generator/yield-star-next-then-returns-abrupt.js
-  - [ ] test/language/statements/async-generator/yield-star-normal-notdone-iter-value-throws.js
-  - [ ] test/language/statements/async-generator/yield-star-promise-not-unwrapped.js
+  - [x] test/language/statements/async-generator/yield-star-normal-notdone-iter-value-throws.js
+  - [x] test/language/statements/async-generator/yield-star-promise-not-unwrapped.js
   - [ ] test/language/statements/async-generator/yield-star-return-missing-value-is-awaited.js
   - [ ] test/language/statements/async-generator/yield-star-return-notdone-iter-value-throws.js
   - [ ] test/language/statements/async-generator/yield-star-return-then-getter-ticks.js

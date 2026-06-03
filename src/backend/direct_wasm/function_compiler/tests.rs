@@ -6203,6 +6203,184 @@ fn consumes_async_yield_delegate_abrupt_getiterator_rejection_then_completion() 
 }
 
 #[test]
+fn consumes_async_yield_delegate_not_done_value_getter_throw() {
+    let program = frontend::parse(
+        r#"
+            var token = {};
+            var asyncIter = {
+              [Symbol.asyncIterator]() {
+                return this;
+              },
+              next() {
+                return {
+                  done: false,
+                  get value() {
+                    throw token;
+                  }
+                };
+              }
+            };
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should construct");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+
+    for statement in &program.statements {
+        function_compiler
+            .emit_statement(statement)
+            .expect("statement should emit");
+    }
+
+    let (steps, completion_effects) = function_compiler
+        .resolve_simple_async_yield_delegate_source(&Expression::Identifier(
+            "asyncIter".to_string(),
+        ))
+        .expect("delegate source should resolve");
+
+    assert!(completion_effects.is_empty());
+    assert_eq!(steps.len(), 1);
+    match &steps[0].outcome {
+        SimpleGeneratorStepOutcome::Throw(Expression::Identifier(name)) if name == "token" => {}
+        SimpleGeneratorStepOutcome::Throw(other) => {
+            panic!("expected thrown token, got throw={other:?}");
+        }
+        SimpleGeneratorStepOutcome::Yield(other) => {
+            panic!("expected thrown token, got yield={other:?}");
+        }
+        SimpleGeneratorStepOutcome::YieldResult(other) => {
+            panic!("expected thrown token, got yield result={other:?}");
+        }
+    }
+}
+
+#[test]
+fn consumes_caught_async_yield_delegate_value_getter_throw_as_completion() {
+    let program = frontend::parse(
+        r#"
+            var token = {};
+            var asyncIter = {
+              [Symbol.asyncIterator]() {
+                return this;
+              },
+              next() {
+                return {
+                  done: false,
+                  get value() {
+                    throw token;
+                  }
+                };
+              }
+            };
+            async function* f() {
+              var thrown;
+              try {
+                yield* asyncIter;
+              } catch (e) {
+                thrown = e;
+              }
+              return thrown;
+            }
+            var iter = f();
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should construct");
+    function_compiler
+        .register_bindings(&program.statements)
+        .expect("bindings should register");
+
+    for statement in &program.statements {
+        function_compiler
+            .emit_statement(statement)
+            .expect("statement should emit");
+    }
+
+    let outcome = function_compiler
+        .consume_immediate_promise_outcome(&Expression::Call {
+            callee: Box::new(Expression::Member {
+                object: Box::new(Expression::Identifier("iter".to_string())),
+                property: Box::new(Expression::String("next".to_string())),
+            }),
+            arguments: Vec::new(),
+        })
+        .expect("iter.next should compile")
+        .expect("iter.next should resolve");
+
+    let StaticEvalOutcome::Value(value) = outcome else {
+        panic!("expected fulfilled iterator result");
+    };
+    assert_eq!(
+        function_compiler.materialize_static_expression(&Expression::Member {
+            object: Box::new(value.clone()),
+            property: Box::new(Expression::String("done".to_string())),
+        }),
+        Expression::Bool(true)
+    );
+    let completion_value = function_compiler.materialize_static_expression(&Expression::Member {
+        object: Box::new(value),
+        property: Box::new(Expression::String("value".to_string())),
+    });
+    let Expression::Identifier(completion_name) = completion_value else {
+        panic!("expected completion value binding");
+    };
+    assert_eq!(
+        function_compiler
+            .state
+            .speculation
+            .static_semantics
+            .local_value_binding(&completion_name),
+        Some(&Expression::Identifier("token".to_string()))
+    );
+}
+
+#[test]
 fn consumes_async_yield_delegate_undefined_async_getiterator_rejection_then_completion() {
     let program = frontend::parse(
         r#"

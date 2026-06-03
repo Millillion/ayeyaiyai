@@ -9,19 +9,28 @@ impl<'a> FunctionCompiler<'a> {
         let next_outcome = if let Some(getter_binding) =
             self.resolve_member_getter_binding(iterator_value, &next_property)
         {
-            self.resolve_static_function_outcome_from_binding_with_context(
+            self.resolve_static_function_outcome_from_binding_with_call_frame_and_context(
                 &getter_binding,
                 &[],
+                iterator_value,
                 self.current_function_name(),
-            )?
+            )
+            .or_else(|| {
+                self.resolve_static_function_outcome_from_binding_with_context(
+                    &getter_binding,
+                    &[],
+                    self.current_function_name(),
+                )
+            })?
         } else {
             self.resolve_static_property_get_outcome(iterator_value, &next_property)?
         };
-        self.validate_static_async_iterator_next_outcome(next_outcome)
+        self.validate_static_async_iterator_next_outcome(iterator_value, next_outcome)
     }
 
     pub(in crate::backend::direct_wasm) fn validate_static_async_iterator_next_outcome(
         &self,
+        iterator_value: &Expression,
         next_outcome: StaticEvalOutcome,
     ) -> Option<(Vec<SimpleGeneratorStep>, Vec<Statement>)> {
         let current_function_name = self.current_function_name();
@@ -40,11 +49,20 @@ impl<'a> FunctionCompiler<'a> {
         ) else {
             return self.simple_generator_throw_step(StaticThrowValue::NamedError("TypeError"));
         };
-        let next_result_outcome = self.resolve_static_function_outcome_from_binding_with_context(
-            &next_binding,
-            &[],
-            current_function_name,
-        )?;
+        let next_result_outcome = self
+            .resolve_static_function_outcome_from_binding_with_call_frame_and_context(
+                &next_binding,
+                &[],
+                iterator_value,
+                current_function_name,
+            )
+            .or_else(|| {
+                self.resolve_static_function_outcome_from_binding_with_context(
+                    &next_binding,
+                    &[],
+                    current_function_name,
+                )
+            })?;
         let awaited_result = match next_result_outcome {
             StaticEvalOutcome::Throw(throw_value) => {
                 return self.simple_generator_throw_step(throw_value);

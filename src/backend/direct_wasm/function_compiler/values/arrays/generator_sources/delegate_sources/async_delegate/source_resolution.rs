@@ -44,63 +44,108 @@ impl<'a> FunctionCompiler<'a> {
         });
         let iterator_property = self.materialize_static_expression(&symbol_iterator_expression());
         let current_function_name = self.current_function_name();
-        let resolve_iterator_method_call_outcome = |compiler: &Self,
-                                                    property: &Expression|
-         -> Option<Option<StaticEvalOutcome>> {
-            if let Some(getter_binding) =
-                compiler.resolve_member_getter_binding(expression, property)
-            {
-                return match compiler.resolve_static_function_outcome_from_binding_with_context(
-                    &getter_binding,
-                    &[],
+        let resolve_iterator_method_outcome =
+            |compiler: &Self, method_value: &Expression| -> Option<StaticEvalOutcome> {
+                let Some(binding) = compiler.resolve_function_binding_from_expression_with_context(
+                    method_value,
                     current_function_name,
-                )? {
-                    StaticEvalOutcome::Throw(throw_value) => {
-                        Some(Some(StaticEvalOutcome::Throw(throw_value)))
-                    }
-                    StaticEvalOutcome::Value(method_value) => {
-                        if matches!(method_value, Expression::Undefined | Expression::Null) {
-                            return Some(None);
-                        }
-                        Some(Some(
-                            compiler
-                                .resolve_static_sync_iterator_method_call_outcome(&method_value)?,
-                        ))
-                    }
+                ) else {
+                    return Some(StaticEvalOutcome::Throw(StaticThrowValue::NamedError(
+                        "TypeError",
+                    )));
                 };
-            }
-            if let Some(function_binding) =
-                compiler.resolve_member_function_binding(expression, property)
-            {
-                return Some(Some(compiler.validate_static_sync_iterator_call_outcome(
-                    compiler.resolve_static_function_outcome_from_binding_with_context(
-                        &function_binding,
+                let outcome = compiler
+                    .resolve_static_function_outcome_from_binding_with_call_frame_and_context(
+                        &binding,
                         &[],
+                        expression,
                         current_function_name,
-                    )?,
-                )?));
-            }
-            if let Some(object_binding) =
-                compiler.resolve_object_binding_from_expression(expression)
-            {
-                let Some(method_value) = object_binding_lookup_value(&object_binding, property)
-                else {
-                    return Some(None);
-                };
-                if matches!(method_value, Expression::Undefined | Expression::Null) {
-                    return Some(None);
+                    )
+                    .or_else(|| {
+                        compiler.resolve_static_function_outcome_from_binding_with_context(
+                            &binding,
+                            &[],
+                            current_function_name,
+                        )
+                    })?;
+                compiler.validate_static_sync_iterator_call_outcome(outcome)
+            };
+        let resolve_iterator_method_call_outcome =
+            |compiler: &Self, property: &Expression| -> Option<Option<StaticEvalOutcome>> {
+                if let Some(getter_binding) =
+                    compiler.resolve_member_getter_binding(expression, property)
+                {
+                    return match compiler
+                        .resolve_static_function_outcome_from_binding_with_call_frame_and_context(
+                            &getter_binding,
+                            &[],
+                            expression,
+                            current_function_name,
+                        )
+                        .or_else(|| {
+                            compiler.resolve_static_function_outcome_from_binding_with_context(
+                                &getter_binding,
+                                &[],
+                                current_function_name,
+                            )
+                        })? {
+                        StaticEvalOutcome::Throw(throw_value) => {
+                            Some(Some(StaticEvalOutcome::Throw(throw_value)))
+                        }
+                        StaticEvalOutcome::Value(method_value) => {
+                            if matches!(method_value, Expression::Undefined | Expression::Null) {
+                                return Some(None);
+                            }
+                            Some(Some(resolve_iterator_method_outcome(
+                                compiler,
+                                &method_value,
+                            )?))
+                        }
+                    };
                 }
-                return Some(Some(
-                    compiler.resolve_static_sync_iterator_method_call_outcome(method_value)?,
-                ));
-            }
-            Some(None)
-        };
-        let call_outcome =
+                if let Some(function_binding) =
+                    compiler.resolve_member_function_binding(expression, property)
+                {
+                    let outcome = compiler
+                        .resolve_static_function_outcome_from_binding_with_call_frame_and_context(
+                            &function_binding,
+                            &[],
+                            expression,
+                            current_function_name,
+                        )
+                        .or_else(|| {
+                            compiler.resolve_static_function_outcome_from_binding_with_context(
+                                &function_binding,
+                                &[],
+                                current_function_name,
+                            )
+                        })?;
+                    return Some(Some(
+                        compiler.validate_static_sync_iterator_call_outcome(outcome)?,
+                    ));
+                }
+                if let Some(object_binding) =
+                    compiler.resolve_object_binding_from_expression(expression)
+                {
+                    let Some(method_value) = object_binding_lookup_value(&object_binding, property)
+                    else {
+                        return Some(None);
+                    };
+                    if matches!(method_value, Expression::Undefined | Expression::Null) {
+                        return Some(None);
+                    }
+                    return Some(Some(resolve_iterator_method_outcome(
+                        compiler,
+                        method_value,
+                    )?));
+                }
+                Some(None)
+            };
+        let (call_outcome, uses_async_iterator_method) =
             match resolve_iterator_method_call_outcome(self, &async_iterator_property)? {
-                Some(outcome) => outcome,
+                Some(outcome) => (outcome, true),
                 None => match resolve_iterator_method_call_outcome(self, &iterator_property)? {
-                    Some(outcome) => outcome,
+                    Some(outcome) => (outcome, false),
                     None => {
                         if let Some(source) = self.resolve_iterator_source_kind(expression)
                             && let Some(flattened) =
@@ -122,6 +167,17 @@ impl<'a> FunctionCompiler<'a> {
                     return self
                         .simple_generator_throw_step(StaticThrowValue::NamedError("TypeError"));
                 }
+                let return_property = Expression::String("return".to_string());
+                let throw_property = Expression::String("throw".to_string());
+                if uses_async_iterator_method {
+                    if self.expression_has_defined_member_entry(&iterator_value, &return_property)
+                        || self
+                            .expression_has_defined_member_entry(&iterator_value, &throw_property)
+                    {
+                        return None;
+                    }
+                    return self.resolve_simple_async_iterator_next_source(&iterator_value);
+                }
                 if let Some(source) = self.resolve_iterator_source_kind(&iterator_value) {
                     if let Some(flattened) =
                         self.flatten_simple_yield_delegate_iterator_source(&source)
@@ -129,8 +185,6 @@ impl<'a> FunctionCompiler<'a> {
                         return Some(flattened);
                     }
                 }
-                let return_property = Expression::String("return".to_string());
-                let throw_property = Expression::String("throw".to_string());
                 if self.expression_has_defined_member_entry(&iterator_value, &return_property)
                     || self.expression_has_defined_member_entry(&iterator_value, &throw_property)
                 {

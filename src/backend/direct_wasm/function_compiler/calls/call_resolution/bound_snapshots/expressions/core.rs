@@ -9,6 +9,24 @@ impl<'a> FunctionCompiler<'a> {
             && self.is_unshadowed_builtin_identifier(name)
     }
 
+    fn bound_snapshot_expression_is_direct_promise_object_call(
+        &self,
+        expression: &Expression,
+    ) -> bool {
+        let Expression::Call { callee, .. } = expression else {
+            return false;
+        };
+        let Expression::Member { object, property } = callee.as_ref() else {
+            return false;
+        };
+        matches!(object.as_ref(), Expression::Identifier(name) if name == "Promise" && self.is_unshadowed_builtin_identifier(name))
+            && matches!(
+                property.as_ref(),
+                Expression::String(name)
+                    if matches!(name.as_str(), "resolve" | "reject" | "all" | "withResolvers")
+            )
+    }
+
     pub(super) fn evaluate_bound_snapshot_identifier(
         &self,
         name: &str,
@@ -56,6 +74,9 @@ impl<'a> FunctionCompiler<'a> {
                         | Expression::Null
                         | Expression::Undefined
                 ) {
+                    if self.bound_snapshot_expression_is_direct_promise_object_call(&value) {
+                        return Some(Expression::Identifier(resolved_name.to_string()));
+                    }
                     if let Some(evaluated) =
                         self.evaluate_bound_snapshot_expression(&value, bindings, None)
                     {
@@ -118,6 +139,9 @@ impl<'a> FunctionCompiler<'a> {
             .resolve_global_value_expression(&identifier)
             .filter(|resolved| !static_expression_matches(resolved, &identifier))
         {
+            if self.bound_snapshot_expression_is_direct_promise_object_call(&resolved) {
+                return Some(identifier);
+            }
             return self
                 .evaluate_bound_snapshot_expression(&resolved, bindings, None)
                 .or_else(|| Some(self.materialize_static_expression(&resolved)));

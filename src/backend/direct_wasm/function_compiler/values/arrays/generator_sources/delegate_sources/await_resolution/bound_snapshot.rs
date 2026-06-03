@@ -1,12 +1,44 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn bound_snapshot_object_literal_definitely_lacks_static_property(
+        &self,
+        entries: &[ObjectEntry],
+        property: &Expression,
+    ) -> bool {
+        for entry in entries {
+            match entry {
+                ObjectEntry::Data { key, .. }
+                | ObjectEntry::Getter { key, .. }
+                | ObjectEntry::Setter { key, .. } => {
+                    let Some(key) = self.resolve_property_key_expression(key) else {
+                        return false;
+                    };
+                    if static_expression_matches(&key, property) {
+                        return false;
+                    }
+                }
+                ObjectEntry::Spread(_) => return false,
+            }
+        }
+        true
+    }
+
     pub(in crate::backend::direct_wasm) fn resolve_bound_snapshot_await_resolution_outcome(
         &self,
         resolution: &Expression,
         bindings: &mut HashMap<String, Expression>,
         current_function_name: Option<&str>,
     ) -> Option<StaticEvalOutcome> {
+        let then_property = Expression::String("then".to_string());
+        if let Expression::Object(entries) = resolution
+            && self.bound_snapshot_object_literal_definitely_lacks_static_property(
+                entries,
+                &then_property,
+            )
+        {
+            return Some(StaticEvalOutcome::Value(resolution.clone()));
+        }
         let materialized = self
             .evaluate_bound_snapshot_expression(resolution, bindings, current_function_name)
             .unwrap_or_else(|| self.materialize_static_expression(resolution));
@@ -51,7 +83,6 @@ impl<'a> FunctionCompiler<'a> {
             return Some(StaticEvalOutcome::Value(materialized));
         }
 
-        let then_property = Expression::String("then".to_string());
         let then_value = match &materialized {
             Expression::Object(entries) => self
                 .resolve_bound_snapshot_object_member_outcome(

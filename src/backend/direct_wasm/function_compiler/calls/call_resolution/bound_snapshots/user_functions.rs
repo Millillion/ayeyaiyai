@@ -1680,6 +1680,41 @@ impl<'a> FunctionCompiler<'a> {
         )
     }
 
+    fn bound_snapshot_object_literal_definitely_lacks_property(
+        &self,
+        entries: &[ObjectEntry],
+        property: &Expression,
+    ) -> bool {
+        for entry in entries {
+            match entry {
+                ObjectEntry::Data { key, .. }
+                | ObjectEntry::Getter { key, .. }
+                | ObjectEntry::Setter { key, .. } => {
+                    let Some(key) = self.resolve_property_key_expression(key) else {
+                        return false;
+                    };
+                    if static_expression_matches(&key, property) {
+                        return false;
+                    }
+                }
+                ObjectEntry::Spread(_) => return false,
+            }
+        }
+        true
+    }
+
+    fn bound_snapshot_await_resolution_definitely_lacks_then(
+        &self,
+        resolution: &Expression,
+    ) -> bool {
+        let then_property = Expression::String("then".to_string());
+        match resolution {
+            Expression::Object(entries) => self
+                .bound_snapshot_object_literal_definitely_lacks_property(entries, &then_property),
+            _ => false,
+        }
+    }
+
     pub(in crate::backend::direct_wasm) fn resolve_bound_snapshot_thenable_outcome(
         &self,
         binding: &LocalFunctionBinding,
@@ -1722,6 +1757,9 @@ impl<'a> FunctionCompiler<'a> {
                 )
         });
         if let Some(resolution) = resolution {
+            if self.bound_snapshot_await_resolution_definitely_lacks_then(&resolution) {
+                return Some(StaticEvalOutcome::Value(resolution));
+            }
             return self
                 .resolve_static_await_resolution_outcome(&resolution)
                 .or(Some(StaticEvalOutcome::Value(resolution)));
