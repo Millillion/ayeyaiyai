@@ -15,7 +15,7 @@ use tempfile::tempdir;
 use walkdir::WalkDir;
 
 #[derive(Debug, Parser)]
-#[command(about = "Run a supported subset of test262 against AyeYaiYai")]
+#[command(about = "Run the test262 language category against AyeYaiYai")]
 struct Cli {
     #[arg(long)]
     test262_dir: PathBuf,
@@ -77,7 +77,7 @@ fn run() -> Result<()> {
     let exact_tests = normalize_requested_tests(&cli.test262_dir, &cli.tests, &cli.tests_from)?;
     let candidate_paths: Box<dyn Iterator<Item = PathBuf>> = if exact_tests.is_empty() {
         Box::new(
-            WalkDir::new(cli.test262_dir.join("test"))
+            WalkDir::new(cli.test262_dir.join("test/language"))
                 .into_iter()
                 .filter_map(Result::ok)
                 .filter(|entry| entry.file_type().is_file())

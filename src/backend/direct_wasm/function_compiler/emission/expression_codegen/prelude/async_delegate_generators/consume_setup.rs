@@ -1,6 +1,73 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn static_snapshot_key_may_match_string_property(
+        &self,
+        key: &Expression,
+        property_name: &str,
+    ) -> bool {
+        self.resolve_property_key_expression(key).map_or(
+            true,
+            |key| matches!(key, Expression::String(key_name) if key_name == property_name),
+        )
+    }
+
+    fn static_snapshot_object_member_is_missing_or_nullish(
+        &self,
+        expression: &Expression,
+        property: &Expression,
+        snapshot_bindings: &HashMap<String, Expression>,
+    ) -> bool {
+        if let Expression::Identifier(name) = expression {
+            if let Some(value) = snapshot_bindings
+                .get(name)
+                .filter(|value| !static_expression_matches(value, expression))
+            {
+                return self.static_snapshot_object_member_is_missing_or_nullish(
+                    value,
+                    property,
+                    snapshot_bindings,
+                );
+            }
+            if let Some(object_binding) = self
+                .state
+                .speculation
+                .static_semantics
+                .local_object_binding(name)
+                .or_else(|| self.global_object_binding(name))
+            {
+                if let Some(value) = object_binding_lookup_value(object_binding, property) {
+                    return matches!(value, Expression::Null | Expression::Undefined);
+                }
+                return object_binding_lookup_descriptor(object_binding, property).is_none();
+            }
+            return false;
+        }
+
+        let Expression::Object(entries) = expression else {
+            return false;
+        };
+        let Expression::String(property_name) = property else {
+            return false;
+        };
+        for entry in entries.iter().rev() {
+            match entry {
+                ObjectEntry::Data { key, value } => {
+                    if self.static_snapshot_key_may_match_string_property(key, property_name) {
+                        return matches!(value, Expression::Null | Expression::Undefined);
+                    }
+                }
+                ObjectEntry::Getter { key, .. } | ObjectEntry::Setter { key, .. } => {
+                    if self.static_snapshot_key_may_match_string_property(key, property_name) {
+                        return false;
+                    }
+                }
+                ObjectEntry::Spread(_) => return false,
+            }
+        }
+        true
+    }
+
     pub(super) fn prepare_async_yield_delegate_generator_consumption(
         &mut self,
         object: &Expression,
@@ -148,20 +215,14 @@ impl<'a> FunctionCompiler<'a> {
         }
         let delegate_return_method_missing = if property_name == "return" {
             delegate_snapshot_bindings
-                .as_mut()
-                .and_then(|snapshot_bindings| {
-                    self.evaluate_bound_snapshot_expression(
-                        &Expression::Member {
-                            object: Box::new(Expression::Identifier(
-                                delegate_iterator_name.clone(),
-                            )),
-                            property: Box::new(Expression::String("return".to_string())),
-                        },
+                .as_ref()
+                .is_some_and(|snapshot_bindings| {
+                    self.static_snapshot_object_member_is_missing_or_nullish(
+                        &Expression::Identifier(delegate_iterator_name.clone()),
+                        &Expression::String("return".to_string()),
                         snapshot_bindings,
-                        Some(&plan.function_name),
                     )
                 })
-                .is_some_and(|method| matches!(method, Expression::Null | Expression::Undefined))
         } else {
             false
         };
