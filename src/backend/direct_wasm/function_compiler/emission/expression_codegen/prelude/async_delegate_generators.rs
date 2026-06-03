@@ -34,6 +34,43 @@ pub(super) struct PreparedAsyncDelegateConsumption {
 }
 
 impl<'a> FunctionCompiler<'a> {
+    fn current_function_mentions_promise_like_chain(&self) -> bool {
+        self.current_function_name().is_some_and(|function_name| {
+            self.registered_function_body_mentions_promise_like_chain(function_name)
+        })
+    }
+
+    fn async_delegate_first_next_rejects(
+        &self,
+        source: &IteratorSourceKind,
+        sent_value: &Expression,
+    ) -> bool {
+        let IteratorSourceKind::AsyncYieldDelegateGenerator { plan, .. } = source else {
+            return false;
+        };
+        if let Some((is_async, steps, _, _)) =
+            self.simple_generator_source_metadata(&plan.delegate_expression)
+            && is_async
+            && self.first_async_generator_step_rejects_on_next(&steps, sent_value)
+        {
+            return true;
+        }
+        let Some((steps, _)) =
+            self.resolve_simple_async_yield_delegate_source(&plan.delegate_expression)
+        else {
+            return false;
+        };
+        let Some(step) = steps.first() else {
+            return false;
+        };
+        match &step.outcome {
+            SimpleGeneratorStepOutcome::Throw(_) => true,
+            SimpleGeneratorStepOutcome::Yield(_) | SimpleGeneratorStepOutcome::YieldResult(_) => {
+                self.first_async_generator_step_rejects_on_next(&steps, sent_value)
+            }
+        }
+    }
+
     pub(in crate::backend::direct_wasm) fn emit_static_async_generator_delegate_return_after_caught_value_getter_throw(
         &mut self,
         object: &Expression,
@@ -332,6 +369,29 @@ impl<'a> FunctionCompiler<'a> {
                     if let Some(source @ IteratorSourceKind::AsyncYieldDelegateGenerator { .. }) =
                         source
                     {
+                        let can_initialize_missing_index =
+                            self.state.speculation.execution_context.top_level_function
+                                || self.resolve_current_local_binding(name).is_some();
+                        if property_name == "next"
+                            && !can_initialize_missing_index
+                            && self.current_function_mentions_promise_like_chain()
+                            && self.async_delegate_first_next_rejects(
+                                &source,
+                                &self.promise_argument_expression(arguments, 0),
+                            )
+                        {
+                            if std::env::var_os("AYY_TRACE_SIMPLE_GENERATORS").is_some() {
+                                eprintln!(
+                                    "async_delegate_next:nonlocal-closed-after-rejected-first-step object={object:?} binding={binding_name}"
+                                );
+                            }
+                            return Ok(Some(StaticEvalOutcome::Value(
+                                Self::simple_generator_iterator_result_object(
+                                    true,
+                                    Expression::Undefined,
+                                ),
+                            )));
+                        }
                         self.update_local_array_iterator_binding_with_source(
                             &binding_name,
                             Some(source),

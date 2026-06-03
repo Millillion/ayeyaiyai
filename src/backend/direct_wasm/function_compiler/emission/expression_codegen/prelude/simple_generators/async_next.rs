@@ -86,7 +86,10 @@ impl<'a> FunctionCompiler<'a> {
                 && Self::expression_is_await_resume_call(completion_value))
     }
 
-    fn simple_generator_iterator_result_object(done: bool, value: Expression) -> Expression {
+    pub(in crate::backend::direct_wasm) fn simple_generator_iterator_result_object(
+        done: bool,
+        value: Expression,
+    ) -> Expression {
         Expression::Object(vec![
             ObjectEntry::Data {
                 key: Expression::String("done".to_string()),
@@ -99,7 +102,7 @@ impl<'a> FunctionCompiler<'a> {
         ])
     }
 
-    fn first_async_generator_step_rejects_on_next(
+    pub(in crate::backend::direct_wasm) fn first_async_generator_step_rejects_on_next(
         &self,
         steps: &[SimpleGeneratorStep],
         sent_value: &Expression,
