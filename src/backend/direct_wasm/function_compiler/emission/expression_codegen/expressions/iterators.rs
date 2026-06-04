@@ -1232,7 +1232,11 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(false);
         };
 
-        self.with_user_function_execution_context(&user_function, |compiler| {
+        if self.emit_static_using_dispose_array_push_body(&function_declaration, dispose_object)? {
+            return Ok(true);
+        }
+
+        let body_result = self.with_user_function_execution_context(&user_function, |compiler| {
             for statement in &function_declaration.body {
                 let statement = Self::substitute_this_in_statement(statement, dispose_object);
                 match &statement {
@@ -1245,7 +1249,61 @@ impl<'a> FunctionCompiler<'a> {
                 }
             }
             Ok(())
-        })?;
+        });
+        let mut invalidated = self.collect_user_function_assigned_nonlocal_bindings(&user_function);
+        invalidated.extend(self.collect_user_function_updated_nonlocal_bindings(&user_function));
+        invalidated
+            .extend(self.collect_user_function_call_effect_nonlocal_bindings(&user_function));
+        let mut referenced_names =
+            collect_referenced_binding_names_from_statements(&function_declaration.body);
+        referenced_names.retain(|name| {
+            let source_name = scoped_binding_source_name(name).unwrap_or(name);
+            source_name != "arguments"
+                && !user_function.scope_bindings.contains(source_name)
+                && !user_function
+                    .params
+                    .iter()
+                    .any(|param| param == source_name)
+        });
+        invalidated.extend(referenced_names);
+        body_result?;
+        self.invalidate_static_binding_metadata_for_names(&invalidated);
+        Ok(true)
+    }
+
+    fn emit_static_using_dispose_array_push_body(
+        &mut self,
+        function_declaration: &FunctionDeclaration,
+        dispose_object: &Expression,
+    ) -> DirectResult<bool> {
+        let [Statement::Expression(Expression::Call { callee, arguments })] =
+            function_declaration.body.as_slice()
+        else {
+            return Ok(false);
+        };
+        let Expression::Member { object, property } = callee.as_ref() else {
+            return Ok(false);
+        };
+        if !matches!(property.as_ref(), Expression::String(name) if name == "push") {
+            return Ok(false);
+        }
+        let Expression::Identifier(array_name) = object.as_ref() else {
+            return Ok(false);
+        };
+        let [CallArgument::Expression(Expression::This)] = arguments.as_slice() else {
+            return Ok(false);
+        };
+        let array_binding_name = self
+            .resolve_current_local_binding(array_name)
+            .map(|(resolved_name, _)| resolved_name)
+            .unwrap_or_else(|| array_name.clone());
+        if !self.emit_tracked_array_push_call(
+            &Expression::Identifier(array_binding_name),
+            &[CallArgument::Expression(dispose_object.clone())],
+        )? {
+            return Ok(false);
+        }
+        self.state.emission.output.instructions.push(0x1a);
         Ok(true)
     }
 

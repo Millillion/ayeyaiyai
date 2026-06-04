@@ -1,4 +1,4 @@
-1744/23668 (7.37%)
+1745/23668 (7.37%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,7 +14,7 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 419/9337 (4.49%)
+- statements: 420/9337 (4.50%)
 - expressions: 0/11061 (0.00%)
 - types: 0/113 (0.00%)
 - function-code: 0/217 (0.00%)
@@ -1788,7 +1788,7 @@ Sub-category progress
   - [x] test/language/statements/await-using/initializer-Symbol.dispose-called-at-end-of-forstatement.js
   - [x] test/language/statements/await-using/initializer-Symbol.dispose-called-if-subsequent-initializer-throws-in-forstatement-head.js
   - [x] test/language/statements/await-using/initializer-Symbol.dispose-called-if-subsequent-initializer-throws.js
-  - [ ] test/language/statements/await-using/multiple-resources-disposed-in-reverse-order.js
+  - [x] test/language/statements/await-using/multiple-resources-disposed-in-reverse-order.js
   - [ ] test/language/statements/await-using/puts-initializer-on-top-of-disposableresourcestack-multiple-bindings.js
   - [ ] test/language/statements/await-using/puts-initializer-on-top-of-disposableresourcestack-subsequent-usings.js
   - [ ] test/language/statements/await-using/redeclaration-error-from-within-strict-mode-function-await-using.js
