@@ -550,6 +550,11 @@ impl<'a> FunctionCompiler<'a> {
                 expression
             );
         }
+        if matches!(callee, Expression::Identifier(name) if name == "asyncTest")
+            && self.emit_dynamic_user_function_call(callee, arguments)?
+        {
+            return Ok(());
+        }
         if matches!(callee, Expression::Identifier(name) if name == "__ayyTemplateObject") {
             if let Some(
                 CallArgument::Expression(Expression::String(site_key))

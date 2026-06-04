@@ -81,6 +81,12 @@ impl<'a> FunctionCompiler<'a> {
         {
             return Ok(true);
         }
+        if matches!(object, Expression::Identifier(name) if name == "assert")
+            && matches!(property, Expression::String(name) if name == "throwsAsync")
+            && self.emit_assert_throws_async_call(arguments)?
+        {
+            return Ok(true);
+        }
         if self.emit_array_is_array_call(object, property, arguments)? {
             return Ok(true);
         }

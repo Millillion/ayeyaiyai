@@ -509,6 +509,9 @@ impl<'a> FunctionCompiler<'a> {
             if self.emit_test262_async_test_inline_await_using_callback(callback)? {
                 return Ok(true);
             }
+            if self.emit_test262_async_test_inline_assert_throws_async_callback(callback)? {
+                return Ok(true);
+            }
             return Ok(false);
         };
 
@@ -625,6 +628,58 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(false);
         };
         if !Self::statements_contain_await_undefined(&callback_declaration.body) {
+            return Ok(false);
+        }
+
+        let inline_local_bindings =
+            collect_declared_bindings_from_statements_recursive(&callback_declaration.body)
+                .into_iter()
+                .filter(|name| {
+                    !callback_function.params.iter().any(|param| param == name)
+                        && name != "arguments"
+                })
+                .collect::<Vec<_>>();
+        let inline_local_scope_names =
+            self.prepare_inline_summary_local_bindings(&inline_local_bindings);
+        self.with_scoped_lexical_bindings_cleanup(inline_local_scope_names, |compiler| {
+            compiler.with_user_function_execution_context(&callback_function, |compiler| {
+                for statement in &callback_declaration.body {
+                    compiler.emit_statement(statement)?;
+                }
+                Ok(())
+            })
+        })?;
+
+        self.emit_print(&[Expression::String("Test262:AsyncTestComplete".to_string())])?;
+        self.push_i32_const(JS_UNDEFINED_TAG);
+        Ok(true)
+    }
+
+    fn emit_test262_async_test_inline_assert_throws_async_callback(
+        &mut self,
+        callback: &Expression,
+    ) -> DirectResult<bool> {
+        let Some(callback_function) = self
+            .resolve_user_function_from_expression(callback)
+            .cloned()
+        else {
+            return Ok(false);
+        };
+        if !callback_function.is_async()
+            || callback_function.is_generator()
+            || !callback_function.params.is_empty()
+            || callback_function.has_parameter_defaults()
+            || callback_function.has_lowered_pattern_parameters()
+        {
+            return Ok(false);
+        }
+        let Some(callback_declaration) = self
+            .resolve_registered_function_declaration(&callback_function.name)
+            .cloned()
+        else {
+            return Ok(false);
+        };
+        if !Self::statements_contain_assert_throws_async(&callback_declaration.body) {
             return Ok(false);
         }
 
@@ -801,6 +856,95 @@ impl<'a> FunctionCompiler<'a> {
             Statement::While { body, .. } | Statement::DoWhile { body, .. } => {
                 Self::statements_contain_await_undefined(body)
             }
+            _ => false,
+        }
+    }
+
+    fn statements_contain_assert_throws_async(statements: &[Statement]) -> bool {
+        statements
+            .iter()
+            .any(Self::statement_contains_assert_throws_async)
+    }
+
+    fn statement_contains_assert_throws_async(statement: &Statement) -> bool {
+        match statement {
+            Statement::Expression(expression)
+            | Statement::Throw(expression)
+            | Statement::Return(expression)
+            | Statement::Let {
+                value: expression, ..
+            }
+            | Statement::Var {
+                value: expression, ..
+            }
+            | Statement::Assign {
+                value: expression, ..
+            }
+            | Statement::AssignMember {
+                value: expression, ..
+            } => Self::expression_contains_assert_throws_async(expression),
+            Statement::Declaration { body }
+            | Statement::Block { body }
+            | Statement::Labeled { body, .. }
+            | Statement::With { body, .. } => Self::statements_contain_assert_throws_async(body),
+            Statement::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                Self::expression_contains_assert_throws_async(condition)
+                    || Self::statements_contain_assert_throws_async(then_branch)
+                    || Self::statements_contain_assert_throws_async(else_branch)
+            }
+            Statement::Try {
+                body,
+                catch_setup,
+                catch_body,
+                ..
+            } => {
+                Self::statements_contain_assert_throws_async(body)
+                    || Self::statements_contain_assert_throws_async(catch_setup)
+                    || Self::statements_contain_assert_throws_async(catch_body)
+            }
+            Statement::Switch { cases, .. } => cases
+                .iter()
+                .any(|case| Self::statements_contain_assert_throws_async(&case.body)),
+            Statement::For { init, body, .. } => {
+                Self::statements_contain_assert_throws_async(init)
+                    || Self::statements_contain_assert_throws_async(body)
+            }
+            Statement::While { body, .. } | Statement::DoWhile { body, .. } => {
+                Self::statements_contain_assert_throws_async(body)
+            }
+            _ => false,
+        }
+    }
+
+    fn expression_contains_assert_throws_async(expression: &Expression) -> bool {
+        match expression {
+            Expression::Await(value) => Self::expression_contains_assert_throws_async(value),
+            Expression::Call { callee, arguments } => {
+                matches!(
+                    callee.as_ref(),
+                    Expression::Member { object, property }
+                        if matches!(object.as_ref(), Expression::Identifier(name) if name == "assert")
+                            && matches!(property.as_ref(), Expression::String(name) if name == "throwsAsync")
+                ) || Self::expression_contains_assert_throws_async(callee)
+                    || arguments.iter().any(|argument| {
+                        Self::expression_contains_assert_throws_async(argument.expression())
+                    })
+            }
+            Expression::Member { object, property } => {
+                Self::expression_contains_assert_throws_async(object)
+                    || Self::expression_contains_assert_throws_async(property)
+            }
+            Expression::Binary { left, right, .. } => {
+                Self::expression_contains_assert_throws_async(left)
+                    || Self::expression_contains_assert_throws_async(right)
+            }
+            Expression::Sequence(expressions) => expressions
+                .iter()
+                .any(Self::expression_contains_assert_throws_async),
             _ => false,
         }
     }

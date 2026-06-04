@@ -755,6 +755,187 @@ impl<'a> FunctionCompiler<'a> {
         ))
     }
 
+    pub(in crate::backend::direct_wasm) fn emit_assert_throws_async_call(
+        &mut self,
+        arguments: &[CallArgument],
+    ) -> DirectResult<bool> {
+        let [
+            CallArgument::Expression(expected_error),
+            CallArgument::Expression(callback),
+            rest @ ..,
+        ] = arguments
+        else {
+            return Ok(false);
+        };
+
+        let Some(callback_function) = self
+            .resolve_user_function_from_expression(callback)
+            .cloned()
+        else {
+            return Ok(false);
+        };
+        if !callback_function.is_async()
+            || callback_function.is_generator()
+            || !callback_function.params.is_empty()
+            || callback_function.has_parameter_defaults()
+            || callback_function.has_lowered_pattern_parameters()
+        {
+            return Ok(false);
+        }
+        let Some(callback_declaration) = self
+            .resolve_registered_function_declaration(&callback_function.name)
+            .cloned()
+        else {
+            return Ok(false);
+        };
+
+        if !self.assert_throws_expected_constructor_is_static(expected_error) {
+            self.emit_numeric_expression(expected_error)?;
+            self.state.emission.output.instructions.push(0x1a);
+        }
+        for argument in rest {
+            match argument {
+                CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                    self.emit_numeric_expression(expression)?;
+                    self.state.emission.output.instructions.push(0x1a);
+                }
+            }
+        }
+
+        let caught_name =
+            self.allocate_named_hidden_local("assert_throws_async_caught", StaticValueKind::Bool);
+        self.emit_statement(&Statement::Let {
+            name: caught_name.clone(),
+            mutable: true,
+            value: Expression::Bool(false),
+        })?;
+        let caught_local = self.lookup_local(&caught_name)?;
+
+        let inline_local_bindings =
+            collect_declared_bindings_from_statements_recursive(&callback_declaration.body)
+                .into_iter()
+                .filter(|name| {
+                    !callback_function.params.iter().any(|param| param == name)
+                        && name != "arguments"
+                })
+                .collect::<Vec<_>>();
+        let (inline_local_scope_names, initialized_local_snapshots) =
+            self.prepare_assert_throws_async_inline_lexical_bindings(&inline_local_bindings);
+        let try_statement = Statement::Try {
+            body: callback_declaration.body.clone(),
+            catch_binding: None,
+            catch_setup: Vec::new(),
+            catch_body: vec![Statement::Assign {
+                name: caught_name,
+                value: Expression::Bool(true),
+            }],
+        };
+        let result =
+            self.with_scoped_lexical_bindings_cleanup(inline_local_scope_names, |compiler| {
+                compiler.with_user_function_execution_context(&callback_function, |compiler| {
+                    compiler.with_strict_mode(callback_declaration.strict, |compiler| {
+                        compiler.emit_statement(&try_statement)
+                    })
+                })
+            });
+        self.restore_assert_throws_async_inline_initialized_locals(initialized_local_snapshots);
+        result?;
+
+        self.push_local_get(caught_local);
+        self.push_i32_const(0);
+        self.push_binary_op(BinaryOp::Equal)?;
+        self.state.emission.output.instructions.push(0x04);
+        self.state
+            .emission
+            .output
+            .instructions
+            .push(EMPTY_BLOCK_TYPE);
+        self.push_control_frame();
+        self.emit_error_throw()?;
+        self.state.emission.output.instructions.push(0x0b);
+        self.pop_control_frame();
+        self.push_i32_const(JS_UNDEFINED_TAG);
+        Ok(true)
+    }
+
+    fn prepare_assert_throws_async_inline_lexical_bindings(
+        &mut self,
+        inline_local_bindings: &[String],
+    ) -> (Vec<String>, Vec<(String, Option<u32>)>) {
+        let mut inline_local_scope_names = Vec::new();
+        let mut initialized_local_snapshots = Vec::new();
+        for name in inline_local_bindings {
+            let hidden_name = self.allocate_named_hidden_local(
+                &format!("assert_throws_async_inline_local_{name}"),
+                StaticValueKind::Unknown,
+            );
+            let hidden_local = self
+                .state
+                .runtime
+                .locals
+                .get(&hidden_name)
+                .copied()
+                .expect("assert throws async inline local binding must exist");
+            self.push_i32_const(JS_UNDEFINED_TAG);
+            self.push_local_set(hidden_local);
+
+            let initialized_name = self.allocate_named_hidden_local(
+                &format!("assert_throws_async_inline_initialized_{name}"),
+                StaticValueKind::Bool,
+            );
+            let initialized_local = self
+                .state
+                .runtime
+                .locals
+                .get(&initialized_name)
+                .copied()
+                .expect("assert throws async inline initialized binding must exist");
+            self.push_i32_const(0);
+            self.push_local_set(initialized_local);
+
+            self.state
+                .emission
+                .lexical_scopes
+                .active_scoped_lexical_bindings
+                .entry(name.clone())
+                .or_default()
+                .push(hidden_name.clone());
+            inline_local_scope_names.push(name.clone());
+
+            for initialized_key in [name.clone(), hidden_name] {
+                let previous = self
+                    .state
+                    .speculation
+                    .static_semantics
+                    .local_lexical_initialized_locals
+                    .insert(initialized_key.clone(), initialized_local);
+                initialized_local_snapshots.push((initialized_key, previous));
+            }
+        }
+        (inline_local_scope_names, initialized_local_snapshots)
+    }
+
+    fn restore_assert_throws_async_inline_initialized_locals(
+        &mut self,
+        initialized_local_snapshots: Vec<(String, Option<u32>)>,
+    ) {
+        for (name, previous) in initialized_local_snapshots.into_iter().rev() {
+            if let Some(previous) = previous {
+                self.state
+                    .speculation
+                    .static_semantics
+                    .local_lexical_initialized_locals
+                    .insert(name, previous);
+            } else {
+                self.state
+                    .speculation
+                    .static_semantics
+                    .local_lexical_initialized_locals
+                    .remove(&name);
+            }
+        }
+    }
+
     pub(in crate::backend::direct_wasm) fn sync_assert_throws_iterator_bindings_for_body(
         &mut self,
         body: &[Statement],
