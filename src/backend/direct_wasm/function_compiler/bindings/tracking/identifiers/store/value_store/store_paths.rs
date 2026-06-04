@@ -1,21 +1,37 @@
 use super::*;
 
 fn is_internal_array_iterator_binding_name(name: &str) -> bool {
+    let name = unwrap_assert_throws_async_inline_local_name(name);
     name.strip_prefix("__ayy_array_iter_")
         .is_some_and(|suffix| !suffix.is_empty() && suffix.chars().all(|ch| ch.is_ascii_digit()))
 }
 
 fn is_internal_array_step_binding_name(name: &str) -> bool {
+    let name = unwrap_assert_throws_async_inline_local_name(name);
     name.starts_with("__ayy_array_step_") || name.starts_with("__ayy_for_of_step_")
 }
 
 fn is_internal_iterator_bookkeeping_binding_name(name: &str) -> bool {
+    let name = unwrap_assert_throws_async_inline_local_name(name);
     name.starts_with("__ayy_array_iter_value_")
         || name.starts_with("__ayy_for_of_iter_value_")
         || name.starts_with("__ayy_array_iter_done_")
         || name.starts_with("__ayy_for_of_iter_done_")
         || name.starts_with("__ayy_destructure_value_")
         || name.starts_with("__ayy_binding_value_")
+}
+
+fn unwrap_assert_throws_async_inline_local_name(name: &str) -> &str {
+    let Some(rest) = name.strip_prefix("__ayy_assert_throws_async_inline_local_") else {
+        return name;
+    };
+    let Some((source_name, suffix)) = rest.rsplit_once('_') else {
+        return name;
+    };
+    if !suffix.chars().all(|ch| ch.is_ascii_digit()) {
+        return name;
+    }
+    source_name
 }
 
 fn is_internal_assignment_temp(name: &str) -> bool {

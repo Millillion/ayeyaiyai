@@ -1,4 +1,4 @@
-1756/23668 (7.42%)
+1757/23668 (7.42%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,7 +14,7 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 431/9337 (4.62%)
+- statements: 432/9337 (4.63%)
 - expressions: 0/11061 (0.00%)
 - types: 0/113 (0.00%)
 - function-code: 0/217 (0.00%)
@@ -1800,7 +1800,7 @@ Sub-category progress
   - [x] test/language/statements/await-using/syntax/await-using-invalid-arraybindingpattern-does-not-break-element-access.js
   - [x] test/language/statements/await-using/syntax/await-using-invalid-arraybindingpattern.js
   - [x] test/language/statements/await-using/syntax/await-using-invalid-assignment-next-expression-for.js
-  - [ ] test/language/statements/await-using/syntax/await-using-invalid-assignment-statement-body-for-of.js
+  - [x] test/language/statements/await-using/syntax/await-using-invalid-assignment-statement-body-for-of.js
   - [ ] test/language/statements/await-using/syntax/await-using-invalid-for-in.js
   - [ ] test/language/statements/await-using/syntax/await-using-invalid-objectbindingpattern-after-bindingidentifier.js
   - [ ] test/language/statements/await-using/syntax/await-using-invalid-objectbindingpattern.js
