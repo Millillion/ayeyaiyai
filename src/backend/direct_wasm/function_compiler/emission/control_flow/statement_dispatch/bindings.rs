@@ -724,6 +724,11 @@ impl<'a> FunctionCompiler<'a> {
                 | Expression::GetIterator(_)
         ) && !Self::expression_contains_assignment_or_update(value)
             && !Self::expression_references_internal_assignment_temp(value)
+            && !matches!(
+                value,
+                Expression::Member { object, property }
+                    if self.member_getter_value_requires_runtime_read_effects(object, property)
+            )
             && inline_summary_side_effect_free_expression(value)
             && let Some(LocalFunctionBinding::User(function_name)) =
                 self.resolve_function_binding_from_expression(value)

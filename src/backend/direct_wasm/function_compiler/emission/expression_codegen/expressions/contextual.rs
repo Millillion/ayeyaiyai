@@ -1542,6 +1542,7 @@ impl<'a> FunctionCompiler<'a> {
             && !object_uses_runtime_array_state
             && !nested_assert_helper_member
             && !matches!(property, Expression::Member { .. })
+            && !self.member_getter_value_requires_runtime_read_effects(object, property)
             && !(matches!(property, Expression::String(property_name) if matches!(property_name.as_str(), "return" | "throw"))
                 && self.is_async_generator_iterator_expression(object))
             && let Some(function_binding) =

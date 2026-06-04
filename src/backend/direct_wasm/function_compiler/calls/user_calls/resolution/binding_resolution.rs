@@ -2,6 +2,23 @@ use super::guard::{FunctionBindingResolutionGuard, FunctionBindingResolutionShap
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn resolve_getter_terminal_return_function_binding(
+        &self,
+        getter_binding: &LocalFunctionBinding,
+    ) -> Option<LocalFunctionBinding> {
+        let LocalFunctionBinding::User(function_name) = getter_binding else {
+            return None;
+        };
+        let function = self.resolve_registered_function_declaration(function_name)?;
+        let Statement::Return(return_value) = function.body.last()? else {
+            return None;
+        };
+        self.resolve_function_binding_from_expression_with_context(
+            return_value,
+            Some(function_name),
+        )
+    }
+
     fn resolve_scoped_function_declaration_alias_binding(
         &self,
         name: &str,
@@ -694,14 +711,18 @@ impl<'a> FunctionCompiler<'a> {
                     self.resolve_function_binding_from_expression(&value)
                 } else if let Some(getter_binding) =
                     self.resolve_member_getter_binding(object, property)
-                    && let Some(value) = self
+                {
+                    if let Some(value) = self
                         .resolve_function_binding_static_return_expression_with_call_frame(
                             &getter_binding,
                             &[],
                             object,
                         )
-                {
-                    self.resolve_function_binding_from_expression(&value)
+                    {
+                        self.resolve_function_binding_from_expression(&value)
+                    } else {
+                        self.resolve_getter_terminal_return_function_binding(&getter_binding)
+                    }
                 } else if let Some(binding) = self
                     .member_function_binding_key_with_context(
                         object,

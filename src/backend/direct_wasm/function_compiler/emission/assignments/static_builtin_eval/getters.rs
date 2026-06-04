@@ -1,17 +1,88 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn static_getter_prefix_statement_can_be_skipped(statement: &Statement) -> bool {
+        match statement {
+            Statement::Block { body } | Statement::Declaration { body } => body
+                .iter()
+                .all(Self::static_getter_prefix_statement_can_be_skipped),
+            Statement::Expression(expression) => {
+                inline_summary_side_effect_free_expression(expression)
+            }
+            _ => false,
+        }
+    }
+
+    fn static_getter_body_effects_can_be_skipped(&self, function_name: &str) -> bool {
+        let Some(function) = self.resolve_registered_function_declaration(function_name) else {
+            return false;
+        };
+        let Some((_, prefix_statements)) = function.body.split_last() else {
+            return true;
+        };
+        prefix_statements
+            .iter()
+            .all(Self::static_getter_prefix_statement_can_be_skipped)
+    }
+
     pub(in crate::backend::direct_wasm) fn static_getter_binding_value_can_be_used(
         &self,
         binding: &LocalFunctionBinding,
     ) -> bool {
         match binding {
-            LocalFunctionBinding::User(function_name) => self
-                .user_function(function_name)
-                .and_then(|user_function| user_function.inline_summary.as_ref())
-                .is_some_and(|summary| summary.effects.is_empty()),
+            LocalFunctionBinding::User(function_name) => {
+                self.user_function(function_name)
+                    .and_then(|user_function| user_function.inline_summary.as_ref())
+                    .is_some_and(|summary| summary.effects.is_empty())
+                    && self.static_getter_body_effects_can_be_skipped(function_name)
+            }
             LocalFunctionBinding::Builtin(_) => true,
         }
+    }
+
+    pub(in crate::backend::direct_wasm) fn member_getter_value_requires_runtime_read_effects(
+        &self,
+        object: &Expression,
+        property: &Expression,
+    ) -> bool {
+        let resolved_property = self.resolve_property_key_expression(property);
+        let materialized_property = resolved_property
+            .clone()
+            .unwrap_or_else(|| self.materialize_static_expression(property));
+        if static_property_name_from_expression(&materialized_property)
+            .is_some_and(|property_name| property_name == "constructor")
+        {
+            return false;
+        }
+
+        let getter_requires_runtime_read =
+            |compiler: &FunctionCompiler<'a>,
+             candidate_object: &Expression,
+             candidate_property: &Expression| {
+                compiler
+                    .resolve_member_getter_binding(candidate_object, candidate_property)
+                    .is_some_and(|binding| {
+                        !compiler.static_getter_binding_value_can_be_used(&binding)
+                    })
+            };
+        if getter_requires_runtime_read(self, object, property) {
+            return true;
+        }
+
+        if resolved_property
+            .as_ref()
+            .is_some_and(|property| getter_requires_runtime_read(self, object, property))
+        {
+            return true;
+        }
+
+        if !static_expression_matches(&materialized_property, property)
+            && getter_requires_runtime_read(self, object, &materialized_property)
+        {
+            return true;
+        }
+
+        false
     }
 
     pub(in crate::backend::direct_wasm) fn resolve_static_getter_value_from_binding_with_context(

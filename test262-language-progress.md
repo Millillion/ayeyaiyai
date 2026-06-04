@@ -1,4 +1,4 @@
-1722/23668 (7.28%)
+1723/23668 (7.28%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,7 +14,7 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 397/9337 (4.25%)
+- statements: 398/9337 (4.26%)
 - expressions: 0/11061 (0.00%)
 - types: 0/113 (0.00%)
 - function-code: 0/217 (0.00%)
@@ -1766,7 +1766,7 @@ Sub-category progress
   - [x] test/language/statements/await-using/function-local-closure-get-before-initialization.js
   - [x] test/language/statements/await-using/function-local-use-before-initialization-in-declaration-statement.js
   - [x] test/language/statements/await-using/function-local-use-before-initialization-in-prior-statement.js
-  - [ ] test/language/statements/await-using/gets-initializer-Symbol.asyncDispose-property-once.js
+  - [x] test/language/statements/await-using/gets-initializer-Symbol.asyncDispose-property-once.js
   - [ ] test/language/statements/await-using/gets-initializer-Symbol.dispose-after-Symbol.asyncDispose-is-null.js
   - [ ] test/language/statements/await-using/gets-initializer-Symbol.dispose-after-Symbol.asyncDispose-is-undefined.js
   - [ ] test/language/statements/await-using/gets-initializer-Symbol.dispose-property-once.js
