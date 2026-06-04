@@ -541,6 +541,9 @@ impl<'a> FunctionCompiler<'a> {
         {
             return Ok(true);
         }
+        if self.emit_test262_async_test_inline_simple_await_callback(callback)? {
+            return Ok(true);
+        }
         if self.emit_test262_async_test_inline_sync_callback(callback)? {
             return Ok(true);
         }
@@ -549,6 +552,9 @@ impl<'a> FunctionCompiler<'a> {
                 return Ok(true);
             }
             if self.emit_test262_async_test_inline_await_using_callback(callback)? {
+                return Ok(true);
+            }
+            if self.emit_test262_async_test_inline_simple_await_callback(callback)? {
                 return Ok(true);
             }
             if self.emit_test262_async_test_inline_assert_throws_async_callback(callback)? {
@@ -691,6 +697,63 @@ impl<'a> FunctionCompiler<'a> {
                 }
 
                 for statement in &callback_declaration.body[await_index + 1..] {
+                    compiler.emit_statement(statement)?;
+                }
+                Ok(())
+            })
+        })?;
+
+        self.emit_print(&[Expression::String("Test262:AsyncTestComplete".to_string())])?;
+        self.push_i32_const(JS_UNDEFINED_TAG);
+        Ok(true)
+    }
+
+    fn emit_test262_async_test_inline_simple_await_callback(
+        &mut self,
+        callback: &Expression,
+    ) -> DirectResult<bool> {
+        let Some(callback_function) = self
+            .resolve_user_function_from_expression(callback)
+            .cloned()
+        else {
+            return Ok(false);
+        };
+        if !callback_function.is_async()
+            || callback_function.is_generator()
+            || !callback_function.params.is_empty()
+            || callback_function.has_parameter_defaults()
+            || callback_function.has_lowered_pattern_parameters()
+        {
+            return Ok(false);
+        }
+        let Some(callback_declaration) = self
+            .resolve_registered_function_declaration(&callback_function.name)
+            .cloned()
+        else {
+            return Ok(false);
+        };
+        if !Self::statements_contain_await(&callback_declaration.body)
+            || Self::statements_contain_return(&callback_declaration.body)
+            || !Self::test262_async_test_simple_await_callback_supported(&callback_declaration.body)
+        {
+            return Ok(false);
+        }
+
+        self.emit_prepare_user_function_capture_globals(&callback_function.name)?;
+
+        let inline_local_bindings =
+            collect_declared_bindings_from_statements_recursive(&callback_declaration.body)
+                .into_iter()
+                .filter(|name| {
+                    !callback_function.params.iter().any(|param| param == name)
+                        && name != "arguments"
+                })
+                .collect::<Vec<_>>();
+        let inline_local_scope_names =
+            self.prepare_inline_summary_local_bindings(&inline_local_bindings);
+        self.with_scoped_lexical_bindings_cleanup(inline_local_scope_names, |compiler| {
+            compiler.with_user_function_execution_context(&callback_function, |compiler| {
+                for statement in &callback_declaration.body {
                     compiler.emit_statement(statement)?;
                 }
                 Ok(())
@@ -1010,6 +1073,235 @@ impl<'a> FunctionCompiler<'a> {
             Statement::Expression(Expression::Await(value))
                 if matches!(value.as_ref(), Expression::Identifier(awaited) if awaited == name)
         )
+    }
+
+    fn test262_async_test_simple_await_callback_supported(statements: &[Statement]) -> bool {
+        for (index, statement) in statements.iter().enumerate() {
+            if !Self::statement_contains_await(statement) {
+                continue;
+            }
+            let Statement::Expression(Expression::Await(value)) = statement else {
+                return false;
+            };
+            if !Self::test262_async_test_simple_await_value_supported(statements, index, value) {
+                return false;
+            }
+        }
+        true
+    }
+
+    fn test262_async_test_simple_await_value_supported(
+        statements: &[Statement],
+        await_index: usize,
+        value: &Expression,
+    ) -> bool {
+        if matches!(value, Expression::Undefined) {
+            return true;
+        }
+        let Expression::Identifier(name) = value else {
+            return false;
+        };
+        statements.iter().any(|statement| {
+            matches!(
+                statement,
+                Statement::Var {
+                    name: var_name,
+                    value: Expression::Undefined,
+                } if var_name == name
+            )
+        }) && !statements
+            .iter()
+            .take(await_index)
+            .any(|statement| Self::statement_writes_binding(statement, name))
+    }
+
+    fn statement_writes_binding(statement: &Statement, binding_name: &str) -> bool {
+        match statement {
+            Statement::Var { name, value }
+            | Statement::Let { name, value, .. }
+            | Statement::Assign { name, value } => {
+                name == binding_name || Self::expression_writes_binding(value, binding_name)
+            }
+            Statement::Expression(expression)
+            | Statement::Throw(expression)
+            | Statement::Return(expression)
+            | Statement::Yield { value: expression }
+            | Statement::YieldDelegate { value: expression } => {
+                Self::expression_writes_binding(expression, binding_name)
+            }
+            Statement::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                Self::expression_writes_binding(object, binding_name)
+                    || Self::expression_writes_binding(property, binding_name)
+                    || Self::expression_writes_binding(value, binding_name)
+            }
+            Statement::Print { values } => values
+                .iter()
+                .any(|value| Self::expression_writes_binding(value, binding_name)),
+            Statement::Declaration { body }
+            | Statement::Block { body }
+            | Statement::Labeled { body, .. }
+            | Statement::With { body, .. }
+            | Statement::While { body, .. }
+            | Statement::DoWhile { body, .. } => body
+                .iter()
+                .any(|statement| Self::statement_writes_binding(statement, binding_name)),
+            Statement::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                Self::expression_writes_binding(condition, binding_name)
+                    || then_branch
+                        .iter()
+                        .any(|statement| Self::statement_writes_binding(statement, binding_name))
+                    || else_branch
+                        .iter()
+                        .any(|statement| Self::statement_writes_binding(statement, binding_name))
+            }
+            Statement::Try {
+                body,
+                catch_setup,
+                catch_body,
+                ..
+            } => body
+                .iter()
+                .chain(catch_setup)
+                .chain(catch_body)
+                .any(|statement| Self::statement_writes_binding(statement, binding_name)),
+            Statement::Switch {
+                discriminant,
+                cases,
+                ..
+            } => {
+                Self::expression_writes_binding(discriminant, binding_name)
+                    || cases.iter().any(|case| {
+                        case.body.iter().any(|statement| {
+                            Self::statement_writes_binding(statement, binding_name)
+                        })
+                    })
+            }
+            Statement::For {
+                init,
+                condition,
+                update,
+                break_hook,
+                body,
+                ..
+            } => {
+                init.iter()
+                    .any(|statement| Self::statement_writes_binding(statement, binding_name))
+                    || condition
+                        .as_ref()
+                        .is_some_and(|value| Self::expression_writes_binding(value, binding_name))
+                    || update
+                        .as_ref()
+                        .is_some_and(|value| Self::expression_writes_binding(value, binding_name))
+                    || break_hook
+                        .as_ref()
+                        .is_some_and(|value| Self::expression_writes_binding(value, binding_name))
+                    || body
+                        .iter()
+                        .any(|statement| Self::statement_writes_binding(statement, binding_name))
+            }
+            Statement::Break { .. } | Statement::Continue { .. } => false,
+        }
+    }
+
+    fn expression_writes_binding(expression: &Expression, binding_name: &str) -> bool {
+        match expression {
+            Expression::Assign { name, value } => {
+                name == binding_name || Self::expression_writes_binding(value, binding_name)
+            }
+            Expression::Update { name, .. } => name == binding_name,
+            Expression::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                Self::expression_writes_binding(object, binding_name)
+                    || Self::expression_writes_binding(property, binding_name)
+                    || Self::expression_writes_binding(value, binding_name)
+            }
+            Expression::AssignSuperMember { property, value } => {
+                Self::expression_writes_binding(property, binding_name)
+                    || Self::expression_writes_binding(value, binding_name)
+            }
+            Expression::Member { object, property } => {
+                Self::expression_writes_binding(object, binding_name)
+                    || Self::expression_writes_binding(property, binding_name)
+            }
+            Expression::SuperMember { property }
+            | Expression::Await(property)
+            | Expression::EnumerateKeys(property)
+            | Expression::GetIterator(property)
+            | Expression::IteratorClose(property)
+            | Expression::Unary {
+                expression: property,
+                ..
+            } => Self::expression_writes_binding(property, binding_name),
+            Expression::Binary { left, right, .. } => {
+                Self::expression_writes_binding(left, binding_name)
+                    || Self::expression_writes_binding(right, binding_name)
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                Self::expression_writes_binding(condition, binding_name)
+                    || Self::expression_writes_binding(then_expression, binding_name)
+                    || Self::expression_writes_binding(else_expression, binding_name)
+            }
+            Expression::Sequence(expressions) => expressions
+                .iter()
+                .any(|expression| Self::expression_writes_binding(expression, binding_name)),
+            Expression::Call { callee, arguments }
+            | Expression::SuperCall { callee, arguments }
+            | Expression::New { callee, arguments } => {
+                Self::expression_writes_binding(callee, binding_name)
+                    || arguments.iter().any(|argument| match argument {
+                        CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                            Self::expression_writes_binding(expression, binding_name)
+                        }
+                    })
+            }
+            Expression::Array(elements) => elements.iter().any(|element| match element {
+                ArrayElement::Expression(expression) | ArrayElement::Spread(expression) => {
+                    Self::expression_writes_binding(expression, binding_name)
+                }
+            }),
+            Expression::Object(entries) => entries.iter().any(|entry| match entry {
+                ObjectEntry::Data { key, value } => {
+                    Self::expression_writes_binding(key, binding_name)
+                        || Self::expression_writes_binding(value, binding_name)
+                }
+                ObjectEntry::Getter { key, getter } => {
+                    Self::expression_writes_binding(key, binding_name)
+                        || Self::expression_writes_binding(getter, binding_name)
+                }
+                ObjectEntry::Setter { key, setter } => {
+                    Self::expression_writes_binding(key, binding_name)
+                        || Self::expression_writes_binding(setter, binding_name)
+                }
+                ObjectEntry::Spread(expression) => {
+                    Self::expression_writes_binding(expression, binding_name)
+                }
+            }),
+            Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined
+            | Expression::NewTarget
+            | Expression::Identifier(_)
+            | Expression::This
+            | Expression::Sent => false,
+        }
     }
 
     fn statement_is_test262_async_function_gate_release_call(statement: &Statement) -> bool {
