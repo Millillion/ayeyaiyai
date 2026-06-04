@@ -49,6 +49,13 @@ pub(in crate::backend::direct_wasm) fn object_binding_has_property(
         || object_binding_lookup_descriptor(object_binding, property).is_some()
 }
 
+pub(in crate::backend::direct_wasm) fn object_binding_is_static_property_key(
+    property: &Expression,
+) -> bool {
+    static_property_name_from_expression(property).is_some()
+        || well_known_symbol_property_name(property).is_some()
+}
+
 pub(in crate::backend::direct_wasm) fn object_binding_is_extensible(
     object_binding: &ObjectValueBinding,
 ) -> bool {

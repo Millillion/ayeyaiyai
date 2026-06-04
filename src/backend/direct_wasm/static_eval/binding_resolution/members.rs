@@ -8,7 +8,7 @@ pub(in crate::backend::direct_wasm) fn materialize_object_member_from_binding(
     if let Some(value) = object_binding_lookup_value(object_binding, property) {
         return recurse(value);
     }
-    if static_property_name_from_expression(property).is_some()
+    if object_binding_is_static_property_key(property)
         || object_binding_has_property(object_binding, property)
     {
         if is_private_property_name_expression(property) {

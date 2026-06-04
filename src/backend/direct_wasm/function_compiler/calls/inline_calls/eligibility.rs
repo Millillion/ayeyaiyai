@@ -770,6 +770,17 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    fn expression_is_private_scan_using_dispose_symbol_property(expression: &Expression) -> bool {
+        let Expression::Member { object, property } = expression else {
+            return false;
+        };
+        matches!(object.as_ref(), Expression::Identifier(name) if name == "Symbol")
+            && matches!(
+                property.as_ref(),
+                Expression::String(name) if matches!(name.as_str(), "dispose" | "asyncDispose")
+            )
+    }
+
     fn statement_mentions_private_member_access(statement: &Statement) -> bool {
         match statement {
             Statement::Declaration { body }
@@ -999,6 +1010,14 @@ impl<'a> FunctionCompiler<'a> {
         callee: &Expression,
         visited_functions: &mut HashSet<String>,
     ) -> bool {
+        if matches!(
+            callee,
+            Expression::Member { property, .. }
+                if Self::expression_is_private_scan_using_dispose_symbol_property(property)
+        ) {
+            return false;
+        }
+
         if matches!(
             callee,
             Expression::Member { object, property }

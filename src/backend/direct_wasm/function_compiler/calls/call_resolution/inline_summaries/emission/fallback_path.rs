@@ -48,6 +48,7 @@ impl<'a> FunctionCompiler<'a> {
                     &state.call_arguments,
                     this_binding,
                     &state.arguments_binding,
+                    &inline_local_bindings,
                     result_local,
                 )
             })
@@ -92,6 +93,7 @@ impl<'a> FunctionCompiler<'a> {
         call_arguments: &[CallArgument],
         this_binding: &Expression,
         arguments_binding: &Expression,
+        inline_local_bindings: &[String],
         result_local: u32,
     ) -> DirectResult<bool> {
         match terminal_statement {
@@ -266,7 +268,33 @@ impl<'a> FunctionCompiler<'a> {
                 self.push_i32_const(JS_UNDEFINED_TAG);
                 self.push_local_set(result_local);
             }
-            Statement::Block { body } if body.is_empty() => {
+            Statement::Block { body } => {
+                for statement in body {
+                    if !self.emit_inline_user_function_effect_statement_with_explicit_call_frame(
+                        statement,
+                        user_function,
+                        call_arguments,
+                        this_binding,
+                        arguments_binding,
+                        inline_local_bindings,
+                    )? {
+                        return Ok(false);
+                    }
+                }
+                self.push_i32_const(JS_UNDEFINED_TAG);
+                self.push_local_set(result_local);
+            }
+            Statement::If { .. } => {
+                if !self.emit_inline_user_function_effect_statement_with_explicit_call_frame(
+                    terminal_statement,
+                    user_function,
+                    call_arguments,
+                    this_binding,
+                    arguments_binding,
+                    inline_local_bindings,
+                )? {
+                    return Ok(false);
+                }
                 self.push_i32_const(JS_UNDEFINED_TAG);
                 self.push_local_set(result_local);
             }

@@ -804,7 +804,8 @@ impl<'a> FunctionCompiler<'a> {
                     property: Box::new(materialized_property),
                 };
             }
-            if static_property_name_from_expression(&materialized_property).is_some()
+            if object_binding_is_static_property_key(&materialized_property)
+                || object_binding_is_static_property_key(property)
                 || object_binding_has_property(&object_binding, &materialized_property)
             {
                 if is_private_property_name_expression(&materialized_property) {

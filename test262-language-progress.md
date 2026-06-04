@@ -1,4 +1,4 @@
-1700/23668 (7.18%)
+1709/23668 (7.22%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,7 +14,7 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 375/9337 (4.02%)
+- statements: 384/9337 (4.11%)
 - expressions: 0/11061 (0.00%)
 - types: 0/113 (0.00%)
 - function-code: 0/217 (0.00%)
@@ -1744,15 +1744,15 @@ Sub-category progress
   - [x] test/language/statements/async-generator/yield-star-sync-return.js
   - [x] test/language/statements/async-generator/yield-star-sync-throw.js
   - [x] test/language/statements/async-generator/yield-star-throw-notdone-iter-value-throws.js
-  - [ ] test/language/statements/await-using/Symbol.asyncDispose-getter.js
-  - [ ] test/language/statements/await-using/Symbol.asyncDispose-method-called-with-correct-this.js
-  - [ ] test/language/statements/await-using/Symbol.asyncDispose-method-not-async.js
-  - [ ] test/language/statements/await-using/Symbol.dispose-getter.js
-  - [ ] test/language/statements/await-using/Symbol.dispose-method-called-with-correct-this.js
-  - [ ] test/language/statements/await-using/await-using-Symbol.asyncDispose-allows-non-promise-return-value.js
-  - [ ] test/language/statements/await-using/await-using-Symbol.asyncDispose-allows-promiselike-return-value.js
-  - [ ] test/language/statements/await-using/await-using-allows-null-initializer.js
-  - [ ] test/language/statements/await-using/await-using-allows-undefined-initializer.js
+  - [x] test/language/statements/await-using/Symbol.asyncDispose-getter.js
+  - [x] test/language/statements/await-using/Symbol.asyncDispose-method-called-with-correct-this.js
+  - [x] test/language/statements/await-using/Symbol.asyncDispose-method-not-async.js
+  - [x] test/language/statements/await-using/Symbol.dispose-getter.js
+  - [x] test/language/statements/await-using/Symbol.dispose-method-called-with-correct-this.js
+  - [x] test/language/statements/await-using/await-using-Symbol.asyncDispose-allows-non-promise-return-value.js
+  - [x] test/language/statements/await-using/await-using-Symbol.asyncDispose-allows-promiselike-return-value.js
+  - [x] test/language/statements/await-using/await-using-allows-null-initializer.js
+  - [x] test/language/statements/await-using/await-using-allows-undefined-initializer.js
   - [ ] test/language/statements/await-using/await-using-does-not-imply-await-if-not-evaluated.js
   - [ ] test/language/statements/await-using/await-using-implies-await-if-evaluated.js
   - [ ] test/language/statements/await-using/block-local-closure-get-before-initialization.js

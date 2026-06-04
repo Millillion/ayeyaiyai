@@ -907,6 +907,37 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    fn expression_is_using_dispose_symbol_property(expression: &Expression) -> bool {
+        let Expression::Member { object, property } = expression else {
+            return false;
+        };
+        matches!(object.as_ref(), Expression::Identifier(name) if name == "Symbol")
+            && matches!(
+                property.as_ref(),
+                Expression::String(name) if matches!(name.as_str(), "dispose" | "asyncDispose")
+            )
+    }
+
+    fn expression_is_supported_direct_async_implicit_await(expression: &Expression) -> bool {
+        let Expression::Await(value) = expression else {
+            return false;
+        };
+        let Expression::Call { callee, arguments } = value.as_ref() else {
+            return false;
+        };
+        arguments.is_empty()
+            && matches!(
+                callee.as_ref(),
+                Expression::Member { property, .. }
+                    if Self::expression_is_using_dispose_symbol_property(property)
+            )
+    }
+
+    fn direct_async_implicit_completion_expression_supported(expression: &Expression) -> bool {
+        Self::expression_is_supported_direct_async_implicit_await(expression)
+            || !Self::expression_contains_await_for_user_call_runtime(expression)
+    }
+
     fn direct_async_implicit_completion_statement_supported(statement: &Statement) -> bool {
         match statement {
             Statement::Return(_) | Statement::Throw(_) => false,
@@ -914,22 +945,22 @@ impl<'a> FunctionCompiler<'a> {
             | Statement::Let { value, .. }
             | Statement::Assign { value, .. }
             | Statement::Expression(value) => {
-                !Self::expression_contains_await_for_user_call_runtime(value)
+                Self::direct_async_implicit_completion_expression_supported(value)
             }
             Statement::AssignMember {
                 object,
                 property,
                 value,
             } => {
-                !Self::expression_contains_await_for_user_call_runtime(object)
-                    && !Self::expression_contains_await_for_user_call_runtime(property)
-                    && !Self::expression_contains_await_for_user_call_runtime(value)
+                Self::direct_async_implicit_completion_expression_supported(object)
+                    && Self::direct_async_implicit_completion_expression_supported(property)
+                    && Self::direct_async_implicit_completion_expression_supported(value)
             }
             Statement::Print { values } => values
                 .iter()
-                .all(|value| !Self::expression_contains_await_for_user_call_runtime(value)),
+                .all(Self::direct_async_implicit_completion_expression_supported),
             Statement::With { object, body } => {
-                !Self::expression_contains_await_for_user_call_runtime(object)
+                Self::direct_async_implicit_completion_expression_supported(object)
                     && body
                         .iter()
                         .all(Self::direct_async_implicit_completion_statement_supported)
@@ -942,7 +973,7 @@ impl<'a> FunctionCompiler<'a> {
                 then_branch,
                 else_branch,
             } => {
-                !Self::expression_contains_await_for_user_call_runtime(condition)
+                Self::direct_async_implicit_completion_expression_supported(condition)
                     && then_branch
                         .iter()
                         .all(Self::direct_async_implicit_completion_statement_supported)
@@ -961,43 +992,77 @@ impl<'a> FunctionCompiler<'a> {
         this_binding: &Expression,
         parameter_defaults_supported: bool,
     ) -> bool {
-        user_function.is_async()
-            && !user_function.is_generator()
-            && (!user_function.has_parameter_defaults() || parameter_defaults_supported)
-            && !user_function.has_lowered_pattern_parameters()
-            && user_function.extra_argument_indices.is_empty()
-            && !self.current_function_contains_try_statement()
-            && self.state.emission.control_flow.try_stack.is_empty()
-            && self.inline_safe_argument_expression(this_binding)
-            && !self.expression_reads_local_descriptor_binding_member(this_binding)
-            && !self.inline_argument_mentions_shadowed_implicit_global(this_binding)
-            && arguments
-                .iter()
-                .all(|argument| self.inline_safe_argument_expression(argument))
-            && !arguments
-                .iter()
-                .any(|argument| self.inline_argument_mentions_shadowed_implicit_global(argument))
-            && !self.user_function_mentions_private_member_access(user_function)
-            && !self.user_function_mentions_direct_eval(user_function)
-            && self.user_function_identifier_callee_calls_are_direct_async_safe(user_function)
-            && !self.user_function_may_read_restricted_function_property(user_function)
-            && (!self.user_function_references_captured_user_function(user_function)
-                || self.user_function_references_only_supported_self_function_has_own_property(
-                    user_function,
-                )
-                || self
-                    .user_function_references_only_direct_async_safe_captured_user_function_calls(
-                        user_function,
-                    ))
-            && self.user_function_has_explicit_call_frame_inlineable_terminal_body(user_function)
-            && self
-                .resolve_registered_function_declaration(&user_function.name)
-                .is_some_and(|function| {
-                    function
-                        .body
-                        .iter()
-                        .all(Self::direct_async_implicit_completion_statement_supported)
-                })
+        let is_async = user_function.is_async();
+        let no_generator = !user_function.is_generator();
+        let parameter_defaults_ok =
+            !user_function.has_parameter_defaults() || parameter_defaults_supported;
+        let no_lowered_patterns = !user_function.has_lowered_pattern_parameters();
+        let no_extra_arguments = user_function.extra_argument_indices.is_empty();
+        let no_try = !self.current_function_contains_try_statement()
+            && self.state.emission.control_flow.try_stack.is_empty();
+        let this_inline_safe = self.inline_safe_argument_expression(this_binding);
+        let this_no_descriptor_read =
+            !self.expression_reads_local_descriptor_binding_member(this_binding);
+        let this_no_shadowed_implicit_global =
+            !self.inline_argument_mentions_shadowed_implicit_global(this_binding);
+        let arguments_inline_safe = arguments
+            .iter()
+            .all(|argument| self.inline_safe_argument_expression(argument));
+        let arguments_no_shadowed_implicit_global = !arguments
+            .iter()
+            .any(|argument| self.inline_argument_mentions_shadowed_implicit_global(argument));
+        let no_private = !self.user_function_mentions_private_member_access(user_function);
+        let no_direct_eval = !self.user_function_mentions_direct_eval(user_function);
+        let identifier_callees_safe =
+            self.user_function_identifier_callee_calls_are_direct_async_safe(user_function);
+        let no_restricted_function_property =
+            !self.user_function_may_read_restricted_function_property(user_function);
+        let captured_user_functions_ok = !self
+            .user_function_references_captured_user_function(user_function)
+            || self.user_function_references_only_supported_self_function_has_own_property(
+                user_function,
+            )
+            || self.user_function_references_only_direct_async_safe_captured_user_function_calls(
+                user_function,
+            );
+        let terminal_body_inlineable =
+            self.user_function_has_explicit_call_frame_inlineable_terminal_body(user_function);
+        let registered_body_supported = self
+            .resolve_registered_function_declaration(&user_function.name)
+            .is_some_and(|function| {
+                function
+                    .body
+                    .iter()
+                    .all(Self::direct_async_implicit_completion_statement_supported)
+            });
+
+        let safe = is_async
+            && no_generator
+            && parameter_defaults_ok
+            && no_lowered_patterns
+            && no_extra_arguments
+            && no_try
+            && this_inline_safe
+            && this_no_descriptor_read
+            && this_no_shadowed_implicit_global
+            && arguments_inline_safe
+            && arguments_no_shadowed_implicit_global
+            && no_private
+            && no_direct_eval
+            && identifier_callees_safe
+            && no_restricted_function_property
+            && captured_user_functions_ok
+            && terminal_body_inlineable
+            && registered_body_supported;
+
+        if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+            eprintln!(
+                "direct_async_implicit_completion_guard function={} safe={safe} is_async={is_async} no_generator={no_generator} parameter_defaults_ok={parameter_defaults_ok} no_lowered_patterns={no_lowered_patterns} no_extra_arguments={no_extra_arguments} no_try={no_try} this_inline_safe={this_inline_safe} this_no_descriptor_read={this_no_descriptor_read} this_no_shadowed_implicit_global={this_no_shadowed_implicit_global} arguments_inline_safe={arguments_inline_safe} arguments_no_shadowed_implicit_global={arguments_no_shadowed_implicit_global} no_private={no_private} no_direct_eval={no_direct_eval} identifier_callees_safe={identifier_callees_safe} no_restricted_function_property={no_restricted_function_property} captured_user_functions_ok={captured_user_functions_ok} terminal_body_inlineable={terminal_body_inlineable} registered_body_supported={registered_body_supported}",
+                user_function.name
+            );
+        }
+
+        safe
     }
 
     fn consume_direct_async_function_implicit_completion(

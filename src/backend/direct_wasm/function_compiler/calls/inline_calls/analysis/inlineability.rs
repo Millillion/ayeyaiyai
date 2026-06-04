@@ -817,7 +817,12 @@ impl<'a> FunctionCompiler<'a> {
                         .iter()
                         .all(Self::explicit_call_frame_inlineable_effect_statement)
             }
-            Statement::Block { body } if body.is_empty() => true,
+            Statement::Block { body } => body
+                .iter()
+                .all(Self::explicit_call_frame_inlineable_effect_statement),
+            Statement::If { .. } => {
+                Self::explicit_call_frame_inlineable_effect_statement(terminal_statement)
+            }
             Statement::Expression(expression) => {
                 !expression_mentions_unsupported_explicit_call_frame_state(expression)
             }

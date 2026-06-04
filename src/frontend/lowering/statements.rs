@@ -192,6 +192,13 @@ impl Lowerer {
         }
     }
 
+    fn symbol_async_dispose_expression() -> Expression {
+        Expression::Member {
+            object: Box::new(Expression::Identifier("Symbol".to_string())),
+            property: Box::new(Expression::String("asyncDispose".to_string())),
+        }
+    }
+
     fn using_resource_is_disposable_expression(name: &str) -> Expression {
         let resource = Expression::Identifier(name.to_string());
         Expression::Binary {
@@ -209,16 +216,69 @@ impl Lowerer {
         }
     }
 
-    fn using_dispose_statement(name: &str, dispose_object: Expression) -> Statement {
+    fn using_dispose_expression(
+        dispose_object: Expression,
+        property: Expression,
+        is_await: bool,
+    ) -> Expression {
+        let call = Expression::Call {
+            callee: Box::new(Expression::Member {
+                object: Box::new(dispose_object),
+                property: Box::new(property),
+            }),
+            arguments: Vec::new(),
+        };
+        if is_await {
+            Expression::Await(Box::new(call))
+        } else {
+            call
+        }
+    }
+
+    fn using_dispose_statement(
+        &mut self,
+        name: &str,
+        dispose_object: Expression,
+        is_await: bool,
+    ) -> Statement {
+        let then_branch = if is_await {
+            let async_dispose_method_name = self.fresh_temporary_name("using_async_dispose_method");
+            vec![
+                Statement::Let {
+                    name: async_dispose_method_name.clone(),
+                    mutable: false,
+                    value: Expression::Member {
+                        object: Box::new(dispose_object.clone()),
+                        property: Box::new(Self::symbol_async_dispose_expression()),
+                    },
+                },
+                Statement::If {
+                    condition: Self::using_resource_is_disposable_expression(
+                        &async_dispose_method_name,
+                    ),
+                    then_branch: vec![Statement::Expression(Self::using_dispose_expression(
+                        dispose_object.clone(),
+                        Self::symbol_async_dispose_expression(),
+                        true,
+                    ))],
+                    else_branch: vec![Statement::Expression(Self::using_dispose_expression(
+                        dispose_object,
+                        Self::symbol_dispose_expression(),
+                        true,
+                    ))],
+                },
+            ]
+        } else {
+            vec![Statement::Expression(Self::using_dispose_expression(
+                dispose_object,
+                Self::symbol_dispose_expression(),
+                false,
+            ))]
+        };
+
         Statement::If {
             condition: Self::using_resource_is_disposable_expression(name),
-            then_branch: vec![Statement::Expression(Expression::Call {
-                callee: Box::new(Expression::Member {
-                    object: Box::new(dispose_object),
-                    property: Box::new(Self::symbol_dispose_expression()),
-                }),
-                arguments: Vec::new(),
-            })],
+            then_branch,
             else_branch: Vec::new(),
         }
     }
@@ -343,14 +403,10 @@ impl Lowerer {
         using_declaration: &swc_ecma_ast::UsingDecl,
         protect_abrupt_completion: bool,
     ) -> Result<(Vec<Statement>, Vec<Statement>, Vec<Statement>)> {
-        ensure!(
-            !using_declaration.is_await,
-            "`await using` is not supported in statement lowering yet"
-        );
-
         let mut prelude = Vec::new();
         let mut lowered = Vec::new();
         let mut finalizer = Vec::new();
+        let is_await = using_declaration.is_await;
 
         for declarator in &using_declaration.decls {
             let initializer_is_class_expression =
@@ -386,7 +442,7 @@ impl Lowerer {
                     _ => Expression::Identifier(name.clone()),
                 };
                 if !initializer_is_class_expression {
-                    finalizer.push(Self::using_dispose_statement(&name, dispose_object));
+                    finalizer.push(self.using_dispose_statement(&name, dispose_object, is_await));
                 }
                 continue;
             }
@@ -423,9 +479,10 @@ impl Lowerer {
                 &mut lowered,
             )?;
             if !initializer_is_class_expression {
-                finalizer.push(Self::using_dispose_statement(
+                finalizer.push(self.using_dispose_statement(
                     &temporary_name,
                     Expression::Identifier(temporary_name.clone()),
+                    is_await,
                 ));
             }
         }
