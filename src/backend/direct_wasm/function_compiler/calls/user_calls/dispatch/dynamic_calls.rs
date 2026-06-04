@@ -506,6 +506,9 @@ impl<'a> FunctionCompiler<'a> {
             if self.emit_test262_async_test_awaited_local_async_callback(callback)? {
                 return Ok(true);
             }
+            if self.emit_test262_async_test_inline_await_using_callback(callback)? {
+                return Ok(true);
+            }
             return Ok(false);
         };
 
@@ -586,6 +589,58 @@ impl<'a> FunctionCompiler<'a> {
                 }
 
                 for statement in &callback_declaration.body[await_index + 1..] {
+                    compiler.emit_statement(statement)?;
+                }
+                Ok(())
+            })
+        })?;
+
+        self.emit_print(&[Expression::String("Test262:AsyncTestComplete".to_string())])?;
+        self.push_i32_const(JS_UNDEFINED_TAG);
+        Ok(true)
+    }
+
+    fn emit_test262_async_test_inline_await_using_callback(
+        &mut self,
+        callback: &Expression,
+    ) -> DirectResult<bool> {
+        let Some(callback_function) = self
+            .resolve_user_function_from_expression(callback)
+            .cloned()
+        else {
+            return Ok(false);
+        };
+        if !callback_function.is_async()
+            || callback_function.is_generator()
+            || !callback_function.params.is_empty()
+            || callback_function.has_parameter_defaults()
+            || callback_function.has_lowered_pattern_parameters()
+        {
+            return Ok(false);
+        }
+        let Some(callback_declaration) = self
+            .resolve_registered_function_declaration(&callback_function.name)
+            .cloned()
+        else {
+            return Ok(false);
+        };
+        if !Self::statements_contain_await_undefined(&callback_declaration.body) {
+            return Ok(false);
+        }
+
+        let inline_local_bindings =
+            collect_declared_bindings_from_statements_recursive(&callback_declaration.body)
+                .into_iter()
+                .filter(|name| {
+                    !callback_function.params.iter().any(|param| param == name)
+                        && name != "arguments"
+                })
+                .collect::<Vec<_>>();
+        let inline_local_scope_names =
+            self.prepare_inline_summary_local_bindings(&inline_local_bindings);
+        self.with_scoped_lexical_bindings_cleanup(inline_local_scope_names, |compiler| {
+            compiler.with_user_function_execution_context(&callback_function, |compiler| {
+                for statement in &callback_declaration.body {
                     compiler.emit_statement(statement)?;
                 }
                 Ok(())

@@ -107,6 +107,9 @@ impl<'a> FunctionCompiler<'a> {
             self.note_last_bound_user_function_source_expression(source_expression);
             return Ok(());
         }
+        if name == "asyncTest" && self.emit_dynamic_user_function_call(callee, arguments)? {
+            return Ok(());
+        }
         if name == "TestIterationAndResize"
             && self.emit_test_iteration_and_resize_call(arguments)?
         {
