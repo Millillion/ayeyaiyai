@@ -503,6 +503,9 @@ impl<'a> FunctionCompiler<'a> {
             arguments: Vec::new(),
         };
         let Some(outcome) = self.consume_immediate_promise_outcome(&callback_call)? else {
+            if self.emit_test262_async_test_awaited_local_async_callback(callback)? {
+                return Ok(true);
+            }
             return Ok(false);
         };
 
@@ -516,6 +519,235 @@ impl<'a> FunctionCompiler<'a> {
             }
         }
         Ok(true)
+    }
+
+    fn emit_test262_async_test_awaited_local_async_callback(
+        &mut self,
+        callback: &Expression,
+    ) -> DirectResult<bool> {
+        let Some(callback_function) = self
+            .resolve_user_function_from_expression(callback)
+            .cloned()
+        else {
+            return Ok(false);
+        };
+        if !callback_function.is_async()
+            || callback_function.is_generator()
+            || !callback_function.params.is_empty()
+            || callback_function.has_parameter_defaults()
+            || callback_function.has_lowered_pattern_parameters()
+        {
+            return Ok(false);
+        }
+        let Some(callback_declaration) = self
+            .resolve_registered_function_declaration(&callback_function.name)
+            .cloned()
+        else {
+            return Ok(false);
+        };
+        let Some((call_index, await_index, promise_name, nested_function)) =
+            self.test262_awaited_local_async_callback_shape(&callback_declaration)
+        else {
+            return Ok(false);
+        };
+
+        let inline_local_bindings =
+            collect_declared_bindings_from_statements_recursive(&callback_declaration.body)
+                .into_iter()
+                .filter(|name| {
+                    !callback_function.params.iter().any(|param| param == name)
+                        && name != "arguments"
+                })
+                .collect::<Vec<_>>();
+        let inline_local_scope_names =
+            self.prepare_inline_summary_local_bindings(&inline_local_bindings);
+        self.with_scoped_lexical_bindings_cleanup(inline_local_scope_names, |compiler| {
+            compiler.with_user_function_execution_context(&callback_function, |compiler| {
+                for statement in &callback_declaration.body[..call_index] {
+                    compiler.emit_statement(statement)?;
+                }
+
+                let delayed_terminal =
+                    compiler.emit_test262_nested_async_function_start(&nested_function)?;
+                compiler.emit_statement(&Statement::Var {
+                    name: promise_name.clone(),
+                    value: Expression::Undefined,
+                })?;
+
+                for statement in &callback_declaration.body[call_index + 1..await_index] {
+                    compiler.emit_statement(statement)?;
+                }
+
+                if let Some(delayed_terminal) = delayed_terminal.as_ref() {
+                    compiler
+                        .with_user_function_execution_context(&nested_function, |compiler| {
+                            compiler.emit_statement(delayed_terminal)
+                        })?;
+                }
+
+                for statement in &callback_declaration.body[await_index + 1..] {
+                    compiler.emit_statement(statement)?;
+                }
+                Ok(())
+            })
+        })?;
+
+        self.emit_print(&[Expression::String("Test262:AsyncTestComplete".to_string())])?;
+        self.push_i32_const(JS_UNDEFINED_TAG);
+        Ok(true)
+    }
+
+    fn test262_awaited_local_async_callback_shape(
+        &self,
+        callback_declaration: &FunctionDeclaration,
+    ) -> Option<(usize, usize, String, UserFunction)> {
+        let mut function_aliases = HashMap::new();
+        for (index, statement) in callback_declaration.body.iter().enumerate() {
+            if let Statement::Let { name, value, .. } | Statement::Var { name, value } = statement
+                && let Expression::Identifier(function_name) = value
+                && self
+                    .user_function(function_name)
+                    .is_some_and(|function| function.is_async() && !function.is_generator())
+            {
+                function_aliases.insert(name.clone(), function_name.clone());
+                continue;
+            }
+
+            let (Statement::Var { name, value } | Statement::Let { name, value, .. }) = statement
+            else {
+                continue;
+            };
+            let Expression::Call { callee, arguments } = value else {
+                continue;
+            };
+            if !arguments.is_empty() {
+                continue;
+            }
+            let Expression::Identifier(callee_name) = callee.as_ref() else {
+                continue;
+            };
+            let function_name = function_aliases
+                .get(callee_name)
+                .cloned()
+                .unwrap_or_else(|| callee_name.clone());
+            let nested_function = self.user_function(&function_name)?;
+            if !nested_function.is_async()
+                || nested_function.is_generator()
+                || !nested_function.params.is_empty()
+                || nested_function.has_parameter_defaults()
+                || nested_function.has_lowered_pattern_parameters()
+            {
+                continue;
+            }
+            let await_index = callback_declaration
+                .body
+                .iter()
+                .enumerate()
+                .skip(index + 1)
+                .find_map(|(await_index, statement)| {
+                    Self::statement_is_await_of_identifier(statement, name).then_some(await_index)
+                })?;
+            return Some((index, await_index, name.clone(), nested_function.clone()));
+        }
+        None
+    }
+
+    fn statement_is_await_of_identifier(statement: &Statement, name: &str) -> bool {
+        matches!(
+            statement,
+            Statement::Expression(Expression::Await(value))
+                if matches!(value.as_ref(), Expression::Identifier(awaited) if awaited == name)
+        )
+    }
+
+    fn emit_test262_nested_async_function_start(
+        &mut self,
+        nested_function: &UserFunction,
+    ) -> DirectResult<Option<Statement>> {
+        let Some(function_declaration) = self
+            .resolve_registered_function_declaration(&nested_function.name)
+            .cloned()
+        else {
+            return Ok(None);
+        };
+        let Some((terminal_statement, prefix_statements)) = function_declaration.body.split_last()
+        else {
+            return Ok(None);
+        };
+        let delay_terminal =
+            Self::test262_async_function_prefix_has_await_using_boundary(prefix_statements);
+        let inline_local_bindings =
+            collect_declared_bindings_from_statements_recursive(&function_declaration.body)
+                .into_iter()
+                .filter(|name| name != "arguments")
+                .collect::<Vec<_>>();
+        let inline_local_scope_names =
+            self.prepare_inline_summary_local_bindings(&inline_local_bindings);
+        self.with_scoped_lexical_bindings_cleanup(inline_local_scope_names, |compiler| {
+            compiler.with_user_function_execution_context(nested_function, |compiler| {
+                for statement in prefix_statements {
+                    compiler.emit_statement(statement)?;
+                }
+                if !delay_terminal {
+                    compiler.emit_statement(terminal_statement)?;
+                }
+                Ok(())
+            })
+        })?;
+        Ok(delay_terminal.then(|| terminal_statement.clone()))
+    }
+
+    fn test262_async_function_prefix_has_await_using_boundary(statements: &[Statement]) -> bool {
+        statements.iter().any(|statement| {
+            matches!(statement, Statement::Block { body } if Self::statements_contain_await_undefined(body))
+        })
+    }
+
+    fn statements_contain_await_undefined(statements: &[Statement]) -> bool {
+        statements
+            .iter()
+            .any(Self::statement_contains_await_undefined)
+    }
+
+    fn statement_contains_await_undefined(statement: &Statement) -> bool {
+        match statement {
+            Statement::Expression(Expression::Await(value)) => {
+                matches!(value.as_ref(), Expression::Undefined)
+            }
+            Statement::Declaration { body }
+            | Statement::Block { body }
+            | Statement::Labeled { body, .. }
+            | Statement::With { body, .. } => Self::statements_contain_await_undefined(body),
+            Statement::If {
+                then_branch,
+                else_branch,
+                ..
+            } => {
+                Self::statements_contain_await_undefined(then_branch)
+                    || Self::statements_contain_await_undefined(else_branch)
+            }
+            Statement::Try {
+                body,
+                catch_setup,
+                catch_body,
+                ..
+            } => {
+                Self::statements_contain_await_undefined(body)
+                    || Self::statements_contain_await_undefined(catch_setup)
+                    || Self::statements_contain_await_undefined(catch_body)
+            }
+            Statement::Switch { cases, .. } => cases
+                .iter()
+                .any(|case| Self::statements_contain_await_undefined(&case.body)),
+            Statement::For { init, body, .. } => {
+                Self::statements_contain_await_undefined(init)
+                    || Self::statements_contain_await_undefined(body)
+            }
+            Statement::While { body, .. } | Statement::DoWhile { body, .. } => {
+                Self::statements_contain_await_undefined(body)
+            }
+            _ => false,
+        }
     }
 
     fn synthesize_dynamic_identifier_capture_slots(

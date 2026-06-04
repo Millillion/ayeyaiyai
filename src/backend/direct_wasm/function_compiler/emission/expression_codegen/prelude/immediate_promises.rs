@@ -922,14 +922,32 @@ impl<'a> FunctionCompiler<'a> {
         let Expression::Await(value) = expression else {
             return false;
         };
+        if matches!(value.as_ref(), Expression::Undefined) {
+            return true;
+        }
         let Expression::Call { callee, arguments } = value.as_ref() else {
             return false;
         };
-        arguments.is_empty()
+        if arguments.is_empty()
             && matches!(
                 callee.as_ref(),
                 Expression::Member { property, .. }
                     if Self::expression_is_using_dispose_symbol_property(property)
+            )
+        {
+            return true;
+        }
+        arguments.len() == 1
+            && matches!(
+                callee.as_ref(),
+                Expression::Member { object, property }
+                    if matches!(property.as_ref(), Expression::String(name) if name == "call")
+                        && matches!(
+                            object.as_ref(),
+                            Expression::Identifier(name)
+                                if name.starts_with("__ayy_using_")
+                                    && name.contains("_dispose_method_")
+                        )
             )
     }
 

@@ -235,14 +235,35 @@ impl Lowerer {
         }
     }
 
+    fn using_dispose_method_expression(
+        dispose_object: Expression,
+        method: Expression,
+        is_await: bool,
+    ) -> Expression {
+        let call = Expression::Call {
+            callee: Box::new(Expression::Member {
+                object: Box::new(method),
+                property: Box::new(Expression::String("call".to_string())),
+            }),
+            arguments: vec![CallArgument::Expression(dispose_object)],
+        };
+        if is_await {
+            Expression::Await(Box::new(call))
+        } else {
+            call
+        }
+    }
+
     fn using_dispose_statement(
         &mut self,
         name: &str,
         dispose_object: Expression,
         is_await: bool,
+        initialized_name: Option<&str>,
     ) -> Statement {
         let then_branch = if is_await {
             let async_dispose_method_name = self.fresh_temporary_name("using_async_dispose_method");
+            let dispose_method_name = self.fresh_temporary_name("using_dispose_method");
             vec![
                 Statement::Let {
                     name: async_dispose_method_name.clone(),
@@ -256,16 +277,42 @@ impl Lowerer {
                     condition: Self::using_resource_is_disposable_expression(
                         &async_dispose_method_name,
                     ),
-                    then_branch: vec![Statement::Expression(Self::using_dispose_expression(
-                        dispose_object.clone(),
-                        Self::symbol_async_dispose_expression(),
-                        true,
-                    ))],
-                    else_branch: vec![Statement::Expression(Self::using_dispose_expression(
-                        dispose_object,
-                        Self::symbol_dispose_expression(),
-                        true,
-                    ))],
+                    then_branch: vec![Statement::Expression(
+                        Self::using_dispose_method_expression(
+                            dispose_object.clone(),
+                            Expression::Identifier(async_dispose_method_name),
+                            true,
+                        ),
+                    )],
+                    else_branch: vec![
+                        Statement::Let {
+                            name: dispose_method_name.clone(),
+                            mutable: false,
+                            value: Expression::Member {
+                                object: Box::new(dispose_object.clone()),
+                                property: Box::new(Self::symbol_dispose_expression()),
+                            },
+                        },
+                        Statement::If {
+                            condition: Self::using_resource_is_disposable_expression(
+                                &dispose_method_name,
+                            ),
+                            then_branch: vec![Statement::Expression(
+                                Self::using_dispose_method_expression(
+                                    dispose_object.clone(),
+                                    Expression::Identifier(dispose_method_name),
+                                    true,
+                                ),
+                            )],
+                            else_branch: vec![Statement::Expression(
+                                Self::using_dispose_expression(
+                                    dispose_object,
+                                    Self::symbol_dispose_expression(),
+                                    true,
+                                ),
+                            )],
+                        },
+                    ],
                 },
             ]
         } else {
@@ -276,10 +323,26 @@ impl Lowerer {
             ))]
         };
 
-        Statement::If {
+        let disposal = Statement::If {
             condition: Self::using_resource_is_disposable_expression(name),
             then_branch,
-            else_branch: Vec::new(),
+            else_branch: if is_await {
+                vec![Statement::Expression(Expression::Await(Box::new(
+                    Expression::Undefined,
+                )))]
+            } else {
+                Vec::new()
+            },
+        };
+
+        if is_await && let Some(initialized_name) = initialized_name {
+            Statement::If {
+                condition: Expression::Identifier(initialized_name.to_string()),
+                then_branch: vec![disposal],
+                else_branch: Vec::new(),
+            }
+        } else {
+            disposal
         }
     }
 
@@ -420,16 +483,31 @@ impl Lowerer {
                     )?,
                     None => Expression::Undefined,
                 };
+                let initialized_name = (protect_abrupt_completion && is_await)
+                    .then(|| self.fresh_temporary_name("using_initialized"));
                 if protect_abrupt_completion {
                     prelude.push(Statement::Let {
                         name: name.clone(),
                         mutable: true,
                         value: Expression::Undefined,
                     });
+                    if let Some(initialized_name) = initialized_name.as_ref() {
+                        prelude.push(Statement::Let {
+                            name: initialized_name.clone(),
+                            mutable: true,
+                            value: Expression::Bool(false),
+                        });
+                    }
                     lowered.push(Statement::Assign {
                         name: name.clone(),
                         value: value.clone(),
                     });
+                    if let Some(initialized_name) = initialized_name.as_ref() {
+                        lowered.push(Statement::Assign {
+                            name: initialized_name.clone(),
+                            value: Expression::Bool(true),
+                        });
+                    }
                 } else {
                     lowered.push(Statement::Let {
                         name: name.clone(),
@@ -442,7 +520,12 @@ impl Lowerer {
                     _ => Expression::Identifier(name.clone()),
                 };
                 if !initializer_is_class_expression {
-                    finalizer.push(self.using_dispose_statement(&name, dispose_object, is_await));
+                    finalizer.push(self.using_dispose_statement(
+                        &name,
+                        dispose_object,
+                        is_await,
+                        initialized_name.as_deref(),
+                    ));
                 }
                 continue;
             }
@@ -455,16 +538,31 @@ impl Lowerer {
                 )?,
                 None => Expression::Undefined,
             };
+            let initialized_name = (protect_abrupt_completion && is_await)
+                .then(|| self.fresh_temporary_name("using_initialized"));
             if protect_abrupt_completion {
                 prelude.push(Statement::Let {
                     name: temporary_name.clone(),
                     mutable: true,
                     value: Expression::Undefined,
                 });
+                if let Some(initialized_name) = initialized_name.as_ref() {
+                    prelude.push(Statement::Let {
+                        name: initialized_name.clone(),
+                        mutable: true,
+                        value: Expression::Bool(false),
+                    });
+                }
                 lowered.push(Statement::Assign {
                     name: temporary_name.clone(),
                     value,
                 });
+                if let Some(initialized_name) = initialized_name.as_ref() {
+                    lowered.push(Statement::Assign {
+                        name: initialized_name.clone(),
+                        value: Expression::Bool(true),
+                    });
+                }
             } else {
                 lowered.push(Statement::Let {
                     name: temporary_name.clone(),
@@ -483,6 +581,7 @@ impl Lowerer {
                     &temporary_name,
                     Expression::Identifier(temporary_name.clone()),
                     is_await,
+                    initialized_name.as_deref(),
                 ));
             }
         }

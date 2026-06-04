@@ -781,6 +781,21 @@ impl<'a> FunctionCompiler<'a> {
             )
     }
 
+    fn expression_is_private_scan_using_dispose_method_call_callee(
+        expression: &Expression,
+    ) -> bool {
+        let Expression::Member { object, property } = expression else {
+            return false;
+        };
+        matches!(property.as_ref(), Expression::String(name) if name == "call")
+            && matches!(
+                object.as_ref(),
+                Expression::Identifier(name)
+                    if name.starts_with("__ayy_using_")
+                        && name.contains("_dispose_method_")
+            )
+    }
+
     fn statement_mentions_private_member_access(statement: &Statement) -> bool {
         match statement {
             Statement::Declaration { body }
@@ -1015,6 +1030,9 @@ impl<'a> FunctionCompiler<'a> {
             Expression::Member { property, .. }
                 if Self::expression_is_private_scan_using_dispose_symbol_property(property)
         ) {
+            return false;
+        }
+        if Self::expression_is_private_scan_using_dispose_method_call_callee(callee) {
             return false;
         }
 
