@@ -76,6 +76,27 @@ impl<'a> FunctionCompiler<'a> {
         object: &Expression,
         arguments: &[CallArgument],
     ) -> DirectResult<bool> {
+        self.emit_static_async_generator_delegate_protocol_after_caught_value_getter_throw(
+            object, arguments, "return",
+        )
+    }
+
+    pub(in crate::backend::direct_wasm) fn emit_static_async_generator_delegate_throw_after_caught_value_getter_throw(
+        &mut self,
+        object: &Expression,
+        arguments: &[CallArgument],
+    ) -> DirectResult<bool> {
+        self.emit_static_async_generator_delegate_protocol_after_caught_value_getter_throw(
+            object, arguments, "throw",
+        )
+    }
+
+    fn emit_static_async_generator_delegate_protocol_after_caught_value_getter_throw(
+        &mut self,
+        object: &Expression,
+        arguments: &[CallArgument],
+        protocol_name: &str,
+    ) -> DirectResult<bool> {
         if !arguments.is_empty() {
             return Ok(false);
         }
@@ -84,16 +105,17 @@ impl<'a> FunctionCompiler<'a> {
         else {
             return Ok(false);
         };
-        let Some(throw_value) =
-            self.resolve_yield_delegate_return_value_getter_throw(&delegate_expression)
-        else {
+        let Some(throw_value) = self.resolve_yield_delegate_protocol_value_getter_throw(
+            &delegate_expression,
+            protocol_name,
+        ) else {
             return Ok(false);
         };
 
         let call_expression = Expression::Call {
             callee: Box::new(Expression::Member {
                 object: Box::new(object.clone()),
-                property: Box::new(Expression::String("return".to_string())),
+                property: Box::new(Expression::String(protocol_name.to_string())),
             }),
             arguments: arguments.to_vec(),
         };
@@ -111,7 +133,7 @@ impl<'a> FunctionCompiler<'a> {
             .speculation
             .static_semantics
             .last_bound_user_function_call = Some(BoundUserFunctionCallSnapshot {
-            function_name: "__ayy_async_generator_delegate_return".to_string(),
+            function_name: format!("__ayy_async_generator_delegate_{protocol_name}"),
             source_expression: Some(call_expression),
             result_expression: Some(result_expression),
             prototype_source_expression: None,
@@ -184,16 +206,20 @@ impl<'a> FunctionCompiler<'a> {
         })
     }
 
-    fn resolve_yield_delegate_return_value_getter_throw(
+    fn resolve_yield_delegate_protocol_value_getter_throw(
         &self,
         delegate_expression: &Expression,
+        protocol_name: &str,
     ) -> Option<Expression> {
-        let return_member = Expression::Member {
+        if !matches!(protocol_name, "return" | "throw") {
+            return None;
+        }
+        let protocol_member = Expression::Member {
             object: Box::new(delegate_expression.clone()),
-            property: Box::new(Expression::String("return".to_string())),
+            property: Box::new(Expression::String(protocol_name.to_string())),
         };
         let Some(LocalFunctionBinding::User(function_name)) =
-            self.resolve_function_binding_from_expression(&return_member)
+            self.resolve_function_binding_from_expression(&protocol_member)
         else {
             return None;
         };
@@ -313,12 +339,14 @@ impl<'a> FunctionCompiler<'a> {
         property_name: &str,
         arguments: &[CallArgument],
     ) -> DirectResult<Option<StaticEvalOutcome>> {
-        if property_name == "return"
+        if matches!(property_name, "return" | "throw")
             && arguments.is_empty()
             && let Some((delegate_expression, _)) =
                 self.resolve_async_generator_caught_yield_delegate_return_shape(object)
-            && let Some(throw_value) =
-                self.resolve_yield_delegate_return_value_getter_throw(&delegate_expression)
+            && let Some(throw_value) = self.resolve_yield_delegate_protocol_value_getter_throw(
+                &delegate_expression,
+                property_name,
+            )
         {
             return Ok(Some(StaticEvalOutcome::Value(Expression::Object(vec![
                 ObjectEntry::Data {

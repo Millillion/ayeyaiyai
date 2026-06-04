@@ -15,6 +15,33 @@ pub(super) fn reset_static_dynamic_import_caches() {
 }
 
 impl<'a> FunctionCompiler<'a> {
+    fn static_await_binding_value_for_identifier(&self, name: &str) -> Option<Expression> {
+        let resolved_local = self.resolve_current_local_binding(name);
+        let resolved_value = resolved_local.as_ref().and_then(|(resolved_name, _)| {
+            self.state
+                .speculation
+                .static_semantics
+                .local_value_binding(resolved_name)
+        });
+        let direct_value = self
+            .state
+            .speculation
+            .static_semantics
+            .local_value_binding(name);
+        let source_value = scoped_binding_source_name(name).and_then(|source_name| {
+            self.state
+                .speculation
+                .static_semantics
+                .local_value_binding(source_name)
+        });
+        let global_value = self.global_value_binding(name);
+        resolved_value
+            .or(direct_value)
+            .or(source_value)
+            .or(global_value)
+            .cloned()
+    }
+
     fn static_module_promise_init_call_expression(&self, name: &str) -> Option<Expression> {
         if !name.starts_with("__ayy_module_promise_") {
             return None;
@@ -205,6 +232,14 @@ impl<'a> FunctionCompiler<'a> {
             && let Some(init_call) = self.static_module_promise_init_call_expression(name)
         {
             return self.resolve_static_await_resolution_outcome(&init_call);
+        }
+        if let Expression::Identifier(name) = resolution
+            && let Some(bound_value) = self.static_await_binding_value_for_identifier(name)
+            && !static_expression_matches(&bound_value, resolution)
+            && let Some(outcome) = self
+                .resolve_static_immediate_promise_chain_outcome(&bound_value, current_function_name)
+        {
+            return Some(outcome);
         }
         if let Expression::Await(value) = resolution {
             let materialized = self.materialize_static_expression(value);

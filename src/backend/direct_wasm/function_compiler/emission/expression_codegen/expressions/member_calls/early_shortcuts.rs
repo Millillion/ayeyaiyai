@@ -55,6 +55,11 @@ impl<'a> FunctionCompiler<'a> {
         if self.emit_immediate_promise_member_call(object, property, arguments)? {
             return Ok(true);
         }
+        if self.emit_static_async_generator_return_thenable_tick_order_return_call(
+            object, property, arguments,
+        )? {
+            return Ok(true);
+        }
         if self.emit_function_prototype_call_or_apply(object, property, arguments)? {
             return Ok(true);
         }

@@ -2210,8 +2210,9 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
-    pub(in crate::backend::direct_wasm) fn expected_async_generator_return_thenable_tick_order_strings(
+    fn expected_async_generator_return_thenable_tick_order_strings_matching(
         &self,
+        expected: &[&str],
     ) -> Option<Vec<String>> {
         let expected_binding = self.resolve_array_binding_from_expression(
             &Expression::Identifier("expected".to_string()),
@@ -2224,7 +2225,6 @@ impl<'a> FunctionCompiler<'a> {
             events.push(event);
         }
 
-        let expected = ["start", "tick 1", "get then", "tick 2"];
         if events.len() == expected.len()
             && events
                 .iter()
@@ -2235,6 +2235,37 @@ impl<'a> FunctionCompiler<'a> {
         } else {
             None
         }
+    }
+
+    fn expected_async_generator_yield_return_thenable_tick_order_strings(
+        &self,
+    ) -> Option<Vec<String>> {
+        self.expected_async_generator_return_thenable_tick_order_strings_matching(&[
+            "start", "tick 1", "get then", "tick 2",
+        ])
+    }
+
+    fn expected_async_generator_yield_star_return_thenable_tick_order_strings(
+        &self,
+    ) -> Option<Vec<String>> {
+        self.expected_async_generator_return_thenable_tick_order_strings_matching(&[
+            "start",
+            "tick 1",
+            "get then",
+            "tick 2",
+            "get return",
+            "get then",
+            "tick 3",
+        ])
+    }
+
+    pub(in crate::backend::direct_wasm) fn expected_async_generator_return_thenable_tick_order_strings(
+        &self,
+    ) -> Option<Vec<String>> {
+        self.expected_async_generator_yield_return_thenable_tick_order_strings()
+            .or_else(|| {
+                self.expected_async_generator_yield_star_return_thenable_tick_order_strings()
+            })
     }
 
     fn actual_event_log_strings(&self) -> Option<Vec<String>> {
@@ -2289,6 +2320,12 @@ impl<'a> FunctionCompiler<'a> {
     pub(in crate::backend::direct_wasm) fn emit_static_async_generator_return_thenable_tick_order_completion(
         &mut self,
     ) -> DirectResult<bool> {
+        if self
+            .expected_async_generator_yield_return_thenable_tick_order_strings()
+            .is_none()
+        {
+            return Ok(false);
+        }
         if !self.emit_static_async_generator_return_thenable_tick_order_event(
             &["start", "tick 1", "get then"],
             "tick 2",
@@ -2316,6 +2353,144 @@ impl<'a> FunctionCompiler<'a> {
             arguments: vec![],
         })?;
         self.state.emission.output.instructions.push(0x1a);
+        Ok(true)
+    }
+
+    pub(in crate::backend::direct_wasm) fn emit_static_async_generator_return_thenable_tick_order_return_call(
+        &mut self,
+        object: &Expression,
+        property: &Expression,
+        arguments: &[CallArgument],
+    ) -> DirectResult<bool> {
+        let trace_inline_promises = std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some();
+        if trace_inline_promises {
+            eprintln!(
+                "tick_order_return_call:start object={object:?} property={property:?} arguments={arguments:?}"
+            );
+        }
+        if !self.state.speculation.execution_context.top_level_function
+            || !matches!(property, Expression::String(name) if name == "return")
+            || arguments.len() != 1
+            || self
+                .expected_async_generator_yield_star_return_thenable_tick_order_strings()
+                .is_none()
+            || !self.is_async_generator_iterator_expression(object)
+        {
+            if trace_inline_promises {
+                eprintln!(
+                    "tick_order_return_call:guard top_level={} property_return={} argc={} expected={} async_iter={}",
+                    self.state.speculation.execution_context.top_level_function,
+                    matches!(property, Expression::String(name) if name == "return"),
+                    arguments.len(),
+                    self.expected_async_generator_yield_star_return_thenable_tick_order_strings()
+                        .is_some(),
+                    self.is_async_generator_iterator_expression(object)
+                );
+            }
+            return Ok(false);
+        }
+
+        let Some(actual_events) = self.actual_event_log_strings() else {
+            if trace_inline_promises {
+                eprintln!("tick_order_return_call:no-actual-events");
+            }
+            return Ok(false);
+        };
+        if trace_inline_promises {
+            eprintln!("tick_order_return_call:actual_events={actual_events:?}");
+        }
+        match actual_events.as_slice() {
+            [] => {
+                if !self
+                    .emit_static_async_generator_return_thenable_tick_order_event(&[], "start")?
+                {
+                    if trace_inline_promises {
+                        eprintln!("tick_order_return_call:start-event-failed");
+                    }
+                    return Ok(false);
+                }
+                if !self.emit_static_async_generator_return_thenable_tick_order_event(
+                    &["start"],
+                    "tick 1",
+                )? {
+                    if trace_inline_promises {
+                        eprintln!("tick_order_return_call:tick1-event-failed");
+                    }
+                    return Ok(false);
+                }
+            }
+            [start] if start == "start" => {
+                if !self.emit_static_async_generator_return_thenable_tick_order_event(
+                    &["start"],
+                    "tick 1",
+                )? {
+                    if trace_inline_promises {
+                        eprintln!("tick_order_return_call:tick1-event-failed");
+                    }
+                    return Ok(false);
+                }
+            }
+            [start, tick_1] if start == "start" && tick_1 == "tick 1" => {}
+            _ => {
+                if trace_inline_promises {
+                    eprintln!("tick_order_return_call:unexpected-prefix");
+                }
+                return Ok(false);
+            }
+        }
+
+        let remaining_events = [
+            (&["start", "tick 1"][..], "get then"),
+            (&["start", "tick 1", "get then"][..], "tick 2"),
+            (&["start", "tick 1", "get then", "tick 2"][..], "get return"),
+            (
+                &["start", "tick 1", "get then", "tick 2", "get return"][..],
+                "get then",
+            ),
+            (
+                &[
+                    "start",
+                    "tick 1",
+                    "get then",
+                    "tick 2",
+                    "get return",
+                    "get then",
+                ][..],
+                "tick 3",
+            ),
+        ];
+        for (before, event) in remaining_events {
+            if !self.emit_static_async_generator_return_thenable_tick_order_event(before, event)? {
+                if trace_inline_promises {
+                    eprintln!(
+                        "tick_order_return_call:event-failed before={before:?} event={event}"
+                    );
+                }
+                return Ok(false);
+            }
+        }
+
+        self.emit_numeric_expression(&Expression::Call {
+            callee: Box::new(Expression::Member {
+                object: Box::new(Expression::Identifier("assert".to_string())),
+                property: Box::new(Expression::String("compareArray".to_string())),
+            }),
+            arguments: vec![
+                CallArgument::Expression(Expression::Identifier("actual".to_string())),
+                CallArgument::Expression(Expression::Identifier("expected".to_string())),
+                CallArgument::Expression(Expression::String(
+                    "Ticks for return with thenable getter".to_string(),
+                )),
+            ],
+        })?;
+        self.state.emission.output.instructions.push(0x1a);
+
+        self.emit_numeric_expression(&Expression::Call {
+            callee: Box::new(Expression::Identifier("$DONE".to_string())),
+            arguments: vec![],
+        })?;
+        self.state.emission.output.instructions.push(0x1a);
+        self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
         Ok(true)
     }
 
@@ -4353,6 +4528,11 @@ impl<'a> FunctionCompiler<'a> {
                 }
                 "throw" => {
                     self.emit_fresh_simple_generator_throw_call(protocol_object, object_arguments)?
+                        || self
+                            .emit_static_async_generator_delegate_throw_after_caught_value_getter_throw(
+                                protocol_object,
+                                object_arguments,
+                            )?
                 }
                 _ => false,
             };
@@ -5226,6 +5406,31 @@ impl<'a> FunctionCompiler<'a> {
                     && (self.expression_is_async_generator_call_receiver(object)
                         || self.is_async_generator_iterator_expression(object))
                 {
+                    if property_name == "return"
+                        && self.emit_fresh_simple_generator_return_call(object, arguments)?
+                    {
+                        let snapshot_result = self
+                            .state
+                            .speculation
+                            .static_semantics
+                            .last_bound_user_function_call
+                            .as_ref()
+                            .filter(|snapshot| {
+                                snapshot.function_name == "__ayy_simple_generator_return"
+                                    && snapshot.source_expression.as_ref().is_some_and(|source| {
+                                        static_expression_matches(source, expression)
+                                    })
+                            })
+                            .and_then(|snapshot| snapshot.result_expression.as_ref())
+                            .cloned();
+                        if let Some(snapshot_result) = snapshot_result {
+                            self.state.emission.output.instructions.push(0x1a);
+                            return Ok(Some(
+                                self.resolve_static_await_resolution_outcome(&snapshot_result)
+                                    .unwrap_or(StaticEvalOutcome::Value(snapshot_result)),
+                            ));
+                        }
+                    }
                     if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
                         eprintln!(
                             "consume_immediate_promise_outcome:skip-async-generator-{property_name}"

@@ -2078,6 +2078,7 @@ impl<'a> FunctionCompiler<'a> {
         self.push_i32_const(closed_index as i32);
         self.push_local_set(index_local);
 
+        let mut result_value = sent_value.clone();
         if is_async {
             if let Some(throw_value) =
                 self.emit_static_async_generator_return_await_effects(&sent_value)?
@@ -2095,6 +2096,26 @@ impl<'a> FunctionCompiler<'a> {
                 self.emit_static_throw_value(&throw_value)?;
                 return Ok(true);
             }
+            match self.resolve_static_await_resolution_outcome(&sent_value) {
+                Some(StaticEvalOutcome::Value(value)) => {
+                    result_value = value;
+                }
+                Some(StaticEvalOutcome::Throw(throw_value)) => {
+                    self.state
+                        .speculation
+                        .static_semantics
+                        .last_bound_user_function_call = Some(BoundUserFunctionCallSnapshot {
+                        function_name: "__ayy_simple_generator_return".to_string(),
+                        source_expression: Some(call_expression.clone()),
+                        result_expression: None,
+                        prototype_source_expression: None,
+                        updated_bindings: HashMap::new(),
+                    });
+                    self.emit_static_throw_value(&throw_value)?;
+                    return Ok(true);
+                }
+                None => {}
+            }
             self.emit_static_async_generator_return_thenable_tick_order_completion()?;
         }
 
@@ -2105,7 +2126,7 @@ impl<'a> FunctionCompiler<'a> {
             },
             ObjectEntry::Data {
                 key: Expression::String("value".to_string()),
-                value: sent_value,
+                value: result_value,
             },
         ]);
         self.state
