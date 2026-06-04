@@ -195,7 +195,10 @@ impl<'a> FunctionCompiler<'a> {
         expression: &Expression,
     ) -> Option<Expression> {
         match expression {
-            Expression::Identifier(name) if name.starts_with("__ayy_binding_value_") => {
+            Expression::Identifier(name)
+                if name.starts_with("__ayy_binding_value_")
+                    || (name.starts_with("__ayy_using_") && name.contains("_dispose_method_")) =>
+            {
                 if let Some(value) = self
                     .state
                     .speculation

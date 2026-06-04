@@ -1,5 +1,34 @@
 use super::*;
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Test262ReachableFlow {
+    Continue,
+    Stop,
+}
+
+struct Test262DelayedTerminal {
+    before_callback_await: Vec<Statement>,
+    terminal_statements: Vec<Statement>,
+    scope_names: Vec<String>,
+}
+
+struct Test262AsyncGeneratorTerminal {
+    function: UserFunction,
+    start_statements: Vec<Statement>,
+    terminal_statements: Vec<Statement>,
+    local_bindings: Vec<String>,
+}
+
+struct Test262ForOfAwaitUsingPlan {
+    generator_function: UserFunction,
+    generator_start_statements: Vec<Statement>,
+    loop_body_statements: Vec<Statement>,
+    dispose_object: Expression,
+    dispose_function: UserFunction,
+    generator_terminal_statements: Vec<Statement>,
+    generator_local_bindings: Vec<String>,
+}
+
 impl<'a> FunctionCompiler<'a> {
     fn user_function_is_class_constructor(user_function: &UserFunction) -> bool {
         user_function.name.starts_with("__ayy_class_ctor_")
@@ -498,10 +527,23 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(true);
         };
 
+        if self.test262_async_test_callback_has_awaited_local_async_await_using_shape(callback)
+            && self.emit_test262_async_test_awaited_local_async_callback(callback)?
+        {
+            return Ok(true);
+        }
         let callback_call = Expression::Call {
             callee: Box::new(callback.clone()),
             arguments: Vec::new(),
         };
+        if !self.test262_async_test_callback_has_awaited_local_async_shape(callback)
+            && self.emit_test262_async_test_inline_await_using_callback(callback)?
+        {
+            return Ok(true);
+        }
+        if self.emit_test262_async_test_inline_sync_callback(callback)? {
+            return Ok(true);
+        }
         let Some(outcome) = self.consume_immediate_promise_outcome(&callback_call)? else {
             if self.emit_test262_async_test_awaited_local_async_callback(callback)? {
                 return Ok(true);
@@ -578,7 +620,7 @@ impl<'a> FunctionCompiler<'a> {
                     compiler.emit_statement(statement)?;
                 }
 
-                let delayed_terminal =
+                let mut delayed_terminal =
                     compiler.emit_test262_nested_async_function_start(&nested_function)?;
                 compiler.emit_statement(&Statement::Var {
                     name: promise_name.clone(),
@@ -586,14 +628,66 @@ impl<'a> FunctionCompiler<'a> {
                 })?;
 
                 for statement in &callback_declaration.body[call_index + 1..await_index] {
+                    if Self::statement_is_test262_async_function_gate_release_call(statement) {
+                        continue;
+                    }
+                    if let Some(delayed_terminal) = delayed_terminal.as_mut()
+                        && !delayed_terminal.before_callback_await.is_empty()
+                        && Self::statement_contains_await(statement)
+                    {
+                        let resume_statements =
+                            std::mem::take(&mut delayed_terminal.before_callback_await);
+                        compiler.with_user_function_execution_context(
+                            &nested_function,
+                            |compiler| {
+                                for statement in &resume_statements {
+                                    if Self::statement_is_test262_async_function_gate_release_call(
+                                        statement,
+                                    ) {
+                                        continue;
+                                    }
+                                    compiler.emit_statement(statement)?;
+                                }
+                                Ok(())
+                            },
+                        )?;
+                    }
+                    if Self::statement_is_test262_async_function_gate_await(statement) {
+                        continue;
+                    }
                     compiler.emit_statement(statement)?;
                 }
 
-                if let Some(delayed_terminal) = delayed_terminal.as_ref() {
-                    compiler
-                        .with_user_function_execution_context(&nested_function, |compiler| {
-                            compiler.emit_statement(delayed_terminal)
-                        })?;
+                if let Some(delayed_terminal) = delayed_terminal.as_mut() {
+                    if !delayed_terminal.before_callback_await.is_empty() {
+                        let resume_statements =
+                            std::mem::take(&mut delayed_terminal.before_callback_await);
+                        compiler.with_user_function_execution_context(
+                            &nested_function,
+                            |compiler| {
+                                for statement in &resume_statements {
+                                    if Self::statement_is_test262_async_function_gate_release_call(
+                                        statement,
+                                    ) {
+                                        continue;
+                                    }
+                                    compiler.emit_statement(statement)?;
+                                }
+                                Ok(())
+                            },
+                        )?;
+                    }
+                    let terminal_result = compiler.with_user_function_execution_context(
+                        &nested_function,
+                        |compiler| {
+                            for statement in &delayed_terminal.terminal_statements {
+                                compiler.emit_statement(statement)?;
+                            }
+                            Ok(())
+                        },
+                    );
+                    compiler.pop_scoped_lexical_bindings(&delayed_terminal.scope_names);
+                    terminal_result?;
                 }
 
                 for statement in &callback_declaration.body[await_index + 1..] {
@@ -632,6 +726,8 @@ impl<'a> FunctionCompiler<'a> {
         else {
             return Ok(false);
         };
+        let mut for_of_await_using_plan =
+            self.test262_for_of_await_using_disposal_plan(&callback_declaration);
         if Self::statements_contain_await(&callback_declaration.body)
             || Self::statements_contain_return(&callback_declaration.body)
         {
@@ -653,6 +749,13 @@ impl<'a> FunctionCompiler<'a> {
         self.with_scoped_lexical_bindings_cleanup(inline_local_scope_names, |compiler| {
             compiler.with_user_function_execution_context(&callback_function, |compiler| {
                 for statement in &callback_declaration.body {
+                    if let Some(plan) = for_of_await_using_plan.as_ref()
+                        && matches!(statement, Statement::For { .. })
+                    {
+                        compiler.emit_test262_for_of_await_using_disposal_plan(plan)?;
+                        for_of_await_using_plan = None;
+                        continue;
+                    }
                     compiler.emit_statement(statement)?;
                 }
                 Ok(())
@@ -662,6 +765,42 @@ impl<'a> FunctionCompiler<'a> {
         self.emit_print(&[Expression::String("Test262:AsyncTestComplete".to_string())])?;
         self.push_i32_const(JS_UNDEFINED_TAG);
         Ok(true)
+    }
+
+    fn emit_test262_for_of_await_using_disposal_plan(
+        &mut self,
+        plan: &Test262ForOfAwaitUsingPlan,
+    ) -> DirectResult<()> {
+        self.emit_prepare_user_function_capture_globals(&plan.generator_function.name)?;
+        let scope_names =
+            self.prepare_inline_summary_local_bindings(&plan.generator_local_bindings);
+        let start_result =
+            self.with_user_function_execution_context(&plan.generator_function, |compiler| {
+                for statement in &plan.generator_start_statements {
+                    compiler.emit_statement(statement)?;
+                }
+                Ok(())
+            });
+        if start_result.is_ok() {
+            for statement in &plan.loop_body_statements {
+                self.emit_statement(statement)?;
+            }
+        }
+        let dispose_result = start_result.and_then(|_| {
+            let method = Expression::Identifier(plan.dispose_function.name.clone());
+            self.emit_static_using_dispose_method_body(&method, &plan.dispose_object)
+        });
+        let terminal_result = dispose_result.and_then(|handled| {
+            if !handled {
+                return Ok(());
+            }
+            for statement in &plan.generator_terminal_statements {
+                self.emit_statement(statement)?;
+            }
+            Ok(())
+        });
+        self.pop_scoped_lexical_bindings(&scope_names);
+        terminal_result
     }
 
     fn emit_test262_async_test_inline_await_using_callback(
@@ -688,7 +827,11 @@ impl<'a> FunctionCompiler<'a> {
         else {
             return Ok(false);
         };
-        if !Self::statements_contain_await_undefined(&callback_declaration.body) {
+        let mut async_generator_terminal =
+            self.test262_local_async_generator_using_disposer_terminal(&callback_declaration);
+        if !Self::statements_contain_await_using_boundary(&callback_declaration.body)
+            && async_generator_terminal.is_none()
+        {
             return Ok(false);
         }
 
@@ -707,6 +850,18 @@ impl<'a> FunctionCompiler<'a> {
         self.with_scoped_lexical_bindings_cleanup(inline_local_scope_names, |compiler| {
             compiler.with_user_function_execution_context(&callback_function, |compiler| {
                 for statement in &callback_declaration.body {
+                    if let Some(terminal) = async_generator_terminal.as_ref()
+                        && Self::statement_is_test262_async_generator_next_promise_await(statement)
+                    {
+                        compiler.emit_test262_async_generator_terminal(terminal)?;
+                        async_generator_terminal = None;
+                        continue;
+                    }
+                    if Self::statement_is_test262_async_function_gate_release_call(statement)
+                        || Self::statement_is_test262_async_function_gate_await(statement)
+                    {
+                        continue;
+                    }
                     compiler.emit_statement(statement)?;
                 }
                 Ok(())
@@ -716,6 +871,28 @@ impl<'a> FunctionCompiler<'a> {
         self.emit_print(&[Expression::String("Test262:AsyncTestComplete".to_string())])?;
         self.push_i32_const(JS_UNDEFINED_TAG);
         Ok(true)
+    }
+
+    fn emit_test262_async_generator_terminal(
+        &mut self,
+        terminal: &Test262AsyncGeneratorTerminal,
+    ) -> DirectResult<()> {
+        self.emit_prepare_user_function_capture_globals(&terminal.function.name)?;
+        let scope_names = self.prepare_inline_summary_local_bindings(&terminal.local_bindings);
+        let result = self.with_user_function_execution_context(&terminal.function, |compiler| {
+            for statement in &terminal.start_statements {
+                compiler.emit_statement(statement)?;
+            }
+            for statement in &terminal.terminal_statements {
+                if Self::statement_is_test262_async_generator_await_resume(statement) {
+                    continue;
+                }
+                compiler.emit_statement(statement)?;
+            }
+            Ok(())
+        });
+        self.pop_scoped_lexical_bindings(&scope_names);
+        result
     }
 
     fn emit_test262_async_test_inline_assert_throws_async_callback(
@@ -835,10 +1012,47 @@ impl<'a> FunctionCompiler<'a> {
         )
     }
 
+    fn statement_is_test262_async_function_gate_release_call(statement: &Statement) -> bool {
+        matches!(
+            statement,
+            Statement::Expression(Expression::Call { callee, arguments })
+                if arguments.is_empty()
+                    && matches!(callee.as_ref(), Expression::Identifier(name) if name.starts_with("release"))
+        )
+    }
+
+    fn statement_is_test262_async_function_gate_await(statement: &Statement) -> bool {
+        matches!(
+            statement,
+            Statement::Expression(Expression::Await(value))
+                if matches!(
+                    value.as_ref(),
+                    Expression::Identifier(name)
+                        if name.starts_with("suspend") && name.ends_with("Promise")
+                )
+        )
+    }
+
+    fn statement_is_test262_async_generator_next_promise_await(statement: &Statement) -> bool {
+        matches!(
+            statement,
+            Statement::Expression(Expression::Await(value))
+                if matches!(value.as_ref(), Expression::Identifier(name) if name.contains("nextPromise"))
+        )
+    }
+
+    fn statement_is_test262_async_generator_await_resume(statement: &Statement) -> bool {
+        matches!(
+            statement,
+            Statement::Expression(Expression::Call { callee, .. })
+                if matches!(callee.as_ref(), Expression::Identifier(name) if name == "__ayyAwaitResume")
+        )
+    }
+
     fn emit_test262_nested_async_function_start(
         &mut self,
         nested_function: &UserFunction,
-    ) -> DirectResult<Option<Statement>> {
+    ) -> DirectResult<Option<Test262DelayedTerminal>> {
         let Some(function_declaration) = self
             .resolve_registered_function_declaration(&nested_function.name)
             .cloned()
@@ -850,7 +1064,35 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(None);
         };
         let delay_terminal =
-            Self::test262_async_function_prefix_has_await_using_boundary(prefix_statements);
+            self.test262_async_function_prefix_has_await_using_boundary(prefix_statements);
+        let (start_statements, before_callback_await, terminal_statements) = if delay_terminal {
+            let await_statement_indices = prefix_statements
+                .iter()
+                .enumerate()
+                .filter_map(|(index, statement)| {
+                    Self::statement_contains_await(statement).then_some(index)
+                })
+                .collect::<Vec<_>>();
+            if await_statement_indices.len() >= 2 {
+                let first_await_index = await_statement_indices[0];
+                let second_await_index = await_statement_indices[1];
+                let mut terminal_statements = prefix_statements[second_await_index + 1..].to_vec();
+                terminal_statements.push(terminal_statement.clone());
+                (
+                    &prefix_statements[..first_await_index],
+                    prefix_statements[first_await_index + 1..second_await_index].to_vec(),
+                    terminal_statements,
+                )
+            } else {
+                (
+                    prefix_statements,
+                    Vec::new(),
+                    vec![terminal_statement.clone()],
+                )
+            }
+        } else {
+            (prefix_statements, Vec::new(), Vec::new())
+        };
         let inline_local_bindings =
             collect_declared_bindings_from_statements_recursive(&function_declaration.body)
                 .into_iter()
@@ -858,24 +1100,824 @@ impl<'a> FunctionCompiler<'a> {
                 .collect::<Vec<_>>();
         let inline_local_scope_names =
             self.prepare_inline_summary_local_bindings(&inline_local_bindings);
-        self.with_scoped_lexical_bindings_cleanup(inline_local_scope_names, |compiler| {
-            compiler.with_user_function_execution_context(nested_function, |compiler| {
-                for statement in prefix_statements {
-                    compiler.emit_statement(statement)?;
-                }
-                if !delay_terminal {
-                    compiler.emit_statement(terminal_statement)?;
-                }
-                Ok(())
-            })
-        })?;
-        Ok(delay_terminal.then(|| terminal_statement.clone()))
+        let result = self.with_user_function_execution_context(nested_function, |compiler| {
+            for statement in start_statements {
+                compiler.emit_statement(statement)?;
+            }
+            if !delay_terminal {
+                compiler.emit_statement(terminal_statement)?;
+            }
+            Ok(())
+        });
+        if result.is_err() || !delay_terminal {
+            self.pop_scoped_lexical_bindings(&inline_local_scope_names);
+        }
+        result?;
+        Ok(delay_terminal.then(|| Test262DelayedTerminal {
+            before_callback_await,
+            terminal_statements,
+            scope_names: inline_local_scope_names,
+        }))
     }
 
-    fn test262_async_function_prefix_has_await_using_boundary(statements: &[Statement]) -> bool {
-        statements.iter().any(|statement| {
-            matches!(statement, Statement::Block { body } if Self::statements_contain_await_undefined(body))
+    fn test262_async_function_prefix_has_await_using_boundary(
+        &self,
+        statements: &[Statement],
+    ) -> bool {
+        let mut local_values = HashMap::new();
+        self.test262_statements_reach_await_boundary(statements, &mut local_values)
+            .0
+    }
+
+    fn test262_statements_reach_await_boundary(
+        &self,
+        statements: &[Statement],
+        local_values: &mut HashMap<String, Expression>,
+    ) -> (bool, Test262ReachableFlow) {
+        for statement in statements {
+            let (found, flow) =
+                self.test262_statement_reaches_await_boundary(statement, local_values);
+            if found || flow == Test262ReachableFlow::Stop {
+                return (found, flow);
+            }
+        }
+        (false, Test262ReachableFlow::Continue)
+    }
+
+    fn test262_statement_reaches_await_boundary(
+        &self,
+        statement: &Statement,
+        local_values: &mut HashMap<String, Expression>,
+    ) -> (bool, Test262ReachableFlow) {
+        match statement {
+            Statement::Expression(expression) => (
+                Self::expression_contains_await_for_user_call_runtime(expression),
+                Test262ReachableFlow::Continue,
+            ),
+            Statement::Throw(expression) | Statement::Return(expression) => (
+                Self::expression_contains_await_for_user_call_runtime(expression),
+                Test262ReachableFlow::Stop,
+            ),
+            Statement::Let { name, value, .. } | Statement::Var { name, value } => {
+                let found = Self::expression_contains_await_for_user_call_runtime(value);
+                if !found {
+                    self.test262_update_reachability_local_value(name, value, local_values);
+                }
+                (found, Test262ReachableFlow::Continue)
+            }
+            Statement::Assign { name, value } => {
+                let found = Self::expression_contains_await_for_user_call_runtime(value);
+                if !found {
+                    self.test262_update_reachability_local_value(name, value, local_values);
+                }
+                (found, Test262ReachableFlow::Continue)
+            }
+            Statement::AssignMember {
+                object,
+                property,
+                value,
+            } => (
+                Self::expression_contains_await_for_user_call_runtime(object)
+                    || Self::expression_contains_await_for_user_call_runtime(property)
+                    || Self::expression_contains_await_for_user_call_runtime(value),
+                Test262ReachableFlow::Continue,
+            ),
+            Statement::Print { values } => (
+                values
+                    .iter()
+                    .any(Self::expression_contains_await_for_user_call_runtime),
+                Test262ReachableFlow::Continue,
+            ),
+            Statement::Declaration { body } | Statement::Block { body } => {
+                self.test262_statements_reach_await_boundary(body, local_values)
+            }
+            Statement::Labeled { body, .. } => {
+                let mut nested_values = local_values.clone();
+                let (found, _) =
+                    self.test262_statements_reach_await_boundary(body, &mut nested_values);
+                if !found {
+                    *local_values = nested_values;
+                }
+                (found, Test262ReachableFlow::Continue)
+            }
+            Statement::With { object, body } => {
+                if Self::expression_contains_await_for_user_call_runtime(object) {
+                    return (true, Test262ReachableFlow::Continue);
+                }
+                self.test262_statements_reach_await_boundary(body, local_values)
+            }
+            Statement::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => self.test262_if_statement_reaches_await_boundary(
+                condition,
+                then_branch,
+                else_branch,
+                local_values,
+            ),
+            Statement::Try {
+                body,
+                catch_setup,
+                catch_body,
+                ..
+            } => {
+                let (found, flow) =
+                    self.test262_statements_reach_await_boundary(body, local_values);
+                if found || flow == Test262ReachableFlow::Stop {
+                    return (found, flow);
+                }
+                let mut catch_values = local_values.clone();
+                let (found, _) =
+                    self.test262_statements_reach_await_boundary(catch_setup, &mut catch_values);
+                if found {
+                    return (true, Test262ReachableFlow::Continue);
+                }
+                let (found, _) =
+                    self.test262_statements_reach_await_boundary(catch_body, &mut catch_values);
+                (found, Test262ReachableFlow::Continue)
+            }
+            Statement::Switch { .. } => {
+                if Self::statement_contains_await(statement) {
+                    (true, Test262ReachableFlow::Continue)
+                } else {
+                    local_values.clear();
+                    (false, Test262ReachableFlow::Continue)
+                }
+            }
+            Statement::For {
+                init,
+                condition,
+                update,
+                break_hook,
+                body,
+                ..
+            } => {
+                let found = self
+                    .test262_statements_reach_await_boundary(init, local_values)
+                    .0
+                    || condition
+                        .as_ref()
+                        .is_some_and(Self::expression_contains_await_for_user_call_runtime)
+                    || update
+                        .as_ref()
+                        .is_some_and(Self::expression_contains_await_for_user_call_runtime)
+                    || break_hook
+                        .as_ref()
+                        .is_some_and(Self::expression_contains_await_for_user_call_runtime)
+                    || Self::statements_contain_await(body);
+                local_values.clear();
+                (found, Test262ReachableFlow::Continue)
+            }
+            Statement::While {
+                condition,
+                break_hook,
+                body,
+                ..
+            }
+            | Statement::DoWhile {
+                condition,
+                break_hook,
+                body,
+                ..
+            } => {
+                let found = Self::expression_contains_await_for_user_call_runtime(condition)
+                    || break_hook
+                        .as_ref()
+                        .is_some_and(Self::expression_contains_await_for_user_call_runtime)
+                    || Self::statements_contain_await(body);
+                local_values.clear();
+                (found, Test262ReachableFlow::Continue)
+            }
+            Statement::Break { .. } | Statement::Continue { .. } => {
+                (false, Test262ReachableFlow::Stop)
+            }
+            Statement::Yield { value } | Statement::YieldDelegate { value } => (
+                Self::expression_contains_await_for_user_call_runtime(value),
+                Test262ReachableFlow::Continue,
+            ),
+        }
+    }
+
+    fn test262_if_statement_reaches_await_boundary(
+        &self,
+        condition: &Expression,
+        then_branch: &[Statement],
+        else_branch: &[Statement],
+        local_values: &mut HashMap<String, Expression>,
+    ) -> (bool, Test262ReachableFlow) {
+        match self.test262_reachability_condition_value(condition, local_values) {
+            Some(true) => self.test262_statements_reach_await_boundary(then_branch, local_values),
+            Some(false) => self.test262_statements_reach_await_boundary(else_branch, local_values),
+            None => {
+                let mut then_values = local_values.clone();
+                let mut else_values = local_values.clone();
+                let (then_found, then_flow) =
+                    self.test262_statements_reach_await_boundary(then_branch, &mut then_values);
+                let (else_found, else_flow) =
+                    self.test262_statements_reach_await_boundary(else_branch, &mut else_values);
+                if then_found || else_found {
+                    return (true, Test262ReachableFlow::Continue);
+                }
+                if then_flow == Test262ReachableFlow::Stop
+                    && else_flow == Test262ReachableFlow::Stop
+                {
+                    (false, Test262ReachableFlow::Stop)
+                } else {
+                    local_values.clear();
+                    (false, Test262ReachableFlow::Continue)
+                }
+            }
+        }
+    }
+
+    fn test262_reachability_condition_value(
+        &self,
+        condition: &Expression,
+        local_values: &HashMap<String, Expression>,
+    ) -> Option<bool> {
+        let substituted =
+            Self::test262_substitute_reachability_local_values(condition, local_values);
+        self.resolve_static_if_condition_value(&substituted)
+            .or_else(|| {
+                let materialized = self.materialize_static_expression(&substituted);
+                self.resolve_static_if_condition_value(&materialized)
+            })
+    }
+
+    fn test262_update_reachability_local_value(
+        &self,
+        name: &str,
+        value: &Expression,
+        local_values: &mut HashMap<String, Expression>,
+    ) {
+        let substituted = Self::test262_substitute_reachability_local_values(value, local_values);
+        let materialized = self.materialize_static_expression(&substituted);
+        match materialized {
+            Expression::Bool(_) | Expression::Null | Expression::Undefined => {
+                local_values.insert(name.to_string(), materialized);
+            }
+            _ => {
+                local_values.remove(name);
+            }
+        }
+    }
+
+    fn test262_substitute_reachability_local_values(
+        expression: &Expression,
+        local_values: &HashMap<String, Expression>,
+    ) -> Expression {
+        match expression {
+            Expression::Identifier(name) => local_values
+                .get(name)
+                .cloned()
+                .unwrap_or_else(|| expression.clone()),
+            Expression::Unary { op, expression } => Expression::Unary {
+                op: *op,
+                expression: Box::new(Self::test262_substitute_reachability_local_values(
+                    expression,
+                    local_values,
+                )),
+            },
+            Expression::Binary { op, left, right } => Expression::Binary {
+                op: *op,
+                left: Box::new(Self::test262_substitute_reachability_local_values(
+                    left,
+                    local_values,
+                )),
+                right: Box::new(Self::test262_substitute_reachability_local_values(
+                    right,
+                    local_values,
+                )),
+            },
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => Expression::Conditional {
+                condition: Box::new(Self::test262_substitute_reachability_local_values(
+                    condition,
+                    local_values,
+                )),
+                then_expression: Box::new(Self::test262_substitute_reachability_local_values(
+                    then_expression,
+                    local_values,
+                )),
+                else_expression: Box::new(Self::test262_substitute_reachability_local_values(
+                    else_expression,
+                    local_values,
+                )),
+            },
+            Expression::Sequence(expressions) => Expression::Sequence(
+                expressions
+                    .iter()
+                    .map(|expression| {
+                        Self::test262_substitute_reachability_local_values(expression, local_values)
+                    })
+                    .collect(),
+            ),
+            _ => expression.clone(),
+        }
+    }
+
+    fn test262_async_test_callback_has_awaited_local_async_shape(
+        &self,
+        callback: &Expression,
+    ) -> bool {
+        let Some(callback_function) = self.resolve_user_function_from_expression(callback) else {
+            return false;
+        };
+        let Some(callback_declaration) =
+            self.resolve_registered_function_declaration(&callback_function.name)
+        else {
+            return false;
+        };
+        self.test262_awaited_local_async_callback_shape(callback_declaration)
+            .is_some()
+    }
+
+    fn test262_async_test_callback_has_awaited_local_async_await_using_shape(
+        &self,
+        callback: &Expression,
+    ) -> bool {
+        let Some(callback_function) = self.resolve_user_function_from_expression(callback) else {
+            return false;
+        };
+        let Some(callback_declaration) =
+            self.resolve_registered_function_declaration(&callback_function.name)
+        else {
+            return false;
+        };
+        let Some((_, _, _, nested_function)) =
+            self.test262_awaited_local_async_callback_shape(callback_declaration)
+        else {
+            return false;
+        };
+        let Some(nested_declaration) =
+            self.resolve_registered_function_declaration(&nested_function.name)
+        else {
+            return false;
+        };
+        Self::statements_contain_await_using_boundary(&nested_declaration.body)
+    }
+
+    fn test262_for_of_await_using_disposal_plan(
+        &self,
+        callback_declaration: &FunctionDeclaration,
+    ) -> Option<Test262ForOfAwaitUsingPlan> {
+        let mut function_aliases = HashMap::new();
+        for statement in &callback_declaration.body {
+            if let Statement::Let { name, value, .. } | Statement::Var { name, value } = statement
+                && let Expression::Identifier(function_name) = value
+                && self
+                    .user_function(function_name)
+                    .is_some_and(|function| function.is_generator() && !function.is_async())
+            {
+                function_aliases.insert(name.clone(), function_name.clone());
+                continue;
+            }
+
+            let Statement::For { init, body, .. } = statement else {
+                continue;
+            };
+            let generator_name =
+                self.test262_for_of_generator_name_from_init(init, &function_aliases)?;
+            let generator_function = self.user_function(&generator_name)?.clone();
+            let generator_declaration = self
+                .resolve_registered_function_declaration(&generator_name)?
+                .clone();
+            let yield_index = generator_declaration.body.iter().position(|statement| {
+                matches!(
+                    statement,
+                    Statement::Yield { .. } | Statement::YieldDelegate { .. }
+                )
+            })?;
+            let dispose_object = match &generator_declaration.body[yield_index] {
+                Statement::Yield { value } | Statement::YieldDelegate { value } => value.clone(),
+                _ => return None,
+            };
+            let dispose_function = self.test262_callback_declares_async_disposable_object(
+                callback_declaration,
+                &dispose_object,
+            )?;
+            let loop_body_statements = Self::test262_for_of_loop_body_statements(body)?;
+            let generator_local_bindings =
+                collect_declared_bindings_from_statements_recursive(&generator_declaration.body)
+                    .into_iter()
+                    .filter(|name| name != "arguments")
+                    .collect();
+            return Some(Test262ForOfAwaitUsingPlan {
+                generator_function,
+                generator_start_statements: generator_declaration.body[..yield_index].to_vec(),
+                loop_body_statements,
+                dispose_object,
+                dispose_function,
+                generator_terminal_statements: generator_declaration.body[yield_index + 1..]
+                    .to_vec(),
+                generator_local_bindings,
+            });
+        }
+        None
+    }
+
+    fn test262_callback_declares_async_disposable_object(
+        &self,
+        callback_declaration: &FunctionDeclaration,
+        dispose_object: &Expression,
+    ) -> Option<UserFunction> {
+        let Expression::Identifier(dispose_name) = dispose_object else {
+            return None;
+        };
+        for statement in &callback_declaration.body {
+            let (Statement::Let { name, value, .. } | Statement::Var { name, value }) = statement
+            else {
+                continue;
+            };
+            if name != dispose_name {
+                continue;
+            }
+            let Expression::Object(entries) = value else {
+                continue;
+            };
+            if let Some(dispose_function) = entries.iter().find_map(|entry| {
+                let ObjectEntry::Data { key, value } = entry else {
+                    return None;
+                };
+                if !Self::expression_is_symbol_async_dispose_key(key) {
+                    return None;
+                }
+                let Expression::Identifier(function_name) = value else {
+                    return None;
+                };
+                self.user_function(function_name).cloned()
+            }) {
+                return Some(dispose_function);
+            }
+        }
+        None
+    }
+
+    fn expression_is_symbol_async_dispose_key(expression: &Expression) -> bool {
+        let Expression::Sequence(expressions) = expression else {
+            return false;
+        };
+        let [Expression::Member { object, property }] = expressions.as_slice() else {
+            return false;
+        };
+        matches!(object.as_ref(), Expression::Identifier(name) if name == "Symbol")
+            && matches!(property.as_ref(), Expression::String(name) if name == "asyncDispose")
+    }
+
+    fn test262_for_of_generator_name_from_init(
+        &self,
+        init: &[Statement],
+        function_aliases: &HashMap<String, String>,
+    ) -> Option<String> {
+        let (Statement::Let { value, .. } | Statement::Var { value, .. }) = init.first()? else {
+            return None;
+        };
+        let Expression::GetIterator(iterator_source) = value else {
+            return None;
+        };
+        let Expression::Call { callee, arguments } = iterator_source.as_ref() else {
+            return None;
+        };
+        if !arguments.is_empty() {
+            return None;
+        }
+        let Expression::Identifier(callee_name) = callee.as_ref() else {
+            return None;
+        };
+        Some(
+            function_aliases
+                .get(callee_name)
+                .cloned()
+                .unwrap_or_else(|| callee_name.clone()),
+        )
+    }
+
+    fn test262_for_of_loop_body_statements(body: &[Statement]) -> Option<Vec<Statement>> {
+        for statement in body {
+            let Statement::Try { body, .. } = statement else {
+                continue;
+            };
+            for try_statement in body {
+                let Statement::Block { body } = try_statement else {
+                    continue;
+                };
+                return Some(body.clone());
+            }
+        }
+        None
+    }
+
+    fn test262_local_async_generator_using_disposer_terminal(
+        &self,
+        callback_declaration: &FunctionDeclaration,
+    ) -> Option<Test262AsyncGeneratorTerminal> {
+        let mut function_aliases = HashMap::new();
+        for statement in &callback_declaration.body {
+            if let Statement::Let { name, value, .. } | Statement::Var { name, value } = statement
+                && let Expression::Identifier(function_name) = value
+                && self
+                    .user_function(function_name)
+                    .is_some_and(|function| function.is_async() && function.is_generator())
+            {
+                function_aliases.insert(name.clone(), function_name.clone());
+                if let Some(terminal) =
+                    self.test262_user_function_using_disposer_terminal(function_name)
+                {
+                    return Some(terminal);
+                }
+            }
+
+            let (Statement::Let { value, .. } | Statement::Var { value, .. }) = statement else {
+                continue;
+            };
+            let Expression::Call { callee, .. } = value else {
+                continue;
+            };
+            let Expression::Identifier(callee_name) = callee.as_ref() else {
+                continue;
+            };
+            let function_name = function_aliases
+                .get(callee_name)
+                .map(String::as_str)
+                .unwrap_or(callee_name);
+            if self
+                .user_function(function_name)
+                .is_some_and(|function| function.is_async() && function.is_generator())
+                && let Some(terminal) =
+                    self.test262_user_function_using_disposer_terminal(function_name)
+            {
+                return Some(terminal);
+            }
+        }
+        None
+    }
+
+    fn test262_user_function_using_disposer_terminal(
+        &self,
+        function_name: &str,
+    ) -> Option<Test262AsyncGeneratorTerminal> {
+        let function = self.user_function(function_name)?.clone();
+        let declaration = self
+            .resolve_registered_function_declaration(function_name)?
+            .clone();
+        if !Self::statements_contain_using_dispose_method_call(&declaration.body) {
+            return None;
+        }
+        let yield_indices = declaration
+            .body
+            .iter()
+            .enumerate()
+            .filter_map(|(index, statement)| {
+                matches!(
+                    statement,
+                    Statement::Yield { .. } | Statement::YieldDelegate { .. }
+                )
+                .then_some(index)
+            })
+            .collect::<Vec<_>>();
+        let first_yield_index = *yield_indices.first()?;
+        let last_yield_index = *yield_indices.last()?;
+        let terminal_statements = declaration.body[last_yield_index + 1..].to_vec();
+        if !Self::statements_contain_using_dispose_method_call(&terminal_statements) {
+            return None;
+        }
+        let local_bindings = collect_declared_bindings_from_statements_recursive(&declaration.body)
+            .into_iter()
+            .filter(|name| name != "arguments")
+            .collect();
+        Some(Test262AsyncGeneratorTerminal {
+            function,
+            start_statements: declaration.body[..first_yield_index].to_vec(),
+            terminal_statements,
+            local_bindings,
         })
+    }
+
+    fn statements_contain_await_using_boundary(statements: &[Statement]) -> bool {
+        Self::statements_contain_await_undefined(statements)
+            && Self::statements_contain_using_dispose_method_call(statements)
+    }
+
+    fn statements_contain_using_dispose_method_call(statements: &[Statement]) -> bool {
+        statements
+            .iter()
+            .any(Self::statement_contains_using_dispose_method_call)
+    }
+
+    fn statement_contains_using_dispose_method_call(statement: &Statement) -> bool {
+        match statement {
+            Statement::Expression(expression)
+            | Statement::Throw(expression)
+            | Statement::Return(expression)
+            | Statement::Let {
+                value: expression, ..
+            }
+            | Statement::Var {
+                value: expression, ..
+            }
+            | Statement::Assign {
+                value: expression, ..
+            }
+            | Statement::AssignMember {
+                value: expression, ..
+            }
+            | Statement::Yield { value: expression }
+            | Statement::YieldDelegate { value: expression } => {
+                Self::expression_contains_using_dispose_method_call(expression)
+            }
+            Statement::Print { values } => values
+                .iter()
+                .any(Self::expression_contains_using_dispose_method_call),
+            Statement::Declaration { body }
+            | Statement::Block { body }
+            | Statement::Labeled { body, .. }
+            | Statement::With { body, .. } => {
+                Self::statements_contain_using_dispose_method_call(body)
+            }
+            Statement::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                Self::expression_contains_using_dispose_method_call(condition)
+                    || Self::statements_contain_using_dispose_method_call(then_branch)
+                    || Self::statements_contain_using_dispose_method_call(else_branch)
+            }
+            Statement::Try {
+                body,
+                catch_setup,
+                catch_body,
+                ..
+            } => {
+                Self::statements_contain_using_dispose_method_call(body)
+                    || Self::statements_contain_using_dispose_method_call(catch_setup)
+                    || Self::statements_contain_using_dispose_method_call(catch_body)
+            }
+            Statement::Switch {
+                discriminant,
+                cases,
+                ..
+            } => {
+                Self::expression_contains_using_dispose_method_call(discriminant)
+                    || cases.iter().any(|case| {
+                        case.test
+                            .as_ref()
+                            .is_some_and(Self::expression_contains_using_dispose_method_call)
+                            || Self::statements_contain_using_dispose_method_call(&case.body)
+                    })
+            }
+            Statement::For {
+                init,
+                condition,
+                update,
+                break_hook,
+                body,
+                ..
+            } => {
+                Self::statements_contain_using_dispose_method_call(init)
+                    || condition
+                        .as_ref()
+                        .is_some_and(Self::expression_contains_using_dispose_method_call)
+                    || update
+                        .as_ref()
+                        .is_some_and(Self::expression_contains_using_dispose_method_call)
+                    || break_hook
+                        .as_ref()
+                        .is_some_and(Self::expression_contains_using_dispose_method_call)
+                    || Self::statements_contain_using_dispose_method_call(body)
+            }
+            Statement::While {
+                condition,
+                break_hook,
+                body,
+                ..
+            }
+            | Statement::DoWhile {
+                condition,
+                break_hook,
+                body,
+                ..
+            } => {
+                Self::expression_contains_using_dispose_method_call(condition)
+                    || break_hook
+                        .as_ref()
+                        .is_some_and(Self::expression_contains_using_dispose_method_call)
+                    || Self::statements_contain_using_dispose_method_call(body)
+            }
+            Statement::Break { .. } | Statement::Continue { .. } => false,
+        }
+    }
+
+    fn expression_contains_using_dispose_method_call(expression: &Expression) -> bool {
+        match expression {
+            Expression::Call { callee, arguments }
+            | Expression::SuperCall { callee, arguments }
+            | Expression::New { callee, arguments } => {
+                Self::expression_is_test262_using_dispose_method_call(expression)
+                    || Self::expression_contains_using_dispose_method_call(callee)
+                    || arguments.iter().any(|argument| match argument {
+                        CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                            Self::expression_contains_using_dispose_method_call(expression)
+                        }
+                    })
+            }
+            Expression::Member { object, property } => {
+                Self::expression_contains_using_dispose_method_call(object)
+                    || Self::expression_contains_using_dispose_method_call(property)
+            }
+            Expression::SuperMember { property } => {
+                Self::expression_contains_using_dispose_method_call(property)
+            }
+            Expression::Assign { value, .. }
+            | Expression::Await(value)
+            | Expression::EnumerateKeys(value)
+            | Expression::GetIterator(value)
+            | Expression::IteratorClose(value)
+            | Expression::Unary {
+                expression: value, ..
+            } => Self::expression_contains_using_dispose_method_call(value),
+            Expression::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                Self::expression_contains_using_dispose_method_call(object)
+                    || Self::expression_contains_using_dispose_method_call(property)
+                    || Self::expression_contains_using_dispose_method_call(value)
+            }
+            Expression::AssignSuperMember { property, value } => {
+                Self::expression_contains_using_dispose_method_call(property)
+                    || Self::expression_contains_using_dispose_method_call(value)
+            }
+            Expression::Binary { left, right, .. } => {
+                Self::expression_contains_using_dispose_method_call(left)
+                    || Self::expression_contains_using_dispose_method_call(right)
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                Self::expression_contains_using_dispose_method_call(condition)
+                    || Self::expression_contains_using_dispose_method_call(then_expression)
+                    || Self::expression_contains_using_dispose_method_call(else_expression)
+            }
+            Expression::Sequence(expressions) => expressions
+                .iter()
+                .any(Self::expression_contains_using_dispose_method_call),
+            Expression::Array(elements) => elements.iter().any(|element| match element {
+                ArrayElement::Expression(expression) | ArrayElement::Spread(expression) => {
+                    Self::expression_contains_using_dispose_method_call(expression)
+                }
+            }),
+            Expression::Object(entries) => entries.iter().any(|entry| match entry {
+                ObjectEntry::Data { key, value } => {
+                    Self::expression_contains_using_dispose_method_call(key)
+                        || Self::expression_contains_using_dispose_method_call(value)
+                }
+                ObjectEntry::Getter { key, getter } => {
+                    Self::expression_contains_using_dispose_method_call(key)
+                        || Self::expression_contains_using_dispose_method_call(getter)
+                }
+                ObjectEntry::Setter { key, setter } => {
+                    Self::expression_contains_using_dispose_method_call(key)
+                        || Self::expression_contains_using_dispose_method_call(setter)
+                }
+                ObjectEntry::Spread(expression) => {
+                    Self::expression_contains_using_dispose_method_call(expression)
+                }
+            }),
+            Expression::This
+            | Expression::Identifier(_)
+            | Expression::Update { .. }
+            | Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined
+            | Expression::NewTarget
+            | Expression::Sent => false,
+        }
+    }
+
+    fn expression_is_test262_using_dispose_method_call(expression: &Expression) -> bool {
+        let Expression::Call { callee, .. } = expression else {
+            return false;
+        };
+        let Expression::Member { object, property } = callee.as_ref() else {
+            return false;
+        };
+        matches!(property.as_ref(), Expression::String(name) if name == "call")
+            && matches!(
+                object.as_ref(),
+                Expression::Identifier(name)
+                    if name.starts_with("__ayy_using_") && name.contains("_dispose_method_")
+            )
     }
 
     fn statements_contain_await_undefined(statements: &[Statement]) -> bool {

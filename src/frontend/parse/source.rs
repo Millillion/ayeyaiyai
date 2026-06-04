@@ -108,8 +108,13 @@ fn source_file(file_name: FileName, source: &str) -> Lrc<swc_common::SourceFile>
 }
 
 fn unmodified_source_file(file_name: FileName, source: &str) -> Lrc<swc_common::SourceFile> {
+    let normalized = normalize_unmodified_parser_source(source);
     let source_map: Lrc<SourceMap> = Default::default();
-    source_map.new_source_file(file_name.into(), source.to_string())
+    source_map.new_source_file(file_name.into(), normalized.into_owned())
+}
+
+fn normalize_unmodified_parser_source(source: &str) -> Cow<'_, str> {
+    normalize_for_statement_using_declarations(Cow::Borrowed(source))
 }
 
 fn normalize_parser_source(source: &str) -> Cow<'_, str> {
@@ -895,17 +900,25 @@ fn normalize_for_statement_using_declarations(source: Cow<'_, str>) -> Cow<'_, s
                     index += 1;
                     continue;
                 };
-                if !identifier_at(&source, head_start, "using") {
+                let head_using_start = if identifier_at(&source, head_start, "using") {
+                    Some(head_start)
+                } else if identifier_at(&source, head_start, "await") {
+                    skip_whitespace_and_comments(bytes, head_start + "await".len())
+                        .filter(|using_start| identifier_at(&source, *using_start, "using"))
+                } else {
+                    None
+                };
+                let Some(head_using_start) = head_using_start else {
                     index += 1;
                     continue;
-                }
+                };
                 let Some(close_paren) = find_matching_delimiter(bytes, open_paren, b'(', b')')
                 else {
                     index += 1;
                     continue;
                 };
                 let Some(first_semicolon) =
-                    find_top_level_semicolon(bytes, head_start, close_paren)
+                    find_top_level_semicolon(bytes, head_using_start, close_paren)
                 else {
                     index = close_paren + 1;
                     continue;

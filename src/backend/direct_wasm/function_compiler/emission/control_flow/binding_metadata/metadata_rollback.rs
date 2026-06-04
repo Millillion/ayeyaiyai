@@ -622,6 +622,10 @@ impl<'a> FunctionCompiler<'a> {
                     .values
                     .mark_array_with_runtime_state(name);
             }
+            if let Some((resolved_name, _)) = self.resolve_current_local_binding(name) {
+                self.state
+                    .clear_local_static_binding_metadata(&resolved_name);
+            }
             self.clear_static_identifier_binding_metadata(name);
         }
     }

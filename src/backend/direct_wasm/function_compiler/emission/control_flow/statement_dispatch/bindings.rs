@@ -10,6 +10,47 @@ impl<'a> FunctionCompiler<'a> {
             && matches!(value, Expression::Object(entries) if entries.is_empty())
     }
 
+    fn is_using_dispose_method_binding_name(name: &str) -> bool {
+        name.starts_with("__ayy_using_") && name.contains("_dispose_method_")
+    }
+
+    fn static_using_dispose_method_initializer_result(
+        &self,
+        name: &str,
+        value: &Expression,
+    ) -> Option<Expression> {
+        if !Self::is_using_dispose_method_binding_name(name) {
+            return None;
+        }
+        let Expression::Member { object, property } = value else {
+            return None;
+        };
+        let computed_property = Expression::Sequence(vec![property.as_ref().clone()]);
+        let getter_binding = self
+            .resolve_member_getter_binding(object, property)
+            .or_else(|| self.resolve_member_getter_binding(object, &computed_property))?;
+        let static_this_expression = self.resolve_static_snapshot_this_expression(object);
+        let return_value = self.resolve_static_getter_value_from_binding_with_context(
+            &getter_binding,
+            &static_this_expression,
+            self.current_function_name(),
+        )?;
+        if self
+            .resolve_static_boxed_primitive_value(&return_value)
+            .is_some()
+        {
+            Some(return_value)
+        } else {
+            Some(
+                self.resolve_static_primitive_expression_with_context(
+                    &return_value,
+                    self.current_function_name(),
+                )
+                .unwrap_or(return_value),
+            )
+        }
+    }
+
     fn emit_fresh_private_brand_value(&mut self) -> DirectResult<()> {
         let brand_local = self.allocate_temp_local();
         self.push_global_get(NEXT_PRIVATE_BRAND_GLOBAL_INDEX);
@@ -1083,7 +1124,8 @@ impl<'a> FunctionCompiler<'a> {
                 }
                 let resolved_store_value = self
                     .static_for_await_iterator_initializer_result(name, value)
-                    .or_else(|| self.static_class_constructor_call_initializer_result(value));
+                    .or_else(|| self.static_class_constructor_call_initializer_result(value))
+                    .or_else(|| self.static_using_dispose_method_initializer_result(name, value));
                 if trace {
                     eprintln!("binding_statement:let:after_resolve_store name={name}");
                 }

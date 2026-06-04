@@ -1123,6 +1123,16 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         expression: &Expression,
     ) -> DirectResult<()> {
+        if let Some((method, dispose_object)) = Self::using_dispose_method_call_parts(expression) {
+            if self.emit_static_using_dispose_method_body(method, dispose_object)? {
+                self.push_i32_const(JS_UNDEFINED_TAG);
+                return Ok(());
+            }
+            self.emit_numeric_expression(expression)?;
+            self.state.emission.output.instructions.push(0x1a);
+            self.push_i32_const(JS_UNDEFINED_TAG);
+            return Ok(());
+        }
         if let Expression::Identifier(_) = expression {
             let then_property = Expression::String("then".to_string());
             if let Some(object_binding) = self.resolve_object_binding_from_expression(expression)
@@ -1166,5 +1176,232 @@ impl<'a> FunctionCompiler<'a> {
         self.state.emission.output.instructions.push(0x1a);
         self.push_i32_const(JS_UNDEFINED_TAG);
         Ok(())
+    }
+
+    fn using_dispose_method_call_parts(
+        expression: &Expression,
+    ) -> Option<(&Expression, &Expression)> {
+        let Expression::Call { callee, .. } = expression else {
+            return None;
+        };
+        let Expression::Member { object, property } = callee.as_ref() else {
+            return None;
+        };
+        if !matches!(property.as_ref(), Expression::String(name) if name == "call") {
+            return None;
+        }
+        let Expression::Identifier(name) = object.as_ref() else {
+            return None;
+        };
+        if !name.starts_with("__ayy_using_") || !name.contains("_dispose_method_") {
+            return None;
+        }
+        let Expression::Call { arguments, .. } = expression else {
+            return None;
+        };
+        let Some(CallArgument::Expression(dispose_object)) = arguments.first() else {
+            return None;
+        };
+        Some((object, dispose_object))
+    }
+
+    pub(in crate::backend::direct_wasm) fn emit_static_using_dispose_method_body(
+        &mut self,
+        method: &Expression,
+        dispose_object: &Expression,
+    ) -> DirectResult<bool> {
+        let materialized_method = self.materialize_static_expression(method);
+        let Some(user_function) = self
+            .resolve_user_function_from_expression(method)
+            .or_else(|| self.resolve_user_function_from_expression(&materialized_method))
+            .cloned()
+        else {
+            return Ok(false);
+        };
+        if !user_function.params.is_empty()
+            || user_function.has_parameter_defaults()
+            || user_function.has_lowered_pattern_parameters()
+            || user_function.is_generator()
+        {
+            return Ok(false);
+        }
+        let Some(function_declaration) = self
+            .resolve_registered_function_declaration(&user_function.name)
+            .cloned()
+        else {
+            return Ok(false);
+        };
+
+        self.with_user_function_execution_context(&user_function, |compiler| {
+            for statement in &function_declaration.body {
+                let statement = Self::substitute_this_in_statement(statement, dispose_object);
+                match &statement {
+                    Statement::Return(Expression::Undefined) => {}
+                    Statement::Return(value) => {
+                        compiler.emit_numeric_expression(value)?;
+                        compiler.state.emission.output.instructions.push(0x1a);
+                    }
+                    _ => compiler.emit_statement(&statement)?,
+                }
+            }
+            Ok(())
+        })?;
+        Ok(true)
+    }
+
+    fn substitute_this_in_statement(
+        statement: &Statement,
+        this_expression: &Expression,
+    ) -> Statement {
+        match statement {
+            Statement::AssignMember {
+                object,
+                property,
+                value,
+            } => Statement::AssignMember {
+                object: Self::substitute_this_in_expression(object, this_expression),
+                property: Self::substitute_this_in_expression(property, this_expression),
+                value: Self::substitute_this_in_expression(value, this_expression),
+            },
+            Statement::Expression(expression) => Statement::Expression(
+                Self::substitute_this_in_expression(expression, this_expression),
+            ),
+            Statement::Return(expression) => Statement::Return(
+                Self::substitute_this_in_expression(expression, this_expression),
+            ),
+            _ => statement.clone(),
+        }
+    }
+
+    fn substitute_this_in_expression(
+        expression: &Expression,
+        this_expression: &Expression,
+    ) -> Expression {
+        match expression {
+            Expression::This => this_expression.clone(),
+            Expression::Array(elements) => Expression::Array(
+                elements
+                    .iter()
+                    .map(|element| match element {
+                        ArrayElement::Expression(expression) => ArrayElement::Expression(
+                            Self::substitute_this_in_expression(expression, this_expression),
+                        ),
+                        ArrayElement::Spread(expression) => ArrayElement::Spread(
+                            Self::substitute_this_in_expression(expression, this_expression),
+                        ),
+                    })
+                    .collect(),
+            ),
+            Expression::Object(entries) => Expression::Object(
+                entries
+                    .iter()
+                    .map(|entry| match entry {
+                        ObjectEntry::Data { key, value } => ObjectEntry::Data {
+                            key: Self::substitute_this_in_expression(key, this_expression),
+                            value: Self::substitute_this_in_expression(value, this_expression),
+                        },
+                        ObjectEntry::Getter { key, getter } => ObjectEntry::Getter {
+                            key: Self::substitute_this_in_expression(key, this_expression),
+                            getter: Self::substitute_this_in_expression(getter, this_expression),
+                        },
+                        ObjectEntry::Setter { key, setter } => ObjectEntry::Setter {
+                            key: Self::substitute_this_in_expression(key, this_expression),
+                            setter: Self::substitute_this_in_expression(setter, this_expression),
+                        },
+                        ObjectEntry::Spread(expression) => ObjectEntry::Spread(
+                            Self::substitute_this_in_expression(expression, this_expression),
+                        ),
+                    })
+                    .collect(),
+            ),
+            Expression::Member { object, property } => Expression::Member {
+                object: Box::new(Self::substitute_this_in_expression(object, this_expression)),
+                property: Box::new(Self::substitute_this_in_expression(
+                    property,
+                    this_expression,
+                )),
+            },
+            Expression::AssignMember {
+                object,
+                property,
+                value,
+            } => Expression::AssignMember {
+                object: Box::new(Self::substitute_this_in_expression(object, this_expression)),
+                property: Box::new(Self::substitute_this_in_expression(
+                    property,
+                    this_expression,
+                )),
+                value: Box::new(Self::substitute_this_in_expression(value, this_expression)),
+            },
+            Expression::Await(value)
+            | Expression::EnumerateKeys(value)
+            | Expression::GetIterator(value)
+            | Expression::IteratorClose(value) => {
+                let value = Box::new(Self::substitute_this_in_expression(value, this_expression));
+                match expression {
+                    Expression::Await(_) => Expression::Await(value),
+                    Expression::EnumerateKeys(_) => Expression::EnumerateKeys(value),
+                    Expression::GetIterator(_) => Expression::GetIterator(value),
+                    _ => Expression::IteratorClose(value),
+                }
+            }
+            Expression::Unary { op, expression } => Expression::Unary {
+                op: *op,
+                expression: Box::new(Self::substitute_this_in_expression(
+                    expression,
+                    this_expression,
+                )),
+            },
+            Expression::Binary { op, left, right } => Expression::Binary {
+                op: *op,
+                left: Box::new(Self::substitute_this_in_expression(left, this_expression)),
+                right: Box::new(Self::substitute_this_in_expression(right, this_expression)),
+            },
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => Expression::Conditional {
+                condition: Box::new(Self::substitute_this_in_expression(
+                    condition,
+                    this_expression,
+                )),
+                then_expression: Box::new(Self::substitute_this_in_expression(
+                    then_expression,
+                    this_expression,
+                )),
+                else_expression: Box::new(Self::substitute_this_in_expression(
+                    else_expression,
+                    this_expression,
+                )),
+            },
+            Expression::Sequence(expressions) => Expression::Sequence(
+                expressions
+                    .iter()
+                    .map(|expression| {
+                        Self::substitute_this_in_expression(expression, this_expression)
+                    })
+                    .collect(),
+            ),
+            Expression::Call { callee, arguments } => Expression::Call {
+                callee: Box::new(Self::substitute_this_in_expression(callee, this_expression)),
+                arguments: arguments
+                    .iter()
+                    .map(|argument| match argument {
+                        CallArgument::Expression(expression) => CallArgument::Expression(
+                            Self::substitute_this_in_expression(expression, this_expression),
+                        ),
+                        CallArgument::Spread(expression) => CallArgument::Spread(
+                            Self::substitute_this_in_expression(expression, this_expression),
+                        ),
+                    })
+                    .collect(),
+            },
+            Expression::Assign { name, value } => Expression::Assign {
+                name: name.clone(),
+                value: Box::new(Self::substitute_this_in_expression(value, this_expression)),
+            },
+            _ => expression.clone(),
+        }
     }
 }

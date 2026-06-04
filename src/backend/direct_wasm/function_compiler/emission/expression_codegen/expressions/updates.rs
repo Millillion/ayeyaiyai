@@ -434,6 +434,8 @@ impl<'a> FunctionCompiler<'a> {
             } else {
                 let previous_local = self.allocate_temp_local();
                 let next_local = self.allocate_temp_local();
+                self.state
+                    .clear_local_static_binding_metadata(&resolved_name);
                 self.push_local_get(local_index);
                 self.push_local_set(previous_local);
                 let numeric_previous_local = self.emit_runtime_update_from_previous_local(

@@ -530,7 +530,7 @@ mod tests {
     use super::{
         Metadata, NegativeExpectation, TestFailure, apply_negative_expectation,
         extract_requested_tests_from_list, normalize_requested_test, parse_frontmatter,
-        parse_test262_metadata, should_skip_path,
+        parse_test262_metadata, run_single_test, should_skip_path,
     };
 
     #[test]
@@ -707,5 +707,27 @@ assert.sameValue(1, 1);
                 "test/language/comments/S7.4_A1_T2.js".to_string()
             ]
         );
+    }
+
+    #[test]
+    fn runner_compiles_test262_source_without_await_rewrite_fallback() {
+        let tempdir = tempfile::tempdir().unwrap();
+        let path = tempdir.path().join("escaped-await-async-generator.js");
+        fs::write(&path, "class C { async *gen() { var \\u0061wait; } }\n").unwrap();
+
+        let outcome = run_single_test(&path, "wasm32-wasip2", 30, false, false, false);
+
+        match outcome {
+            Err(TestFailure::Compile(error)) => {
+                assert!(
+                    error.contains("await"),
+                    "expected an unmodified parse error for escaped await, got:\n{error}"
+                );
+            }
+            Ok(()) => panic!("test262 runner unexpectedly accepted rewritten source"),
+            Err(TestFailure::Runtime(_)) => {
+                panic!("invalid escaped await should fail during unmodified parsing")
+            }
+        }
     }
 }

@@ -1,4 +1,4 @@
-1730/23668 (7.31%)
+1740/23668 (7.35%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,7 +14,7 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 405/9337 (4.34%)
+- statements: 415/9337 (4.44%)
 - expressions: 0/11061 (0.00%)
 - types: 0/113 (0.00%)
 - function-code: 0/217 (0.00%)
@@ -1774,16 +1774,16 @@ Sub-category progress
   - [x] test/language/statements/await-using/global-closure-get-before-initialization.js
   - [x] test/language/statements/await-using/global-use-before-initialization-in-declaration-statement.js
   - [x] test/language/statements/await-using/global-use-before-initialization-in-prior-statement.js
-  - [ ] test/language/statements/await-using/initializer-Symbol.asyncDispose-called-at-end-of-asyncfunctionbody.js
-  - [ ] test/language/statements/await-using/initializer-Symbol.asyncDispose-called-at-end-of-asyncgeneratorbody.js
-  - [ ] test/language/statements/await-using/initializer-Symbol.asyncDispose-called-at-end-of-block.js
-  - [ ] test/language/statements/await-using/initializer-Symbol.asyncDispose-called-at-end-of-each-iteration-of-forofstatement.js
-  - [ ] test/language/statements/await-using/initializer-Symbol.asyncDispose-called-at-end-of-forstatement.js
-  - [ ] test/language/statements/await-using/initializer-Symbol.asyncDispose-called-if-subsequent-initializer-throws-in-forstatement-head.js
-  - [ ] test/language/statements/await-using/initializer-Symbol.asyncDispose-called-if-subsequent-initializer-throws.js
-  - [ ] test/language/statements/await-using/initializer-Symbol.dispose-called-at-end-of-asyncfunctionbody.js
-  - [ ] test/language/statements/await-using/initializer-Symbol.dispose-called-at-end-of-asyncgeneratorbody.js
-  - [ ] test/language/statements/await-using/initializer-Symbol.dispose-called-at-end-of-block.js
+  - [x] test/language/statements/await-using/initializer-Symbol.asyncDispose-called-at-end-of-asyncfunctionbody.js
+  - [x] test/language/statements/await-using/initializer-Symbol.asyncDispose-called-at-end-of-asyncgeneratorbody.js
+  - [x] test/language/statements/await-using/initializer-Symbol.asyncDispose-called-at-end-of-block.js
+  - [x] test/language/statements/await-using/initializer-Symbol.asyncDispose-called-at-end-of-each-iteration-of-forofstatement.js
+  - [x] test/language/statements/await-using/initializer-Symbol.asyncDispose-called-at-end-of-forstatement.js
+  - [x] test/language/statements/await-using/initializer-Symbol.asyncDispose-called-if-subsequent-initializer-throws-in-forstatement-head.js
+  - [x] test/language/statements/await-using/initializer-Symbol.asyncDispose-called-if-subsequent-initializer-throws.js
+  - [x] test/language/statements/await-using/initializer-Symbol.dispose-called-at-end-of-asyncfunctionbody.js
+  - [x] test/language/statements/await-using/initializer-Symbol.dispose-called-at-end-of-asyncgeneratorbody.js
+  - [x] test/language/statements/await-using/initializer-Symbol.dispose-called-at-end-of-block.js
   - [ ] test/language/statements/await-using/initializer-Symbol.dispose-called-at-end-of-each-iteration-of-forofstatement.js
   - [ ] test/language/statements/await-using/initializer-Symbol.dispose-called-at-end-of-forstatement.js
   - [ ] test/language/statements/await-using/initializer-Symbol.dispose-called-if-subsequent-initializer-throws-in-forstatement-head.js
