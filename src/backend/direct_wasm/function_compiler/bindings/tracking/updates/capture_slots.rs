@@ -556,7 +556,7 @@ impl<'a> FunctionCompiler<'a> {
         Ok(())
     }
 
-    fn sync_module_export_capture_runtime_array_from_source(
+    pub(in crate::backend::direct_wasm) fn sync_module_export_capture_runtime_array_from_source(
         &mut self,
         hidden_name: &str,
         source: &Expression,

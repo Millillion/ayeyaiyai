@@ -613,6 +613,24 @@ impl<'a> FunctionCompiler<'a> {
             {
                 return Some(binding);
             }
+            if let Some((resolved_name, _)) = self.resolve_current_local_binding(name)
+                && resolved_name.as_str() != name.as_str()
+                && let Some(binding) = self
+                    .state
+                    .speculation
+                    .static_semantics
+                    .local_typed_array_view_binding(&resolved_name)
+                    .and_then(|view| self.typed_array_view_static_values(view))
+                    .or_else(|| {
+                        self.state
+                            .speculation
+                            .static_semantics
+                            .local_array_binding(&resolved_name)
+                            .cloned()
+                    })
+            {
+                return Some(binding);
+            }
         }
 
         if let Some(resolved) = self

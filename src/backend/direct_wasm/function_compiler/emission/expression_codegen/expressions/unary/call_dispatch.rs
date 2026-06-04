@@ -706,6 +706,13 @@ impl<'a> FunctionCompiler<'a> {
         {
             return Ok(());
         }
+        if let Expression::Member { object, property } = callee
+            && matches!(object.as_ref(), Expression::Identifier(name) if name == "assert")
+            && matches!(property.as_ref(), Expression::String(name) if name == "deepEqual")
+            && self.emit_assert_compare_array_call(arguments)?
+        {
+            return Ok(());
+        }
         let local_iterator_next_binding_name = match callee {
             Expression::Member { object, property } if matches!(property.as_ref(), Expression::String(property_name) if property_name == "next") => {
                 match object.as_ref() {

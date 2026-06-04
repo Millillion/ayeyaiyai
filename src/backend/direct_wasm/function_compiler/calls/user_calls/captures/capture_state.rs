@@ -614,6 +614,10 @@ impl<'a> FunctionCompiler<'a> {
                     &capture_source_name,
                     &source_expression,
                 )?;
+                self.sync_module_export_capture_runtime_array_from_source(
+                    &hidden_name,
+                    &source_expression,
+                )?;
                 self.state.emission.output.instructions.push(0x05);
                 self.push_i32_const(JS_UNDEFINED_TAG);
                 self.push_global_set(binding.value_index);
@@ -633,6 +637,10 @@ impl<'a> FunctionCompiler<'a> {
                 self.sync_user_function_capture_runtime_object_shadows_for_source(
                     &hidden_name,
                     &capture_source_name,
+                    &source_expression,
+                )?;
+                self.sync_module_export_capture_runtime_array_from_source(
+                    &hidden_name,
                     &source_expression,
                 )?;
             }
@@ -935,6 +943,10 @@ impl<'a> FunctionCompiler<'a> {
                     value_local,
                 )?;
             }
+            self.sync_user_function_capture_runtime_array_state_to_source(
+                &binding.source_name,
+                &binding.hidden_name,
+            )?;
             self.emit_runtime_object_property_shadow_copy(
                 &binding.hidden_name,
                 &binding.source_name,
@@ -963,6 +975,82 @@ impl<'a> FunctionCompiler<'a> {
                 }
             }
         }
+        Ok(())
+    }
+
+    fn sync_user_function_capture_runtime_array_state_to_source(
+        &mut self,
+        source_name: &str,
+        hidden_name: &str,
+    ) -> DirectResult<()> {
+        let hidden_array_binding = self
+            .backend
+            .global_array_binding(hidden_name)
+            .cloned()
+            .or_else(|| {
+                self.backend
+                    .shared_global_semantics
+                    .values
+                    .array_bindings
+                    .get(hidden_name)
+                    .cloned()
+            });
+        if hidden_array_binding.is_none() && !self.uses_global_runtime_array_state(hidden_name) {
+            return Ok(());
+        }
+
+        let target_name = self
+            .resolve_runtime_array_binding_name(source_name)
+            .or_else(|| {
+                self.resolve_current_local_binding(source_name)
+                    .map(|(resolved_name, _)| resolved_name)
+            })
+            .unwrap_or_else(|| source_name.to_string());
+
+        if let Some(array_binding) = hidden_array_binding.as_ref() {
+            self.state
+                .speculation
+                .static_semantics
+                .set_local_array_binding(&target_name, array_binding.clone());
+            self.state
+                .speculation
+                .static_semantics
+                .set_local_kind(&target_name, StaticValueKind::Object);
+        }
+
+        if self.uses_global_runtime_array_state(hidden_name) {
+            let length_local = self.ensure_runtime_array_length_local(&target_name);
+            let source_length = self.global_runtime_array_length_binding(hidden_name);
+            self.push_global_get(source_length.value_index);
+            self.push_local_set(length_local);
+
+            for index in 0..TRACKED_ARRAY_SLOT_LIMIT {
+                let target_slot = if let Some(slot) = self.runtime_array_slot(&target_name, index) {
+                    slot
+                } else {
+                    let slot = RuntimeArraySlot {
+                        value_local: self.allocate_temp_local(),
+                        present_local: self.allocate_temp_local(),
+                    };
+                    self.state
+                        .speculation
+                        .static_semantics
+                        .set_runtime_array_slot(&target_name, index, slot.clone());
+                    slot
+                };
+                let source_slot = self.global_runtime_array_slot_binding(hidden_name, index);
+                self.push_global_get(source_slot.value_index);
+                self.push_local_set(target_slot.value_local);
+                self.push_global_get(source_slot.present_index);
+                self.push_local_set(target_slot.present_local);
+            }
+        } else if let Some(array_binding) = hidden_array_binding.as_ref() {
+            let length_local = self.ensure_runtime_array_length_local(&target_name);
+            self.push_i32_const(array_binding.values.len() as i32);
+            self.push_local_set(length_local);
+            self.ensure_runtime_array_slots_for_binding(&target_name, array_binding);
+        }
+
         Ok(())
     }
 
