@@ -52,7 +52,7 @@ impl<'a> FunctionCompiler<'a> {
             .map(|candidate| candidate.name.clone())
     }
 
-    fn function_declares_immutable_local_binding_in_statements(
+    pub(in crate::backend::direct_wasm) fn function_declares_immutable_local_binding_in_statements(
         statements: &[Statement],
         target_name: &str,
     ) -> bool {

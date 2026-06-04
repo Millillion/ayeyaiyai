@@ -819,8 +819,11 @@ impl<'a> FunctionCompiler<'a> {
                         && name != "arguments"
                 })
                 .collect::<Vec<_>>();
-        let (inline_local_scope_names, initialized_local_snapshots) =
-            self.prepare_assert_throws_async_inline_lexical_bindings(&inline_local_bindings);
+        let (inline_local_scope_names, initialized_local_snapshots, immutable_local_snapshots) =
+            self.prepare_assert_throws_async_inline_lexical_bindings(
+                &inline_local_bindings,
+                &callback_declaration.body,
+            );
         let try_statement = Statement::Try {
             body: callback_declaration.body.clone(),
             catch_binding: None,
@@ -839,6 +842,7 @@ impl<'a> FunctionCompiler<'a> {
                 })
             });
         self.restore_assert_throws_async_inline_initialized_locals(initialized_local_snapshots);
+        self.restore_assert_throws_async_inline_immutable_locals(immutable_local_snapshots);
         result?;
 
         self.push_local_get(caught_local);
@@ -861,9 +865,11 @@ impl<'a> FunctionCompiler<'a> {
     fn prepare_assert_throws_async_inline_lexical_bindings(
         &mut self,
         inline_local_bindings: &[String],
-    ) -> (Vec<String>, Vec<(String, Option<u32>)>) {
+        callback_body: &[Statement],
+    ) -> (Vec<String>, Vec<(String, Option<u32>)>, Vec<(String, bool)>) {
         let mut inline_local_scope_names = Vec::new();
         let mut initialized_local_snapshots = Vec::new();
+        let mut immutable_local_snapshots = Vec::new();
         for name in inline_local_bindings {
             let hidden_name = self.allocate_named_hidden_local(
                 &format!("assert_throws_async_inline_local_{name}"),
@@ -902,7 +908,7 @@ impl<'a> FunctionCompiler<'a> {
                 .push(hidden_name.clone());
             inline_local_scope_names.push(name.clone());
 
-            for initialized_key in [name.clone(), hidden_name] {
+            for initialized_key in [name.clone(), hidden_name.clone()] {
                 let previous = self
                     .state
                     .speculation
@@ -911,8 +917,28 @@ impl<'a> FunctionCompiler<'a> {
                     .insert(initialized_key.clone(), initialized_local);
                 initialized_local_snapshots.push((initialized_key, previous));
             }
+
+            let source_name = scoped_binding_source_name(name).unwrap_or(name);
+            if Self::function_declares_immutable_local_binding_in_statements(
+                callback_body,
+                source_name,
+            ) {
+                for immutable_key in [name.clone(), hidden_name] {
+                    let was_immutable = self
+                        .state
+                        .speculation
+                        .static_semantics
+                        .immutable_local_bindings
+                        .insert(immutable_key.clone());
+                    immutable_local_snapshots.push((immutable_key, was_immutable));
+                }
+            }
         }
-        (inline_local_scope_names, initialized_local_snapshots)
+        (
+            inline_local_scope_names,
+            initialized_local_snapshots,
+            immutable_local_snapshots,
+        )
     }
 
     fn restore_assert_throws_async_inline_initialized_locals(
@@ -931,6 +957,27 @@ impl<'a> FunctionCompiler<'a> {
                     .speculation
                     .static_semantics
                     .local_lexical_initialized_locals
+                    .remove(&name);
+            }
+        }
+    }
+
+    fn restore_assert_throws_async_inline_immutable_locals(
+        &mut self,
+        immutable_local_snapshots: Vec<(String, bool)>,
+    ) {
+        for (name, was_immutable) in immutable_local_snapshots.into_iter().rev() {
+            if was_immutable {
+                self.state
+                    .speculation
+                    .static_semantics
+                    .immutable_local_bindings
+                    .insert(name);
+            } else {
+                self.state
+                    .speculation
+                    .static_semantics
+                    .immutable_local_bindings
                     .remove(&name);
             }
         }
