@@ -1496,7 +1496,7 @@ impl<'a> FunctionCompiler<'a> {
                 Statement::Yield { value } | Statement::YieldDelegate { value } => value.clone(),
                 _ => return None,
             };
-            let dispose_function = self.test262_callback_declares_async_disposable_object(
+            let dispose_function = self.test262_callback_declares_await_using_dispose_function(
                 callback_declaration,
                 &dispose_object,
             )?;
@@ -1520,7 +1520,7 @@ impl<'a> FunctionCompiler<'a> {
         None
     }
 
-    fn test262_callback_declares_async_disposable_object(
+    fn test262_callback_declares_await_using_dispose_function(
         &self,
         callback_declaration: &FunctionDeclaration,
         dispose_object: &Expression,
@@ -1539,25 +1539,36 @@ impl<'a> FunctionCompiler<'a> {
             let Expression::Object(entries) = value else {
                 continue;
             };
-            if let Some(dispose_function) = entries.iter().find_map(|entry| {
-                let ObjectEntry::Data { key, value } = entry else {
-                    return None;
-                };
-                if !Self::expression_is_symbol_async_dispose_key(key) {
-                    return None;
-                }
-                let Expression::Identifier(function_name) = value else {
-                    return None;
-                };
-                self.user_function(function_name).cloned()
-            }) {
+            if let Some(dispose_function) =
+                Self::test262_object_symbol_method(entries, "asyncDispose")
+                    .or_else(|| Self::test262_object_symbol_method(entries, "dispose"))
+                    .and_then(|function_name| self.user_function(function_name).cloned())
+            {
                 return Some(dispose_function);
             }
         }
         None
     }
 
-    fn expression_is_symbol_async_dispose_key(expression: &Expression) -> bool {
+    fn test262_object_symbol_method<'b>(
+        entries: &'b [ObjectEntry],
+        symbol_name: &str,
+    ) -> Option<&'b str> {
+        entries.iter().find_map(|entry| {
+            let ObjectEntry::Data { key, value } = entry else {
+                return None;
+            };
+            if !Self::expression_is_symbol_named_key(key, symbol_name) {
+                return None;
+            }
+            let Expression::Identifier(function_name) = value else {
+                return None;
+            };
+            Some(function_name.as_str())
+        })
+    }
+
+    fn expression_is_symbol_named_key(expression: &Expression, symbol_name: &str) -> bool {
         let Expression::Sequence(expressions) = expression else {
             return false;
         };
@@ -1565,7 +1576,7 @@ impl<'a> FunctionCompiler<'a> {
             return false;
         };
         matches!(object.as_ref(), Expression::Identifier(name) if name == "Symbol")
-            && matches!(property.as_ref(), Expression::String(name) if name == "asyncDispose")
+            && matches!(property.as_ref(), Expression::String(name) if name == symbol_name)
     }
 
     fn test262_for_of_generator_name_from_init(
