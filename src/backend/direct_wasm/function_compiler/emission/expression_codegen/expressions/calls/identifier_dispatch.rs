@@ -211,6 +211,13 @@ impl<'a> FunctionCompiler<'a> {
         if name == "verifyProperty" && self.emit_verify_property_call(arguments)? {
             return Ok(());
         }
+        if matches!(
+            name,
+            "verifyNotEnumerable" | "verifyNotWritable" | "verifyConfigurable"
+        ) && self.emit_deprecated_property_helper_call(name, arguments)?
+        {
+            return Ok(());
+        }
         let resolved_local_name = self
             .resolve_current_local_binding(name)
             .map(|(resolved_name, _)| resolved_name);
@@ -418,6 +425,13 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(());
         }
         if name == "verifyProperty" && self.emit_verify_property_call(arguments)? {
+            return Ok(());
+        }
+        if matches!(
+            name,
+            "verifyNotEnumerable" | "verifyNotWritable" | "verifyConfigurable"
+        ) && self.emit_deprecated_property_helper_call(name, arguments)?
+        {
             return Ok(());
         }
         if name == "assert" && self.emit_assertion_builtin_call("__assert", arguments)? {

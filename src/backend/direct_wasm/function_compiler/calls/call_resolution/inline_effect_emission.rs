@@ -210,6 +210,14 @@ impl<'a> FunctionCompiler<'a> {
                         self.state.emission.output.instructions.push(0x1a);
                         return Ok(true);
                     }
+                    if matches!(
+                        name.as_str(),
+                        "verifyNotEnumerable" | "verifyNotWritable" | "verifyConfigurable"
+                    ) && self.emit_deprecated_property_helper_call(name, arguments)?
+                    {
+                        self.state.emission.output.instructions.push(0x1a);
+                        return Ok(true);
+                    }
                 }
                 if self
                     .user_function_references_only_direct_async_safe_captured_user_function_calls(

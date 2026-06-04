@@ -62,6 +62,48 @@ fn static_numeric_literal_values_match(actual: &Expression, expected: &Expressio
 }
 
 impl<'a> FunctionCompiler<'a> {
+    fn deprecated_property_helper_descriptor(helper_name: &str) -> Option<(&'static str, bool)> {
+        match helper_name {
+            "verifyNotEnumerable" => Some(("enumerable", false)),
+            "verifyNotWritable" => Some(("writable", false)),
+            "verifyConfigurable" => Some(("configurable", true)),
+            _ => None,
+        }
+    }
+
+    pub(in crate::backend::direct_wasm) fn emit_deprecated_property_helper_call(
+        &mut self,
+        helper_name: &str,
+        arguments: &[CallArgument],
+    ) -> DirectResult<bool> {
+        let Some((descriptor_name, expected_value)) =
+            Self::deprecated_property_helper_descriptor(helper_name)
+        else {
+            return Ok(false);
+        };
+        let [object_argument, property_argument, rest @ ..] = arguments else {
+            return Ok(false);
+        };
+        let (
+            CallArgument::Expression(object_expression),
+            CallArgument::Expression(property_expression),
+        ) = (object_argument, property_argument)
+        else {
+            return Ok(false);
+        };
+
+        let descriptor = CallArgument::Expression(Expression::Object(vec![ObjectEntry::Data {
+            key: Expression::String(descriptor_name.to_string()),
+            value: Expression::Bool(expected_value),
+        }]));
+        let mut verify_arguments = Vec::with_capacity(arguments.len().saturating_add(1));
+        verify_arguments.push(CallArgument::Expression(object_expression.clone()));
+        verify_arguments.push(CallArgument::Expression(property_expression.clone()));
+        verify_arguments.push(descriptor);
+        verify_arguments.extend(rest.iter().cloned());
+        self.emit_verify_property_call(&verify_arguments)
+    }
+
     fn runtime_shadow_member_matches_expected_value(
         &self,
         actual: &Expression,

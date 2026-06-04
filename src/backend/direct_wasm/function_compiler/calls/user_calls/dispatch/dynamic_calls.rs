@@ -557,6 +557,8 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(false);
         };
 
+        self.emit_prepare_user_function_capture_globals(&callback_function.name)?;
+
         let inline_local_bindings =
             collect_declared_bindings_from_statements_recursive(&callback_declaration.body)
                 .into_iter()
@@ -631,6 +633,8 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(false);
         }
 
+        self.emit_prepare_user_function_capture_globals(&callback_function.name)?;
+
         let inline_local_bindings =
             collect_declared_bindings_from_statements_recursive(&callback_declaration.body)
                 .into_iter()
@@ -682,6 +686,8 @@ impl<'a> FunctionCompiler<'a> {
         if !Self::statements_contain_assert_throws_async(&callback_declaration.body) {
             return Ok(false);
         }
+
+        self.emit_prepare_user_function_capture_globals(&callback_function.name)?;
 
         let inline_local_bindings =
             collect_declared_bindings_from_statements_recursive(&callback_declaration.body)
