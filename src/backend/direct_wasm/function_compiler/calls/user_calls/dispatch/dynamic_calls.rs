@@ -512,6 +512,9 @@ impl<'a> FunctionCompiler<'a> {
             if self.emit_test262_async_test_inline_assert_throws_async_callback(callback)? {
                 return Ok(true);
             }
+            if self.emit_test262_async_test_inline_sync_callback(callback)? {
+                return Ok(true);
+            }
             return Ok(false);
         };
 
@@ -594,6 +597,62 @@ impl<'a> FunctionCompiler<'a> {
                 }
 
                 for statement in &callback_declaration.body[await_index + 1..] {
+                    compiler.emit_statement(statement)?;
+                }
+                Ok(())
+            })
+        })?;
+
+        self.emit_print(&[Expression::String("Test262:AsyncTestComplete".to_string())])?;
+        self.push_i32_const(JS_UNDEFINED_TAG);
+        Ok(true)
+    }
+
+    fn emit_test262_async_test_inline_sync_callback(
+        &mut self,
+        callback: &Expression,
+    ) -> DirectResult<bool> {
+        let Some(callback_function) = self
+            .resolve_user_function_from_expression(callback)
+            .cloned()
+        else {
+            return Ok(false);
+        };
+        if !callback_function.is_async()
+            || callback_function.is_generator()
+            || !callback_function.params.is_empty()
+            || callback_function.has_parameter_defaults()
+            || callback_function.has_lowered_pattern_parameters()
+        {
+            return Ok(false);
+        }
+        let Some(callback_declaration) = self
+            .resolve_registered_function_declaration(&callback_function.name)
+            .cloned()
+        else {
+            return Ok(false);
+        };
+        if Self::statements_contain_await(&callback_declaration.body)
+            || Self::statements_contain_return(&callback_declaration.body)
+        {
+            return Ok(false);
+        }
+
+        self.emit_prepare_user_function_capture_globals(&callback_function.name)?;
+
+        let inline_local_bindings =
+            collect_declared_bindings_from_statements_recursive(&callback_declaration.body)
+                .into_iter()
+                .filter(|name| {
+                    !callback_function.params.iter().any(|param| param == name)
+                        && name != "arguments"
+                })
+                .collect::<Vec<_>>();
+        let inline_local_scope_names =
+            self.prepare_inline_summary_local_bindings(&inline_local_bindings);
+        self.with_scoped_lexical_bindings_cleanup(inline_local_scope_names, |compiler| {
+            compiler.with_user_function_execution_context(&callback_function, |compiler| {
+                for statement in &callback_declaration.body {
                     compiler.emit_statement(statement)?;
                 }
                 Ok(())
@@ -823,6 +882,154 @@ impl<'a> FunctionCompiler<'a> {
         statements
             .iter()
             .any(Self::statement_contains_await_undefined)
+    }
+
+    fn statements_contain_await(statements: &[Statement]) -> bool {
+        statements.iter().any(Self::statement_contains_await)
+    }
+
+    fn statement_contains_await(statement: &Statement) -> bool {
+        match statement {
+            Statement::Expression(expression)
+            | Statement::Throw(expression)
+            | Statement::Return(expression)
+            | Statement::Let {
+                value: expression, ..
+            }
+            | Statement::Var {
+                value: expression, ..
+            }
+            | Statement::Assign {
+                value: expression, ..
+            }
+            | Statement::AssignMember {
+                value: expression, ..
+            }
+            | Statement::Yield { value: expression }
+            | Statement::YieldDelegate { value: expression } => {
+                Self::expression_contains_await_for_user_call_runtime(expression)
+            }
+            Statement::Print { values } => values
+                .iter()
+                .any(Self::expression_contains_await_for_user_call_runtime),
+            Statement::Declaration { body }
+            | Statement::Block { body }
+            | Statement::Labeled { body, .. } => Self::statements_contain_await(body),
+            Statement::With { object, body } => {
+                Self::expression_contains_await_for_user_call_runtime(object)
+                    || Self::statements_contain_await(body)
+            }
+            Statement::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                Self::expression_contains_await_for_user_call_runtime(condition)
+                    || Self::statements_contain_await(then_branch)
+                    || Self::statements_contain_await(else_branch)
+            }
+            Statement::Try {
+                body,
+                catch_setup,
+                catch_body,
+                ..
+            } => {
+                Self::statements_contain_await(body)
+                    || Self::statements_contain_await(catch_setup)
+                    || Self::statements_contain_await(catch_body)
+            }
+            Statement::Switch {
+                discriminant,
+                cases,
+                ..
+            } => {
+                Self::expression_contains_await_for_user_call_runtime(discriminant)
+                    || cases
+                        .iter()
+                        .any(|case| Self::statements_contain_await(&case.body))
+            }
+            Statement::For {
+                init,
+                condition,
+                update,
+                body,
+                break_hook,
+                ..
+            } => {
+                Self::statements_contain_await(init)
+                    || condition
+                        .as_ref()
+                        .is_some_and(Self::expression_contains_await_for_user_call_runtime)
+                    || update
+                        .as_ref()
+                        .is_some_and(Self::expression_contains_await_for_user_call_runtime)
+                    || break_hook
+                        .as_ref()
+                        .is_some_and(Self::expression_contains_await_for_user_call_runtime)
+                    || Self::statements_contain_await(body)
+            }
+            Statement::While {
+                condition,
+                body,
+                break_hook,
+                ..
+            }
+            | Statement::DoWhile {
+                condition,
+                body,
+                break_hook,
+                ..
+            } => {
+                Self::expression_contains_await_for_user_call_runtime(condition)
+                    || break_hook
+                        .as_ref()
+                        .is_some_and(Self::expression_contains_await_for_user_call_runtime)
+                    || Self::statements_contain_await(body)
+            }
+            _ => false,
+        }
+    }
+
+    fn statements_contain_return(statements: &[Statement]) -> bool {
+        statements.iter().any(Self::statement_contains_return)
+    }
+
+    fn statement_contains_return(statement: &Statement) -> bool {
+        match statement {
+            Statement::Return(_) => true,
+            Statement::Declaration { body }
+            | Statement::Block { body }
+            | Statement::Labeled { body, .. }
+            | Statement::With { body, .. } => Self::statements_contain_return(body),
+            Statement::If {
+                then_branch,
+                else_branch,
+                ..
+            } => {
+                Self::statements_contain_return(then_branch)
+                    || Self::statements_contain_return(else_branch)
+            }
+            Statement::Try {
+                body,
+                catch_setup,
+                catch_body,
+                ..
+            } => {
+                Self::statements_contain_return(body)
+                    || Self::statements_contain_return(catch_setup)
+                    || Self::statements_contain_return(catch_body)
+            }
+            Statement::Switch { cases, .. } => cases
+                .iter()
+                .any(|case| Self::statements_contain_return(&case.body)),
+            Statement::For { init, body, .. } => {
+                Self::statements_contain_return(init) || Self::statements_contain_return(body)
+            }
+            Statement::While { body, .. } | Statement::DoWhile { body, .. } => {
+                Self::statements_contain_return(body)
+            }
+            _ => false,
+        }
     }
 
     fn statement_contains_await_undefined(statement: &Statement) -> bool {
