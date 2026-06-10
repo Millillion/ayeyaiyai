@@ -22,8 +22,19 @@ struct Cli {
 }
 
 fn main() {
-    if let Err(error) = run() {
-        eprintln!("error: {error:#}");
+    // Static resolution recurses with expression depth; give the compiler a
+    // large dedicated stack instead of relying on the platform default.
+    let worker = std::thread::Builder::new()
+        .name("ayy-compile".to_string())
+        .stack_size(512 * 1024 * 1024)
+        .spawn(|| {
+            if let Err(error) = run() {
+                eprintln!("error: {error:#}");
+                std::process::exit(1);
+            }
+        })
+        .expect("spawn compile thread");
+    if worker.join().is_err() {
         std::process::exit(1);
     }
 }
