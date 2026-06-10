@@ -938,8 +938,19 @@ impl<'a> FunctionCompiler<'a> {
                 self.push_local_tee(completion_local);
                 self.state.emission.output.instructions.push(0x1a);
             }
-            Statement::Block { body } | Statement::Declaration { body } => {
+            Statement::Block { body } => {
                 self.emit_eval_statement_list_completion_value(body, completion_local)?;
+            }
+            // Declarations have an empty completion value: execute the lowered
+            // body without letting its internal statements (e.g. a class's
+            // defineProperty calls) update the completion local.
+            Statement::Declaration { body } => {
+                for body_statement in body {
+                    self.emit_statement(body_statement)?;
+                    if Self::statement_unconditionally_transfers_control(body_statement) {
+                        break;
+                    }
+                }
             }
             Statement::Labeled { labels, body } => {
                 self.emit_eval_labeled_completion_value(labels, body, completion_local)?;

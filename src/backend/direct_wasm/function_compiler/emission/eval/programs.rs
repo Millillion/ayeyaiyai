@@ -1804,9 +1804,13 @@ impl<'a> FunctionCompiler<'a> {
             Statement::Assign { value, .. } | Statement::AssignMember { value, .. } => {
                 Some(value.clone())
             }
-            Statement::Block { body } | Statement::Declaration { body } => {
+            Statement::Block { body } => {
                 self.resolve_static_eval_statement_list_completion_expression(body)
             }
+            // Declarations have an empty completion value; recursing into the
+            // lowered body would surface internal statements (e.g. the
+            // defineProperty calls a class declaration lowers to).
+            Statement::Declaration { .. } => None,
             Statement::With { body, .. } => self
                 .resolve_static_eval_statement_list_completion_expression(body)
                 .or(Some(Expression::Undefined)),

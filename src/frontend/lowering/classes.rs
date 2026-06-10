@@ -325,9 +325,13 @@ impl Lowerer {
         match property {
             PropName::Ident(identifier) => identifier.sym == *"name",
             PropName::Str(string) => string.value == *"name",
-            PropName::Computed(computed) => {
-                matches!(computed.expr.as_ref(), Expr::Lit(Lit::Str(string)) if string.value == *"name")
-            }
+            // A non-literal computed key may evaluate to "name" at runtime;
+            // SetFunctionName already ran before element evaluation, so
+            // suppressing the trailing name re-assert is safe either way.
+            PropName::Computed(computed) => !matches!(
+                computed.expr.as_ref(),
+                Expr::Lit(Lit::Str(string)) if string.value != *"name"
+            ),
             _ => false,
         }
     }

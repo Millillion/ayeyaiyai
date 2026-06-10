@@ -13,3 +13,6 @@ swc_ecma_ast = "21.0.0"
 swc_ecma_parser = "35.0.0"
 tempfile = "3.23.0"
 walkdir = "2.5.0"
+
+[patch.crates-io]
+swc_ecma_parser = { path = "vendor/swc_ecma_parser" }
