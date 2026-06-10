@@ -255,6 +255,7 @@ impl<'a> FunctionCompiler<'a> {
                 .static_semantics
                 .eval_lexical_initialized_locals
                 .insert(hidden_name.clone(), initialized_local);
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
             renamed_bindings.insert(name, hidden_name);
         }
 

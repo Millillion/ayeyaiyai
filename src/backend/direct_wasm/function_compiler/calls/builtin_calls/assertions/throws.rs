@@ -915,6 +915,7 @@ impl<'a> FunctionCompiler<'a> {
                     .static_semantics
                     .local_lexical_initialized_locals
                     .insert(initialized_key.clone(), initialized_local);
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
                 initialized_local_snapshots.push((initialized_key, previous));
             }
 
@@ -930,6 +931,7 @@ impl<'a> FunctionCompiler<'a> {
                         .static_semantics
                         .immutable_local_bindings
                         .insert(immutable_key.clone());
+                    crate::backend::direct_wasm::memo::bump_static_state_generation();
                     immutable_local_snapshots.push((immutable_key, was_immutable));
                 }
             }
@@ -952,12 +954,14 @@ impl<'a> FunctionCompiler<'a> {
                     .static_semantics
                     .local_lexical_initialized_locals
                     .insert(name, previous);
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
             } else {
                 self.state
                     .speculation
                     .static_semantics
                     .local_lexical_initialized_locals
                     .remove(&name);
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
             }
         }
     }
@@ -973,12 +977,14 @@ impl<'a> FunctionCompiler<'a> {
                     .static_semantics
                     .immutable_local_bindings
                     .insert(name);
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
             } else {
                 self.state
                     .speculation
                     .static_semantics
                     .immutable_local_bindings
                     .remove(&name);
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
             }
         }
     }

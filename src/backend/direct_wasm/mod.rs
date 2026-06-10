@@ -20,6 +20,7 @@ mod constants;
 mod encoding;
 mod function_compiler;
 mod helpers;
+mod memo;
 mod program_compiler;
 mod state;
 mod static_eval;

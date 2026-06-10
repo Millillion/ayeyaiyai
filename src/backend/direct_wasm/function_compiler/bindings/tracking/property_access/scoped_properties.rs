@@ -309,6 +309,7 @@ impl<'a> FunctionCompiler<'a> {
                 &property,
                 value_expression,
             );
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
             if let Some(object_binding) = self
                 .backend
                 .global_semantics
@@ -411,6 +412,7 @@ impl<'a> FunctionCompiler<'a> {
                     materialized_value.clone(),
                 );
             }
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
             if let Some(object_binding) = self
                 .backend
                 .global_semantics
@@ -424,6 +426,7 @@ impl<'a> FunctionCompiler<'a> {
                     materialized_value.clone(),
                 );
             }
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
             if let Some(object_binding) = self
                 .backend
                 .shared_global_semantics
@@ -606,6 +609,7 @@ impl<'a> FunctionCompiler<'a> {
                         materialized_value.clone(),
                     );
                 }
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
                 if let Some(shared_object_binding) = self
                     .backend
                     .shared_global_semantics
@@ -620,6 +624,7 @@ impl<'a> FunctionCompiler<'a> {
                     );
                 }
                 if let Some(hidden_name) = lexical_this_capture_hidden_name.as_deref() {
+                    crate::backend::direct_wasm::memo::bump_static_state_generation();
                     let hidden_object_binding = self
                         .backend
                         .global_semantics
@@ -632,6 +637,7 @@ impl<'a> FunctionCompiler<'a> {
                         property.clone(),
                         materialized_value.clone(),
                     );
+                    crate::backend::direct_wasm::memo::bump_static_state_generation();
                     let shared_hidden_object_binding = self
                         .backend
                         .shared_global_semantics
@@ -668,6 +674,7 @@ impl<'a> FunctionCompiler<'a> {
                 );
                 updated_global_object = true;
             }
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
             if let Some(object_binding) = self
                 .backend
                 .shared_global_semantics
@@ -684,6 +691,7 @@ impl<'a> FunctionCompiler<'a> {
             }
             if updated_global_object {
                 if let Some(hidden_name) = lexical_this_capture_hidden_name.as_deref() {
+                    crate::backend::direct_wasm::memo::bump_static_state_generation();
                     let hidden_object_binding = self
                         .backend
                         .global_semantics
@@ -696,6 +704,7 @@ impl<'a> FunctionCompiler<'a> {
                         property.clone(),
                         materialized_value.clone(),
                     );
+                    crate::backend::direct_wasm::memo::bump_static_state_generation();
                     let shared_hidden_object_binding = self
                         .backend
                         .shared_global_semantics
@@ -725,6 +734,7 @@ impl<'a> FunctionCompiler<'a> {
                     &property,
                     value_expression,
                 );
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
                 let object_binding = self
                     .backend
                     .global_semantics
@@ -737,6 +747,7 @@ impl<'a> FunctionCompiler<'a> {
                     property.clone(),
                     materialized_value.clone(),
                 );
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
                 let shared_object_binding = self
                     .backend
                     .shared_global_semantics

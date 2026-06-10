@@ -6,6 +6,7 @@ impl CompilerState {
         name: &str,
         binding: Option<ArrayValueBinding>,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.global_semantics
             .values
             .sync_array_binding(name, binding);
@@ -17,6 +18,7 @@ impl CompilerState {
         index: usize,
         value: Expression,
     ) -> bool {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.global_semantics
             .values
             .set_array_element_binding(name, index, value)

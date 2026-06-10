@@ -77,6 +77,7 @@ impl<'a> FunctionCompiler<'a> {
                 property,
             };
             if let Some(binding) = value_binding {
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
                 self.state
                     .speculation
                     .static_semantics
@@ -89,6 +90,7 @@ impl<'a> FunctionCompiler<'a> {
                 }
             }
             if let Some(binding) = getter_binding {
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
                 self.state
                     .speculation
                     .static_semantics
@@ -101,6 +103,7 @@ impl<'a> FunctionCompiler<'a> {
                 }
             }
             if let Some(binding) = setter_binding {
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
                 self.state
                     .speculation
                     .static_semantics

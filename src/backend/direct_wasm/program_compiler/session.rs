@@ -30,11 +30,14 @@ impl<'a> ProgramCompilationSession<'a> {
         if crate::ayy_env_flag!("AYY_TRACE_PROGRAM_COMPILE") {
             eprintln!("program_compile=emit");
         }
-        Ok(self.emit_program(prepared_program)?.assemble())
+        let result = self.emit_program(prepared_program)?.assemble();
+        crate::backend::direct_wasm::memo::dump_memo_stats("program");
+        Ok(result)
     }
 
     fn reset_compilation_state(&mut self) {
         reset_function_compiler_thread_locals();
+        crate::backend::direct_wasm::memo::reset_memo_state();
         self.compiler.reset_for_program_compilation();
     }
 }

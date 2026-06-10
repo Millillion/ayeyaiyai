@@ -133,6 +133,7 @@ impl DirectWasmCompiler {
         name: &str,
         value: &Expression,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         let seeded_realm_value = self
             .global_value_binding(name)
             .and_then(Self::seeded_test262_realm_assignment_value);
@@ -230,6 +231,7 @@ impl DirectWasmCompiler {
         property: &Expression,
         value: &Expression,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         if self.global_property_key_requires_runtime_coercion(property) {
             self.invalidate_dynamic_global_member_assignment_target(object);
             return;
@@ -311,6 +313,7 @@ impl DirectWasmCompiler {
     }
 
     fn invalidate_dynamic_global_member_assignment_target(&mut self, object: &Expression) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         match object {
             Expression::Identifier(name) if self.global_has_binding(name) => {
                 self.clear_global_binding_state(name);

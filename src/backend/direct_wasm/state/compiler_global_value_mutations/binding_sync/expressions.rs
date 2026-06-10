@@ -6,6 +6,7 @@ impl CompilerState {
         name: &str,
         value: Expression,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.global_semantics
             .values
             .set_value_binding(name.to_string(), value);

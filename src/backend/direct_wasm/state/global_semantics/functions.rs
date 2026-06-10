@@ -9,6 +9,7 @@ pub(in crate::backend::direct_wasm) struct GlobalFunctionService {
 
 impl GlobalFunctionService {
     pub(in crate::backend::direct_wasm) fn reset_for_program(&mut self) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.function_bindings.clear();
         self.specialized_function_values.clear();
     }
@@ -18,6 +19,7 @@ impl GlobalFunctionService {
         name: &str,
         binding: LocalFunctionBinding,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.function_bindings.insert(name.to_string(), binding);
     }
 
@@ -29,10 +31,12 @@ impl GlobalFunctionService {
     }
 
     pub(in crate::backend::direct_wasm) fn clear_function_binding(&mut self, name: &str) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.function_bindings.remove(name);
     }
 
     pub(in crate::backend::direct_wasm) fn clear_specialized_function_value(&mut self, name: &str) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.specialized_function_values.remove(name);
     }
 

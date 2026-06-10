@@ -245,6 +245,7 @@ impl<'a> FunctionCompiler<'a> {
             .parameters
             .local_arguments_bindings
             .remove(&state.resolved_name);
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.state
             .speculation
             .static_semantics
@@ -431,6 +432,7 @@ impl<'a> FunctionCompiler<'a> {
             .parameters
             .local_arguments_bindings
             .remove(&state.resolved_name);
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.state
             .speculation
             .static_semantics

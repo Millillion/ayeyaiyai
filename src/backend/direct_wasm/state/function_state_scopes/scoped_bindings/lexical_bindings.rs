@@ -6,6 +6,7 @@ impl FunctionCompilerState {
         name: &str,
         scoped_binding: String,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.emission
             .lexical_scopes
             .active_scoped_lexical_bindings
@@ -15,6 +16,7 @@ impl FunctionCompilerState {
     }
 
     pub(in crate::backend::direct_wasm) fn pop_scoped_lexical_binding(&mut self, name: &str) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         let should_remove = self
             .emission
             .lexical_scopes
@@ -37,6 +39,7 @@ impl FunctionCompilerState {
         name: &str,
         scoped_binding: &str,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         let should_remove = self
             .emission
             .lexical_scopes

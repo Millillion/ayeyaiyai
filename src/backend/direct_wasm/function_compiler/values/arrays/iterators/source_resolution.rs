@@ -12,6 +12,7 @@ thread_local! {
 
 struct IteratorSourceGuard {
     key: String,
+    _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope,
 }
 
 impl Drop for IteratorSourceGuard {

@@ -8,6 +8,7 @@ thread_local! {
 
 struct StaticLocalAliasNormalizationGuard {
     key: String,
+    _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope,
 }
 
 impl StaticLocalAliasNormalizationGuard {
@@ -16,9 +17,13 @@ impl StaticLocalAliasNormalizationGuard {
         ACTIVE_STATIC_LOCAL_ALIAS_NORMALIZATIONS.with(|active| {
             let mut active = active.borrow_mut();
             if !active.insert(key.clone()) {
+                crate::backend::direct_wasm::memo::note_resolution_guard_block();
                 return None;
             }
-            Some(Self { key })
+            Some(Self {
+                key,
+                _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope::enter_class(9),
+            })
         })
     }
 }

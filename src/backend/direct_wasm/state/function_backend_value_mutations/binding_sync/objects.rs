@@ -6,6 +6,7 @@ impl<'a> FunctionCompilerBackend<'a> {
         name: &str,
         binding: Option<ObjectValueBinding>,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         if crate::ayy_env_flag!("AYY_TRACE_GLOBAL_OBJECT_SYNC") {
             let (strings, symbols, descriptors) = binding
                 .as_ref()
@@ -32,6 +33,7 @@ impl<'a> FunctionCompilerBackend<'a> {
         name: &str,
         binding: Option<ProxyValueBinding>,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.global_semantics
             .values
             .sync_proxy_binding(name, binding);
@@ -42,6 +44,7 @@ impl<'a> FunctionCompilerBackend<'a> {
         name: &str,
         binding: Option<ObjectValueBinding>,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.global_semantics
             .values
             .sync_prototype_object_binding(name, binding);
@@ -52,6 +55,7 @@ impl<'a> FunctionCompilerBackend<'a> {
         name: &str,
         prototype: Option<Expression>,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.global_semantics
             .values
             .sync_object_prototype_expression(name, prototype);

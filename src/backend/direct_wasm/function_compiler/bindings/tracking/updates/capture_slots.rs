@@ -318,6 +318,7 @@ impl<'a> FunctionCompiler<'a> {
             .static_semantics
             .capture_slot_initial_source_bindings
             .remove(name);
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         let direct_source = self.direct_iterator_binding_source_expression(value);
         if matches!(value, Expression::Identifier(_))
             || matches!(direct_source, Some(Expression::Identifier(_)))
@@ -644,6 +645,7 @@ impl<'a> FunctionCompiler<'a> {
                 .static_semantics
                 .capture_slot_source_bindings
                 .insert(slot_name, resolved_name.to_string());
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
         }
 
         Ok(())
@@ -681,6 +683,7 @@ impl<'a> FunctionCompiler<'a> {
                     .static_semantics
                     .capture_slot_source_bindings
                     .insert(slot_name, source_key.clone());
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
                 continue;
             }
 
@@ -697,6 +700,7 @@ impl<'a> FunctionCompiler<'a> {
                     .static_semantics
                     .capture_slot_source_bindings
                     .insert(slot_name, source_key.clone());
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
             }
         }
 
@@ -1033,6 +1037,7 @@ impl<'a> FunctionCompiler<'a> {
                                 hidden_name.clone(),
                                 self.capture_slot_live_source_binding_name(source_binding_name),
                             );
+                        crate::backend::direct_wasm::memo::bump_static_state_generation();
                     }
                     if capture_slot_tracks_live_source
                         && let Expression::Identifier(source_binding_name) = &source_expression
@@ -1042,6 +1047,7 @@ impl<'a> FunctionCompiler<'a> {
                             .static_semantics
                             .capture_slot_initial_source_bindings
                             .insert(hidden_name.clone(), source_binding_name.clone());
+                        crate::backend::direct_wasm::memo::bump_static_state_generation();
                     }
                     initialized_slots.insert(capture_name.clone(), hidden_name.clone());
                     hidden_name

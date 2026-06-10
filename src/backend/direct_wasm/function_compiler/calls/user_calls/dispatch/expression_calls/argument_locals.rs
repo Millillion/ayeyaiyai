@@ -99,6 +99,7 @@ impl<'a> FunctionCompiler<'a> {
         } else {
             existing_snapshot
         };
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         let assigned_nonlocal_bindings =
             self.collect_user_function_assigned_nonlocal_bindings(user_function);
         let mut call_effect_nonlocal_bindings =

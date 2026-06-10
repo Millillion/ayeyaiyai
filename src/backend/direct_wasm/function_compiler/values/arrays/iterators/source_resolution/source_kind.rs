@@ -342,9 +342,11 @@ impl<'a> FunctionCompiler<'a> {
         let inserted = ACTIVE_ITERATOR_SOURCE_SHAPES
             .with(|active| active.borrow_mut().insert(structural_key.clone()));
         if !inserted {
+            crate::backend::direct_wasm::memo::note_resolution_guard_block();
             return None;
         }
         let _guard = IteratorSourceGuard {
+            _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope::enter_class(7),
             key: structural_key,
         };
         let expression_is_internal_iterator_value = matches!(

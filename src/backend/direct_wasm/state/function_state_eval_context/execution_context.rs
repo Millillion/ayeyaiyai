@@ -13,6 +13,7 @@ impl FunctionCompilerState {
         &mut self,
         user_function: &UserFunction,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.speculation.execution_context.strict_mode = user_function.strict;
         self.speculation
             .execution_context
@@ -23,6 +24,7 @@ impl FunctionCompilerState {
         &mut self,
         snapshot: UserFunctionExecutionContextSnapshot,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.speculation.execution_context = snapshot.execution_context;
     }
 }

@@ -6,6 +6,7 @@ thread_local! {
 
 struct StaticIterableBindingGuard {
     key: String,
+    _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope,
 }
 
 impl StaticIterableBindingGuard {
@@ -13,7 +14,13 @@ impl StaticIterableBindingGuard {
         let key = format!("{expression:?}");
         let inserted = ACTIVE_STATIC_ITERABLE_BINDING_SHAPES
             .with(|active| active.borrow_mut().insert(key.clone()));
-        inserted.then_some(Self { key })
+        if !inserted {
+            crate::backend::direct_wasm::memo::note_resolution_guard_block();
+        }
+        inserted.then_some(Self {
+            key,
+            _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope::enter_class(18),
+        })
     }
 }
 

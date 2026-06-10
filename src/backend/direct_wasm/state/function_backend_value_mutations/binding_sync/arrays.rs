@@ -6,6 +6,7 @@ impl<'a> FunctionCompilerBackend<'a> {
         name: &str,
         binding: Option<ArrayValueBinding>,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.global_semantics
             .values
             .sync_array_binding(name, binding);
@@ -15,6 +16,7 @@ impl<'a> FunctionCompilerBackend<'a> {
         &mut self,
         name: &str,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.global_semantics
             .values
             .mark_array_with_runtime_state(name);

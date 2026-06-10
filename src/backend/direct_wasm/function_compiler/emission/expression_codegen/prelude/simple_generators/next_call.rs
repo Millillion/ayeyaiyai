@@ -1247,6 +1247,7 @@ impl<'a> FunctionCompiler<'a> {
                     prototype_source_expression: None,
                     updated_bindings: HashMap::new(),
                 });
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
                 self.emit_static_throw_value(&throw_value)?;
                 return Ok(true);
             }
@@ -1276,6 +1277,7 @@ impl<'a> FunctionCompiler<'a> {
                 prototype_source_expression: None,
                 updated_bindings: HashMap::new(),
             });
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
             self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
             return Ok(true);
         }
@@ -1290,6 +1292,7 @@ impl<'a> FunctionCompiler<'a> {
             prototype_source_expression: None,
             updated_bindings: HashMap::new(),
         });
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         if trace_return {
             eprintln!("simple_generator_return:delegate_close:done_false_suspended");
         }
@@ -1331,6 +1334,7 @@ impl<'a> FunctionCompiler<'a> {
                 prototype_source_expression: None,
                 updated_bindings: HashMap::new(),
             });
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
             self.emit_static_throw_value(&throw_value)?;
             return Ok(true);
         }
@@ -1367,6 +1371,7 @@ impl<'a> FunctionCompiler<'a> {
                 prototype_source_expression: None,
                 updated_bindings: HashMap::new(),
             });
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
             self.emit_static_throw_value(&throw_value)?;
             return Ok(true);
         }
@@ -1389,6 +1394,7 @@ impl<'a> FunctionCompiler<'a> {
             prototype_source_expression: None,
             updated_bindings: HashMap::new(),
         });
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
         Ok(true)
     }
@@ -1878,6 +1884,7 @@ impl<'a> FunctionCompiler<'a> {
                         prototype_source_expression: None,
                         updated_bindings: HashMap::new(),
                     });
+                    crate::backend::direct_wasm::memo::bump_static_state_generation();
                     self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
                     return Ok(true);
                 }
@@ -2062,6 +2069,7 @@ impl<'a> FunctionCompiler<'a> {
                         prototype_source_expression: None,
                         updated_bindings: HashMap::new(),
                     });
+                    crate::backend::direct_wasm::memo::bump_static_state_generation();
                     self.emit_static_throw_value(&throw_value)?;
                     return Ok(true);
                 }
@@ -2093,6 +2101,7 @@ impl<'a> FunctionCompiler<'a> {
                     prototype_source_expression: None,
                     updated_bindings: HashMap::new(),
                 });
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
                 self.emit_static_throw_value(&throw_value)?;
                 return Ok(true);
             }
@@ -2111,6 +2120,7 @@ impl<'a> FunctionCompiler<'a> {
                         prototype_source_expression: None,
                         updated_bindings: HashMap::new(),
                     });
+                    crate::backend::direct_wasm::memo::bump_static_state_generation();
                     self.emit_static_throw_value(&throw_value)?;
                     return Ok(true);
                 }
@@ -2139,6 +2149,7 @@ impl<'a> FunctionCompiler<'a> {
             prototype_source_expression: None,
             updated_bindings: HashMap::new(),
         });
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
         Ok(true)
     }
@@ -2247,6 +2258,7 @@ impl<'a> FunctionCompiler<'a> {
                 prototype_source_expression: None,
                 updated_bindings: HashMap::new(),
             });
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
             self.emit_static_async_generator_return_thenable_tick_order_event(
                 &["start"],
                 "tick 1",
@@ -2358,6 +2370,7 @@ impl<'a> FunctionCompiler<'a> {
                     prototype_source_expression: None,
                     updated_bindings: HashMap::new(),
                 });
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
                 self.emit_static_throw_value(&throw_value)?;
                 return Ok(true);
             }
@@ -2379,6 +2392,7 @@ impl<'a> FunctionCompiler<'a> {
                         prototype_source_expression: None,
                         updated_bindings: HashMap::new(),
                     });
+                    crate::backend::direct_wasm::memo::bump_static_state_generation();
                     self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
                     Ok(true)
                 }
@@ -2439,6 +2453,7 @@ impl<'a> FunctionCompiler<'a> {
                                     prototype_source_expression: None,
                                     updated_bindings: HashMap::new(),
                                 });
+                            crate::backend::direct_wasm::memo::bump_static_state_generation();
                             self.emit_static_throw_value(&throw_value)?;
                             return Ok(true);
                         }
@@ -2455,6 +2470,7 @@ impl<'a> FunctionCompiler<'a> {
                             prototype_source_expression: None,
                             updated_bindings: HashMap::new(),
                         });
+                        crate::backend::direct_wasm::memo::bump_static_state_generation();
                         self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
                         return Ok(true);
                     }
@@ -2470,6 +2486,7 @@ impl<'a> FunctionCompiler<'a> {
                         prototype_source_expression: None,
                         updated_bindings: HashMap::new(),
                     });
+                    crate::backend::direct_wasm::memo::bump_static_state_generation();
                     self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
                     Ok(true)
                 }
@@ -2485,6 +2502,7 @@ impl<'a> FunctionCompiler<'a> {
                         prototype_source_expression: None,
                         updated_bindings: HashMap::new(),
                     });
+                    crate::backend::direct_wasm::memo::bump_static_state_generation();
                     self.emit_statement(&Statement::Throw(value.clone()))?;
                     Ok(true)
                 }
@@ -2521,6 +2539,7 @@ impl<'a> FunctionCompiler<'a> {
                         prototype_source_expression: None,
                         updated_bindings: HashMap::new(),
                     });
+                    crate::backend::direct_wasm::memo::bump_static_state_generation();
                     self.emit_static_throw_value(&throw_value)?;
                     return Ok(true);
                 }
@@ -2549,6 +2568,7 @@ impl<'a> FunctionCompiler<'a> {
                 prototype_source_expression: None,
                 updated_bindings: HashMap::new(),
             });
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
             self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
             Ok(true)
         }

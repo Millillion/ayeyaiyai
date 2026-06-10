@@ -14,6 +14,7 @@ pub(in crate::backend::direct_wasm) struct GlobalNameService {
 
 impl GlobalNameService {
     pub(in crate::backend::direct_wasm) fn reset_for_program(&mut self) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.bindings.clear();
         self.lexical_bindings.clear();
         self.kinds.clear();
@@ -26,6 +27,7 @@ impl GlobalNameService {
         name: &str,
         next_global_index: &mut u32,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         if self.has_binding(name) {
             return;
         }
@@ -39,6 +41,7 @@ impl GlobalNameService {
         mutable: bool,
         next_global_index: &mut u32,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         if let Some(existing) = self.lexical_bindings.get(name).copied() {
             debug_assert_eq!(existing.mutable, mutable);
             return;
@@ -125,10 +128,12 @@ impl GlobalNameService {
     }
 
     pub(in crate::backend::direct_wasm) fn set_kind(&mut self, name: &str, kind: StaticValueKind) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.kinds.insert(name.to_string(), kind);
     }
 
     pub(in crate::backend::direct_wasm) fn clear_kind(&mut self, name: &str) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.kinds.remove(name);
     }
 
@@ -167,6 +172,7 @@ impl GlobalNameService {
         &mut self,
         name: &str,
     ) -> ImplicitGlobalBinding {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         if let Some(binding) = self.implicit_binding(name) {
             return binding;
         }
@@ -186,6 +192,7 @@ impl GlobalNameService {
         name: &str,
         binding: ImplicitGlobalBinding,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         if let Some(existing) = self.implicit_binding(name) {
             debug_assert!(
                 existing.value_index == binding.value_index
@@ -200,6 +207,7 @@ impl GlobalNameService {
         &mut self,
         other: &GlobalNameService,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         for (name, binding) in &other.implicit_bindings {
             self.sync_implicit_binding(name, *binding);
         }

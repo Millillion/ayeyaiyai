@@ -22,10 +22,12 @@ impl FunctionValueSemanticsState {
         name: &str,
         value: Expression,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.local_value_bindings.insert(name.to_string(), value);
     }
 
     pub(in crate::backend::direct_wasm) fn clear_local_value_binding(&mut self, name: &str) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.local_value_bindings.remove(name);
     }
 
@@ -41,10 +43,12 @@ impl FunctionValueSemanticsState {
         name: &str,
         kind: StaticValueKind,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.local_kinds.insert(name.to_string(), kind);
     }
 
     pub(in crate::backend::direct_wasm) fn clear_local_kind(&mut self, name: &str) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.local_kinds.remove(name);
     }
 }

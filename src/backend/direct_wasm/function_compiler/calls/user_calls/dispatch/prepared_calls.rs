@@ -202,6 +202,7 @@ impl<'a> FunctionCompiler<'a> {
                     .clone()
                     .unwrap_or_else(|| capture_snapshot.clone()),
             });
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         let assigned_nonlocal_bindings = if skip_static_call_effect_analysis {
             HashSet::new()
         } else {

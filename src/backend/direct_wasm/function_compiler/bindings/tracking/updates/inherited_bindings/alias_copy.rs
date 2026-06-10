@@ -159,6 +159,7 @@ impl<'a> FunctionCompiler<'a> {
         }
 
         for (key, binding) in function_bindings {
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
             self.state
                 .speculation
                 .static_semantics
@@ -171,6 +172,7 @@ impl<'a> FunctionCompiler<'a> {
             }
         }
         for (key, capture_slots) in function_capture_slots {
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
             self.state
                 .speculation
                 .static_semantics
@@ -183,6 +185,7 @@ impl<'a> FunctionCompiler<'a> {
             }
         }
         for (key, binding) in getter_bindings {
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
             self.state
                 .speculation
                 .static_semantics
@@ -194,6 +197,7 @@ impl<'a> FunctionCompiler<'a> {
             }
         }
         for (key, binding) in setter_bindings {
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
             self.state
                 .speculation
                 .static_semantics

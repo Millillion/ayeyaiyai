@@ -20,6 +20,7 @@ impl GlobalStaticSemanticsSnapshot {
     pub(in crate::backend::direct_wasm) fn global_members_mut(
         &mut self,
     ) -> &mut GlobalMemberService {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         &mut self.members
     }
 
@@ -32,6 +33,7 @@ impl GlobalStaticSemanticsSnapshot {
         name: &str,
         kind: StaticValueKind,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.names.set_kind(name, kind);
     }
 
@@ -39,6 +41,7 @@ impl GlobalStaticSemanticsSnapshot {
         &mut self,
         name: &str,
     ) -> ImplicitGlobalBinding {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.names.ensure_implicit_binding(name)
     }
 
@@ -47,6 +50,7 @@ impl GlobalStaticSemanticsSnapshot {
         name: &str,
         binding: ImplicitGlobalBinding,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.names.sync_implicit_binding(name, binding);
     }
 
@@ -54,6 +58,7 @@ impl GlobalStaticSemanticsSnapshot {
         &mut self,
         other: &GlobalNameService,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.names.sync_implicit_bindings_from(other);
     }
 
@@ -62,14 +67,17 @@ impl GlobalStaticSemanticsSnapshot {
         name: &str,
         binding: LocalFunctionBinding,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.functions.set_function_binding(name, binding);
     }
 
     pub(in crate::backend::direct_wasm) fn clear_global_function_binding(&mut self, name: &str) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.functions.clear_function_binding(name);
     }
 
     pub(in crate::backend::direct_wasm) fn clear_global_binding_kind(&mut self, name: &str) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.names.clear_kind(name);
     }
 
@@ -77,10 +85,12 @@ impl GlobalStaticSemanticsSnapshot {
         &mut self,
         name: &str,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         clear_global_static_binding_metadata(self, name);
     }
 
     pub(in crate::backend::direct_wasm) fn clear_global_binding_state(&mut self, name: &str) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         clear_global_binding_state(self, name);
     }
 
@@ -88,6 +98,7 @@ impl GlobalStaticSemanticsSnapshot {
         &mut self,
         name: &str,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.members.clear_bindings_for_name(name, false);
     }
 }

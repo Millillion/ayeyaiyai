@@ -6,6 +6,7 @@ impl<'a> FunctionCompilerBackend<'a> {
         name: &str,
         value: Expression,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.global_semantics
             .values
             .set_value_binding(name.to_string(), value);
@@ -16,6 +17,7 @@ impl<'a> FunctionCompilerBackend<'a> {
         name: &str,
         value: Option<Expression>,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         if let Some(value) = value {
             self.set_global_expression_binding(name, value);
         } else {

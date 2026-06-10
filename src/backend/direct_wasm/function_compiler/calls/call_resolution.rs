@@ -12,6 +12,7 @@ thread_local! {
 
 struct BoundSnapshotExpressionGuard {
     key: String,
+    _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope,
 }
 
 impl BoundSnapshotExpressionGuard {
@@ -20,9 +21,13 @@ impl BoundSnapshotExpressionGuard {
         ACTIVE_BOUND_SNAPSHOT_EXPRESSIONS.with(|active| {
             let mut active = active.borrow_mut();
             if !active.insert(key.clone()) {
+                crate::backend::direct_wasm::memo::note_resolution_guard_block();
                 return None;
             }
-            Some(Self { key })
+            Some(Self {
+                key,
+                _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope::enter_class(8),
+            })
         })
     }
 }

@@ -23,6 +23,7 @@ impl<'a> FunctionCompiler<'a> {
         statements: &[Statement],
         initial_named_error: Option<&str>,
     ) -> DirectResult<CompiledFunction> {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         let trace = crate::ayy_env_flag!("AYY_TRACE_FUNCTION_COMPILE");
         if trace {
             eprintln!("function_compile=register_statements");

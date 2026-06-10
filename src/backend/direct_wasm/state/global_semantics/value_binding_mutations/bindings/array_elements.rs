@@ -8,6 +8,7 @@ impl GlobalValueService {
         index: usize,
         value: Expression,
     ) -> bool {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         let Some(array_binding) = self.array_binding_mut(name) else {
             return false;
         };

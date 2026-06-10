@@ -3,6 +3,7 @@ use crate::backend::direct_wasm::GlobalValueService;
 
 impl GlobalValueService {
     pub(in crate::backend::direct_wasm) fn mark_array_with_runtime_state(&mut self, name: &str) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.arrays_with_runtime_state.insert(name.to_string());
     }
 
@@ -11,6 +12,7 @@ impl GlobalValueService {
         name: &str,
         binding: Option<ObjectValueBinding>,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         if let Some(binding) = binding {
             self.prototype_object_bindings
                 .insert(name.to_string(), binding);
@@ -24,6 +26,7 @@ impl GlobalValueService {
         name: &str,
         prototype: Option<Expression>,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         if let Some(prototype) = prototype {
             self.object_prototype_bindings
                 .insert(name.to_string(), prototype);
@@ -33,6 +36,7 @@ impl GlobalValueService {
     }
 
     pub(in crate::backend::direct_wasm) fn clear_prototype_object_binding(&mut self, name: &str) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.prototype_object_bindings.remove(name);
     }
 
@@ -41,6 +45,7 @@ impl GlobalValueService {
         name: &str,
         global_index: u32,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         if let Some(binding) = self.runtime_prototype_bindings.get_mut(name) {
             binding.global_index = Some(global_index);
         }
@@ -51,6 +56,7 @@ impl GlobalValueService {
         name: &str,
         prototype: Option<Expression>,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         let initial_variant = self.object_prototype_expression(name).cloned();
         let binding = self
             .runtime_prototype_bindings

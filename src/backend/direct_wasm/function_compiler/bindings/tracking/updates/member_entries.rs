@@ -6,6 +6,7 @@ impl<'a> FunctionCompiler<'a> {
         key: &MemberFunctionBindingKey,
         binding: LocalFunctionBinding,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.state
             .speculation
             .static_semantics
@@ -19,6 +20,7 @@ impl<'a> FunctionCompiler<'a> {
     }
 
     fn clear_member_function_binding_entry(&mut self, key: &MemberFunctionBindingKey) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.state
             .speculation
             .static_semantics
@@ -35,6 +37,7 @@ impl<'a> FunctionCompiler<'a> {
         key: &MemberFunctionBindingKey,
         binding: LocalFunctionBinding,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.state
             .speculation
             .static_semantics
@@ -48,6 +51,7 @@ impl<'a> FunctionCompiler<'a> {
     }
 
     fn clear_member_getter_binding_entry(&mut self, key: &MemberFunctionBindingKey) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.state
             .speculation
             .static_semantics
@@ -64,6 +68,7 @@ impl<'a> FunctionCompiler<'a> {
         key: &MemberFunctionBindingKey,
         binding: LocalFunctionBinding,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.state
             .speculation
             .static_semantics
@@ -77,6 +82,7 @@ impl<'a> FunctionCompiler<'a> {
     }
 
     fn clear_member_setter_binding_entry(&mut self, key: &MemberFunctionBindingKey) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.state
             .speculation
             .static_semantics

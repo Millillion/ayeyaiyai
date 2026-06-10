@@ -14,6 +14,7 @@ impl FunctionCompilerState {
         &mut self,
         snapshot: FunctionStaticBindingMetadataSnapshot,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.speculation
             .static_semantics
             .restore_static_binding_metadata(snapshot);
@@ -58,6 +59,7 @@ impl FunctionCompilerState {
         object: Option<ObjectValueBinding>,
         kind: Option<StaticValueKind>,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.speculation
             .static_semantics
             .set_local_static_binding(name, value, array, object, kind);
@@ -67,6 +69,7 @@ impl FunctionCompilerState {
         &mut self,
         snapshot: LocalStaticBindingSnapshot,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.speculation
             .static_semantics
             .restore_local_static_binding(snapshot);

@@ -7,6 +7,7 @@ impl GlobalValueService {
         name: &str,
         binding: Option<ArrayValueBinding>,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         if let Some(binding) = binding {
             self.array_bindings.insert(name.to_string(), binding);
         } else {
@@ -19,6 +20,7 @@ impl GlobalValueService {
         name: &str,
         binding: Option<ResizableArrayBufferBinding>,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         if let Some(binding) = binding {
             self.resizable_array_buffer_bindings
                 .insert(name.to_string(), binding);
@@ -32,6 +34,7 @@ impl GlobalValueService {
         name: &str,
         binding: Option<TypedArrayViewBinding>,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         if let Some(binding) = binding {
             self.typed_array_view_bindings
                 .insert(name.to_string(), binding);
@@ -45,6 +48,7 @@ impl GlobalValueService {
         name: &str,
         binding: Option<ObjectValueBinding>,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         if let Some(binding) = binding {
             self.object_bindings.insert(name.to_string(), binding);
         } else {
@@ -57,6 +61,7 @@ impl GlobalValueService {
         name: &str,
         binding: Option<ArgumentsValueBinding>,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         if let Some(binding) = binding {
             self.arguments_bindings.insert(name.to_string(), binding);
         } else {

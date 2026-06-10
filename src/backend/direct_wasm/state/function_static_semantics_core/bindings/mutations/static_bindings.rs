@@ -10,6 +10,7 @@ impl FunctionStaticSemanticsState {
         &mut self,
         snapshot: FunctionStaticBindingMetadataSnapshot,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.values = snapshot.values;
         self.objects = snapshot.objects;
         self.arrays = snapshot.arrays;

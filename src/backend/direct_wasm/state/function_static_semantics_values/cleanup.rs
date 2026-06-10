@@ -2,6 +2,7 @@ use super::FunctionValueSemanticsState;
 
 impl FunctionValueSemanticsState {
     pub(in crate::backend::direct_wasm) fn clear_isolated_indirect_eval_state(&mut self) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.local_kinds.clear();
         self.local_value_bindings.clear();
         self.local_function_bindings.clear();
@@ -13,6 +14,7 @@ impl FunctionValueSemanticsState {
         &mut self,
         name: &str,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.local_value_bindings.remove(name);
         self.local_function_bindings.remove(name);
         self.local_kinds.remove(name);
@@ -22,6 +24,7 @@ impl FunctionValueSemanticsState {
         &mut self,
         name: &str,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.local_value_bindings.remove(name);
         self.local_function_bindings.remove(name);
         self.local_kinds.remove(name);
@@ -33,6 +36,7 @@ impl FunctionValueSemanticsState {
         &mut self,
         name: &str,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.clear_local_static_binding_metadata(name);
     }
 }

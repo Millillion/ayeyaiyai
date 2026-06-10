@@ -6,17 +6,24 @@ thread_local! {
     static INFER_VALUE_KIND_DEPTH: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
 }
 
-struct InferValueKindDepthGuard;
+struct InferValueKindDepthGuard {
+    _memo: Option<crate::backend::direct_wasm::memo::ResolutionGuardScope>,
+}
 
 impl InferValueKindDepthGuard {
     fn enter() -> Option<Self> {
         INFER_VALUE_KIND_DEPTH.with(|depth| {
             let current = depth.get();
             if current >= INFER_VALUE_KIND_RECURSION_LIMIT {
+                crate::backend::direct_wasm::memo::note_resolution_guard_block();
                 return None;
             }
             depth.set(current + 1);
-            Some(Self)
+            Some(Self {
+                _memo: (current + 1 >= INFER_VALUE_KIND_RECURSION_LIMIT / 2).then(|| {
+                    crate::backend::direct_wasm::memo::ResolutionGuardScope::enter_class(5)
+                }),
+            })
         })
     }
 }

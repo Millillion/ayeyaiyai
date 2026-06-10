@@ -384,6 +384,7 @@ impl<'a> FunctionCompiler<'a> {
             prototype_source_expression: None,
             updated_bindings: HashMap::new(),
         });
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.push_local_get(result_local);
         Ok(true)
     }

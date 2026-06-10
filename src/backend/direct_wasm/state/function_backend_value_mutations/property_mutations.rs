@@ -6,6 +6,7 @@ impl<'a> FunctionCompilerBackend<'a> {
         name: String,
         state: GlobalPropertyDescriptorState,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.shared_global_semantics
             .values
             .upsert_property_descriptor(name.clone(), state.clone());
@@ -21,6 +22,7 @@ impl<'a> FunctionCompilerBackend<'a> {
         value: Expression,
         enumerable: bool,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         let mut binding = self
             .global_semantics
             .values
@@ -38,6 +40,7 @@ impl<'a> FunctionCompilerBackend<'a> {
         value: Expression,
         enumerable: bool,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         let mut binding = self
             .global_semantics
             .values

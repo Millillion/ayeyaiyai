@@ -6,6 +6,7 @@ impl<'a> FunctionCompilerBackend<'a> {
         name: &str,
         binding: Option<ArgumentsValueBinding>,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.global_semantics
             .values
             .sync_arguments_binding(name, binding);
@@ -17,6 +18,7 @@ impl<'a> FunctionCompilerBackend<'a> {
         property_name: &str,
         effect: ArgumentsPropertyEffect,
     ) -> bool {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         let Some(binding): Option<&mut ArgumentsValueBinding> = self
             .global_semantics
             .values

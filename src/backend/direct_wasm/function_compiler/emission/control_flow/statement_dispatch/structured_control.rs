@@ -807,6 +807,7 @@ impl<'a> FunctionCompiler<'a> {
         source: &HashMap<String, T>,
         name: &str,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         if let Some(value) = source.get(name).cloned() {
             target.insert(name.to_string(), value);
         } else {
@@ -966,11 +967,13 @@ impl<'a> FunctionCompiler<'a> {
             name,
         );
         if snapshot.values.arrays_with_runtime_state.contains(name) {
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
             global_semantics
                 .values
                 .arrays_with_runtime_state
                 .insert(name.to_string());
         } else {
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
             global_semantics
                 .values
                 .arrays_with_runtime_state

@@ -6,6 +6,7 @@ impl CompilerState {
         name: &str,
         binding: Option<ArgumentsValueBinding>,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.global_semantics
             .values
             .sync_arguments_binding(name, binding);

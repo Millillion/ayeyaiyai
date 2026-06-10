@@ -6,6 +6,7 @@ impl<'a> FunctionCompiler<'a> {
         snapshot: &HashMap<String, T>,
         name: &str,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         if let Some(value) = snapshot.get(name) {
             map.insert(name.to_string(), value.clone());
         } else {
@@ -80,11 +81,13 @@ impl<'a> FunctionCompiler<'a> {
             name,
         );
         if snapshot.values.arrays_with_runtime_state.contains(name) {
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
             global_semantics
                 .values
                 .arrays_with_runtime_state
                 .insert(name.to_string());
         } else {
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
             global_semantics
                 .values
                 .arrays_with_runtime_state
@@ -255,6 +258,7 @@ impl<'a> FunctionCompiler<'a> {
             for slot_name in capture_slots.values() {
                 slot_names.insert(slot_name.clone());
             }
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
             self.state
                 .speculation
                 .static_semantics
@@ -269,6 +273,7 @@ impl<'a> FunctionCompiler<'a> {
                     .static_semantics
                     .capture_slot_source_bindings
                     .insert(slot_name.clone(), source_name.clone());
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
             }
             if let Some(source_name) = snapshot
                 .capture_slot_initial_source_bindings
@@ -279,6 +284,7 @@ impl<'a> FunctionCompiler<'a> {
                     .static_semantics
                     .capture_slot_initial_source_bindings
                     .insert(slot_name, source_name.clone());
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
             }
         }
     }
@@ -296,6 +302,7 @@ impl<'a> FunctionCompiler<'a> {
 
     fn clear_runtime_array_member_function_capture_slots_for_name(&mut self, name: &str) {
         let mut removed_slot_names = HashSet::new();
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.state
             .speculation
             .static_semantics
@@ -315,11 +322,13 @@ impl<'a> FunctionCompiler<'a> {
                 .static_semantics
                 .capture_slot_source_bindings
                 .remove(&slot_name);
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
             self.state
                 .speculation
                 .static_semantics
                 .capture_slot_initial_source_bindings
                 .remove(&slot_name);
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
         }
     }
 

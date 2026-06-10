@@ -14,10 +14,12 @@ impl FunctionValueSemanticsState {
         name: &str,
         binding: ProxyValueBinding,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.local_proxy_bindings.insert(name.to_string(), binding);
     }
 
     pub(in crate::backend::direct_wasm) fn clear_local_proxy_binding(&mut self, name: &str) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.local_proxy_bindings.remove(name);
     }
 }

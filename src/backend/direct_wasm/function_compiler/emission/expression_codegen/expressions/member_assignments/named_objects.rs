@@ -531,6 +531,7 @@ impl<'a> FunctionCompiler<'a> {
                         &function_name,
                         capture_slots,
                     );
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
                 self.state
                     .speculation
                     .static_semantics
@@ -593,18 +594,21 @@ impl<'a> FunctionCompiler<'a> {
                             hidden_name.clone(),
                             self.capture_slot_live_source_binding_name(source_binding_name),
                         );
+                    crate::backend::direct_wasm::memo::bump_static_state_generation();
                 } else if matches!(source_expression, Expression::This) {
                     self.state
                         .speculation
                         .static_semantics
                         .capture_slot_source_bindings
                         .insert(hidden_name.clone(), capture_name.clone());
+                    crate::backend::direct_wasm::memo::bump_static_state_generation();
                 } else if matches!(source_expression, Expression::NewTarget) {
                     self.state
                         .speculation
                         .static_semantics
                         .capture_slot_source_bindings
                         .insert(hidden_name.clone(), capture_name.clone());
+                    crate::backend::direct_wasm::memo::bump_static_state_generation();
                 } else if let Expression::Member { object, property } = &source_expression
                     && let Some(source_key) = Self::capture_slot_member_source_key(object, property)
                 {
@@ -613,6 +617,7 @@ impl<'a> FunctionCompiler<'a> {
                         .static_semantics
                         .capture_slot_source_bindings
                         .insert(hidden_name.clone(), source_key);
+                    crate::backend::direct_wasm::memo::bump_static_state_generation();
                 }
                 capture_slots.insert(capture_name.clone(), hidden_name);
             } else if let Expression::Identifier(source_binding_name) = source_expression {
@@ -632,6 +637,7 @@ impl<'a> FunctionCompiler<'a> {
             &function_name,
             capture_slots,
         );
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.state
             .speculation
             .static_semantics
@@ -1349,6 +1355,7 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(());
         }
 
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.state
             .speculation
             .static_semantics
@@ -1549,6 +1556,7 @@ impl<'a> FunctionCompiler<'a> {
             );
         }
         if self.binding_name_is_global(name) {
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
             let object_binding = self
                 .backend
                 .global_semantics
@@ -1955,6 +1963,7 @@ impl<'a> FunctionCompiler<'a> {
                 .static_semantics
                 .set_local_kind(&owner_name, StaticValueKind::Function);
         }
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         if self.binding_name_is_global(name)
             && let Some(object_binding) = self
                 .backend
@@ -2169,6 +2178,7 @@ impl<'a> FunctionCompiler<'a> {
             }
         }
         if self.binding_name_is_global(name) {
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
             let object_binding = self
                 .backend
                 .global_semantics
@@ -2454,6 +2464,7 @@ impl<'a> FunctionCompiler<'a> {
             .unwrap_or_else(|| self.materialize_static_expression(property));
         let resolved_property = self.canonical_object_property_expression(&resolved_property);
         let materialized_value = self.member_assignment_static_property_value(value);
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         let object_binding = self
             .backend
             .global_semantics
@@ -2513,6 +2524,7 @@ impl<'a> FunctionCompiler<'a> {
             let materialized_property = self.canonical_object_property_expression(property);
             let materialized = self.member_assignment_static_property_value(value);
             if let Expression::Identifier(name) = prototype_object.as_ref() {
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
                 if let Some(object_binding) = self
                     .state
                     .speculation
@@ -2528,6 +2540,7 @@ impl<'a> FunctionCompiler<'a> {
                     );
                 }
                 if self.binding_name_is_global(name) {
+                    crate::backend::direct_wasm::memo::bump_static_state_generation();
                     let object_binding = self
                         .backend
                         .global_semantics
@@ -2707,6 +2720,7 @@ impl<'a> FunctionCompiler<'a> {
                     materialized.clone(),
                 );
             }
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
             if self.binding_name_is_global(name)
                 && let Some(object_binding) = self
                     .backend
@@ -2786,6 +2800,7 @@ impl<'a> FunctionCompiler<'a> {
                 old_length = Some(array_binding.values.len());
                 array_binding.values.truncate(new_length);
                 synced_array_binding = Some(array_binding.clone());
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
             } else if let Some(array_binding) = self
                 .backend
                 .global_semantics
@@ -2889,6 +2904,7 @@ impl<'a> FunctionCompiler<'a> {
                 array_binding.values[index as usize] = Some(materialized.clone());
                 array_length = Some(array_binding.values.len() as i32);
                 updated_array_binding = Some(array_binding.clone());
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
             } else if let Some(array_binding) = self
                 .backend
                 .global_semantics
@@ -3012,6 +3028,7 @@ impl<'a> FunctionCompiler<'a> {
             {
                 object_binding_remove_property(object_binding, &resolved_property);
             }
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
             if let Some(object_binding) = self
                 .backend
                 .global_semantics
@@ -3038,6 +3055,7 @@ impl<'a> FunctionCompiler<'a> {
                 self.update_prototype_object_binding(name, value);
             }
             let updated_object_binding = if self.binding_name_is_global(name) {
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
                 let object_binding = self
                     .backend
                     .global_semantics
@@ -3159,6 +3177,7 @@ impl<'a> FunctionCompiler<'a> {
                 );
             }
             if has_global_array_binding || has_resolved_array_binding {
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
                 let object_binding = self
                     .backend
                     .global_semantics
@@ -3430,6 +3449,7 @@ impl<'a> FunctionCompiler<'a> {
             eprintln!("named_member_assignment:global_object_binding:start");
         }
         let sync_shared_global_object_binding = self.current_function_name().is_none();
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         if let Some(object_binding) = self
             .backend
             .global_semantics
@@ -3444,6 +3464,7 @@ impl<'a> FunctionCompiler<'a> {
                     materialized.clone(),
                 );
                 if sync_shared_global_object_binding {
+                    crate::backend::direct_wasm::memo::bump_static_state_generation();
                     let shared_binding = self
                         .backend
                         .shared_global_semantics
@@ -3465,6 +3486,7 @@ impl<'a> FunctionCompiler<'a> {
                         materialized.clone(),
                     );
                     if sync_shared_global_object_binding {
+                        crate::backend::direct_wasm::memo::bump_static_state_generation();
                         let shared_binding = self
                             .backend
                             .shared_global_semantics
@@ -3562,6 +3584,7 @@ impl<'a> FunctionCompiler<'a> {
                 materialized.clone(),
             );
             if self.binding_name_is_global(name) {
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
                 let global_binding = self
                     .backend
                     .global_semantics

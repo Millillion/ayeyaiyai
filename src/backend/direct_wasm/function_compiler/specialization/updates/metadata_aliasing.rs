@@ -27,6 +27,7 @@ impl<'a> FunctionCompiler<'a> {
             .get(source)
             .cloned()
         {
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
             self.state
                 .speculation
                 .static_semantics
@@ -123,6 +124,7 @@ impl<'a> FunctionCompiler<'a> {
             .get(source)
             .cloned()
         {
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
             self.state
                 .speculation
                 .static_semantics

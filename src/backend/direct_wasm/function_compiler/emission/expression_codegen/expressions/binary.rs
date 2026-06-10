@@ -3300,6 +3300,7 @@ impl<'a> FunctionCompiler<'a> {
                 .static_semantics
                 .capture_slot_source_bindings
                 .insert(slot_name.clone(), source_name.clone());
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
             self.state.emission.output.instructions.push(0x0b);
             self.pop_control_frame();
         }

@@ -5,7 +5,9 @@ thread_local! {
         const { std::cell::RefCell::new(Vec::new()) };
 }
 
-struct StatefulObjectBindingResolutionGuard;
+struct StatefulObjectBindingResolutionGuard {
+    _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope,
+}
 
 impl StatefulObjectBindingResolutionGuard {
     fn enter(expression: &Expression) -> Option<Self> {
@@ -16,12 +18,15 @@ impl StatefulObjectBindingResolutionGuard {
                 .any(|visited| static_expression_matches(visited, expression))
         });
         if reentered {
+            crate::backend::direct_wasm::memo::note_resolution_guard_block();
             return None;
         }
         STATEFUL_OBJECT_BINDING_RESOLUTION_STACK.with(|stack| {
             stack.borrow_mut().push(expression.clone());
         });
-        Some(Self)
+        Some(Self {
+            _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope::enter_class(13),
+        })
     }
 }
 

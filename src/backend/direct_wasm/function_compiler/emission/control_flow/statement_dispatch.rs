@@ -100,6 +100,10 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         statement: &Statement,
     ) -> DirectResult<()> {
+        // Statement-boundary memoization fence: bounds the blast radius of any
+        // resolution-state mutation that is not routed through a bumping
+        // funnel to a single statement's emission.
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         match statement {
             Statement::Declaration { .. }
             | Statement::Block { .. }

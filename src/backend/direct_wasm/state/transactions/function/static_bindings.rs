@@ -8,7 +8,7 @@ pub(in crate::backend::direct_wasm) struct FunctionStaticBindingMetadataSnapshot
     pub(in crate::backend::direct_wasm) values: FunctionValueSemanticsState,
     pub(in crate::backend::direct_wasm) objects: FunctionObjectSemanticsState,
     pub(in crate::backend::direct_wasm) arrays: FunctionArraySemanticsState,
-    pub(in crate::backend::direct_wasm) materializing_expression_keys: HashSet<usize>,
+    pub(in crate::backend::direct_wasm) materializing_expression_keys: HashMap<usize, u64>,
     pub(in crate::backend::direct_wasm) local_lexical_initialized_locals: HashMap<String, u32>,
     pub(in crate::backend::direct_wasm) immutable_local_bindings: HashSet<String>,
     pub(in crate::backend::direct_wasm) eval_lexical_initialized_locals: HashMap<String, u32>,
@@ -33,6 +33,7 @@ impl FunctionStaticBindingMetadataTransaction {
     }
 
     pub(in crate::backend::direct_wasm) fn restore(self, state: &mut FunctionCompilerState) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         state.restore_static_binding_metadata(self.binding_metadata);
     }
 }

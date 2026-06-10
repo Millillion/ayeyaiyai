@@ -1359,6 +1359,7 @@ impl<'a> FunctionCompiler<'a> {
                     .static_semantics
                     .capture_slot_source_bindings
                     .insert(capture_hidden_name.clone(), source_binding_name.clone());
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
             }
             let binding = self
                 .implicit_global_binding(&capture_hidden_name)
@@ -1445,6 +1446,7 @@ impl<'a> FunctionCompiler<'a> {
                         binding.capture_hidden_name.clone(),
                         source_binding_name.clone(),
                     );
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
             }
             if let Some((_, initialized_local)) = lexical_source_initialized_local {
                 self.push_local_get(initialized_local);
@@ -1635,6 +1637,7 @@ impl<'a> FunctionCompiler<'a> {
                             &binding.capture_hidden_name,
                             StaticValueKind::Object,
                         );
+                        crate::backend::direct_wasm::memo::bump_static_state_generation();
                         self.backend
                             .shared_global_semantics
                             .values
@@ -1655,6 +1658,7 @@ impl<'a> FunctionCompiler<'a> {
                             &object_binding,
                         );
                     }
+                    crate::backend::direct_wasm::memo::bump_static_state_generation();
                     self.state
                         .runtime
                         .locals
@@ -1695,6 +1699,7 @@ impl<'a> FunctionCompiler<'a> {
                                 .map(|binding| binding.string_properties.clone())
                         );
                     }
+                    crate::backend::direct_wasm::memo::bump_static_state_generation();
                     self.state
                         .runtime
                         .locals

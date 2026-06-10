@@ -16,6 +16,7 @@ impl FunctionExecutionContextState {
         &mut self,
         snapshot: FunctionExecutionContextSnapshot,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         *self = snapshot.execution_context;
     }
 }

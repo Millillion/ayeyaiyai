@@ -18,6 +18,7 @@ impl FunctionRuntimeState {
         &mut self,
         snapshot: FunctionRuntimeIsolatedIndirectEvalSnapshot,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         let next_local_index = self
             .locals
             .next_local_index

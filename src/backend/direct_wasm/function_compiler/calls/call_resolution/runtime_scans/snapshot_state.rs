@@ -18,6 +18,7 @@ impl<'a> FunctionCompiler<'a> {
                 .get(name)
                 && let Some(active_binding) = active_bindings.last().cloned()
             {
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
                 self.state
                     .speculation
                     .static_semantics

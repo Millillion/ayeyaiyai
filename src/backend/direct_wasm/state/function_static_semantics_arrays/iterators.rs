@@ -15,6 +15,7 @@ impl FunctionArraySemanticsState {
         &mut self,
         name: &str,
     ) -> Option<&mut ArrayIteratorBinding> {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.local_array_iterator_bindings.get_mut(name)
     }
 
@@ -30,6 +31,7 @@ impl FunctionArraySemanticsState {
         name: &str,
         binding: ArrayIteratorBinding,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.local_array_iterator_bindings
             .insert(name.to_string(), binding);
     }
@@ -38,6 +40,7 @@ impl FunctionArraySemanticsState {
         &mut self,
         name: &str,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.local_array_iterator_bindings.remove(name);
     }
 
@@ -53,6 +56,7 @@ impl FunctionArraySemanticsState {
         name: &str,
         binding: CachedIteratorNextMethodBinding,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.cached_iterator_next_method_bindings
             .insert(name.to_string(), binding);
     }
@@ -61,6 +65,7 @@ impl FunctionArraySemanticsState {
         &mut self,
         name: &str,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.cached_iterator_next_method_bindings.remove(name);
     }
 
@@ -76,6 +81,7 @@ impl FunctionArraySemanticsState {
         name: &str,
         binding: IteratorStepBinding,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.local_iterator_step_bindings
             .insert(name.to_string(), binding);
     }
@@ -84,6 +90,7 @@ impl FunctionArraySemanticsState {
         &mut self,
         name: &str,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.local_iterator_step_bindings.remove(name);
     }
 }

@@ -14,11 +14,13 @@ impl FunctionValueSemanticsState {
         name: &str,
         binding: LocalFunctionBinding,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.local_function_bindings
             .insert(name.to_string(), binding);
     }
 
     pub(in crate::backend::direct_wasm) fn clear_local_function_binding(&mut self, name: &str) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.local_function_bindings.remove(name);
     }
 }

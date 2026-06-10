@@ -6,6 +6,7 @@ impl CompilerState {
         name: &str,
         next_global_index: &mut u32,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.global_semantics
             .ensure_global_binding_index(name, next_global_index);
     }
@@ -16,11 +17,13 @@ impl CompilerState {
         mutable: bool,
         next_global_index: &mut u32,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.global_semantics
             .mark_global_lexical_binding(name, mutable, next_global_index);
     }
 
     pub(in crate::backend::direct_wasm) fn clear_global_binding_state(&mut self, name: &str) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.global_semantics.clear_global_binding_state(name);
     }
 
@@ -29,6 +32,7 @@ impl CompilerState {
         name: &str,
         kind: StaticValueKind,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.global_semantics.set_global_binding_kind(name, kind);
     }
 }

@@ -7,6 +7,7 @@ impl GlobalValueService {
         name: String,
         state: GlobalPropertyDescriptorState,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         match self.property_descriptors.get_mut(&name) {
             Some(existing) => *existing = state,
             None => {
@@ -16,6 +17,7 @@ impl GlobalValueService {
     }
 
     pub(in crate::backend::direct_wasm) fn clear_property_descriptor(&mut self, name: &str) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.property_descriptors.remove(name);
     }
 }

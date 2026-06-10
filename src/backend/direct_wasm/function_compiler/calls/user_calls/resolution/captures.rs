@@ -470,6 +470,7 @@ impl<'a> FunctionCompiler<'a> {
                 .resolve_constructor_capture_source_bindings_from_expression(callee)
                 .unwrap_or_default(),
         });
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.emit_builtin_call_for_callee(callee, &function_name, arguments, true)
     }
 
@@ -1085,12 +1086,14 @@ impl<'a> FunctionCompiler<'a> {
                         hidden_name.clone(),
                         self.capture_slot_live_source_binding_name(source_binding_name),
                     );
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
             } else if matches!(source_expression, Expression::This | Expression::NewTarget) {
                 self.state
                     .speculation
                     .static_semantics
                     .capture_slot_source_bindings
                     .insert(hidden_name.clone(), capture_name.clone());
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
             } else if let Expression::Member { object, property } = &source_expression
                 && let Some(source_key) = Self::capture_slot_member_source_key(object, property)
             {
@@ -1099,6 +1102,7 @@ impl<'a> FunctionCompiler<'a> {
                     .static_semantics
                     .capture_slot_source_bindings
                     .insert(hidden_name.clone(), source_key);
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
             }
             capture_slots.insert(capture_name.clone(), hidden_name);
         }
@@ -1263,6 +1267,7 @@ impl<'a> FunctionCompiler<'a> {
             prototype_source_expression: constructor_prototype_source_expression,
             updated_bindings: constructor_snapshot_updated_bindings,
         });
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
 
         let (runtime_arguments, argument_shadow_writebacks) =
             self.prepare_constructor_runtime_argument_bindings(arguments)?;

@@ -139,6 +139,7 @@ impl<'a> FunctionCompiler<'a> {
             prototype_source_expression: None,
             updated_bindings: HashMap::new(),
         });
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
         Ok(true)
     }

@@ -31,6 +31,7 @@ impl Drop for MemberFunctionBindingResolutionGuard {
 
 struct MemberBindingResolutionShapeGuard {
     key: String,
+    _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope,
 }
 
 impl MemberBindingResolutionShapeGuard {
@@ -38,7 +39,13 @@ impl MemberBindingResolutionShapeGuard {
         let key = format!("{kind}:{object:?}:{property:?}");
         let inserted = ACTIVE_MEMBER_BINDING_RESOLUTION_SHAPES
             .with(|active| active.borrow_mut().insert(key.clone()));
-        inserted.then_some(Self { key })
+        if !inserted {
+            crate::backend::direct_wasm::memo::note_resolution_guard_block();
+        }
+        inserted.then_some(Self {
+            key,
+            _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope::enter_class(10),
+        })
     }
 }
 

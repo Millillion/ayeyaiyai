@@ -7,7 +7,7 @@ mod member_resolution;
 mod object_literals;
 
 thread_local! {
-    static OBJECT_BINDING_RESOLUTION_STACK: std::cell::RefCell<Vec<Expression>> =
+    static OBJECT_BINDING_RESOLUTION_STACK: std::cell::RefCell<Vec<(Expression, u64)>> =
         const { std::cell::RefCell::new(Vec::new()) };
 }
 
@@ -17,19 +17,25 @@ impl<'a> FunctionCompiler<'a> {
         expression: &Expression,
         f: impl FnOnce(&Self) -> Option<T>,
     ) -> Option<T> {
-        let reentered = OBJECT_BINDING_RESOLUTION_STACK.with(|stack| {
+        let reentered_serial = OBJECT_BINDING_RESOLUTION_STACK.with(|stack| {
             stack
                 .borrow()
                 .iter()
-                .any(|visited| static_expression_matches(visited, expression))
+                .find(|(visited, _)| static_expression_matches(visited, expression))
+                .map(|(_, serial)| *serial)
         });
-        if reentered {
+        if let Some(serial) = reentered_serial {
+            crate::backend::direct_wasm::memo::note_resolution_guard_block_conflict(serial);
             return None;
         }
 
         OBJECT_BINDING_RESOLUTION_STACK.with(|stack| {
-            stack.borrow_mut().push(expression.clone());
+            stack.borrow_mut().push((
+                expression.clone(),
+                crate::backend::direct_wasm::memo::next_guard_serial(),
+            ));
         });
+        let _memo_guard = crate::backend::direct_wasm::memo::ResolutionGuardScope::enter_class(1);
         let result = f(self);
         OBJECT_BINDING_RESOLUTION_STACK.with(|stack| {
             stack.borrow_mut().pop();
@@ -146,6 +152,51 @@ impl<'a> FunctionCompiler<'a> {
     }
 
     pub(in crate::backend::direct_wasm) fn resolve_object_binding_from_expression(
+        &self,
+        expression: &Expression,
+    ) -> Option<ObjectValueBinding> {
+        use crate::backend::direct_wasm::memo;
+        let cacheable = matches!(
+            expression,
+            Expression::Call { .. } | Expression::New { .. } | Expression::Member { .. }
+        ) && memo::memo_context_is_cacheable();
+        if !cacheable {
+            return self.resolve_object_binding_from_expression_uncached(expression);
+        }
+        let key = memo::object_binding_cache_key(expression, self.current_function_name());
+        if let Some(cached) = memo::lookup_object_binding(key) {
+            if memo::memo_verify_enabled() {
+                let verify_token = memo::MemoStoreToken::capture();
+                let fresh = self.resolve_object_binding_from_expression_uncached(expression);
+                // Only compare when the fresh recomputation was canonical
+                // (it did not hit a recursion guard entered by an enclosing
+                // resolution, which conservatively degrades its result).
+                if verify_token.is_clean() && !memo::verify_object_bindings_match(&fresh, &cached) {
+                    let render = |binding: &Option<ObjectValueBinding>| {
+                        binding
+                            .as_ref()
+                            .map(|binding| format!("{:?}", object_binding_to_expression(binding)))
+                            .unwrap_or_else(|| "None".to_string())
+                    };
+                    panic!(
+                        "AYY_MEMO_VERIFY divergence: object binding for {expression:?} (function {:?})\ncached={}\nfresh={}",
+                        self.current_function_name(),
+                        render(&cached),
+                        render(&fresh)
+                    );
+                }
+            }
+            return cached;
+        }
+        let token = memo::MemoStoreToken::capture();
+        let result = self.resolve_object_binding_from_expression_uncached(expression);
+        if token.is_clean() {
+            memo::store_object_binding(key, result.clone());
+        }
+        result
+    }
+
+    fn resolve_object_binding_from_expression_uncached(
         &self,
         expression: &Expression,
     ) -> Option<ObjectValueBinding> {

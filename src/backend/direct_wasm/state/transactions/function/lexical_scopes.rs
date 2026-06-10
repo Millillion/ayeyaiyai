@@ -16,6 +16,7 @@ impl FunctionLexicalScopeState {
         &mut self,
         snapshot: FunctionLexicalScopeSnapshot,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         *self = snapshot.lexical_scopes;
     }
 }

@@ -33,18 +33,22 @@ impl FunctionRuntimeLocalsState {
         name: String,
         index: u32,
     ) -> Option<u32> {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.bindings.insert(name, index)
     }
 
     pub(in crate::backend::direct_wasm) fn remove(&mut self, name: &str) -> Option<u32> {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.bindings.remove(name)
     }
 
     pub(in crate::backend::direct_wasm) fn clear(&mut self) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.bindings.clear();
     }
 
     pub(in crate::backend::direct_wasm) fn insert_runtime_dynamic_binding(&mut self, name: String) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.runtime_dynamic_bindings.insert(name);
     }
 
@@ -59,6 +63,7 @@ impl FunctionRuntimeLocalsState {
         &mut self,
         name: &str,
     ) -> bool {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.runtime_dynamic_bindings.remove(name)
     }
 

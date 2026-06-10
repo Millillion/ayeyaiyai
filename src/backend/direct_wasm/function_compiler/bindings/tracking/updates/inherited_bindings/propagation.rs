@@ -92,6 +92,7 @@ impl<'a> FunctionCompiler<'a> {
                 capture_slots.entry(capture_name).or_insert(slot_name);
             }
         }
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.state
             .speculation
             .static_semantics
@@ -110,6 +111,7 @@ impl<'a> FunctionCompiler<'a> {
         binding: LocalFunctionBinding,
         capture_slots: Option<BTreeMap<String, String>>,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.state
             .speculation
             .static_semantics
@@ -181,6 +183,7 @@ impl<'a> FunctionCompiler<'a> {
             target: self.inherited_member_binding_target(name, binding.target),
             property: MemberFunctionBindingProperty::String(property_name.clone()),
         };
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.state
             .speculation
             .static_semantics
@@ -188,6 +191,7 @@ impl<'a> FunctionCompiler<'a> {
             .member_getter_bindings
             .insert(key.clone(), binding.binding.clone());
         if let Some(capture_slots) = capture_slots_by_property.get(&property_name).cloned() {
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
             self.state
                 .speculation
                 .static_semantics
@@ -216,6 +220,7 @@ impl<'a> FunctionCompiler<'a> {
             target: self.inherited_member_binding_target(name, binding.target),
             property: MemberFunctionBindingProperty::String(property_name.clone()),
         };
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.state
             .speculation
             .static_semantics
@@ -223,6 +228,7 @@ impl<'a> FunctionCompiler<'a> {
             .member_setter_bindings
             .insert(key.clone(), binding.binding.clone());
         if let Some(capture_slots) = capture_slots_by_property.get(&property_name).cloned() {
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
             self.state
                 .speculation
                 .static_semantics
@@ -304,6 +310,7 @@ impl<'a> FunctionCompiler<'a> {
                 target: MemberFunctionBindingTarget::Identifier(name.to_string()),
                 property,
             };
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
             self.state
                 .speculation
                 .static_semantics
@@ -314,6 +321,7 @@ impl<'a> FunctionCompiler<'a> {
                 .get(&capture_property_name)
                 .cloned()
             {
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
                 self.state
                     .speculation
                     .static_semantics

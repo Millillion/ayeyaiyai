@@ -416,6 +416,7 @@ impl<'a> FunctionCompiler<'a> {
                                     prototype_source_expression: None,
                                     updated_bindings: merged_bindings.clone(),
                                 });
+                                crate::backend::direct_wasm::memo::bump_static_state_generation();
                         }
                         compiler.update_local_value_binding(
                             delegate_iterator_name,

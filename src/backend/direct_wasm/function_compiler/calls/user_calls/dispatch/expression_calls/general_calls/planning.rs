@@ -99,6 +99,7 @@ impl<'a> FunctionCompiler<'a> {
         } else {
             existing_snapshot
         };
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
 
         let assigned_nonlocal_bindings = if skip_static_call_effect_analysis {
             HashSet::new()

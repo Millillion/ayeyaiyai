@@ -24,6 +24,7 @@ impl GlobalStaticSemanticsReadServices for GlobalSemanticState {
 
 impl GlobalStaticSemanticsWriteServices for GlobalSemanticState {
     fn clear_global_static_binding_metadata(&mut self, name: &str) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.values.clear_value_binding(name);
         self.values.sync_array_binding(name, None);
         self.values.sync_resizable_array_buffer_binding(name, None);
@@ -36,6 +37,7 @@ impl GlobalStaticSemanticsWriteServices for GlobalSemanticState {
     }
 
     fn clear_global_binding_state(&mut self, name: &str) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.clear_global_static_binding_metadata(name);
         self.values.clear_proxy_binding(name);
         self.values.clear_prototype_object_binding(name);
@@ -64,6 +66,7 @@ impl GlobalStaticSemanticsReadServices for GlobalStaticSemanticsSnapshot {
 
 impl GlobalStaticSemanticsWriteServices for GlobalStaticSemanticsSnapshot {
     fn clear_global_static_binding_metadata(&mut self, name: &str) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.values.clear_value_binding(name);
         self.values.sync_array_binding(name, None);
         self.values.sync_resizable_array_buffer_binding(name, None);
@@ -76,6 +79,7 @@ impl GlobalStaticSemanticsWriteServices for GlobalStaticSemanticsSnapshot {
     }
 
     fn clear_global_binding_state(&mut self, name: &str) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.clear_global_static_binding_metadata(name);
         self.values.clear_proxy_binding(name);
         self.values.clear_prototype_object_binding(name);

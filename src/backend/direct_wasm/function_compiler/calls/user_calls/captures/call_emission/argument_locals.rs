@@ -113,6 +113,7 @@ impl<'a> FunctionCompiler<'a> {
                 updated_bindings: reliable_updated_bindings.clone().unwrap_or_default(),
             })
             .or(existing_snapshot);
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         let mut call_effect_nonlocal_bindings = if runtime_only_parameter_iterator_call {
             HashSet::new()
         } else {

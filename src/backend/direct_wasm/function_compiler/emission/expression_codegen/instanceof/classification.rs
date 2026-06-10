@@ -18,12 +18,14 @@ impl<'a> FunctionCompiler<'a> {
                 .any(|visited| static_expression_matches(visited, expression))
         });
         if reentered {
+            crate::backend::direct_wasm::memo::note_resolution_guard_block();
             return false;
         }
 
         PROMISE_INSTANCE_CLASSIFICATION_STACK.with(|stack| {
             stack.borrow_mut().push(expression.clone());
         });
+        let _memo_guard = crate::backend::direct_wasm::memo::ResolutionGuardScope::enter_class(20);
         let result = f(self);
         PROMISE_INSTANCE_CLASSIFICATION_STACK.with(|stack| {
             stack.borrow_mut().pop();

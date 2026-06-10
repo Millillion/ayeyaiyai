@@ -27,6 +27,7 @@ impl FunctionParameterState {
         &mut self,
         snapshot: FunctionParameterIsolatedIndirectEvalSnapshot,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.in_parameter_default_initialization = snapshot.in_parameter_default_initialization;
         self.actual_argument_count_local = snapshot.actual_argument_count_local;
         self.arguments_slots = snapshot.arguments_slots;

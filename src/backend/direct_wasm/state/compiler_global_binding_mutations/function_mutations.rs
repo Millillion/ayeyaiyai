@@ -6,6 +6,7 @@ impl CompilerState {
         name: &str,
         binding: LocalFunctionBinding,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.global_semantics
             .set_global_function_binding(name, binding);
         self.set_global_binding_kind(name, StaticValueKind::Function);
@@ -15,6 +16,7 @@ impl CompilerState {
         &mut self,
         name: &str,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.set_global_binding_kind(name, StaticValueKind::Function);
         self.set_global_expression_binding(name, Expression::Identifier(name.to_string()));
         self.set_global_function_binding(name, LocalFunctionBinding::User(name.to_string()));
@@ -25,6 +27,7 @@ impl CompilerState {
         name: &str,
         binding: Option<LocalFunctionBinding>,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         if let Some(binding) = binding {
             self.set_global_function_binding(name, binding);
         } else {

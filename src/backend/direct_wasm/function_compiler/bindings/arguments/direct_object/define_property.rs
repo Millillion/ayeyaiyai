@@ -6,6 +6,7 @@ impl<'a> FunctionCompiler<'a> {
         index: u32,
         descriptor: &PropertyDescriptorDefinition,
     ) -> DirectResult<bool> {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.ensure_arguments_slot(index)?;
         let Some(mut slot) = self.state.parameters.arguments_slots.get(&index).cloned() else {
             return Ok(false);

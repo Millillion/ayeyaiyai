@@ -20,6 +20,7 @@ impl FunctionObjectSemanticsState {
         name: &str,
         include_prototype: bool,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.member_function_bindings
             .retain(|key, _| !Self::target_matches_name(&key.target, name, include_prototype));
         self.member_function_capture_slots

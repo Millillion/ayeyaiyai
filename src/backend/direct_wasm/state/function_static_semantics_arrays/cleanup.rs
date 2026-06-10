@@ -2,6 +2,7 @@ use super::FunctionArraySemanticsState;
 
 impl FunctionArraySemanticsState {
     pub(in crate::backend::direct_wasm) fn clear_isolated_indirect_eval_state(&mut self) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.local_array_bindings.clear();
         self.local_resizable_array_buffer_bindings.clear();
         self.local_typed_array_view_bindings.clear();
@@ -18,6 +19,7 @@ impl FunctionArraySemanticsState {
         &mut self,
         name: &str,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.local_array_bindings.remove(name);
     }
 
@@ -25,6 +27,7 @@ impl FunctionArraySemanticsState {
         &mut self,
         name: &str,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.local_array_bindings.remove(name);
         self.local_resizable_array_buffer_bindings.remove(name);
         self.local_typed_array_view_bindings.remove(name);

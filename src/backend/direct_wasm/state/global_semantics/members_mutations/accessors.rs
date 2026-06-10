@@ -6,6 +6,7 @@ impl GlobalMemberService {
         key: MemberFunctionBindingKey,
         binding: LocalFunctionBinding,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         if crate::ayy_env_flag!("AYY_TRACE_MEMBER_BINDINGS") {
             eprintln!("global_member:set_getter key={key:?} binding={binding:?}");
         }
@@ -16,6 +17,7 @@ impl GlobalMemberService {
         &mut self,
         key: &MemberFunctionBindingKey,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         if crate::ayy_env_flag!("AYY_TRACE_MEMBER_BINDINGS") {
             eprintln!("global_member:clear_getter key={key:?}");
         }
@@ -27,6 +29,7 @@ impl GlobalMemberService {
         key: MemberFunctionBindingKey,
         binding: LocalFunctionBinding,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         if crate::ayy_env_flag!("AYY_TRACE_MEMBER_BINDINGS") {
             eprintln!("global_member:set_setter key={key:?} binding={binding:?}");
         }
@@ -37,6 +40,7 @@ impl GlobalMemberService {
         &mut self,
         key: &MemberFunctionBindingKey,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         if crate::ayy_env_flag!("AYY_TRACE_MEMBER_BINDINGS") {
             eprintln!("global_member:clear_setter key={key:?}");
         }

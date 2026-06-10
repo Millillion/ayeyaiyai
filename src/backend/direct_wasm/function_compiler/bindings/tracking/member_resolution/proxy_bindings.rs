@@ -7,6 +7,7 @@ thread_local! {
 
 struct ProxyBindingResolutionShapeGuard {
     key: String,
+    _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope,
 }
 
 impl ProxyBindingResolutionShapeGuard {
@@ -14,7 +15,13 @@ impl ProxyBindingResolutionShapeGuard {
         let key = format!("{expression:?}");
         let inserted = ACTIVE_PROXY_BINDING_RESOLUTION_SHAPES
             .with(|active| active.borrow_mut().insert(key.clone()));
-        inserted.then_some(Self { key })
+        if !inserted {
+            crate::backend::direct_wasm::memo::note_resolution_guard_block();
+        }
+        inserted.then_some(Self {
+            key,
+            _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope::enter_class(16),
+        })
     }
 }
 

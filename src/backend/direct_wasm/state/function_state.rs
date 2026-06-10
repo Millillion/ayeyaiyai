@@ -40,10 +40,12 @@ impl FunctionParameterState {
     }
 
     pub(in crate::backend::direct_wasm) fn clear_local_binding_metadata(&mut self, name: &str) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.local_arguments_bindings.remove(name);
     }
 
     pub(in crate::backend::direct_wasm) fn clear_isolated_indirect_eval_state(&mut self) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.in_parameter_default_initialization = false;
         self.actual_argument_count_local = None;
         self.arguments_slots.clear();

@@ -15,11 +15,13 @@ impl FunctionArraySemanticsState {
         name: &str,
         local: u32,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.runtime_array_length_locals
             .insert(name.to_string(), local);
     }
 
     pub(in crate::backend::direct_wasm) fn clear_runtime_array_length_local(&mut self, name: &str) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.runtime_array_length_locals.remove(name);
     }
 
@@ -61,6 +63,7 @@ impl FunctionArraySemanticsState {
         index: u32,
         slot: RuntimeArraySlot,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.runtime_array_slots
             .entry(name.to_string())
             .or_default()
@@ -72,10 +75,12 @@ impl FunctionArraySemanticsState {
         name: &str,
         slots: HashMap<u32, RuntimeArraySlot>,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.runtime_array_slots.insert(name.to_string(), slots);
     }
 
     pub(in crate::backend::direct_wasm) fn clear_runtime_array_slots(&mut self, name: &str) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.runtime_array_slots.remove(name);
     }
 
@@ -103,6 +108,7 @@ impl FunctionArraySemanticsState {
         index: u32,
         value: SpecializedFunctionValue,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.tracked_array_function_values
             .entry(name.to_string())
             .or_default()
@@ -114,6 +120,7 @@ impl FunctionArraySemanticsState {
         name: &str,
         index: u32,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         if let Some(bindings) = self.tracked_array_function_values.get_mut(name) {
             bindings.remove(&index);
             if bindings.is_empty() {
@@ -127,6 +134,7 @@ impl FunctionArraySemanticsState {
         name: &str,
         values: HashMap<u32, SpecializedFunctionValue>,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.tracked_array_function_values
             .insert(name.to_string(), values);
     }
@@ -135,6 +143,7 @@ impl FunctionArraySemanticsState {
         &mut self,
         name: &str,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.tracked_array_function_values.remove(name);
     }
 }

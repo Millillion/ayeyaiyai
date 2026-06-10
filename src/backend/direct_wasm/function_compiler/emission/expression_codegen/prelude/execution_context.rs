@@ -6,6 +6,7 @@ impl<'a> FunctionCompiler<'a> {
         function_name: Option<String>,
         callback: impl FnOnce(&mut Self) -> DirectResult<T>,
     ) -> DirectResult<T> {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         let previous_strict_mode = self.state.speculation.execution_context.strict_mode;
         let previous_user_function_name = self
             .state
@@ -160,6 +161,7 @@ impl<'a> FunctionCompiler<'a> {
         strict_mode: bool,
         callback: impl FnOnce(&mut Self) -> DirectResult<T>,
     ) -> DirectResult<T> {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         let previous_strict_mode = self.state.speculation.execution_context.strict_mode;
         self.state.speculation.execution_context.strict_mode = strict_mode;
         let result = callback(self);
@@ -172,6 +174,7 @@ impl<'a> FunctionCompiler<'a> {
         user_function: &UserFunction,
         callback: impl FnOnce(&mut Self) -> DirectResult<T>,
     ) -> DirectResult<T> {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.with_current_user_function_name(Some(user_function.name.clone()), callback)
     }
 
@@ -180,6 +183,7 @@ impl<'a> FunctionCompiler<'a> {
         function_name: String,
         callback: impl FnOnce(&mut Self) -> DirectResult<T>,
     ) -> DirectResult<T> {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         if let Some(user_function) = self
             .backend
             .function_registry
@@ -197,6 +201,7 @@ impl<'a> FunctionCompiler<'a> {
         scope_names: Vec<String>,
         callback: impl FnOnce(&mut Self) -> DirectResult<T>,
     ) -> DirectResult<T> {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         let result = callback(self);
         self.pop_scoped_lexical_bindings(&scope_names);
         result

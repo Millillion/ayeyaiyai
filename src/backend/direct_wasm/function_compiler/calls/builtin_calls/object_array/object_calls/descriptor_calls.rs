@@ -2517,6 +2517,7 @@ impl<'a> FunctionCompiler<'a> {
                     .static_semantics
                     .capture_slot_source_bindings
                     .insert(hidden_name, resolved_name);
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
             }
         }
 

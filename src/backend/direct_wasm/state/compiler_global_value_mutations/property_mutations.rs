@@ -6,6 +6,7 @@ impl CompilerState {
         name: String,
         state: GlobalPropertyDescriptorState,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.global_semantics
             .values
             .upsert_property_descriptor(name, state);
@@ -19,6 +20,7 @@ impl CompilerState {
         enumerable: bool,
         configurable: bool,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         let mut descriptor = self.global_property_descriptor(name).cloned().unwrap_or(
             GlobalPropertyDescriptorState {
                 value: Expression::Undefined,
@@ -45,6 +47,7 @@ impl CompilerState {
         value: Expression,
         enumerable: bool,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         let mut binding = self
             .global_semantics
             .values
@@ -72,6 +75,7 @@ impl CompilerState {
         value: Expression,
         enumerable: bool,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         let mut binding = self
             .global_semantics
             .values

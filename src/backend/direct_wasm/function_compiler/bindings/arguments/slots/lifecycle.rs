@@ -5,6 +5,7 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         statements: &[Statement],
     ) -> DirectResult<()> {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         let Some(actual_argument_count_local) = self.state.parameters.actual_argument_count_local
         else {
             return Ok(());
@@ -77,6 +78,7 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         index: u32,
     ) -> DirectResult<()> {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         if self.state.parameters.arguments_slots.contains_key(&index) {
             return Ok(());
         }
@@ -143,6 +145,7 @@ impl<'a> FunctionCompiler<'a> {
     }
 
     pub(in crate::backend::direct_wasm) fn emit_arguments_length(&mut self) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         if let Some(actual_argument_count_local) = self.state.parameters.actual_argument_count_local
         {
             self.push_local_get(actual_argument_count_local);

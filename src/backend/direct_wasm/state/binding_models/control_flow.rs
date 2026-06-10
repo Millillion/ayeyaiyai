@@ -32,7 +32,7 @@ pub(in crate::backend::direct_wasm) struct BreakContext {
 }
 
 pub(in crate::backend::direct_wasm) struct MaterializationGuard<'a> {
-    pub(in crate::backend::direct_wasm) active: &'a RefCell<HashSet<usize>>,
+    pub(in crate::backend::direct_wasm) active: &'a RefCell<HashMap<usize, u64>>,
     pub(in crate::backend::direct_wasm) key: usize,
 }
 

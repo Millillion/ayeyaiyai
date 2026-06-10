@@ -242,6 +242,7 @@ impl<'a> FunctionCompiler<'a> {
                     .static_semantics
                     .capture_slot_source_bindings
                     .insert(slot_name, "this".to_string());
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
                 continue;
             }
 
@@ -261,6 +262,7 @@ impl<'a> FunctionCompiler<'a> {
                     .static_semantics
                     .capture_slot_source_bindings
                     .insert(slot_name, "this".to_string());
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
             }
         }
 

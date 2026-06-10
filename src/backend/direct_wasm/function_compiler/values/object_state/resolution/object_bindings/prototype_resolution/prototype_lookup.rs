@@ -520,6 +520,7 @@ impl<'a> FunctionCompiler<'a> {
                 .any(|visited| static_expression_matches(visited, expression))
         });
         if reentered {
+            crate::backend::direct_wasm::memo::note_resolution_guard_block();
             if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                 eprintln!("runtime_shadow_prototype_resolve_reentered expression={expression:?}");
             }
@@ -529,6 +530,7 @@ impl<'a> FunctionCompiler<'a> {
         STATIC_OBJECT_PROTOTYPE_RESOLUTION_STACK.with(|stack| {
             stack.borrow_mut().push(expression.clone());
         });
+        let _memo_guard = crate::backend::direct_wasm::memo::ResolutionGuardScope::enter_class(11);
         let result = f(self);
         STATIC_OBJECT_PROTOTYPE_RESOLUTION_STACK.with(|stack| {
             stack.borrow_mut().pop();

@@ -6,6 +6,7 @@ impl<'a> FunctionCompiler<'a> {
         name: &str,
         value: &Expression,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         if self.is_direct_arguments_object(value) {
             self.state
                 .parameters

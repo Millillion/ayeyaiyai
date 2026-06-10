@@ -482,12 +482,14 @@ impl<'a> FunctionCompiler<'a> {
                             hidden_name.clone(),
                             self.capture_slot_live_source_binding_name(source_binding_name),
                         );
+                    crate::backend::direct_wasm::memo::bump_static_state_generation();
                 } else if matches!(source_expression, Expression::This) {
                     self.state
                         .speculation
                         .static_semantics
                         .capture_slot_source_bindings
                         .insert(hidden_name.clone(), "this".to_string());
+                    crate::backend::direct_wasm::memo::bump_static_state_generation();
                 } else if let Expression::Member { object, property } = &source_expression
                     && let Some(source_key) = Self::capture_slot_member_source_key(object, property)
                 {
@@ -496,6 +498,7 @@ impl<'a> FunctionCompiler<'a> {
                         .static_semantics
                         .capture_slot_source_bindings
                         .insert(hidden_name.clone(), source_key);
+                    crate::backend::direct_wasm::memo::bump_static_state_generation();
                 }
                 capture_slots.insert(capture_name.clone(), hidden_name);
             } else if let Expression::Identifier(source_binding_name) = source_expression {
@@ -508,6 +511,7 @@ impl<'a> FunctionCompiler<'a> {
         }
 
         let key = Self::identifier_function_value_capture_slots_key(&state.resolved_name);
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.state
             .speculation
             .static_semantics
@@ -1209,6 +1213,7 @@ impl<'a> FunctionCompiler<'a> {
             if !rewritten {
                 continue;
             }
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
             self.state
                 .speculation
                 .static_semantics
@@ -2060,6 +2065,7 @@ impl<'a> FunctionCompiler<'a> {
             );
             trace_step("descriptor_binding:done");
             if let Some(descriptor) = state.returned_descriptor_binding.clone() {
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
                 self.state
                     .speculation
                     .static_semantics

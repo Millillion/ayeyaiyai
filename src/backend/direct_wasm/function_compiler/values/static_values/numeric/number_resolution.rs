@@ -19,17 +19,24 @@ thread_local! {
     static STATIC_NUMBER_VALUE_DEPTH: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
 }
 
-struct StaticNumberValueDepthGuard;
+struct StaticNumberValueDepthGuard {
+    _memo: Option<crate::backend::direct_wasm::memo::ResolutionGuardScope>,
+}
 
 impl StaticNumberValueDepthGuard {
     fn enter() -> Option<Self> {
         STATIC_NUMBER_VALUE_DEPTH.with(|depth| {
             let current = depth.get();
             if current >= STATIC_NUMBER_VALUE_RECURSION_LIMIT {
+                crate::backend::direct_wasm::memo::note_resolution_guard_block();
                 return None;
             }
             depth.set(current + 1);
-            Some(Self)
+            Some(Self {
+                _memo: (current + 1 >= STATIC_NUMBER_VALUE_RECURSION_LIMIT / 2).then(|| {
+                    crate::backend::direct_wasm::memo::ResolutionGuardScope::enter_class(6)
+                }),
+            })
         })
     }
 }

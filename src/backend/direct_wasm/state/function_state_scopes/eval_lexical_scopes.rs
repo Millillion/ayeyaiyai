@@ -5,6 +5,7 @@ impl FunctionCompilerState {
         &mut self,
         names: Vec<String>,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         let mut pushed = Vec::new();
         let mut seen = HashSet::new();
         for name in names {
@@ -33,6 +34,7 @@ impl FunctionCompilerState {
     }
 
     pub(in crate::backend::direct_wasm) fn pop_active_eval_lexical_scope(&mut self) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         let Some(names) = self
             .emission
             .lexical_scopes

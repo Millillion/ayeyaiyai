@@ -6,6 +6,7 @@ impl DirectWasmCompiler {
         name: &str,
         next_global_index: &mut u32,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.state
             .ensure_global_binding_index(name, next_global_index);
     }
@@ -14,6 +15,7 @@ impl DirectWasmCompiler {
         &mut self,
         name: &str,
     ) -> ImplicitGlobalBinding {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.state.global_semantics.ensure_implicit_binding(name)
     }
 
@@ -22,6 +24,7 @@ impl DirectWasmCompiler {
         name: &str,
         kind: StaticValueKind,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.state.set_global_binding_kind(name, kind);
     }
 
@@ -31,6 +34,7 @@ impl DirectWasmCompiler {
         mutable: bool,
         next_global_index: &mut u32,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.state
             .mark_global_lexical_binding(name, mutable, next_global_index);
     }
@@ -40,6 +44,7 @@ impl DirectWasmCompiler {
         name: &str,
         value: Expression,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.state.set_global_expression_binding(name, value);
     }
 
@@ -48,6 +53,7 @@ impl DirectWasmCompiler {
         name: &str,
         binding: Option<ArrayValueBinding>,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.state.sync_global_array_binding(name, binding);
     }
 
@@ -56,6 +62,7 @@ impl DirectWasmCompiler {
         name: &str,
         binding: Option<ObjectValueBinding>,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.state.sync_global_object_binding(name, binding);
     }
 
@@ -64,6 +71,7 @@ impl DirectWasmCompiler {
         name: &str,
         binding: Option<ArgumentsValueBinding>,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.state.sync_global_arguments_binding(name, binding);
     }
 
@@ -72,6 +80,7 @@ impl DirectWasmCompiler {
         name: &str,
         binding: Option<LocalFunctionBinding>,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.state.sync_global_function_binding(name, binding);
     }
 
@@ -83,6 +92,7 @@ impl DirectWasmCompiler {
         enumerable: bool,
         configurable: bool,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.state.upsert_global_data_property_descriptor(
             name,
             value,
@@ -99,6 +109,7 @@ impl DirectWasmCompiler {
         value: Expression,
         enumerable: bool,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.state
             .define_global_object_property(name, property, value, enumerable);
     }
@@ -110,6 +121,7 @@ impl DirectWasmCompiler {
         value: Expression,
         enumerable: bool,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.state
             .define_global_prototype_object_property(name, property, value, enumerable);
     }
@@ -118,6 +130,7 @@ impl DirectWasmCompiler {
         &mut self,
         name: &str,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.state.set_global_user_function_reference(name);
     }
 
@@ -127,6 +140,7 @@ impl DirectWasmCompiler {
         index: usize,
         value: Expression,
     ) -> bool {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.state
             .set_global_array_element_binding(name, index, value)
     }

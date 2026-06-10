@@ -370,6 +370,44 @@ impl<'a> FunctionCompiler<'a> {
         expression: &Expression,
         current_function_name: Option<&str>,
     ) -> Option<LocalFunctionBinding> {
+        use crate::backend::direct_wasm::memo;
+        if !memo::memo_context_is_cacheable() {
+            return self.resolve_function_binding_from_expression_with_context_uncached(
+                expression,
+                current_function_name,
+            );
+        }
+        let key = memo::function_binding_cache_key(expression, current_function_name);
+        if let Some(cached) = memo::lookup_function_binding(key) {
+            if memo::memo_verify_enabled() {
+                let verify_token = memo::MemoStoreToken::capture();
+                let fresh = self.resolve_function_binding_from_expression_with_context_uncached(
+                    expression,
+                    current_function_name,
+                );
+                assert!(
+                    !verify_token.is_clean() || fresh == cached,
+                    "AYY_MEMO_VERIFY divergence: function binding for {expression:?} (function {current_function_name:?}): cached={cached:?} fresh={fresh:?}"
+                );
+            }
+            return cached;
+        }
+        let token = memo::MemoStoreToken::capture();
+        let result = self.resolve_function_binding_from_expression_with_context_uncached(
+            expression,
+            current_function_name,
+        );
+        if token.is_clean() {
+            memo::store_function_binding(key, result.clone());
+        }
+        result
+    }
+
+    fn resolve_function_binding_from_expression_with_context_uncached(
+        &self,
+        expression: &Expression,
+        current_function_name: Option<&str>,
+    ) -> Option<LocalFunctionBinding> {
         let _guard = FunctionBindingResolutionGuard::enter(expression, current_function_name)?;
         let _shape_guard =
             FunctionBindingResolutionShapeGuard::enter(expression, current_function_name)?;

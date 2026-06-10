@@ -177,10 +177,12 @@ impl<'a> FunctionCompiler<'a> {
             current > 0
         });
         if reentered {
+            crate::backend::direct_wasm::memo::note_resolution_guard_block();
             RUNTIME_PUBLIC_THIS_RESOLUTION_QUERY_DEPTH
                 .with(|depth| depth.set(depth.get().saturating_sub(1)));
             return false;
         }
+        let _memo_guard = crate::backend::direct_wasm::memo::ResolutionGuardScope::enter_class(21);
         let result = self.current_user_function().is_some_and(|user_function| {
             self.user_function_mentions_private_member_access(user_function)
         });

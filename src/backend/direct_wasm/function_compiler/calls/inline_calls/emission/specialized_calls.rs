@@ -72,6 +72,7 @@ impl<'a> FunctionCompiler<'a> {
             prototype_source_expression: None,
             updated_bindings: HashMap::new(),
         });
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.emit_inline_summary_with_call_arguments(
             &user_function,
             &specialized.summary,

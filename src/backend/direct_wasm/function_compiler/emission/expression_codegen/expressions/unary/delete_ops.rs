@@ -228,6 +228,7 @@ impl<'a> FunctionCompiler<'a> {
         {
             object_binding.runtime_symbol_properties = true;
         }
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         if let Some(object_binding) = self
             .backend
             .global_semantics
@@ -773,6 +774,7 @@ impl<'a> FunctionCompiler<'a> {
                         self.push_i32_const(1);
                         return Ok(());
                     }
+                    crate::backend::direct_wasm::memo::bump_static_state_generation();
                     if let Some(array_binding) = self
                         .backend
                         .global_semantics
@@ -1023,6 +1025,7 @@ impl<'a> FunctionCompiler<'a> {
                         self.push_i32_const(1);
                         return Ok(());
                     }
+                    crate::backend::direct_wasm::memo::bump_static_state_generation();
                     if let Some(object_binding) = self
                         .backend
                         .global_semantics

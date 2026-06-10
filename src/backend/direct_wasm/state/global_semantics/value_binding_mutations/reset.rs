@@ -2,6 +2,7 @@ use crate::backend::direct_wasm::GlobalValueService;
 
 impl GlobalValueService {
     pub(in crate::backend::direct_wasm) fn reset_for_program(&mut self) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.value_bindings.clear();
         self.array_bindings.clear();
         self.arrays_with_runtime_state.clear();

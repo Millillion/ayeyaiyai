@@ -2,6 +2,7 @@ use super::*;
 
 impl DirectWasmCompiler {
     pub(in crate::backend::direct_wasm) fn user_type_index_for_arity(&mut self, arity: u32) -> u32 {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.state
             .function_registry
             .user_type_index_for_arity(arity)
@@ -16,6 +17,7 @@ impl DirectWasmCompiler {
         declaration: FunctionDeclaration,
         user_function: UserFunction,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.state
             .register_user_function(declaration, user_function);
     }

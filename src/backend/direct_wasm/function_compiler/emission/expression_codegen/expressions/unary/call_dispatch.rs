@@ -676,6 +676,7 @@ impl<'a> FunctionCompiler<'a> {
             .speculation
             .static_semantics
             .last_bound_user_function_call = None;
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         if self.emit_optional_static_regexp_member_call(callee, arguments)? {
             return Ok(());
         }

@@ -21,6 +21,7 @@ impl FunctionArraySemanticsState {
         name: &str,
         binding: TypedArrayViewBinding,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.local_typed_array_view_bindings
             .insert(name.to_string(), binding);
     }
@@ -29,6 +30,7 @@ impl FunctionArraySemanticsState {
         &mut self,
         name: &str,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.local_typed_array_view_bindings.remove(name);
     }
 
@@ -43,6 +45,7 @@ impl FunctionArraySemanticsState {
         &mut self,
         name: &str,
     ) -> Option<&mut ResizableArrayBufferBinding> {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.local_resizable_array_buffer_bindings.get_mut(name)
     }
 
@@ -51,6 +54,7 @@ impl FunctionArraySemanticsState {
         name: &str,
         binding: ResizableArrayBufferBinding,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.local_resizable_array_buffer_bindings
             .insert(name.to_string(), binding);
     }
@@ -59,6 +63,7 @@ impl FunctionArraySemanticsState {
         &mut self,
         name: &str,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.local_resizable_array_buffer_bindings.remove(name);
     }
 
@@ -84,6 +89,7 @@ impl FunctionArraySemanticsState {
         name: &str,
         local: u32,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.runtime_typed_array_oob_locals
             .insert(name.to_string(), local);
     }
@@ -92,6 +98,7 @@ impl FunctionArraySemanticsState {
         &mut self,
         name: &str,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.runtime_typed_array_oob_locals.remove(name);
     }
 }

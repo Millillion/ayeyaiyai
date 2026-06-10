@@ -18,14 +18,19 @@ thread_local! {
 
 struct SimpleGeneratorSourceGuard {
     key: String,
+    _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope,
 }
 
 impl SimpleGeneratorSourceGuard {
     fn enter_key(key: &str) -> Option<Self> {
         let inserted = ACTIVE_SIMPLE_GENERATOR_SOURCE_SHAPES
             .with(|active| active.borrow_mut().insert(key.to_string()));
+        if !inserted {
+            crate::backend::direct_wasm::memo::note_resolution_guard_block();
+        }
         inserted.then_some(Self {
             key: key.to_string(),
+            _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope::enter_class(19),
         })
     }
 }
@@ -44,7 +49,11 @@ fn simple_generator_source_cache_key(
     expression: &Expression,
     environment_key: &str,
 ) -> String {
-    format!("{kind}:{expression:?}:{function:?}:env:{environment_key}")
+    let expression_hash = crate::backend::direct_wasm::memo::expression_structural_hash(expression);
+    format!(
+        "{kind}:{expression_hash:032x}:{}:env:{environment_key}",
+        function.name
+    )
 }
 
 fn lookup_simple_generator_source_cache(key: &str) -> Option<Option<SimpleGeneratorSourceParts>> {

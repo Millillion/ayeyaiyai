@@ -1381,6 +1381,7 @@ impl<'a> FunctionCompiler<'a> {
                     .static_semantics
                     .capture_slot_source_bindings
                     .insert(hidden_name.clone(), source_name.clone());
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
             }
             capture_slots.insert(capture_name.clone(), hidden_name);
         }
@@ -1392,6 +1393,7 @@ impl<'a> FunctionCompiler<'a> {
             _ => returned_function_name,
         };
         let key = Self::identifier_function_value_capture_slots_key(&target_name);
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.state
             .speculation
             .static_semantics
@@ -1470,6 +1472,7 @@ impl<'a> FunctionCompiler<'a> {
                 prototype_source_expression: None,
                 updated_bindings: updated_bindings.clone(),
             });
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
             let user_scope_bindings = self
                 .user_function(function_name)
                 .map(|function| function.scope_bindings.clone())

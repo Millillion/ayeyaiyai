@@ -266,6 +266,7 @@ impl<'a> FunctionCompiler<'a> {
                 );
                 synced_array_binding = Some(array_binding.clone());
                 new_length = Some(array_binding.values.len() as i32);
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
             } else if let Some(array_binding) = self
                 .backend
                 .global_semantics

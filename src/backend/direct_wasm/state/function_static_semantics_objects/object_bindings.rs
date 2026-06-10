@@ -9,6 +9,7 @@ impl FunctionObjectSemanticsState {
         &mut self,
         name: &str,
     ) -> Option<&mut ObjectValueBinding> {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.local_object_bindings.get_mut(name)
     }
 
@@ -36,10 +37,12 @@ impl FunctionObjectSemanticsState {
         name: &str,
         object: ObjectValueBinding,
     ) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.local_object_bindings.insert(name.to_string(), object);
     }
 
     pub(in crate::backend::direct_wasm) fn clear_local_object_binding(&mut self, name: &str) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.local_object_bindings.remove(name);
     }
 
@@ -47,6 +50,7 @@ impl FunctionObjectSemanticsState {
         &mut self,
         name: &str,
     ) -> &mut ObjectValueBinding {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.local_object_bindings
             .entry(name.to_string())
             .or_insert_with(empty_object_value_binding)

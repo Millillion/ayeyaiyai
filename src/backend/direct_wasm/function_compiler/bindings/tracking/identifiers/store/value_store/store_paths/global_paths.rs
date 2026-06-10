@@ -603,6 +603,7 @@ impl<'a> FunctionCompiler<'a> {
                 .static_semantics
                 .capture_slot_source_bindings
                 .insert(hidden_name.clone(), source_name.to_string());
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
 
             return Ok(hidden_name);
         }
@@ -636,6 +637,7 @@ impl<'a> FunctionCompiler<'a> {
             .static_semantics
             .capture_slot_source_bindings
             .insert(hidden_name.clone(), source_name.to_string());
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
 
         Ok(hidden_name)
     }
@@ -689,6 +691,7 @@ impl<'a> FunctionCompiler<'a> {
             .static_semantics
             .capture_slot_source_bindings
             .insert(hidden_name, source_name);
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
 
         Ok(())
     }
@@ -953,6 +956,7 @@ impl<'a> FunctionCompiler<'a> {
                             hidden_name.clone(),
                             self.capture_slot_live_source_binding_name(source_binding_name),
                         );
+                    crate::backend::direct_wasm::memo::bump_static_state_generation();
                 } else if capture_slot_tracks_live_source
                     && matches!(source_expression, Expression::This)
                 {
@@ -961,6 +965,7 @@ impl<'a> FunctionCompiler<'a> {
                         .static_semantics
                         .capture_slot_source_bindings
                         .insert(hidden_name.clone(), "this".to_string());
+                    crate::backend::direct_wasm::memo::bump_static_state_generation();
                 } else if capture_slot_tracks_live_source
                     && let Expression::Member { object, property } = &source_expression
                     && let Some(source_key) = Self::capture_slot_member_source_key(object, property)
@@ -970,6 +975,7 @@ impl<'a> FunctionCompiler<'a> {
                         .static_semantics
                         .capture_slot_source_bindings
                         .insert(hidden_name.clone(), source_key);
+                    crate::backend::direct_wasm::memo::bump_static_state_generation();
                 }
                 capture_slots.insert(capture_name.clone(), hidden_name);
             } else if let Expression::Identifier(source_binding_name) = source_expression {

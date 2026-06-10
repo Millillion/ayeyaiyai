@@ -7,6 +7,7 @@ thread_local! {
 
 struct RuntimeShadowFallbackGuard {
     key: String,
+    _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope,
 }
 
 impl RuntimeShadowFallbackGuard {
@@ -14,7 +15,13 @@ impl RuntimeShadowFallbackGuard {
         let key = format!("{fallback_value:?}");
         let inserted =
             ACTIVE_RUNTIME_SHADOW_FALLBACKS.with(|active| active.borrow_mut().insert(key.clone()));
-        inserted.then_some(Self { key })
+        if !inserted {
+            crate::backend::direct_wasm::memo::note_resolution_guard_block();
+        }
+        inserted.then_some(Self {
+            key,
+            _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope::enter_class(17),
+        })
     }
 }
 
@@ -2998,6 +3005,7 @@ impl<'a> FunctionCompiler<'a> {
                     shadow_binding_name.clone(),
                     descriptor_state.clone(),
                 );
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
                 self.backend
                     .shared_global_semantics
                     .values
@@ -3023,6 +3031,7 @@ impl<'a> FunctionCompiler<'a> {
                     shadow_binding_name.clone(),
                     descriptor_state.clone(),
                 );
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
                 self.backend
                     .shared_global_semantics
                     .values

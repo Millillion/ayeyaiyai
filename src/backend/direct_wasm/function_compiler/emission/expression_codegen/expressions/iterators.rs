@@ -1098,6 +1098,7 @@ impl<'a> FunctionCompiler<'a> {
             }
             self.state.emission.output.instructions.push(0x1a);
             if !capture_source_bindings.is_empty() {
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
                 self.state
                     .runtime
                     .locals

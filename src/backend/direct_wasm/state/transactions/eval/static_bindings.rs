@@ -19,6 +19,7 @@ impl StaticBindingMetadataTransaction {
     }
 
     pub(in crate::backend::direct_wasm) fn restore(self, compiler: &mut FunctionCompiler<'_>) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         compiler
             .backend
             .restore_global_static_semantics_transaction(self.global_semantics);

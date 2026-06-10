@@ -31,6 +31,7 @@ impl IsolatedIndirectEvalTransaction {
     }
 
     pub(in crate::backend::direct_wasm) fn restore(self, state: &mut FunctionCompilerState) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         state
             .runtime
             .restore_isolated_indirect_eval(self.runtime_state);

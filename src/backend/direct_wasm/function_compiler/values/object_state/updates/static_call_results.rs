@@ -8,12 +8,13 @@ mod member_builtins;
 mod specialized_results;
 
 thread_local! {
-    static ACTIVE_STATIC_CALL_RESULT_SHAPES: std::cell::RefCell<HashSet<String>> =
-        std::cell::RefCell::new(HashSet::new());
+    static ACTIVE_STATIC_CALL_RESULT_SHAPES: std::cell::RefCell<HashMap<String, u64>> =
+        std::cell::RefCell::new(HashMap::new());
 }
 
 struct StaticCallResultResolutionShapeGuard {
     key: String,
+    _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope,
 }
 
 impl StaticCallResultResolutionShapeGuard {
@@ -23,9 +24,27 @@ impl StaticCallResultResolutionShapeGuard {
         current_function_name: Option<&str>,
     ) -> Option<Self> {
         let key = format!("{current_function_name:?}:{callee:?}:{arguments:?}");
-        let inserted =
-            ACTIVE_STATIC_CALL_RESULT_SHAPES.with(|active| active.borrow_mut().insert(key.clone()));
-        inserted.then_some(Self { key })
+        let conflict = ACTIVE_STATIC_CALL_RESULT_SHAPES.with(|active| {
+            let mut active = active.borrow_mut();
+            match active.get(&key) {
+                Some(serial) => Some(*serial),
+                None => {
+                    active.insert(
+                        key.clone(),
+                        crate::backend::direct_wasm::memo::next_guard_serial(),
+                    );
+                    None
+                }
+            }
+        });
+        if let Some(serial) = conflict {
+            crate::backend::direct_wasm::memo::note_resolution_guard_block_conflict(serial);
+            return None;
+        }
+        Some(Self {
+            key,
+            _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope::enter_class(4),
+        })
     }
 }
 
@@ -88,6 +107,49 @@ impl<'a> FunctionCompiler<'a> {
     }
 
     pub(in crate::backend::direct_wasm) fn resolve_static_call_result_expression_with_context(
+        &self,
+        callee: &Expression,
+        arguments: &[CallArgument],
+        current_function_name: Option<&str>,
+    ) -> Option<(Expression, Option<String>)> {
+        use crate::backend::direct_wasm::memo;
+        if !memo::memo_context_is_cacheable() {
+            return self.resolve_static_call_result_expression_with_context_uncached(
+                callee,
+                arguments,
+                current_function_name,
+            );
+        }
+        let key = memo::static_call_result_cache_key(callee, arguments, current_function_name);
+        if let Some(cached) = memo::lookup_static_call_result(key) {
+            if memo::memo_verify_enabled() {
+                let verify_token = memo::MemoStoreToken::capture();
+                let fresh = self.resolve_static_call_result_expression_with_context_uncached(
+                    callee,
+                    arguments,
+                    current_function_name,
+                );
+                assert!(
+                    !verify_token.is_clean()
+                        || memo::verify_static_call_results_match(&fresh, &cached),
+                    "AYY_MEMO_VERIFY divergence: static call result for {callee:?} (function {current_function_name:?}): cached={cached:?} fresh={fresh:?}"
+                );
+            }
+            return cached;
+        }
+        let token = memo::MemoStoreToken::capture();
+        let result = self.resolve_static_call_result_expression_with_context_uncached(
+            callee,
+            arguments,
+            current_function_name,
+        );
+        if token.is_clean() {
+            memo::store_static_call_result(key, result.clone());
+        }
+        result
+    }
+
+    fn resolve_static_call_result_expression_with_context_uncached(
         &self,
         callee: &Expression,
         arguments: &[CallArgument],

@@ -5,23 +5,29 @@ thread_local! {
         const { std::cell::RefCell::new(Vec::new()) };
 }
 
-struct RuntimeArrayBindingResolutionGuard;
+struct RuntimeArrayBindingResolutionGuard {
+    _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope,
+}
 
 impl RuntimeArrayBindingResolutionGuard {
     fn enter(expression: &Expression) -> Option<Self> {
         RUNTIME_ARRAY_BINDING_RESOLUTION_STACK.with(|stack| {
             let mut stack = stack.borrow_mut();
             if stack.len() >= 64 {
+                crate::backend::direct_wasm::memo::note_resolution_guard_block();
                 return None;
             }
             if stack
                 .iter()
                 .any(|active| static_expression_matches(active, expression))
             {
+                crate::backend::direct_wasm::memo::note_resolution_guard_block();
                 return None;
             }
             stack.push(expression.clone());
-            Some(Self)
+            Some(Self {
+                _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope::enter_class(15),
+            })
         })
     }
 }

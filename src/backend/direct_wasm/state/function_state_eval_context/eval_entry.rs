@@ -2,6 +2,7 @@ use super::super::*;
 
 impl FunctionCompilerState {
     pub(in crate::backend::direct_wasm) fn enter_isolated_indirect_eval_state(&mut self) {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.runtime.clear_isolated_indirect_eval_state();
         self.parameters.clear_isolated_indirect_eval_state();
         self.speculation

@@ -887,12 +887,14 @@ impl<'a> FunctionCompiler<'a> {
                 updated_bindings,
             )?;
             if source_is_dynamic {
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
                 self.state
                     .runtime
                     .locals
                     .runtime_dynamic_bindings
                     .insert(binding.source_name.clone());
             } else {
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
                 self.state
                     .runtime
                     .locals

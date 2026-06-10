@@ -22,6 +22,7 @@ impl<'a> FunctionCompiler<'a> {
         name: &str,
         value: &Expression,
     ) -> DirectResult<()> {
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.state
             .speculation
             .static_semantics
@@ -31,6 +32,7 @@ impl<'a> FunctionCompiler<'a> {
         let Some(specialized) = self.resolve_updated_specialized_function_value(value)? else {
             return Ok(());
         };
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.state
             .speculation
             .static_semantics
@@ -51,6 +53,7 @@ impl<'a> FunctionCompiler<'a> {
                 "capture_bindings update_global_specialized:start name={name} value={value:?}"
             );
         }
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.backend
             .global_semantics
             .functions
@@ -70,6 +73,7 @@ impl<'a> FunctionCompiler<'a> {
                 specialized.summary.effects.len()
             );
         }
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
         self.backend
             .global_semantics
             .functions

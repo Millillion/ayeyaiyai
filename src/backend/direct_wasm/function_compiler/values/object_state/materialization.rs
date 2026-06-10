@@ -1,7 +1,7 @@
 use super::*;
 
 thread_local! {
-    static ACTIVE_MATERIALIZATION_SHAPES: RefCell<HashSet<String>> = RefCell::new(HashSet::new());
+    static ACTIVE_MATERIALIZATION_SHAPES: RefCell<HashMap<String, u64>> = RefCell::new(HashMap::new());
 }
 
 const MATERIALIZATION_SHAPE_DEPTH_LIMIT: usize = 16;
@@ -296,6 +296,35 @@ impl<'a> FunctionCompiler<'a> {
             | Expression::Sent => return expression.clone(),
             _ => {}
         }
+        {
+            use crate::backend::direct_wasm::memo;
+            if memo::memo_context_is_cacheable() {
+                let key = memo::materialize_cache_key(expression, self.current_function_name());
+                if let Some(cached) = memo::lookup_materialized_expression(key) {
+                    if memo::memo_verify_enabled() {
+                        let verify_token = memo::MemoStoreToken::capture();
+                        let fresh = self.materialize_static_expression_uncached(expression);
+                        assert!(
+                            !verify_token.is_clean()
+                                || memo::verify_expressions_match(&fresh, &cached),
+                            "AYY_MEMO_VERIFY divergence: materialize for {expression:?} (function {:?}): cached={cached:?} fresh={fresh:?}",
+                            self.current_function_name()
+                        );
+                    }
+                    return cached;
+                }
+                let token = memo::MemoStoreToken::capture();
+                let result = self.materialize_static_expression_uncached(expression);
+                if token.is_clean() {
+                    memo::store_materialized_expression(key, result.clone());
+                }
+                return result;
+            }
+        }
+        self.materialize_static_expression_uncached(expression)
+    }
+
+    fn materialize_static_expression_uncached(&self, expression: &Expression) -> Expression {
         let guard_key = expression as *const Expression as usize;
         {
             let mut active = self
@@ -304,9 +333,12 @@ impl<'a> FunctionCompiler<'a> {
                 .static_semantics
                 .materializing_expression_keys
                 .borrow_mut();
-            if !active.insert(guard_key) {
+            if let Some(serial) = active.get(&guard_key) {
+                crate::backend::direct_wasm::memo::note_resolution_guard_block_conflict(*serial);
                 return expression.clone();
             }
+            let serial = crate::backend::direct_wasm::memo::next_guard_serial();
+            active.insert(guard_key, serial);
         }
         let _guard = MaterializationGuard {
             active: &self
@@ -316,10 +348,23 @@ impl<'a> FunctionCompiler<'a> {
                 .materializing_expression_keys,
             key: guard_key,
         };
+        let _memo_scope = crate::backend::direct_wasm::memo::ResolutionGuardScope::enter_class(0);
         let structural_key = materialization_shape_key(expression);
-        let inserted = ACTIVE_MATERIALIZATION_SHAPES
-            .with(|active| active.borrow_mut().insert(structural_key.clone()));
-        if !inserted {
+        let shape_conflict = ACTIVE_MATERIALIZATION_SHAPES.with(|active| {
+            let mut active = active.borrow_mut();
+            match active.get(&structural_key) {
+                Some(serial) => Some(*serial),
+                None => {
+                    active.insert(
+                        structural_key.clone(),
+                        crate::backend::direct_wasm::memo::next_guard_serial(),
+                    );
+                    None
+                }
+            }
+        });
+        if let Some(serial) = shape_conflict {
+            crate::backend::direct_wasm::memo::note_resolution_guard_block_conflict(serial);
             return expression.clone();
         }
         let _structural_guard = StructuralMaterializationGuard {
