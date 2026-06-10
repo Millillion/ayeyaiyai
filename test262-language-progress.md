@@ -1,4 +1,4 @@
-3419/23668 (14.45%)
+3425/23668 (14.47%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -15,7 +15,7 @@ Sub-category progress
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
 - statements: 2086/9337 (22.34%)
-- expressions: 8/11061 (0.07%)
+- expressions: 14/11061 (0.13%)
 - types: 0/113 (0.00%)
 - function-code: 0/217 (0.00%)
 - global-code: 0/42 (0.00%)
@@ -12948,7 +12948,7 @@ Sub-category progress
   - [ ] test/language/expressions/call/spread-sngl-literal.js
   - [ ] test/language/expressions/call/spread-sngl-obj-ident.js
   - [ ] test/language/expressions/call/tco-call-args.js
-  - [ ] test/language/expressions/call/tco-member-args.js
+  - [x] test/language/expressions/call/tco-member-args.js
   - [ ] test/language/expressions/call/tco-non-eval-function-dynamic.js
   - [ ] test/language/expressions/call/tco-non-eval-function.js
   - [ ] test/language/expressions/call/tco-non-eval-global.js
@@ -17043,7 +17043,7 @@ Sub-category progress
   - [ ] test/language/expressions/comma/S11.14_A2.1_T2.js
   - [ ] test/language/expressions/comma/S11.14_A2.1_T3.js
   - [ ] test/language/expressions/comma/S11.14_A3.js
-  - [ ] test/language/expressions/comma/tco-final.js
+  - [x] test/language/expressions/comma/tco-final.js
   - [ ] test/language/expressions/compound-assignment/11.13.2-1-s.js
   - [ ] test/language/expressions/compound-assignment/11.13.2-10-s.js
   - [ ] test/language/expressions/compound-assignment/11.13.2-11-s.js
@@ -17535,8 +17535,8 @@ Sub-category progress
   - [ ] test/language/expressions/conditional/in-branch-2.js
   - [ ] test/language/expressions/conditional/in-condition.js
   - [ ] test/language/expressions/conditional/symbol-conditional-evaluation.js
-  - [ ] test/language/expressions/conditional/tco-cond.js
-  - [ ] test/language/expressions/conditional/tco-pos.js
+  - [x] test/language/expressions/conditional/tco-cond.js
+  - [x] test/language/expressions/conditional/tco-pos.js
   - [ ] test/language/expressions/delete/11.4.1-0-1.js
   - [ ] test/language/expressions/delete/11.4.1-2-2.js
   - [ ] test/language/expressions/delete/11.4.1-3-1.js
@@ -19757,7 +19757,7 @@ Sub-category progress
   - [ ] test/language/expressions/logical-or/S11.11.2_A4_T3.js
   - [ ] test/language/expressions/logical-or/S11.11.2_A4_T4.js
   - [ ] test/language/expressions/logical-or/symbol-logical-or-evaluation.js
-  - [ ] test/language/expressions/logical-or/tco-right.js
+  - [x] test/language/expressions/logical-or/tco-right.js
   - [ ] test/language/expressions/member-expression/computed-reference-null-or-undefined.js
   - [ ] test/language/expressions/modulus/S11.5.3_A1.js
   - [ ] test/language/expressions/modulus/S11.5.3_A2.1_T1.js
@@ -21540,7 +21540,7 @@ Sub-category progress
   - [ ] test/language/expressions/tagged-template/template-object-frozen-strict.js
   - [ ] test/language/expressions/tagged-template/template-object-template-map.js
   - [ ] test/language/expressions/tagged-template/template-object.js
-  - [ ] test/language/expressions/tco-pos.js
+  - [x] test/language/expressions/tco-pos.js
   - [ ] test/language/expressions/template-literal/evaluation-order.js
   - [ ] test/language/expressions/template-literal/invalid-hexidecimal-character-escape-sequence-truncated-1.js
   - [ ] test/language/expressions/template-literal/invalid-hexidecimal-character-escape-sequence-truncated-2.js
