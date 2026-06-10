@@ -796,6 +796,15 @@ impl<'a> FunctionCompiler<'a> {
                 return Some(Self::prototype_member_expression("Object"));
             }
             if this.expression_is_known_array_value(expression) {
+                // An Array-exotic instance may still belong to an Array
+                // subclass; a recorded prototype expression (e.g.
+                // `Subclass.prototype`) is more precise than the generic
+                // `Array.prototype` fallback.
+                if let Expression::Identifier(name) = expression
+                    && let Some(prototype) = this.global_object_prototype_expression(name)
+                {
+                    return Some(prototype.clone());
+                }
                 return Some(Self::prototype_member_expression("Array"));
             }
             if let Expression::New { callee, .. } = expression {

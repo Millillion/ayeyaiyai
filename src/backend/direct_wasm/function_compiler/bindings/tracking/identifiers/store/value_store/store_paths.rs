@@ -131,6 +131,15 @@ impl PreparedIdentifierStoreState {
         if self.prototype_source_snapshot_expression.is_some() {
             return self.prototype_source_expression();
         }
+        if matches!(self.canonical_value_expression, Expression::New { .. }) {
+            // Without an explicit constructor return, the constructed object's
+            // prototype is `new.target.prototype` — the prototype of the class
+            // actually named in the original `new` expression. Prefer it over
+            // the module assignment expression, which may have been rewritten
+            // to the heritage constructor (e.g. `new Map()` for an implicit
+            // derived constructor) and would lose the subclass identity.
+            return &self.canonical_value_expression;
+        }
         if matches!(self.module_assignment_expression, Expression::New { .. }) {
             return &self.module_assignment_expression;
         }
