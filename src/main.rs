@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use anyhow::Result;
 use clap::Parser;
 
-use ayeyaiyai::{CompileOptions, compile_file};
+use ayeyaiyai::{CompileOptions, compile_file, compile_unmodified_file_with_goal_and_strict};
 
 #[derive(Debug, Parser)]
 #[command(
@@ -19,6 +19,18 @@ struct Cli {
 
     #[arg(long, default_value = "wasm32-wasip2")]
     target: String,
+
+    /// Parse as a module (test262 runner support).
+    #[arg(long, hide = true)]
+    module: bool,
+
+    /// Force strict mode (test262 runner support).
+    #[arg(long, hide = true)]
+    force_strict: bool,
+
+    /// Use the rewrite-free parse path (test262 runner support).
+    #[arg(long, hide = true)]
+    unmodified: bool,
 }
 
 fn main() {
@@ -46,5 +58,13 @@ fn run() -> Result<()> {
         target: cli.target,
     };
 
+    if cli.unmodified {
+        return compile_unmodified_file_with_goal_and_strict(
+            &cli.input,
+            &options,
+            cli.module,
+            cli.force_strict,
+        );
+    }
     compile_file(&cli.input, &options)
 }

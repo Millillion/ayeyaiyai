@@ -284,6 +284,60 @@ enum TestFailure {
     Runtime(String),
 }
 
+/// Compile via the sibling `ayeyaiyai` binary so a pathological compile can
+/// be killed at the wall-clock budget instead of wedging the whole sweep.
+fn compile_in_subprocess_with_timeout(
+    source_path: &Path,
+    options: &CompileOptions,
+    module: bool,
+    force_strict: bool,
+    timeout_seconds: u64,
+) -> anyhow::Result<()> {
+    let compiler = std::env::current_exe()
+        .ok()
+        .and_then(|path| path.parent().map(|dir| dir.join("ayeyaiyai")))
+        .filter(|path| path.is_file())
+        .ok_or_else(|| anyhow::anyhow!("sibling ayeyaiyai binary not found"))?;
+    let mut command = Command::new(compiler);
+    command
+        .arg(source_path)
+        .arg("-o")
+        .arg(&options.output)
+        .arg("--target")
+        .arg(&options.target)
+        .arg("--unmodified")
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    if module {
+        command.arg("--module");
+    }
+    if force_strict {
+        command.arg("--force-strict");
+    }
+    let mut child = command.spawn()?;
+    let started = Instant::now();
+    loop {
+        if child.try_wait()?.is_some() {
+            break;
+        }
+        if started.elapsed() >= Duration::from_secs(timeout_seconds) {
+            child.kill()?;
+            let _ = child.wait();
+            anyhow::bail!("compile timed out after {timeout_seconds}s");
+        }
+        thread::sleep(Duration::from_millis(20));
+    }
+    let output = child.wait_with_output()?;
+    if !output.status.success() {
+        anyhow::bail!(
+            "{}{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+    Ok(())
+}
+
 fn run_single_test(
     source_path: &Path,
     target: &str,
@@ -308,8 +362,20 @@ fn run_single_test(
     let keep_tempdir = std::env::var_os("AYY_KEEP_TEST262_TEMP").is_some()
         || std::env::var_os("AYY_KEEP_TEST262_TEMP_PRECOMPILE").is_some();
 
-    let compile_result =
-        compile_unmodified_file_with_goal_and_strict(source_path, &options, module, force_strict);
+    let compile_timeout = std::env::var("AYY_COMPILE_TIMEOUT_SECONDS")
+        .ok()
+        .and_then(|value| value.parse::<u64>().ok());
+    let compile_result = if let Some(timeout_seconds) = compile_timeout {
+        compile_in_subprocess_with_timeout(
+            source_path,
+            &options,
+            module,
+            force_strict,
+            timeout_seconds,
+        )
+    } else {
+        compile_unmodified_file_with_goal_and_strict(source_path, &options, module, force_strict)
+    };
 
     compile_result.map_err(|error| TestFailure::Compile(format!("{error:#}")))?;
     if trace_timing {
