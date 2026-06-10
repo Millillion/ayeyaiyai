@@ -1,4 +1,4 @@
-3384/23668 (14.30%)
+3419/23668 (14.45%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,8 +14,8 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 2059/9337 (22.05%)
-- expressions: 0/11061 (0.00%)
+- statements: 2086/9337 (22.34%)
+- expressions: 8/11061 (0.07%)
 - types: 0/113 (0.00%)
 - function-code: 0/217 (0.00%)
 - global-code: 0/42 (0.00%)
@@ -2141,8 +2141,8 @@ Sub-category progress
   - [x] test/language/statements/class/async-method/dflt-params-ref-self.js
   - [x] test/language/statements/class/async-method/dflt-params-rest.js
   - [x] test/language/statements/class/async-method/dflt-params-trailing-comma.js
-  - [ ] test/language/statements/class/async-method/forbidden-ext/b1/cls-decl-async-meth-forbidden-ext-direct-access-prop-arguments.js
-  - [ ] test/language/statements/class/async-method/forbidden-ext/b1/cls-decl-async-meth-forbidden-ext-direct-access-prop-caller.js
+  - [x] test/language/statements/class/async-method/forbidden-ext/b1/cls-decl-async-meth-forbidden-ext-direct-access-prop-arguments.js
+  - [x] test/language/statements/class/async-method/forbidden-ext/b1/cls-decl-async-meth-forbidden-ext-direct-access-prop-caller.js
   - [x] test/language/statements/class/async-method/forbidden-ext/b2/cls-decl-async-meth-forbidden-ext-indirect-access-own-prop-caller-get.js
   - [x] test/language/statements/class/async-method/forbidden-ext/b2/cls-decl-async-meth-forbidden-ext-indirect-access-own-prop-caller-value.js
   - [x] test/language/statements/class/async-method/forbidden-ext/b2/cls-decl-async-meth-forbidden-ext-indirect-access-prop-caller.js
@@ -2173,8 +2173,8 @@ Sub-category progress
   - [x] test/language/statements/class/async-method-static/dflt-params-ref-self.js
   - [x] test/language/statements/class/async-method-static/dflt-params-rest.js
   - [x] test/language/statements/class/async-method-static/dflt-params-trailing-comma.js
-  - [ ] test/language/statements/class/async-method-static/forbidden-ext/b1/cls-decl-async-meth-static-forbidden-ext-direct-access-prop-arguments.js
-  - [ ] test/language/statements/class/async-method-static/forbidden-ext/b1/cls-decl-async-meth-static-forbidden-ext-direct-access-prop-caller.js
+  - [x] test/language/statements/class/async-method-static/forbidden-ext/b1/cls-decl-async-meth-static-forbidden-ext-direct-access-prop-arguments.js
+  - [x] test/language/statements/class/async-method-static/forbidden-ext/b1/cls-decl-async-meth-static-forbidden-ext-direct-access-prop-caller.js
   - [x] test/language/statements/class/async-method-static/forbidden-ext/b2/cls-decl-async-meth-static-forbidden-ext-indirect-access-own-prop-caller-get.js
   - [x] test/language/statements/class/async-method-static/forbidden-ext/b2/cls-decl-async-meth-static-forbidden-ext-indirect-access-own-prop-caller-value.js
   - [x] test/language/statements/class/async-method-static/forbidden-ext/b2/cls-decl-async-meth-static-forbidden-ext-indirect-access-prop-caller.js
@@ -2190,7 +2190,7 @@ Sub-category progress
   - [x] test/language/statements/class/async-method-static/returns-async-function-returns-newtarget.js
   - [x] test/language/statements/class/async-method-static/returns-async-function.js
   - [x] test/language/statements/class/class-name-ident-await-escaped-module.js
-  - [ ] test/language/statements/class/class-name-ident-await-escaped.js
+  - [x] test/language/statements/class/class-name-ident-await-escaped.js
   - [x] test/language/statements/class/class-name-ident-await-module.js
   - [x] test/language/statements/class/class-name-ident-await.js
   - [x] test/language/statements/class/class-name-ident-let-escaped.js
@@ -2324,17 +2324,17 @@ Sub-category progress
   - [x] test/language/statements/class/cpn-class-decl-fields-methods-computed-property-name-from-numeric-literal.js
   - [x] test/language/statements/class/cpn-class-decl-fields-methods-computed-property-name-from-string-literal.js
   - [x] test/language/statements/class/cpn-class-decl-fields-methods-computed-property-name-from-yield-expression.js
-  - [ ] test/language/statements/class/cptn-decl.js
+  - [x] test/language/statements/class/cptn-decl.js
   - [x] test/language/statements/class/decorator/syntax/class-valid/decorator-member-expr-private-identifier.js
-  - [ ] test/language/statements/class/decorator/syntax/valid/class-element-decorator-call-expr-identifier-reference.js
+  - [x] test/language/statements/class/decorator/syntax/valid/class-element-decorator-call-expr-identifier-reference.js
   - [x] test/language/statements/class/decorator/syntax/valid/class-element-decorator-member-expr-decorator-member-expr.js
-  - [ ] test/language/statements/class/decorator/syntax/valid/class-element-decorator-member-expr-identifier-reference.js
+  - [x] test/language/statements/class/decorator/syntax/valid/class-element-decorator-member-expr-identifier-reference.js
   - [x] test/language/statements/class/decorator/syntax/valid/class-element-decorator-parenthesized-expr-identifier-reference.js
   - [x] test/language/statements/class/decorator/syntax/valid/decorator-call-expr-identifier-reference-yield.js
-  - [ ] test/language/statements/class/decorator/syntax/valid/decorator-call-expr-identifier-reference.js
+  - [x] test/language/statements/class/decorator/syntax/valid/decorator-call-expr-identifier-reference.js
   - [x] test/language/statements/class/decorator/syntax/valid/decorator-member-expr-decorator-member-expr.js
   - [x] test/language/statements/class/decorator/syntax/valid/decorator-member-expr-identifier-reference-yield.js
-  - [ ] test/language/statements/class/decorator/syntax/valid/decorator-member-expr-identifier-reference.js
+  - [x] test/language/statements/class/decorator/syntax/valid/decorator-member-expr-identifier-reference.js
   - [x] test/language/statements/class/decorator/syntax/valid/decorator-parenthesized-expr-identifier-reference-yield.js
   - [x] test/language/statements/class/decorator/syntax/valid/decorator-parenthesized-expr-identifier-reference.js
   - [ ] test/language/statements/class/definition/accessors.js
@@ -2396,7 +2396,7 @@ Sub-category progress
   - [x] test/language/statements/class/definition/prototype-wiring.js
   - [x] test/language/statements/class/definition/setters-non-configurable-err.js
   - [x] test/language/statements/class/definition/setters-prop-desc.js
-  - [ ] test/language/statements/class/definition/setters-restricted-ids.js
+  - [x] test/language/statements/class/definition/setters-restricted-ids.js
   - [ ] test/language/statements/class/definition/side-effects-in-extends.js
   - [x] test/language/statements/class/definition/side-effects-in-property-define.js
   - [ ] test/language/statements/class/definition/this-access-restriction-2.js
@@ -6443,7 +6443,7 @@ Sub-category progress
   - [ ] test/language/statements/do-while/decl-let.js
   - [ ] test/language/statements/do-while/labelled-fn-stmt.js
   - [ ] test/language/statements/do-while/let-array-with-newline.js
-  - [ ] test/language/statements/do-while/tco-body.js
+  - [x] test/language/statements/do-while/tco-body.js
   - [ ] test/language/statements/empty/S12.3_A1.js
   - [ ] test/language/statements/empty/cptn-value.js
   - [ ] test/language/statements/expression/S12.4_A1.js
@@ -6830,10 +6830,10 @@ Sub-category progress
   - [ ] test/language/statements/for/scope-head-lex-close.js
   - [ ] test/language/statements/for/scope-head-lex-open.js
   - [ ] test/language/statements/for/scope-head-var-none.js
-  - [ ] test/language/statements/for/tco-const-body.js
-  - [ ] test/language/statements/for/tco-let-body.js
-  - [ ] test/language/statements/for/tco-lhs-body.js
-  - [ ] test/language/statements/for/tco-var-body.js
+  - [x] test/language/statements/for/tco-const-body.js
+  - [x] test/language/statements/for/tco-let-body.js
+  - [x] test/language/statements/for/tco-lhs-body.js
+  - [x] test/language/statements/for/tco-var-body.js
   - [ ] test/language/statements/for-await-of/async-from-sync-iterator-continuation-abrupt-completion-get-constructor.js
   - [ ] test/language/statements/for-await-of/async-func-decl-dstr-array-elem-init-assignment.js
   - [ ] test/language/statements/for-await-of/async-func-decl-dstr-array-elem-init-evaluation.js
@@ -9718,8 +9718,8 @@ Sub-category progress
   - [ ] test/language/statements/if/let-array-with-newline.js
   - [ ] test/language/statements/if/let-block-with-newline.js
   - [ ] test/language/statements/if/let-identifier-with-newline.js
-  - [ ] test/language/statements/if/tco-else-body.js
-  - [ ] test/language/statements/if/tco-if-body.js
+  - [x] test/language/statements/if/tco-else-body.js
+  - [x] test/language/statements/if/tco-if-body.js
   - [ ] test/language/statements/labeled/S12.12_A1_T1.js
   - [ ] test/language/statements/labeled/continue.js
   - [ ] test/language/statements/labeled/cptn-break.js
@@ -9735,7 +9735,7 @@ Sub-category progress
   - [ ] test/language/statements/labeled/let-block-with-newline.js
   - [ ] test/language/statements/labeled/let-identifier-with-newline.js
   - [ ] test/language/statements/labeled/static-init-invalid-await.js
-  - [ ] test/language/statements/labeled/tco.js
+  - [x] test/language/statements/labeled/tco.js
   - [ ] test/language/statements/labeled/value-await-module-escaped.js
   - [ ] test/language/statements/labeled/value-await-module.js
   - [ ] test/language/statements/labeled/value-await-non-module-escaped.js
@@ -9904,7 +9904,7 @@ Sub-category progress
   - [ ] test/language/statements/return/S12.9_A4.js
   - [ ] test/language/statements/return/S12.9_A5.js
   - [ ] test/language/statements/return/line-terminators.js
-  - [ ] test/language/statements/return/tco.js
+  - [x] test/language/statements/return/tco.js
   - [ ] test/language/statements/switch/S12.11_A1_T1.js
   - [ ] test/language/statements/switch/S12.11_A1_T2.js
   - [ ] test/language/statements/switch/S12.11_A1_T3.js
@@ -10013,9 +10013,9 @@ Sub-category progress
   - [ ] test/language/statements/switch/syntax/redeclaration/var-name-redeclaration-attempt-with-generator.js
   - [ ] test/language/statements/switch/syntax/redeclaration/var-name-redeclaration-attempt-with-let.js
   - [ ] test/language/statements/switch/syntax/redeclaration/var-name-redeclaration-attempt-with-var.js
-  - [ ] test/language/statements/switch/tco-case-body-dflt.js
-  - [ ] test/language/statements/switch/tco-case-body.js
-  - [ ] test/language/statements/switch/tco-dftl-body.js
+  - [x] test/language/statements/switch/tco-case-body-dflt.js
+  - [x] test/language/statements/switch/tco-case-body.js
+  - [x] test/language/statements/switch/tco-dftl-body.js
   - [ ] test/language/statements/throw/S12.13_A1.js
   - [ ] test/language/statements/throw/S12.13_A2_T1.js
   - [ ] test/language/statements/throw/S12.13_A2_T2.js
@@ -10228,9 +10228,9 @@ Sub-category progress
   - [ ] test/language/statements/try/scope-catch-param-var-none.js
   - [ ] test/language/statements/try/static-init-await-binding-invalid.js
   - [ ] test/language/statements/try/static-init-await-binding-valid.js
-  - [ ] test/language/statements/try/tco-catch-finally.js
-  - [ ] test/language/statements/try/tco-catch.js
-  - [ ] test/language/statements/try/tco-finally.js
+  - [x] test/language/statements/try/tco-catch-finally.js
+  - [x] test/language/statements/try/tco-catch.js
+  - [x] test/language/statements/try/tco-finally.js
   - [ ] test/language/statements/using/Symbol.dispose-getter.js
   - [ ] test/language/statements/using/Symbol.dispose-method-called-with-correct-this.js
   - [ ] test/language/statements/using/block-local-closure-get-before-initialization.js
@@ -10524,7 +10524,7 @@ Sub-category progress
   - [ ] test/language/statements/while/let-array-with-newline.js
   - [ ] test/language/statements/while/let-block-with-newline.js
   - [ ] test/language/statements/while/let-identifier-with-newline.js
-  - [ ] test/language/statements/while/tco-body.js
+  - [x] test/language/statements/while/tco-body.js
   - [ ] test/language/statements/with/12.10-0-1.js
   - [ ] test/language/statements/with/12.10-0-10.js
   - [ ] test/language/statements/with/12.10-0-11.js
@@ -13264,7 +13264,7 @@ Sub-category progress
   - [ ] test/language/expressions/class/async-method-static/returns-async-function-returns-newtarget.js
   - [ ] test/language/expressions/class/async-method-static/returns-async-function.js
   - [ ] test/language/expressions/class/class-name-ident-await-escaped-module.js
-  - [ ] test/language/expressions/class/class-name-ident-await-escaped.js
+  - [x] test/language/expressions/class/class-name-ident-await-escaped.js
   - [ ] test/language/expressions/class/class-name-ident-await-module.js
   - [ ] test/language/expressions/class/class-name-ident-await.js
   - [ ] test/language/expressions/class/class-name-ident-let-escaped.js
@@ -13400,10 +13400,10 @@ Sub-category progress
   - [ ] test/language/expressions/class/cpn-class-expr-fields-methods-computed-property-name-from-yield-expression.js
   - [ ] test/language/expressions/class/decorator/syntax/class-valid/decorator-member-expr-private-identifier.js
   - [ ] test/language/expressions/class/decorator/syntax/valid/decorator-call-expr-identifier-reference-yield.js
-  - [ ] test/language/expressions/class/decorator/syntax/valid/decorator-call-expr-identifier-reference.js
+  - [x] test/language/expressions/class/decorator/syntax/valid/decorator-call-expr-identifier-reference.js
   - [ ] test/language/expressions/class/decorator/syntax/valid/decorator-member-expr-decorator-member-expr.js
   - [ ] test/language/expressions/class/decorator/syntax/valid/decorator-member-expr-identifier-reference-yield.js
-  - [ ] test/language/expressions/class/decorator/syntax/valid/decorator-member-expr-identifier-reference.js
+  - [x] test/language/expressions/class/decorator/syntax/valid/decorator-member-expr-identifier-reference.js
   - [ ] test/language/expressions/class/decorator/syntax/valid/decorator-parenthesized-expr-identifier-reference-yield.js
   - [ ] test/language/expressions/class/decorator/syntax/valid/decorator-parenthesized-expr-identifier-reference.js
   - [ ] test/language/expressions/class/dstr/async-gen-meth-ary-init-iter-close.js
@@ -17036,8 +17036,8 @@ Sub-category progress
   - [ ] test/language/expressions/coalesce/short-circuit-number-symbol.js
   - [ ] test/language/expressions/coalesce/short-circuit-number-true.js
   - [ ] test/language/expressions/coalesce/short-circuit-prevents-evaluation.js
-  - [ ] test/language/expressions/coalesce/tco-pos-null.js
-  - [ ] test/language/expressions/coalesce/tco-pos-undefined.js
+  - [x] test/language/expressions/coalesce/tco-pos-null.js
+  - [x] test/language/expressions/coalesce/tco-pos-undefined.js
   - [ ] test/language/expressions/comma/S11.14_A1.js
   - [ ] test/language/expressions/comma/S11.14_A2.1_T1.js
   - [ ] test/language/expressions/comma/S11.14_A2.1_T2.js
@@ -19642,7 +19642,7 @@ Sub-category progress
   - [ ] test/language/expressions/logical-and/S11.11.1_A4_T3.js
   - [ ] test/language/expressions/logical-and/S11.11.1_A4_T4.js
   - [ ] test/language/expressions/logical-and/symbol-logical-and-evaluation.js
-  - [ ] test/language/expressions/logical-and/tco-right.js
+  - [x] test/language/expressions/logical-and/tco-right.js
   - [ ] test/language/expressions/logical-assignment/left-hand-side-private-reference-accessor-property-and.js
   - [ ] test/language/expressions/logical-assignment/left-hand-side-private-reference-accessor-property-nullish.js
   - [ ] test/language/expressions/logical-assignment/left-hand-side-private-reference-accessor-property-or.js
@@ -21534,8 +21534,8 @@ Sub-category progress
   - [ ] test/language/expressions/tagged-template/invalid-escape-sequences.js
   - [ ] test/language/expressions/tagged-template/member-expression-argument-list-evaluation.js
   - [ ] test/language/expressions/tagged-template/member-expression-context.js
-  - [ ] test/language/expressions/tagged-template/tco-call.js
-  - [ ] test/language/expressions/tagged-template/tco-member.js
+  - [x] test/language/expressions/tagged-template/tco-call.js
+  - [x] test/language/expressions/tagged-template/tco-member.js
   - [ ] test/language/expressions/tagged-template/template-object-frozen-non-strict.js
   - [ ] test/language/expressions/tagged-template/template-object-frozen-strict.js
   - [ ] test/language/expressions/tagged-template/template-object-template-map.js
