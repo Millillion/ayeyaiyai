@@ -1,4 +1,4 @@
-3931/23668 (16.61%)
+3943/23668 (16.66%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,7 +14,7 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 2592/9337 (27.76%)
+- statements: 2604/9337 (27.89%)
 - expressions: 14/11061 (0.13%)
 - types: 0/113 (0.00%)
 - function-code: 0/217 (0.00%)
@@ -3664,19 +3664,19 @@ Sub-category progress
   - [ ] test/language/statements/class/dstr/meth-static-dflt-ary-init-iter-get-err-array-prototype.js
   - [x] test/language/statements/class/dstr/meth-static-dflt-ary-init-iter-get-err.js
   - [x] test/language/statements/class/dstr/meth-static-dflt-ary-init-iter-no-close.js
-  - [ ] test/language/statements/class/dstr/meth-static-dflt-ary-name-iter-val.js
-  - [ ] test/language/statements/class/dstr/meth-static-dflt-ary-ptrn-elem-ary-elem-init.js
-  - [ ] test/language/statements/class/dstr/meth-static-dflt-ary-ptrn-elem-ary-elem-iter.js
-  - [ ] test/language/statements/class/dstr/meth-static-dflt-ary-ptrn-elem-ary-elision-init.js
-  - [ ] test/language/statements/class/dstr/meth-static-dflt-ary-ptrn-elem-ary-elision-iter.js
-  - [ ] test/language/statements/class/dstr/meth-static-dflt-ary-ptrn-elem-ary-empty-init.js
-  - [ ] test/language/statements/class/dstr/meth-static-dflt-ary-ptrn-elem-ary-empty-iter.js
-  - [ ] test/language/statements/class/dstr/meth-static-dflt-ary-ptrn-elem-ary-rest-init.js
+  - [x] test/language/statements/class/dstr/meth-static-dflt-ary-name-iter-val.js
+  - [x] test/language/statements/class/dstr/meth-static-dflt-ary-ptrn-elem-ary-elem-init.js
+  - [x] test/language/statements/class/dstr/meth-static-dflt-ary-ptrn-elem-ary-elem-iter.js
+  - [x] test/language/statements/class/dstr/meth-static-dflt-ary-ptrn-elem-ary-elision-init.js
+  - [x] test/language/statements/class/dstr/meth-static-dflt-ary-ptrn-elem-ary-elision-iter.js
+  - [x] test/language/statements/class/dstr/meth-static-dflt-ary-ptrn-elem-ary-empty-init.js
+  - [x] test/language/statements/class/dstr/meth-static-dflt-ary-ptrn-elem-ary-empty-iter.js
+  - [x] test/language/statements/class/dstr/meth-static-dflt-ary-ptrn-elem-ary-rest-init.js
   - [ ] test/language/statements/class/dstr/meth-static-dflt-ary-ptrn-elem-ary-rest-iter.js
-  - [ ] test/language/statements/class/dstr/meth-static-dflt-ary-ptrn-elem-ary-val-null.js
-  - [ ] test/language/statements/class/dstr/meth-static-dflt-ary-ptrn-elem-id-init-exhausted.js
-  - [ ] test/language/statements/class/dstr/meth-static-dflt-ary-ptrn-elem-id-init-fn-name-arrow.js
-  - [ ] test/language/statements/class/dstr/meth-static-dflt-ary-ptrn-elem-id-init-fn-name-class.js
+  - [x] test/language/statements/class/dstr/meth-static-dflt-ary-ptrn-elem-ary-val-null.js
+  - [x] test/language/statements/class/dstr/meth-static-dflt-ary-ptrn-elem-id-init-exhausted.js
+  - [x] test/language/statements/class/dstr/meth-static-dflt-ary-ptrn-elem-id-init-fn-name-arrow.js
+  - [x] test/language/statements/class/dstr/meth-static-dflt-ary-ptrn-elem-id-init-fn-name-class.js
   - [x] test/language/statements/class/dstr/meth-static-dflt-ary-ptrn-elem-id-init-fn-name-cover.js
   - [x] test/language/statements/class/dstr/meth-static-dflt-ary-ptrn-elem-id-init-fn-name-fn.js
   - [x] test/language/statements/class/dstr/meth-static-dflt-ary-ptrn-elem-id-init-fn-name-gen.js
