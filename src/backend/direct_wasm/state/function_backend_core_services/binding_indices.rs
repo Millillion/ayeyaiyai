@@ -13,4 +13,27 @@ impl<'a> FunctionCompilerBackend<'a> {
         self.global_semantics.sync_implicit_binding(name, binding);
         binding
     }
+
+    pub(in crate::backend::direct_wasm) fn record_emitted_delete_shadow(&mut self, name: &str) {
+        self.shared_global_semantics
+            .names
+            .emitted_delete_shadow_names
+            .insert(name.to_string());
+        self.global_semantics
+            .names
+            .emitted_delete_shadow_names
+            .insert(name.to_string());
+    }
+
+    pub(in crate::backend::direct_wasm) fn delete_shadow_was_emitted(&self, name: &str) -> bool {
+        self.global_semantics
+            .names
+            .emitted_delete_shadow_names
+            .contains(name)
+            || self
+                .shared_global_semantics
+                .names
+                .emitted_delete_shadow_names
+                .contains(name)
+    }
 }

@@ -2328,7 +2328,7 @@ impl<'a> FunctionCompiler<'a> {
         };
         let deleted_shadow_name =
             Self::runtime_object_property_deleted_shadow_name(&owner_name, &property);
-        if !self.global_has_implicit_binding(&deleted_shadow_name) {
+        if !self.backend.delete_shadow_was_emitted(&deleted_shadow_name) {
             return false;
         }
         let object_binding = self
@@ -2357,7 +2357,7 @@ impl<'a> FunctionCompiler<'a> {
         };
         let deleted_shadow_name =
             Self::runtime_object_property_deleted_shadow_name(&owner_name, &property);
-        self.global_has_implicit_binding(&deleted_shadow_name)
+        self.backend.delete_shadow_was_emitted(&deleted_shadow_name)
     }
 
     pub(in crate::backend::direct_wasm) fn runtime_object_property_shadow_deletion_is_statically_present(
@@ -2462,6 +2462,15 @@ impl<'a> FunctionCompiler<'a> {
         self.ensure_implicit_global_binding(&Self::runtime_object_property_deleted_shadow_name(
             owner_name, property,
         ))
+    }
+
+    pub(in crate::backend::direct_wasm) fn record_emitted_delete_shadow_for(
+        &mut self,
+        owner_name: &str,
+        property: &Expression,
+    ) {
+        let name = Self::runtime_object_property_deleted_shadow_name(owner_name, property);
+        self.backend.record_emitted_delete_shadow(&name);
     }
 
     pub(in crate::backend::direct_wasm) fn runtime_object_property_shadow_binding_by_names(

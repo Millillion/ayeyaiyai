@@ -6,6 +6,10 @@ pub(in crate::backend::direct_wasm) struct GlobalNameService {
     pub(in crate::backend::direct_wasm) lexical_bindings: HashMap<String, LexicalGlobalBinding>,
     pub(in crate::backend::direct_wasm) kinds: HashMap<String, StaticValueKind>,
     pub(in crate::backend::direct_wasm) implicit_bindings: HashMap<String, ImplicitGlobalBinding>,
+    /// Deleted-property shadow names whose markers were set by an actual
+    /// emitted `delete`; mere existence of the implicit binding (allocated by
+    /// assignment paths for codegen) must not make a property look deletable.
+    pub(in crate::backend::direct_wasm) emitted_delete_shadow_names: HashSet<String>,
 }
 
 impl GlobalNameService {
@@ -14,6 +18,7 @@ impl GlobalNameService {
         self.lexical_bindings.clear();
         self.kinds.clear();
         self.implicit_bindings.clear();
+        self.emitted_delete_shadow_names.clear();
     }
 
     pub(in crate::backend::direct_wasm) fn ensure_binding_index(

@@ -251,6 +251,7 @@ impl<'a> FunctionCompiler<'a> {
                 &owner_name,
                 &existing_key,
             );
+            self.record_emitted_delete_shadow_for(&owner_name, &existing_key);
             self.push_i32_const(JS_UNDEFINED_TAG);
             self.push_global_set(binding.value_index);
             self.push_i32_const(0);
@@ -279,6 +280,7 @@ impl<'a> FunctionCompiler<'a> {
                 &owner_name,
                 &existing_key,
             );
+            self.record_emitted_delete_shadow_for(&owner_name, &existing_key);
             self.push_i32_const(JS_UNDEFINED_TAG);
             self.push_global_set(binding.value_index);
             self.push_i32_const(0);
@@ -365,6 +367,7 @@ impl<'a> FunctionCompiler<'a> {
                 &owner_name,
                 &existing_key,
             );
+            self.record_emitted_delete_shadow_for(&owner_name, &existing_key);
             self.push_i32_const(JS_UNDEFINED_TAG);
             self.push_global_set(binding.value_index);
             self.push_i32_const(0);
@@ -397,6 +400,7 @@ impl<'a> FunctionCompiler<'a> {
                 &owner_name,
                 &existing_key,
             );
+            self.record_emitted_delete_shadow_for(&owner_name, &existing_key);
             self.push_i32_const(JS_UNDEFINED_TAG);
             self.push_global_set(binding.value_index);
             self.push_i32_const(0);
