@@ -98,8 +98,8 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         statements: &[Statement],
     ) -> DirectResult<()> {
-        let trace = std::env::var_os("AYY_TRACE_FUNCTION_COMPILE").is_some();
-        let trace_timing = std::env::var_os("AYY_TRACE_FUNCTION_STATEMENT_TIMING").is_some();
+        let trace = crate::ayy_env_flag!("AYY_TRACE_FUNCTION_COMPILE");
+        let trace_timing = crate::ayy_env_flag!("AYY_TRACE_FUNCTION_STATEMENT_TIMING");
         let mut index = 0;
         while let Some(statement) = statements.get(index) {
             let timing_start = trace_timing.then(std::time::Instant::now);

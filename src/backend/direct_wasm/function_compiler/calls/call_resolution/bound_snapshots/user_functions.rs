@@ -1312,7 +1312,7 @@ impl<'a> FunctionCompiler<'a> {
         arguments: &[Expression],
         this_binding: &Expression,
     ) -> Option<(StaticEvalOutcome, HashMap<String, Expression>)> {
-        let trace = std::env::var_os("AYY_TRACE_BOUND_SNAPSHOT").is_some();
+        let trace = crate::ayy_env_flag!("AYY_TRACE_BOUND_SNAPSHOT");
         let function = self.resolve_registered_function_declaration(function_name)?;
         let user_function = self.user_function(function_name)?;
         if trace {

@@ -64,7 +64,7 @@ impl<'a> FunctionCompiler<'a> {
             })
             && let Some(actual_binding) = self.resolve_array_binding_from_expression(actual)
         {
-            if std::env::var_os("AYY_TRACE_COMPARE_ARRAY").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_COMPARE_ARRAY") {
                 eprintln!(
                     "assert_compare_array:static actual={:?} expected={:?}",
                     actual_binding.values, expected_binding.values
@@ -137,7 +137,7 @@ impl<'a> FunctionCompiler<'a> {
         let Some(actual_binding) = self.resolve_array_binding_from_expression(actual) else {
             return Ok(false);
         };
-        if std::env::var_os("AYY_TRACE_COMPARE_ARRAY").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_COMPARE_ARRAY") {
             eprintln!(
                 "assert_compare_array:actual={:?} expected={:?}",
                 actual_binding.values, expected_binding.values
@@ -419,7 +419,7 @@ impl<'a> FunctionCompiler<'a> {
         let Some(actual_binding) = self.resolve_array_binding_from_expression(actual) else {
             return Ok(false);
         };
-        if std::env::var_os("AYY_TRACE_COMPARE_ARRAY").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_COMPARE_ARRAY") {
             eprintln!(
                 "compare_array:actual={:?} expected={:?}",
                 actual_binding.values, expected_binding.values

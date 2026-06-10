@@ -29,7 +29,7 @@ pub(in crate::backend::direct_wasm) fn infer_own_property_names_binding_from_exp
         return Some(own_property_names_from_array_binding(&array_binding));
     }
     let object_binding = resolve_object_binding(expression);
-    if std::env::var_os("AYY_TRACE_OWN_PROPERTY_NAMES").is_some() {
+    if crate::ayy_env_flag!("AYY_TRACE_OWN_PROPERTY_NAMES") {
         eprintln!(
             "own_property_names expression={expression:?} function_shape={} object_props={:?}",
             has_function_property_shape(expression),

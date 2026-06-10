@@ -370,7 +370,7 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         statement: &Statement,
     ) -> DirectResult<bool> {
-        let trace = std::env::var_os("AYY_TRACE_FUNCTION_COMPILE").is_some();
+        let trace = crate::ayy_env_flag!("AYY_TRACE_FUNCTION_COMPILE");
         if trace {
             eprintln!("binding_statement:static_step_probe:start statement={statement:?}");
         }
@@ -1071,7 +1071,7 @@ impl<'a> FunctionCompiler<'a> {
                     }
                     return Ok(());
                 }
-                let trace = std::env::var_os("AYY_TRACE_FUNCTION_COMPILE").is_some();
+                let trace = crate::ayy_env_flag!("AYY_TRACE_FUNCTION_COMPILE");
                 let value_local = self.allocate_temp_local();
                 let resolved_store_value = self
                     .static_for_await_iterator_initializer_result(name, value)
@@ -1117,7 +1117,7 @@ impl<'a> FunctionCompiler<'a> {
                 Ok(())
             }
             Statement::Let { name, value, .. } => {
-                let trace = std::env::var_os("AYY_TRACE_FUNCTION_COMPILE").is_some();
+                let trace = crate::ayy_env_flag!("AYY_TRACE_FUNCTION_COMPILE");
                 let value_local = self.allocate_temp_local();
                 if trace {
                     eprintln!("binding_statement:let:before_resolve_store name={name}");
@@ -1191,7 +1191,7 @@ impl<'a> FunctionCompiler<'a> {
                 Ok(())
             }
             Statement::Assign { name, value } => {
-                let trace = std::env::var_os("AYY_TRACE_FUNCTION_COMPILE").is_some();
+                let trace = crate::ayy_env_flag!("AYY_TRACE_FUNCTION_COMPILE");
                 if trace {
                     eprintln!("binding_statement:assign:start name={name}");
                 }

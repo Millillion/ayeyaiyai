@@ -442,7 +442,7 @@ impl<'a> FunctionCompiler<'a> {
         property: &Expression,
         arguments: &[CallArgument],
     ) -> DirectResult<bool> {
-        let trace = std::env::var_os("AYY_TRACE_ITERATOR_NEXT_CACHE").is_some();
+        let trace = crate::ayy_env_flag!("AYY_TRACE_ITERATOR_NEXT_CACHE");
         let Some(binding) = self.cached_iterator_next_method_binding_for_object(object, property)
         else {
             if trace

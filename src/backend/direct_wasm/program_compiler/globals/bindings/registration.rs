@@ -300,7 +300,7 @@ impl DirectWasmCompiler {
 
         let (value_bindings, _) = self.snapshot_top_level_static_state();
         for (name, value) in &value_bindings {
-            if std::env::var_os("AYY_TRACE_MEMBER_BINDINGS").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_MEMBER_BINDINGS") {
                 eprintln!("global_member:class_alias_candidate name={name} value={value:?}");
             }
             let source_name = match value {
@@ -349,7 +349,7 @@ impl DirectWasmCompiler {
                 continue;
             };
             let source_name = self.normalize_local_member_binding_identifier_target(&source_name);
-            if std::env::var_os("AYY_TRACE_MEMBER_BINDINGS").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_MEMBER_BINDINGS") {
                 eprintln!("global_member:class_alias_resolved name={name} source={source_name}");
             }
             if name == &source_name || !source_name.starts_with("__ayy_class_expr_") {
@@ -1298,7 +1298,7 @@ impl DirectWasmCompiler {
                 } => {
                     let condition_value =
                         self.resolve_static_global_property_key_condition(condition);
-                    if std::env::var_os("AYY_TRACE_GLOBAL_IF_METADATA").is_some() {
+                    if crate::ayy_env_flag!("AYY_TRACE_GLOBAL_IF_METADATA") {
                         eprintln!(
                             "global_if_metadata condition={condition:?} value={condition_value:?}"
                         );
@@ -2197,7 +2197,7 @@ impl DirectWasmCompiler {
         functions: &[FunctionDeclaration],
     ) {
         self.clear_user_function_capture_bindings();
-        let trace_capture_bindings = std::env::var_os("AYY_TRACE_CAPTURE_BINDINGS").is_some();
+        let trace_capture_bindings = crate::ayy_env_flag!("AYY_TRACE_CAPTURE_BINDINGS");
         let mut capture_functions = functions.to_vec();
         let mut seen_capture_functions = capture_functions
             .iter()

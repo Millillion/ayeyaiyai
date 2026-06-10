@@ -99,7 +99,7 @@ impl<'a> FunctionCompiler<'a> {
             }
             _ => false,
         };
-        if std::env::var_os("AYY_TRACE_HAS_OWN").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_HAS_OWN") {
             eprintln!(
                 "has_own:receiver={receiver:?} property={argument_property:?} function_synthetic={function_synthetic_property} kind={:?}",
                 self.infer_value_kind(receiver)
@@ -185,7 +185,7 @@ impl<'a> FunctionCompiler<'a> {
                 receiver,
                 &canonical_argument_property,
             );
-        if std::env::var_os("AYY_TRACE_HAS_OWN").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_HAS_OWN") {
             eprintln!(
                 "has_own:result={result:?} dynamic_import_inherited_method={dynamic_import_inherited_method_property}"
             );

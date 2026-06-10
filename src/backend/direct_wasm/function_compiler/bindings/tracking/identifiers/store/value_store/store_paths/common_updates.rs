@@ -383,7 +383,7 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(());
         }
 
-        let trace_capture_bindings = std::env::var_os("AYY_TRACE_CAPTURE_BINDINGS").is_some();
+        let trace_capture_bindings = crate::ayy_env_flag!("AYY_TRACE_CAPTURE_BINDINGS");
         let mut capture_slots = BTreeMap::new();
         for capture_name in capture_bindings.keys() {
             let capture_originates_in_enclosing_local = self
@@ -733,7 +733,7 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         state: &PreparedIdentifierStoreState,
     ) -> DirectResult<()> {
-        let trace = std::env::var_os("AYY_TRACE_ITERATOR_NEXT_CACHE").is_some();
+        let trace = crate::ayy_env_flag!("AYY_TRACE_ITERATOR_NEXT_CACHE");
         self.state
             .speculation
             .static_semantics
@@ -1231,7 +1231,7 @@ impl<'a> FunctionCompiler<'a> {
         if state.is_internal_array_step_binding {
             return Ok(());
         }
-        let trace_identifier_store = std::env::var_os("AYY_TRACE_IDENTIFIER_STORE").is_some();
+        let trace_identifier_store = crate::ayy_env_flag!("AYY_TRACE_IDENTIFIER_STORE");
         if Self::expression_contains_await_for_user_call_runtime(&state.canonical_value_expression)
             || Self::expression_contains_await_for_user_call_runtime(
                 &state.tracked_value_expression,
@@ -1674,7 +1674,7 @@ impl<'a> FunctionCompiler<'a> {
         value_local: u32,
         state: &PreparedIdentifierStoreState,
     ) -> DirectResult<()> {
-        let trace_identifier_store = std::env::var_os("AYY_TRACE_IDENTIFIER_STORE").is_some();
+        let trace_identifier_store = crate::ayy_env_flag!("AYY_TRACE_IDENTIFIER_STORE");
         let trace_step = |label: &str| {
             if trace_identifier_store {
                 eprintln!("identifier_store:{}:shared:{label}", state.resolved_name);
@@ -2086,7 +2086,7 @@ impl<'a> FunctionCompiler<'a> {
         trace_step("iterator_source:done");
         trace_step("array_iterator_binding:start");
         if let Some(iterator_binding_alias) = iterator_binding_alias {
-            if std::env::var_os("AYY_TRACE_SIMPLE_GENERATORS").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_SIMPLE_GENERATORS") {
                 eprintln!(
                     "iterator_binding_alias name={} static_index={:?}",
                     state.resolved_name, iterator_binding_alias.static_index

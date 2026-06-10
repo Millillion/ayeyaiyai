@@ -596,7 +596,7 @@ impl<'a> FunctionCompiler<'a> {
         let private_member_marker_property = |property_name: &str| {
             private_brand_marker_property_expression(&Expression::String(property_name.to_string()))
         };
-        let trace_private = std::env::var_os("AYY_TRACE_PRIVATE_MEMBER_LOOKUP").is_some();
+        let trace_private = crate::ayy_env_flag!("AYY_TRACE_PRIVATE_MEMBER_LOOKUP");
         if trace_private {
             eprintln!(
                 "private_seed_function constructor={} class={}",
@@ -1507,7 +1507,7 @@ impl<'a> FunctionCompiler<'a> {
         arguments: &[CallArgument],
         capture_source_bindings: Option<&HashMap<String, Expression>>,
     ) -> Option<(Expression, bool)> {
-        let trace_constructor_return = std::env::var_os("AYY_TRACE_CONSTRUCTOR_RETURN").is_some();
+        let trace_constructor_return = crate::ayy_env_flag!("AYY_TRACE_CONSTRUCTOR_RETURN");
         if !user_function.is_constructible() {
             if trace_constructor_return {
                 eprintln!(
@@ -1739,7 +1739,7 @@ impl<'a> FunctionCompiler<'a> {
         capture_source_bindings: Option<&HashMap<String, Expression>>,
         this_object_binding: ObjectValueBinding,
     ) -> Option<Result<ObjectValueBinding, StaticThrowValue>> {
-        let trace_private = std::env::var_os("AYY_TRACE_PRIVATE_MEMBER_LOOKUP").is_some();
+        let trace_private = crate::ayy_env_flag!("AYY_TRACE_PRIVATE_MEMBER_LOOKUP");
         if !user_function.is_constructible() {
             return None;
         }
@@ -2008,7 +2008,7 @@ impl<'a> FunctionCompiler<'a> {
         callee: &Expression,
         arguments: &[CallArgument],
     ) -> Option<ObjectValueBinding> {
-        let trace_constructor = std::env::var_os("AYY_TRACE_CONSTRUCTOR_BINDINGS").is_some();
+        let trace_constructor = crate::ayy_env_flag!("AYY_TRACE_CONSTRUCTOR_BINDINGS");
         let LocalFunctionBinding::User(function_name) =
             self.resolve_function_binding_from_expression(callee)?
         else {
@@ -2245,7 +2245,7 @@ impl<'a> FunctionCompiler<'a> {
                             snapshot
                         }
                     };
-                    if std::env::var_os("AYY_TRACE_CAPTURE_BINDINGS").is_some() {
+                    if crate::ayy_env_flag!("AYY_TRACE_CAPTURE_BINDINGS") {
                         eprintln!(
                             "constructor_capture_source expression={expression:?} source={source_name} slot={slot_name} resolved={source_expression:?}"
                         );

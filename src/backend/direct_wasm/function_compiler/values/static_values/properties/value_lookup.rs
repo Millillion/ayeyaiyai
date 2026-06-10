@@ -551,7 +551,7 @@ impl<'a> FunctionCompiler<'a> {
         object: &Expression,
         property: &Expression,
     ) -> Option<Expression> {
-        let trace_inherited_values = std::env::var_os("AYY_TRACE_INHERITED_VALUES").is_some();
+        let trace_inherited_values = crate::ayy_env_flag!("AYY_TRACE_INHERITED_VALUES");
         let mut prototype = self.resolve_static_object_prototype_expression(object)?;
         for _ in 0..32 {
             let materialized_prototype = self.materialize_static_expression(&prototype);

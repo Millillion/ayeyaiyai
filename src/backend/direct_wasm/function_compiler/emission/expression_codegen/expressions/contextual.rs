@@ -980,7 +980,7 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         name: &str,
     ) -> DirectResult<()> {
-        let trace_identifier_dispatch = std::env::var_os("AYY_TRACE_IDENTIFIER_DISPATCH").is_some();
+        let trace_identifier_dispatch = crate::ayy_env_flag!("AYY_TRACE_IDENTIFIER_DISPATCH");
         if trace_identifier_dispatch {
             eprintln!("identifier_dispatch:start name={name}");
         }
@@ -1130,7 +1130,7 @@ impl<'a> FunctionCompiler<'a> {
             .iter()
             .map(|(runtime_value, binding)| (*runtime_value, binding.clone()))
             .collect::<Vec<_>>();
-        let trace_template_objects = std::env::var_os("AYY_TRACE_TEMPLATE_OBJECTS").is_some();
+        let trace_template_objects = crate::ayy_env_flag!("AYY_TRACE_TEMPLATE_OBJECTS");
         if trace_template_objects {
             eprintln!(
                 "template_member:property={property:?} entries={}",
@@ -1330,14 +1330,14 @@ impl<'a> FunctionCompiler<'a> {
         object: &Expression,
         property: &Expression,
     ) -> DirectResult<()> {
-        let trace_member_reads = std::env::var_os("AYY_TRACE_MEMBER_READS").is_some();
+        let trace_member_reads = crate::ayy_env_flag!("AYY_TRACE_MEMBER_READS");
         if trace_member_reads {
             eprintln!(
                 "member_expr:start current_fn={:?} object={object:?} property={property:?}",
                 self.current_function_name(),
             );
         }
-        if std::env::var_os("AYY_TRACE_PRIVATE_MEMBER_LOOKUP").is_some()
+        if crate::ayy_env_flag!("AYY_TRACE_PRIVATE_MEMBER_LOOKUP")
             && matches!(property, Expression::String(name) if name.starts_with("__ayy$private$"))
         {
             eprintln!(
@@ -2019,7 +2019,7 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         property: &Expression,
     ) -> DirectResult<()> {
-        if std::env::var_os("AYY_TRACE_SUPER_RESOLUTION").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_SUPER_RESOLUTION") {
             eprintln!(
                 "super_resolution:emit_member current={:?} property={property:?}",
                 self.current_function_name()

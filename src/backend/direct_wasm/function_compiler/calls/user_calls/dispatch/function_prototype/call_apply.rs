@@ -118,7 +118,7 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         arguments: &[CallArgument],
     ) -> DirectResult<bool> {
-        let trace = std::env::var_os("AYY_TRACE_REFLECT_CONSTRUCT_CALL").is_some();
+        let trace = crate::ayy_env_flag!("AYY_TRACE_REFLECT_CONSTRUCT_CALL");
         let expanded_arguments = self.expand_call_arguments(arguments);
         let target_expression = expanded_arguments
             .first()

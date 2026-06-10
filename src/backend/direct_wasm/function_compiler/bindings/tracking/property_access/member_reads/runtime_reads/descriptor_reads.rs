@@ -56,7 +56,7 @@ impl<'a> FunctionCompiler<'a> {
         name: &str,
         property_name: &str,
     ) -> DirectResult<bool> {
-        let trace = std::env::var_os("AYY_TRACE_DESCRIPTOR_READS").is_some();
+        let trace = crate::ayy_env_flag!("AYY_TRACE_DESCRIPTOR_READS");
         let Some((receiver, descriptor_property)) =
             self.dynamic_property_descriptor_source_for_local(name)
         else {
@@ -294,7 +294,7 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(false);
         };
 
-        let trace_descriptor_reads = std::env::var_os("AYY_TRACE_DESCRIPTOR_READS").is_some();
+        let trace_descriptor_reads = crate::ayy_env_flag!("AYY_TRACE_DESCRIPTOR_READS");
         if trace_descriptor_reads {
             eprintln!(
                 "descriptor_read object={object:?} property={property:?} value={:?} configurable={} enumerable={} writable={:?} getter={:?} setter={:?}",

@@ -461,7 +461,7 @@ impl<'a> FunctionCompiler<'a> {
         member_property: &Expression,
         value: &Expression,
     ) -> DirectResult<()> {
-        let trace_capture_bindings = std::env::var_os("AYY_TRACE_CAPTURE_BINDINGS").is_some();
+        let trace_capture_bindings = crate::ayy_env_flag!("AYY_TRACE_CAPTURE_BINDINGS");
         let Some(LocalFunctionBinding::User(function_name)) =
             self.resolve_function_binding_from_expression(value)
         else {
@@ -1784,7 +1784,7 @@ impl<'a> FunctionCompiler<'a> {
                 && (member_assignment_expression_contains_known_promise_factory_call(value)
                     || object_binding_contains_known_promise_factory_call(&binding))
             {
-                if std::env::var_os("AYY_TRACE_MEMBER_ASSIGNMENT").is_some() {
+                if crate::ayy_env_flag!("AYY_TRACE_MEMBER_ASSIGNMENT") {
                     eprintln!(
                         "named_member_assignment:nonwritable:skip_promise_static_materialization name={name} property={property_name}"
                     );
@@ -1997,7 +1997,7 @@ impl<'a> FunctionCompiler<'a> {
         } else {
             None
         };
-        if std::env::var_os("AYY_TRACE_PRIVATE_FIELD_INIT_VALUES").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_PRIVATE_FIELD_INIT_VALUES") {
             eprintln!(
                 "private_field_init_compile current_fn={:?} owner={owner_name} module_namespace={owner_is_module_namespace} property={materialized_property:?} marker_property={marker_property:?} marker_brand={marker_brand_binding:?} binding=({}, {}) marker_binding={:?}",
                 self.current_function_name(),
@@ -2486,7 +2486,7 @@ impl<'a> FunctionCompiler<'a> {
         property: &Expression,
         value: &Expression,
     ) -> DirectResult<bool> {
-        let trace_member_assignment = std::env::var_os("AYY_TRACE_MEMBER_ASSIGNMENT").is_some();
+        let trace_member_assignment = crate::ayy_env_flag!("AYY_TRACE_MEMBER_ASSIGNMENT");
         if trace_member_assignment {
             eprintln!(
                 "named_member_assignment:start object={object:?} property={property:?} value={value:?}"

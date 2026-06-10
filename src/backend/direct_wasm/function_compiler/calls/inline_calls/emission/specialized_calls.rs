@@ -6,7 +6,7 @@ impl<'a> FunctionCompiler<'a> {
         specialized: &SpecializedFunctionValue,
         arguments: &[CallArgument],
     ) -> DirectResult<bool> {
-        let trace_capture_bindings = std::env::var_os("AYY_TRACE_CAPTURE_BINDINGS").is_some();
+        let trace_capture_bindings = crate::ayy_env_flag!("AYY_TRACE_CAPTURE_BINDINGS");
         let LocalFunctionBinding::User(function_name) = &specialized.binding else {
             if trace_capture_bindings {
                 eprintln!(

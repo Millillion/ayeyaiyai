@@ -168,7 +168,7 @@ impl<'a> FunctionCompiler<'a> {
         binding: &CachedIteratorNextMethodBinding,
         arguments: &[CallArgument],
     ) -> Option<Vec<(Option<Expression>, Expression)>> {
-        let trace = std::env::var_os("AYY_TRACE_ITERATOR_STEP").is_some();
+        let trace = crate::ayy_env_flag!("AYY_TRACE_ITERATOR_STEP");
         if !arguments.is_empty() {
             if trace {
                 eprintln!("iterator_step_cached_returns:reject_args");
@@ -352,7 +352,7 @@ impl<'a> FunctionCompiler<'a> {
             self.push_local_set(value_local);
             return Ok(());
         }
-        if std::env::var_os("AYY_TRACE_ITERATOR_CACHED_SLOTS").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_ITERATOR_CACHED_SLOTS") {
             eprintln!(
                 "iterator_cached_slots current_fn={:?} result={result:?} done={:?} value={:?}",
                 self.current_function_name(),
@@ -360,7 +360,7 @@ impl<'a> FunctionCompiler<'a> {
                 self.iterator_result_object_member_value(result, "value")
             );
         }
-        if std::env::var_os("AYY_TRACE_ITERATOR_STEP").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_ITERATOR_STEP") {
             eprintln!(
                 "iterator_step_cached_result_slots result={result:?} done={:?} value={:?}",
                 self.iterator_result_object_member_value(result, "done"),
@@ -682,7 +682,7 @@ impl<'a> FunctionCompiler<'a> {
         property: &Expression,
         arguments: &[CallArgument],
     ) -> bool {
-        let trace = std::env::var_os("AYY_TRACE_ITERATOR_STEP").is_some();
+        let trace = crate::ayy_env_flag!("AYY_TRACE_ITERATOR_STEP");
         let Some(binding) = self.cached_iterator_next_method_binding_for_object(object, property)
         else {
             if trace {
@@ -781,7 +781,7 @@ impl<'a> FunctionCompiler<'a> {
         name: &str,
         value: &Expression,
     ) {
-        let trace = std::env::var_os("AYY_TRACE_ITERATOR_STEP").is_some();
+        let trace = crate::ayy_env_flag!("AYY_TRACE_ITERATOR_STEP");
         if trace {
             eprintln!("iterator_step_update:start name={name} value={value:?}");
         }

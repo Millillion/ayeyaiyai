@@ -330,9 +330,7 @@ impl<'a> FunctionCompiler<'a> {
             }
         }
         if self.expression_uses_runtime_dynamic_binding(object) {
-            if std::env::var_os("AYY_TRACE_THIS_FLOW").is_some()
-                && matches!(object, Expression::This)
-            {
+            if crate::ayy_env_flag!("AYY_TRACE_THIS_FLOW") && matches!(object, Expression::This) {
                 eprintln!(
                     "this_flow materialize_member runtime-dynamic fn={:?} expr={:?}",
                     self.current_function_name(),
@@ -404,7 +402,7 @@ impl<'a> FunctionCompiler<'a> {
                 )
             });
         if original_shadow_should_defer || materialized_shadow_should_defer {
-            if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                 eprintln!(
                     "runtime_shadow_materialize_preserve object={object:?} property={property:?} materialized_object={materialized_object:?} materialized_property={materialized_property:?}"
                 );
@@ -674,9 +672,7 @@ impl<'a> FunctionCompiler<'a> {
                     .flatten()
             });
         if let Some(object_binding) = object_binding {
-            if std::env::var_os("AYY_TRACE_THIS_FLOW").is_some()
-                && matches!(object, Expression::This)
-            {
+            if crate::ayy_env_flag!("AYY_TRACE_THIS_FLOW") && matches!(object, Expression::This) {
                 eprintln!(
                     "this_flow materialize_member static-binding fn={:?} expr={:?} properties={:?}",
                     self.current_function_name(),

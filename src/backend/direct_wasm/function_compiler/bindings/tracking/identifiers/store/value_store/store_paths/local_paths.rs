@@ -237,13 +237,13 @@ impl<'a> FunctionCompiler<'a> {
             .resolved_static_promise_then_expression(&state.module_assignment_expression)
             .is_some()
         {
-            if std::env::var_os("AYY_TRACE_IDENTIFIER_STORE").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_IDENTIFIER_STORE") {
                 eprintln!("identifier_store:{name}:runtime_shadows skipped_promise_then");
             }
             return Ok(());
         }
         if is_internal_assignment_temp(name) {
-            if std::env::var_os("AYY_TRACE_IDENTIFIER_STORE").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_IDENTIFIER_STORE") {
                 eprintln!(
                     "identifier_store:{name}:runtime_shadows skipped_internal_assignment_temp"
                 );
@@ -261,7 +261,7 @@ impl<'a> FunctionCompiler<'a> {
         local_index: u32,
         state: &PreparedIdentifierStoreState,
     ) -> DirectResult<()> {
-        let trace_identifier_store = std::env::var_os("AYY_TRACE_IDENTIFIER_STORE").is_some();
+        let trace_identifier_store = crate::ayy_env_flag!("AYY_TRACE_IDENTIFIER_STORE");
         if is_internal_assignment_temp(name) {
             if trace_identifier_store {
                 eprintln!("identifier_store:{name}:local_init:update_internal:start");
@@ -449,7 +449,7 @@ impl<'a> FunctionCompiler<'a> {
         local_index: u32,
         state: &PreparedIdentifierStoreState,
     ) -> DirectResult<()> {
-        let trace_identifier_store = std::env::var_os("AYY_TRACE_IDENTIFIER_STORE").is_some();
+        let trace_identifier_store = crate::ayy_env_flag!("AYY_TRACE_IDENTIFIER_STORE");
         if self
             .local_lexical_initialized_local(resolved_name)
             .is_some()

@@ -267,7 +267,7 @@ impl<'a> FunctionCompiler<'a> {
         property: &Expression,
         object: &Expression,
     ) -> DirectResult<bool> {
-        let trace_for_in_keys = std::env::var_os("AYY_TRACE_FOR_IN_KEYS").is_some();
+        let trace_for_in_keys = crate::ayy_env_flag!("AYY_TRACE_FOR_IN_KEYS");
         if !self.expression_is_top_level_global_object_for_property_query(object) {
             if trace_for_in_keys {
                 eprintln!("for_in_keys:global_in object={object:?} matched=false");

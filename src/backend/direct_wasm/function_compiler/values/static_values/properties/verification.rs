@@ -355,7 +355,7 @@ impl<'a> FunctionCompiler<'a> {
         let Some(descriptor) = resolve_property_descriptor_definition(descriptor_expression) else {
             return Ok(false);
         };
-        let trace_verify_property = std::env::var_os("AYY_TRACE_VERIFY_PROPERTY").is_some();
+        let trace_verify_property = crate::ayy_env_flag!("AYY_TRACE_VERIFY_PROPERTY");
         if trace_verify_property {
             eprintln!(
                 "verify_property:start object={object_expression:?} property={property_expression:?}"

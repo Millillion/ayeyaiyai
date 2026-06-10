@@ -447,7 +447,7 @@ impl<'a> FunctionCompiler<'a> {
         else {
             return Ok(false);
         };
-        if std::env::var_os("AYY_TRACE_CONSTRUCT_CALLS").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_CONSTRUCT_CALLS") {
             eprintln!(
                 "construct_call:default_derived_builtin callee={callee:?} super={function_name}"
             );
@@ -603,7 +603,7 @@ impl<'a> FunctionCompiler<'a> {
         } else {
             None
         };
-        if std::env::var_os("AYY_TRACE_CONSTRUCT_CALLS").is_some()
+        if crate::ayy_env_flag!("AYY_TRACE_CONSTRUCT_CALLS")
             && let Some(object_binding) = &precomputed_object_binding
         {
             let property_summary = ordered_object_property_names(object_binding)
@@ -1242,7 +1242,7 @@ impl<'a> FunctionCompiler<'a> {
             )
         })
         .flatten();
-        if std::env::var_os("AYY_TRACE_CONSTRUCT_CALLS").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_CONSTRUCT_CALLS") {
             eprintln!(
                 "construct_call:static_updates function={} direct_eval={} static_allowed={} updated={constructor_updated_bindings:?}",
                 user_function.name,

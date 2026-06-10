@@ -443,7 +443,7 @@ impl<'a> FunctionCompiler<'a> {
                 .or(home_object_fallback)
         }
         .map(|binding| self.rewrite_static_new_this_object_binding(&binding));
-        if std::env::var_os("AYY_TRACE_THIS_FLOW").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_THIS_FLOW") {
             eprintln!(
                 "this_flow resolve_this_object_binding fn={:?} runtime_dynamic_this={} resolved={}",
                 self.current_function_name(),

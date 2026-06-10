@@ -40,7 +40,7 @@ impl<'a> FunctionCompiler<'a> {
         callee: &Expression,
         arguments: &[CallArgument],
     ) -> DirectResult<()> {
-        if std::env::var_os("AYY_TRACE_CONSTRUCT_CALLS").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_CONSTRUCT_CALLS") {
             eprintln!(
                 "construct_call:non_constructible_throw callee={callee:?} arguments={arguments:?}"
             );
@@ -126,7 +126,7 @@ impl<'a> FunctionCompiler<'a> {
         callee: &Expression,
         arguments: &[CallArgument],
     ) -> DirectResult<()> {
-        let trace_construct_calls = std::env::var_os("AYY_TRACE_CONSTRUCT_CALLS").is_some();
+        let trace_construct_calls = crate::ayy_env_flag!("AYY_TRACE_CONSTRUCT_CALLS");
         if let Some((target, mut bound_arguments, LocalFunctionBinding::User(function_name))) =
             self.resolve_function_prototype_bind_call(callee, self.current_function_name())
             && let Some(user_function) = self.user_function(&function_name).cloned()

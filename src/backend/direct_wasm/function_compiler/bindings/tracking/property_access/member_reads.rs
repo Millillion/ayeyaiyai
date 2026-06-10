@@ -165,7 +165,7 @@ impl<'a> FunctionCompiler<'a> {
         object: &Expression,
         property: &Expression,
     ) -> DirectResult<()> {
-        let trace_member_reads = std::env::var_os("AYY_TRACE_MEMBER_READS").is_some();
+        let trace_member_reads = crate::ayy_env_flag!("AYY_TRACE_MEMBER_READS");
         if trace_member_reads {
             eprintln!("member_read:start object={object:?} property={property:?}");
         }
@@ -199,7 +199,7 @@ impl<'a> FunctionCompiler<'a> {
             if trace_member_reads {
                 eprintln!("member_read:descriptor_hit object={object:?} property={property:?}");
             }
-            if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                 eprintln!(
                     "runtime_shadow_member_dispatch descriptor_early object={object:?} property={property:?}"
                 );
@@ -251,7 +251,7 @@ impl<'a> FunctionCompiler<'a> {
             if trace_member_reads {
                 eprintln!("member_read:special_hit object={object:?} property={property:?}");
             }
-            if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                 eprintln!(
                     "runtime_shadow_member_dispatch special object={object:?} property={property:?}"
                 );
@@ -388,7 +388,7 @@ impl<'a> FunctionCompiler<'a> {
             if trace_member_reads {
                 eprintln!("member_read:binding_hit object={object:?} property={property:?}");
             }
-            if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                 eprintln!(
                     "runtime_shadow_member_dispatch binding object={object:?} property={property:?}"
                 );
@@ -429,7 +429,7 @@ impl<'a> FunctionCompiler<'a> {
             if trace_member_reads {
                 eprintln!("member_read:runtime_hit object={object:?} property={property:?}");
             }
-            if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                 eprintln!(
                     "runtime_shadow_member_dispatch runtime object={object:?} property={property:?}"
                 );

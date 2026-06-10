@@ -1164,7 +1164,7 @@ impl<'a> FunctionCompiler<'a> {
                     })
                     .or_else(|| self.function_argument_metadata_object_binding(argument_expression))
             };
-            if std::env::var_os("AYY_TRACE_PRIVATE_MEMBER_LOOKUP").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_PRIVATE_MEMBER_LOOKUP") {
                 eprintln!(
                     "private_param_shadow_setup fn={} param={} arg={argument_expression:?} descriptor_arg={} param_binding={} arg_binding={} source_owner={source_owner:?}",
                     user_function.name,
@@ -1745,7 +1745,7 @@ impl<'a> FunctionCompiler<'a> {
         name: &str,
     ) -> Option<String> {
         let identifier_expression = Expression::Identifier(name.to_string());
-        let trace_runtime_shadows = std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some();
+        let trace_runtime_shadows = crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS");
         if name.starts_with("__ayy_target_object_")
             && let Some(source) = self
                 .state
@@ -2392,7 +2392,7 @@ impl<'a> FunctionCompiler<'a> {
     ) -> Option<ImplicitGlobalBinding> {
         let property = self.canonical_object_property_expression(property);
         let owner_name = self.runtime_object_property_shadow_owner_name_for_expression(object)?;
-        if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
             eprintln!(
                 "runtime_shadow_binding object={object:?} property={property:?} owner={owner_name}"
             );
@@ -2716,7 +2716,7 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         fallback_value: &Expression,
     ) -> DirectResult<()> {
-        if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
             eprintln!("runtime_shadow_fallback value={fallback_value:?}");
         }
         let Some(_fallback_guard) = RuntimeShadowFallbackGuard::enter(fallback_value) else {
@@ -2907,7 +2907,7 @@ impl<'a> FunctionCompiler<'a> {
             let fallback_value =
                 self.rewrite_static_new_this_expression_for_owner(fallback_value, target_owner);
             if Self::runtime_shadow_class_entry_should_defer(target_owner, &fallback_value) {
-                if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+                if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                     eprintln!(
                         "runtime_shadow_static_sync_defer_class target={target_owner} property={property:?} fallback={fallback_value:?}"
                     );
@@ -2924,7 +2924,7 @@ impl<'a> FunctionCompiler<'a> {
             // poisoning static descriptor and kind resolution.
             let materialized_value =
                 self.reference_preserving_static_value_expression(&fallback_value);
-            if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                 eprintln!(
                     "runtime_shadow_static_sync target={target_owner} property={property:?} fallback={fallback_value:?} materialized={materialized_value:?}"
                 );
@@ -3086,7 +3086,7 @@ impl<'a> FunctionCompiler<'a> {
             let fallback_value =
                 self.rewrite_static_new_this_expression_for_owner(&fallback_value, target_owner);
             if Self::runtime_shadow_class_entry_should_defer(target_owner, &fallback_value) {
-                if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+                if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                     eprintln!(
                         "runtime_shadow_seed_defer_class target={target_owner} property={property:?} fallback={fallback_value:?}"
                     );
@@ -3176,7 +3176,7 @@ impl<'a> FunctionCompiler<'a> {
                             || property_name.starts_with("__ayy$private_brand$")
                     },
                 );
-            if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                 eprintln!(
                     "runtime_shadow_prefix_copy {source_owner}->{target_owner} suffix={suffix} source_binding={} source_deleted={}",
                     source_binding.is_some(),
@@ -3221,7 +3221,7 @@ impl<'a> FunctionCompiler<'a> {
                     self.push_global_set(target_deleted.value_index);
                     self.push_i32_const(0);
                     self.push_global_set(target_deleted.present_index);
-                    if std::env::var_os("AYY_TRACE_PRIVATE_MEMBER_VALUES").is_some()
+                    if crate::ayy_env_flag!("AYY_TRACE_PRIVATE_MEMBER_VALUES")
                         && private_shadow_property_name.is_some()
                     {
                         let copied_value_local = self.allocate_temp_local();
@@ -3270,7 +3270,7 @@ impl<'a> FunctionCompiler<'a> {
             }
 
             if let Some(source_binding) = source_binding {
-                if std::env::var_os("AYY_TRACE_PRIVATE_MEMBER_VALUES").is_some()
+                if crate::ayy_env_flag!("AYY_TRACE_PRIVATE_MEMBER_VALUES")
                     && private_shadow_property_name.is_some()
                 {
                     let copied_value_local = self.allocate_temp_local();
@@ -3315,7 +3315,7 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         owner_name: &str,
     ) {
-        if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
             eprintln!("runtime_shadow_clear_prefix {owner_name}");
         }
         let property_prefix = format!("__ayy_object_property__{owner_name}__");
@@ -3343,7 +3343,7 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         owner_name: &str,
     ) {
-        if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
             eprintln!("runtime_shadow_clear_non_private_prefix {owner_name}");
         }
         let property_prefix = format!("__ayy_object_property__{owner_name}__");
@@ -3556,7 +3556,7 @@ impl<'a> FunctionCompiler<'a> {
         };
 
         for (param_name, source_owner, _) in writebacks {
-            if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                 eprintln!(
                     "runtime_shadow_param_writeback_sync param={param_name} source_owner={source_owner} updated_binding={:?}",
                     updated_bindings.get(param_name),
@@ -3578,7 +3578,7 @@ impl<'a> FunctionCompiler<'a> {
                 );
                 continue;
             };
-            if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                 eprintln!(
                     "runtime_shadow_param_writeback_sync_commit param={param_name} source_owner={source_owner} updated_expression={updated_expression:?}",
                     param_name = param_name,
@@ -3647,10 +3647,10 @@ impl<'a> FunctionCompiler<'a> {
         if source_owner == target_owner {
             return Ok(());
         }
-        if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
             eprintln!("runtime_shadow_copy {source_owner} -> {target_owner}");
         }
-        if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
             let entry_count = self
                 .runtime_object_property_shadow_copy_entries(source_owner)
                 .len();
@@ -3684,7 +3684,7 @@ impl<'a> FunctionCompiler<'a> {
                     if property_name.starts_with("__ayy$private$")
                         || property_name.starts_with("__ayy$private_brand$")
             );
-            if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                 eprintln!(
                     "runtime_shadow_copy_entry {source_owner}->{target_owner} property={property:?} fallback={fallback_value:?} private={is_private_property}",
                 );
@@ -3788,8 +3788,7 @@ impl<'a> FunctionCompiler<'a> {
             self.push_global_set(target_deleted.value_index);
             self.push_i32_const(0);
             self.push_global_set(target_deleted.present_index);
-            if std::env::var_os("AYY_TRACE_PRIVATE_MEMBER_VALUES").is_some()
-                && is_private_shadow_property
+            if crate::ayy_env_flag!("AYY_TRACE_PRIVATE_MEMBER_VALUES") && is_private_shadow_property
             {
                 let copied_value_local = self.allocate_temp_local();
                 self.push_global_get(source_binding.value_index);
@@ -3840,7 +3839,7 @@ impl<'a> FunctionCompiler<'a> {
                 } else if !is_private_property {
                     self.emit_runtime_shadow_fallback_value(fallback_value)?;
                 }
-                if std::env::var_os("AYY_TRACE_PRIVATE_MEMBER_VALUES").is_some()
+                if crate::ayy_env_flag!("AYY_TRACE_PRIVATE_MEMBER_VALUES")
                     && is_private_shadow_property
                 {
                     let copied_value_local = self.allocate_temp_local();
@@ -3865,7 +3864,7 @@ impl<'a> FunctionCompiler<'a> {
                     Some(fallback_value),
                 )?;
             } else {
-                if std::env::var_os("AYY_TRACE_PRIVATE_MEMBER_VALUES").is_some()
+                if crate::ayy_env_flag!("AYY_TRACE_PRIVATE_MEMBER_VALUES")
                     && is_private_shadow_property
                 {
                     self.emit_print(&[Expression::String(format!(

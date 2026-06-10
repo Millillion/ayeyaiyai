@@ -56,7 +56,7 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         name: &str,
     ) -> DirectResult<()> {
-        let trace_identifier_reads = std::env::var_os("AYY_TRACE_IDENTIFIER_READS").is_some();
+        let trace_identifier_reads = crate::ayy_env_flag!("AYY_TRACE_IDENTIFIER_READS");
         if trace_identifier_reads {
             eprintln!(
                 "identifier_read:fallback:start current_fn={:?} name={name}",
@@ -323,7 +323,7 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         name: &str,
     ) -> DirectResult<()> {
-        let trace_identifier_reads = std::env::var_os("AYY_TRACE_IDENTIFIER_READS").is_some();
+        let trace_identifier_reads = crate::ayy_env_flag!("AYY_TRACE_IDENTIFIER_READS");
         if trace_identifier_reads {
             eprintln!(
                 "identifier_read:start current_fn={:?} name={name}",

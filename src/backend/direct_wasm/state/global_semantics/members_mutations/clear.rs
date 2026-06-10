@@ -21,7 +21,7 @@ impl GlobalMemberService {
         name: &str,
         include_prototype: bool,
     ) {
-        if std::env::var_os("AYY_TRACE_MEMBER_BINDINGS").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_MEMBER_BINDINGS") {
             eprintln!(
                 "global_member:clear_bindings_for_name name={name} include_prototype={include_prototype}"
             );

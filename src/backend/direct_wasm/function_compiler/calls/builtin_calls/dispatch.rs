@@ -1257,7 +1257,7 @@ impl<'a> FunctionCompiler<'a> {
             let executor_binding = self
                 .resolve_function_binding_from_expression(&executor)
                 .or_else(|| self.resolve_function_binding_from_expression(&materialized_executor));
-            if std::env::var_os("AYY_TRACE_PROMISE_CTOR").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_PROMISE_CTOR") {
                 eprintln!(
                     "promise_ctor executor={executor:?} materialized={materialized_executor:?} binding={executor_binding:?} kind={} materialized_kind={}",
                     self.infer_value_kind(&executor)

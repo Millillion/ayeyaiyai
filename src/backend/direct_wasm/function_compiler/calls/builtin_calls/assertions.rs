@@ -213,7 +213,7 @@ impl<'a> FunctionCompiler<'a> {
     }
 
     fn emit_assertion_global_runtime_array_length_read(&mut self, name: &str) -> bool {
-        let trace = std::env::var_os("AYY_TRACE_ASSERTIONS").is_some();
+        let trace = crate::ayy_env_flag!("AYY_TRACE_ASSERTIONS");
         let initial_length = self
             .backend
             .global_array_binding(name)
@@ -502,7 +502,7 @@ impl<'a> FunctionCompiler<'a> {
         ) {
             return Ok(false);
         }
-        let trace = std::env::var_os("AYY_TRACE_ASSERTIONS").is_some();
+        let trace = crate::ayy_env_flag!("AYY_TRACE_ASSERTIONS");
         if trace {
             eprintln!(
                 "assertion_runtime_length:condition fn={:?} condition={condition:?} left_binding={:?} right_binding={:?}",
@@ -585,7 +585,7 @@ impl<'a> FunctionCompiler<'a> {
                     .instructions
                     .push(EMPTY_BLOCK_TYPE);
                 self.push_control_frame();
-                if std::env::var_os("AYY_TRACE_ASSERTIONS").is_some() {
+                if crate::ayy_env_flag!("AYY_TRACE_ASSERTIONS") {
                     self.emit_print(&[Expression::String(format!(
                         "assertion_fail name=__assert condition={condition:?} fn={:?}",
                         self.current_function_name()

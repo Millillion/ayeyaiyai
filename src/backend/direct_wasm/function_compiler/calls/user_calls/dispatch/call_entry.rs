@@ -114,7 +114,7 @@ impl<'a> FunctionCompiler<'a> {
         new_target_value: i32,
         this_value: i32,
     ) -> DirectResult<()> {
-        let trace_user_calls = std::env::var_os("AYY_TRACE_USER_CALLS").is_some();
+        let trace_user_calls = crate::ayy_env_flag!("AYY_TRACE_USER_CALLS");
         if trace_user_calls {
             eprintln!(
                 "user_call_entry:start current_fn={:?} target={} args={arguments:?}",

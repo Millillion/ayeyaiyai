@@ -463,7 +463,7 @@ impl<'a> FunctionCompiler<'a> {
             self.evaluate_bound_snapshot_expression(property, bindings, current_function_name)?;
         let value =
             self.evaluate_bound_snapshot_expression(value, bindings, current_function_name)?;
-        if std::env::var_os("AYY_TRACE_THIS_FLOW").is_some() && matches!(object, Expression::This) {
+        if crate::ayy_env_flag!("AYY_TRACE_THIS_FLOW") && matches!(object, Expression::This) {
             eprintln!(
                 "this_flow bound_snapshot_member_assignment before current_fn={current_function_name:?} this_binding={:?} property={property:?} value={value:?}",
                 bindings.get("this")
@@ -487,7 +487,7 @@ impl<'a> FunctionCompiler<'a> {
         let mut object_binding = self.resolve_object_binding_from_expression(&current_object)?;
         object_binding_set_property(&mut object_binding, property, value.clone());
         let updated_object = object_binding_to_expression(&object_binding);
-        if std::env::var_os("AYY_TRACE_THIS_FLOW").is_some() && matches!(object, Expression::This) {
+        if crate::ayy_env_flag!("AYY_TRACE_THIS_FLOW") && matches!(object, Expression::This) {
             eprintln!(
                 "this_flow bound_snapshot_member_assignment after current_fn={current_function_name:?} updated_object={updated_object:?}"
             );

@@ -18,7 +18,7 @@ impl<'a> FunctionCompiler<'a> {
             return None;
         };
         let user_function = self.user_function(function_name)?;
-        let trace_instanceof = std::env::var_os("AYY_TRACE_INSTANCEOF").is_some();
+        let trace_instanceof = crate::ayy_env_flag!("AYY_TRACE_INSTANCEOF");
         if self.user_function_mentions_direct_eval(user_function)
             || self.user_function_deletes_call_frame_arguments_member(user_function)
         {
@@ -90,7 +90,7 @@ impl<'a> FunctionCompiler<'a> {
         visited: &mut Vec<Expression>,
     ) -> bool {
         let Some(prototype) = self.resolve_static_object_prototype_expression(expression) else {
-            if std::env::var_os("AYY_TRACE_INSTANCEOF").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_INSTANCEOF") {
                 eprintln!(
                     "instanceof:chain-none expression={expression:?} target={target_prototype:?}"
                 );
@@ -99,7 +99,7 @@ impl<'a> FunctionCompiler<'a> {
         };
         let prototype = self.normalize_instanceof_prototype_expression(&prototype);
         let target = self.normalize_instanceof_prototype_expression(target_prototype);
-        if std::env::var_os("AYY_TRACE_INSTANCEOF").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_INSTANCEOF") {
             eprintln!(
                 "instanceof:chain expression={expression:?} prototype={prototype:?} target={target:?}"
             );

@@ -66,7 +66,7 @@ impl<'a> FunctionCompiler<'a> {
 
         let template_object_identity_value =
             self.resolve_template_object_reference_identity_expression(&snapshot_value);
-        if std::env::var_os("AYY_TRACE_REFERENCE_IDENTITY").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_REFERENCE_IDENTITY") {
             eprintln!(
                 "reference_identity:global_update name={name} value={value:?} snapshot={snapshot_value:?} template={template_object_identity_value:?}"
             );

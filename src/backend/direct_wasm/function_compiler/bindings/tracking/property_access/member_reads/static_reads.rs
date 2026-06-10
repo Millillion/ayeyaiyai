@@ -216,7 +216,7 @@ impl<'a> FunctionCompiler<'a> {
             if let Expression::String(property_name) = property {
                 match property_name.as_str() {
                     "done" => {
-                        if std::env::var_os("AYY_TRACE_ITERATOR_CACHED_SLOTS").is_some() {
+                        if crate::ayy_env_flag!("AYY_TRACE_ITERATOR_CACHED_SLOTS") {
                             match &step_binding {
                                 IteratorStepBinding::Runtime {
                                     done_local,
@@ -237,7 +237,7 @@ impl<'a> FunctionCompiler<'a> {
                         return Ok(true);
                     }
                     "value" => {
-                        if std::env::var_os("AYY_TRACE_ITERATOR_CACHED_SLOTS").is_some() {
+                        if crate::ayy_env_flag!("AYY_TRACE_ITERATOR_CACHED_SLOTS") {
                             match &step_binding {
                                 IteratorStepBinding::Runtime {
                                     done_local,
@@ -291,7 +291,7 @@ impl<'a> FunctionCompiler<'a> {
                 object: Box::new(object.clone()),
                 property: Box::new(property.clone()),
             }) {
-                if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+                if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                     eprintln!(
                         "runtime_shadow_member_static_string object={object:?} property={property:?} text={text:?}"
                     );

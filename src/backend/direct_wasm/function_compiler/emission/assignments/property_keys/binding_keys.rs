@@ -150,7 +150,7 @@ impl<'a> FunctionCompiler<'a> {
                 targets = filtered_targets;
             }
         }
-        if std::env::var_os("AYY_TRACE_PRIVATE_MEMBER_LOOKUP").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_PRIVATE_MEMBER_LOOKUP") {
             eprintln!(
                 "private_binding_targets property={name} current_fn={current_function_name:?} declaring={declaring_class_name:?} targets={targets:?}"
             );

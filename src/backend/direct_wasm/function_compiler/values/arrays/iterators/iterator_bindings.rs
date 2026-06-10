@@ -146,7 +146,7 @@ impl<'a> FunctionCompiler<'a> {
                     static_index,
                 },
             );
-        if std::env::var_os("AYY_TRACE_SIMPLE_GENERATORS").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_SIMPLE_GENERATORS") {
             let source_kind = match self
                 .state
                 .speculation

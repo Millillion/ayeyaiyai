@@ -408,7 +408,7 @@ impl<'a> FunctionCompiler<'a> {
                                 &self.promise_argument_expression(arguments, 0),
                             )
                         {
-                            if std::env::var_os("AYY_TRACE_SIMPLE_GENERATORS").is_some() {
+                            if crate::ayy_env_flag!("AYY_TRACE_SIMPLE_GENERATORS") {
                                 eprintln!(
                                     "async_delegate_next:nonlocal-closed-after-rejected-first-step object={object:?} binding={binding_name}"
                                 );

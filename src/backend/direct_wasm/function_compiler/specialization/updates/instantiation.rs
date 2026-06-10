@@ -6,7 +6,7 @@ impl<'a> FunctionCompiler<'a> {
         template: &SpecializedFunctionValue,
     ) -> DirectResult<Option<SpecializedFunctionValue>> {
         let captured = self.collect_capture_bindings_from_summary(&template.summary);
-        let trace_capture_bindings = std::env::var_os("AYY_TRACE_CAPTURE_BINDINGS").is_some();
+        let trace_capture_bindings = crate::ayy_env_flag!("AYY_TRACE_CAPTURE_BINDINGS");
         if trace_capture_bindings {
             eprintln!(
                 "capture_bindings instantiate binding={:?} captured={captured:?} return={:?} effects={}",

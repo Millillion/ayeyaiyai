@@ -365,7 +365,7 @@ impl<'a> FunctionCompiler<'a> {
         object: &Expression,
         property: &Expression,
     ) -> Option<LocalFunctionBinding> {
-        let trace_member_bindings = std::env::var_os("AYY_TRACE_MEMBER_BINDINGS").is_some();
+        let trace_member_bindings = crate::ayy_env_flag!("AYY_TRACE_MEMBER_BINDINGS");
         let Some(_shape_guard) =
             MemberBindingResolutionShapeGuard::enter("getter", object, property)
         else {
@@ -374,7 +374,7 @@ impl<'a> FunctionCompiler<'a> {
             }
             return None;
         };
-        let trace_private = std::env::var_os("AYY_TRACE_PRIVATE_MEMBER_LOOKUP").is_some()
+        let trace_private = crate::ayy_env_flag!("AYY_TRACE_PRIVATE_MEMBER_LOOKUP")
             && matches!(property, Expression::String(name) if name.starts_with("__ayy$private$"));
         let format_key = |key: &MemberFunctionBindingKey| {
             let target = match &key.target {
@@ -592,7 +592,7 @@ impl<'a> FunctionCompiler<'a> {
         property: &Expression,
         current_function_name: Option<&str>,
     ) -> Option<LocalFunctionBinding> {
-        let trace_member_bindings = std::env::var_os("AYY_TRACE_MEMBER_BINDINGS").is_some();
+        let trace_member_bindings = crate::ayy_env_flag!("AYY_TRACE_MEMBER_BINDINGS");
         let Some(_shape_guard) =
             MemberBindingResolutionShapeGuard::enter("setter", object, property)
         else {

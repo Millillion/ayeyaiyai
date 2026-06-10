@@ -131,7 +131,7 @@ impl<'a> FunctionCompiler<'a> {
         binding: ReturnedMemberFunctionBinding,
         capture_slots_by_property: &HashMap<String, BTreeMap<String, String>>,
     ) {
-        let trace_inherited_bindings = std::env::var_os("AYY_TRACE_INHERITED_BINDINGS").is_some();
+        let trace_inherited_bindings = crate::ayy_env_flag!("AYY_TRACE_INHERITED_BINDINGS");
         let property_name = binding.property.clone();
         let key = MemberFunctionBindingKey {
             target: self.inherited_member_binding_target(name, binding.target),

@@ -46,7 +46,7 @@ impl<'a> FunctionCompiler<'a> {
                     user_function,
                     call_arguments,
                 );
-                if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+                if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
                     eprintln!(
                         "inline_effect_expression user_function={} expr={substituted:?}",
                         user_function.name
@@ -125,7 +125,7 @@ impl<'a> FunctionCompiler<'a> {
                     user_function,
                     call_arguments,
                 );
-                if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+                if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
                     eprintln!(
                         "inline_terminal_expression user_function={} expr={substituted:?}",
                         user_function.name
@@ -175,7 +175,7 @@ impl<'a> FunctionCompiler<'a> {
                             user_function,
                             call_arguments,
                         );
-                        if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+                        if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
                             eprintln!(
                                 "inline_summary_expression user_function={} expr={substituted:?}",
                                 user_function.name

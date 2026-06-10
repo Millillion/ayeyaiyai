@@ -15,7 +15,7 @@ impl FunctionBindingResolutionGuard {
         FUNCTION_BINDING_RESOLUTION_DEPTH.with(|depth| {
             let next = depth.get() + 1;
             if next > 256 {
-                if std::env::var_os("AYY_TRACE_FUNCTION_BINDINGS").is_some() {
+                if crate::ayy_env_flag!("AYY_TRACE_FUNCTION_BINDINGS") {
                     eprintln!(
                         "function_binding_resolution:depth_limit current_function={current_function_name:?} expression={expression:?}"
                     );

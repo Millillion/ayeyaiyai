@@ -25,7 +25,7 @@ impl<'a> FunctionCompiler<'a> {
             }
             _ => None,
         });
-        if std::env::var_os("AYY_TRACE_PROXY_DEFINE_PROPERTY").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_PROXY_DEFINE_PROPERTY") {
             eprintln!(
                 "derived_super_call:function={} found={} body={:?}",
                 user_function.name,
@@ -135,7 +135,7 @@ impl<'a> FunctionCompiler<'a> {
                     capture_source_bindings.as_ref(),
                 )
             });
-        if std::env::var_os("AYY_TRACE_PROXY_DEFINE_PROPERTY").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_PROXY_DEFINE_PROPERTY") {
             eprintln!(
                 "derived_super_replacement:function={} callee={substituted_callee:?} resolved_callee={resolved_callee:?} replacement={replacement:?}",
                 user_function.name,
@@ -198,7 +198,7 @@ impl<'a> FunctionCompiler<'a> {
             self.resolve_user_function_call_receiver_shadow_owner(this_expression)
             && source_owner != "this"
         {
-            if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                 eprintln!(
                     "derived_this_runtime_shadow_seed source_owner={source_owner} this_expression={this_expression:?}",
                 );
@@ -208,7 +208,7 @@ impl<'a> FunctionCompiler<'a> {
         }
 
         if let Some(object_binding) = self.resolve_object_binding_from_expression(this_expression) {
-            if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                 eprintln!(
                     "derived_this_runtime_shadow_seed_binding this_expression={this_expression:?}",
                 );
@@ -239,7 +239,7 @@ impl<'a> FunctionCompiler<'a> {
         if target_owner == "this" {
             return Ok(());
         }
-        if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
             eprintln!(
                 "derived_this_runtime_shadow_commit target_owner={target_owner} this_expression={this_expression:?}",
             );
@@ -259,8 +259,7 @@ impl<'a> FunctionCompiler<'a> {
                 callee: Box::new(Expression::Identifier(user_function.name.clone())),
                 arguments: arguments.to_vec(),
             });
-        let trace_proxy_define_property =
-            std::env::var_os("AYY_TRACE_PROXY_DEFINE_PROPERTY").is_some();
+        let trace_proxy_define_property = crate::ayy_env_flag!("AYY_TRACE_PROXY_DEFINE_PROPERTY");
         if trace_proxy_define_property {
             eprintln!(
                 "derived_this_sync:function={} this_expression={this_expression:?}",

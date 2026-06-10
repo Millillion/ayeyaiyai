@@ -145,7 +145,7 @@ impl<'a> FunctionCompiler<'a> {
         } else {
             self.collect_user_function_updated_nonlocal_bindings(user_function)
         };
-        if std::env::var_os("AYY_TRACE_CONSTRUCT_CALLS").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_CONSTRUCT_CALLS") {
             eprintln!(
                 "call_plan:function={} new_target={} assigned={assigned_nonlocal_bindings:?} call_effect={call_effect_nonlocal_bindings:?} updated={updated_nonlocal_bindings:?} additional={additional_call_effect_nonlocal_bindings:?} static_snapshot={enable_static_snapshot}",
                 user_function.name, new_target_value

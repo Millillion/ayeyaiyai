@@ -191,7 +191,7 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         expression: &Expression,
     ) -> Option<IteratorStepBinding> {
-        let trace = std::env::var_os("AYY_TRACE_ITERATOR_STEP").is_some();
+        let trace = crate::ayy_env_flag!("AYY_TRACE_ITERATOR_STEP");
         if let Expression::Identifier(name) = expression {
             if let Some(binding) = self
                 .state

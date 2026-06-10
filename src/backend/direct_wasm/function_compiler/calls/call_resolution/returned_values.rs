@@ -109,7 +109,7 @@ impl<'a> FunctionCompiler<'a> {
                 function_name,
             );
         };
-        let trace_inherited_bindings = std::env::var_os("AYY_TRACE_INHERITED_BINDINGS").is_some();
+        let trace_inherited_bindings = crate::ayy_env_flag!("AYY_TRACE_INHERITED_BINDINGS");
         if trace_inherited_bindings {
             eprintln!(
                 "normalize_returned_object_binding_after_runtime_user_call function={function_name} updates={updated_bindings:?} props={:?}",
@@ -959,7 +959,7 @@ impl<'a> FunctionCompiler<'a> {
     ) {
         let value =
             self.materialize_static_return_object_binding_expression_with_state(value, environment);
-        let trace_inherited_bindings = std::env::var_os("AYY_TRACE_INHERITED_BINDINGS").is_some();
+        let trace_inherited_bindings = crate::ayy_env_flag!("AYY_TRACE_INHERITED_BINDINGS");
         let Expression::New { callee, .. } = value else {
             if trace_inherited_bindings {
                 eprintln!("merge_static_local_private_constructor_markers:skip value={value:?}");
@@ -1420,7 +1420,7 @@ impl<'a> FunctionCompiler<'a> {
         callee: &Expression,
         arguments: &[CallArgument],
     ) -> Option<ObjectValueBinding> {
-        let trace_inherited_bindings = std::env::var_os("AYY_TRACE_INHERITED_BINDINGS").is_some();
+        let trace_inherited_bindings = crate::ayy_env_flag!("AYY_TRACE_INHERITED_BINDINGS");
         if trace_inherited_bindings {
             eprintln!(
                 "resolve_returned_object_binding_from_call:start callee={callee:?} argc={}",
@@ -1652,7 +1652,7 @@ impl<'a> FunctionCompiler<'a> {
         arguments: &[CallArgument],
         capture_source_bindings: Option<&HashMap<String, Expression>>,
     ) -> Option<ObjectValueBinding> {
-        let trace_inherited_bindings = std::env::var_os("AYY_TRACE_INHERITED_BINDINGS").is_some();
+        let trace_inherited_bindings = crate::ayy_env_flag!("AYY_TRACE_INHERITED_BINDINGS");
         if trace_inherited_bindings {
             eprintln!(
                 "resolve_static_returned_object_binding_from_user_function_call:start function={function_name} argc={}",

@@ -812,7 +812,7 @@ impl<'a> FunctionCompiler<'a> {
         name: &str,
         state: &PreparedIdentifierStoreState,
     ) -> DirectResult<()> {
-        let trace_capture_bindings = std::env::var_os("AYY_TRACE_CAPTURE_BINDINGS").is_some();
+        let trace_capture_bindings = crate::ayy_env_flag!("AYY_TRACE_CAPTURE_BINDINGS");
         let Some(LocalFunctionBinding::User(function_name)) = state.function_binding.as_ref()
         else {
             return Ok(());
@@ -1286,7 +1286,7 @@ impl<'a> FunctionCompiler<'a> {
         state: &PreparedIdentifierStoreState,
         ensure_descriptor: bool,
     ) -> DirectResult<()> {
-        let trace_identifier_store = std::env::var_os("AYY_TRACE_IDENTIFIER_STORE").is_some();
+        let trace_identifier_store = crate::ayy_env_flag!("AYY_TRACE_IDENTIFIER_STORE");
         let trace_step = |label: &str| {
             if trace_identifier_store {
                 eprintln!("identifier_store:{name}:global_metadata:{label}");

@@ -86,7 +86,7 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         expression: &Expression,
     ) -> DirectResult<bool> {
-        let trace_array_spread = std::env::var_os("AYY_TRACE_ARRAY_SPREAD").is_some();
+        let trace_array_spread = crate::ayy_env_flag!("AYY_TRACE_ARRAY_SPREAD");
         let Some(iterator_target) = self.resolve_static_get_iterator_value(expression, &[]) else {
             if trace_array_spread {
                 eprintln!("array_spread_static: no iterator target for {expression:?}");

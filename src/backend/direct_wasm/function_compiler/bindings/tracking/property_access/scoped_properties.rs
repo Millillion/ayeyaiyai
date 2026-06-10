@@ -346,7 +346,7 @@ impl<'a> FunctionCompiler<'a> {
             if let Some(shadow_binding_name) = self
                 .runtime_object_property_shadow_binding_name_for_expression(scope_object, &property)
             {
-                if std::env::var_os("AYY_TRACE_THIS_FLOW").is_some() {
+                if crate::ayy_env_flag!("AYY_TRACE_THIS_FLOW") {
                     eprintln!(
                         "this_flow shadow_metadata_write fn={:?} name={} value={materialized_value:?}",
                         self.current_function_name(),
@@ -574,7 +574,7 @@ impl<'a> FunctionCompiler<'a> {
         if let Some(scope_name) = scope_name {
             let resolved_scope_object_binding =
                 self.resolve_object_binding_from_expression(scope_object);
-            if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                 eprintln!(
                     "scoped_property_store scope_object={scope_object:?} scope_name={scope_name} property={name} hidden_this={:?}",
                     self.resolve_user_function_capture_hidden_name("this")

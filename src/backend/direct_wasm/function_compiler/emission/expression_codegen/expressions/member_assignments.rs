@@ -318,7 +318,7 @@ impl<'a> FunctionCompiler<'a> {
             right,
             self.current_function_name(),
         );
-        if std::env::var_os("AYY_TRACE_MEMBER_ASSIGNMENT").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_MEMBER_ASSIGNMENT") {
             eprintln!(
                 "function_constructor_global_this_update property={property:?} previous={previous_value:?} right={right:?} resolved={resolved:?}"
             );
@@ -351,7 +351,7 @@ impl<'a> FunctionCompiler<'a> {
         let emitted_value = self
             .static_function_constructor_global_this_update_value(&materialized_property, value)
             .unwrap_or_else(|| self.member_assignment_emission_value(value));
-        if std::env::var_os("AYY_TRACE_MEMBER_ASSIGNMENT").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_MEMBER_ASSIGNMENT") {
             eprintln!(
                 "function_constructor_global_this_emit property={materialized_property:?} value={value:?} emitted={emitted_value:?}"
             );
@@ -613,7 +613,7 @@ impl<'a> FunctionCompiler<'a> {
         property: &Expression,
         value: &Expression,
     ) -> DirectResult<()> {
-        let trace_member_assignment = std::env::var_os("AYY_TRACE_MEMBER_ASSIGNMENT").is_some();
+        let trace_member_assignment = crate::ayy_env_flag!("AYY_TRACE_MEMBER_ASSIGNMENT");
         if trace_member_assignment {
             eprintln!(
                 "member_assignment:start object={object:?} property={property:?} value={value:?}"

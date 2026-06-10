@@ -318,7 +318,7 @@ impl<'a> FunctionCompiler<'a> {
         statement: &Statement,
         next_statement: Option<&Statement>,
     ) -> Option<DestructuringDefaultIteratorClosePattern> {
-        let trace = std::env::var_os("AYY_TRACE_DESTRUCTURING_CLOSE").is_some();
+        let trace = crate::ayy_env_flag!("AYY_TRACE_DESTRUCTURING_CLOSE");
         let Statement::If {
             condition,
             then_branch,
@@ -2109,7 +2109,7 @@ impl<'a> FunctionCompiler<'a> {
     }
 
     pub(super) fn emit_structured_statement(&mut self, statement: &Statement) -> DirectResult<()> {
-        let trace_static_if = std::env::var_os("AYY_TRACE_STATIC_IF").is_some();
+        let trace_static_if = crate::ayy_env_flag!("AYY_TRACE_STATIC_IF");
         match statement {
             Statement::Declaration { body } => {
                 let global_static_semantics = self.backend.snapshot_global_static_semantics();

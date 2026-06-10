@@ -3881,7 +3881,7 @@ impl<'a> FunctionCompiler<'a> {
             "__assertNotSameValue" => BinaryOp::Equal,
             _ => return Ok(false),
         };
-        let trace_assertions = std::env::var_os("AYY_TRACE_ASSERTIONS").is_some();
+        let trace_assertions = crate::ayy_env_flag!("AYY_TRACE_ASSERTIONS");
         if trace_assertions {
             eprintln!(
                 "same_value_assertion:start name={name} actual={actual:?} expected={expected:?} fn={:?}",

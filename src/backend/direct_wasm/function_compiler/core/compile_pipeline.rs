@@ -23,7 +23,7 @@ impl<'a> FunctionCompiler<'a> {
         statements: &[Statement],
         initial_named_error: Option<&str>,
     ) -> DirectResult<CompiledFunction> {
-        let trace = std::env::var_os("AYY_TRACE_FUNCTION_COMPILE").is_some();
+        let trace = crate::ayy_env_flag!("AYY_TRACE_FUNCTION_COMPILE");
         if trace {
             eprintln!("function_compile=register_statements");
         }
@@ -317,7 +317,7 @@ impl<'a> FunctionCompiler<'a> {
     }
 
     fn should_enable_tail_restart_for_current_function(&self, statements: &[Statement]) -> bool {
-        let trace = std::env::var_os("AYY_TRACE_FUNCTION_COMPILE").is_some();
+        let trace = crate::ayy_env_flag!("AYY_TRACE_FUNCTION_COMPILE");
         if !self.state.runtime.behavior.allow_return
             || !self.state.parameters.arguments_slots.is_empty()
         {

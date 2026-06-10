@@ -434,7 +434,7 @@ impl<'a> FunctionCompiler<'a> {
         arguments: &[Expression],
         this_expression: &Expression,
     ) -> DirectResult<bool> {
-        let trace_user_calls = std::env::var_os("AYY_TRACE_USER_CALLS").is_some();
+        let trace_user_calls = crate::ayy_env_flag!("AYY_TRACE_USER_CALLS");
         let consumes_parameter_iterator = !self
             .user_function_parameter_iterator_consumption_indices(user_function)
             .is_empty();

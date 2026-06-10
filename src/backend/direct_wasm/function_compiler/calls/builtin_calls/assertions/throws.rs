@@ -1639,7 +1639,7 @@ impl<'a> FunctionCompiler<'a> {
         let caught_local = self.lookup_local(&caught_name)?;
 
         let inline_body = self.assert_throws_inline_callback_body(callback);
-        if std::env::var_os("AYY_TRACE_ASSERTIONS").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_ASSERTIONS") {
             eprintln!(
                 "assert_throws_call inline={} callback={callback:?}",
                 inline_body.is_some()
@@ -1754,7 +1754,7 @@ impl<'a> FunctionCompiler<'a> {
         let caught_local = self.lookup_local(&caught_name)?;
 
         let inline_body = self.assert_throws_inline_callback_body(callback);
-        if std::env::var_os("AYY_TRACE_ASSERTIONS").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_ASSERTIONS") {
             eprintln!(
                 "assert_throws_statement inline={} callback={callback:?}",
                 inline_body.is_some()

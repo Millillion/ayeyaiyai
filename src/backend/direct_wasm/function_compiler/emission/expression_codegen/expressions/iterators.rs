@@ -57,7 +57,7 @@ impl<'a> FunctionCompiler<'a> {
                     | StaticValueKind::Symbol
             )
         });
-        if std::env::var_os("AYY_TRACE_ITERATOR_CLOSE").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_ITERATOR_CLOSE") {
             let outcome_kind = match &outcome {
                 Some(StaticEvalOutcome::Value(_)) => "value",
                 Some(StaticEvalOutcome::Throw(_)) => "throw",
@@ -317,7 +317,7 @@ impl<'a> FunctionCompiler<'a> {
         expression: &Expression,
         property: &Expression,
     ) -> Option<HashMap<String, Expression>> {
-        let trace_iterator_close = std::env::var_os("AYY_TRACE_ITERATOR_CLOSE").is_some();
+        let trace_iterator_close = crate::ayy_env_flag!("AYY_TRACE_ITERATOR_CLOSE");
         if let Expression::Identifier(name) = expression
             && let Some(iterator_binding) = self
                 .state
@@ -557,7 +557,7 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         expression: &Expression,
     ) -> DirectResult<()> {
-        let trace_get_iterator = std::env::var_os("AYY_TRACE_GET_ITERATOR").is_some();
+        let trace_get_iterator = crate::ayy_env_flag!("AYY_TRACE_GET_ITERATOR");
         if trace_get_iterator {
             eprintln!("get_iterator:start expression={expression:?}");
         }
@@ -863,7 +863,7 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         expression: &Expression,
     ) -> DirectResult<()> {
-        let trace_iterator_close = std::env::var_os("AYY_TRACE_ITERATOR_CLOSE").is_some();
+        let trace_iterator_close = crate::ayy_env_flag!("AYY_TRACE_ITERATOR_CLOSE");
         if let Expression::Identifier(name) = expression
             && let Some(iterator_binding) = self
                 .state

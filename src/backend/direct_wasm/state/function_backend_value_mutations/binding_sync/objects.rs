@@ -6,7 +6,7 @@ impl<'a> FunctionCompilerBackend<'a> {
         name: &str,
         binding: Option<ObjectValueBinding>,
     ) {
-        if std::env::var_os("AYY_TRACE_GLOBAL_OBJECT_SYNC").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_GLOBAL_OBJECT_SYNC") {
             let (strings, symbols, descriptors) = binding
                 .as_ref()
                 .map(|binding| {

@@ -99,7 +99,7 @@ impl<'a> FunctionCompiler<'a> {
         function_name: &str,
         expression: &Expression,
     ) -> Option<BTreeMap<String, String>> {
-        let trace_private = std::env::var_os("AYY_TRACE_PRIVATE_MEMBER_LOOKUP").is_some();
+        let trace_private = crate::ayy_env_flag!("AYY_TRACE_PRIVATE_MEMBER_LOOKUP");
         let capture_bindings = self.user_function_capture_bindings(function_name)?;
         if capture_bindings.is_empty() {
             return None;
@@ -259,7 +259,7 @@ impl<'a> FunctionCompiler<'a> {
         this_expression: &Expression,
         capture_slots: Option<&BTreeMap<String, String>>,
     ) -> DirectResult<()> {
-        let trace_private = std::env::var_os("AYY_TRACE_PRIVATE_MEMBER_LOOKUP").is_some();
+        let trace_private = crate::ayy_env_flag!("AYY_TRACE_PRIVATE_MEMBER_LOOKUP");
         let expanded_arguments = self.expand_call_arguments(arguments);
         let simple_generator_call = Expression::Call {
             callee: Box::new(Expression::Identifier(user_function.name.clone())),

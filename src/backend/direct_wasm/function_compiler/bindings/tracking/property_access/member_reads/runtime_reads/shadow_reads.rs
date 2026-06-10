@@ -186,7 +186,7 @@ impl<'a> FunctionCompiler<'a> {
             } else {
                 fallback_value
             };
-        if is_private_property && std::env::var_os("AYY_TRACE_PRIVATE_MEMBER_LOOKUP").is_some() {
+        if is_private_property && crate::ayy_env_flag!("AYY_TRACE_PRIVATE_MEMBER_LOOKUP") {
             eprintln!(
                 "private_shadow_read object={object:?} property={property:?} fallback={fallback_value:?} deleted_present={} binding_present={}",
                 deleted_binding.is_some(),

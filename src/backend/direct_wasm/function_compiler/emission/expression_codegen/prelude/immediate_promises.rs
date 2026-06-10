@@ -260,7 +260,7 @@ impl<'a> FunctionCompiler<'a> {
             .or(source_value)
             .or(global_value)
             .cloned();
-        if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some()
+        if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES")
             && (name.contains("promiseForNamespace") || value.is_some())
         {
             eprintln!(
@@ -1073,7 +1073,7 @@ impl<'a> FunctionCompiler<'a> {
             && terminal_body_inlineable
             && registered_body_supported;
 
-        if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
             eprintln!(
                 "direct_async_implicit_completion_guard function={} safe={safe} is_async={is_async} no_generator={no_generator} parameter_defaults_ok={parameter_defaults_ok} no_lowered_patterns={no_lowered_patterns} no_extra_arguments={no_extra_arguments} no_try={no_try} this_inline_safe={this_inline_safe} this_no_descriptor_read={this_no_descriptor_read} this_no_shadowed_implicit_global={this_no_shadowed_implicit_global} arguments_inline_safe={arguments_inline_safe} arguments_no_shadowed_implicit_global={arguments_no_shadowed_implicit_global} no_private={no_private} no_direct_eval={no_direct_eval} identifier_callees_safe={identifier_callees_safe} no_restricted_function_property={no_restricted_function_property} captured_user_functions_ok={captured_user_functions_ok} terminal_body_inlineable={terminal_body_inlineable} registered_body_supported={registered_body_supported}",
                 user_function.name
@@ -1255,7 +1255,7 @@ impl<'a> FunctionCompiler<'a> {
         {
             let pending = std::mem::take(&mut self.state.emission.pending_static_promise_reactions);
             for (handler, argument) in pending {
-                if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+                if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
                     eprintln!(
                         "emit_pending_static_promise_reactions:handler={handler:?} argument={argument:?}"
                     );
@@ -1336,7 +1336,7 @@ impl<'a> FunctionCompiler<'a> {
             if let Expression::Identifier(source_name) = &source_expression
                 && let Some(existing_hidden_name) = capture_slots.get(source_name).cloned()
             {
-                if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+                if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
                     eprintln!(
                         "immediate_await_captures:reuse-capture function={returned_function_name} capture={capture_name} source={source_name} hidden={existing_hidden_name}"
                     );
@@ -1356,7 +1356,7 @@ impl<'a> FunctionCompiler<'a> {
                 self.infer_value_kind(&source_expression)
                     .unwrap_or(StaticValueKind::Unknown),
             );
-            if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
                 eprintln!(
                     "immediate_await_captures:install-capture function={returned_function_name} capture={capture_name} source={source_expression:?} hidden={hidden_name}"
                 );
@@ -1415,7 +1415,7 @@ impl<'a> FunctionCompiler<'a> {
         let LocalFunctionBinding::User(function_name) = binding else {
             return Ok(None);
         };
-        if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
             eprintln!(
                 "immediate_await_captures:user-start function={function_name} this={this_binding:?} args={call_arguments:?}"
             );
@@ -1426,7 +1426,7 @@ impl<'a> FunctionCompiler<'a> {
                 !self.user_function_mentions_private_member_access(user_function)
             })
             && {
-                if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+                if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
                     eprintln!("immediate_await_captures:snapshot-attempt function={function_name}");
                 }
                 true
@@ -1450,7 +1450,7 @@ impl<'a> FunctionCompiler<'a> {
                     this_binding,
                 )
         {
-            if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
                 eprintln!(
                     "immediate_await_captures:snapshot-result function={function_name} result={result:?} updated_keys={:?}",
                     updated_bindings.keys().collect::<Vec<_>>()
@@ -1528,7 +1528,7 @@ impl<'a> FunctionCompiler<'a> {
             {
                 value = Self::substitute_immediate_promise_bare_new_target(value);
             }
-            if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
                 eprintln!(
                     "immediate_await_captures:return-expression function={function_name} value={value:?}"
                 );
@@ -1899,7 +1899,7 @@ impl<'a> FunctionCompiler<'a> {
         let Expression::Call { callee, arguments } = resolution else {
             return Ok(self.resolve_static_await_resolution_outcome(resolution));
         };
-        if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
             eprintln!("immediate_await_captures:resolution-call {resolution:?}");
         }
         if matches!(
@@ -1993,7 +1993,7 @@ impl<'a> FunctionCompiler<'a> {
         let Some(binding) = binding else {
             return Ok(None);
         };
-        if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
             eprintln!(
                 "immediate_await_captures:bound-call object={object:?} this_args={bind_arguments:?} call_args={arguments:?} binding={binding:?}"
             );
@@ -2445,7 +2445,7 @@ impl<'a> FunctionCompiler<'a> {
         property: &Expression,
         arguments: &[CallArgument],
     ) -> DirectResult<bool> {
-        let trace_inline_promises = std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some();
+        let trace_inline_promises = crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES");
         if trace_inline_promises {
             eprintln!(
                 "tick_order_return_call:start object={object:?} property={property:?} arguments={arguments:?}"
@@ -3094,7 +3094,7 @@ impl<'a> FunctionCompiler<'a> {
             self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
             return Ok(true);
         };
-        if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
             eprintln!(
                 "emit_static_top_level_promise_then_statement:queued handler={handler:?} argument={argument:?}"
             );
@@ -4076,7 +4076,7 @@ impl<'a> FunctionCompiler<'a> {
                 );
             }
         }
-        if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() && !handlers.is_empty() {
+        if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") && !handlers.is_empty() {
             eprintln!(
                 "queue_static_module_dependency_promise_reactions resolver={callee:?} promise={namespace_name}.{promise_name} handlers={handlers:?}"
             );
@@ -4241,7 +4241,7 @@ impl<'a> FunctionCompiler<'a> {
         argument: &Expression,
         allow_inline: bool,
     ) -> DirectResult<()> {
-        if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
             eprintln!(
                 "emit_immediate_promise_callback:start callback={callback:?} argument={argument:?} allow_inline={allow_inline}"
             );
@@ -4327,7 +4327,7 @@ impl<'a> FunctionCompiler<'a> {
             let callback_body_mentions_promise_chain =
                 self.registered_function_body_mentions_promise_like_chain(&user_function.name);
             let allow_callback_inline = allow_inline;
-            if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
                 eprintln!(
                     "emit_immediate_promise_callback:user-function name={}",
                     user_function.name
@@ -4357,7 +4357,7 @@ impl<'a> FunctionCompiler<'a> {
             self.clear_global_throw_state();
             let bound_capture_slots =
                 self.resolve_function_expression_capture_slots(&effective_callback);
-            if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
                 eprintln!(
                     "emit_immediate_promise_callback:capture-slots-present={}",
                     bound_capture_slots.is_some()
@@ -4367,7 +4367,7 @@ impl<'a> FunctionCompiler<'a> {
                 user_function.has_lowered_pattern_parameters() && bound_capture_slots.is_some();
             if allow_callback_inline && inline_safe_argument && !lowered_pattern_with_bound_captures
             {
-                if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+                if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
                     eprintln!(
                         "emit_immediate_promise_callback:check-explicit-call-frame-inline name={}",
                         user_function.name
@@ -4379,7 +4379,7 @@ impl<'a> FunctionCompiler<'a> {
                         std::slice::from_ref(&effective_argument),
                         &Expression::Undefined,
                     );
-                if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+                if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
                     eprintln!(
                         "emit_immediate_promise_callback:check-explicit-call-frame-inline:result name={} can_inline={can_inline_with_explicit_call_frame}",
                         user_function.name
@@ -4393,7 +4393,7 @@ impl<'a> FunctionCompiler<'a> {
                         &Expression::Undefined,
                         result_local,
                     )? {
-                        if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+                        if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
                             eprintln!(
                                 "emit_immediate_promise_callback:inlined-explicit-call-frame"
                             );
@@ -4415,7 +4415,7 @@ impl<'a> FunctionCompiler<'a> {
                         &Expression::Undefined,
                         result_local,
                     )? {
-                        if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+                        if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
                             eprintln!("emit_immediate_promise_callback:inlined-promise-assertion");
                         }
                         self.push_local_get(result_local);
@@ -4435,7 +4435,7 @@ impl<'a> FunctionCompiler<'a> {
                         &Expression::Undefined,
                         result_local,
                     )? {
-                        if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+                        if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
                             eprintln!("emit_immediate_promise_callback:inlined-body");
                         }
                         self.push_local_get(result_local);
@@ -4476,14 +4476,14 @@ impl<'a> FunctionCompiler<'a> {
                 .registered_function(&user_function.name)
                 .map(|function| function.body.clone());
             if let Some(callback_body) = callback_body.as_ref() {
-                if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+                if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
                     eprintln!(
                         "emit_immediate_promise_callback:sync-visible-runtime-bindings:start name={}",
                         user_function.name
                     );
                 }
                 self.sync_visible_runtime_bindings_for_statements(callback_body)?;
-                if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+                if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
                     eprintln!(
                         "emit_immediate_promise_callback:sync-visible-runtime-bindings:done name={}",
                         user_function.name
@@ -4493,7 +4493,7 @@ impl<'a> FunctionCompiler<'a> {
             let callback_arguments =
                 vec![CallArgument::Expression(runtime_callback_argument.clone())];
             if let Some(bound_capture_slots) = bound_capture_slots.as_ref() {
-                if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+                if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
                     eprintln!(
                         "emit_immediate_promise_callback:emit-bound-captures-call name={}",
                         user_function.name
@@ -4518,7 +4518,7 @@ impl<'a> FunctionCompiler<'a> {
                 }
             } else {
                 if allow_callback_inline && inline_safe_argument {
-                    if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+                    if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
                         eprintln!(
                             "emit_immediate_promise_callback:emit-user-call-inline-path name={}",
                             user_function.name
@@ -4526,7 +4526,7 @@ impl<'a> FunctionCompiler<'a> {
                     }
                     self.emit_user_function_call(&user_function, &callback_arguments)?;
                 } else {
-                    if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+                    if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
                         eprintln!(
                             "emit_immediate_promise_callback:emit-user-call-runtime-path name={}",
                             user_function.name
@@ -4544,14 +4544,14 @@ impl<'a> FunctionCompiler<'a> {
                     )?;
                 }
             }
-            if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
                 eprintln!(
                     "emit_immediate_promise_callback:user-call-done name={}",
                     user_function.name
                 );
             }
         } else {
-            if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
                 eprintln!("emit_immediate_promise_callback:dynamic-callback");
             }
             self.emit_numeric_expression(&Expression::Call {
@@ -4578,7 +4578,7 @@ impl<'a> FunctionCompiler<'a> {
         {
             return Ok(false);
         }
-        if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
             eprintln!(
                 "emit_fulfilled_promise_protocol_member_call object={object:?} property={property_name} arguments={arguments:?}"
             );
@@ -4855,7 +4855,7 @@ impl<'a> FunctionCompiler<'a> {
             && (self.expression_is_async_generator_call_receiver(object)
                 || self.is_async_generator_iterator_expression(object))
         {
-            if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
                 eprintln!(
                     "consume_immediate_promise_outcome:skip-async-generator-return-materialize expr={expression:?}"
                 );
@@ -4870,7 +4870,7 @@ impl<'a> FunctionCompiler<'a> {
         if let Expression::Call { callee, .. } = expression
             && matches!(callee.as_ref(), Expression::Call { .. })
         {
-            if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
                 eprintln!(
                     "consume_immediate_promise_outcome:skip-materialization-indirect-callee expr={expression:?}"
                 );
@@ -4885,7 +4885,7 @@ impl<'a> FunctionCompiler<'a> {
             )
             && matches!(object.as_ref(), Expression::Call { .. })
         {
-            if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
                 eprintln!(
                     "consume_immediate_promise_outcome:skip-materialization-nested-chain expr={expression:?}"
                 );
@@ -4899,7 +4899,7 @@ impl<'a> FunctionCompiler<'a> {
         if let Expression::Call { callee, .. } = expression
             && matches!(callee.as_ref(), Expression::Call { .. })
         {
-            if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
                 eprintln!(
                     "consume_immediate_promise_outcome:skip-materialization-indirect-callee expr={expression:?}"
                 );
@@ -4914,7 +4914,7 @@ impl<'a> FunctionCompiler<'a> {
             )
             && matches!(object.as_ref(), Expression::Call { .. })
         {
-            if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
                 eprintln!(
                     "consume_immediate_promise_outcome:skip-materialization-nested-chain expr={expression:?}"
                 );
@@ -5141,7 +5141,7 @@ impl<'a> FunctionCompiler<'a> {
         let Some(returned_value) = returned_value else {
             return Ok(None);
         };
-        if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
             eprintln!(
                 "direct_function_returned_promise function={function_name} value={returned_value:?}"
             );
@@ -5418,7 +5418,7 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         expression: &Expression,
     ) -> DirectResult<Option<StaticEvalOutcome>> {
-        if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
             eprintln!("consume_immediate_promise_outcome:start expr={expression:?}");
         }
         let Expression::Call { callee, arguments } = expression else {
@@ -5437,7 +5437,7 @@ impl<'a> FunctionCompiler<'a> {
                         self.promise_handler_requires_runtime_chain(handler)
                     }
                 });
-        if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
             eprintln!(
                 "consume_immediate_promise_outcome:property={} handlers_require_runtime_chain={}",
                 property_name, handlers_require_runtime_chain
@@ -5514,7 +5514,7 @@ impl<'a> FunctionCompiler<'a> {
                             ));
                         }
                     }
-                    if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+                    if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
                         eprintln!(
                             "consume_immediate_promise_outcome:skip-async-generator-{property_name}"
                         );
@@ -5628,14 +5628,14 @@ impl<'a> FunctionCompiler<'a> {
             }
             "then" | "catch" | "finally" => {
                 let Some(base_outcome) = self.consume_immediate_promise_outcome(object)? else {
-                    if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+                    if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
                         eprintln!(
                             "consume_immediate_promise_outcome:no-base-outcome property={property_name}"
                         );
                     }
                     return Ok(None);
                 };
-                if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+                if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
                     let outcome_kind = match &base_outcome {
                         StaticEvalOutcome::Value(_) => "value",
                         StaticEvalOutcome::Throw(_) => "throw",
@@ -5670,14 +5670,14 @@ impl<'a> FunctionCompiler<'a> {
                     };
 
                 let Some(handler) = selected_handler else {
-                    if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+                    if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
                         eprintln!(
                             "consume_immediate_promise_outcome:no-selected-handler property={property_name}"
                         );
                     }
                     return Ok(Some(passthrough_outcome));
                 };
-                if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+                if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
                     eprintln!(
                         "consume_immediate_promise_outcome:handler-selected property={} handler={handler:?}",
                         property_name
@@ -5701,7 +5701,7 @@ impl<'a> FunctionCompiler<'a> {
                     {
                         return Ok(Some(StaticEvalOutcome::Throw(throw_value)));
                     }
-                    if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+                    if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
                         eprintln!("consume_immediate_promise_outcome:finally-handler-emitted");
                     }
                     return Ok(Some(passthrough_outcome));
@@ -5725,7 +5725,7 @@ impl<'a> FunctionCompiler<'a> {
                             &value,
                             allow_inline_handler,
                         )?;
-                        if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+                        if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
                             eprintln!(
                                 "consume_immediate_promise_outcome:throw-handler-emitted property={property_name}"
                             );
@@ -5764,7 +5764,7 @@ impl<'a> FunctionCompiler<'a> {
                         handler_argument,
                         allow_inline_handler,
                     )?;
-                } else if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+                } else if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
                     eprintln!(
                         "consume_immediate_promise_outcome:skip-callback-body-return-chain handler={handler:?}"
                     );
@@ -5774,7 +5774,7 @@ impl<'a> FunctionCompiler<'a> {
                 } else {
                     self.immediate_promise_callback_return_outcome(&handler, handler_argument)?
                 };
-                if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+                if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
                     eprintln!(
                         "consume_immediate_promise_outcome:value-handler-emitted property={property_name}"
                     );
@@ -5816,7 +5816,7 @@ impl<'a> FunctionCompiler<'a> {
         property: &Expression,
         arguments: &[CallArgument],
     ) -> DirectResult<bool> {
-        if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
             eprintln!(
                 "emit_immediate_promise_member_call:start object={object:?} property={property:?} arguments={arguments:?}"
             );
@@ -5836,7 +5836,7 @@ impl<'a> FunctionCompiler<'a> {
                 .is_some())
             && Self::call_is_promise_like_chain(object)
         {
-            if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
                 eprintln!(
                     "emit_immediate_promise_member_call:tick-order-promise-chain-fallback object={object:?} property={property:?}"
                 );
@@ -5852,7 +5852,7 @@ impl<'a> FunctionCompiler<'a> {
             arguments: arguments.to_vec(),
         })?
         else {
-            if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
                 eprintln!(
                     "emit_immediate_promise_member_call:no-static-outcome object={object:?} property={property:?}"
                 );
@@ -5872,7 +5872,7 @@ impl<'a> FunctionCompiler<'a> {
                 || self.expression_is_dynamic_import_promise_reference(object)
                 || self.expression_is_async_function_prototype_call(object)
             {
-                if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+                if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
                     eprintln!(
                         "emit_immediate_promise_member_call:promise-like-fallback object={object:?} property={property:?}"
                     );
@@ -5923,14 +5923,14 @@ impl<'a> FunctionCompiler<'a> {
                 self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
                 return Ok(true);
             }
-            if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
                 eprintln!(
                     "emit_immediate_promise_member_call:dynamic-fallback object={object:?} property={property:?}"
                 );
             }
             return Ok(false);
         };
-        if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
             eprintln!(
                 "emit_immediate_promise_member_call:consumed object={object:?} property={property:?}"
             );

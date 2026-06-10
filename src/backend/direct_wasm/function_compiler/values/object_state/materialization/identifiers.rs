@@ -57,7 +57,7 @@ impl<'a> FunctionCompiler<'a> {
         }
         if name.starts_with("__ayy_target_object_") || name.starts_with("__ayy_target_property_") {
             let resolved_target_alias = self.resolve_bound_alias_expression(expression);
-            if std::env::var_os("AYY_TRACE_MEMBER_ASSIGNMENT").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_MEMBER_ASSIGNMENT") {
                 eprintln!("materialize_target_temp name={name} alias={resolved_target_alias:?}");
             }
             if let Some(resolved) = resolved_target_alias

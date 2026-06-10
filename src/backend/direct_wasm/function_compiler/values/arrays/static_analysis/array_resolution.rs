@@ -125,7 +125,7 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         expression: &Expression,
     ) -> Option<ArrayValueBinding> {
-        let trace_for_in_keys = std::env::var_os("AYY_TRACE_FOR_IN_KEYS").is_some();
+        let trace_for_in_keys = crate::ayy_env_flag!("AYY_TRACE_FOR_IN_KEYS");
         if let Some(module_index) = self.module_namespace_index_from_expression(expression) {
             let result = self
                 .resolve_static_dynamic_import_namespace_own_property_names_binding(module_index);
@@ -586,7 +586,7 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         expression: &Expression,
     ) -> Option<ArrayValueBinding> {
-        if std::env::var_os("AYY_TRACE_FOR_IN_KEYS").is_some()
+        if crate::ayy_env_flag!("AYY_TRACE_FOR_IN_KEYS")
             && matches!(expression, Expression::EnumerateKeys(_))
         {
             eprintln!("for_in_keys:resolve_array expression={expression:?}");

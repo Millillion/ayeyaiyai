@@ -7,7 +7,7 @@ impl<'a> FunctionCompiler<'a> {
         static_index: Option<usize>,
         snapshot_bindings: Option<HashMap<String, Expression>>,
     ) {
-        if std::env::var_os("AYY_TRACE_ASYNC_DELEGATES").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_ASYNC_DELEGATES") {
             eprintln!(
                 "async_delegate_persist binding={} static_index={:?} snapshot={}",
                 binding_name,

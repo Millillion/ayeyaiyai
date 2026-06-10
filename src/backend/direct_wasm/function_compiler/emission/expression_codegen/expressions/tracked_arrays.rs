@@ -146,7 +146,7 @@ impl<'a> FunctionCompiler<'a> {
         object: &Expression,
         arguments: &[CallArgument],
     ) -> DirectResult<bool> {
-        let trace = std::env::var_os("AYY_TRACE_TRACKED_ARRAY_PUSH").is_some();
+        let trace = crate::ayy_env_flag!("AYY_TRACE_TRACKED_ARRAY_PUSH");
         let binding_name = if let Expression::Identifier(name) = object {
             if self
                 .state

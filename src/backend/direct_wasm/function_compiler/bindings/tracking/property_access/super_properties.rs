@@ -73,7 +73,7 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         current_function_name: Option<&str>,
     ) -> Option<Expression> {
-        let trace_super_resolution = std::env::var_os("AYY_TRACE_SUPER_RESOLUTION").is_some();
+        let trace_super_resolution = crate::ayy_env_flag!("AYY_TRACE_SUPER_RESOLUTION");
         let function_name = current_function_name?;
         if let Some(function) = self.resolve_registered_function_declaration(function_name)
             && function.derived_constructor
@@ -317,7 +317,7 @@ impl<'a> FunctionCompiler<'a> {
         property: &Expression,
         current_function_name: Option<&str>,
     ) -> Option<Expression> {
-        let trace_super_resolution = std::env::var_os("AYY_TRACE_SUPER_RESOLUTION").is_some();
+        let trace_super_resolution = crate::ayy_env_flag!("AYY_TRACE_SUPER_RESOLUTION");
         let base = self.resolve_super_base_expression_with_context(current_function_name)?;
         let materialized_property = self.materialize_static_expression(property);
         let resolved = self

@@ -130,7 +130,7 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         value: &Expression,
     ) -> Vec<ReturnedMemberFunctionBinding> {
-        let trace_inherited_bindings = std::env::var_os("AYY_TRACE_INHERITED_BINDINGS").is_some();
+        let trace_inherited_bindings = crate::ayy_env_flag!("AYY_TRACE_INHERITED_BINDINGS");
         if trace_inherited_bindings {
             eprintln!("inherited_member_function_bindings:start value={value:?}");
         }

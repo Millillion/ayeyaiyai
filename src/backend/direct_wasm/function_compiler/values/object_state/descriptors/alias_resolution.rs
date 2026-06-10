@@ -138,7 +138,7 @@ impl<'a> FunctionCompiler<'a> {
         expression: &Expression,
     ) -> Option<Expression> {
         let _guard = BoundAliasResolutionGuard::enter(expression);
-        let trace_private = std::env::var_os("AYY_TRACE_PRIVATE_MEMBER_LOOKUP").is_some();
+        let trace_private = crate::ayy_env_flag!("AYY_TRACE_PRIVATE_MEMBER_LOOKUP");
         let mut current = expression;
         let mut current_owned = None;
         let mut visited = HashSet::new();

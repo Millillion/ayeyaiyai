@@ -559,7 +559,7 @@ impl<'a> FunctionCompiler<'a> {
             let lexical_initialized_local = resolved_local_binding
                 .as_ref()
                 .and_then(|(resolved_name, _)| self.local_lexical_initialized_local(resolved_name));
-            if std::env::var_os("AYY_TRACE_CAPTURE_BINDINGS").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_CAPTURE_BINDINGS") {
                 eprintln!(
                     "capture_prepare fn={function_name} source={source_name} capture_source={capture_source_name} hidden={hidden_name} resolved={:?} initialized_local={:?} statically_uninitialized={}",
                     resolved_local_binding,

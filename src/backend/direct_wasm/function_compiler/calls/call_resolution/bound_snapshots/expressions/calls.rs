@@ -72,7 +72,7 @@ impl<'a> FunctionCompiler<'a> {
                 )
                 .then_some(true)
             });
-            if std::env::var_os("AYY_TRACE_BOUND_SNAPSHOT").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_BOUND_SNAPSHOT") {
                 eprintln!(
                     "bound_snapshot_assert_same_value actual={actual:?} expected={expected:?} result={result:?}"
                 );

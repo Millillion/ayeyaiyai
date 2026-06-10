@@ -380,7 +380,7 @@ impl<'a> FunctionCompiler<'a> {
             return self.expression_is_known_object_like_value_for_instanceof(&materialized);
         }
         let object_binding = self.resolve_object_binding_from_expression(&materialized);
-        if std::env::var_os("AYY_TRACE_INSTANCEOF").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_INSTANCEOF") {
             eprintln!(
                 "instanceof:object_like expression={expression:?} materialized={materialized:?} object_binding={} kind={:?}",
                 object_binding.is_some(),

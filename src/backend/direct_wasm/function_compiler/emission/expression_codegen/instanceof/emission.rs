@@ -165,7 +165,7 @@ impl<'a> FunctionCompiler<'a> {
                         left,
                         &Self::prototype_member_expression(name),
                     );
-                if std::env::var_os("AYY_TRACE_INSTANCEOF").is_some() {
+                if crate::ayy_env_flag!("AYY_TRACE_INSTANCEOF") {
                     eprintln!(
                         "instanceof:native_error left={left:?} right={right:?} materialized_right={materialized_right:?} static_result={static_result}"
                     );
@@ -267,7 +267,7 @@ impl<'a> FunctionCompiler<'a> {
             } else {
                 self.expression_inherits_from_prototype_for_instanceof(left, &prototype_expression)
             };
-            if std::env::var_os("AYY_TRACE_INSTANCEOF").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_INSTANCEOF") {
                 eprintln!(
                     "instanceof:prototype left={left:?} right={right:?} materialized_right={materialized_right:?} prototype={prototype_expression:?} static_result={static_result}"
                 );

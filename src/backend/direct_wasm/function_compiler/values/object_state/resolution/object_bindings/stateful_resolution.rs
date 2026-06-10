@@ -637,7 +637,7 @@ impl<'a> FunctionCompiler<'a> {
         environment: &mut StaticResolutionEnvironment,
     ) -> Option<ObjectValueBinding> {
         static TRACE_COUNT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
-        let trace_copy_data = std::env::var_os("AYY_TRACE_COPY_DATA").is_some()
+        let trace_copy_data = crate::ayy_env_flag!("AYY_TRACE_COPY_DATA")
             && TRACE_COUNT.fetch_add(1, std::sync::atomic::Ordering::Relaxed) < 4;
         let proxy_binding =
             self.resolve_proxy_binding_from_expression_with_state(expression, environment, 0)?;
@@ -931,7 +931,7 @@ impl<'a> FunctionCompiler<'a> {
                             },
                             |object, property, environment| {
                                 let trace_copy_data =
-                                    std::env::var_os("AYY_TRACE_COPY_DATA").is_some();
+                                    crate::ayy_env_flag!("AYY_TRACE_COPY_DATA");
                                 let binding =
                                     self.resolve_member_getter_binding(object, property)?;
                                 if trace_copy_data {

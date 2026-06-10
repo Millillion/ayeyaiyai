@@ -417,7 +417,7 @@ impl<'a> FunctionCompiler<'a> {
         then_snapshot: &GlobalStaticSemanticsSnapshot,
         else_snapshot: Option<&GlobalStaticSemanticsSnapshot>,
     ) {
-        let trace_static_if = std::env::var_os("AYY_TRACE_STATIC_IF").is_some();
+        let trace_static_if = crate::ayy_env_flag!("AYY_TRACE_STATIC_IF");
         for name in invalidated_bindings {
             let else_snapshot = else_snapshot.unwrap_or(base_snapshot);
             let then_runtime_array = then_snapshot

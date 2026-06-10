@@ -1550,7 +1550,7 @@ impl<'a> FunctionCompiler<'a> {
         break_hook: Option<&Expression>,
         body: &[Statement],
     ) -> DirectResult<()> {
-        let trace_loop = std::env::var_os("AYY_TRACE_LOOP_INVALIDATION").is_some();
+        let trace_loop = crate::ayy_env_flag!("AYY_TRACE_LOOP_INVALIDATION");
         let fallback_condition = Expression::Bool(true);
         let invalidated_bindings = self
             .collect_loop_assigned_binding_names_with_effectful_iterators(

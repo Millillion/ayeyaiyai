@@ -32,7 +32,7 @@ impl<'a> FunctionCompiler<'a> {
         object: &Expression,
         property: &Expression,
     ) -> DirectResult<bool> {
-        let trace_member_reads = std::env::var_os("AYY_TRACE_MEMBER_READS").is_some();
+        let trace_member_reads = crate::ayy_env_flag!("AYY_TRACE_MEMBER_READS");
         let dynamic_descriptor_member = if let (
             Expression::Identifier(name),
             Expression::String(property_name),
@@ -69,7 +69,7 @@ impl<'a> FunctionCompiler<'a> {
         {
             return Ok(false);
         }
-        if std::env::var_os("AYY_TRACE_PRIVATE_MEMBER_LOOKUP").is_some()
+        if crate::ayy_env_flag!("AYY_TRACE_PRIVATE_MEMBER_LOOKUP")
             && matches!(property, Expression::String(name) if name.starts_with("__ayy$private$"))
         {
             eprintln!(
@@ -100,7 +100,7 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(false);
         }
         if let Some(function_binding) = self.resolve_member_getter_binding(object, property) {
-            if std::env::var_os("AYY_TRACE_RESTRICTED_PROPERTIES").is_some()
+            if crate::ayy_env_flag!("AYY_TRACE_RESTRICTED_PROPERTIES")
                 && matches!(property, Expression::String(property_name) if property_name == "caller" || property_name == "arguments")
             {
                 eprintln!(
@@ -152,7 +152,7 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(true);
         }
         if let Some(function_binding) = self.resolve_member_function_binding(object, property) {
-            if std::env::var_os("AYY_TRACE_RESTRICTED_PROPERTIES").is_some()
+            if crate::ayy_env_flag!("AYY_TRACE_RESTRICTED_PROPERTIES")
                 && matches!(property, Expression::String(property_name) if property_name == "caller" || property_name == "arguments")
             {
                 eprintln!(
@@ -187,7 +187,7 @@ impl<'a> FunctionCompiler<'a> {
             }
         }
         if self.is_restricted_function_property(object, property) {
-            if std::env::var_os("AYY_TRACE_RESTRICTED_PROPERTIES").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_RESTRICTED_PROPERTIES") {
                 eprintln!(
                     "restricted_property_read throw current_fn={:?} object={object:?} property={property:?}",
                     self.current_function_name(),

@@ -154,7 +154,7 @@ impl<'a> FunctionCompiler<'a> {
             self.resolve_arguments_binding_from_expression(&state.tracked_value_expression);
         let canonical =
             self.resolve_arguments_binding_from_expression(&state.canonical_value_expression);
-        if std::env::var_os("AYY_TRACE_IDENTIFIER_STORE").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_IDENTIFIER_STORE") {
             eprintln!(
                 "identifier_store:{}:arguments_binding tracked={} canonical={}",
                 state.resolved_name,
@@ -380,7 +380,7 @@ impl<'a> FunctionCompiler<'a> {
             _ => return Ok(false),
         }
 
-        if std::env::var_os("AYY_TRACE_IDENTIFIER_STORE").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_IDENTIFIER_STORE") {
             eprintln!("identifier_store:{name}:static_iterator_result_fast");
         }
         Ok(true)
@@ -518,7 +518,7 @@ impl<'a> FunctionCompiler<'a> {
         }
         self.preserve_internal_fresh_null_prototype_object_bindings(name, state);
 
-        if std::env::var_os("AYY_TRACE_IDENTIFIER_STORE").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_IDENTIFIER_STORE") {
             eprintln!("identifier_store:{name}:fresh_null_object_global_init_fast");
         }
         Ok(true)
@@ -619,7 +619,7 @@ impl<'a> FunctionCompiler<'a> {
         initialize_declared_global: bool,
         target: IdentifierReferenceStoreTarget,
     ) -> DirectResult<()> {
-        let trace_identifier_store = std::env::var_os("AYY_TRACE_IDENTIFIER_STORE").is_some();
+        let trace_identifier_store = crate::ayy_env_flag!("AYY_TRACE_IDENTIFIER_STORE");
         let PreparedIdentifierValueStore {
             canonical_value_expression,
             tracked_value_expression,
@@ -993,14 +993,14 @@ impl<'a> FunctionCompiler<'a> {
         unresolvable_reference: bool,
     ) -> DirectResult<()> {
         if self.assignment_targets_immutable_class_binding(name) {
-            if std::env::var_os("AYY_TRACE_IDENTIFIER_STORE").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_IDENTIFIER_STORE") {
                 eprintln!("identifier_store:{name}:immutable_class_binding_type_error");
             }
             self.emit_named_error_throw("TypeError")?;
             return Ok(());
         }
         if self.assignment_targets_immutable_function_self_binding(name) {
-            if std::env::var_os("AYY_TRACE_IDENTIFIER_STORE").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_IDENTIFIER_STORE") {
                 eprintln!("identifier_store:{name}:immutable_function_self_binding");
             }
             if self.state.speculation.execution_context.strict_mode {

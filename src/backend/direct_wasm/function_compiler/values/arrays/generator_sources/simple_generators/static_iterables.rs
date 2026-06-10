@@ -746,7 +746,7 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         expression: &Expression,
     ) -> Option<(Vec<SimpleGeneratorStep>, Vec<Statement>, Expression)> {
-        let trace = std::env::var_os("AYY_TRACE_STATIC_ITERATOR_OBJECT").is_some();
+        let trace = crate::ayy_env_flag!("AYY_TRACE_STATIC_ITERATOR_OBJECT");
         macro_rules! trace {
             ($($arg:tt)*) => {
                 if trace {

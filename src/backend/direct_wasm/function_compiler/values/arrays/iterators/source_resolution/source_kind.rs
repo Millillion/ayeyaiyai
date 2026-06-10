@@ -315,7 +315,7 @@ impl<'a> FunctionCompiler<'a> {
         }
         let structural_key = format!("{expression:?}");
         let trace_focus = std::env::var("AYY_TRACE_ITERATOR_SOURCE_FOCUS").ok();
-        let trace_iterator_source = std::env::var_os("AYY_TRACE_ITERATOR_SOURCE_KIND").is_some()
+        let trace_iterator_source = crate::ayy_env_flag!("AYY_TRACE_ITERATOR_SOURCE_KIND")
             && trace_focus
                 .as_ref()
                 .is_none_or(|focus| structural_key.contains(focus));

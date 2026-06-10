@@ -113,7 +113,7 @@ impl<'a> FunctionCompiler<'a> {
             },
             None => None,
         };
-        if std::env::var_os("AYY_TRACE_ASYNC_DELEGATES").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_ASYNC_DELEGATES") {
             eprintln!(
                 "async_delegate_finalize property={} returned_done={:?} returned_value={:?} next_static_index={next_static_index:?}",
                 property_name,

@@ -1109,7 +1109,7 @@ impl<'a> FunctionCompiler<'a> {
         user_function: &UserFunction,
         capture_slots: &BTreeMap<String, String>,
     ) -> DirectResult<Vec<PreparedBoundCaptureBinding>> {
-        let trace_capture_bindings = std::env::var_os("AYY_TRACE_CAPTURE_BINDINGS").is_some();
+        let trace_capture_bindings = crate::ayy_env_flag!("AYY_TRACE_CAPTURE_BINDINGS");
         let Some(capture_bindings) = self.user_function_capture_bindings(&user_function.name)
         else {
             if trace_capture_bindings {
@@ -1616,7 +1616,7 @@ impl<'a> FunctionCompiler<'a> {
                     value
                 };
                 if binding.source_binding_name.as_deref() == Some("this") {
-                    if std::env::var_os("AYY_TRACE_THIS_FLOW").is_some() {
+                    if crate::ayy_env_flag!("AYY_TRACE_THIS_FLOW") {
                         eprintln!(
                             "this_flow bound_capture_sync fn={:?} capture_hidden={} updated_value={value:?} global_binding={:?}",
                             self.current_function_name(),
@@ -1686,7 +1686,7 @@ impl<'a> FunctionCompiler<'a> {
                 }
             } else {
                 if binding.source_binding_name.as_deref() == Some("this") {
-                    if std::env::var_os("AYY_TRACE_THIS_FLOW").is_some() {
+                    if crate::ayy_env_flag!("AYY_TRACE_THIS_FLOW") {
                         eprintln!(
                             "this_flow bound_capture_sync fn={:?} capture_hidden={} global_binding={:?}",
                             self.current_function_name(),
@@ -1948,7 +1948,7 @@ impl<'a> FunctionCompiler<'a> {
         if is_globally_bound
             && !matches!(preserved_value, Expression::Identifier(ref identifier) if identifier == name)
         {
-            if std::env::var_os("AYY_TRACE_CAPTURE_BINDINGS").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_CAPTURE_BINDINGS") {
                 eprintln!("capture_bindings sync_source name={name} value={preserved_value:?}");
             }
             self.update_static_global_assignment_metadata(name, &preserved_value);

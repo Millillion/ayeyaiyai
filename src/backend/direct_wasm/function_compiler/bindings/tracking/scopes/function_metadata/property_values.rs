@@ -39,7 +39,7 @@ impl<'a> FunctionCompiler<'a> {
         object: &Expression,
         property: &Expression,
     ) -> Option<u32> {
-        let trace_function_length = std::env::var_os("AYY_TRACE_FUNCTION_LENGTH").is_some();
+        let trace_function_length = crate::ayy_env_flag!("AYY_TRACE_FUNCTION_LENGTH");
         let resolved_object = self
             .resolve_bound_alias_expression(object)
             .filter(|resolved| !static_expression_matches(resolved, object));

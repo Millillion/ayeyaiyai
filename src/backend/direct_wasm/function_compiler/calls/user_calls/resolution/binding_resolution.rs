@@ -342,8 +342,12 @@ impl<'a> FunctionCompiler<'a> {
 
         // An own accessor (e.g. `static set arguments(v)`) shadows the
         // Function.prototype poisoned accessors, so the write is allowed.
-        if self.resolve_member_setter_binding(object, property).is_some()
-            || self.resolve_member_getter_binding(object, property).is_some()
+        if self
+            .resolve_member_setter_binding(object, property)
+            .is_some()
+            || self
+                .resolve_member_getter_binding(object, property)
+                .is_some()
         {
             return false;
         }

@@ -62,13 +62,13 @@ impl<'a> FunctionCompiler<'a> {
         result_local: u32,
         preserve_emitted_effect_metadata: bool,
     ) -> DirectResult<bool> {
-        if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
             eprintln!(
                 "emit_inline_user_function_summary_with_explicit_call_frame:start name={}",
                 user_function.name
             );
         }
-        if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
             eprintln!(
                 "emit_inline_user_function_summary_with_explicit_call_frame:check-iterator-consumption name={}",
                 user_function.name
@@ -76,7 +76,7 @@ impl<'a> FunctionCompiler<'a> {
         }
         let parameter_iterator_consumption_indices =
             self.user_function_parameter_iterator_consumption_indices(user_function);
-        if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
             eprintln!(
                 "emit_inline_user_function_summary_with_explicit_call_frame:check-iterator-consumption:result name={} consumed={parameter_iterator_consumption_indices:?}",
                 user_function.name
@@ -90,7 +90,7 @@ impl<'a> FunctionCompiler<'a> {
         }
         let mut state =
             self.prepare_inline_summary_emission_state(user_function, arguments, this_binding)?;
-        if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
             eprintln!(
                 "emit_inline_user_function_summary_with_explicit_call_frame:prepared name={}",
                 user_function.name
@@ -103,7 +103,7 @@ impl<'a> FunctionCompiler<'a> {
             this_binding,
             result_local,
         )? {
-            if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
                 eprintln!(
                     "emit_inline_user_function_summary_with_explicit_call_frame:fast-path name={}",
                     user_function.name
@@ -117,7 +117,7 @@ impl<'a> FunctionCompiler<'a> {
             self.finalize_inline_summary_emission_state(user_function, arguments, &mut state)?;
             return Ok(true);
         }
-        if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
             eprintln!(
                 "emit_inline_user_function_summary_with_explicit_call_frame:fallback-start name={}",
                 user_function.name
@@ -129,7 +129,7 @@ impl<'a> FunctionCompiler<'a> {
             this_binding,
             result_local,
         )?;
-        if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
             eprintln!(
                 "emit_inline_user_function_summary_with_explicit_call_frame:fallback-result name={} emitted={emitted}",
                 user_function.name
@@ -145,7 +145,7 @@ impl<'a> FunctionCompiler<'a> {
             state.assigned_nonlocal_binding_results = None;
         }
         self.finalize_inline_summary_emission_state(user_function, arguments, &mut state)?;
-        if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
             eprintln!(
                 "emit_inline_user_function_summary_with_explicit_call_frame:finalized name={}",
                 user_function.name

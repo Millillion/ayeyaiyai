@@ -1026,7 +1026,7 @@ impl<'a> FunctionCompiler<'a> {
         closed_index: usize,
         strict_mode: bool,
     ) -> DirectResult<bool> {
-        let trace_return = std::env::var_os("AYY_TRACE_SIMPLE_GENERATOR_RETURN").is_some();
+        let trace_return = crate::ayy_env_flag!("AYY_TRACE_SIMPLE_GENERATOR_RETURN");
         let Some(close_expression) =
             Self::first_iterator_close_expression_in_statements(step_close_effects)
         else {
@@ -1398,7 +1398,7 @@ impl<'a> FunctionCompiler<'a> {
         object: &Expression,
         arguments: &[CallArgument],
     ) -> DirectResult<bool> {
-        let trace_throw = std::env::var_os("AYY_TRACE_SIMPLE_GENERATOR_THROW").is_some();
+        let trace_throw = crate::ayy_env_flag!("AYY_TRACE_SIMPLE_GENERATOR_THROW");
         let Expression::Identifier(object_name) = object else {
             return Ok(false);
         };
@@ -1907,7 +1907,7 @@ impl<'a> FunctionCompiler<'a> {
         object: &Expression,
         arguments: &[CallArgument],
     ) -> DirectResult<bool> {
-        let trace_return = std::env::var_os("AYY_TRACE_SIMPLE_GENERATOR_RETURN").is_some();
+        let trace_return = crate::ayy_env_flag!("AYY_TRACE_SIMPLE_GENERATOR_RETURN");
         if trace_return {
             eprintln!("simple_generator_return:start object={object:?} args={arguments:?}");
         }
@@ -2276,7 +2276,7 @@ impl<'a> FunctionCompiler<'a> {
                 .local_array_iterator_binding(&binding_name)
                 .and_then(|binding| binding.static_index)
             else {
-                if std::env::var_os("AYY_TRACE_SIMPLE_GENERATORS").is_some() {
+                if crate::ayy_env_flag!("AYY_TRACE_SIMPLE_GENERATORS") {
                     eprintln!(
                         "simple_next_call:no-static-index object={object:?} binding={binding_name}"
                     );
@@ -2297,7 +2297,7 @@ impl<'a> FunctionCompiler<'a> {
                     .and_then(|binding| binding.static_index)
             })
             .unwrap_or(0);
-        if std::env::var_os("AYY_TRACE_SIMPLE_GENERATORS").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_SIMPLE_GENERATORS") {
             eprintln!(
                 "simple_next_call object={object:?} binding={binding_name:?} current_index={current_index}"
             );
@@ -2390,7 +2390,7 @@ impl<'a> FunctionCompiler<'a> {
                     };
                     let materialized_done_member =
                         self.materialize_simple_generator_yield_result_done_member(&done_member);
-                    if std::env::var_os("AYY_TRACE_SIMPLE_GENERATORS").is_some() {
+                    if crate::ayy_env_flag!("AYY_TRACE_SIMPLE_GENERATORS") {
                         eprintln!(
                             "simple_next_call:yield_result result={substituted_result:?} done={materialized_done_member:?}"
                         );

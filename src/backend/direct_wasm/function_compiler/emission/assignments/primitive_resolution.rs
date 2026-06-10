@@ -99,7 +99,7 @@ impl<'a> FunctionCompiler<'a> {
                 .resolve_static_string_value_with_context(expression, current_function_name)
                 .map(Expression::String),
             Expression::Member { object, property } => {
-                if std::env::var_os("AYY_TRACE_THIS_FLOW").is_some()
+                if crate::ayy_env_flag!("AYY_TRACE_THIS_FLOW")
                     && matches!(object.as_ref(), Expression::This)
                 {
                     eprintln!(
@@ -126,7 +126,7 @@ impl<'a> FunctionCompiler<'a> {
                             object, property,
                         )
                     {
-                        if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+                        if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                             eprintln!(
                                 "runtime_shadow_primitive_accessor object={object:?} property={property:?} shadow_name={shadow_binding_name} value={value:?}"
                             );
@@ -136,7 +136,7 @@ impl<'a> FunctionCompiler<'a> {
                             current_function_name,
                         );
                     }
-                    if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+                    if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                         eprintln!(
                             "runtime_shadow_primitive_defer object={object:?} property={property:?} shadow_name={shadow_binding_name}"
                         );
@@ -146,7 +146,7 @@ impl<'a> FunctionCompiler<'a> {
                 if self.expression_uses_runtime_dynamic_binding(object)
                     || self.expression_uses_runtime_dynamic_binding(property)
                 {
-                    if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+                    if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                         eprintln!(
                             "runtime_shadow_primitive_member_dynamic object={object:?} property={property:?}"
                         );
@@ -204,7 +204,7 @@ impl<'a> FunctionCompiler<'a> {
                     return None;
                 }
                 if let Some(function_name) = self.resolve_function_name_value(object, property) {
-                    if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+                    if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                         eprintln!(
                             "runtime_shadow_primitive_member_function_name object={object:?} property={property:?} function_name={function_name:?}"
                         );
@@ -219,7 +219,7 @@ impl<'a> FunctionCompiler<'a> {
                     )
                     .filter(|value| !static_expression_matches(value, expression))
                 {
-                    if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+                    if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                         eprintln!(
                             "runtime_shadow_primitive_member_getter object={object:?} property={property:?} value={value:?}"
                         );
@@ -235,7 +235,7 @@ impl<'a> FunctionCompiler<'a> {
                 if !self.function_object_has_explicit_own_property(object, property)
                     && let Some(number) = self.resolve_static_number_value(expression)
                 {
-                    if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+                    if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                         eprintln!(
                             "runtime_shadow_primitive_member_number object={object:?} property={property:?} number={number:?}"
                         );
@@ -303,7 +303,7 @@ impl<'a> FunctionCompiler<'a> {
                         return Some(Expression::Undefined);
                     }
                 }
-                if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+                if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                     eprintln!(
                         "runtime_shadow_primitive_member_none object={object:?} property={property:?}"
                     );

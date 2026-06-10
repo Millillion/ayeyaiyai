@@ -21,7 +21,7 @@ impl DirectWasmCompiler {
         else {
             return;
         };
-        let trace_private = std::env::var_os("AYY_TRACE_PRIVATE_MEMBER_LOOKUP").is_some();
+        let trace_private = crate::ayy_env_flag!("AYY_TRACE_PRIVATE_MEMBER_LOOKUP");
         if trace_private {
             eprintln!(
                 "private_seed_global constructor={} class={}",

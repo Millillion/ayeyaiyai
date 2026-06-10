@@ -12,7 +12,7 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         name: &str,
     ) {
-        if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
             eprintln!(
                 "runtime_shadow_clear_identifier_metadata name={name} local_value={:?} local_object={} global_value={:?} global_object={}",
                 self.state

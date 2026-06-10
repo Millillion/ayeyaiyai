@@ -20,7 +20,7 @@ impl<'a> FunctionCompiler<'a> {
     ) -> Option<BTreeMap<String, String>> {
         let key = Self::identifier_function_value_capture_slots_key(name);
         let slots = self.member_function_capture_slots_entry(&key);
-        if std::env::var_os("AYY_TRACE_CAPTURE_BINDINGS").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_CAPTURE_BINDINGS") {
             eprintln!("capture_slots identifier_resolve name={name} slots={slots:?}");
         }
         slots
@@ -354,7 +354,7 @@ impl<'a> FunctionCompiler<'a> {
         object: &Expression,
         property: &Expression,
     ) -> Option<LocalFunctionBinding> {
-        let trace_member_bindings = std::env::var_os("AYY_TRACE_MEMBER_BINDINGS").is_some();
+        let trace_member_bindings = crate::ayy_env_flag!("AYY_TRACE_MEMBER_BINDINGS");
         if trace_member_bindings {
             eprintln!("member_binding:start object={object:?} property={property:?}");
         }
@@ -750,7 +750,7 @@ impl<'a> FunctionCompiler<'a> {
         object: &Expression,
         property: &Expression,
     ) -> Option<BTreeMap<String, String>> {
-        let trace_capture_bindings = std::env::var_os("AYY_TRACE_CAPTURE_BINDINGS").is_some();
+        let trace_capture_bindings = crate::ayy_env_flag!("AYY_TRACE_CAPTURE_BINDINGS");
         if let Some(source_expression) = self.identifier_iterator_binding_source_expression(object)
             && let Some(capture_slots) =
                 self.resolve_member_function_capture_slots(&source_expression, property)
@@ -1014,7 +1014,7 @@ impl<'a> FunctionCompiler<'a> {
         key: &MemberFunctionBindingKey,
         mut capture_slots: BTreeMap<String, String>,
     ) -> BTreeMap<String, String> {
-        let trace_capture_bindings = std::env::var_os("AYY_TRACE_CAPTURE_BINDINGS").is_some();
+        let trace_capture_bindings = crate::ayy_env_flag!("AYY_TRACE_CAPTURE_BINDINGS");
         let key_binding = self.member_function_binding_entry(key);
         for alias_key in self.member_function_capture_slot_alias_keys(object, key) {
             let alias_binding = self.member_function_binding_entry(&alias_key);

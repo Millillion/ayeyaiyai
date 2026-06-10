@@ -54,7 +54,7 @@ impl CompilerState {
         let traced_property =
             std::env::var_os("AYY_TRACE_GLOBAL_OBJECT_PROPERTY").map(|_| property.clone());
         object_binding_define_property(&mut binding, property, value, enumerable);
-        if std::env::var_os("AYY_TRACE_GLOBAL_OBJECT_PROPERTY").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_GLOBAL_OBJECT_PROPERTY") {
             eprintln!(
                 "global_object_property name={name} property={:?} enumerable={enumerable} strings={} symbols={}",
                 traced_property,

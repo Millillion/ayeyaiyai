@@ -35,7 +35,7 @@ impl<'a> FunctionCompiler<'a> {
 
         let binding = self
             .resolve_function_binding_from_expression_with_context(callee, current_function_name)?;
-        if std::env::var_os("AYY_TRACE_STATIC_EVAL_RESULT").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_STATIC_EVAL_RESULT") {
             eprintln!(
                 "static_eval_result binding callee={callee:?} current={current_function_name:?} binding={binding:?} args={arguments:?}"
             );
@@ -51,7 +51,7 @@ impl<'a> FunctionCompiler<'a> {
                     current_function_name,
                 )
             {
-                if std::env::var_os("AYY_TRACE_STATIC_EVAL_RESULT").is_some() {
+                if crate::ayy_env_flag!("AYY_TRACE_STATIC_EVAL_RESULT") {
                     let outcome_kind = match &outcome {
                         StaticEvalOutcome::Value(_) => "value",
                         StaticEvalOutcome::Throw(_) => "throw",

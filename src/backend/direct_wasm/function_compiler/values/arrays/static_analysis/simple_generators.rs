@@ -1494,7 +1494,7 @@ impl<'a> FunctionCompiler<'a> {
         effects: &mut Vec<Statement>,
         active_close_effects: &[Statement],
     ) -> Option<()> {
-        let trace_analyze = std::env::var_os("AYY_TRACE_SIMPLE_GENERATOR_SOURCE").is_some();
+        let trace_analyze = crate::ayy_env_flag!("AYY_TRACE_SIMPLE_GENERATOR_SOURCE");
         let mut pending_sent_replacement = None;
         for (index, statement) in statements.iter().enumerate() {
             let substituted_statement;

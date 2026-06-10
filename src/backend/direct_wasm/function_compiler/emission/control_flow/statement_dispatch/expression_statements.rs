@@ -2,8 +2,7 @@ use super::*;
 
 impl<'a> FunctionCompiler<'a> {
     pub(super) fn emit_expression_statement(&mut self, statement: &Statement) -> DirectResult<()> {
-        let trace_expression_statement =
-            std::env::var_os("AYY_TRACE_EXPRESSION_STATEMENT").is_some();
+        let trace_expression_statement = crate::ayy_env_flag!("AYY_TRACE_EXPRESSION_STATEMENT");
         let class_field_initializer_eval_rules =
             self.statement_uses_class_field_initializer_eval_rules(statement);
         match statement {

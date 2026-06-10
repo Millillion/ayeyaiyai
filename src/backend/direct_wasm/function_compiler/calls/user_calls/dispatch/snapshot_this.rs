@@ -3589,7 +3589,7 @@ impl<'a> FunctionCompiler<'a> {
             property_values.retain(|property_name, _| {
                 self.static_argument_member_writeback_allowed(argument_expression, property_name)
             });
-            if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                 eprintln!(
                     "static_arg_member_writeback function={} param={} source_owner={} values={property_values:?}",
                     user_function.name, parameter.name, source_owner,
@@ -3658,7 +3658,7 @@ impl<'a> FunctionCompiler<'a> {
     ) {
         for (param_name, _, property_values) in writebacks {
             for property_name in property_values.keys() {
-                if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+                if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                     eprintln!(
                         "static_arg_member_writeback_predeclare param={param_name} property={property_name}"
                     );
@@ -3687,7 +3687,7 @@ impl<'a> FunctionCompiler<'a> {
             for (property_name, value) in property_values {
                 let property = Expression::String(property_name.clone());
                 let value = self.reference_preserving_static_value_expression(value);
-                if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+                if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                     eprintln!(
                         "static_arg_member_writeback_sync param={param_name} source_owner={source_owner} property={property_name} value={value:?}"
                     );
@@ -3775,7 +3775,7 @@ impl<'a> FunctionCompiler<'a> {
         this_expression: &Expression,
     ) -> DirectResult<Option<String>> {
         let target_owner = self.resolve_user_function_call_receiver_shadow_owner(this_expression);
-        if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
             eprintln!(
                 "runtime_this_shadow_prepare fn={:?} this_expression={this_expression:?} target_owner={target_owner:?}",
                 self.current_function_name(),
@@ -3823,7 +3823,7 @@ impl<'a> FunctionCompiler<'a> {
         let receiver_is_module_namespace = self
             .resolve_object_binding_from_expression(this_expression)
             .is_some_and(|binding| Self::object_binding_has_module_namespace_marker(&binding));
-        if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
             eprintln!(
                 "runtime_this_shadow_finalize fn={:?} this_expression={this_expression:?} target_owner={target_owner:?} updated_this={:?} allow_static_receiver_update={} receiver_updated_via_parameter_writeback={} receiver_is_module_namespace={}",
                 self.current_function_name(),
@@ -3856,7 +3856,7 @@ impl<'a> FunctionCompiler<'a> {
             if should_copy_runtime_this_shadow {
                 self.emit_runtime_object_property_shadow_copy("this", target_owner)?;
             }
-            if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                 eprintln!(
                     "runtime_this_shadow_sync fn={:?} target_owner={target_owner} updated_receiver_binding_present={} copied={should_copy_runtime_this_shadow}",
                     self.current_function_name(),
@@ -3872,7 +3872,7 @@ impl<'a> FunctionCompiler<'a> {
                     );
                 }
                 if allow_static_receiver_update && explicit_updated_this.is_some() {
-                    if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some()
+                    if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS")
                         && let Expression::Identifier(name) = this_expression
                     {
                         let updated_receiver_expression =
@@ -3926,7 +3926,7 @@ impl<'a> FunctionCompiler<'a> {
                     argument_expressions,
                 );
             if !property_values.is_empty() {
-                if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+                if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                     let property_names = property_values.keys().collect::<Vec<_>>();
                     eprintln!("runtime_this_shadow_global_commit properties={property_names:?}");
                 }

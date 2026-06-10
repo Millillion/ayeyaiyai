@@ -20,7 +20,7 @@ impl<'a> FunctionCompiler<'a> {
         return_value_local: u32,
         argument_expressions: &[Expression],
     ) -> DirectResult<()> {
-        let trace_user_calls = std::env::var_os("AYY_TRACE_USER_CALLS").is_some();
+        let trace_user_calls = crate::ayy_env_flag!("AYY_TRACE_USER_CALLS");
         if trace_user_calls {
             eprintln!("finalize_user_call:start target={}", user_function.name);
         }

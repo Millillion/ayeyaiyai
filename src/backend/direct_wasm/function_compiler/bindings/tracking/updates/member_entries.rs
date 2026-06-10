@@ -92,8 +92,7 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         expression: &Expression,
     ) {
-        let trace_iterator_close_updates =
-            std::env::var_os("AYY_TRACE_ITERATOR_CLOSE_UPDATES").is_some();
+        let trace_iterator_close_updates = crate::ayy_env_flag!("AYY_TRACE_ITERATOR_CLOSE_UPDATES");
         if trace_iterator_close_updates && matches!(expression, Expression::IteratorClose(_)) {
             eprintln!("iterator_close_updates:member:start expr={expression:?}");
         }

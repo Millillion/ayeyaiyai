@@ -80,7 +80,7 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         expression: &Expression,
     ) -> Option<&'static str> {
-        let trace = std::env::var_os("AYY_TRACE_CONSTRUCTED_FUNCTIONS").is_some();
+        let trace = crate::ayy_env_flag!("AYY_TRACE_CONSTRUCTED_FUNCTIONS");
         if let Expression::Member { object, property } = expression
             && let Expression::String(name) = property.as_ref()
             && let Some(constructor_name) = Self::function_constructor_builtin_name(name)
@@ -190,7 +190,7 @@ impl<'a> FunctionCompiler<'a> {
         arguments: &[CallArgument],
         depth: usize,
     ) -> Option<&'static str> {
-        let trace = std::env::var_os("AYY_TRACE_CONSTRUCTED_FUNCTIONS").is_some();
+        let trace = crate::ayy_env_flag!("AYY_TRACE_CONSTRUCTED_FUNCTIONS");
         if depth > 16 {
             return None;
         }
@@ -835,7 +835,7 @@ impl<'a> FunctionCompiler<'a> {
         callee: &Expression,
         arguments: &[CallArgument],
     ) -> Option<&'static str> {
-        let trace = std::env::var_os("AYY_TRACE_CONSTRUCTED_FUNCTIONS").is_some();
+        let trace = crate::ayy_env_flag!("AYY_TRACE_CONSTRUCTED_FUNCTIONS");
         if let Some(constructor_name) =
             self.expression_resolves_to_function_constructor_builtin(callee)
         {
@@ -1570,12 +1570,12 @@ impl<'a> FunctionCompiler<'a> {
     ) {
         let Some(value) = self.resolve_static_constructed_boxed_primitive_value(source_expression)
         else {
-            if std::env::var_os("AYY_TRACE_BOXED_PRIMITIVES").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_BOXED_PRIMITIVES") {
                 eprintln!("boxed_primitive:seed_local none source={source_expression:?}");
             }
             return;
         };
-        if std::env::var_os("AYY_TRACE_BOXED_PRIMITIVES").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_BOXED_PRIMITIVES") {
             eprintln!("boxed_primitive:seed_local source={source_expression:?} value={value:?}");
         }
         object_binding_define_property(
@@ -1593,14 +1593,14 @@ impl<'a> FunctionCompiler<'a> {
     ) {
         let Some(value) = self.resolve_static_constructed_boxed_primitive_value(source_expression)
         else {
-            if std::env::var_os("AYY_TRACE_BOXED_PRIMITIVES").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_BOXED_PRIMITIVES") {
                 eprintln!(
                     "boxed_primitive:seed_global none name={name} source={source_expression:?}"
                 );
             }
             return;
         };
-        if std::env::var_os("AYY_TRACE_BOXED_PRIMITIVES").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_BOXED_PRIMITIVES") {
             eprintln!(
                 "boxed_primitive:seed_global name={name} source={source_expression:?} value={value:?}"
             );
@@ -1704,7 +1704,7 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         expression: &Expression,
     ) -> Option<Expression> {
-        let trace_boxed = std::env::var_os("AYY_TRACE_BOXED_PRIMITIVES").is_some();
+        let trace_boxed = crate::ayy_env_flag!("AYY_TRACE_BOXED_PRIMITIVES");
         if let Some(object_binding) = self.resolve_object_binding_from_expression(expression)
             && let Some(value) = object_binding_lookup_value(
                 &object_binding,

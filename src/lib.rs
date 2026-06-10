@@ -3,6 +3,18 @@ mod compile_options;
 pub mod frontend;
 pub mod ir;
 
+/// Caches an `AYY_*` env-flag lookup per call site: profiling showed the
+/// repeated `getenv` calls from trace guards consuming ~12% of compile time
+/// on hot paths. Flags are read once per process; the compiler never sets
+/// env vars at runtime.
+#[macro_export]
+macro_rules! ayy_env_flag {
+    ($name:literal) => {{
+        static FLAG: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+        *FLAG.get_or_init(|| std::env::var_os($name).is_some())
+    }};
+}
+
 use std::path::Path;
 
 use anyhow::{Result, bail};

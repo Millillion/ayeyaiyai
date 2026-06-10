@@ -268,7 +268,7 @@ impl<'a> FunctionCompiler<'a> {
         }
         let prefix_effects =
             self.simple_generator_prefix_effects_before_terminal_throw(&prefix_effects);
-        if std::env::var_os("AYY_TRACE_SIMPLE_GENERATORS").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_SIMPLE_GENERATORS") {
             eprintln!(
                 "simple_generator_call_time_prefix expression={expression:?} effects={prefix_effects:#?}"
             );

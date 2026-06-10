@@ -247,7 +247,7 @@ impl<'a> FunctionCompiler<'a> {
             }
             _ => (None, None),
         };
-        if std::env::var_os("AYY_TRACE_SIMPLE_GENERATOR_ASSIGNMENT").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_SIMPLE_GENERATOR_ASSIGNMENT") {
             let source_kind = match &iterator_binding.source {
                 IteratorSourceKind::StaticArray { values, .. } => {
                     format!("StaticArray(len={})", values.len())

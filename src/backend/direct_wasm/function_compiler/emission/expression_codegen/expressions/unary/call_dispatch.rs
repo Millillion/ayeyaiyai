@@ -202,7 +202,7 @@ impl<'a> FunctionCompiler<'a> {
         property: &Expression,
         arguments: &[CallArgument],
     ) -> DirectResult<bool> {
-        let trace_call_dispatch = std::env::var_os("AYY_TRACE_CALL_DISPATCH").is_some();
+        let trace_call_dispatch = crate::ayy_env_flag!("AYY_TRACE_CALL_DISPATCH");
         if !arguments.is_empty() || !inline_summary_side_effect_free_expression(object) {
             if trace_call_dispatch {
                 eprintln!("call_dispatch:static_global_member:bail arguments_or_object");
@@ -303,7 +303,7 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         expression: &Expression,
     ) -> bool {
-        let trace_call_dispatch = std::env::var_os("AYY_TRACE_CALL_DISPATCH").is_some();
+        let trace_call_dispatch = crate::ayy_env_flag!("AYY_TRACE_CALL_DISPATCH");
         if trace_call_dispatch {
             eprintln!("call_static_requires:start expr={expression:?}");
         }
@@ -576,7 +576,7 @@ impl<'a> FunctionCompiler<'a> {
         callee: &Expression,
         arguments: &[CallArgument],
     ) -> DirectResult<()> {
-        let trace_call_dispatch = std::env::var_os("AYY_TRACE_CALL_DISPATCH").is_some();
+        let trace_call_dispatch = crate::ayy_env_flag!("AYY_TRACE_CALL_DISPATCH");
         if trace_call_dispatch {
             eprintln!(
                 "call_dispatch:start function={:?} expr={:?}",

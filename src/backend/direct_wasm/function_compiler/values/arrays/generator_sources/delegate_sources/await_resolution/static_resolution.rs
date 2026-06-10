@@ -1131,7 +1131,7 @@ impl<'a> FunctionCompiler<'a> {
         {
             return cached;
         }
-        let trace = std::env::var_os("AYY_TRACE_DYNAMIC_IMPORT_AWAIT").is_some();
+        let trace = crate::ayy_env_flag!("AYY_TRACE_DYNAMIC_IMPORT_AWAIT");
         let mut local_bindings = self.static_dynamic_import_module_local_bindings(init_function);
         if trace {
             eprintln!(
@@ -1423,7 +1423,7 @@ impl<'a> FunctionCompiler<'a> {
         value: &Expression,
         local_bindings: &HashMap<String, Expression>,
     ) -> Option<Expression> {
-        let trace = std::env::var_os("AYY_TRACE_DYNAMIC_IMPORT_AWAIT").is_some();
+        let trace = crate::ayy_env_flag!("AYY_TRACE_DYNAMIC_IMPORT_AWAIT");
         let localized = Self::static_dynamic_import_localized_expression(value, local_bindings);
         if expression_references_module_dependency_param(&localized) {
             if trace {

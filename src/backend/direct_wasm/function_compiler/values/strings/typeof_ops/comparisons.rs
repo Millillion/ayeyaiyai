@@ -7,8 +7,8 @@ impl<'a> FunctionCompiler<'a> {
         right: &Expression,
         op: BinaryOp,
     ) -> DirectResult<bool> {
-        let trace_typeof = std::env::var_os("AYY_TRACE_TYPEOF").is_some()
-            || std::env::var_os("AYY_TRACE_ASSERTIONS").is_some();
+        let trace_typeof = crate::ayy_env_flag!("AYY_TRACE_TYPEOF")
+            || crate::ayy_env_flag!("AYY_TRACE_ASSERTIONS");
         if trace_typeof {
             eprintln!("typeof_string_comparison:start left={left:?} right={right:?} op={op:?}");
         }

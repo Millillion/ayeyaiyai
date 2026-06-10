@@ -135,7 +135,7 @@ impl<'a> FunctionCompiler<'a> {
             if let Some(binding_name) = self.runtime_array_binding_name_for_expression(object)
                 && self.emit_global_runtime_array_length_read(&binding_name)
             {
-                if std::env::var_os("AYY_TRACE_MEMBER_READS").is_some() {
+                if crate::ayy_env_flag!("AYY_TRACE_MEMBER_READS") {
                     eprintln!(
                         "runtime_array_read:length_global object={object:?} binding={binding_name}"
                     );
@@ -143,7 +143,7 @@ impl<'a> FunctionCompiler<'a> {
                 return Ok(true);
             }
             if let Some(length_local) = self.runtime_array_length_local_for_expression(object) {
-                if std::env::var_os("AYY_TRACE_MEMBER_READS").is_some() {
+                if crate::ayy_env_flag!("AYY_TRACE_MEMBER_READS") {
                     let binding_name = self.runtime_array_binding_name_for_expression(object);
                     eprintln!(
                         "runtime_array_read:length_local_early object={object:?} binding={binding_name:?} local={length_local}"
@@ -155,7 +155,7 @@ impl<'a> FunctionCompiler<'a> {
             if let Some(binding_name) = self.runtime_array_binding_name_for_expression(object)
                 && self.emit_runtime_array_length_from_slots(&binding_name)?
             {
-                if std::env::var_os("AYY_TRACE_MEMBER_READS").is_some() {
+                if crate::ayy_env_flag!("AYY_TRACE_MEMBER_READS") {
                     eprintln!(
                         "runtime_array_read:length_slots object={object:?} binding={binding_name}"
                     );
@@ -195,7 +195,7 @@ impl<'a> FunctionCompiler<'a> {
             && let Some(binding_name) = self.runtime_array_binding_name_for_expression(object)
             && self.emit_global_runtime_array_length_read(&binding_name)
         {
-            if std::env::var_os("AYY_TRACE_MEMBER_READS").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_MEMBER_READS") {
                 eprintln!(
                     "runtime_array_read:length_global object={object:?} binding={binding_name}"
                 );
@@ -203,14 +203,14 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(true);
         }
         let Some(array_binding) = array_binding else {
-            if std::env::var_os("AYY_TRACE_MEMBER_READS").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_MEMBER_READS") {
                 eprintln!("runtime_array_read:no_static_binding object={object:?}");
             }
             return Ok(false);
         };
         if matches!(static_array_property, Expression::String(text) if text == "length") {
             if let Some(length_local) = self.runtime_array_length_local_for_expression(object) {
-                if std::env::var_os("AYY_TRACE_MEMBER_READS").is_some() {
+                if crate::ayy_env_flag!("AYY_TRACE_MEMBER_READS") {
                     let binding_name = self.runtime_array_binding_name_for_expression(object);
                     eprintln!(
                         "runtime_array_read:length_local object={object:?} binding={binding_name:?} local={length_local}"
@@ -218,7 +218,7 @@ impl<'a> FunctionCompiler<'a> {
                 }
                 self.push_local_get(length_local);
             } else {
-                if std::env::var_os("AYY_TRACE_MEMBER_READS").is_some() {
+                if crate::ayy_env_flag!("AYY_TRACE_MEMBER_READS") {
                     eprintln!(
                         "runtime_array_read:length_static object={object:?} len={}",
                         array_binding.values.len()

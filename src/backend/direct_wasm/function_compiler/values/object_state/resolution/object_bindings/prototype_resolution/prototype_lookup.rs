@@ -48,7 +48,7 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         expression: &Expression,
     ) -> Option<Expression> {
-        let trace = std::env::var_os("AYY_TRACE_REFLECT_CONSTRUCT_PROTOTYPE").is_some();
+        let trace = crate::ayy_env_flag!("AYY_TRACE_REFLECT_CONSTRUCT_PROTOTYPE");
         if trace {
             eprintln!("reflect_construct_proto:source_probe expression={expression:?}");
         }
@@ -165,7 +165,7 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         arguments: &[CallArgument],
     ) -> Option<Expression> {
-        let trace = std::env::var_os("AYY_TRACE_REFLECT_CONSTRUCT_PROTOTYPE").is_some();
+        let trace = crate::ayy_env_flag!("AYY_TRACE_REFLECT_CONSTRUCT_PROTOTYPE");
         let target = arguments.first()?.expression();
         let new_target = arguments
             .get(2)
@@ -505,7 +505,7 @@ impl<'a> FunctionCompiler<'a> {
         expression: &Expression,
         f: impl FnOnce(&Self) -> Option<T>,
     ) -> Option<T> {
-        if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
             let depth = STATIC_OBJECT_PROTOTYPE_RESOLUTION_STACK.with(|stack| stack.borrow().len());
             if depth < 32 {
                 eprintln!(
@@ -520,7 +520,7 @@ impl<'a> FunctionCompiler<'a> {
                 .any(|visited| static_expression_matches(visited, expression))
         });
         if reentered {
-            if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                 eprintln!("runtime_shadow_prototype_resolve_reentered expression={expression:?}");
             }
             return None;
@@ -853,7 +853,7 @@ impl<'a> FunctionCompiler<'a> {
                         )
                         .cloned()
                 {
-                    if std::env::var_os("AYY_TRACE_OBJECT_PROTOTYPES").is_some() {
+                    if crate::ayy_env_flag!("AYY_TRACE_OBJECT_PROTOTYPES") {
                         eprintln!(
                             "object_prototype_generator_call callee={callee_name} assigned_prototype={assigned_prototype:?}"
                         );
@@ -1291,7 +1291,7 @@ impl<'a> FunctionCompiler<'a> {
                                 )
                                 .cloned()
                         {
-                            if std::env::var_os("AYY_TRACE_OBJECT_PROTOTYPES").is_some() {
+                            if crate::ayy_env_flag!("AYY_TRACE_OBJECT_PROTOTYPES") {
                                 eprintln!(
                                     "object_prototype_generator_call callee={callee_name} assigned_prototype={assigned_prototype:?}"
                                 );
@@ -1322,7 +1322,7 @@ impl<'a> FunctionCompiler<'a> {
                         };
                         let materialized_direct_prototype =
                             this.materialize_static_expression(&direct_prototype_expression);
-                        if std::env::var_os("AYY_TRACE_OBJECT_PROTOTYPES").is_some() {
+                        if crate::ayy_env_flag!("AYY_TRACE_OBJECT_PROTOTYPES") {
                             eprintln!(
                                 "object_prototype_generator_call direct={direct_prototype_expression:?} materialized={materialized_direct_prototype:?}"
                             );

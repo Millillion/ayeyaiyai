@@ -9,7 +9,7 @@ impl<'a> ProgramCompilationSession<'a> {
         &mut self,
         prepared_program: &PreparedBackendProgram,
     ) -> DirectResult<Vec<CompiledFunction>> {
-        let trace = std::env::var_os("AYY_TRACE_PROGRAM_COMPILE").is_some();
+        let trace = crate::ayy_env_flag!("AYY_TRACE_PROGRAM_COMPILE");
         prepared_program
             .user_functions
             .iter()
@@ -29,7 +29,7 @@ impl<'a> ProgramCompilationSession<'a> {
         &mut self,
         prepared_program: &PreparedBackendProgram,
     ) -> DirectResult<Vec<CompiledFunction>> {
-        let trace = std::env::var_os("AYY_TRACE_PROGRAM_COMPILE").is_some();
+        let trace = crate::ayy_env_flag!("AYY_TRACE_PROGRAM_COMPILE");
         let mut compiled_functions = HashMap::new();
 
         loop {
@@ -78,7 +78,7 @@ impl<'a> ProgramCompilationSession<'a> {
         &mut self,
         prepared_program: PreparedBackendProgram,
     ) -> DirectResult<EmittedBackendProgram> {
-        if std::env::var_os("AYY_TRACE_PROGRAM_COMPILE").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_PROGRAM_COMPILE") {
             eprintln!("program_compile=start");
         }
         let compiled_start = self.compiler.compile_start(
@@ -87,7 +87,7 @@ impl<'a> ProgramCompilationSession<'a> {
         )?;
         let compiled_functions =
             self.compile_runtime_called_registered_functions(&prepared_program)?;
-        if std::env::var_os("AYY_TRACE_PROGRAM_COMPILE").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_PROGRAM_COMPILE") {
             eprintln!("program_compile=layout");
         }
         // Start/function lowering can still reserve implicit globals and related runtime slots,

@@ -72,7 +72,7 @@ impl<'a> FunctionCompiler<'a> {
         name: &str,
         arguments: &[CallArgument],
     ) -> DirectResult<()> {
-        let trace_call_dispatch = std::env::var_os("AYY_TRACE_CALL_DISPATCH").is_some();
+        let trace_call_dispatch = crate::ayy_env_flag!("AYY_TRACE_CALL_DISPATCH");
         if let Some(scope_object) = self.resolve_with_scope_binding(name)? {
             self.emit_scoped_property_read(&scope_object, name)?;
             self.state.emission.output.instructions.push(0x1a);

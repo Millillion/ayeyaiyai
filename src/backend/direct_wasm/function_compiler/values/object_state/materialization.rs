@@ -281,6 +281,21 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         expression: &Expression,
     ) -> Expression {
+        // Fast path: leaf expressions always materialize to themselves (the
+        // recursive fallback returns None for them, yielding
+        // expression.clone()), so skip the guard bookkeeping entirely.
+        match expression {
+            Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined
+            | Expression::This
+            | Expression::NewTarget
+            | Expression::Sent => return expression.clone(),
+            _ => {}
+        }
         let guard_key = expression as *const Expression as usize;
         {
             let mut active = self

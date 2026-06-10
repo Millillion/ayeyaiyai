@@ -307,12 +307,12 @@ impl<'a> FunctionCompiler<'a> {
         let object_expression = Expression::Identifier(name.to_string());
         let Some(object_binding) = self.resolve_object_binding_from_expression(&object_expression)
         else {
-            if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                 eprintln!("dynamic_string_delete object={name} binding=<none>");
             }
             return Ok(false);
         };
-        if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
             eprintln!(
                 "dynamic_string_delete object={name} keys={:?}",
                 object_binding
@@ -585,7 +585,7 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         expression: &Expression,
     ) -> DirectResult<()> {
-        if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
             eprintln!("emit_delete_expression expression={expression:?}");
         }
         if let Expression::Identifier(name) = expression

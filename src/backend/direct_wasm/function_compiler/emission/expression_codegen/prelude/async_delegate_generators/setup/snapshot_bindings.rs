@@ -98,7 +98,7 @@ impl<'a> FunctionCompiler<'a> {
                         )
                     })?
                 });
-            if std::env::var_os("AYY_TRACE_ASYNC_DELEGATES").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_ASYNC_DELEGATES") {
                 eprintln!(
                     "async_delegate_operand_outcome expression={expression:?} callee={callee:?} materialized_callee={materialized_callee:?} binding={binding:?}"
                 );
@@ -129,7 +129,7 @@ impl<'a> FunctionCompiler<'a> {
         {
             Some(StaticEvalOutcome::Value(value)) => Some(value),
             Some(StaticEvalOutcome::Throw(throw_value)) => {
-                if std::env::var_os("AYY_TRACE_ASYNC_DELEGATES").is_some() {
+                if crate::ayy_env_flag!("AYY_TRACE_ASYNC_DELEGATES") {
                     eprintln!(
                         "async_delegate_method_resolution awaited_throw expression={expression:?} property={property:?}"
                     );
@@ -143,7 +143,7 @@ impl<'a> FunctionCompiler<'a> {
         };
         let expression = awaited_expression.as_ref().unwrap_or(expression);
         if let Some(getter_binding) = self.resolve_member_getter_binding(expression, property) {
-            if std::env::var_os("AYY_TRACE_ASYNC_DELEGATES").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_ASYNC_DELEGATES") {
                 eprintln!(
                     "async_delegate_method_resolution getter expression={expression:?} property={property:?} binding={getter_binding:?}"
                 );
@@ -160,7 +160,7 @@ impl<'a> FunctionCompiler<'a> {
                         &mut merged_bindings,
                         updated_bindings,
                     );
-                    if std::env::var_os("AYY_TRACE_ASYNC_DELEGATES").is_some() {
+                    if crate::ayy_env_flag!("AYY_TRACE_ASYNC_DELEGATES") {
                         eprintln!(
                             "async_delegate_method_resolution getter_value method={method_value:?}"
                         );
@@ -188,7 +188,7 @@ impl<'a> FunctionCompiler<'a> {
                         &mut merged_bindings,
                         updated_bindings,
                     );
-                    if std::env::var_os("AYY_TRACE_ASYNC_DELEGATES").is_some() {
+                    if crate::ayy_env_flag!("AYY_TRACE_ASYNC_DELEGATES") {
                         eprintln!("async_delegate_method_resolution getter_throw");
                     }
                     DelegateMethodSnapshotResolution::Throw {
@@ -213,7 +213,7 @@ impl<'a> FunctionCompiler<'a> {
         }
 
         if let Some(function_binding) = self.resolve_member_function_binding(expression, property) {
-            if std::env::var_os("AYY_TRACE_ASYNC_DELEGATES").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_ASYNC_DELEGATES") {
                 eprintln!(
                     "async_delegate_method_resolution member_function expression={expression:?} property={property:?} binding={function_binding:?}"
                 );
@@ -227,7 +227,7 @@ impl<'a> FunctionCompiler<'a> {
         if let Some(method_value) =
             self.resolve_async_delegate_object_member_value(expression, property)
         {
-            if std::env::var_os("AYY_TRACE_ASYNC_DELEGATES").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_ASYNC_DELEGATES") {
                 eprintln!(
                     "async_delegate_method_resolution object_value expression={expression:?} property={property:?} method={method_value:?}"
                 );
@@ -323,7 +323,7 @@ impl<'a> FunctionCompiler<'a> {
                     }
                 }
             };
-            if std::env::var_os("AYY_TRACE_ASYNC_DELEGATES").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_ASYNC_DELEGATES") {
                 eprintln!(
                     "async_delegate_init function={} iterator_binding_snapshot={}",
                     plan.function_name,
@@ -445,7 +445,7 @@ impl<'a> FunctionCompiler<'a> {
                         }))
                     }
                     None => {
-                        if std::env::var_os("AYY_TRACE_ASYNC_DELEGATES").is_some() {
+                        if crate::ayy_env_flag!("AYY_TRACE_ASYNC_DELEGATES") {
                             eprintln!(
                                 "async_delegate_init function={} final_snapshot_outcome=false",
                                 plan.function_name
@@ -455,7 +455,7 @@ impl<'a> FunctionCompiler<'a> {
                     }
                 }
             } else {
-                if std::env::var_os("AYY_TRACE_ASYNC_DELEGATES").is_some() {
+                if crate::ayy_env_flag!("AYY_TRACE_ASYNC_DELEGATES") {
                     eprintln!(
                         "async_delegate_init function={} final_snapshot_outcome=missing_iterator_binding",
                         plan.function_name

@@ -6,7 +6,7 @@ impl GlobalMemberService {
         key: MemberFunctionBindingKey,
         binding: LocalFunctionBinding,
     ) {
-        if std::env::var_os("AYY_TRACE_MEMBER_BINDINGS").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_MEMBER_BINDINGS") {
             eprintln!("global_member:set_function key={key:?} binding={binding:?}");
         }
         self.member_function_bindings.insert(key, binding);
@@ -16,7 +16,7 @@ impl GlobalMemberService {
         &mut self,
         key: &MemberFunctionBindingKey,
     ) {
-        if std::env::var_os("AYY_TRACE_MEMBER_BINDINGS").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_MEMBER_BINDINGS") {
             eprintln!("global_member:clear_function key={key:?}");
         }
         self.member_function_bindings.remove(key);
@@ -27,7 +27,7 @@ impl GlobalMemberService {
         key: MemberFunctionBindingKey,
         capture_slots: BTreeMap<String, String>,
     ) {
-        if std::env::var_os("AYY_TRACE_MEMBER_BINDINGS").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_MEMBER_BINDINGS") {
             eprintln!(
                 "global_member:set_capture_slots key={key:?} capture_slots={capture_slots:?}"
             );

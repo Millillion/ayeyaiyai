@@ -23,11 +23,11 @@ impl<'a> ProgramCompilationSession<'a> {
         program: &Program,
     ) -> DirectResult<Vec<u8>> {
         self.reset_compilation_state();
-        if std::env::var_os("AYY_TRACE_PROGRAM_COMPILE").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_PROGRAM_COMPILE") {
             eprintln!("program_compile=prepare");
         }
         let prepared_program = self.prepare_program(program)?;
-        if std::env::var_os("AYY_TRACE_PROGRAM_COMPILE").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_PROGRAM_COMPILE") {
             eprintln!("program_compile=emit");
         }
         Ok(self.emit_program(prepared_program)?.assemble())

@@ -77,7 +77,7 @@ impl DirectWasmCompiler {
         if let Some(binding) = Self::template_object_array_binding_from_array(cooked)
             .or_else(|| self.infer_global_array_binding(cooked))
         {
-            if std::env::var_os("AYY_TRACE_TEMPLATE_OBJECTS").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_TEMPLATE_OBJECTS") {
                 eprintln!(
                     "template_register site={site_key} runtime={runtime_value} len={}",
                     binding.values.len()
@@ -91,7 +91,7 @@ impl DirectWasmCompiler {
                     .template_object_raw_array_bindings
                     .insert(runtime_value, raw_binding);
             }
-        } else if std::env::var_os("AYY_TRACE_TEMPLATE_OBJECTS").is_some() {
+        } else if crate::ayy_env_flag!("AYY_TRACE_TEMPLATE_OBJECTS") {
             eprintln!("template_register:missing_binding site={site_key} cooked={cooked:?}");
         }
     }

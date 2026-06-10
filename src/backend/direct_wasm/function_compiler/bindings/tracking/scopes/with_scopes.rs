@@ -109,7 +109,7 @@ impl<'a> FunctionCompiler<'a> {
                 !static_expression_matches(&materialized_scope_object, scope_object)
                     && has_property(&materialized_scope_object)
             };
-        if std::env::var_os("AYY_TRACE_WITH_SCOPE").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_WITH_SCOPE") {
             let capture_hidden = match scope_object {
                 Expression::Identifier(name) => {
                     self.resolve_user_function_capture_hidden_name(name)
@@ -283,7 +283,7 @@ impl<'a> FunctionCompiler<'a> {
         }
         let scopes = self.state.emission.lexical_scopes.with_scopes.clone();
         let property = Expression::String(name.to_string());
-        if std::env::var_os("AYY_TRACE_WITH_SCOPE").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_WITH_SCOPE") {
             eprintln!(
                 "with_scope resolve fn={:?} name={name} scopes={scopes:?}",
                 self.current_function_name(),
@@ -328,7 +328,7 @@ impl<'a> FunctionCompiler<'a> {
             let has_binding_property = self.with_suspended_with_scopes(|compiler| {
                 Ok(compiler.scope_object_has_binding_property(&scope_object, name))
             })?;
-            if std::env::var_os("AYY_TRACE_WITH_SCOPE").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_WITH_SCOPE") {
                 eprintln!(
                     "with_scope candidate fn={:?} name={name} object={scope_object:?} has={has_binding_property}",
                     self.current_function_name(),
@@ -340,7 +340,7 @@ impl<'a> FunctionCompiler<'a> {
             let blocked = self.with_suspended_with_scopes(|compiler| {
                 compiler.emit_with_scope_unscopables_block_check(&scope_object, name)
             })?;
-            if std::env::var_os("AYY_TRACE_WITH_SCOPE").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_WITH_SCOPE") {
                 eprintln!(
                     "with_scope blocked fn={:?} name={name} object={scope_object:?} blocked={blocked}",
                     self.current_function_name(),

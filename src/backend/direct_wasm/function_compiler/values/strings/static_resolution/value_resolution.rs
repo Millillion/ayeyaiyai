@@ -136,7 +136,7 @@ impl<'a> FunctionCompiler<'a> {
                 ) {
                     return None;
                 }
-                if std::env::var_os("AYY_TRACE_THIS_FLOW").is_some()
+                if crate::ayy_env_flag!("AYY_TRACE_THIS_FLOW")
                     && matches!(object.as_ref(), Expression::This)
                 {
                     eprintln!(
@@ -161,12 +161,12 @@ impl<'a> FunctionCompiler<'a> {
                                 .value_bindings
                                 .get(&shadow_binding_name)
                         });
-                    if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+                    if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                         eprintln!(
                             "runtime_shadow_string_lookup expr={expression:?} shadow_name={shadow_binding_name} shadow_value={shadow_value:?}"
                         );
                     }
-                    if std::env::var_os("AYY_TRACE_THIS_FLOW").is_some() {
+                    if crate::ayy_env_flag!("AYY_TRACE_THIS_FLOW") {
                         eprintln!(
                             "this_flow string_resolution shadow fn={:?} name={} value={:?}",
                             current_function_name, shadow_binding_name, shadow_value
@@ -225,7 +225,7 @@ impl<'a> FunctionCompiler<'a> {
                         .map(|character| character.to_string());
                 }
                 if let Some(object_binding) = self.resolve_object_binding_from_expression(object) {
-                    if std::env::var_os("AYY_TRACE_THIS_FLOW").is_some()
+                    if crate::ayy_env_flag!("AYY_TRACE_THIS_FLOW")
                         && matches!(object.as_ref(), Expression::This)
                     {
                         eprintln!(

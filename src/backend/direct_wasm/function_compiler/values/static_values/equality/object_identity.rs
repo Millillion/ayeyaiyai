@@ -499,7 +499,7 @@ impl<'a> FunctionCompiler<'a> {
                 .global_value_binding(name)
                 .filter(|value| !matches!(value, Expression::Identifier(alias) if alias == name))
         {
-            if std::env::var_os("AYY_TRACE_REFERENCE_IDENTITY").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_REFERENCE_IDENTITY") {
                 eprintln!("reference_identity:identifier {name}:prefer_global value={value:?}");
             }
             if self.expression_is_static_regexp_instance(value) {
@@ -509,7 +509,7 @@ impl<'a> FunctionCompiler<'a> {
                 return Some(format!("global:{name}"));
             }
             if let Some(binding) = self.resolve_static_reference_identity_key(value) {
-                if std::env::var_os("AYY_TRACE_REFERENCE_IDENTITY").is_some() {
+                if crate::ayy_env_flag!("AYY_TRACE_REFERENCE_IDENTITY") {
                     eprintln!("reference_identity:identifier {name}:prefer_global key={binding}");
                 }
                 return Some(binding);
@@ -573,7 +573,7 @@ impl<'a> FunctionCompiler<'a> {
             .global_value_binding(name)
             .filter(|value| !matches!(value, Expression::Identifier(alias) if alias == name))
         {
-            if std::env::var_os("AYY_TRACE_REFERENCE_IDENTITY").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_REFERENCE_IDENTITY") {
                 eprintln!("reference_identity:identifier {name}:global value={value:?}");
             }
             if self.expression_is_static_regexp_instance(value) {
@@ -583,7 +583,7 @@ impl<'a> FunctionCompiler<'a> {
                 return Some(format!("global:{name}"));
             }
             if let Some(binding) = self.resolve_static_reference_identity_key(value) {
-                if std::env::var_os("AYY_TRACE_REFERENCE_IDENTITY").is_some() {
+                if crate::ayy_env_flag!("AYY_TRACE_REFERENCE_IDENTITY") {
                     eprintln!("reference_identity:identifier {name}:global key={binding}");
                 }
                 return Some(binding);

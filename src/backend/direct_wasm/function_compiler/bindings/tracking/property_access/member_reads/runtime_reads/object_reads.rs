@@ -459,7 +459,7 @@ impl<'a> FunctionCompiler<'a> {
                     self.resolve_member_getter_binding(&materialized_object, &materialized_property)
                 })?
             });
-        if is_private_property && std::env::var_os("AYY_TRACE_PRIVATE_MEMBER_LOOKUP").is_some() {
+        if is_private_property && crate::ayy_env_flag!("AYY_TRACE_PRIVATE_MEMBER_LOOKUP") {
             eprintln!(
                 "private_object_binding_read object={object:?} property={property:?} getter_binding={getter_binding:?}",
             );

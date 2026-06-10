@@ -2,7 +2,7 @@ use super::*;
 
 impl<'a> FunctionCompiler<'a> {
     pub(super) fn apply_object_define_property_update(&mut self, arguments: &[CallArgument]) {
-        if std::env::var_os("AYY_TRACE_DEFINE_PROPERTY_UPDATE").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_DEFINE_PROPERTY_UPDATE") {
             eprintln!("define_property_update args={arguments:?}");
         }
         let [
@@ -458,7 +458,7 @@ impl<'a> FunctionCompiler<'a> {
             self.seed_local_this_object_binding();
         }
         let property = self.canonical_object_property_expression(property);
-        if std::env::var_os("AYY_TRACE_DEFINE_PROPERTY_UPDATE").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_DEFINE_PROPERTY_UPDATE") {
             eprintln!(
                 "define_property_update target={name} canonical_property={property:?} global={} local_object={}",
                 self.binding_name_is_global(name),
@@ -611,7 +611,7 @@ impl<'a> FunctionCompiler<'a> {
             has_get,
             has_set,
         };
-        if std::env::var_os("AYY_TRACE_DEFINE_PROPERTY_UPDATE").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_DEFINE_PROPERTY_UPDATE") {
             eprintln!(
                 "define_property_merge target={name} property={property:?} existing_descriptor={} is_accessor={} result_has_get={} result_has_set={} result_value={:?}",
                 existing_descriptor.is_some(),
@@ -717,7 +717,7 @@ impl<'a> FunctionCompiler<'a> {
         descriptor: &PropertyDescriptorDefinition,
     ) {
         let property = self.canonical_object_property_expression(property);
-        if std::env::var_os("AYY_TRACE_DEFINE_PROPERTY_UPDATE").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_DEFINE_PROPERTY_UPDATE") {
             eprintln!(
                 "define_property_update prototype target={name} canonical_property={property:?}"
             );
@@ -883,7 +883,7 @@ impl<'a> FunctionCompiler<'a> {
                 property,
                 descriptor_binding,
             );
-            if std::env::var_os("AYY_TRACE_DEFINE_PROPERTY_UPDATE").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_DEFINE_PROPERTY_UPDATE") {
                 eprintln!(
                     "define_property_update prototype_sync target={name} symbols={:?}",
                     object_binding
@@ -905,7 +905,7 @@ impl<'a> FunctionCompiler<'a> {
                 .entry(name.to_string())
                 .or_insert_with(empty_object_value_binding);
             object_binding_define_property_descriptor(object_binding, property, descriptor_binding);
-            if std::env::var_os("AYY_TRACE_DEFINE_PROPERTY_UPDATE").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_DEFINE_PROPERTY_UPDATE") {
                 eprintln!(
                     "define_property_update local_prototype target={name} symbols={:?}",
                     object_binding

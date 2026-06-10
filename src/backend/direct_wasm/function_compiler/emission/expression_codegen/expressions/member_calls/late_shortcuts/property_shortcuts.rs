@@ -167,7 +167,7 @@ impl<'a> FunctionCompiler<'a> {
         if matches!(property, Expression::String(property_name) if property_name == "hasOwnProperty")
             && let [CallArgument::Expression(argument_property)] = arguments
         {
-            let trace_has_own_shortcut = std::env::var_os("AYY_TRACE_HAS_OWN_SHORTCUT").is_some();
+            let trace_has_own_shortcut = crate::ayy_env_flag!("AYY_TRACE_HAS_OWN_SHORTCUT");
             if trace_has_own_shortcut {
                 eprintln!(
                     "has_own_shortcut:start fn={:?} object={object:?} property={argument_property:?} object_binding={} runtime_owner={:?} function_binding={}",
@@ -421,7 +421,7 @@ impl<'a> FunctionCompiler<'a> {
             }
 
             let trace_proxy_define_property =
-                std::env::var_os("AYY_TRACE_PROXY_DEFINE_PROPERTY").is_some();
+                crate::ayy_env_flag!("AYY_TRACE_PROXY_DEFINE_PROPERTY");
             if let Some(proxy_binding) = self.resolve_proxy_binding_from_expression(target)
                 && let Some(define_property_binding) =
                     proxy_binding.define_property_binding.as_ref()

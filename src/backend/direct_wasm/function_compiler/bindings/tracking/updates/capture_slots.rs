@@ -397,7 +397,7 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(());
         }
 
-        let trace_identifier_store = std::env::var_os("AYY_TRACE_IDENTIFIER_STORE").is_some();
+        let trace_identifier_store = crate::ayy_env_flag!("AYY_TRACE_IDENTIFIER_STORE");
         let source = Expression::Identifier(resolved_name.to_string());
         let is_promise_with_resolvers = expression_is_promise_with_resolvers_call(value)
             || expression_is_static_promise_with_resolvers_record(value);
@@ -740,7 +740,7 @@ impl<'a> FunctionCompiler<'a> {
                 .iter()
                 .map(|parameter| parameter.name.clone()),
         );
-        let trace_inherited_bindings = std::env::var_os("AYY_TRACE_INHERITED_BINDINGS").is_some();
+        let trace_inherited_bindings = crate::ayy_env_flag!("AYY_TRACE_INHERITED_BINDINGS");
         let mut initialized_slots: BTreeMap<String, String> = BTreeMap::new();
         let mut property_slots: HashMap<String, BTreeMap<String, String>> = HashMap::new();
         let returned_object_binding = if expression_is_unresolved_constructor_instance(value) {

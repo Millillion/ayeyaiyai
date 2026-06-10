@@ -1443,7 +1443,7 @@ impl<'a> FunctionCompiler<'a> {
                     })
             })
             .unwrap_or_else(|| name.to_string());
-        let trace_prototype_bindings = std::env::var_os("AYY_TRACE_PROTOTYPE_BINDINGS").is_some();
+        let trace_prototype_bindings = crate::ayy_env_flag!("AYY_TRACE_PROTOTYPE_BINDINGS");
         if trace_prototype_bindings {
             eprintln!(
                 "prototype_binding:resolve name={name} resolved_storage_name={resolved_storage_name} local_value={:?} global_value={:?}",

@@ -3114,7 +3114,7 @@ impl<'a> FunctionCompiler<'a> {
         then_expression: &Expression,
         else_expression: &Expression,
     ) -> DirectResult<()> {
-        let trace_conditional = std::env::var_os("AYY_TRACE_CONDITIONAL").is_some();
+        let trace_conditional = crate::ayy_env_flag!("AYY_TRACE_CONDITIONAL");
         if trace_conditional {
             eprintln!(
                 "conditional_emit:start condition={condition:?} then={then_expression:?} else={else_expression:?}"

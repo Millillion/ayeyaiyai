@@ -882,7 +882,7 @@ impl<'a> FunctionCompiler<'a> {
         target: &Expression,
         property: &Expression,
     ) -> Option<usize> {
-        let trace = std::env::var_os("AYY_TRACE_DEFINE_PROPERTY_DECISION").is_some();
+        let trace = crate::ayy_env_flag!("AYY_TRACE_DEFINE_PROPERTY_DECISION");
         let materialized_property = self.deferred_module_namespace_define_property_key(property)?;
         let property_name = static_property_name_from_expression(&materialized_property);
         if property_name
@@ -1158,7 +1158,7 @@ impl<'a> FunctionCompiler<'a> {
         property: &Expression,
         descriptor_expression: &Expression,
     ) -> Option<bool> {
-        let trace = std::env::var_os("AYY_TRACE_DEFINE_PROPERTY_DECISION").is_some();
+        let trace = crate::ayy_env_flag!("AYY_TRACE_DEFINE_PROPERTY_DECISION");
         let descriptor = resolve_property_descriptor_definition(descriptor_expression)?;
         let materialized_property = self.canonical_object_property_expression(property);
         if !target_is_module_init_namespace_construction_target(
@@ -1426,7 +1426,7 @@ impl<'a> FunctionCompiler<'a> {
         receiver: &Expression,
         property: &Expression,
     ) -> DirectResult<bool> {
-        let trace_dynamic_descriptor = std::env::var_os("AYY_TRACE_DYNAMIC_DESCRIPTOR").is_some();
+        let trace_dynamic_descriptor = crate::ayy_env_flag!("AYY_TRACE_DYNAMIC_DESCRIPTOR");
         if trace_dynamic_descriptor {
             eprintln!("dynamic_descriptor:start receiver={receiver:?} property={property:?}");
         }
@@ -1650,7 +1650,7 @@ impl<'a> FunctionCompiler<'a> {
         property: &Expression,
         materialized_property: &Expression,
     ) -> DirectResult<bool> {
-        let trace = std::env::var_os("AYY_TRACE_NAMESPACE_DESCRIPTOR").is_some();
+        let trace = crate::ayy_env_flag!("AYY_TRACE_NAMESPACE_DESCRIPTOR");
         let Some(module_index) = self.module_namespace_index_from_expression(receiver) else {
             return Ok(false);
         };

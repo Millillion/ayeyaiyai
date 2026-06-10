@@ -127,7 +127,7 @@ impl<'a> FunctionCompiler<'a> {
         let Some(previous_number) = self.resolve_static_number_value(&target) else {
             return Ok(false);
         };
-        if std::env::var_os("AYY_TRACE_UPDATES").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_UPDATES") {
             eprintln!(
                 "update:static_number current_fn={:?} name={name} previous={previous_number:?}",
                 self.current_function_name()
@@ -311,7 +311,7 @@ impl<'a> FunctionCompiler<'a> {
         if self.static_update_kind_is_stale_declared_global(name, previous_kind) {
             previous_kind = StaticValueKind::Unknown;
         }
-        if std::env::var_os("AYY_TRACE_UPDATES").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_UPDATES") {
             eprintln!(
                 "update:start current_fn={:?} name={name} kind={previous_kind:?} global_kind={:?} global_value={:?} capture={:?}",
                 self.current_function_name(),

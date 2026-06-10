@@ -90,7 +90,7 @@ impl<'a> FunctionCompiler<'a> {
         prepared_capture_bindings: Vec<PreparedCaptureBinding>,
         enable_static_snapshot: bool,
     ) -> DirectResult<()> {
-        let trace_user_calls = std::env::var_os("AYY_TRACE_USER_CALLS").is_some();
+        let trace_user_calls = crate::ayy_env_flag!("AYY_TRACE_USER_CALLS");
         if trace_user_calls {
             eprintln!(
                 "prepared_user_call:start current_fn={:?} target={} enable_static_snapshot={} args={expanded_arguments:?}",

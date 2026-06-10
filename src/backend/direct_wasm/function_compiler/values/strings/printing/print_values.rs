@@ -54,7 +54,7 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         value: &Expression,
     ) -> DirectResult<()> {
-        if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
             eprintln!("runtime_shadow_print_value value={value:?}");
         }
         match value {

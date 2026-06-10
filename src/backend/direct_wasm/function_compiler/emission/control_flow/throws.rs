@@ -1239,7 +1239,7 @@ impl<'a> FunctionCompiler<'a> {
 
     #[track_caller]
     pub(in crate::backend::direct_wasm) fn emit_throw_from_locals(&mut self) -> DirectResult<()> {
-        if std::env::var_os("AYY_TRACE_THROW_SITES").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_THROW_SITES") {
             let caller = std::panic::Location::caller();
             self.emit_print(&[Expression::String(format!(
                 "throw_from_locals fn={:?} allow_return={} try_depth={} instruction={} caller={}:{}",
@@ -1286,7 +1286,7 @@ impl<'a> FunctionCompiler<'a> {
             .push(EMPTY_BLOCK_TYPE);
         self.push_control_frame();
 
-        if std::env::var_os("AYY_TRACE_THROW_SITES").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_THROW_SITES") {
             self.emit_print(&[Expression::String(format!(
                 "check_global_throw fn={:?} allow_return={} try_depth={} instruction={}",
                 self.current_function_name(),
@@ -1344,7 +1344,7 @@ impl<'a> FunctionCompiler<'a> {
 
     #[track_caller]
     pub(in crate::backend::direct_wasm) fn emit_error_throw(&mut self) -> DirectResult<()> {
-        if std::env::var_os("AYY_TRACE_THROW_SITES").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_THROW_SITES") {
             let caller = std::panic::Location::caller();
             self.emit_print(&[Expression::String(format!(
                 "throw_site name=Error fn={:?} instruction={} caller={}:{}",
@@ -1366,7 +1366,7 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         name: &str,
     ) -> DirectResult<()> {
-        if std::env::var_os("AYY_TRACE_THROW_SITES").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_THROW_SITES") {
             let caller = std::panic::Location::caller();
             self.emit_print(&[Expression::String(format!(
                 "throw_site name={name} fn={:?} instruction={} caller={}:{}",

@@ -13,9 +13,9 @@ pub(in crate::backend::direct_wasm) fn execute_static_statement_block<
 where
     Executor::Environment: StaticTransactionalEnvironment,
 {
-    let trace_static_exec = std::env::var_os("AYY_TRACE_STATIC_EXEC").is_some();
-    let trace_static_loop = std::env::var_os("AYY_TRACE_STATIC_LOOP").is_some();
-    let trace_static_condition = std::env::var_os("AYY_TRACE_STATIC_CONDITION").is_some();
+    let trace_static_exec = crate::ayy_env_flag!("AYY_TRACE_STATIC_EXEC");
+    let trace_static_loop = crate::ayy_env_flag!("AYY_TRACE_STATIC_LOOP");
+    let trace_static_condition = crate::ayy_env_flag!("AYY_TRACE_STATIC_CONDITION");
     for statement in statements {
         if trace_static_exec {
             eprintln!("static_exec:statement={statement:?}");

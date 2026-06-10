@@ -2669,7 +2669,7 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         callee: &'b Expression,
     ) -> Option<&'b Expression> {
-        let trace = std::env::var_os("AYY_TRACE_DYNAMIC_CALLS").is_some();
+        let trace = crate::ayy_env_flag!("AYY_TRACE_DYNAMIC_CALLS");
         let Expression::Member { object, property } = callee else {
             return None;
         };
@@ -2715,7 +2715,7 @@ impl<'a> FunctionCompiler<'a> {
         callee: &Expression,
         user_function: &UserFunction,
     ) -> Vec<(u32, BTreeMap<String, String>)> {
-        let trace = std::env::var_os("AYY_TRACE_DYNAMIC_CALLS").is_some();
+        let trace = crate::ayy_env_flag!("AYY_TRACE_DYNAMIC_CALLS");
         let Expression::Member { object, .. } = callee else {
             return Vec::new();
         };
@@ -3033,21 +3033,21 @@ impl<'a> FunctionCompiler<'a> {
         {
             return Ok(true);
         }
-        if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
             eprintln!(
                 "emit_dynamic_user_function_call:start callee={callee:?} arguments={arguments:?}"
             );
         }
         let callee_local = self.allocate_temp_local();
-        if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
             eprintln!("emit_dynamic_user_function_call:emit-callee");
         }
         self.emit_numeric_expression(callee)?;
-        if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
             eprintln!("emit_dynamic_user_function_call:emit-callee-done");
         }
         self.push_local_set(callee_local);
-        if std::env::var_os("AYY_TRACE_DYNAMIC_CALLS").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_DYNAMIC_CALLS") {
             self.emit_runtime_shadow_debug_print_local(
                 &format!("dynamic_call_callee callee={callee:?}"),
                 callee_local,
@@ -3136,7 +3136,7 @@ impl<'a> FunctionCompiler<'a> {
         let mut call_arguments = Vec::with_capacity(expanded_arguments.len());
         let mut argument_shadow_writebacks = Vec::new();
         for (index, argument) in expanded_arguments.iter().enumerate() {
-            if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
                 eprintln!(
                     "emit_dynamic_user_function_call:prepare-arg index={index} argument={argument:?}"
                 );
@@ -3175,7 +3175,7 @@ impl<'a> FunctionCompiler<'a> {
                 hidden_name,
             )));
         }
-        if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
             eprintln!(
                 "emit_dynamic_user_function_call:dispatch-functions builtins={} user={}",
                 builtin_function_runtime_entries().count(),
@@ -3187,7 +3187,7 @@ impl<'a> FunctionCompiler<'a> {
         let callee_capture_slots = self.resolve_function_expression_capture_slots(callee);
         let user_functions = self.dynamic_user_function_dispatch_candidates(callee);
         let dispatch_branch_count = builtin_runtime_functions.len() + user_functions.len();
-        if std::env::var_os("AYY_TRACE_DYNAMIC_CALLS").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_DYNAMIC_CALLS") {
             for (function_name, runtime_value) in &builtin_runtime_functions {
                 eprintln!("dynamic_dispatch_builtin name={function_name} runtime={runtime_value}");
             }
@@ -3205,7 +3205,7 @@ impl<'a> FunctionCompiler<'a> {
             self.push_local_get(callee_local);
             self.push_i32_const(*runtime_value);
             self.push_binary_op(BinaryOp::Equal)?;
-            if std::env::var_os("AYY_TRACE_DYNAMIC_CALLS").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_DYNAMIC_CALLS") {
                 let match_local = self.allocate_temp_local();
                 self.push_local_set(match_local);
                 self.emit_runtime_shadow_debug_print_local(
@@ -3217,7 +3217,7 @@ impl<'a> FunctionCompiler<'a> {
             self.state.emission.output.instructions.push(0x04);
             self.state.emission.output.instructions.push(I32_TYPE);
             self.push_control_frame();
-            if std::env::var_os("AYY_TRACE_DYNAMIC_CALLS").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_DYNAMIC_CALLS") {
                 self.emit_print(&[Expression::String(format!(
                     "dynamic_dispatch_enter builtin {function_name}"
                 ))])?;
@@ -3231,7 +3231,7 @@ impl<'a> FunctionCompiler<'a> {
             self.push_local_get(callee_local);
             self.push_i32_const(user_function_runtime_value(user_function));
             self.push_binary_op(BinaryOp::Equal)?;
-            if std::env::var_os("AYY_TRACE_DYNAMIC_CALLS").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_DYNAMIC_CALLS") {
                 let match_local = self.allocate_temp_local();
                 self.push_local_set(match_local);
                 self.emit_runtime_shadow_debug_print_local(
@@ -3243,7 +3243,7 @@ impl<'a> FunctionCompiler<'a> {
             self.state.emission.output.instructions.push(0x04);
             self.state.emission.output.instructions.push(I32_TYPE);
             self.push_control_frame();
-            if std::env::var_os("AYY_TRACE_DYNAMIC_CALLS").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_DYNAMIC_CALLS") {
                 self.emit_print(&[Expression::String(format!(
                     "dynamic_dispatch_enter user {}",
                     user_function.name
@@ -3286,7 +3286,7 @@ impl<'a> FunctionCompiler<'a> {
             }
             self.state.emission.output.instructions.push(0x05);
             if index + 1 == user_functions.len() {
-                if std::env::var_os("AYY_TRACE_DYNAMIC_CALLS").is_some() {
+                if crate::ayy_env_flag!("AYY_TRACE_DYNAMIC_CALLS") {
                     eprintln!(
                         "emit_dynamic_user_function_call:no-match-fallback callee={callee:?} instruction={}",
                         self.state.emission.output.instructions.len()
@@ -3300,7 +3300,7 @@ impl<'a> FunctionCompiler<'a> {
             }
         }
         if user_functions.is_empty() {
-            if std::env::var_os("AYY_TRACE_DYNAMIC_CALLS").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_DYNAMIC_CALLS") {
                 eprintln!(
                     "emit_dynamic_user_function_call:no-match-fallback callee={callee:?} instruction={}",
                     self.state.emission.output.instructions.len()
@@ -3328,7 +3328,7 @@ impl<'a> FunctionCompiler<'a> {
         self.state.emission.output.instructions.push(0x0b);
         self.pop_control_frame();
 
-        if std::env::var_os("AYY_TRACE_INLINE_PROMISES").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
             eprintln!("emit_dynamic_user_function_call:done");
         }
         Ok(true)

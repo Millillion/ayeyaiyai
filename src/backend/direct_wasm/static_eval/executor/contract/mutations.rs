@@ -67,7 +67,7 @@ pub(in crate::backend::direct_wasm) trait StaticBindingMutationExecutor:
         value: Expression,
         environment: &mut Self::Environment,
     ) -> Option<()> {
-        let trace_static_exec = std::env::var_os("AYY_TRACE_STATIC_EXEC").is_some();
+        let trace_static_exec = crate::ayy_env_flag!("AYY_TRACE_STATIC_EXEC");
         let property = self.normalize_assigned_member_property(property, environment);
         if self
             .assign_member_binding_value_hook(object, &property, &value, environment)

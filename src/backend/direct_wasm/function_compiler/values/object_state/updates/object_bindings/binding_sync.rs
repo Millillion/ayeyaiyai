@@ -618,7 +618,7 @@ impl<'a> FunctionCompiler<'a> {
             }
             prototype_from_value(self, &materialized)
         });
-        if std::env::var_os("AYY_TRACE_OBJECT_PROTOTYPES").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_OBJECT_PROTOTYPES") {
             eprintln!(
                 "object_prototype_update name={name} value={value:?} prototype={prototype:?}"
             );

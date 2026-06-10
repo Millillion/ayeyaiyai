@@ -124,7 +124,7 @@ impl<'a> FunctionCompiler<'a> {
                 .push(hidden_name.clone());
             match &argument {
                 Expression::Identifier(source_name) => {
-                    if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+                    if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                         eprintln!(
                             "inline_param_writeback hidden={hidden_name} source_owner={source_name}"
                         );
@@ -133,7 +133,7 @@ impl<'a> FunctionCompiler<'a> {
                         .push((hidden_name.clone(), source_name.clone()));
                 }
                 Expression::This => {
-                    if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+                    if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                         eprintln!("inline_param_writeback hidden={hidden_name} source_owner=this");
                     }
                     inline_parameter_shadow_writebacks
@@ -230,7 +230,7 @@ impl<'a> FunctionCompiler<'a> {
         state: &mut InlineSummaryEmissionState,
     ) -> DirectResult<()> {
         let visible_param_count = user_function.visible_param_count() as usize;
-        if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
             eprintln!(
                 "inline_param_writeback_finalize visible_param_count={visible_param_count} arguments_len={} call_arguments_len={}",
                 arguments.len(),
@@ -251,7 +251,7 @@ impl<'a> FunctionCompiler<'a> {
                 Expression::This => "this",
                 _ => continue,
             };
-            if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                 eprintln!(
                     "inline_param_writeback_commit hidden={hidden_name} source_owner={source_owner}"
                 );
@@ -263,7 +263,7 @@ impl<'a> FunctionCompiler<'a> {
                 &Expression::Identifier(hidden_name.clone()),
             );
             for alias_owner in alias_owners {
-                if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+                if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                     eprintln!(
                         "inline_param_writeback_alias hidden={hidden_name} alias_owner={alias_owner}"
                     );

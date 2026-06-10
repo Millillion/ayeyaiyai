@@ -16581,7 +16581,7 @@ fn consumes_chained_immediate_promise_outcome_for_async_generator_private_method
             .resolve_static_number_value(&Expression::Identifier("callCount".to_string())),
         Some(1.0),
     );
-    if std::env::var_os("AYY_TRACE_PRIVATE_RETURN").is_some() {
+    if crate::ayy_env_flag!("AYY_TRACE_PRIVATE_RETURN") {
         for index in 0..14 {
             eprintln!(
                 "private_return_log index={index} name={:?} value={:?}",
@@ -16789,7 +16789,7 @@ fn consumes_chained_immediate_promise_outcome_for_async_generator_private_method
             .resolve_static_number_value(&Expression::Identifier("callCount".to_string())),
         Some(1.0),
     );
-    if std::env::var_os("AYY_TRACE_PRIVATE_RETURN").is_some() {
+    if crate::ayy_env_flag!("AYY_TRACE_PRIVATE_RETURN") {
         for index in 0..14 {
             eprintln!(
                 "private_return_log index={index} name={:?} value={:?}",

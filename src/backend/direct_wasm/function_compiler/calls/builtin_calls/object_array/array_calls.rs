@@ -48,7 +48,7 @@ impl<'a> FunctionCompiler<'a> {
                 let runtime_array = self.runtime_array_binding_name_for_expression(expression);
                 let template_raw_array =
                     self.expression_is_template_object_raw_array_candidate(expression);
-                if std::env::var_os("AYY_TRACE_ARRAY_IS_ARRAY").is_some() {
+                if crate::ayy_env_flag!("AYY_TRACE_ARRAY_IS_ARRAY") {
                     eprintln!(
                         "array_is_array:emit expression={expression:?} typed_array={typed_array} static_array={static_array} runtime_array={runtime_array:?} template_raw_array={template_raw_array}"
                     );

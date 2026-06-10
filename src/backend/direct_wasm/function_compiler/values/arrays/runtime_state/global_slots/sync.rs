@@ -6,7 +6,7 @@ impl<'a> FunctionCompiler<'a> {
         name: &str,
         source: &Expression,
     ) -> DirectResult<bool> {
-        let trace_identifier_store = std::env::var_os("AYY_TRACE_IDENTIFIER_STORE").is_some();
+        let trace_identifier_store = crate::ayy_env_flag!("AYY_TRACE_IDENTIFIER_STORE");
         let Expression::Identifier(source_name) = source else {
             if trace_identifier_store {
                 eprintln!(

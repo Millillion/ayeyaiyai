@@ -59,7 +59,7 @@ impl<'a> FunctionCompiler<'a> {
             && let Some(synthetic_value) =
                 Self::synthetic_private_brand_runtime_value_for_binding_name(binding_name)
         {
-            if std::env::var_os("AYY_TRACE_PRIVATE_BRAND_COMPILE").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_PRIVATE_BRAND_COMPILE") {
                 eprintln!(
                     "private_brand_direct_value current_fn={:?} binding={binding_name} source=hidden_or_synthetic",
                     self.current_function_name(),
@@ -81,7 +81,7 @@ impl<'a> FunctionCompiler<'a> {
             || self.resolve_global_binding_index(binding_name).is_some()
             || self.hidden_implicit_global_binding(binding_name).is_some()
         {
-            if std::env::var_os("AYY_TRACE_PRIVATE_BRAND_COMPILE").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_PRIVATE_BRAND_COMPILE") {
                 eprintln!(
                     "private_brand_direct_value current_fn={:?} binding={binding_name} source=identifier",
                     self.current_function_name(),
@@ -94,7 +94,7 @@ impl<'a> FunctionCompiler<'a> {
         if let Some(synthetic_value) =
             Self::synthetic_private_brand_runtime_value_for_binding_name(binding_name)
         {
-            if std::env::var_os("AYY_TRACE_PRIVATE_BRAND_COMPILE").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_PRIVATE_BRAND_COMPILE") {
                 eprintln!(
                     "private_brand_direct_value current_fn={:?} binding={binding_name} source=synthetic suffix={}",
                     self.current_function_name(),
@@ -106,7 +106,7 @@ impl<'a> FunctionCompiler<'a> {
         }
 
         if self.lookup_identifier_kind(binding_name).is_some() {
-            if std::env::var_os("AYY_TRACE_PRIVATE_BRAND_COMPILE").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_PRIVATE_BRAND_COMPILE") {
                 eprintln!(
                     "private_brand_direct_value current_fn={:?} binding={binding_name} source=kind",
                     self.current_function_name(),
@@ -127,7 +127,7 @@ impl<'a> FunctionCompiler<'a> {
             || self.resolve_global_binding_index(binding_name).is_some()
             || self.hidden_implicit_global_binding(binding_name).is_some()
         {
-            if std::env::var_os("AYY_TRACE_PRIVATE_BRAND_COMPILE").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_PRIVATE_BRAND_COMPILE") {
                 eprintln!(
                     "private_brand_value_source current_fn={:?} binding={binding_name} source=direct",
                     self.current_function_name(),
@@ -136,7 +136,7 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(false);
         }
         if let Some(hidden_name) = self.resolve_user_function_capture_hidden_name(binding_name) {
-            if std::env::var_os("AYY_TRACE_PRIVATE_BRAND_COMPILE").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_PRIVATE_BRAND_COMPILE") {
                 eprintln!(
                     "private_brand_value_source current_fn={:?} binding={binding_name} source=hidden hidden={hidden_name}",
                     self.current_function_name(),
@@ -163,7 +163,7 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(true);
         }
         if self.lookup_identifier_kind(binding_name).is_some() {
-            if std::env::var_os("AYY_TRACE_PRIVATE_BRAND_COMPILE").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_PRIVATE_BRAND_COMPILE") {
                 eprintln!(
                     "private_brand_value_source current_fn={:?} binding={binding_name} source=kind",
                     self.current_function_name(),
@@ -338,7 +338,7 @@ impl<'a> FunctionCompiler<'a> {
         let matches_local = self.allocate_temp_local();
         self.push_i32_const(0);
         self.push_local_set(matches_local);
-        let trace_private_values = std::env::var_os("AYY_TRACE_PRIVATE_MEMBER_VALUES").is_some();
+        let trace_private_values = crate::ayy_env_flag!("AYY_TRACE_PRIVATE_MEMBER_VALUES");
         if trace_private_values {
             self.emit_runtime_shadow_debug_print_local("private_member_match_marker", value_local)?;
         }
@@ -491,7 +491,7 @@ impl<'a> FunctionCompiler<'a> {
             if self.emit_current_private_brand_value()? {
                 let expected_local = self.allocate_temp_local();
                 self.push_local_set(expected_local);
-                if std::env::var_os("AYY_TRACE_PRIVATE_MEMBER_VALUES").is_some() {
+                if crate::ayy_env_flag!("AYY_TRACE_PRIVATE_MEMBER_VALUES") {
                     self.emit_runtime_shadow_debug_print_local(
                         "private_brand_check_marker",
                         marker_local,
@@ -548,7 +548,7 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(());
         }
         if !self.emit_current_private_brand_value()? {
-            if std::env::var_os("AYY_TRACE_PRIVATE_MEMBER_VALUES").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_PRIVATE_MEMBER_VALUES") {
                 self.emit_runtime_shadow_debug_print_local(
                     "private_brand_check_marker_without_expected",
                     marker_local,
@@ -557,7 +557,7 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(());
         }
         self.push_local_set(expected_local);
-        if std::env::var_os("AYY_TRACE_PRIVATE_MEMBER_VALUES").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_PRIVATE_MEMBER_VALUES") {
             self.emit_runtime_shadow_debug_print_local("private_brand_check_marker", marker_local)?;
             self.emit_runtime_shadow_debug_print_local(
                 "private_brand_check_expected",
@@ -576,7 +576,7 @@ impl<'a> FunctionCompiler<'a> {
             .instructions
             .push(EMPTY_BLOCK_TYPE);
         self.push_control_frame();
-        if std::env::var_os("AYY_TRACE_PRIVATE_BRAND_COMPILE").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_PRIVATE_BRAND_COMPILE") {
             eprintln!(
                 "private_brand_check_throw current_fn={:?} instruction={} marker_local={marker_local}",
                 self.current_function_name(),
@@ -723,7 +723,7 @@ impl<'a> FunctionCompiler<'a> {
             .and_then(|object_binding| {
                 self.resolve_object_binding_property_value(&object_binding, &marker_property)
             });
-        if std::env::var_os("AYY_TRACE_PRIVATE_MEMBER_VALUES").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_PRIVATE_MEMBER_VALUES") {
             eprintln!(
                 "private_brand_check_setup current_fn={:?} object={object:?} property={property:?} marker_property={marker_property:?} static_marker={static_marker:?}",
                 self.current_function_name(),
@@ -745,7 +745,7 @@ impl<'a> FunctionCompiler<'a> {
                 .instructions
                 .push(EMPTY_BLOCK_TYPE);
             self.push_control_frame();
-            if std::env::var_os("AYY_TRACE_PRIVATE_MEMBER_VALUES").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_PRIVATE_MEMBER_VALUES") {
                 self.emit_print(&[Expression::String(
                     "private_brand_check_deleted_marker".to_string(),
                 )])?;
@@ -757,7 +757,7 @@ impl<'a> FunctionCompiler<'a> {
 
         let emit_static_or_throw = |compiler: &mut Self| -> DirectResult<()> {
             if let Some(static_marker) = static_marker.as_ref() {
-                if std::env::var_os("AYY_TRACE_PRIVATE_BRAND_COMPILE").is_some() {
+                if crate::ayy_env_flag!("AYY_TRACE_PRIVATE_BRAND_COMPILE") {
                     eprintln!(
                         "private_brand_check_static_marker current_fn={:?} property={property:?} instruction={}",
                         compiler.current_function_name(),
@@ -769,7 +769,7 @@ impl<'a> FunctionCompiler<'a> {
                     Some(property),
                 )
             } else {
-                if std::env::var_os("AYY_TRACE_PRIVATE_MEMBER_VALUES").is_some() {
+                if crate::ayy_env_flag!("AYY_TRACE_PRIVATE_MEMBER_VALUES") {
                     compiler.emit_print(&[Expression::String(format!(
                         "private_brand_check_missing_marker {property:?}"
                     ))])?;
@@ -795,7 +795,7 @@ impl<'a> FunctionCompiler<'a> {
                 .instructions
                 .push(EMPTY_BLOCK_TYPE);
             compiler.push_control_frame();
-            if std::env::var_os("AYY_TRACE_PRIVATE_MEMBER_VALUES").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_PRIVATE_MEMBER_VALUES") {
                 compiler.emit_print(&[Expression::String(
                     "private_brand_check_field_shadow_present".to_string(),
                 )])?;
@@ -822,7 +822,7 @@ impl<'a> FunctionCompiler<'a> {
         let marker_local = self.allocate_temp_local();
         self.push_global_get(runtime_binding.value_index);
         self.push_local_set(marker_local);
-        if std::env::var_os("AYY_TRACE_PRIVATE_BRAND_COMPILE").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_PRIVATE_BRAND_COMPILE") {
             eprintln!(
                 "private_brand_check_runtime_marker current_fn={:?} property={property:?} instruction={} marker_local={marker_local}",
                 self.current_function_name(),
@@ -856,7 +856,7 @@ impl<'a> FunctionCompiler<'a> {
         property: &Expression,
         value_local: u32,
     ) -> DirectResult<()> {
-        if std::env::var_os("AYY_TRACE_PRIVATE_MEMBER_LOOKUP").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_PRIVATE_MEMBER_LOOKUP") {
             eprintln!(
                 "private_runtime_local_read current_fn={:?} object={object:?} property={property:?} getter={:?} method={:?}",
                 self.current_function_name(),
@@ -951,7 +951,7 @@ impl<'a> FunctionCompiler<'a> {
         function_binding: &LocalFunctionBinding,
         capture_slots: Option<&BTreeMap<String, String>>,
     ) -> DirectResult<()> {
-        if std::env::var_os("AYY_TRACE_PRIVATE_MEMBER_LOOKUP").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_PRIVATE_MEMBER_LOOKUP") {
             eprintln!(
                 "private_runtime_fallback_read current_fn={:?} object={object:?} property={property:?} binding={function_binding:?} getter={:?} method={:?}",
                 self.current_function_name(),
@@ -1048,8 +1048,8 @@ impl<'a> FunctionCompiler<'a> {
         property: &Expression,
         static_array_property: &Expression,
     ) -> DirectResult<bool> {
-        let trace_member_reads = std::env::var_os("AYY_TRACE_MEMBER_READS").is_some()
-            || std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some();
+        let trace_member_reads = crate::ayy_env_flag!("AYY_TRACE_MEMBER_READS")
+            || crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS");
         if trace_member_reads {
             eprintln!(
                 "runtime_or_object_read:start object={object:?} property={property:?} static={static_array_property:?}"
@@ -1072,7 +1072,7 @@ impl<'a> FunctionCompiler<'a> {
                     .is_some())
             && self.emit_runtime_arguments_member_read(object, static_array_property)?
         {
-            if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                 eprintln!(
                     "runtime_shadow_member_branch arguments_own object={object:?} property={property:?}"
                 );
@@ -1082,8 +1082,8 @@ impl<'a> FunctionCompiler<'a> {
         if object_uses_internal_assignment_temp
             && self.emit_runtime_array_member_read(object, static_array_property)?
         {
-            if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some()
-                || std::env::var_os("AYY_TRACE_MEMBER_READS").is_some()
+            if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS")
+                || crate::ayy_env_flag!("AYY_TRACE_MEMBER_READS")
             {
                 eprintln!(
                     "runtime_shadow_member_branch internal_temp_array object={object:?} property={property:?}"
@@ -1094,8 +1094,8 @@ impl<'a> FunctionCompiler<'a> {
         if object_uses_internal_assignment_temp
             && self.emit_runtime_object_binding_member_read(object, property)?
         {
-            if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some()
-                || std::env::var_os("AYY_TRACE_MEMBER_READS").is_some()
+            if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS")
+                || crate::ayy_env_flag!("AYY_TRACE_MEMBER_READS")
             {
                 eprintln!(
                     "runtime_shadow_member_branch internal_temp_object object={object:?} property={property:?}"
@@ -1107,7 +1107,7 @@ impl<'a> FunctionCompiler<'a> {
             eprintln!("runtime_or_object_read:before_descriptor");
         }
         if self.emit_runtime_descriptor_member_read(object, property)? {
-            if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                 eprintln!(
                     "runtime_shadow_member_branch descriptor object={object:?} property={property:?}"
                 );
@@ -1120,7 +1120,7 @@ impl<'a> FunctionCompiler<'a> {
         if !object_is_runtime_array_element_base
             && self.emit_runtime_array_member_read(object, static_array_property)?
         {
-            if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                 eprintln!(
                     "runtime_shadow_member_branch array object={object:?} property={property:?}"
                 );
@@ -1148,7 +1148,7 @@ impl<'a> FunctionCompiler<'a> {
                 object, property,
             )?
         {
-            if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                 eprintln!(
                     "runtime_shadow_member_branch dynamic_shadow object={object:?} property={property:?}"
                 );
@@ -1162,7 +1162,7 @@ impl<'a> FunctionCompiler<'a> {
             && !dynamic_descriptor_member_read
             && self.emit_runtime_object_shadow_member_read(object, property)?
         {
-            if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                 eprintln!(
                     "runtime_shadow_member_branch shadow object={object:?} property={property:?}"
                 );
@@ -1181,7 +1181,7 @@ impl<'a> FunctionCompiler<'a> {
             eprintln!("runtime_or_object_read:before_object_binding");
         }
         if self.emit_runtime_object_binding_member_read(object, property)? {
-            if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                 eprintln!(
                     "runtime_shadow_member_branch object object={object:?} property={property:?}"
                 );
@@ -1192,7 +1192,7 @@ impl<'a> FunctionCompiler<'a> {
             eprintln!("runtime_or_object_read:before_string");
         }
         if self.emit_runtime_string_member_read(object, property)? {
-            if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                 eprintln!(
                     "runtime_shadow_member_branch string object={object:?} property={property:?}"
                 );
@@ -1203,7 +1203,7 @@ impl<'a> FunctionCompiler<'a> {
             eprintln!("runtime_or_object_read:before_arguments");
         }
         if self.emit_runtime_arguments_member_read(object, property)? {
-            if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                 eprintln!(
                     "runtime_shadow_member_branch arguments object={object:?} property={property:?}"
                 );
@@ -1214,7 +1214,7 @@ impl<'a> FunctionCompiler<'a> {
             eprintln!("runtime_or_object_read:before_native_error");
         }
         if self.emit_runtime_native_error_member_read(object, property)? {
-            if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                 eprintln!(
                     "runtime_shadow_member_branch native_error object={object:?} property={property:?}"
                 );
@@ -1225,7 +1225,7 @@ impl<'a> FunctionCompiler<'a> {
             eprintln!("runtime_or_object_read:before_returned_or_function");
         }
         if self.emit_runtime_returned_or_function_member_read(object, property)? {
-            if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                 eprintln!(
                     "runtime_shadow_member_branch returned_or_function object={object:?} property={property:?}"
                 );
@@ -1236,7 +1236,7 @@ impl<'a> FunctionCompiler<'a> {
             eprintln!("runtime_or_object_read:before_array_undefined");
         }
         if self.resolve_array_binding_from_expression(object).is_some() {
-            if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {
+            if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                 eprintln!(
                     "runtime_shadow_member_branch array_undefined object={object:?} property={property:?}"
                 );

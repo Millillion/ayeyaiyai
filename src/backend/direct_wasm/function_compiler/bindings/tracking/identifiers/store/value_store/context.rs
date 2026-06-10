@@ -726,7 +726,7 @@ impl<'a> FunctionCompiler<'a> {
         result: Expression,
         function_name: Option<String>,
     ) -> Expression {
-        let trace_identifier_store = std::env::var_os("AYY_TRACE_IDENTIFIER_STORE").is_some();
+        let trace_identifier_store = crate::ayy_env_flag!("AYY_TRACE_IDENTIFIER_STORE");
         if trace_identifier_store {
             eprintln!(
                 "identifier_store:normalize_static_call_result function={function_name:?} result={result:?}"
@@ -1118,7 +1118,7 @@ impl<'a> FunctionCompiler<'a> {
         name: &str,
         value_expression: &Expression,
     ) -> PreparedIdentifierValueStore {
-        let trace_identifier_store = std::env::var_os("AYY_TRACE_IDENTIFIER_STORE").is_some();
+        let trace_identifier_store = crate::ayy_env_flag!("AYY_TRACE_IDENTIFIER_STORE");
         if trace_identifier_store {
             eprintln!("identifier_store:{name}:prepare:start");
         }

@@ -266,7 +266,7 @@ impl StaticSpecialExpressionSource for FunctionStaticEvalContext<'_, '_> {
         let Expression::SuperCall { callee, arguments } = expression else {
             return None;
         };
-        let trace_constructor = std::env::var_os("AYY_TRACE_CONSTRUCTOR_BINDINGS").is_some();
+        let trace_constructor = crate::ayy_env_flag!("AYY_TRACE_CONSTRUCTOR_BINDINGS");
         if matches!(
             environment
                 .local_bindings
