@@ -1113,6 +1113,25 @@ impl<'a> FunctionCompiler<'a> {
         (!snapshot.is_empty()).then_some(snapshot)
     }
 
+    fn for_await_step_value_without_await(&self, expression: &Expression) -> Option<Expression> {
+        let Expression::Await(inner) = expression else {
+            return None;
+        };
+        let Expression::Member { object, property } = inner.as_ref() else {
+            return None;
+        };
+        if !matches!(property.as_ref(), Expression::String(name) if name == "value") {
+            return None;
+        }
+        let IteratorStepBinding::Runtime { static_value, .. } =
+            self.resolve_iterator_step_binding_from_expression(object)?
+        else {
+            return None;
+        };
+        let static_value = static_value?;
+        expression_is_statically_non_thenable(&static_value).then(|| inner.as_ref().clone())
+    }
+
     pub(super) fn prepare_identifier_value_store(
         &mut self,
         name: &str,
@@ -1767,6 +1786,15 @@ impl<'a> FunctionCompiler<'a> {
             if trace_identifier_store {
                 eprintln!("identifier_store:{name}:iterator_step_value");
             }
+            // Awaiting a statically known non-thenable iterator element is an
+            // identity step; track the inner member read so for-await values
+            // keep the same metadata as sync for-of.
+            let canonical_value_expression = self
+                .for_await_step_value_without_await(&canonical_value_expression)
+                .unwrap_or_else(|| canonical_value_expression.clone());
+            let tracked_value_expression = self
+                .for_await_step_value_without_await(&tracked_value_expression)
+                .unwrap_or_else(|| tracked_value_expression.clone());
             return PreparedIdentifierValueStore {
                 canonical_value_expression: canonical_value_expression.clone(),
                 tracked_value_expression: tracked_value_expression.clone(),
@@ -2208,5 +2236,26 @@ impl<'a> FunctionCompiler<'a> {
             runtime_value_override: None,
             opaque_runtime_value: false,
         }
+    }
+}
+
+fn expression_is_statically_non_thenable(expression: &Expression) -> bool {
+    match expression {
+        Expression::Array(_)
+        | Expression::String(_)
+        | Expression::Number(_)
+        | Expression::BigInt(_)
+        | Expression::Bool(_)
+        | Expression::Null
+        | Expression::Undefined => true,
+        Expression::Object(entries) => entries.iter().all(|entry| match entry {
+            ObjectEntry::Data { key, .. }
+            | ObjectEntry::Getter { key, .. }
+            | ObjectEntry::Setter { key, .. } => {
+                !matches!(key, Expression::String(name) if name == "then")
+            }
+            ObjectEntry::Spread(_) => false,
+        }),
+        _ => false,
     }
 }

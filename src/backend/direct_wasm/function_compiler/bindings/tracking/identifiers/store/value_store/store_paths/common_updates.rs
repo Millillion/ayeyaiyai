@@ -1742,6 +1742,28 @@ impl<'a> FunctionCompiler<'a> {
                 &state.tracked_value_expression,
             );
         if value_contains_await {
+            // A for-await step value (`Await(step.value)`) must keep its value
+            // binding so iterator-source resolution can chase the alias;
+            // wiping it loses the loop value entirely (arrays/objects exist
+            // only as compile-time metadata).
+            if value_references_internal_iterator_step {
+                trace_step("await_iterator_step:start");
+                self.state
+                    .speculation
+                    .static_semantics
+                    .set_local_value_binding(
+                        &state.resolved_name,
+                        state.canonical_value_expression.clone(),
+                    );
+                if let Some(kind) = state.kind {
+                    self.state
+                        .speculation
+                        .static_semantics
+                        .set_local_kind(&state.resolved_name, kind);
+                }
+                trace_step("await_iterator_step:done");
+                return Ok(());
+            }
             trace_step("await_runtime:start");
             self.state
                 .clear_local_static_binding_metadata(&state.resolved_name);

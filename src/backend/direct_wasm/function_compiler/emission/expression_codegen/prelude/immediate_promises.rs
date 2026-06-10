@@ -5888,8 +5888,10 @@ impl<'a> FunctionCompiler<'a> {
                     self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
                     return Ok(true);
                 }
-                if object_is_promise_like_chain
-                    && self.promise_like_chain_roots_in_async_generator_protocol_call(object)
+                // Dropping the handler arguments here loses the continuation
+                // entirely ($DONE never fires); prefer driving the fulfilled
+                // protocol inline for any promise-like receiver.
+                if (object_is_promise_like_chain || object_is_direct_async_function_call)
                     && self.emit_fulfilled_promise_protocol_member_call(
                         object,
                         property_name,
