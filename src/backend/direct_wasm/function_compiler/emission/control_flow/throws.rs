@@ -1328,6 +1328,40 @@ impl<'a> FunctionCompiler<'a> {
         Ok(())
     }
 
+    /// Moves a pending synchronous throw left behind by an async user
+    /// function call into the dedicated pending-promise-rejection globals so
+    /// the implicit promise rejection can later be routed to a rejection
+    /// handler instead of being silently discarded.
+    pub(in crate::backend::direct_wasm) fn emit_async_call_pending_rejection_capture(
+        &mut self,
+    ) -> DirectResult<()> {
+        self.push_global_get(THROW_TAG_GLOBAL_INDEX);
+        self.push_i32_const(0);
+        self.push_binary_op(BinaryOp::NotEqual)?;
+        self.state.emission.output.instructions.push(0x04);
+        self.state
+            .emission
+            .output
+            .instructions
+            .push(EMPTY_BLOCK_TYPE);
+        self.push_control_frame();
+        self.push_global_get(THROW_VALUE_GLOBAL_INDEX);
+        self.push_global_set(PENDING_PROMISE_REJECTION_VALUE_GLOBAL_INDEX);
+        self.push_global_get(THROW_TAG_GLOBAL_INDEX);
+        self.push_global_set(PENDING_PROMISE_REJECTION_TAG_GLOBAL_INDEX);
+        self.clear_global_throw_state();
+        self.state.emission.output.instructions.push(0x0b);
+        self.pop_control_frame();
+        Ok(())
+    }
+
+    pub(in crate::backend::direct_wasm) fn clear_pending_promise_rejection_state(&mut self) {
+        self.push_i32_const(0);
+        self.push_global_set(PENDING_PROMISE_REJECTION_TAG_GLOBAL_INDEX);
+        self.push_i32_const(0);
+        self.push_global_set(PENDING_PROMISE_REJECTION_VALUE_GLOBAL_INDEX);
+    }
+
     pub(in crate::backend::direct_wasm) fn clear_local_throw_state(&mut self) {
         self.push_i32_const(0);
         self.push_local_set(self.state.runtime.throws.throw_tag_local);

@@ -67,6 +67,8 @@ pub(in crate::backend::direct_wasm) const CURRENT_NEW_TARGET_GLOBAL_INDEX: u32 =
 pub(in crate::backend::direct_wasm) const CURRENT_THIS_GLOBAL_INDEX: u32 = 3;
 pub(in crate::backend::direct_wasm) const NEXT_PRIVATE_BRAND_GLOBAL_INDEX: u32 = 4;
 pub(in crate::backend::direct_wasm) const NEXT_RUNTIME_OBJECT_VALUE_GLOBAL_INDEX: u32 = 5;
+pub(in crate::backend::direct_wasm) const PENDING_PROMISE_REJECTION_TAG_GLOBAL_INDEX: u32 = 6;
+pub(in crate::backend::direct_wasm) const PENDING_PROMISE_REJECTION_VALUE_GLOBAL_INDEX: u32 = 7;
 pub(in crate::backend::direct_wasm) const TRACKED_ARGUMENT_SLOT_LIMIT: u32 = 64;
 pub(in crate::backend::direct_wasm) const TRACKED_ARRAY_SLOT_LIMIT: u32 = 32;
 

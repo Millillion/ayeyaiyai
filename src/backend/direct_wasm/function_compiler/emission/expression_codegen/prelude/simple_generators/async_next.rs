@@ -155,6 +155,80 @@ impl<'a> FunctionCompiler<'a> {
         name.starts_with("__ayy_array_step_") || name.starts_with("__ayy_for_of_step_")
     }
 
+    /// Emits one inline-driven async generator body statement so a runtime
+    /// abrupt completion rejects the driven promise (recorded in the pending
+    /// promise rejection globals) instead of escaping as an uncaught throw.
+    pub(in crate::backend::direct_wasm) fn emit_inline_async_generator_effect_statement(
+        &mut self,
+        statement: &Statement,
+    ) -> DirectResult<()> {
+        self.state.emission.output.instructions.push(0x02);
+        self.state
+            .emission
+            .output
+            .instructions
+            .push(EMPTY_BLOCK_TYPE);
+        let catch_target = self.push_control_frame();
+        self.state
+            .emission
+            .control_flow
+            .try_stack
+            .push(TryContext { catch_target });
+        let result = self.emit_statement(statement);
+        self.state.emission.control_flow.try_stack.pop();
+        self.state.emission.output.instructions.push(0x0b);
+        self.pop_control_frame();
+        result?;
+
+        // Any abrupt completion branched here with the throw state recorded in
+        // the throw locals/globals; convert it into a pending promise
+        // rejection so promise protocol consumers can route it.
+        self.push_local_get(self.state.runtime.throws.throw_tag_local);
+        self.push_i32_const(0);
+        self.push_binary_op(BinaryOp::NotEqual)?;
+        self.state.emission.output.instructions.push(0x04);
+        self.state
+            .emission
+            .output
+            .instructions
+            .push(EMPTY_BLOCK_TYPE);
+        self.push_control_frame();
+        self.push_local_get(self.state.runtime.throws.throw_value_local);
+        self.push_global_set(PENDING_PROMISE_REJECTION_VALUE_GLOBAL_INDEX);
+        self.push_local_get(self.state.runtime.throws.throw_tag_local);
+        self.push_global_set(PENDING_PROMISE_REJECTION_TAG_GLOBAL_INDEX);
+        self.clear_local_throw_state();
+        self.clear_global_throw_state();
+        self.state.emission.output.instructions.push(0x0b);
+        self.pop_control_frame();
+        Ok(())
+    }
+
+    /// When a binding initializer just drove a fresh async generator `next`
+    /// call inline (e.g. `let promise = gen().next();`), the static binding
+    /// should remember the settled completion instead of the raw call so a
+    /// later `promise.then(...)` replays the stored result rather than
+    /// re-executing the generator body.
+    pub(in crate::backend::direct_wasm) fn static_async_generator_next_completion_store_value(
+        &self,
+        value: &Expression,
+    ) -> Option<Expression> {
+        let snapshot = self
+            .state
+            .speculation
+            .static_semantics
+            .last_bound_user_function_call
+            .as_ref()?;
+        if snapshot.function_name != "__ayy_simple_async_generator_next" {
+            return None;
+        }
+        let source = snapshot.source_expression.as_ref()?;
+        if !static_expression_matches(source, value) {
+            return None;
+        }
+        snapshot.result_expression.clone()
+    }
+
     fn cached_simple_generator_binding_value(value: &Expression) -> Expression {
         match value {
             Expression::Sequence(expressions) => expressions
@@ -3545,7 +3619,8 @@ impl<'a> FunctionCompiler<'a> {
                                 compiler.sync_visible_runtime_bindings_for_statements(
                                     std::slice::from_ref(effect),
                                 )?;
-                                compiler.emit_statement(effect)?;
+                                compiler
+                                    .emit_inline_async_generator_effect_statement(effect)?;
                             }
                         }
                         prior_effects.push(effect.clone());
@@ -3705,7 +3780,8 @@ impl<'a> FunctionCompiler<'a> {
                                 compiler.sync_visible_runtime_bindings_for_statements(
                                     std::slice::from_ref(effect),
                                 )?;
-                                compiler.emit_statement(effect)?;
+                                compiler
+                                    .emit_inline_async_generator_effect_statement(effect)?;
                             }
                         }
                         prior_effects.push(effect.clone());

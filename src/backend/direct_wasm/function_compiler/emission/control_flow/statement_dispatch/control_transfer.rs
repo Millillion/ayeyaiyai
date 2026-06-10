@@ -90,9 +90,12 @@ impl<'a> FunctionCompiler<'a> {
             }
             Statement::Return(expression) => {
                 if !self.state.runtime.behavior.allow_return {
+                    // Statements must stay stack-neutral: a `return` reached in
+                    // a no-return context (e.g. an inline-driven function body
+                    // at top level) evaluates its expression for side effects
+                    // only.
                     self.emit_numeric_expression(expression)?;
                     self.state.emission.output.instructions.push(0x1a);
-                    self.push_i32_const(JS_UNDEFINED_TAG);
                     return Ok(());
                 }
                 if self.emit_self_tail_call_restart(expression)? {

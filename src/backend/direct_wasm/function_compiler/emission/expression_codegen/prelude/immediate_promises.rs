@@ -4648,7 +4648,33 @@ impl<'a> FunctionCompiler<'a> {
         }
         self.state.emission.output.instructions.push(0x1a);
 
+        let runtime_rejection_dispatch = !emitted_fresh_protocol_object
+            && matches!(property_name, "then" | "catch")
+            && self.promise_protocol_object_may_reject_at_runtime(object);
         match property_name {
+            "then" if runtime_rejection_dispatch => {
+                let fulfilled_handler = self.promise_handler_expression(arguments.first());
+                let rejected_handler = self.promise_handler_expression(arguments.get(1));
+                self.emit_runtime_promise_rejection_dispatch(
+                    fulfilled_handler.as_ref(),
+                    rejected_handler.as_ref(),
+                    &Expression::Undefined,
+                )?;
+                self.emit_ignored_promise_handler_arguments(
+                    arguments.get(2..).unwrap_or(&[]),
+                )?;
+            }
+            "catch" if runtime_rejection_dispatch => {
+                let rejected_handler = self.promise_handler_expression(arguments.first());
+                self.emit_runtime_promise_rejection_dispatch(
+                    None,
+                    rejected_handler.as_ref(),
+                    &Expression::Undefined,
+                )?;
+                self.emit_ignored_promise_handler_arguments(
+                    arguments.get(1..).unwrap_or(&[]),
+                )?;
+            }
             "then" => {
                 if let Some(handler) = self.promise_handler_expression(arguments.first()) {
                     let handler_argument = if emitted_fresh_protocol_object {
@@ -4678,6 +4704,89 @@ impl<'a> FunctionCompiler<'a> {
 
         self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
         Ok(true)
+    }
+
+    fn promise_protocol_object_may_reject_at_runtime(&self, object: &Expression) -> bool {
+        let Expression::Call { callee, .. } = object else {
+            return false;
+        };
+        if let Expression::Member {
+            object: inner,
+            property,
+        } = callee.as_ref()
+            && let Expression::String(property_name) = property.as_ref()
+        {
+            match property_name.as_str() {
+                "then" | "catch" | "finally" => {
+                    return self.promise_protocol_object_may_reject_at_runtime(inner);
+                }
+                "next" | "return" | "throw" => {
+                    return self.expression_is_async_generator_call_receiver(inner)
+                        || self.is_async_generator_iterator_expression(inner);
+                }
+                _ => {}
+            }
+        }
+        self.expression_is_direct_async_function_call(object)
+    }
+
+    fn emit_runtime_promise_rejection_dispatch(
+        &mut self,
+        fulfilled_handler: Option<&Expression>,
+        rejected_handler: Option<&Expression>,
+        fulfilled_argument: &Expression,
+    ) -> DirectResult<()> {
+        if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
+            eprintln!(
+                "emit_runtime_promise_rejection_dispatch fulfilled={fulfilled_handler:?} rejected={rejected_handler:?}"
+            );
+        }
+        let rejection_value_name =
+            self.allocate_named_hidden_local("promise_rejection_value", StaticValueKind::Unknown);
+        let rejection_value_local = self
+            .state
+            .runtime
+            .locals
+            .get(&rejection_value_name)
+            .copied()
+            .expect("fresh promise rejection value local must exist");
+
+        let global_static = self.backend.snapshot_global_static_semantics();
+        let local_static = self.state.snapshot_static_binding_metadata();
+
+        self.push_global_get(PENDING_PROMISE_REJECTION_TAG_GLOBAL_INDEX);
+        self.push_i32_const(0);
+        self.push_binary_op(BinaryOp::NotEqual)?;
+        self.state.emission.output.instructions.push(0x04);
+        self.state
+            .emission
+            .output
+            .instructions
+            .push(EMPTY_BLOCK_TYPE);
+        self.push_control_frame();
+        if let Some(rejected_handler) = rejected_handler {
+            self.push_global_get(PENDING_PROMISE_REJECTION_VALUE_GLOBAL_INDEX);
+            self.push_local_set(rejection_value_local);
+            self.clear_pending_promise_rejection_state();
+            self.emit_immediate_promise_callback(
+                rejected_handler,
+                &Expression::Identifier(rejection_value_name.clone()),
+                true,
+            )?;
+            self.backend
+                .restore_global_static_semantics(global_static.clone());
+            self.state
+                .restore_static_binding_metadata(local_static.clone());
+        }
+        self.state.emission.output.instructions.push(0x05);
+        if let Some(fulfilled_handler) = fulfilled_handler {
+            self.emit_immediate_promise_callback(fulfilled_handler, fulfilled_argument, true)?;
+            self.backend.restore_global_static_semantics(global_static);
+            self.state.restore_static_binding_metadata(local_static);
+        }
+        self.state.emission.output.instructions.push(0x0b);
+        self.pop_control_frame();
+        Ok(())
     }
 
     fn emit_ignored_promise_handler_arguments(
@@ -5673,6 +5782,22 @@ impl<'a> FunctionCompiler<'a> {
                     };
 
                 let Some(handler) = selected_handler else {
+                    if matches!(passthrough_outcome, StaticEvalOutcome::Value(_))
+                        && self.promise_protocol_object_may_reject_at_runtime(object)
+                    {
+                        let rejected_handler = match property_name.as_str() {
+                            "catch" => self.promise_handler_expression(arguments.first()),
+                            "then" => self.promise_handler_expression(arguments.get(1)),
+                            _ => None,
+                        };
+                        if let Some(rejected_handler) = rejected_handler {
+                            self.emit_runtime_promise_rejection_dispatch(
+                                None,
+                                Some(&rejected_handler),
+                                &Expression::Undefined,
+                            )?;
+                        }
+                    }
                     if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
                         eprintln!(
                             "consume_immediate_promise_outcome:no-selected-handler property={property_name}"
@@ -5757,6 +5882,34 @@ impl<'a> FunctionCompiler<'a> {
                     .as_ref()
                     .is_some_and(Self::promise_chain_has_call_receiver);
                 if !return_path_will_emit_chain {
+                    if property_name == "then"
+                        && self.promise_protocol_object_may_reject_at_runtime(object)
+                    {
+                        let rejected_handler =
+                            self.promise_handler_expression(arguments.get(1));
+                        let handler_argument = handler_argument.clone();
+                        self.emit_runtime_promise_rejection_dispatch(
+                            Some(&handler),
+                            rejected_handler.as_ref(),
+                            &handler_argument,
+                        )?;
+                        let returned_outcome = if return_path_already_emitted_dynamic_chain {
+                            None
+                        } else {
+                            self.immediate_promise_callback_return_outcome(
+                                &handler,
+                                &handler_argument,
+                            )?
+                        };
+                        if crate::ayy_env_flag!("AYY_TRACE_INLINE_PROMISES") {
+                            eprintln!(
+                                "consume_immediate_promise_outcome:value-handler-dispatched property={property_name}"
+                            );
+                        }
+                        return Ok(Some(returned_outcome.unwrap_or(StaticEvalOutcome::Value(
+                            Expression::Undefined,
+                        ))));
+                    }
                     let allow_inline_handler = !handlers_require_runtime_chain
                         || self.can_inline_immediate_promise_callback_in_current_frame(
                             &handler,

@@ -1089,6 +1089,14 @@ impl<'a> FunctionCompiler<'a> {
                     eprintln!("binding_statement:var:after_emit name={name}");
                 }
                 self.push_local_set(value_local);
+                let async_generator_completion_store_value = if resolved_store_value.is_none() {
+                    self.static_async_generator_next_completion_store_value(value)
+                } else {
+                    None
+                };
+                let store_value = async_generator_completion_store_value
+                    .as_ref()
+                    .unwrap_or(store_value);
                 if let Some(scope_object) = scoped_target {
                     self.emit_scoped_property_store_from_local(
                         &scope_object,
@@ -1169,9 +1177,16 @@ impl<'a> FunctionCompiler<'a> {
                 if trace {
                     eprintln!("binding_statement:let:before_initialize name={name}");
                 }
+                let async_generator_completion_store_value =
+                    if source_property_store_value.is_none() && resolved_store_value.is_none() {
+                        self.static_async_generator_next_completion_store_value(value)
+                    } else {
+                        None
+                    };
                 let store_value = source_property_store_value
                     .as_ref()
                     .or(resolved_store_value.as_ref())
+                    .or(async_generator_completion_store_value.as_ref())
                     .unwrap_or(value);
                 self.emit_initialize_identifier_value_local(name, store_value, value_local)?;
                 if trace {

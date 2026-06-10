@@ -258,6 +258,33 @@ impl Lowerer {
                         mutable: true,
                         value,
                     });
+                    if matches!(
+                        binding_kind,
+                        ForOfPatternBindingKind::Lexical { mutable: false }
+                    ) {
+                        // Immutable lexical bindings cannot be initialized through
+                        // a declare-then-assign sequence: the runtime store path
+                        // rejects assignments to initialized const bindings. Emit
+                        // the initializing declaration inside each branch instead.
+                        statements.push(Statement::If {
+                            condition: Expression::Binary {
+                                op: BinaryOp::NotEqual,
+                                left: Box::new(Expression::Identifier(temporary_name.clone())),
+                                right: Box::new(Expression::Undefined),
+                            },
+                            then_branch: vec![Statement::Let {
+                                name: name.clone(),
+                                mutable: false,
+                                value: Expression::Identifier(temporary_name),
+                            }],
+                            else_branch: vec![Statement::Let {
+                                name,
+                                mutable: false,
+                                value: default_value,
+                            }],
+                        });
+                        return Ok(());
+                    }
                     statements.push(match binding_kind {
                         ForOfPatternBindingKind::Var => Statement::Var {
                             name: name.clone(),

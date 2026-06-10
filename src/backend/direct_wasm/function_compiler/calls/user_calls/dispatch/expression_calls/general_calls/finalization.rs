@@ -158,19 +158,7 @@ impl<'a> FunctionCompiler<'a> {
             self.push_global_set(CURRENT_THIS_GLOBAL_INDEX);
         }
         if user_function.is_async() {
-            self.push_global_get(THROW_TAG_GLOBAL_INDEX);
-            self.push_i32_const(0);
-            self.push_binary_op(BinaryOp::NotEqual)?;
-            self.state.emission.output.instructions.push(0x04);
-            self.state
-                .emission
-                .output
-                .instructions
-                .push(EMPTY_BLOCK_TYPE);
-            self.push_control_frame();
-            self.clear_global_throw_state();
-            self.state.emission.output.instructions.push(0x0b);
-            self.pop_control_frame();
+            self.emit_async_call_pending_rejection_capture()?;
             self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
             return Ok(());
         }

@@ -248,9 +248,23 @@ impl Lowerer {
             BlockStmtOrExpr::BlockStmt(block) => {
                 self.lower_statements(&block.stmts, true, false)?
             }
-            BlockStmtOrExpr::Expr(expression) => vec![Statement::Return(
-                self.lower_expression_with_name_hint(expression, None)?,
-            )],
+            BlockStmtOrExpr::Expr(expression) => {
+                if let Some(arguments) = console_log_arguments(expression) {
+                    vec![
+                        Statement::Print {
+                            values: arguments
+                                .iter()
+                                .map(|argument| self.lower_expression(&argument.expr))
+                                .collect::<Result<Vec<_>>>()?,
+                        },
+                        Statement::Return(Expression::Undefined),
+                    ]
+                } else {
+                    vec![Statement::Return(
+                        self.lower_expression_with_name_hint(expression, None)?,
+                    )]
+                }
+            }
         };
         body.splice(0..0, param_setup);
         let captured_private_brand_bindings = self

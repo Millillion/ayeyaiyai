@@ -1147,13 +1147,33 @@ impl<'a> FunctionCompiler<'a> {
         if let Some(outcome) = self.resolve_static_await_resolution_outcome(expression) {
             match outcome {
                 StaticEvalOutcome::Value(awaited_value) => {
+                    if crate::ayy_env_flag!("AYY_TRACE_AWAIT") {
+                        eprintln!(
+                            "emit_await:static-value expression={expression:?} value={awaited_value:?}"
+                        );
+                    }
                     self.emit_numeric_expression(&awaited_value)?;
                 }
                 StaticEvalOutcome::Throw(throw_value) => {
+                    if crate::ayy_env_flag!("AYY_TRACE_AWAIT") {
+                        eprintln!("emit_await:static-throw expression={expression:?}");
+                    }
                     self.emit_static_throw_value(&throw_value)?;
                 }
             }
             return Ok(());
+        }
+        if self.await_of_iterator_step_value_is_non_thenable(expression) {
+            if crate::ayy_env_flag!("AYY_TRACE_AWAIT") {
+                eprintln!("emit_await:step-value-runtime expression={expression:?}");
+            }
+            // `await` of an iterator step value whose candidates are all
+            // statically non-thenable resolves to the step value itself, so
+            // keep the runtime value instead of collapsing it to undefined.
+            return self.emit_numeric_expression(expression);
+        }
+        if crate::ayy_env_flag!("AYY_TRACE_AWAIT") {
+            eprintln!("emit_await:runtime expression={expression:?}");
         }
         self.emit_numeric_expression(expression)?;
         if let Some(snapshot_result) = self
@@ -1168,15 +1188,99 @@ impl<'a> FunctionCompiler<'a> {
                     .and_then(|_| snapshot.result_expression.clone())
             })
         {
+            if crate::ayy_env_flag!("AYY_TRACE_AWAIT") {
+                eprintln!("emit_await:snapshot-result expression={expression:?}");
+            }
             self.state.emission.output.instructions.push(0x1a);
             if let Some(outcome) = self.resolve_static_await_resolution_outcome(&snapshot_result) {
                 return self.emit_static_eval_outcome(&outcome);
             }
             return self.emit_numeric_expression(&snapshot_result);
         }
+        if crate::ayy_env_flag!("AYY_TRACE_AWAIT") {
+            eprintln!("emit_await:drop-undefined expression={expression:?}");
+        }
         self.state.emission.output.instructions.push(0x1a);
         self.push_i32_const(JS_UNDEFINED_TAG);
         Ok(())
+    }
+
+    fn await_of_iterator_step_value_is_non_thenable(&self, expression: &Expression) -> bool {
+        let Expression::Member { object, property } = expression else {
+            return false;
+        };
+        if !matches!(property.as_ref(), Expression::String(name) if name == "value") {
+            return false;
+        }
+        let Some(IteratorStepBinding::Runtime {
+            static_value,
+            value_candidates,
+            ..
+        }) = self.resolve_iterator_step_binding_from_expression(object)
+        else {
+            if crate::ayy_env_flag!("AYY_TRACE_AWAIT") {
+                eprintln!("await_step_value:no-step-binding object={object:?}");
+            }
+            return false;
+        };
+        let mut candidates = Vec::new();
+        if let Some(static_value) = static_value {
+            candidates.push(static_value);
+        }
+        candidates.extend(value_candidates);
+        if candidates.is_empty() {
+            if crate::ayy_env_flag!("AYY_TRACE_AWAIT") {
+                eprintln!("await_step_value:no-candidates object={object:?}");
+            }
+            return false;
+        }
+        candidates.iter().all(|candidate| {
+            let non_thenable = self.static_step_value_candidate_is_non_thenable(candidate);
+            if crate::ayy_env_flag!("AYY_TRACE_AWAIT") {
+                eprintln!(
+                    "await_step_value:candidate candidate={candidate:?} non_thenable={non_thenable}"
+                );
+            }
+            non_thenable
+        })
+    }
+
+    fn static_step_value_candidate_is_non_thenable(&self, candidate: &Expression) -> bool {
+        if matches!(
+            self.resolve_static_await_resolution_outcome(candidate),
+            Some(StaticEvalOutcome::Value(awaited_value))
+                if static_expression_matches(&awaited_value, candidate)
+        ) {
+            return true;
+        }
+        let materialized = self.materialize_static_expression(candidate);
+        let then_property = Expression::String("then".to_string());
+        if self
+            .resolve_member_function_binding(&materialized, &then_property)
+            .is_some()
+            || self
+                .resolve_member_getter_binding(&materialized, &then_property)
+                .is_some()
+        {
+            return false;
+        }
+        match &materialized {
+            Expression::Number(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined => true,
+            Expression::Array(_) => true,
+            Expression::Object(entries) => !entries.iter().any(|entry| match entry {
+                ObjectEntry::Data { key, .. }
+                | ObjectEntry::Getter { key, .. }
+                | ObjectEntry::Setter { key, .. } => {
+                    !matches!(key, Expression::String(name) if name != "then")
+                }
+                ObjectEntry::Spread(_) => true,
+            }),
+            _ => false,
+        }
     }
 
     fn using_dispose_method_call_parts(

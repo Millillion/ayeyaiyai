@@ -87,7 +87,7 @@ impl DirectWasmCompiler {
     }
 
     fn global_initial_values(&self) -> Vec<i32> {
-        let base_index = NEXT_RUNTIME_OBJECT_VALUE_GLOBAL_INDEX + 1;
+        let base_index = PENDING_PROMISE_REJECTION_VALUE_GLOBAL_INDEX + 1;
         let next_index = self.next_available_global_index();
         let mut initial_values =
             vec![JS_UNDEFINED_TAG; next_index.saturating_sub(base_index) as usize];
