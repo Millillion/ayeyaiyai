@@ -1,4 +1,4 @@
-8579/23668 (36.25%)
+11566/23668 (48.87%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,20 +14,20 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 3290/9337 (35.24%)
-- expressions: 3964/11061 (35.84%)
+- statements: 4681/9337 (50.13%)
+- expressions: 4791/11061 (43.31%)
 - types: 0/113 (0.00%)
 - function-code: 0/217 (0.00%)
 - global-code: 0/42 (0.00%)
-- arguments-object: 0/263 (0.00%)
+- arguments-object: 262/263 (99.62%)
 - rest-parameters: 0/11 (0.00%)
-- block-scope: 0/145 (0.00%)
+- block-scope: 145/145 (100.00%)
 - identifier-resolution: 0/14 (0.00%)
-- computed-property-names: 0/48 (0.00%)
-- destructuring: 0/19 (0.00%)
-- eval-code: 0/347 (0.00%)
+- computed-property-names: 47/48 (97.92%)
+- destructuring: 17/19 (89.47%)
+- eval-code: 295/347 (85.01%)
 - import: 0/127 (0.00%)
-- export: 0/3 (0.00%)
+- export: 3/3 (100.00%)
 - module-code: 0/596 (0.00%)
 
 - [x] comments
@@ -4776,98 +4776,98 @@ Sub-category progress
   - [ ] test/language/statements/class/elements/class-field-is-observable-by-proxy.js
   - [x] test/language/statements/class/elements/class-field-on-frozen-objects.js
   - [x] test/language/statements/class/elements/comp-name-init-err-contains-arguments.js
-  - [ ] test/language/statements/class/elements/comp-name-init-err-contains-super.js
-  - [ ] test/language/statements/class/elements/computed-name-toprimitive-symbol.js
-  - [ ] test/language/statements/class/elements/computed-name-toprimitive.js
-  - [ ] test/language/statements/class/elements/computed-property-abrupt-completition.js
-  - [ ] test/language/statements/class/elements/ctor-called-after-fields-init.js
-  - [ ] test/language/statements/class/elements/derived-cls-direct-eval-contains-superproperty-1.js
-  - [ ] test/language/statements/class/elements/derived-cls-direct-eval-contains-superproperty-2.js
-  - [ ] test/language/statements/class/elements/derived-cls-direct-eval-err-contains-supercall-1.js
-  - [ ] test/language/statements/class/elements/derived-cls-direct-eval-err-contains-supercall-2.js
-  - [ ] test/language/statements/class/elements/derived-cls-direct-eval-err-contains-supercall.js
-  - [ ] test/language/statements/class/elements/derived-cls-indirect-eval-contains-superproperty-1.js
-  - [ ] test/language/statements/class/elements/derived-cls-indirect-eval-contains-superproperty-2.js
-  - [ ] test/language/statements/class/elements/derived-cls-indirect-eval-err-contains-supercall-1.js
-  - [ ] test/language/statements/class/elements/derived-cls-indirect-eval-err-contains-supercall-2.js
-  - [ ] test/language/statements/class/elements/derived-cls-indirect-eval-err-contains-supercall.js
-  - [ ] test/language/statements/class/elements/direct-eval-err-contains-arguments.js
-  - [ ] test/language/statements/class/elements/direct-eval-err-contains-newtarget.js
-  - [ ] test/language/statements/class/elements/equality-init-err-contains-arguments.js
-  - [ ] test/language/statements/class/elements/equality-init-err-contains-super.js
-  - [ ] test/language/statements/class/elements/evaluation-error/computed-name-referenceerror.js
+  - [x] test/language/statements/class/elements/comp-name-init-err-contains-super.js
+  - [x] test/language/statements/class/elements/computed-name-toprimitive-symbol.js
+  - [x] test/language/statements/class/elements/computed-name-toprimitive.js
+  - [x] test/language/statements/class/elements/computed-property-abrupt-completition.js
+  - [x] test/language/statements/class/elements/ctor-called-after-fields-init.js
+  - [x] test/language/statements/class/elements/derived-cls-direct-eval-contains-superproperty-1.js
+  - [x] test/language/statements/class/elements/derived-cls-direct-eval-contains-superproperty-2.js
+  - [x] test/language/statements/class/elements/derived-cls-direct-eval-err-contains-supercall-1.js
+  - [x] test/language/statements/class/elements/derived-cls-direct-eval-err-contains-supercall-2.js
+  - [x] test/language/statements/class/elements/derived-cls-direct-eval-err-contains-supercall.js
+  - [x] test/language/statements/class/elements/derived-cls-indirect-eval-contains-superproperty-1.js
+  - [x] test/language/statements/class/elements/derived-cls-indirect-eval-contains-superproperty-2.js
+  - [x] test/language/statements/class/elements/derived-cls-indirect-eval-err-contains-supercall-1.js
+  - [x] test/language/statements/class/elements/derived-cls-indirect-eval-err-contains-supercall-2.js
+  - [x] test/language/statements/class/elements/derived-cls-indirect-eval-err-contains-supercall.js
+  - [x] test/language/statements/class/elements/direct-eval-err-contains-arguments.js
+  - [x] test/language/statements/class/elements/direct-eval-err-contains-newtarget.js
+  - [x] test/language/statements/class/elements/equality-init-err-contains-arguments.js
+  - [x] test/language/statements/class/elements/equality-init-err-contains-super.js
+  - [x] test/language/statements/class/elements/evaluation-error/computed-name-referenceerror.js
   - [ ] test/language/statements/class/elements/evaluation-error/computed-name-toprimitive-err.js
   - [ ] test/language/statements/class/elements/evaluation-error/computed-name-toprimitive-returns-noncallable.js
   - [ ] test/language/statements/class/elements/evaluation-error/computed-name-toprimitive-returns-nonobject.js
   - [ ] test/language/statements/class/elements/evaluation-error/computed-name-tostring-err.js
   - [ ] test/language/statements/class/elements/evaluation-error/computed-name-valueof-err.js
-  - [ ] test/language/statements/class/elements/field-declaration.js
-  - [ ] test/language/statements/class/elements/field-definition-accessor-no-line-terminator.js
-  - [ ] test/language/statements/class/elements/fielddefinition-initializer-abrupt-completion.js
-  - [ ] test/language/statements/class/elements/fields-anonymous-function-length.js
-  - [ ] test/language/statements/class/elements/fields-asi-1.js
+  - [x] test/language/statements/class/elements/field-declaration.js
+  - [x] test/language/statements/class/elements/field-definition-accessor-no-line-terminator.js
+  - [x] test/language/statements/class/elements/fielddefinition-initializer-abrupt-completion.js
+  - [x] test/language/statements/class/elements/fields-anonymous-function-length.js
+  - [x] test/language/statements/class/elements/fields-asi-1.js
   - [ ] test/language/statements/class/elements/fields-asi-2.js
-  - [ ] test/language/statements/class/elements/fields-asi-3.js
-  - [ ] test/language/statements/class/elements/fields-asi-4.js
-  - [ ] test/language/statements/class/elements/fields-asi-5.js
-  - [ ] test/language/statements/class/elements/fields-asi-same-line-1.js
-  - [ ] test/language/statements/class/elements/fields-asi-same-line-2.js
-  - [ ] test/language/statements/class/elements/fields-computed-name-propname-constructor.js
-  - [ ] test/language/statements/class/elements/fields-computed-name-static-computed-var-propname-constructor.js
+  - [x] test/language/statements/class/elements/fields-asi-3.js
+  - [x] test/language/statements/class/elements/fields-asi-4.js
+  - [x] test/language/statements/class/elements/fields-asi-5.js
+  - [x] test/language/statements/class/elements/fields-asi-same-line-1.js
+  - [x] test/language/statements/class/elements/fields-asi-same-line-2.js
+  - [x] test/language/statements/class/elements/fields-computed-name-propname-constructor.js
+  - [x] test/language/statements/class/elements/fields-computed-name-static-computed-var-propname-constructor.js
   - [ ] test/language/statements/class/elements/fields-computed-name-static-computed-var-propname-prototype.js
-  - [ ] test/language/statements/class/elements/fields-computed-name-static-propname-constructor.js
+  - [x] test/language/statements/class/elements/fields-computed-name-static-propname-constructor.js
   - [ ] test/language/statements/class/elements/fields-computed-name-static-propname-prototype.js
-  - [ ] test/language/statements/class/elements/fields-duplicate-privatenames.js
-  - [ ] test/language/statements/class/elements/fields-hash-constructor-is-a-valid-name.js
-  - [ ] test/language/statements/class/elements/fields-literal-name-propname-constructor.js
-  - [ ] test/language/statements/class/elements/fields-literal-name-static-propname-constructor.js
-  - [ ] test/language/statements/class/elements/fields-literal-name-static-propname-prototype.js
-  - [ ] test/language/statements/class/elements/fields-string-name-propname-constructor.js
-  - [ ] test/language/statements/class/elements/fields-string-name-static-propname-constructor.js
-  - [ ] test/language/statements/class/elements/fields-string-name-static-propname-prototype.js
-  - [ ] test/language/statements/class/elements/gen-private-method/yield-as-binding-identifier-escaped.js
-  - [ ] test/language/statements/class/elements/gen-private-method/yield-as-binding-identifier.js
-  - [ ] test/language/statements/class/elements/gen-private-method/yield-as-identifier-reference-escaped.js
-  - [ ] test/language/statements/class/elements/gen-private-method/yield-as-identifier-reference.js
-  - [ ] test/language/statements/class/elements/gen-private-method/yield-as-label-identifier-escaped.js
-  - [ ] test/language/statements/class/elements/gen-private-method/yield-as-label-identifier.js
-  - [ ] test/language/statements/class/elements/gen-private-method/yield-identifier-spread-strict.js
-  - [ ] test/language/statements/class/elements/gen-private-method/yield-identifier-strict.js
-  - [ ] test/language/statements/class/elements/gen-private-method/yield-spread-arr-multiple.js
-  - [ ] test/language/statements/class/elements/gen-private-method/yield-spread-arr-single.js
-  - [ ] test/language/statements/class/elements/gen-private-method/yield-spread-obj.js
-  - [ ] test/language/statements/class/elements/gen-private-method-static/yield-as-binding-identifier-escaped.js
-  - [ ] test/language/statements/class/elements/gen-private-method-static/yield-as-binding-identifier.js
-  - [ ] test/language/statements/class/elements/gen-private-method-static/yield-as-identifier-reference-escaped.js
-  - [ ] test/language/statements/class/elements/gen-private-method-static/yield-as-identifier-reference.js
-  - [ ] test/language/statements/class/elements/gen-private-method-static/yield-as-label-identifier-escaped.js
-  - [ ] test/language/statements/class/elements/gen-private-method-static/yield-as-label-identifier.js
-  - [ ] test/language/statements/class/elements/gen-private-method-static/yield-identifier-spread-strict.js
-  - [ ] test/language/statements/class/elements/gen-private-method-static/yield-identifier-strict.js
-  - [ ] test/language/statements/class/elements/gen-private-method-static/yield-spread-arr-multiple.js
-  - [ ] test/language/statements/class/elements/gen-private-method-static/yield-spread-arr-single.js
-  - [ ] test/language/statements/class/elements/gen-private-method-static/yield-spread-obj.js
-  - [ ] test/language/statements/class/elements/get-access-of-missing-private-getter.js
-  - [ ] test/language/statements/class/elements/get-access-of-missing-private-static-getter.js
-  - [ ] test/language/statements/class/elements/get-access-of-missing-shadowed-private-getter.js
-  - [ ] test/language/statements/class/elements/grammar-private-field-optional-chaining.js
-  - [ ] test/language/statements/class/elements/indirect-eval-contains-arguments.js
-  - [ ] test/language/statements/class/elements/indirect-eval-err-contains-newtarget.js
-  - [ ] test/language/statements/class/elements/init-err-evaluation.js
-  - [ ] test/language/statements/class/elements/init-value-defined-after-class.js
+  - [x] test/language/statements/class/elements/fields-duplicate-privatenames.js
+  - [x] test/language/statements/class/elements/fields-hash-constructor-is-a-valid-name.js
+  - [x] test/language/statements/class/elements/fields-literal-name-propname-constructor.js
+  - [x] test/language/statements/class/elements/fields-literal-name-static-propname-constructor.js
+  - [x] test/language/statements/class/elements/fields-literal-name-static-propname-prototype.js
+  - [x] test/language/statements/class/elements/fields-string-name-propname-constructor.js
+  - [x] test/language/statements/class/elements/fields-string-name-static-propname-constructor.js
+  - [x] test/language/statements/class/elements/fields-string-name-static-propname-prototype.js
+  - [x] test/language/statements/class/elements/gen-private-method/yield-as-binding-identifier-escaped.js
+  - [x] test/language/statements/class/elements/gen-private-method/yield-as-binding-identifier.js
+  - [x] test/language/statements/class/elements/gen-private-method/yield-as-identifier-reference-escaped.js
+  - [x] test/language/statements/class/elements/gen-private-method/yield-as-identifier-reference.js
+  - [x] test/language/statements/class/elements/gen-private-method/yield-as-label-identifier-escaped.js
+  - [x] test/language/statements/class/elements/gen-private-method/yield-as-label-identifier.js
+  - [x] test/language/statements/class/elements/gen-private-method/yield-identifier-spread-strict.js
+  - [x] test/language/statements/class/elements/gen-private-method/yield-identifier-strict.js
+  - [x] test/language/statements/class/elements/gen-private-method/yield-spread-arr-multiple.js
+  - [x] test/language/statements/class/elements/gen-private-method/yield-spread-arr-single.js
+  - [x] test/language/statements/class/elements/gen-private-method/yield-spread-obj.js
+  - [x] test/language/statements/class/elements/gen-private-method-static/yield-as-binding-identifier-escaped.js
+  - [x] test/language/statements/class/elements/gen-private-method-static/yield-as-binding-identifier.js
+  - [x] test/language/statements/class/elements/gen-private-method-static/yield-as-identifier-reference-escaped.js
+  - [x] test/language/statements/class/elements/gen-private-method-static/yield-as-identifier-reference.js
+  - [x] test/language/statements/class/elements/gen-private-method-static/yield-as-label-identifier-escaped.js
+  - [x] test/language/statements/class/elements/gen-private-method-static/yield-as-label-identifier.js
+  - [x] test/language/statements/class/elements/gen-private-method-static/yield-identifier-spread-strict.js
+  - [x] test/language/statements/class/elements/gen-private-method-static/yield-identifier-strict.js
+  - [x] test/language/statements/class/elements/gen-private-method-static/yield-spread-arr-multiple.js
+  - [x] test/language/statements/class/elements/gen-private-method-static/yield-spread-arr-single.js
+  - [x] test/language/statements/class/elements/gen-private-method-static/yield-spread-obj.js
+  - [x] test/language/statements/class/elements/get-access-of-missing-private-getter.js
+  - [x] test/language/statements/class/elements/get-access-of-missing-private-static-getter.js
+  - [x] test/language/statements/class/elements/get-access-of-missing-shadowed-private-getter.js
+  - [x] test/language/statements/class/elements/grammar-private-field-optional-chaining.js
+  - [x] test/language/statements/class/elements/indirect-eval-contains-arguments.js
+  - [x] test/language/statements/class/elements/indirect-eval-err-contains-newtarget.js
+  - [x] test/language/statements/class/elements/init-err-evaluation.js
+  - [x] test/language/statements/class/elements/init-value-defined-after-class.js
   - [ ] test/language/statements/class/elements/init-value-incremental.js
   - [ ] test/language/statements/class/elements/intercalated-static-non-static-computed-fields.js
-  - [ ] test/language/statements/class/elements/literal-name-init-err-contains-arguments.js
-  - [ ] test/language/statements/class/elements/literal-name-init-err-contains-super.js
-  - [ ] test/language/statements/class/elements/multiple-definitions-computed-names.js
-  - [ ] test/language/statements/class/elements/multiple-definitions-computed-symbol-names.js
-  - [ ] test/language/statements/class/elements/multiple-definitions-grammar-privatename-identifier-semantics-stringvalue.js
-  - [ ] test/language/statements/class/elements/multiple-definitions-literal-names-asi.js
-  - [ ] test/language/statements/class/elements/multiple-definitions-literal-names.js
-  - [ ] test/language/statements/class/elements/multiple-definitions-private-field-usage.js
-  - [ ] test/language/statements/class/elements/multiple-definitions-private-method-getter-usage.js
-  - [ ] test/language/statements/class/elements/multiple-definitions-private-method-usage.js
-  - [ ] test/language/statements/class/elements/multiple-definitions-private-names.js
+  - [x] test/language/statements/class/elements/literal-name-init-err-contains-arguments.js
+  - [x] test/language/statements/class/elements/literal-name-init-err-contains-super.js
+  - [x] test/language/statements/class/elements/multiple-definitions-computed-names.js
+  - [x] test/language/statements/class/elements/multiple-definitions-computed-symbol-names.js
+  - [x] test/language/statements/class/elements/multiple-definitions-grammar-privatename-identifier-semantics-stringvalue.js
+  - [x] test/language/statements/class/elements/multiple-definitions-literal-names-asi.js
+  - [x] test/language/statements/class/elements/multiple-definitions-literal-names.js
+  - [x] test/language/statements/class/elements/multiple-definitions-private-field-usage.js
+  - [x] test/language/statements/class/elements/multiple-definitions-private-method-getter-usage.js
+  - [x] test/language/statements/class/elements/multiple-definitions-private-method-usage.js
+  - [x] test/language/statements/class/elements/multiple-definitions-private-names.js
   - [ ] test/language/statements/class/elements/multiple-definitions-rs-field-identifier-initializer.js
   - [ ] test/language/statements/class/elements/multiple-definitions-rs-field-identifier.js
   - [ ] test/language/statements/class/elements/multiple-definitions-rs-private-getter-alt.js
@@ -4895,19 +4895,19 @@ Sub-category progress
   - [ ] test/language/statements/class/elements/multiple-definitions-rs-static-privatename-identifier-initializer-alt.js
   - [ ] test/language/statements/class/elements/multiple-definitions-rs-static-privatename-identifier-initializer.js
   - [ ] test/language/statements/class/elements/multiple-definitions-rs-static-privatename-identifier.js
-  - [ ] test/language/statements/class/elements/multiple-definitions-static-private-fields.js
-  - [ ] test/language/statements/class/elements/multiple-definitions-static-private-methods-with-fields.js
-  - [ ] test/language/statements/class/elements/multiple-definitions-static-private-methods.js
-  - [ ] test/language/statements/class/elements/multiple-definitions-string-literal-names.js
-  - [ ] test/language/statements/class/elements/multiple-stacked-definitions-computed-names.js
-  - [ ] test/language/statements/class/elements/multiple-stacked-definitions-computed-symbol-names.js
-  - [ ] test/language/statements/class/elements/multiple-stacked-definitions-grammar-privatename-identifier-semantics-stringvalue.js
-  - [ ] test/language/statements/class/elements/multiple-stacked-definitions-literal-names-asi.js
-  - [ ] test/language/statements/class/elements/multiple-stacked-definitions-literal-names.js
-  - [ ] test/language/statements/class/elements/multiple-stacked-definitions-private-field-usage.js
-  - [ ] test/language/statements/class/elements/multiple-stacked-definitions-private-method-getter-usage.js
-  - [ ] test/language/statements/class/elements/multiple-stacked-definitions-private-method-usage.js
-  - [ ] test/language/statements/class/elements/multiple-stacked-definitions-private-names.js
+  - [x] test/language/statements/class/elements/multiple-definitions-static-private-fields.js
+  - [x] test/language/statements/class/elements/multiple-definitions-static-private-methods-with-fields.js
+  - [x] test/language/statements/class/elements/multiple-definitions-static-private-methods.js
+  - [x] test/language/statements/class/elements/multiple-definitions-string-literal-names.js
+  - [x] test/language/statements/class/elements/multiple-stacked-definitions-computed-names.js
+  - [x] test/language/statements/class/elements/multiple-stacked-definitions-computed-symbol-names.js
+  - [x] test/language/statements/class/elements/multiple-stacked-definitions-grammar-privatename-identifier-semantics-stringvalue.js
+  - [x] test/language/statements/class/elements/multiple-stacked-definitions-literal-names-asi.js
+  - [x] test/language/statements/class/elements/multiple-stacked-definitions-literal-names.js
+  - [x] test/language/statements/class/elements/multiple-stacked-definitions-private-field-usage.js
+  - [x] test/language/statements/class/elements/multiple-stacked-definitions-private-method-getter-usage.js
+  - [x] test/language/statements/class/elements/multiple-stacked-definitions-private-method-usage.js
+  - [x] test/language/statements/class/elements/multiple-stacked-definitions-private-names.js
   - [ ] test/language/statements/class/elements/multiple-stacked-definitions-rs-field-identifier-initializer.js
   - [ ] test/language/statements/class/elements/multiple-stacked-definitions-rs-field-identifier.js
   - [ ] test/language/statements/class/elements/multiple-stacked-definitions-rs-private-getter-alt.js
@@ -4935,77 +4935,77 @@ Sub-category progress
   - [ ] test/language/statements/class/elements/multiple-stacked-definitions-rs-static-privatename-identifier-initializer-alt.js
   - [ ] test/language/statements/class/elements/multiple-stacked-definitions-rs-static-privatename-identifier-initializer.js
   - [ ] test/language/statements/class/elements/multiple-stacked-definitions-rs-static-privatename-identifier.js
-  - [ ] test/language/statements/class/elements/multiple-stacked-definitions-static-private-fields.js
-  - [ ] test/language/statements/class/elements/multiple-stacked-definitions-static-private-methods-with-fields.js
-  - [ ] test/language/statements/class/elements/multiple-stacked-definitions-static-private-methods.js
-  - [ ] test/language/statements/class/elements/multiple-stacked-definitions-string-literal-names.js
-  - [ ] test/language/statements/class/elements/nested-arrow-fnc-init-err-contains-arguments.js
-  - [ ] test/language/statements/class/elements/nested-arrow-fnc-init-err-contains-super.js
-  - [ ] test/language/statements/class/elements/nested-comp-name-init-err-contains-arguments.js
-  - [ ] test/language/statements/class/elements/nested-comp-name-init-err-contains-super.js
-  - [ ] test/language/statements/class/elements/nested-derived-cls-direct-eval-contains-superproperty-1.js
-  - [ ] test/language/statements/class/elements/nested-derived-cls-direct-eval-contains-superproperty-2.js
-  - [ ] test/language/statements/class/elements/nested-derived-cls-direct-eval-err-contains-supercall-1.js
-  - [ ] test/language/statements/class/elements/nested-derived-cls-direct-eval-err-contains-supercall-2.js
-  - [ ] test/language/statements/class/elements/nested-derived-cls-direct-eval-err-contains-supercall.js
-  - [ ] test/language/statements/class/elements/nested-derived-cls-indirect-eval-contains-superproperty-1.js
-  - [ ] test/language/statements/class/elements/nested-derived-cls-indirect-eval-contains-superproperty-2.js
-  - [ ] test/language/statements/class/elements/nested-derived-cls-indirect-eval-err-contains-supercall-1.js
-  - [ ] test/language/statements/class/elements/nested-derived-cls-indirect-eval-err-contains-supercall-2.js
-  - [ ] test/language/statements/class/elements/nested-derived-cls-indirect-eval-err-contains-supercall.js
-  - [ ] test/language/statements/class/elements/nested-direct-eval-err-contains-arguments.js
-  - [ ] test/language/statements/class/elements/nested-direct-eval-err-contains-newtarget.js
-  - [ ] test/language/statements/class/elements/nested-equality-init-err-contains-arguments.js
-  - [ ] test/language/statements/class/elements/nested-equality-init-err-contains-super.js
-  - [ ] test/language/statements/class/elements/nested-indirect-eval-contains-arguments.js
-  - [ ] test/language/statements/class/elements/nested-indirect-eval-err-contains-newtarget.js
-  - [ ] test/language/statements/class/elements/nested-literal-name-init-err-contains-arguments.js
-  - [ ] test/language/statements/class/elements/nested-literal-name-init-err-contains-super.js
-  - [ ] test/language/statements/class/elements/nested-private-arrow-fnc-init-err-contains-arguments.js
-  - [ ] test/language/statements/class/elements/nested-private-arrow-fnc-init-err-contains-super.js
-  - [ ] test/language/statements/class/elements/nested-private-derived-cls-direct-eval-contains-superproperty-1.js
-  - [ ] test/language/statements/class/elements/nested-private-derived-cls-direct-eval-contains-superproperty-2.js
-  - [ ] test/language/statements/class/elements/nested-private-derived-cls-direct-eval-err-contains-supercall-1.js
-  - [ ] test/language/statements/class/elements/nested-private-derived-cls-direct-eval-err-contains-supercall-2.js
-  - [ ] test/language/statements/class/elements/nested-private-derived-cls-direct-eval-err-contains-supercall.js
-  - [ ] test/language/statements/class/elements/nested-private-derived-cls-indirect-eval-contains-superproperty-1.js
-  - [ ] test/language/statements/class/elements/nested-private-derived-cls-indirect-eval-contains-superproperty-2.js
-  - [ ] test/language/statements/class/elements/nested-private-derived-cls-indirect-eval-err-contains-supercall-1.js
-  - [ ] test/language/statements/class/elements/nested-private-derived-cls-indirect-eval-err-contains-supercall-2.js
-  - [ ] test/language/statements/class/elements/nested-private-derived-cls-indirect-eval-err-contains-supercall.js
-  - [ ] test/language/statements/class/elements/nested-private-direct-eval-err-contains-arguments.js
-  - [ ] test/language/statements/class/elements/nested-private-direct-eval-err-contains-newtarget.js
+  - [x] test/language/statements/class/elements/multiple-stacked-definitions-static-private-fields.js
+  - [x] test/language/statements/class/elements/multiple-stacked-definitions-static-private-methods-with-fields.js
+  - [x] test/language/statements/class/elements/multiple-stacked-definitions-static-private-methods.js
+  - [x] test/language/statements/class/elements/multiple-stacked-definitions-string-literal-names.js
+  - [x] test/language/statements/class/elements/nested-arrow-fnc-init-err-contains-arguments.js
+  - [x] test/language/statements/class/elements/nested-arrow-fnc-init-err-contains-super.js
+  - [x] test/language/statements/class/elements/nested-comp-name-init-err-contains-arguments.js
+  - [x] test/language/statements/class/elements/nested-comp-name-init-err-contains-super.js
+  - [x] test/language/statements/class/elements/nested-derived-cls-direct-eval-contains-superproperty-1.js
+  - [x] test/language/statements/class/elements/nested-derived-cls-direct-eval-contains-superproperty-2.js
+  - [x] test/language/statements/class/elements/nested-derived-cls-direct-eval-err-contains-supercall-1.js
+  - [x] test/language/statements/class/elements/nested-derived-cls-direct-eval-err-contains-supercall-2.js
+  - [x] test/language/statements/class/elements/nested-derived-cls-direct-eval-err-contains-supercall.js
+  - [x] test/language/statements/class/elements/nested-derived-cls-indirect-eval-contains-superproperty-1.js
+  - [x] test/language/statements/class/elements/nested-derived-cls-indirect-eval-contains-superproperty-2.js
+  - [x] test/language/statements/class/elements/nested-derived-cls-indirect-eval-err-contains-supercall-1.js
+  - [x] test/language/statements/class/elements/nested-derived-cls-indirect-eval-err-contains-supercall-2.js
+  - [x] test/language/statements/class/elements/nested-derived-cls-indirect-eval-err-contains-supercall.js
+  - [x] test/language/statements/class/elements/nested-direct-eval-err-contains-arguments.js
+  - [x] test/language/statements/class/elements/nested-direct-eval-err-contains-newtarget.js
+  - [x] test/language/statements/class/elements/nested-equality-init-err-contains-arguments.js
+  - [x] test/language/statements/class/elements/nested-equality-init-err-contains-super.js
+  - [x] test/language/statements/class/elements/nested-indirect-eval-contains-arguments.js
+  - [x] test/language/statements/class/elements/nested-indirect-eval-err-contains-newtarget.js
+  - [x] test/language/statements/class/elements/nested-literal-name-init-err-contains-arguments.js
+  - [x] test/language/statements/class/elements/nested-literal-name-init-err-contains-super.js
+  - [x] test/language/statements/class/elements/nested-private-arrow-fnc-init-err-contains-arguments.js
+  - [x] test/language/statements/class/elements/nested-private-arrow-fnc-init-err-contains-super.js
+  - [x] test/language/statements/class/elements/nested-private-derived-cls-direct-eval-contains-superproperty-1.js
+  - [x] test/language/statements/class/elements/nested-private-derived-cls-direct-eval-contains-superproperty-2.js
+  - [x] test/language/statements/class/elements/nested-private-derived-cls-direct-eval-err-contains-supercall-1.js
+  - [x] test/language/statements/class/elements/nested-private-derived-cls-direct-eval-err-contains-supercall-2.js
+  - [x] test/language/statements/class/elements/nested-private-derived-cls-direct-eval-err-contains-supercall.js
+  - [x] test/language/statements/class/elements/nested-private-derived-cls-indirect-eval-contains-superproperty-1.js
+  - [x] test/language/statements/class/elements/nested-private-derived-cls-indirect-eval-contains-superproperty-2.js
+  - [x] test/language/statements/class/elements/nested-private-derived-cls-indirect-eval-err-contains-supercall-1.js
+  - [x] test/language/statements/class/elements/nested-private-derived-cls-indirect-eval-err-contains-supercall-2.js
+  - [x] test/language/statements/class/elements/nested-private-derived-cls-indirect-eval-err-contains-supercall.js
+  - [x] test/language/statements/class/elements/nested-private-direct-eval-err-contains-arguments.js
+  - [x] test/language/statements/class/elements/nested-private-direct-eval-err-contains-newtarget.js
   - [ ] test/language/statements/class/elements/nested-private-indirect-eval-contains-arguments.js
-  - [ ] test/language/statements/class/elements/nested-private-indirect-eval-err-contains-newtarget.js
-  - [ ] test/language/statements/class/elements/nested-private-literal-name-init-err-contains-arguments.js
-  - [ ] test/language/statements/class/elements/nested-private-literal-name-init-err-contains-super.js
-  - [ ] test/language/statements/class/elements/nested-private-ternary-init-err-contains-arguments.js
-  - [ ] test/language/statements/class/elements/nested-private-ternary-init-err-contains-super.js
-  - [ ] test/language/statements/class/elements/nested-private-typeof-init-err-contains-arguments.js
-  - [ ] test/language/statements/class/elements/nested-private-typeof-init-err-contains-super.js
-  - [ ] test/language/statements/class/elements/nested-static-comp-name-init-err-contains-arguments.js
-  - [ ] test/language/statements/class/elements/nested-static-comp-name-init-err-contains-super.js
-  - [ ] test/language/statements/class/elements/nested-static-literal-init-err-contains-arguments.js
-  - [ ] test/language/statements/class/elements/nested-static-literal-init-err-contains-super.js
-  - [ ] test/language/statements/class/elements/nested-static-private-init-err-contains-arguments.js
-  - [ ] test/language/statements/class/elements/nested-static-private-init-err-contains-super.js
-  - [ ] test/language/statements/class/elements/nested-static-string-literal-name-init-err-contains-arguments.js
-  - [ ] test/language/statements/class/elements/nested-static-string-literal-name-init-err-contains-super.js
-  - [ ] test/language/statements/class/elements/nested-string-literal-name-init-err-contains-arguments.js
-  - [ ] test/language/statements/class/elements/nested-string-literal-name-init-err-contains-super.js
-  - [ ] test/language/statements/class/elements/nested-ternary-init-err-contains-arguments.js
-  - [ ] test/language/statements/class/elements/nested-ternary-init-err-contains-super.js
-  - [ ] test/language/statements/class/elements/nested-typeof-init-err-contains-arguments.js
-  - [ ] test/language/statements/class/elements/nested-typeof-init-err-contains-super.js
-  - [ ] test/language/statements/class/elements/new-no-sc-line-method-computed-names.js
-  - [ ] test/language/statements/class/elements/new-no-sc-line-method-computed-symbol-names.js
-  - [ ] test/language/statements/class/elements/new-no-sc-line-method-grammar-privatename-identifier-semantics-stringvalue.js
-  - [ ] test/language/statements/class/elements/new-no-sc-line-method-literal-names-asi.js
-  - [ ] test/language/statements/class/elements/new-no-sc-line-method-literal-names.js
-  - [ ] test/language/statements/class/elements/new-no-sc-line-method-private-field-usage.js
-  - [ ] test/language/statements/class/elements/new-no-sc-line-method-private-method-getter-usage.js
-  - [ ] test/language/statements/class/elements/new-no-sc-line-method-private-method-usage.js
-  - [ ] test/language/statements/class/elements/new-no-sc-line-method-private-names.js
+  - [x] test/language/statements/class/elements/nested-private-indirect-eval-err-contains-newtarget.js
+  - [x] test/language/statements/class/elements/nested-private-literal-name-init-err-contains-arguments.js
+  - [x] test/language/statements/class/elements/nested-private-literal-name-init-err-contains-super.js
+  - [x] test/language/statements/class/elements/nested-private-ternary-init-err-contains-arguments.js
+  - [x] test/language/statements/class/elements/nested-private-ternary-init-err-contains-super.js
+  - [x] test/language/statements/class/elements/nested-private-typeof-init-err-contains-arguments.js
+  - [x] test/language/statements/class/elements/nested-private-typeof-init-err-contains-super.js
+  - [x] test/language/statements/class/elements/nested-static-comp-name-init-err-contains-arguments.js
+  - [x] test/language/statements/class/elements/nested-static-comp-name-init-err-contains-super.js
+  - [x] test/language/statements/class/elements/nested-static-literal-init-err-contains-arguments.js
+  - [x] test/language/statements/class/elements/nested-static-literal-init-err-contains-super.js
+  - [x] test/language/statements/class/elements/nested-static-private-init-err-contains-arguments.js
+  - [x] test/language/statements/class/elements/nested-static-private-init-err-contains-super.js
+  - [x] test/language/statements/class/elements/nested-static-string-literal-name-init-err-contains-arguments.js
+  - [x] test/language/statements/class/elements/nested-static-string-literal-name-init-err-contains-super.js
+  - [x] test/language/statements/class/elements/nested-string-literal-name-init-err-contains-arguments.js
+  - [x] test/language/statements/class/elements/nested-string-literal-name-init-err-contains-super.js
+  - [x] test/language/statements/class/elements/nested-ternary-init-err-contains-arguments.js
+  - [x] test/language/statements/class/elements/nested-ternary-init-err-contains-super.js
+  - [x] test/language/statements/class/elements/nested-typeof-init-err-contains-arguments.js
+  - [x] test/language/statements/class/elements/nested-typeof-init-err-contains-super.js
+  - [x] test/language/statements/class/elements/new-no-sc-line-method-computed-names.js
+  - [x] test/language/statements/class/elements/new-no-sc-line-method-computed-symbol-names.js
+  - [x] test/language/statements/class/elements/new-no-sc-line-method-grammar-privatename-identifier-semantics-stringvalue.js
+  - [x] test/language/statements/class/elements/new-no-sc-line-method-literal-names-asi.js
+  - [x] test/language/statements/class/elements/new-no-sc-line-method-literal-names.js
+  - [x] test/language/statements/class/elements/new-no-sc-line-method-private-field-usage.js
+  - [x] test/language/statements/class/elements/new-no-sc-line-method-private-method-getter-usage.js
+  - [x] test/language/statements/class/elements/new-no-sc-line-method-private-method-usage.js
+  - [x] test/language/statements/class/elements/new-no-sc-line-method-private-names.js
   - [ ] test/language/statements/class/elements/new-no-sc-line-method-rs-field-identifier-initializer.js
   - [ ] test/language/statements/class/elements/new-no-sc-line-method-rs-field-identifier.js
   - [ ] test/language/statements/class/elements/new-no-sc-line-method-rs-private-getter-alt.js
@@ -5033,19 +5033,19 @@ Sub-category progress
   - [ ] test/language/statements/class/elements/new-no-sc-line-method-rs-static-privatename-identifier-initializer-alt.js
   - [ ] test/language/statements/class/elements/new-no-sc-line-method-rs-static-privatename-identifier-initializer.js
   - [ ] test/language/statements/class/elements/new-no-sc-line-method-rs-static-privatename-identifier.js
-  - [ ] test/language/statements/class/elements/new-no-sc-line-method-static-private-fields.js
-  - [ ] test/language/statements/class/elements/new-no-sc-line-method-static-private-methods-with-fields.js
-  - [ ] test/language/statements/class/elements/new-no-sc-line-method-static-private-methods.js
-  - [ ] test/language/statements/class/elements/new-no-sc-line-method-string-literal-names.js
-  - [ ] test/language/statements/class/elements/new-sc-line-gen-computed-names.js
-  - [ ] test/language/statements/class/elements/new-sc-line-gen-computed-symbol-names.js
-  - [ ] test/language/statements/class/elements/new-sc-line-gen-grammar-privatename-identifier-semantics-stringvalue.js
-  - [ ] test/language/statements/class/elements/new-sc-line-gen-literal-names-asi.js
-  - [ ] test/language/statements/class/elements/new-sc-line-gen-literal-names.js
-  - [ ] test/language/statements/class/elements/new-sc-line-gen-private-field-usage.js
-  - [ ] test/language/statements/class/elements/new-sc-line-gen-private-method-getter-usage.js
-  - [ ] test/language/statements/class/elements/new-sc-line-gen-private-method-usage.js
-  - [ ] test/language/statements/class/elements/new-sc-line-gen-private-names.js
+  - [x] test/language/statements/class/elements/new-no-sc-line-method-static-private-fields.js
+  - [x] test/language/statements/class/elements/new-no-sc-line-method-static-private-methods-with-fields.js
+  - [x] test/language/statements/class/elements/new-no-sc-line-method-static-private-methods.js
+  - [x] test/language/statements/class/elements/new-no-sc-line-method-string-literal-names.js
+  - [x] test/language/statements/class/elements/new-sc-line-gen-computed-names.js
+  - [x] test/language/statements/class/elements/new-sc-line-gen-computed-symbol-names.js
+  - [x] test/language/statements/class/elements/new-sc-line-gen-grammar-privatename-identifier-semantics-stringvalue.js
+  - [x] test/language/statements/class/elements/new-sc-line-gen-literal-names-asi.js
+  - [x] test/language/statements/class/elements/new-sc-line-gen-literal-names.js
+  - [x] test/language/statements/class/elements/new-sc-line-gen-private-field-usage.js
+  - [x] test/language/statements/class/elements/new-sc-line-gen-private-method-getter-usage.js
+  - [x] test/language/statements/class/elements/new-sc-line-gen-private-method-usage.js
+  - [x] test/language/statements/class/elements/new-sc-line-gen-private-names.js
   - [ ] test/language/statements/class/elements/new-sc-line-gen-rs-field-identifier-initializer.js
   - [ ] test/language/statements/class/elements/new-sc-line-gen-rs-field-identifier.js
   - [ ] test/language/statements/class/elements/new-sc-line-gen-rs-private-getter-alt.js
@@ -5073,19 +5073,19 @@ Sub-category progress
   - [ ] test/language/statements/class/elements/new-sc-line-gen-rs-static-privatename-identifier-initializer-alt.js
   - [ ] test/language/statements/class/elements/new-sc-line-gen-rs-static-privatename-identifier-initializer.js
   - [ ] test/language/statements/class/elements/new-sc-line-gen-rs-static-privatename-identifier.js
-  - [ ] test/language/statements/class/elements/new-sc-line-gen-static-private-fields.js
-  - [ ] test/language/statements/class/elements/new-sc-line-gen-static-private-methods-with-fields.js
-  - [ ] test/language/statements/class/elements/new-sc-line-gen-static-private-methods.js
-  - [ ] test/language/statements/class/elements/new-sc-line-gen-string-literal-names.js
-  - [ ] test/language/statements/class/elements/new-sc-line-method-computed-names.js
-  - [ ] test/language/statements/class/elements/new-sc-line-method-computed-symbol-names.js
-  - [ ] test/language/statements/class/elements/new-sc-line-method-grammar-privatename-identifier-semantics-stringvalue.js
-  - [ ] test/language/statements/class/elements/new-sc-line-method-literal-names-asi.js
-  - [ ] test/language/statements/class/elements/new-sc-line-method-literal-names.js
-  - [ ] test/language/statements/class/elements/new-sc-line-method-private-field-usage.js
-  - [ ] test/language/statements/class/elements/new-sc-line-method-private-method-getter-usage.js
-  - [ ] test/language/statements/class/elements/new-sc-line-method-private-method-usage.js
-  - [ ] test/language/statements/class/elements/new-sc-line-method-private-names.js
+  - [x] test/language/statements/class/elements/new-sc-line-gen-static-private-fields.js
+  - [x] test/language/statements/class/elements/new-sc-line-gen-static-private-methods-with-fields.js
+  - [x] test/language/statements/class/elements/new-sc-line-gen-static-private-methods.js
+  - [x] test/language/statements/class/elements/new-sc-line-gen-string-literal-names.js
+  - [x] test/language/statements/class/elements/new-sc-line-method-computed-names.js
+  - [x] test/language/statements/class/elements/new-sc-line-method-computed-symbol-names.js
+  - [x] test/language/statements/class/elements/new-sc-line-method-grammar-privatename-identifier-semantics-stringvalue.js
+  - [x] test/language/statements/class/elements/new-sc-line-method-literal-names-asi.js
+  - [x] test/language/statements/class/elements/new-sc-line-method-literal-names.js
+  - [x] test/language/statements/class/elements/new-sc-line-method-private-field-usage.js
+  - [x] test/language/statements/class/elements/new-sc-line-method-private-method-getter-usage.js
+  - [x] test/language/statements/class/elements/new-sc-line-method-private-method-usage.js
+  - [x] test/language/statements/class/elements/new-sc-line-method-private-names.js
   - [ ] test/language/statements/class/elements/new-sc-line-method-rs-field-identifier-initializer.js
   - [ ] test/language/statements/class/elements/new-sc-line-method-rs-field-identifier.js
   - [ ] test/language/statements/class/elements/new-sc-line-method-rs-private-getter-alt.js
@@ -5113,70 +5113,70 @@ Sub-category progress
   - [ ] test/language/statements/class/elements/new-sc-line-method-rs-static-privatename-identifier-initializer-alt.js
   - [ ] test/language/statements/class/elements/new-sc-line-method-rs-static-privatename-identifier-initializer.js
   - [ ] test/language/statements/class/elements/new-sc-line-method-rs-static-privatename-identifier.js
-  - [ ] test/language/statements/class/elements/new-sc-line-method-static-private-fields.js
-  - [ ] test/language/statements/class/elements/new-sc-line-method-static-private-methods-with-fields.js
-  - [ ] test/language/statements/class/elements/new-sc-line-method-static-private-methods.js
-  - [ ] test/language/statements/class/elements/new-sc-line-method-string-literal-names.js
-  - [ ] test/language/statements/class/elements/private-accessor-is-visible-in-computed-properties.js
-  - [ ] test/language/statements/class/elements/private-accessor-name/inst-private-escape-sequence-ZWJ.js
-  - [ ] test/language/statements/class/elements/private-accessor-name/inst-private-escape-sequence-ZWNJ.js
-  - [ ] test/language/statements/class/elements/private-accessor-name/inst-private-escape-sequence-u2118.js
-  - [ ] test/language/statements/class/elements/private-accessor-name/inst-private-escape-sequence-u6F.js
-  - [ ] test/language/statements/class/elements/private-accessor-name/inst-private-name-ZWJ.js
-  - [ ] test/language/statements/class/elements/private-accessor-name/inst-private-name-ZWNJ.js
-  - [ ] test/language/statements/class/elements/private-accessor-name/inst-private-name-common.js
-  - [ ] test/language/statements/class/elements/private-accessor-name/inst-private-name-dollar.js
-  - [ ] test/language/statements/class/elements/private-accessor-name/inst-private-name-u2118.js
-  - [ ] test/language/statements/class/elements/private-accessor-name/inst-private-name-underscore.js
-  - [ ] test/language/statements/class/elements/private-accessor-name/static-private-escape-sequence-ZWJ.js
-  - [ ] test/language/statements/class/elements/private-accessor-name/static-private-escape-sequence-ZWNJ.js
-  - [ ] test/language/statements/class/elements/private-accessor-name/static-private-escape-sequence-u2118.js
-  - [ ] test/language/statements/class/elements/private-accessor-name/static-private-escape-sequence-u6F.js
-  - [ ] test/language/statements/class/elements/private-accessor-name/static-private-name-ZWJ.js
-  - [ ] test/language/statements/class/elements/private-accessor-name/static-private-name-ZWNJ.js
-  - [ ] test/language/statements/class/elements/private-accessor-name/static-private-name-common.js
-  - [ ] test/language/statements/class/elements/private-accessor-name/static-private-name-dollar.js
-  - [ ] test/language/statements/class/elements/private-accessor-name/static-private-name-u2118.js
-  - [ ] test/language/statements/class/elements/private-accessor-name/static-private-name-underscore.js
-  - [ ] test/language/statements/class/elements/private-arrow-fnc-init-err-contains-arguments.js
-  - [ ] test/language/statements/class/elements/private-arrow-fnc-init-err-contains-super.js
+  - [x] test/language/statements/class/elements/new-sc-line-method-static-private-fields.js
+  - [x] test/language/statements/class/elements/new-sc-line-method-static-private-methods-with-fields.js
+  - [x] test/language/statements/class/elements/new-sc-line-method-static-private-methods.js
+  - [x] test/language/statements/class/elements/new-sc-line-method-string-literal-names.js
+  - [x] test/language/statements/class/elements/private-accessor-is-visible-in-computed-properties.js
+  - [x] test/language/statements/class/elements/private-accessor-name/inst-private-escape-sequence-ZWJ.js
+  - [x] test/language/statements/class/elements/private-accessor-name/inst-private-escape-sequence-ZWNJ.js
+  - [x] test/language/statements/class/elements/private-accessor-name/inst-private-escape-sequence-u2118.js
+  - [x] test/language/statements/class/elements/private-accessor-name/inst-private-escape-sequence-u6F.js
+  - [x] test/language/statements/class/elements/private-accessor-name/inst-private-name-ZWJ.js
+  - [x] test/language/statements/class/elements/private-accessor-name/inst-private-name-ZWNJ.js
+  - [x] test/language/statements/class/elements/private-accessor-name/inst-private-name-common.js
+  - [x] test/language/statements/class/elements/private-accessor-name/inst-private-name-dollar.js
+  - [x] test/language/statements/class/elements/private-accessor-name/inst-private-name-u2118.js
+  - [x] test/language/statements/class/elements/private-accessor-name/inst-private-name-underscore.js
+  - [x] test/language/statements/class/elements/private-accessor-name/static-private-escape-sequence-ZWJ.js
+  - [x] test/language/statements/class/elements/private-accessor-name/static-private-escape-sequence-ZWNJ.js
+  - [x] test/language/statements/class/elements/private-accessor-name/static-private-escape-sequence-u2118.js
+  - [x] test/language/statements/class/elements/private-accessor-name/static-private-escape-sequence-u6F.js
+  - [x] test/language/statements/class/elements/private-accessor-name/static-private-name-ZWJ.js
+  - [x] test/language/statements/class/elements/private-accessor-name/static-private-name-ZWNJ.js
+  - [x] test/language/statements/class/elements/private-accessor-name/static-private-name-common.js
+  - [x] test/language/statements/class/elements/private-accessor-name/static-private-name-dollar.js
+  - [x] test/language/statements/class/elements/private-accessor-name/static-private-name-u2118.js
+  - [x] test/language/statements/class/elements/private-accessor-name/static-private-name-underscore.js
+  - [x] test/language/statements/class/elements/private-arrow-fnc-init-err-contains-arguments.js
+  - [x] test/language/statements/class/elements/private-arrow-fnc-init-err-contains-super.js
   - [ ] test/language/statements/class/elements/private-async-generator-method-name.js
-  - [ ] test/language/statements/class/elements/private-async-method-name.js
+  - [x] test/language/statements/class/elements/private-async-method-name.js
   - [ ] test/language/statements/class/elements/private-class-field-on-nonextensible-objects.js
-  - [ ] test/language/statements/class/elements/private-derived-cls-direct-eval-contains-superproperty-1.js
-  - [ ] test/language/statements/class/elements/private-derived-cls-direct-eval-contains-superproperty-2.js
-  - [ ] test/language/statements/class/elements/private-derived-cls-direct-eval-err-contains-supercall-1.js
-  - [ ] test/language/statements/class/elements/private-derived-cls-direct-eval-err-contains-supercall-2.js
-  - [ ] test/language/statements/class/elements/private-derived-cls-direct-eval-err-contains-supercall.js
-  - [ ] test/language/statements/class/elements/private-derived-cls-indirect-eval-contains-superproperty-1.js
-  - [ ] test/language/statements/class/elements/private-derived-cls-indirect-eval-contains-superproperty-2.js
-  - [ ] test/language/statements/class/elements/private-derived-cls-indirect-eval-err-contains-supercall-1.js
-  - [ ] test/language/statements/class/elements/private-derived-cls-indirect-eval-err-contains-supercall-2.js
-  - [ ] test/language/statements/class/elements/private-derived-cls-indirect-eval-err-contains-supercall.js
-  - [ ] test/language/statements/class/elements/private-direct-eval-err-contains-arguments.js
-  - [ ] test/language/statements/class/elements/private-direct-eval-err-contains-newtarget.js
-  - [ ] test/language/statements/class/elements/private-field-access-on-inner-arrow-function.js
-  - [ ] test/language/statements/class/elements/private-field-access-on-inner-function.js
+  - [x] test/language/statements/class/elements/private-derived-cls-direct-eval-contains-superproperty-1.js
+  - [x] test/language/statements/class/elements/private-derived-cls-direct-eval-contains-superproperty-2.js
+  - [x] test/language/statements/class/elements/private-derived-cls-direct-eval-err-contains-supercall-1.js
+  - [x] test/language/statements/class/elements/private-derived-cls-direct-eval-err-contains-supercall-2.js
+  - [x] test/language/statements/class/elements/private-derived-cls-direct-eval-err-contains-supercall.js
+  - [x] test/language/statements/class/elements/private-derived-cls-indirect-eval-contains-superproperty-1.js
+  - [x] test/language/statements/class/elements/private-derived-cls-indirect-eval-contains-superproperty-2.js
+  - [x] test/language/statements/class/elements/private-derived-cls-indirect-eval-err-contains-supercall-1.js
+  - [x] test/language/statements/class/elements/private-derived-cls-indirect-eval-err-contains-supercall-2.js
+  - [x] test/language/statements/class/elements/private-derived-cls-indirect-eval-err-contains-supercall.js
+  - [x] test/language/statements/class/elements/private-direct-eval-err-contains-arguments.js
+  - [x] test/language/statements/class/elements/private-direct-eval-err-contains-newtarget.js
+  - [x] test/language/statements/class/elements/private-field-access-on-inner-arrow-function.js
+  - [x] test/language/statements/class/elements/private-field-access-on-inner-function.js
   - [ ] test/language/statements/class/elements/private-field-after-optional-chain.js
-  - [ ] test/language/statements/class/elements/private-field-as-arrow-function.js
-  - [ ] test/language/statements/class/elements/private-field-as-async-arrow-function.js
-  - [ ] test/language/statements/class/elements/private-field-as-async-function.js
-  - [ ] test/language/statements/class/elements/private-field-as-function.js
+  - [x] test/language/statements/class/elements/private-field-as-arrow-function.js
+  - [x] test/language/statements/class/elements/private-field-as-async-arrow-function.js
+  - [x] test/language/statements/class/elements/private-field-as-async-function.js
+  - [x] test/language/statements/class/elements/private-field-as-function.js
   - [ ] test/language/statements/class/elements/private-field-is-not-clobbered-by-computed-property.js
-  - [ ] test/language/statements/class/elements/private-field-is-visible-in-computed-properties.js
-  - [ ] test/language/statements/class/elements/private-field-on-nested-class.js
+  - [x] test/language/statements/class/elements/private-field-is-visible-in-computed-properties.js
+  - [x] test/language/statements/class/elements/private-field-on-nested-class.js
   - [ ] test/language/statements/class/elements/private-field-visible-to-direct-eval-on-initializer.js
-  - [ ] test/language/statements/class/elements/private-field-visible-to-direct-eval.js
-  - [ ] test/language/statements/class/elements/private-field-with-initialized-id-is-visible-in-computed-properties.js
-  - [ ] test/language/statements/class/elements/private-generator-method-name.js
+  - [x] test/language/statements/class/elements/private-field-visible-to-direct-eval.js
+  - [x] test/language/statements/class/elements/private-field-with-initialized-id-is-visible-in-computed-properties.js
+  - [x] test/language/statements/class/elements/private-generator-method-name.js
   - [ ] test/language/statements/class/elements/private-getter-access-on-inner-arrow-function.js
   - [ ] test/language/statements/class/elements/private-getter-access-on-inner-function.js
   - [ ] test/language/statements/class/elements/private-getter-brand-check-multiple-evaluations-of-class.js
   - [ ] test/language/statements/class/elements/private-getter-brand-check-super-class.js
   - [ ] test/language/statements/class/elements/private-getter-brand-check.js
-  - [ ] test/language/statements/class/elements/private-getter-is-not-a-own-property.js
+  - [x] test/language/statements/class/elements/private-getter-is-not-a-own-property.js
   - [ ] test/language/statements/class/elements/private-getter-is-not-clobbered-by-computed-property.js
-  - [ ] test/language/statements/class/elements/private-getter-on-nested-class.js
+  - [x] test/language/statements/class/elements/private-getter-on-nested-class.js
   - [ ] test/language/statements/class/elements/private-getter-shadowed-by-field-on-nested-class.js
   - [ ] test/language/statements/class/elements/private-getter-shadowed-by-getter-on-nested-class.js
   - [ ] test/language/statements/class/elements/private-getter-shadowed-by-method-on-nested-class.js
@@ -5184,127 +5184,127 @@ Sub-category progress
   - [ ] test/language/statements/class/elements/private-getter-visible-to-direct-eval-on-initializer.js
   - [ ] test/language/statements/class/elements/private-getter-visible-to-direct-eval.js
   - [ ] test/language/statements/class/elements/private-indirect-eval-contains-arguments.js
-  - [ ] test/language/statements/class/elements/private-indirect-eval-err-contains-newtarget.js
-  - [ ] test/language/statements/class/elements/private-literal-name-init-err-contains-arguments.js
-  - [ ] test/language/statements/class/elements/private-literal-name-init-err-contains-super.js
+  - [x] test/language/statements/class/elements/private-indirect-eval-err-contains-newtarget.js
+  - [x] test/language/statements/class/elements/private-literal-name-init-err-contains-arguments.js
+  - [x] test/language/statements/class/elements/private-literal-name-init-err-contains-super.js
   - [ ] test/language/statements/class/elements/private-method-access-on-inner-arrow-function.js
   - [ ] test/language/statements/class/elements/private-method-access-on-inner-function.js
   - [ ] test/language/statements/class/elements/private-method-brand-check-multiple-evaluations-of-class.js
   - [ ] test/language/statements/class/elements/private-method-brand-check-super-class.js
   - [ ] test/language/statements/class/elements/private-method-brand-check.js
   - [ ] test/language/statements/class/elements/private-method-comparison-multiple-evaluations-of-class.js
-  - [ ] test/language/statements/class/elements/private-method-comparison.js
+  - [x] test/language/statements/class/elements/private-method-comparison.js
   - [ ] test/language/statements/class/elements/private-method-double-initialisation-get-and-set.js
   - [ ] test/language/statements/class/elements/private-method-double-initialisation-get.js
   - [ ] test/language/statements/class/elements/private-method-double-initialisation-set.js
   - [ ] test/language/statements/class/elements/private-method-double-initialisation.js
   - [ ] test/language/statements/class/elements/private-method-get-and-call.js
-  - [ ] test/language/statements/class/elements/private-method-is-not-a-own-property.js
+  - [x] test/language/statements/class/elements/private-method-is-not-a-own-property.js
   - [ ] test/language/statements/class/elements/private-method-is-not-clobbered-by-computed-property.js
-  - [ ] test/language/statements/class/elements/private-method-is-visible-in-computed-properties.js
-  - [ ] test/language/statements/class/elements/private-method-length.js
-  - [ ] test/language/statements/class/elements/private-method-not-writable.js
-  - [ ] test/language/statements/class/elements/private-method-on-nested-class.js
+  - [x] test/language/statements/class/elements/private-method-is-visible-in-computed-properties.js
+  - [x] test/language/statements/class/elements/private-method-length.js
+  - [x] test/language/statements/class/elements/private-method-not-writable.js
+  - [x] test/language/statements/class/elements/private-method-on-nested-class.js
   - [ ] test/language/statements/class/elements/private-method-referenced-from-static-method.js
   - [ ] test/language/statements/class/elements/private-method-shadowed-by-field-on-nested-class.js
   - [ ] test/language/statements/class/elements/private-method-shadowed-by-getter-on-nested-class.js
   - [ ] test/language/statements/class/elements/private-method-shadowed-by-setter-on-nested-class.js
-  - [ ] test/language/statements/class/elements/private-method-shadowed-on-nested-class.js
-  - [ ] test/language/statements/class/elements/private-method-visible-to-direct-eval-on-initializer.js
+  - [x] test/language/statements/class/elements/private-method-shadowed-on-nested-class.js
+  - [x] test/language/statements/class/elements/private-method-visible-to-direct-eval-on-initializer.js
   - [ ] test/language/statements/class/elements/private-method-visible-to-direct-eval.js
   - [ ] test/language/statements/class/elements/private-methods/prod-private-async-generator.js
   - [ ] test/language/statements/class/elements/private-methods/prod-private-async-method.js
-  - [ ] test/language/statements/class/elements/private-methods/prod-private-generator.js
-  - [ ] test/language/statements/class/elements/private-methods/prod-private-method-initialize-order.js
-  - [ ] test/language/statements/class/elements/private-methods/prod-private-method.js
-  - [ ] test/language/statements/class/elements/private-setter-access-on-inner-arrow-function.js
-  - [ ] test/language/statements/class/elements/private-setter-access-on-inner-function.js
+  - [x] test/language/statements/class/elements/private-methods/prod-private-generator.js
+  - [x] test/language/statements/class/elements/private-methods/prod-private-method-initialize-order.js
+  - [x] test/language/statements/class/elements/private-methods/prod-private-method.js
+  - [x] test/language/statements/class/elements/private-setter-access-on-inner-arrow-function.js
+  - [x] test/language/statements/class/elements/private-setter-access-on-inner-function.js
   - [ ] test/language/statements/class/elements/private-setter-brand-check-multiple-evaluations-of-class.js
   - [ ] test/language/statements/class/elements/private-setter-brand-check-super-class.js
   - [ ] test/language/statements/class/elements/private-setter-brand-check.js
-  - [ ] test/language/statements/class/elements/private-setter-is-not-a-own-property.js
+  - [x] test/language/statements/class/elements/private-setter-is-not-a-own-property.js
   - [ ] test/language/statements/class/elements/private-setter-is-not-clobbered-by-computed-property.js
-  - [ ] test/language/statements/class/elements/private-setter-on-nested-class.js
+  - [x] test/language/statements/class/elements/private-setter-on-nested-class.js
   - [ ] test/language/statements/class/elements/private-setter-shadowed-by-field-on-nested-class.js
-  - [ ] test/language/statements/class/elements/private-setter-shadowed-by-getter-on-nested-class.js
-  - [ ] test/language/statements/class/elements/private-setter-shadowed-by-method-on-nested-class.js
+  - [x] test/language/statements/class/elements/private-setter-shadowed-by-getter-on-nested-class.js
+  - [x] test/language/statements/class/elements/private-setter-shadowed-by-method-on-nested-class.js
   - [ ] test/language/statements/class/elements/private-setter-shadowed-by-setter-on-nested-class.js
   - [ ] test/language/statements/class/elements/private-setter-visible-to-direct-eval-on-initializer.js
-  - [ ] test/language/statements/class/elements/private-setter-visible-to-direct-eval.js
+  - [x] test/language/statements/class/elements/private-setter-visible-to-direct-eval.js
   - [ ] test/language/statements/class/elements/private-static-async-generator-method-name.js
-  - [ ] test/language/statements/class/elements/private-static-async-method-name.js
+  - [x] test/language/statements/class/elements/private-static-async-method-name.js
   - [ ] test/language/statements/class/elements/private-static-field-shadowed-by-field-on-nested-class.js
   - [ ] test/language/statements/class/elements/private-static-field-shadowed-by-getter-on-nested-class.js
   - [ ] test/language/statements/class/elements/private-static-field-shadowed-by-method-on-nested-class.js
   - [ ] test/language/statements/class/elements/private-static-field-shadowed-by-setter-on-nested-class.js
-  - [ ] test/language/statements/class/elements/private-static-field-usage-inside-nested-class.js
-  - [ ] test/language/statements/class/elements/private-static-field-visible-to-direct-eval.js
-  - [ ] test/language/statements/class/elements/private-static-generator-method-name.js
-  - [ ] test/language/statements/class/elements/private-static-getter-abrupt-completition.js
+  - [x] test/language/statements/class/elements/private-static-field-usage-inside-nested-class.js
+  - [x] test/language/statements/class/elements/private-static-field-visible-to-direct-eval.js
+  - [x] test/language/statements/class/elements/private-static-generator-method-name.js
+  - [x] test/language/statements/class/elements/private-static-getter-abrupt-completition.js
   - [ ] test/language/statements/class/elements/private-static-getter-visible-to-direct-eval.js
-  - [ ] test/language/statements/class/elements/private-static-method-length.js
-  - [ ] test/language/statements/class/elements/private-static-method-name.js
-  - [ ] test/language/statements/class/elements/private-static-method-not-writable.js
+  - [x] test/language/statements/class/elements/private-static-method-length.js
+  - [x] test/language/statements/class/elements/private-static-method-name.js
+  - [x] test/language/statements/class/elements/private-static-method-not-writable.js
   - [ ] test/language/statements/class/elements/private-static-method-shadowed-by-field-on-nested-class.js
   - [ ] test/language/statements/class/elements/private-static-method-shadowed-by-getter-on-nested-class.js
   - [ ] test/language/statements/class/elements/private-static-method-shadowed-by-method-on-nested-class.js
   - [ ] test/language/statements/class/elements/private-static-method-shadowed-by-setter-on-nested-class.js
   - [ ] test/language/statements/class/elements/private-static-method-usage-inside-nested-class.js
   - [ ] test/language/statements/class/elements/private-static-method-visible-to-direct-eval.js
-  - [ ] test/language/statements/class/elements/private-static-setter-abrupt-completition.js
+  - [x] test/language/statements/class/elements/private-static-setter-abrupt-completition.js
   - [ ] test/language/statements/class/elements/private-static-setter-visible-to-direct-eval.js
-  - [ ] test/language/statements/class/elements/private-ternary-init-err-contains-arguments.js
-  - [ ] test/language/statements/class/elements/private-ternary-init-err-contains-super.js
-  - [ ] test/language/statements/class/elements/private-typeof-init-err-contains-arguments.js
-  - [ ] test/language/statements/class/elements/private-typeof-init-err-contains-super.js
+  - [x] test/language/statements/class/elements/private-ternary-init-err-contains-arguments.js
+  - [x] test/language/statements/class/elements/private-ternary-init-err-contains-super.js
+  - [x] test/language/statements/class/elements/private-typeof-init-err-contains-arguments.js
+  - [x] test/language/statements/class/elements/private-typeof-init-err-contains-super.js
   - [ ] test/language/statements/class/elements/privatefield-on-proxy.js
   - [ ] test/language/statements/class/elements/privatefieldadd-typeerror.js
   - [ ] test/language/statements/class/elements/privatefieldget-primitive-receiver.js
   - [ ] test/language/statements/class/elements/privatefieldget-success-1.js
-  - [ ] test/language/statements/class/elements/privatefieldget-success-2.js
+  - [x] test/language/statements/class/elements/privatefieldget-success-2.js
   - [ ] test/language/statements/class/elements/privatefieldget-success-3.js
   - [ ] test/language/statements/class/elements/privatefieldget-success-4.js
-  - [ ] test/language/statements/class/elements/privatefieldget-success-5.js
-  - [ ] test/language/statements/class/elements/privatefieldget-typeerror-1.js
-  - [ ] test/language/statements/class/elements/privatefieldget-typeerror-2.js
+  - [x] test/language/statements/class/elements/privatefieldget-success-5.js
+  - [x] test/language/statements/class/elements/privatefieldget-typeerror-1.js
+  - [x] test/language/statements/class/elements/privatefieldget-typeerror-2.js
   - [ ] test/language/statements/class/elements/privatefieldget-typeerror-3.js
-  - [ ] test/language/statements/class/elements/privatefieldget-typeerror-4.js
-  - [ ] test/language/statements/class/elements/privatefieldget-typeerror-5.js
+  - [x] test/language/statements/class/elements/privatefieldget-typeerror-4.js
+  - [x] test/language/statements/class/elements/privatefieldget-typeerror-5.js
   - [ ] test/language/statements/class/elements/privatefieldput-primitive-receiver.js
-  - [ ] test/language/statements/class/elements/privatefieldset-evaluation-order-1.js
-  - [ ] test/language/statements/class/elements/privatefieldset-evaluation-order-2.js
+  - [x] test/language/statements/class/elements/privatefieldset-evaluation-order-1.js
+  - [x] test/language/statements/class/elements/privatefieldset-evaluation-order-2.js
   - [ ] test/language/statements/class/elements/privatefieldset-evaluation-order-3.js
-  - [ ] test/language/statements/class/elements/privatefieldset-typeerror-1.js
-  - [ ] test/language/statements/class/elements/privatefieldset-typeerror-10.js
-  - [ ] test/language/statements/class/elements/privatefieldset-typeerror-11.js
-  - [ ] test/language/statements/class/elements/privatefieldset-typeerror-2.js
+  - [x] test/language/statements/class/elements/privatefieldset-typeerror-1.js
+  - [x] test/language/statements/class/elements/privatefieldset-typeerror-10.js
+  - [x] test/language/statements/class/elements/privatefieldset-typeerror-11.js
+  - [x] test/language/statements/class/elements/privatefieldset-typeerror-2.js
   - [ ] test/language/statements/class/elements/privatefieldset-typeerror-3.js
-  - [ ] test/language/statements/class/elements/privatefieldset-typeerror-4.js
-  - [ ] test/language/statements/class/elements/privatefieldset-typeerror-5.js
-  - [ ] test/language/statements/class/elements/privatefieldset-typeerror-6.js
+  - [x] test/language/statements/class/elements/privatefieldset-typeerror-4.js
+  - [x] test/language/statements/class/elements/privatefieldset-typeerror-5.js
+  - [x] test/language/statements/class/elements/privatefieldset-typeerror-6.js
   - [ ] test/language/statements/class/elements/privatefieldset-typeerror-7.js
-  - [ ] test/language/statements/class/elements/privatefieldset-typeerror-8.js
-  - [ ] test/language/statements/class/elements/privatefieldset-typeerror-9.js
+  - [x] test/language/statements/class/elements/privatefieldset-typeerror-8.js
+  - [x] test/language/statements/class/elements/privatefieldset-typeerror-9.js
   - [ ] test/language/statements/class/elements/privategetter-on-proxy.js
   - [ ] test/language/statements/class/elements/privatemethods-on-proxy.js
-  - [ ] test/language/statements/class/elements/privatename-not-valid-earlyerr-script-1.js
-  - [ ] test/language/statements/class/elements/privatename-not-valid-earlyerr-script-2.js
-  - [ ] test/language/statements/class/elements/privatename-not-valid-earlyerr-script-3.js
-  - [ ] test/language/statements/class/elements/privatename-not-valid-earlyerr-script-4.js
-  - [ ] test/language/statements/class/elements/privatename-not-valid-earlyerr-script-5.js
-  - [ ] test/language/statements/class/elements/privatename-not-valid-earlyerr-script-6.js
-  - [ ] test/language/statements/class/elements/privatename-not-valid-earlyerr-script-7.js
-  - [ ] test/language/statements/class/elements/privatename-not-valid-earlyerr-script-8.js
-  - [ ] test/language/statements/class/elements/privatename-not-valid-eval-earlyerr-1.js
-  - [ ] test/language/statements/class/elements/privatename-not-valid-eval-earlyerr-2.js
-  - [ ] test/language/statements/class/elements/privatename-not-valid-eval-earlyerr-3.js
-  - [ ] test/language/statements/class/elements/privatename-not-valid-eval-earlyerr-4.js
-  - [ ] test/language/statements/class/elements/privatename-not-valid-eval-earlyerr-5.js
-  - [ ] test/language/statements/class/elements/privatename-not-valid-eval-earlyerr-6.js
-  - [ ] test/language/statements/class/elements/privatename-not-valid-eval-earlyerr-7.js
-  - [ ] test/language/statements/class/elements/privatename-not-valid-eval-earlyerr-8.js
-  - [ ] test/language/statements/class/elements/privatename-valid-no-earlyerr.js
-  - [ ] test/language/statements/class/elements/prod-private-getter-before-super-return-in-constructor.js
+  - [x] test/language/statements/class/elements/privatename-not-valid-earlyerr-script-1.js
+  - [x] test/language/statements/class/elements/privatename-not-valid-earlyerr-script-2.js
+  - [x] test/language/statements/class/elements/privatename-not-valid-earlyerr-script-3.js
+  - [x] test/language/statements/class/elements/privatename-not-valid-earlyerr-script-4.js
+  - [x] test/language/statements/class/elements/privatename-not-valid-earlyerr-script-5.js
+  - [x] test/language/statements/class/elements/privatename-not-valid-earlyerr-script-6.js
+  - [x] test/language/statements/class/elements/privatename-not-valid-earlyerr-script-7.js
+  - [x] test/language/statements/class/elements/privatename-not-valid-earlyerr-script-8.js
+  - [x] test/language/statements/class/elements/privatename-not-valid-eval-earlyerr-1.js
+  - [x] test/language/statements/class/elements/privatename-not-valid-eval-earlyerr-2.js
+  - [x] test/language/statements/class/elements/privatename-not-valid-eval-earlyerr-3.js
+  - [x] test/language/statements/class/elements/privatename-not-valid-eval-earlyerr-4.js
+  - [x] test/language/statements/class/elements/privatename-not-valid-eval-earlyerr-5.js
+  - [x] test/language/statements/class/elements/privatename-not-valid-eval-earlyerr-6.js
+  - [x] test/language/statements/class/elements/privatename-not-valid-eval-earlyerr-7.js
+  - [x] test/language/statements/class/elements/privatename-not-valid-eval-earlyerr-8.js
+  - [x] test/language/statements/class/elements/privatename-valid-no-earlyerr.js
+  - [x] test/language/statements/class/elements/prod-private-getter-before-super-return-in-constructor.js
   - [ ] test/language/statements/class/elements/prod-private-getter-before-super-return-in-field-initializer.js
   - [ ] test/language/statements/class/elements/prod-private-method-before-super-return-in-constructor.js
   - [ ] test/language/statements/class/elements/prod-private-method-before-super-return-in-field-initializer.js
@@ -8050,30 +8050,30 @@ Sub-category progress
   - [ ] test/language/statements/for-await-of/async-gen-dstr-var-obj-ptrn-rest-getter.js
   - [ ] test/language/statements/for-await-of/async-gen-dstr-var-obj-ptrn-rest-skip-non-enumerable.js
   - [ ] test/language/statements/for-await-of/async-gen-dstr-var-obj-ptrn-rest-val-obj.js
-  - [ ] test/language/statements/for-await-of/escaped-of.js
-  - [ ] test/language/statements/for-await-of/head-await-using-init.js
-  - [ ] test/language/statements/for-await-of/head-const-init.js
-  - [ ] test/language/statements/for-await-of/head-let-init.js
+  - [x] test/language/statements/for-await-of/escaped-of.js
+  - [x] test/language/statements/for-await-of/head-await-using-init.js
+  - [x] test/language/statements/for-await-of/head-const-init.js
+  - [x] test/language/statements/for-await-of/head-let-init.js
   - [ ] test/language/statements/for-await-of/head-lhs-async.js
-  - [ ] test/language/statements/for-await-of/head-using-init.js
-  - [ ] test/language/statements/for-await-of/head-var-init.js
-  - [ ] test/language/statements/for-await-of/iterator-close-non-throw-get-method-abrupt.js
+  - [x] test/language/statements/for-await-of/head-using-init.js
+  - [x] test/language/statements/for-await-of/head-var-init.js
+  - [x] test/language/statements/for-await-of/iterator-close-non-throw-get-method-abrupt.js
   - [ ] test/language/statements/for-await-of/iterator-close-non-throw-get-method-is-null.js
-  - [ ] test/language/statements/for-await-of/iterator-close-non-throw-get-method-non-callable.js
+  - [x] test/language/statements/for-await-of/iterator-close-non-throw-get-method-non-callable.js
   - [ ] test/language/statements/for-await-of/iterator-close-throw-get-method-abrupt.js
   - [ ] test/language/statements/for-await-of/iterator-close-throw-get-method-non-callable.js
-  - [ ] test/language/statements/for-await-of/let-array-with-newline.js
-  - [ ] test/language/statements/for-await-of/let-block-with-newline.js
-  - [ ] test/language/statements/for-await-of/let-identifier-with-newline.js
+  - [x] test/language/statements/for-await-of/let-array-with-newline.js
+  - [x] test/language/statements/for-await-of/let-block-with-newline.js
+  - [x] test/language/statements/for-await-of/let-identifier-with-newline.js
   - [ ] test/language/statements/for-await-of/ticks-with-async-iter-resolved-promise-and-constructor-lookup-two.js
   - [ ] test/language/statements/for-await-of/ticks-with-async-iter-resolved-promise-and-constructor-lookup.js
   - [ ] test/language/statements/for-await-of/ticks-with-sync-iter-resolved-promise-and-constructor-lookup.js
   - [ ] test/language/statements/for-in/12.6.4-1.js
-  - [ ] test/language/statements/for-in/12.6.4-2.js
-  - [ ] test/language/statements/for-in/S12.6.4_A1.js
+  - [x] test/language/statements/for-in/12.6.4-2.js
+  - [x] test/language/statements/for-in/S12.6.4_A1.js
   - [ ] test/language/statements/for-in/S12.6.4_A14_T2.js
-  - [ ] test/language/statements/for-in/S12.6.4_A15.js
-  - [ ] test/language/statements/for-in/S12.6.4_A2.js
+  - [x] test/language/statements/for-in/S12.6.4_A15.js
+  - [x] test/language/statements/for-in/S12.6.4_A2.js
   - [ ] test/language/statements/for-in/S12.6.4_A3.1.js
   - [ ] test/language/statements/for-in/S12.6.4_A3.js
   - [ ] test/language/statements/for-in/S12.6.4_A4.1.js
@@ -8086,84 +8086,84 @@ Sub-category progress
   - [ ] test/language/statements/for-in/S12.6.4_A7_T2.js
   - [ ] test/language/statements/for-in/cptn-decl-abrupt-empty.js
   - [ ] test/language/statements/for-in/cptn-decl-itr.js
-  - [ ] test/language/statements/for-in/cptn-decl-skip-itr.js
-  - [ ] test/language/statements/for-in/cptn-decl-zero-itr.js
+  - [x] test/language/statements/for-in/cptn-decl-skip-itr.js
+  - [x] test/language/statements/for-in/cptn-decl-zero-itr.js
   - [ ] test/language/statements/for-in/cptn-expr-abrupt-empty.js
   - [ ] test/language/statements/for-in/cptn-expr-itr.js
-  - [ ] test/language/statements/for-in/cptn-expr-skip-itr.js
-  - [ ] test/language/statements/for-in/cptn-expr-zero-itr.js
-  - [ ] test/language/statements/for-in/decl-async-fun.js
-  - [ ] test/language/statements/for-in/decl-async-gen.js
-  - [ ] test/language/statements/for-in/decl-cls.js
-  - [ ] test/language/statements/for-in/decl-const.js
-  - [ ] test/language/statements/for-in/decl-fun.js
-  - [ ] test/language/statements/for-in/decl-gen.js
-  - [ ] test/language/statements/for-in/decl-let.js
-  - [ ] test/language/statements/for-in/dstr/array-elem-init-yield-ident-invalid.js
-  - [ ] test/language/statements/for-in/dstr/array-elem-nested-array-invalid.js
-  - [ ] test/language/statements/for-in/dstr/array-elem-nested-array-yield-ident-invalid.js
-  - [ ] test/language/statements/for-in/dstr/array-elem-nested-memberexpr-optchain-prop-ref-init.js
-  - [ ] test/language/statements/for-in/dstr/array-elem-nested-obj-invalid.js
-  - [ ] test/language/statements/for-in/dstr/array-elem-nested-obj-yield-ident-invalid.js
-  - [ ] test/language/statements/for-in/dstr/array-elem-put-obj-literal-optchain-prop-ref-init.js
-  - [ ] test/language/statements/for-in/dstr/array-elem-target-simple-strict.js
-  - [ ] test/language/statements/for-in/dstr/array-elem-target-yield-invalid.js
-  - [ ] test/language/statements/for-in/dstr/array-rest-before-element.js
-  - [ ] test/language/statements/for-in/dstr/array-rest-before-elision.js
-  - [ ] test/language/statements/for-in/dstr/array-rest-before-rest.js
-  - [ ] test/language/statements/for-in/dstr/array-rest-elision-invalid.js
-  - [ ] test/language/statements/for-in/dstr/array-rest-init.js
-  - [ ] test/language/statements/for-in/dstr/array-rest-nested-array-invalid.js
-  - [ ] test/language/statements/for-in/dstr/array-rest-nested-array-yield-ident-invalid.js
-  - [ ] test/language/statements/for-in/dstr/array-rest-nested-obj-invalid.js
-  - [ ] test/language/statements/for-in/dstr/array-rest-nested-obj-yield-ident-invalid.js
-  - [ ] test/language/statements/for-in/dstr/array-rest-yield-ident-invalid.js
-  - [ ] test/language/statements/for-in/dstr/obj-id-identifier-yield-expr.js
-  - [ ] test/language/statements/for-in/dstr/obj-id-identifier-yield-ident-invalid.js
-  - [ ] test/language/statements/for-in/dstr/obj-id-init-simple-strict.js
-  - [ ] test/language/statements/for-in/dstr/obj-id-init-yield-ident-invalid.js
-  - [ ] test/language/statements/for-in/dstr/obj-id-simple-strict.js
-  - [ ] test/language/statements/for-in/dstr/obj-prop-elem-init-yield-ident-invalid.js
-  - [ ] test/language/statements/for-in/dstr/obj-prop-elem-target-memberexpr-optchain-prop-ref-init.js
-  - [ ] test/language/statements/for-in/dstr/obj-prop-elem-target-obj-literal-optchain-prop-ref-init.js
-  - [ ] test/language/statements/for-in/dstr/obj-prop-elem-target-yield-ident-invalid.js
-  - [ ] test/language/statements/for-in/dstr/obj-prop-nested-array-invalid.js
-  - [ ] test/language/statements/for-in/dstr/obj-prop-nested-array-yield-ident-invalid.js
-  - [ ] test/language/statements/for-in/dstr/obj-prop-nested-obj-invalid.js
-  - [ ] test/language/statements/for-in/dstr/obj-prop-nested-obj-yield-ident-invalid.js
-  - [ ] test/language/statements/for-in/dstr/obj-rest-not-last-element-invalid.js
-  - [ ] test/language/statements/for-in/head-const-bound-names-dup.js
-  - [ ] test/language/statements/for-in/head-const-bound-names-fordecl-tdz.js
-  - [ ] test/language/statements/for-in/head-const-bound-names-in-stmt.js
-  - [ ] test/language/statements/for-in/head-const-bound-names-let.js
+  - [x] test/language/statements/for-in/cptn-expr-skip-itr.js
+  - [x] test/language/statements/for-in/cptn-expr-zero-itr.js
+  - [x] test/language/statements/for-in/decl-async-fun.js
+  - [x] test/language/statements/for-in/decl-async-gen.js
+  - [x] test/language/statements/for-in/decl-cls.js
+  - [x] test/language/statements/for-in/decl-const.js
+  - [x] test/language/statements/for-in/decl-fun.js
+  - [x] test/language/statements/for-in/decl-gen.js
+  - [x] test/language/statements/for-in/decl-let.js
+  - [x] test/language/statements/for-in/dstr/array-elem-init-yield-ident-invalid.js
+  - [x] test/language/statements/for-in/dstr/array-elem-nested-array-invalid.js
+  - [x] test/language/statements/for-in/dstr/array-elem-nested-array-yield-ident-invalid.js
+  - [x] test/language/statements/for-in/dstr/array-elem-nested-memberexpr-optchain-prop-ref-init.js
+  - [x] test/language/statements/for-in/dstr/array-elem-nested-obj-invalid.js
+  - [x] test/language/statements/for-in/dstr/array-elem-nested-obj-yield-ident-invalid.js
+  - [x] test/language/statements/for-in/dstr/array-elem-put-obj-literal-optchain-prop-ref-init.js
+  - [x] test/language/statements/for-in/dstr/array-elem-target-simple-strict.js
+  - [x] test/language/statements/for-in/dstr/array-elem-target-yield-invalid.js
+  - [x] test/language/statements/for-in/dstr/array-rest-before-element.js
+  - [x] test/language/statements/for-in/dstr/array-rest-before-elision.js
+  - [x] test/language/statements/for-in/dstr/array-rest-before-rest.js
+  - [x] test/language/statements/for-in/dstr/array-rest-elision-invalid.js
+  - [x] test/language/statements/for-in/dstr/array-rest-init.js
+  - [x] test/language/statements/for-in/dstr/array-rest-nested-array-invalid.js
+  - [x] test/language/statements/for-in/dstr/array-rest-nested-array-yield-ident-invalid.js
+  - [x] test/language/statements/for-in/dstr/array-rest-nested-obj-invalid.js
+  - [x] test/language/statements/for-in/dstr/array-rest-nested-obj-yield-ident-invalid.js
+  - [x] test/language/statements/for-in/dstr/array-rest-yield-ident-invalid.js
+  - [x] test/language/statements/for-in/dstr/obj-id-identifier-yield-expr.js
+  - [x] test/language/statements/for-in/dstr/obj-id-identifier-yield-ident-invalid.js
+  - [x] test/language/statements/for-in/dstr/obj-id-init-simple-strict.js
+  - [x] test/language/statements/for-in/dstr/obj-id-init-yield-ident-invalid.js
+  - [x] test/language/statements/for-in/dstr/obj-id-simple-strict.js
+  - [x] test/language/statements/for-in/dstr/obj-prop-elem-init-yield-ident-invalid.js
+  - [x] test/language/statements/for-in/dstr/obj-prop-elem-target-memberexpr-optchain-prop-ref-init.js
+  - [x] test/language/statements/for-in/dstr/obj-prop-elem-target-obj-literal-optchain-prop-ref-init.js
+  - [x] test/language/statements/for-in/dstr/obj-prop-elem-target-yield-ident-invalid.js
+  - [x] test/language/statements/for-in/dstr/obj-prop-nested-array-invalid.js
+  - [x] test/language/statements/for-in/dstr/obj-prop-nested-array-yield-ident-invalid.js
+  - [x] test/language/statements/for-in/dstr/obj-prop-nested-obj-invalid.js
+  - [x] test/language/statements/for-in/dstr/obj-prop-nested-obj-yield-ident-invalid.js
+  - [x] test/language/statements/for-in/dstr/obj-rest-not-last-element-invalid.js
+  - [x] test/language/statements/for-in/head-const-bound-names-dup.js
+  - [x] test/language/statements/for-in/head-const-bound-names-fordecl-tdz.js
+  - [x] test/language/statements/for-in/head-const-bound-names-in-stmt.js
+  - [x] test/language/statements/for-in/head-const-bound-names-let.js
   - [ ] test/language/statements/for-in/head-const-fresh-binding-per-iteration.js
   - [ ] test/language/statements/for-in/head-decl-expr.js
   - [ ] test/language/statements/for-in/head-expr-expr.js
-  - [ ] test/language/statements/for-in/head-let-bound-names-dup.js
-  - [ ] test/language/statements/for-in/head-let-bound-names-fordecl-tdz.js
-  - [ ] test/language/statements/for-in/head-let-bound-names-in-stmt.js
-  - [ ] test/language/statements/for-in/head-let-bound-names-let.js
+  - [x] test/language/statements/for-in/head-let-bound-names-dup.js
+  - [x] test/language/statements/for-in/head-let-bound-names-fordecl-tdz.js
+  - [x] test/language/statements/for-in/head-let-bound-names-in-stmt.js
+  - [x] test/language/statements/for-in/head-let-bound-names-let.js
   - [ ] test/language/statements/for-in/head-let-destructuring.js
   - [ ] test/language/statements/for-in/head-let-fresh-binding-per-iteration.js
-  - [ ] test/language/statements/for-in/head-lhs-cover-non-asnmt-trgt.js
+  - [x] test/language/statements/for-in/head-lhs-cover-non-asnmt-trgt.js
   - [ ] test/language/statements/for-in/head-lhs-cover.js
-  - [ ] test/language/statements/for-in/head-lhs-invalid-asnmt-ptrn-ary.js
-  - [ ] test/language/statements/for-in/head-lhs-invalid-asnmt-ptrn-obj.js
+  - [x] test/language/statements/for-in/head-lhs-invalid-asnmt-ptrn-ary.js
+  - [x] test/language/statements/for-in/head-lhs-invalid-asnmt-ptrn-obj.js
   - [ ] test/language/statements/for-in/head-lhs-let.js
   - [ ] test/language/statements/for-in/head-lhs-member.js
-  - [ ] test/language/statements/for-in/head-lhs-non-asnmt-trgt.js
+  - [x] test/language/statements/for-in/head-lhs-non-asnmt-trgt.js
   - [ ] test/language/statements/for-in/head-var-bound-names-dup.js
   - [ ] test/language/statements/for-in/head-var-bound-names-in-stmt.js
   - [ ] test/language/statements/for-in/head-var-bound-names-let.js
   - [ ] test/language/statements/for-in/head-var-expr.js
-  - [ ] test/language/statements/for-in/identifier-let-allowed-as-lefthandside-expression-not-strict.js
-  - [ ] test/language/statements/for-in/labelled-fn-stmt-const.js
-  - [ ] test/language/statements/for-in/labelled-fn-stmt-let.js
-  - [ ] test/language/statements/for-in/labelled-fn-stmt-lhs.js
-  - [ ] test/language/statements/for-in/labelled-fn-stmt-var.js
-  - [ ] test/language/statements/for-in/let-array-with-newline.js
-  - [ ] test/language/statements/for-in/let-block-with-newline.js
-  - [ ] test/language/statements/for-in/let-identifier-with-newline.js
+  - [x] test/language/statements/for-in/identifier-let-allowed-as-lefthandside-expression-not-strict.js
+  - [x] test/language/statements/for-in/labelled-fn-stmt-const.js
+  - [x] test/language/statements/for-in/labelled-fn-stmt-let.js
+  - [x] test/language/statements/for-in/labelled-fn-stmt-lhs.js
+  - [x] test/language/statements/for-in/labelled-fn-stmt-var.js
+  - [x] test/language/statements/for-in/let-array-with-newline.js
+  - [x] test/language/statements/for-in/let-block-with-newline.js
+  - [x] test/language/statements/for-in/let-identifier-with-newline.js
   - [ ] test/language/statements/for-in/order-after-define-property.js
   - [ ] test/language/statements/for-in/order-enumerable-shadowed.js
   - [ ] test/language/statements/for-in/order-property-added.js
@@ -8177,684 +8177,684 @@ Sub-category progress
   - [ ] test/language/statements/for-in/scope-head-lex-close.js
   - [ ] test/language/statements/for-in/scope-head-lex-open.js
   - [ ] test/language/statements/for-in/scope-head-var-none.js
-  - [ ] test/language/statements/for-in/var-arguments-fn-strict-init.js
-  - [ ] test/language/statements/for-in/var-arguments-fn-strict.js
-  - [ ] test/language/statements/for-in/var-arguments-strict-init.js
-  - [ ] test/language/statements/for-in/var-arguments-strict.js
-  - [ ] test/language/statements/for-in/var-eval-strict-init.js
-  - [ ] test/language/statements/for-in/var-eval-strict.js
-  - [ ] test/language/statements/for-of/Array.prototype.Symbol.iterator.js
+  - [x] test/language/statements/for-in/var-arguments-fn-strict-init.js
+  - [x] test/language/statements/for-in/var-arguments-fn-strict.js
+  - [x] test/language/statements/for-in/var-arguments-strict-init.js
+  - [x] test/language/statements/for-in/var-arguments-strict.js
+  - [x] test/language/statements/for-in/var-eval-strict-init.js
+  - [x] test/language/statements/for-in/var-eval-strict.js
+  - [x] test/language/statements/for-of/Array.prototype.Symbol.iterator.js
   - [ ] test/language/statements/for-of/Array.prototype.entries.js
-  - [ ] test/language/statements/for-of/Array.prototype.keys.js
-  - [ ] test/language/statements/for-of/arguments-mapped-aliasing.js
-  - [ ] test/language/statements/for-of/arguments-mapped-mutation.js
-  - [ ] test/language/statements/for-of/arguments-mapped.js
-  - [ ] test/language/statements/for-of/arguments-unmapped-aliasing.js
-  - [ ] test/language/statements/for-of/arguments-unmapped-mutation.js
-  - [ ] test/language/statements/for-of/arguments-unmapped.js
+  - [x] test/language/statements/for-of/Array.prototype.keys.js
+  - [x] test/language/statements/for-of/arguments-mapped-aliasing.js
+  - [x] test/language/statements/for-of/arguments-mapped-mutation.js
+  - [x] test/language/statements/for-of/arguments-mapped.js
+  - [x] test/language/statements/for-of/arguments-unmapped-aliasing.js
+  - [x] test/language/statements/for-of/arguments-unmapped-mutation.js
+  - [x] test/language/statements/for-of/arguments-unmapped.js
   - [ ] test/language/statements/for-of/array-contract-expand.js
   - [ ] test/language/statements/for-of/array-contract.js
   - [ ] test/language/statements/for-of/array-expand-contract.js
   - [ ] test/language/statements/for-of/array-expand.js
-  - [ ] test/language/statements/for-of/array-key-get-error.js
-  - [ ] test/language/statements/for-of/array.js
-  - [ ] test/language/statements/for-of/body-dstr-assign-error.js
-  - [ ] test/language/statements/for-of/body-dstr-assign.js
-  - [ ] test/language/statements/for-of/body-put-error.js
-  - [ ] test/language/statements/for-of/break-from-catch.js
-  - [ ] test/language/statements/for-of/break-from-finally.js
-  - [ ] test/language/statements/for-of/break-from-try.js
-  - [ ] test/language/statements/for-of/break-label-from-catch.js
-  - [ ] test/language/statements/for-of/break-label-from-finally.js
-  - [ ] test/language/statements/for-of/break-label-from-try.js
-  - [ ] test/language/statements/for-of/break-label.js
-  - [ ] test/language/statements/for-of/break.js
-  - [ ] test/language/statements/for-of/continue-from-catch.js
-  - [ ] test/language/statements/for-of/continue-from-finally.js
-  - [ ] test/language/statements/for-of/continue-from-try.js
-  - [ ] test/language/statements/for-of/continue-label-from-catch.js
-  - [ ] test/language/statements/for-of/continue-label-from-finally.js
-  - [ ] test/language/statements/for-of/continue-label-from-try.js
-  - [ ] test/language/statements/for-of/continue-label.js
-  - [ ] test/language/statements/for-of/continue.js
-  - [ ] test/language/statements/for-of/cptn-decl-abrupt-empty.js
+  - [x] test/language/statements/for-of/array-key-get-error.js
+  - [x] test/language/statements/for-of/array.js
+  - [x] test/language/statements/for-of/body-dstr-assign-error.js
+  - [x] test/language/statements/for-of/body-dstr-assign.js
+  - [x] test/language/statements/for-of/body-put-error.js
+  - [x] test/language/statements/for-of/break-from-catch.js
+  - [x] test/language/statements/for-of/break-from-finally.js
+  - [x] test/language/statements/for-of/break-from-try.js
+  - [x] test/language/statements/for-of/break-label-from-catch.js
+  - [x] test/language/statements/for-of/break-label-from-finally.js
+  - [x] test/language/statements/for-of/break-label-from-try.js
+  - [x] test/language/statements/for-of/break-label.js
+  - [x] test/language/statements/for-of/break.js
+  - [x] test/language/statements/for-of/continue-from-catch.js
+  - [x] test/language/statements/for-of/continue-from-finally.js
+  - [x] test/language/statements/for-of/continue-from-try.js
+  - [x] test/language/statements/for-of/continue-label-from-catch.js
+  - [x] test/language/statements/for-of/continue-label-from-finally.js
+  - [x] test/language/statements/for-of/continue-label-from-try.js
+  - [x] test/language/statements/for-of/continue-label.js
+  - [x] test/language/statements/for-of/continue.js
+  - [x] test/language/statements/for-of/cptn-decl-abrupt-empty.js
   - [ ] test/language/statements/for-of/cptn-decl-itr.js
-  - [ ] test/language/statements/for-of/cptn-decl-no-itr.js
+  - [x] test/language/statements/for-of/cptn-decl-no-itr.js
   - [ ] test/language/statements/for-of/cptn-expr-abrupt-empty.js
   - [ ] test/language/statements/for-of/cptn-expr-itr.js
-  - [ ] test/language/statements/for-of/cptn-expr-no-itr.js
-  - [ ] test/language/statements/for-of/decl-async-fun.js
-  - [ ] test/language/statements/for-of/decl-async-gen.js
-  - [ ] test/language/statements/for-of/decl-cls.js
-  - [ ] test/language/statements/for-of/decl-const.js
-  - [ ] test/language/statements/for-of/decl-fun.js
-  - [ ] test/language/statements/for-of/decl-gen.js
-  - [ ] test/language/statements/for-of/decl-let.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-init-assignment.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-init-evaluation.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-init-fn-name-arrow.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-init-fn-name-class.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-init-fn-name-cover.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-init-fn-name-fn.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-init-fn-name-gen.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-init-in.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-init-let.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-init-order.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-init-simple-no-strict.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-init-yield-expr.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-init-yield-ident-invalid.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-init-yield-ident-valid.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-iter-get-err.js
+  - [x] test/language/statements/for-of/cptn-expr-no-itr.js
+  - [x] test/language/statements/for-of/decl-async-fun.js
+  - [x] test/language/statements/for-of/decl-async-gen.js
+  - [x] test/language/statements/for-of/decl-cls.js
+  - [x] test/language/statements/for-of/decl-const.js
+  - [x] test/language/statements/for-of/decl-fun.js
+  - [x] test/language/statements/for-of/decl-gen.js
+  - [x] test/language/statements/for-of/decl-let.js
+  - [x] test/language/statements/for-of/dstr/array-elem-init-assignment.js
+  - [x] test/language/statements/for-of/dstr/array-elem-init-evaluation.js
+  - [x] test/language/statements/for-of/dstr/array-elem-init-fn-name-arrow.js
+  - [x] test/language/statements/for-of/dstr/array-elem-init-fn-name-class.js
+  - [x] test/language/statements/for-of/dstr/array-elem-init-fn-name-cover.js
+  - [x] test/language/statements/for-of/dstr/array-elem-init-fn-name-fn.js
+  - [x] test/language/statements/for-of/dstr/array-elem-init-fn-name-gen.js
+  - [x] test/language/statements/for-of/dstr/array-elem-init-in.js
+  - [x] test/language/statements/for-of/dstr/array-elem-init-let.js
+  - [x] test/language/statements/for-of/dstr/array-elem-init-order.js
+  - [x] test/language/statements/for-of/dstr/array-elem-init-simple-no-strict.js
+  - [x] test/language/statements/for-of/dstr/array-elem-init-yield-expr.js
+  - [x] test/language/statements/for-of/dstr/array-elem-init-yield-ident-invalid.js
+  - [x] test/language/statements/for-of/dstr/array-elem-init-yield-ident-valid.js
+  - [x] test/language/statements/for-of/dstr/array-elem-iter-get-err.js
   - [ ] test/language/statements/for-of/dstr/array-elem-iter-nrml-close-err.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-iter-nrml-close-null.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-iter-nrml-close-skip.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-iter-nrml-close.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-iter-rtrn-close-err.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-iter-rtrn-close-null.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-iter-rtrn-close.js
+  - [x] test/language/statements/for-of/dstr/array-elem-iter-nrml-close-null.js
+  - [x] test/language/statements/for-of/dstr/array-elem-iter-nrml-close-skip.js
+  - [x] test/language/statements/for-of/dstr/array-elem-iter-nrml-close.js
+  - [x] test/language/statements/for-of/dstr/array-elem-iter-rtrn-close-err.js
+  - [x] test/language/statements/for-of/dstr/array-elem-iter-rtrn-close-null.js
+  - [x] test/language/statements/for-of/dstr/array-elem-iter-rtrn-close.js
   - [ ] test/language/statements/for-of/dstr/array-elem-iter-thrw-close-err.js
   - [ ] test/language/statements/for-of/dstr/array-elem-iter-thrw-close-skip.js
   - [ ] test/language/statements/for-of/dstr/array-elem-iter-thrw-close.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-nested-array-invalid.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-nested-array-null.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-nested-array-undefined-hole.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-nested-array-undefined-own.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-nested-array-undefined.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-nested-array-yield-expr.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-nested-array-yield-ident-invalid.js
+  - [x] test/language/statements/for-of/dstr/array-elem-nested-array-invalid.js
+  - [x] test/language/statements/for-of/dstr/array-elem-nested-array-null.js
+  - [x] test/language/statements/for-of/dstr/array-elem-nested-array-undefined-hole.js
+  - [x] test/language/statements/for-of/dstr/array-elem-nested-array-undefined-own.js
+  - [x] test/language/statements/for-of/dstr/array-elem-nested-array-undefined.js
+  - [x] test/language/statements/for-of/dstr/array-elem-nested-array-yield-expr.js
+  - [x] test/language/statements/for-of/dstr/array-elem-nested-array-yield-ident-invalid.js
   - [ ] test/language/statements/for-of/dstr/array-elem-nested-array-yield-ident-valid.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-nested-array.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-nested-memberexpr-optchain-prop-ref-init.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-nested-obj-invalid.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-nested-obj-null.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-nested-obj-undefined-hole.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-nested-obj-undefined-own.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-nested-obj-undefined.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-nested-obj-yield-expr.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-nested-obj-yield-ident-invalid.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-nested-obj-yield-ident-valid.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-nested-obj.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-put-const.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-put-let.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-put-obj-literal-optchain-prop-ref-init.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-put-obj-literal-prop-ref-init-active.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-put-obj-literal-prop-ref-init.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-put-obj-literal-prop-ref.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-put-prop-ref-no-get.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-put-prop-ref-user-err.js
+  - [x] test/language/statements/for-of/dstr/array-elem-nested-array.js
+  - [x] test/language/statements/for-of/dstr/array-elem-nested-memberexpr-optchain-prop-ref-init.js
+  - [x] test/language/statements/for-of/dstr/array-elem-nested-obj-invalid.js
+  - [x] test/language/statements/for-of/dstr/array-elem-nested-obj-null.js
+  - [x] test/language/statements/for-of/dstr/array-elem-nested-obj-undefined-hole.js
+  - [x] test/language/statements/for-of/dstr/array-elem-nested-obj-undefined-own.js
+  - [x] test/language/statements/for-of/dstr/array-elem-nested-obj-undefined.js
+  - [x] test/language/statements/for-of/dstr/array-elem-nested-obj-yield-expr.js
+  - [x] test/language/statements/for-of/dstr/array-elem-nested-obj-yield-ident-invalid.js
+  - [x] test/language/statements/for-of/dstr/array-elem-nested-obj-yield-ident-valid.js
+  - [x] test/language/statements/for-of/dstr/array-elem-nested-obj.js
+  - [x] test/language/statements/for-of/dstr/array-elem-put-const.js
+  - [x] test/language/statements/for-of/dstr/array-elem-put-let.js
+  - [x] test/language/statements/for-of/dstr/array-elem-put-obj-literal-optchain-prop-ref-init.js
+  - [x] test/language/statements/for-of/dstr/array-elem-put-obj-literal-prop-ref-init-active.js
+  - [x] test/language/statements/for-of/dstr/array-elem-put-obj-literal-prop-ref-init.js
+  - [x] test/language/statements/for-of/dstr/array-elem-put-obj-literal-prop-ref.js
+  - [x] test/language/statements/for-of/dstr/array-elem-put-prop-ref-no-get.js
+  - [x] test/language/statements/for-of/dstr/array-elem-put-prop-ref-user-err.js
   - [ ] test/language/statements/for-of/dstr/array-elem-put-prop-ref.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-put-unresolvable-no-strict.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-put-unresolvable-strict.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-target-identifier.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-target-simple-no-strict.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-target-simple-strict.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-target-yield-expr.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-target-yield-invalid.js
+  - [x] test/language/statements/for-of/dstr/array-elem-put-unresolvable-no-strict.js
+  - [x] test/language/statements/for-of/dstr/array-elem-put-unresolvable-strict.js
+  - [x] test/language/statements/for-of/dstr/array-elem-target-identifier.js
+  - [x] test/language/statements/for-of/dstr/array-elem-target-simple-no-strict.js
+  - [x] test/language/statements/for-of/dstr/array-elem-target-simple-strict.js
+  - [x] test/language/statements/for-of/dstr/array-elem-target-yield-expr.js
+  - [x] test/language/statements/for-of/dstr/array-elem-target-yield-invalid.js
   - [ ] test/language/statements/for-of/dstr/array-elem-target-yield-valid.js
   - [ ] test/language/statements/for-of/dstr/array-elem-trlg-iter-elision-iter-abpt.js
   - [ ] test/language/statements/for-of/dstr/array-elem-trlg-iter-elision-iter-nrml-close-err.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-trlg-iter-elision-iter-nrml-close-null.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-trlg-iter-elision-iter-nrml-close-skip.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-trlg-iter-elision-iter-nrml-close.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-trlg-iter-get-err.js
+  - [x] test/language/statements/for-of/dstr/array-elem-trlg-iter-elision-iter-nrml-close-null.js
+  - [x] test/language/statements/for-of/dstr/array-elem-trlg-iter-elision-iter-nrml-close-skip.js
+  - [x] test/language/statements/for-of/dstr/array-elem-trlg-iter-elision-iter-nrml-close.js
+  - [x] test/language/statements/for-of/dstr/array-elem-trlg-iter-get-err.js
   - [ ] test/language/statements/for-of/dstr/array-elem-trlg-iter-list-nrml-close-err.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-trlg-iter-list-nrml-close-null.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-trlg-iter-list-nrml-close-skip.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-trlg-iter-list-nrml-close.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-trlg-iter-list-rtrn-close-err.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-trlg-iter-list-rtrn-close-null.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-trlg-iter-list-rtrn-close.js
+  - [x] test/language/statements/for-of/dstr/array-elem-trlg-iter-list-nrml-close-null.js
+  - [x] test/language/statements/for-of/dstr/array-elem-trlg-iter-list-nrml-close-skip.js
+  - [x] test/language/statements/for-of/dstr/array-elem-trlg-iter-list-nrml-close.js
+  - [x] test/language/statements/for-of/dstr/array-elem-trlg-iter-list-rtrn-close-err.js
+  - [x] test/language/statements/for-of/dstr/array-elem-trlg-iter-list-rtrn-close-null.js
+  - [x] test/language/statements/for-of/dstr/array-elem-trlg-iter-list-rtrn-close.js
   - [ ] test/language/statements/for-of/dstr/array-elem-trlg-iter-list-thrw-close-err.js
   - [ ] test/language/statements/for-of/dstr/array-elem-trlg-iter-list-thrw-close-skip.js
   - [ ] test/language/statements/for-of/dstr/array-elem-trlg-iter-list-thrw-close.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-trlg-iter-rest-nrml-close-skip.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-trlg-iter-rest-rtrn-close-err.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-trlg-iter-rest-rtrn-close-null.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-trlg-iter-rest-rtrn-close.js
+  - [x] test/language/statements/for-of/dstr/array-elem-trlg-iter-rest-nrml-close-skip.js
+  - [x] test/language/statements/for-of/dstr/array-elem-trlg-iter-rest-rtrn-close-err.js
+  - [x] test/language/statements/for-of/dstr/array-elem-trlg-iter-rest-rtrn-close-null.js
+  - [x] test/language/statements/for-of/dstr/array-elem-trlg-iter-rest-rtrn-close.js
   - [ ] test/language/statements/for-of/dstr/array-elem-trlg-iter-rest-thrw-close-err.js
   - [ ] test/language/statements/for-of/dstr/array-elem-trlg-iter-rest-thrw-close-skip.js
   - [ ] test/language/statements/for-of/dstr/array-elem-trlg-iter-rest-thrw-close.js
   - [ ] test/language/statements/for-of/dstr/array-elision-iter-abpt.js
-  - [ ] test/language/statements/for-of/dstr/array-elision-iter-get-err.js
+  - [x] test/language/statements/for-of/dstr/array-elision-iter-get-err.js
   - [ ] test/language/statements/for-of/dstr/array-elision-iter-nrml-close-err.js
-  - [ ] test/language/statements/for-of/dstr/array-elision-iter-nrml-close-null.js
-  - [ ] test/language/statements/for-of/dstr/array-elision-iter-nrml-close-skip.js
-  - [ ] test/language/statements/for-of/dstr/array-elision-iter-nrml-close.js
-  - [ ] test/language/statements/for-of/dstr/array-elision-val-array.js
-  - [ ] test/language/statements/for-of/dstr/array-elision-val-bool.js
-  - [ ] test/language/statements/for-of/dstr/array-elision-val-null.js
-  - [ ] test/language/statements/for-of/dstr/array-elision-val-num.js
-  - [ ] test/language/statements/for-of/dstr/array-elision-val-string.js
-  - [ ] test/language/statements/for-of/dstr/array-elision-val-symbol.js
-  - [ ] test/language/statements/for-of/dstr/array-elision-val-undef.js
+  - [x] test/language/statements/for-of/dstr/array-elision-iter-nrml-close-null.js
+  - [x] test/language/statements/for-of/dstr/array-elision-iter-nrml-close-skip.js
+  - [x] test/language/statements/for-of/dstr/array-elision-iter-nrml-close.js
+  - [x] test/language/statements/for-of/dstr/array-elision-val-array.js
+  - [x] test/language/statements/for-of/dstr/array-elision-val-bool.js
+  - [x] test/language/statements/for-of/dstr/array-elision-val-null.js
+  - [x] test/language/statements/for-of/dstr/array-elision-val-num.js
+  - [x] test/language/statements/for-of/dstr/array-elision-val-string.js
+  - [x] test/language/statements/for-of/dstr/array-elision-val-symbol.js
+  - [x] test/language/statements/for-of/dstr/array-elision-val-undef.js
   - [ ] test/language/statements/for-of/dstr/array-empty-iter-close-err.js
   - [ ] test/language/statements/for-of/dstr/array-empty-iter-close-null.js
-  - [ ] test/language/statements/for-of/dstr/array-empty-iter-close.js
+  - [x] test/language/statements/for-of/dstr/array-empty-iter-close.js
   - [ ] test/language/statements/for-of/dstr/array-empty-iter-get-err.js
-  - [ ] test/language/statements/for-of/dstr/array-empty-val-array.js
-  - [ ] test/language/statements/for-of/dstr/array-empty-val-bool.js
-  - [ ] test/language/statements/for-of/dstr/array-empty-val-null.js
-  - [ ] test/language/statements/for-of/dstr/array-empty-val-num.js
-  - [ ] test/language/statements/for-of/dstr/array-empty-val-string.js
+  - [x] test/language/statements/for-of/dstr/array-empty-val-array.js
+  - [x] test/language/statements/for-of/dstr/array-empty-val-bool.js
+  - [x] test/language/statements/for-of/dstr/array-empty-val-null.js
+  - [x] test/language/statements/for-of/dstr/array-empty-val-num.js
+  - [x] test/language/statements/for-of/dstr/array-empty-val-string.js
   - [ ] test/language/statements/for-of/dstr/array-empty-val-symbol.js
-  - [ ] test/language/statements/for-of/dstr/array-empty-val-undef.js
-  - [ ] test/language/statements/for-of/dstr/array-iteration.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-after-element.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-after-elision.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-before-element.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-before-elision.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-before-rest.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-elision-invalid.js
+  - [x] test/language/statements/for-of/dstr/array-empty-val-undef.js
+  - [x] test/language/statements/for-of/dstr/array-iteration.js
+  - [x] test/language/statements/for-of/dstr/array-rest-after-element.js
+  - [x] test/language/statements/for-of/dstr/array-rest-after-elision.js
+  - [x] test/language/statements/for-of/dstr/array-rest-before-element.js
+  - [x] test/language/statements/for-of/dstr/array-rest-before-elision.js
+  - [x] test/language/statements/for-of/dstr/array-rest-before-rest.js
+  - [x] test/language/statements/for-of/dstr/array-rest-elision-invalid.js
   - [ ] test/language/statements/for-of/dstr/array-rest-elision-iter-abpt.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-elision.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-init.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-iter-get-err.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-iter-nrml-close-skip.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-iter-rtrn-close-err.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-iter-rtrn-close-null.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-iter-rtrn-close.js
+  - [x] test/language/statements/for-of/dstr/array-rest-elision.js
+  - [x] test/language/statements/for-of/dstr/array-rest-init.js
+  - [x] test/language/statements/for-of/dstr/array-rest-iter-get-err.js
+  - [x] test/language/statements/for-of/dstr/array-rest-iter-nrml-close-skip.js
+  - [x] test/language/statements/for-of/dstr/array-rest-iter-rtrn-close-err.js
+  - [x] test/language/statements/for-of/dstr/array-rest-iter-rtrn-close-null.js
+  - [x] test/language/statements/for-of/dstr/array-rest-iter-rtrn-close.js
   - [ ] test/language/statements/for-of/dstr/array-rest-iter-thrw-close-err.js
   - [ ] test/language/statements/for-of/dstr/array-rest-iter-thrw-close-skip.js
   - [ ] test/language/statements/for-of/dstr/array-rest-iter-thrw-close.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-iteration.js
+  - [x] test/language/statements/for-of/dstr/array-rest-iteration.js
   - [ ] test/language/statements/for-of/dstr/array-rest-lref-err.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-lref.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-nested-array-invalid.js
+  - [x] test/language/statements/for-of/dstr/array-rest-lref.js
+  - [x] test/language/statements/for-of/dstr/array-rest-nested-array-invalid.js
   - [ ] test/language/statements/for-of/dstr/array-rest-nested-array-iter-thrw-close-skip.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-nested-array-null.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-nested-array-undefined-hole.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-nested-array-undefined-own.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-nested-array-undefined.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-nested-array-yield-expr.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-nested-array-yield-ident-invalid.js
+  - [x] test/language/statements/for-of/dstr/array-rest-nested-array-null.js
+  - [x] test/language/statements/for-of/dstr/array-rest-nested-array-undefined-hole.js
+  - [x] test/language/statements/for-of/dstr/array-rest-nested-array-undefined-own.js
+  - [x] test/language/statements/for-of/dstr/array-rest-nested-array-undefined.js
+  - [x] test/language/statements/for-of/dstr/array-rest-nested-array-yield-expr.js
+  - [x] test/language/statements/for-of/dstr/array-rest-nested-array-yield-ident-invalid.js
   - [ ] test/language/statements/for-of/dstr/array-rest-nested-array-yield-ident-valid.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-nested-array.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-nested-obj-invalid.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-nested-obj-null.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-nested-obj-undefined-hole.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-nested-obj-undefined-own.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-nested-obj-undefined.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-nested-obj-yield-expr.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-nested-obj-yield-ident-invalid.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-nested-obj-yield-ident-valid.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-nested-obj.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-put-const.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-put-let.js
+  - [x] test/language/statements/for-of/dstr/array-rest-nested-array.js
+  - [x] test/language/statements/for-of/dstr/array-rest-nested-obj-invalid.js
+  - [x] test/language/statements/for-of/dstr/array-rest-nested-obj-null.js
+  - [x] test/language/statements/for-of/dstr/array-rest-nested-obj-undefined-hole.js
+  - [x] test/language/statements/for-of/dstr/array-rest-nested-obj-undefined-own.js
+  - [x] test/language/statements/for-of/dstr/array-rest-nested-obj-undefined.js
+  - [x] test/language/statements/for-of/dstr/array-rest-nested-obj-yield-expr.js
+  - [x] test/language/statements/for-of/dstr/array-rest-nested-obj-yield-ident-invalid.js
+  - [x] test/language/statements/for-of/dstr/array-rest-nested-obj-yield-ident-valid.js
+  - [x] test/language/statements/for-of/dstr/array-rest-nested-obj.js
+  - [x] test/language/statements/for-of/dstr/array-rest-put-const.js
+  - [x] test/language/statements/for-of/dstr/array-rest-put-let.js
   - [ ] test/language/statements/for-of/dstr/array-rest-put-prop-ref-no-get.js
   - [ ] test/language/statements/for-of/dstr/array-rest-put-prop-ref-user-err-iter-close-skip.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-put-prop-ref-user-err.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-put-prop-ref.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-put-unresolvable-no-strict.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-put-unresolvable-strict.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-yield-expr.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-yield-ident-invalid.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-yield-ident-valid.js
+  - [x] test/language/statements/for-of/dstr/array-rest-put-prop-ref-user-err.js
+  - [x] test/language/statements/for-of/dstr/array-rest-put-prop-ref.js
+  - [x] test/language/statements/for-of/dstr/array-rest-put-unresolvable-no-strict.js
+  - [x] test/language/statements/for-of/dstr/array-rest-put-unresolvable-strict.js
+  - [x] test/language/statements/for-of/dstr/array-rest-yield-expr.js
+  - [x] test/language/statements/for-of/dstr/array-rest-yield-ident-invalid.js
+  - [x] test/language/statements/for-of/dstr/array-rest-yield-ident-valid.js
   - [ ] test/language/statements/for-of/dstr/const-ary-init-iter-close.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-init-iter-get-err-array-prototype.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-init-iter-get-err.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-init-iter-no-close.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-name-iter-val.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-elem-ary-elem-init.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-elem-ary-elem-iter.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-elem-ary-elision-init.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-elem-ary-elision-iter.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-elem-ary-empty-init.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-elem-ary-empty-iter.js
+  - [x] test/language/statements/for-of/dstr/const-ary-init-iter-get-err-array-prototype.js
+  - [x] test/language/statements/for-of/dstr/const-ary-init-iter-get-err.js
+  - [x] test/language/statements/for-of/dstr/const-ary-init-iter-no-close.js
+  - [x] test/language/statements/for-of/dstr/const-ary-name-iter-val.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-elem-ary-elem-init.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-elem-ary-elem-iter.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-elem-ary-elision-init.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-elem-ary-elision-iter.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-elem-ary-empty-init.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-elem-ary-empty-iter.js
   - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-elem-ary-rest-init.js
   - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-elem-ary-rest-iter.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-elem-ary-val-null.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-elem-id-init-exhausted.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-elem-id-init-fn-name-arrow.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-elem-id-init-fn-name-class.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-elem-id-init-fn-name-cover.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-elem-id-init-fn-name-fn.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-elem-id-init-fn-name-gen.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-elem-id-init-hole.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-elem-id-init-skipped.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-elem-id-init-throws.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-elem-id-init-undef.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-elem-id-init-unresolvable.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-elem-id-iter-complete.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-elem-id-iter-done.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-elem-id-iter-step-err.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-elem-id-iter-val-array-prototype.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-elem-id-iter-val-err.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-elem-id-iter-val.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-elem-obj-id-init.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-elem-obj-id.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-elem-obj-prop-id-init.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-elem-obj-prop-id.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-elem-obj-val-null.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-elem-obj-val-undef.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-elision-exhausted.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-elision-iter-close.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-elision-step-err.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-elision.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-empty.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-init-err.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-rest-ary-elem.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-rest-ary-elision.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-rest-ary-empty.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-rest-ary-rest.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-rest-id-direct.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-rest-id-elision-next-err.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-elem-ary-val-null.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-elem-id-init-exhausted.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-elem-id-init-fn-name-arrow.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-elem-id-init-fn-name-class.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-elem-id-init-fn-name-cover.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-elem-id-init-fn-name-fn.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-elem-id-init-fn-name-gen.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-elem-id-init-hole.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-elem-id-init-skipped.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-elem-id-init-throws.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-elem-id-init-undef.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-elem-id-init-unresolvable.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-elem-id-iter-complete.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-elem-id-iter-done.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-elem-id-iter-step-err.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-elem-id-iter-val-array-prototype.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-elem-id-iter-val-err.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-elem-id-iter-val.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-elem-obj-id-init.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-elem-obj-id.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-elem-obj-prop-id-init.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-elem-obj-prop-id.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-elem-obj-val-null.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-elem-obj-val-undef.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-elision-exhausted.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-elision-iter-close.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-elision-step-err.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-elision.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-empty.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-init-err.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-rest-ary-elem.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-rest-ary-elision.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-rest-ary-empty.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-rest-ary-rest.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-rest-id-direct.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-rest-id-elision-next-err.js
   - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-rest-id-elision.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-rest-id-exhausted.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-rest-id-iter-close.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-rest-id-iter-step-err.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-rest-id-iter-val-err.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-rest-id.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-rest-init-ary.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-rest-init-id.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-rest-init-obj.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-rest-not-final-ary.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-rest-not-final-id.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-rest-not-final-obj.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-rest-obj-id.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-ptrn-rest-obj-prop-id.js
-  - [ ] test/language/statements/for-of/dstr/const-obj-init-null.js
-  - [ ] test/language/statements/for-of/dstr/const-obj-init-undefined.js
-  - [ ] test/language/statements/for-of/dstr/const-obj-ptrn-empty.js
-  - [ ] test/language/statements/for-of/dstr/const-obj-ptrn-id-get-value-err.js
-  - [ ] test/language/statements/for-of/dstr/const-obj-ptrn-id-init-fn-name-arrow.js
-  - [ ] test/language/statements/for-of/dstr/const-obj-ptrn-id-init-fn-name-class.js
-  - [ ] test/language/statements/for-of/dstr/const-obj-ptrn-id-init-fn-name-cover.js
-  - [ ] test/language/statements/for-of/dstr/const-obj-ptrn-id-init-fn-name-fn.js
-  - [ ] test/language/statements/for-of/dstr/const-obj-ptrn-id-init-fn-name-gen.js
-  - [ ] test/language/statements/for-of/dstr/const-obj-ptrn-id-init-skipped.js
-  - [ ] test/language/statements/for-of/dstr/const-obj-ptrn-id-init-throws.js
-  - [ ] test/language/statements/for-of/dstr/const-obj-ptrn-id-init-unresolvable.js
-  - [ ] test/language/statements/for-of/dstr/const-obj-ptrn-id-trailing-comma.js
-  - [ ] test/language/statements/for-of/dstr/const-obj-ptrn-init-err.js
-  - [ ] test/language/statements/for-of/dstr/const-obj-ptrn-list-err.js
-  - [ ] test/language/statements/for-of/dstr/const-obj-ptrn-prop-ary-init.js
-  - [ ] test/language/statements/for-of/dstr/const-obj-ptrn-prop-ary-trailing-comma.js
-  - [ ] test/language/statements/for-of/dstr/const-obj-ptrn-prop-ary-value-null.js
-  - [ ] test/language/statements/for-of/dstr/const-obj-ptrn-prop-ary.js
-  - [ ] test/language/statements/for-of/dstr/const-obj-ptrn-prop-eval-err.js
-  - [ ] test/language/statements/for-of/dstr/const-obj-ptrn-prop-id-get-value-err.js
-  - [ ] test/language/statements/for-of/dstr/const-obj-ptrn-prop-id-init-skipped.js
-  - [ ] test/language/statements/for-of/dstr/const-obj-ptrn-prop-id-init-throws.js
-  - [ ] test/language/statements/for-of/dstr/const-obj-ptrn-prop-id-init-unresolvable.js
-  - [ ] test/language/statements/for-of/dstr/const-obj-ptrn-prop-id-init.js
-  - [ ] test/language/statements/for-of/dstr/const-obj-ptrn-prop-id-trailing-comma.js
-  - [ ] test/language/statements/for-of/dstr/const-obj-ptrn-prop-id.js
-  - [ ] test/language/statements/for-of/dstr/const-obj-ptrn-prop-obj-init.js
-  - [ ] test/language/statements/for-of/dstr/const-obj-ptrn-prop-obj-value-null.js
-  - [ ] test/language/statements/for-of/dstr/const-obj-ptrn-prop-obj-value-undef.js
-  - [ ] test/language/statements/for-of/dstr/const-obj-ptrn-prop-obj.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-rest-id-exhausted.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-rest-id-iter-close.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-rest-id-iter-step-err.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-rest-id-iter-val-err.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-rest-id.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-rest-init-ary.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-rest-init-id.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-rest-init-obj.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-rest-not-final-ary.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-rest-not-final-id.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-rest-not-final-obj.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-rest-obj-id.js
+  - [x] test/language/statements/for-of/dstr/const-ary-ptrn-rest-obj-prop-id.js
+  - [x] test/language/statements/for-of/dstr/const-obj-init-null.js
+  - [x] test/language/statements/for-of/dstr/const-obj-init-undefined.js
+  - [x] test/language/statements/for-of/dstr/const-obj-ptrn-empty.js
+  - [x] test/language/statements/for-of/dstr/const-obj-ptrn-id-get-value-err.js
+  - [x] test/language/statements/for-of/dstr/const-obj-ptrn-id-init-fn-name-arrow.js
+  - [x] test/language/statements/for-of/dstr/const-obj-ptrn-id-init-fn-name-class.js
+  - [x] test/language/statements/for-of/dstr/const-obj-ptrn-id-init-fn-name-cover.js
+  - [x] test/language/statements/for-of/dstr/const-obj-ptrn-id-init-fn-name-fn.js
+  - [x] test/language/statements/for-of/dstr/const-obj-ptrn-id-init-fn-name-gen.js
+  - [x] test/language/statements/for-of/dstr/const-obj-ptrn-id-init-skipped.js
+  - [x] test/language/statements/for-of/dstr/const-obj-ptrn-id-init-throws.js
+  - [x] test/language/statements/for-of/dstr/const-obj-ptrn-id-init-unresolvable.js
+  - [x] test/language/statements/for-of/dstr/const-obj-ptrn-id-trailing-comma.js
+  - [x] test/language/statements/for-of/dstr/const-obj-ptrn-init-err.js
+  - [x] test/language/statements/for-of/dstr/const-obj-ptrn-list-err.js
+  - [x] test/language/statements/for-of/dstr/const-obj-ptrn-prop-ary-init.js
+  - [x] test/language/statements/for-of/dstr/const-obj-ptrn-prop-ary-trailing-comma.js
+  - [x] test/language/statements/for-of/dstr/const-obj-ptrn-prop-ary-value-null.js
+  - [x] test/language/statements/for-of/dstr/const-obj-ptrn-prop-ary.js
+  - [x] test/language/statements/for-of/dstr/const-obj-ptrn-prop-eval-err.js
+  - [x] test/language/statements/for-of/dstr/const-obj-ptrn-prop-id-get-value-err.js
+  - [x] test/language/statements/for-of/dstr/const-obj-ptrn-prop-id-init-skipped.js
+  - [x] test/language/statements/for-of/dstr/const-obj-ptrn-prop-id-init-throws.js
+  - [x] test/language/statements/for-of/dstr/const-obj-ptrn-prop-id-init-unresolvable.js
+  - [x] test/language/statements/for-of/dstr/const-obj-ptrn-prop-id-init.js
+  - [x] test/language/statements/for-of/dstr/const-obj-ptrn-prop-id-trailing-comma.js
+  - [x] test/language/statements/for-of/dstr/const-obj-ptrn-prop-id.js
+  - [x] test/language/statements/for-of/dstr/const-obj-ptrn-prop-obj-init.js
+  - [x] test/language/statements/for-of/dstr/const-obj-ptrn-prop-obj-value-null.js
+  - [x] test/language/statements/for-of/dstr/const-obj-ptrn-prop-obj-value-undef.js
+  - [x] test/language/statements/for-of/dstr/const-obj-ptrn-prop-obj.js
   - [ ] test/language/statements/for-of/dstr/const-obj-ptrn-rest-getter.js
-  - [ ] test/language/statements/for-of/dstr/const-obj-ptrn-rest-skip-non-enumerable.js
-  - [ ] test/language/statements/for-of/dstr/const-obj-ptrn-rest-val-obj.js
+  - [x] test/language/statements/for-of/dstr/const-obj-ptrn-rest-skip-non-enumerable.js
+  - [x] test/language/statements/for-of/dstr/const-obj-ptrn-rest-val-obj.js
   - [ ] test/language/statements/for-of/dstr/let-ary-init-iter-close.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-init-iter-get-err-array-prototype.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-init-iter-get-err.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-init-iter-no-close.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-name-iter-val.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-elem-ary-elem-init.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-elem-ary-elem-iter.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-elem-ary-elision-init.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-elem-ary-elision-iter.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-elem-ary-empty-init.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-elem-ary-empty-iter.js
+  - [x] test/language/statements/for-of/dstr/let-ary-init-iter-get-err-array-prototype.js
+  - [x] test/language/statements/for-of/dstr/let-ary-init-iter-get-err.js
+  - [x] test/language/statements/for-of/dstr/let-ary-init-iter-no-close.js
+  - [x] test/language/statements/for-of/dstr/let-ary-name-iter-val.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-elem-ary-elem-init.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-elem-ary-elem-iter.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-elem-ary-elision-init.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-elem-ary-elision-iter.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-elem-ary-empty-init.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-elem-ary-empty-iter.js
   - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-elem-ary-rest-init.js
   - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-elem-ary-rest-iter.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-elem-ary-val-null.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-elem-id-init-exhausted.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-elem-id-init-fn-name-arrow.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-elem-id-init-fn-name-class.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-elem-id-init-fn-name-cover.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-elem-id-init-fn-name-fn.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-elem-id-init-fn-name-gen.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-elem-id-init-hole.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-elem-id-init-skipped.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-elem-id-init-throws.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-elem-id-init-undef.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-elem-id-init-unresolvable.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-elem-id-iter-complete.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-elem-id-iter-done.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-elem-id-iter-step-err.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-elem-id-iter-val-array-prototype.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-elem-id-iter-val-err.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-elem-id-iter-val.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-elem-obj-id-init.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-elem-obj-id.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-elem-obj-prop-id-init.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-elem-obj-prop-id.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-elem-obj-val-null.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-elem-obj-val-undef.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-elision-exhausted.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-elision-iter-close.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-elision-step-err.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-elision.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-empty.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-init-err.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-rest-ary-elem.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-rest-ary-elision.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-rest-ary-empty.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-rest-ary-rest.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-rest-id-direct.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-rest-id-elision-next-err.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-elem-ary-val-null.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-elem-id-init-exhausted.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-elem-id-init-fn-name-arrow.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-elem-id-init-fn-name-class.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-elem-id-init-fn-name-cover.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-elem-id-init-fn-name-fn.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-elem-id-init-fn-name-gen.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-elem-id-init-hole.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-elem-id-init-skipped.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-elem-id-init-throws.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-elem-id-init-undef.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-elem-id-init-unresolvable.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-elem-id-iter-complete.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-elem-id-iter-done.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-elem-id-iter-step-err.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-elem-id-iter-val-array-prototype.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-elem-id-iter-val-err.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-elem-id-iter-val.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-elem-obj-id-init.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-elem-obj-id.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-elem-obj-prop-id-init.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-elem-obj-prop-id.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-elem-obj-val-null.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-elem-obj-val-undef.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-elision-exhausted.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-elision-iter-close.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-elision-step-err.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-elision.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-empty.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-init-err.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-rest-ary-elem.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-rest-ary-elision.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-rest-ary-empty.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-rest-ary-rest.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-rest-id-direct.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-rest-id-elision-next-err.js
   - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-rest-id-elision.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-rest-id-exhausted.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-rest-id-iter-close.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-rest-id-iter-step-err.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-rest-id-iter-val-err.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-rest-id.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-rest-init-ary.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-rest-init-id.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-rest-init-obj.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-rest-not-final-ary.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-rest-not-final-id.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-rest-not-final-obj.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-rest-obj-id.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-ptrn-rest-obj-prop-id.js
-  - [ ] test/language/statements/for-of/dstr/let-obj-init-null.js
-  - [ ] test/language/statements/for-of/dstr/let-obj-init-undefined.js
-  - [ ] test/language/statements/for-of/dstr/let-obj-ptrn-empty.js
-  - [ ] test/language/statements/for-of/dstr/let-obj-ptrn-id-get-value-err.js
-  - [ ] test/language/statements/for-of/dstr/let-obj-ptrn-id-init-fn-name-arrow.js
-  - [ ] test/language/statements/for-of/dstr/let-obj-ptrn-id-init-fn-name-class.js
-  - [ ] test/language/statements/for-of/dstr/let-obj-ptrn-id-init-fn-name-cover.js
-  - [ ] test/language/statements/for-of/dstr/let-obj-ptrn-id-init-fn-name-fn.js
-  - [ ] test/language/statements/for-of/dstr/let-obj-ptrn-id-init-fn-name-gen.js
-  - [ ] test/language/statements/for-of/dstr/let-obj-ptrn-id-init-skipped.js
-  - [ ] test/language/statements/for-of/dstr/let-obj-ptrn-id-init-throws.js
-  - [ ] test/language/statements/for-of/dstr/let-obj-ptrn-id-init-unresolvable.js
-  - [ ] test/language/statements/for-of/dstr/let-obj-ptrn-id-trailing-comma.js
-  - [ ] test/language/statements/for-of/dstr/let-obj-ptrn-init-err.js
-  - [ ] test/language/statements/for-of/dstr/let-obj-ptrn-list-err.js
-  - [ ] test/language/statements/for-of/dstr/let-obj-ptrn-prop-ary-init.js
-  - [ ] test/language/statements/for-of/dstr/let-obj-ptrn-prop-ary-trailing-comma.js
-  - [ ] test/language/statements/for-of/dstr/let-obj-ptrn-prop-ary-value-null.js
-  - [ ] test/language/statements/for-of/dstr/let-obj-ptrn-prop-ary.js
-  - [ ] test/language/statements/for-of/dstr/let-obj-ptrn-prop-eval-err.js
-  - [ ] test/language/statements/for-of/dstr/let-obj-ptrn-prop-id-get-value-err.js
-  - [ ] test/language/statements/for-of/dstr/let-obj-ptrn-prop-id-init-skipped.js
-  - [ ] test/language/statements/for-of/dstr/let-obj-ptrn-prop-id-init-throws.js
-  - [ ] test/language/statements/for-of/dstr/let-obj-ptrn-prop-id-init-unresolvable.js
-  - [ ] test/language/statements/for-of/dstr/let-obj-ptrn-prop-id-init.js
-  - [ ] test/language/statements/for-of/dstr/let-obj-ptrn-prop-id-trailing-comma.js
-  - [ ] test/language/statements/for-of/dstr/let-obj-ptrn-prop-id.js
-  - [ ] test/language/statements/for-of/dstr/let-obj-ptrn-prop-obj-init.js
-  - [ ] test/language/statements/for-of/dstr/let-obj-ptrn-prop-obj-value-null.js
-  - [ ] test/language/statements/for-of/dstr/let-obj-ptrn-prop-obj-value-undef.js
-  - [ ] test/language/statements/for-of/dstr/let-obj-ptrn-prop-obj.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-rest-id-exhausted.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-rest-id-iter-close.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-rest-id-iter-step-err.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-rest-id-iter-val-err.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-rest-id.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-rest-init-ary.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-rest-init-id.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-rest-init-obj.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-rest-not-final-ary.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-rest-not-final-id.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-rest-not-final-obj.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-rest-obj-id.js
+  - [x] test/language/statements/for-of/dstr/let-ary-ptrn-rest-obj-prop-id.js
+  - [x] test/language/statements/for-of/dstr/let-obj-init-null.js
+  - [x] test/language/statements/for-of/dstr/let-obj-init-undefined.js
+  - [x] test/language/statements/for-of/dstr/let-obj-ptrn-empty.js
+  - [x] test/language/statements/for-of/dstr/let-obj-ptrn-id-get-value-err.js
+  - [x] test/language/statements/for-of/dstr/let-obj-ptrn-id-init-fn-name-arrow.js
+  - [x] test/language/statements/for-of/dstr/let-obj-ptrn-id-init-fn-name-class.js
+  - [x] test/language/statements/for-of/dstr/let-obj-ptrn-id-init-fn-name-cover.js
+  - [x] test/language/statements/for-of/dstr/let-obj-ptrn-id-init-fn-name-fn.js
+  - [x] test/language/statements/for-of/dstr/let-obj-ptrn-id-init-fn-name-gen.js
+  - [x] test/language/statements/for-of/dstr/let-obj-ptrn-id-init-skipped.js
+  - [x] test/language/statements/for-of/dstr/let-obj-ptrn-id-init-throws.js
+  - [x] test/language/statements/for-of/dstr/let-obj-ptrn-id-init-unresolvable.js
+  - [x] test/language/statements/for-of/dstr/let-obj-ptrn-id-trailing-comma.js
+  - [x] test/language/statements/for-of/dstr/let-obj-ptrn-init-err.js
+  - [x] test/language/statements/for-of/dstr/let-obj-ptrn-list-err.js
+  - [x] test/language/statements/for-of/dstr/let-obj-ptrn-prop-ary-init.js
+  - [x] test/language/statements/for-of/dstr/let-obj-ptrn-prop-ary-trailing-comma.js
+  - [x] test/language/statements/for-of/dstr/let-obj-ptrn-prop-ary-value-null.js
+  - [x] test/language/statements/for-of/dstr/let-obj-ptrn-prop-ary.js
+  - [x] test/language/statements/for-of/dstr/let-obj-ptrn-prop-eval-err.js
+  - [x] test/language/statements/for-of/dstr/let-obj-ptrn-prop-id-get-value-err.js
+  - [x] test/language/statements/for-of/dstr/let-obj-ptrn-prop-id-init-skipped.js
+  - [x] test/language/statements/for-of/dstr/let-obj-ptrn-prop-id-init-throws.js
+  - [x] test/language/statements/for-of/dstr/let-obj-ptrn-prop-id-init-unresolvable.js
+  - [x] test/language/statements/for-of/dstr/let-obj-ptrn-prop-id-init.js
+  - [x] test/language/statements/for-of/dstr/let-obj-ptrn-prop-id-trailing-comma.js
+  - [x] test/language/statements/for-of/dstr/let-obj-ptrn-prop-id.js
+  - [x] test/language/statements/for-of/dstr/let-obj-ptrn-prop-obj-init.js
+  - [x] test/language/statements/for-of/dstr/let-obj-ptrn-prop-obj-value-null.js
+  - [x] test/language/statements/for-of/dstr/let-obj-ptrn-prop-obj-value-undef.js
+  - [x] test/language/statements/for-of/dstr/let-obj-ptrn-prop-obj.js
   - [ ] test/language/statements/for-of/dstr/let-obj-ptrn-rest-getter.js
-  - [ ] test/language/statements/for-of/dstr/let-obj-ptrn-rest-skip-non-enumerable.js
-  - [ ] test/language/statements/for-of/dstr/let-obj-ptrn-rest-val-obj.js
-  - [ ] test/language/statements/for-of/dstr/obj-empty-bool.js
-  - [ ] test/language/statements/for-of/dstr/obj-empty-null.js
-  - [ ] test/language/statements/for-of/dstr/obj-empty-num.js
-  - [ ] test/language/statements/for-of/dstr/obj-empty-obj.js
-  - [ ] test/language/statements/for-of/dstr/obj-empty-string.js
-  - [ ] test/language/statements/for-of/dstr/obj-empty-symbol.js
-  - [ ] test/language/statements/for-of/dstr/obj-empty-undef.js
-  - [ ] test/language/statements/for-of/dstr/obj-id-identifier-resolution-first.js
-  - [ ] test/language/statements/for-of/dstr/obj-id-identifier-resolution-last.js
-  - [ ] test/language/statements/for-of/dstr/obj-id-identifier-resolution-lone.js
-  - [ ] test/language/statements/for-of/dstr/obj-id-identifier-resolution-middle.js
-  - [ ] test/language/statements/for-of/dstr/obj-id-identifier-resolution-trlng.js
-  - [ ] test/language/statements/for-of/dstr/obj-id-identifier-yield-expr.js
-  - [ ] test/language/statements/for-of/dstr/obj-id-identifier-yield-ident-invalid.js
-  - [ ] test/language/statements/for-of/dstr/obj-id-identifier-yield-ident-valid.js
-  - [ ] test/language/statements/for-of/dstr/obj-id-init-assignment-missing.js
-  - [ ] test/language/statements/for-of/dstr/obj-id-init-assignment-null.js
-  - [ ] test/language/statements/for-of/dstr/obj-id-init-assignment-truthy.js
-  - [ ] test/language/statements/for-of/dstr/obj-id-init-assignment-undef.js
-  - [ ] test/language/statements/for-of/dstr/obj-id-init-evaluation.js
-  - [ ] test/language/statements/for-of/dstr/obj-id-init-fn-name-arrow.js
-  - [ ] test/language/statements/for-of/dstr/obj-id-init-fn-name-class.js
-  - [ ] test/language/statements/for-of/dstr/obj-id-init-fn-name-cover.js
-  - [ ] test/language/statements/for-of/dstr/obj-id-init-fn-name-fn.js
-  - [ ] test/language/statements/for-of/dstr/obj-id-init-fn-name-gen.js
-  - [ ] test/language/statements/for-of/dstr/obj-id-init-in.js
-  - [ ] test/language/statements/for-of/dstr/obj-id-init-let.js
-  - [ ] test/language/statements/for-of/dstr/obj-id-init-order.js
-  - [ ] test/language/statements/for-of/dstr/obj-id-init-simple-no-strict.js
-  - [ ] test/language/statements/for-of/dstr/obj-id-init-simple-strict.js
-  - [ ] test/language/statements/for-of/dstr/obj-id-init-yield-expr.js
-  - [ ] test/language/statements/for-of/dstr/obj-id-init-yield-ident-invalid.js
-  - [ ] test/language/statements/for-of/dstr/obj-id-init-yield-ident-valid.js
-  - [ ] test/language/statements/for-of/dstr/obj-id-put-const.js
-  - [ ] test/language/statements/for-of/dstr/obj-id-put-let.js
-  - [ ] test/language/statements/for-of/dstr/obj-id-put-unresolvable-no-strict.js
-  - [ ] test/language/statements/for-of/dstr/obj-id-put-unresolvable-strict.js
-  - [ ] test/language/statements/for-of/dstr/obj-id-simple-no-strict.js
-  - [ ] test/language/statements/for-of/dstr/obj-id-simple-strict.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-elem-init-assignment-missing.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-elem-init-assignment-null.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-elem-init-assignment-truthy.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-elem-init-assignment-undef.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-elem-init-evaluation.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-elem-init-fn-name-arrow.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-elem-init-fn-name-class.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-elem-init-fn-name-cover.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-elem-init-fn-name-fn.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-elem-init-fn-name-gen.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-elem-init-in.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-elem-init-let.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-elem-init-yield-expr.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-elem-init-yield-ident-invalid.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-elem-init-yield-ident-valid.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-elem-target-memberexpr-optchain-prop-ref-init.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-elem-target-obj-literal-optchain-prop-ref-init.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-elem-target-obj-literal-prop-ref-init-active.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-elem-target-obj-literal-prop-ref-init.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-elem-target-obj-literal-prop-ref.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-elem-target-yield-expr.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-elem-target-yield-ident-invalid.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-elem-target-yield-ident-valid.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-identifier-resolution-first.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-identifier-resolution-last.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-identifier-resolution-lone.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-identifier-resolution-middle.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-identifier-resolution-trlng.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-name-evaluation-error.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-name-evaluation.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-nested-array-invalid.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-nested-array-null.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-nested-array-undefined-own.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-nested-array-undefined.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-nested-array-yield-expr.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-nested-array-yield-ident-invalid.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-nested-array-yield-ident-valid.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-nested-array.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-nested-obj-invalid.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-nested-obj-null.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-nested-obj-undefined-own.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-nested-obj-undefined.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-nested-obj-yield-expr.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-nested-obj-yield-ident-invalid.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-nested-obj-yield-ident-valid.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-nested-obj.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-put-const.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-put-let.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-put-order.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-put-prop-ref-no-get.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-put-prop-ref-user-err.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-put-prop-ref.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-put-unresolvable-no-strict.js
-  - [ ] test/language/statements/for-of/dstr/obj-prop-put-unresolvable-strict.js
-  - [ ] test/language/statements/for-of/dstr/obj-rest-computed-property-no-strict.js
-  - [ ] test/language/statements/for-of/dstr/obj-rest-computed-property.js
-  - [ ] test/language/statements/for-of/dstr/obj-rest-descriptors.js
-  - [ ] test/language/statements/for-of/dstr/obj-rest-empty-obj.js
-  - [ ] test/language/statements/for-of/dstr/obj-rest-getter-abrupt-get-error.js
+  - [x] test/language/statements/for-of/dstr/let-obj-ptrn-rest-skip-non-enumerable.js
+  - [x] test/language/statements/for-of/dstr/let-obj-ptrn-rest-val-obj.js
+  - [x] test/language/statements/for-of/dstr/obj-empty-bool.js
+  - [x] test/language/statements/for-of/dstr/obj-empty-null.js
+  - [x] test/language/statements/for-of/dstr/obj-empty-num.js
+  - [x] test/language/statements/for-of/dstr/obj-empty-obj.js
+  - [x] test/language/statements/for-of/dstr/obj-empty-string.js
+  - [x] test/language/statements/for-of/dstr/obj-empty-symbol.js
+  - [x] test/language/statements/for-of/dstr/obj-empty-undef.js
+  - [x] test/language/statements/for-of/dstr/obj-id-identifier-resolution-first.js
+  - [x] test/language/statements/for-of/dstr/obj-id-identifier-resolution-last.js
+  - [x] test/language/statements/for-of/dstr/obj-id-identifier-resolution-lone.js
+  - [x] test/language/statements/for-of/dstr/obj-id-identifier-resolution-middle.js
+  - [x] test/language/statements/for-of/dstr/obj-id-identifier-resolution-trlng.js
+  - [x] test/language/statements/for-of/dstr/obj-id-identifier-yield-expr.js
+  - [x] test/language/statements/for-of/dstr/obj-id-identifier-yield-ident-invalid.js
+  - [x] test/language/statements/for-of/dstr/obj-id-identifier-yield-ident-valid.js
+  - [x] test/language/statements/for-of/dstr/obj-id-init-assignment-missing.js
+  - [x] test/language/statements/for-of/dstr/obj-id-init-assignment-null.js
+  - [x] test/language/statements/for-of/dstr/obj-id-init-assignment-truthy.js
+  - [x] test/language/statements/for-of/dstr/obj-id-init-assignment-undef.js
+  - [x] test/language/statements/for-of/dstr/obj-id-init-evaluation.js
+  - [x] test/language/statements/for-of/dstr/obj-id-init-fn-name-arrow.js
+  - [x] test/language/statements/for-of/dstr/obj-id-init-fn-name-class.js
+  - [x] test/language/statements/for-of/dstr/obj-id-init-fn-name-cover.js
+  - [x] test/language/statements/for-of/dstr/obj-id-init-fn-name-fn.js
+  - [x] test/language/statements/for-of/dstr/obj-id-init-fn-name-gen.js
+  - [x] test/language/statements/for-of/dstr/obj-id-init-in.js
+  - [x] test/language/statements/for-of/dstr/obj-id-init-let.js
+  - [x] test/language/statements/for-of/dstr/obj-id-init-order.js
+  - [x] test/language/statements/for-of/dstr/obj-id-init-simple-no-strict.js
+  - [x] test/language/statements/for-of/dstr/obj-id-init-simple-strict.js
+  - [x] test/language/statements/for-of/dstr/obj-id-init-yield-expr.js
+  - [x] test/language/statements/for-of/dstr/obj-id-init-yield-ident-invalid.js
+  - [x] test/language/statements/for-of/dstr/obj-id-init-yield-ident-valid.js
+  - [x] test/language/statements/for-of/dstr/obj-id-put-const.js
+  - [x] test/language/statements/for-of/dstr/obj-id-put-let.js
+  - [x] test/language/statements/for-of/dstr/obj-id-put-unresolvable-no-strict.js
+  - [x] test/language/statements/for-of/dstr/obj-id-put-unresolvable-strict.js
+  - [x] test/language/statements/for-of/dstr/obj-id-simple-no-strict.js
+  - [x] test/language/statements/for-of/dstr/obj-id-simple-strict.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-elem-init-assignment-missing.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-elem-init-assignment-null.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-elem-init-assignment-truthy.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-elem-init-assignment-undef.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-elem-init-evaluation.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-elem-init-fn-name-arrow.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-elem-init-fn-name-class.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-elem-init-fn-name-cover.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-elem-init-fn-name-fn.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-elem-init-fn-name-gen.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-elem-init-in.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-elem-init-let.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-elem-init-yield-expr.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-elem-init-yield-ident-invalid.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-elem-init-yield-ident-valid.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-elem-target-memberexpr-optchain-prop-ref-init.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-elem-target-obj-literal-optchain-prop-ref-init.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-elem-target-obj-literal-prop-ref-init-active.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-elem-target-obj-literal-prop-ref-init.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-elem-target-obj-literal-prop-ref.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-elem-target-yield-expr.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-elem-target-yield-ident-invalid.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-elem-target-yield-ident-valid.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-identifier-resolution-first.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-identifier-resolution-last.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-identifier-resolution-lone.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-identifier-resolution-middle.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-identifier-resolution-trlng.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-name-evaluation-error.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-name-evaluation.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-nested-array-invalid.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-nested-array-null.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-nested-array-undefined-own.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-nested-array-undefined.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-nested-array-yield-expr.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-nested-array-yield-ident-invalid.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-nested-array-yield-ident-valid.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-nested-array.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-nested-obj-invalid.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-nested-obj-null.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-nested-obj-undefined-own.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-nested-obj-undefined.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-nested-obj-yield-expr.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-nested-obj-yield-ident-invalid.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-nested-obj-yield-ident-valid.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-nested-obj.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-put-const.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-put-let.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-put-order.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-put-prop-ref-no-get.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-put-prop-ref-user-err.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-put-prop-ref.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-put-unresolvable-no-strict.js
+  - [x] test/language/statements/for-of/dstr/obj-prop-put-unresolvable-strict.js
+  - [x] test/language/statements/for-of/dstr/obj-rest-computed-property-no-strict.js
+  - [x] test/language/statements/for-of/dstr/obj-rest-computed-property.js
+  - [x] test/language/statements/for-of/dstr/obj-rest-descriptors.js
+  - [x] test/language/statements/for-of/dstr/obj-rest-empty-obj.js
+  - [x] test/language/statements/for-of/dstr/obj-rest-getter-abrupt-get-error.js
   - [ ] test/language/statements/for-of/dstr/obj-rest-getter.js
-  - [ ] test/language/statements/for-of/dstr/obj-rest-non-string-computed-property-1.js
-  - [ ] test/language/statements/for-of/dstr/obj-rest-non-string-computed-property-1dot.js
-  - [ ] test/language/statements/for-of/dstr/obj-rest-non-string-computed-property-1dot0.js
-  - [ ] test/language/statements/for-of/dstr/obj-rest-non-string-computed-property-1e0.js
-  - [ ] test/language/statements/for-of/dstr/obj-rest-non-string-computed-property-array-1.js
-  - [ ] test/language/statements/for-of/dstr/obj-rest-non-string-computed-property-array-1e0.js
-  - [ ] test/language/statements/for-of/dstr/obj-rest-non-string-computed-property-string-1.js
-  - [ ] test/language/statements/for-of/dstr/obj-rest-not-last-element-invalid.js
-  - [ ] test/language/statements/for-of/dstr/obj-rest-number.js
+  - [x] test/language/statements/for-of/dstr/obj-rest-non-string-computed-property-1.js
+  - [x] test/language/statements/for-of/dstr/obj-rest-non-string-computed-property-1dot.js
+  - [x] test/language/statements/for-of/dstr/obj-rest-non-string-computed-property-1dot0.js
+  - [x] test/language/statements/for-of/dstr/obj-rest-non-string-computed-property-1e0.js
+  - [x] test/language/statements/for-of/dstr/obj-rest-non-string-computed-property-array-1.js
+  - [x] test/language/statements/for-of/dstr/obj-rest-non-string-computed-property-array-1e0.js
+  - [x] test/language/statements/for-of/dstr/obj-rest-non-string-computed-property-string-1.js
+  - [x] test/language/statements/for-of/dstr/obj-rest-not-last-element-invalid.js
+  - [x] test/language/statements/for-of/dstr/obj-rest-number.js
   - [ ] test/language/statements/for-of/dstr/obj-rest-order.js
-  - [ ] test/language/statements/for-of/dstr/obj-rest-put-const.js
-  - [ ] test/language/statements/for-of/dstr/obj-rest-same-name.js
-  - [ ] test/language/statements/for-of/dstr/obj-rest-skip-non-enumerable.js
-  - [ ] test/language/statements/for-of/dstr/obj-rest-str-val.js
-  - [ ] test/language/statements/for-of/dstr/obj-rest-symbol-val.js
-  - [ ] test/language/statements/for-of/dstr/obj-rest-to-property-with-setter.js
-  - [ ] test/language/statements/for-of/dstr/obj-rest-to-property.js
-  - [ ] test/language/statements/for-of/dstr/obj-rest-val-null.js
-  - [ ] test/language/statements/for-of/dstr/obj-rest-val-undefined.js
-  - [ ] test/language/statements/for-of/dstr/obj-rest-valid-object.js
+  - [x] test/language/statements/for-of/dstr/obj-rest-put-const.js
+  - [x] test/language/statements/for-of/dstr/obj-rest-same-name.js
+  - [x] test/language/statements/for-of/dstr/obj-rest-skip-non-enumerable.js
+  - [x] test/language/statements/for-of/dstr/obj-rest-str-val.js
+  - [x] test/language/statements/for-of/dstr/obj-rest-symbol-val.js
+  - [x] test/language/statements/for-of/dstr/obj-rest-to-property-with-setter.js
+  - [x] test/language/statements/for-of/dstr/obj-rest-to-property.js
+  - [x] test/language/statements/for-of/dstr/obj-rest-val-null.js
+  - [x] test/language/statements/for-of/dstr/obj-rest-val-undefined.js
+  - [x] test/language/statements/for-of/dstr/obj-rest-valid-object.js
   - [ ] test/language/statements/for-of/dstr/var-ary-init-iter-close.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-init-iter-get-err-array-prototype.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-init-iter-get-err.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-init-iter-no-close.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-name-iter-val.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-elem-ary-elem-init.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-elem-ary-elem-iter.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-elem-ary-elision-init.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-elem-ary-elision-iter.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-elem-ary-empty-init.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-elem-ary-empty-iter.js
+  - [x] test/language/statements/for-of/dstr/var-ary-init-iter-get-err-array-prototype.js
+  - [x] test/language/statements/for-of/dstr/var-ary-init-iter-get-err.js
+  - [x] test/language/statements/for-of/dstr/var-ary-init-iter-no-close.js
+  - [x] test/language/statements/for-of/dstr/var-ary-name-iter-val.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-elem-ary-elem-init.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-elem-ary-elem-iter.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-elem-ary-elision-init.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-elem-ary-elision-iter.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-elem-ary-empty-init.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-elem-ary-empty-iter.js
   - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-elem-ary-rest-init.js
   - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-elem-ary-rest-iter.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-elem-ary-val-null.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-elem-id-init-exhausted.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-elem-id-init-fn-name-arrow.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-elem-id-init-fn-name-class.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-elem-id-init-fn-name-cover.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-elem-id-init-fn-name-fn.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-elem-id-init-fn-name-gen.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-elem-id-init-hole.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-elem-id-init-skipped.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-elem-id-init-throws.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-elem-id-init-undef.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-elem-id-init-unresolvable.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-elem-id-iter-complete.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-elem-id-iter-done.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-elem-id-iter-step-err.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-elem-id-iter-val-array-prototype.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-elem-id-iter-val-err.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-elem-id-iter-val.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-elem-obj-id-init.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-elem-obj-id.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-elem-obj-prop-id-init.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-elem-obj-prop-id.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-elem-obj-val-null.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-elem-obj-val-undef.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-elision-exhausted.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-elision-iter-close.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-elision-step-err.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-elision.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-empty.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-init-err.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-rest-ary-elem.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-rest-ary-elision.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-rest-ary-empty.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-elem-ary-val-null.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-elem-id-init-exhausted.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-elem-id-init-fn-name-arrow.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-elem-id-init-fn-name-class.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-elem-id-init-fn-name-cover.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-elem-id-init-fn-name-fn.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-elem-id-init-fn-name-gen.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-elem-id-init-hole.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-elem-id-init-skipped.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-elem-id-init-throws.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-elem-id-init-undef.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-elem-id-init-unresolvable.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-elem-id-iter-complete.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-elem-id-iter-done.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-elem-id-iter-step-err.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-elem-id-iter-val-array-prototype.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-elem-id-iter-val-err.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-elem-id-iter-val.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-elem-obj-id-init.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-elem-obj-id.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-elem-obj-prop-id-init.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-elem-obj-prop-id.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-elem-obj-val-null.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-elem-obj-val-undef.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-elision-exhausted.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-elision-iter-close.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-elision-step-err.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-elision.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-empty.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-init-err.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-rest-ary-elem.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-rest-ary-elision.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-rest-ary-empty.js
   - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-rest-ary-rest.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-rest-id-direct.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-rest-id-elision-next-err.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-rest-id-direct.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-rest-id-elision-next-err.js
   - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-rest-id-elision.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-rest-id-exhausted.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-rest-id-iter-close.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-rest-id-iter-step-err.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-rest-id-iter-val-err.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-rest-id-exhausted.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-rest-id-iter-close.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-rest-id-iter-step-err.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-rest-id-iter-val-err.js
   - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-rest-id.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-rest-init-ary.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-rest-init-id.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-rest-init-obj.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-rest-not-final-ary.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-rest-not-final-id.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-rest-not-final-obj.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-rest-obj-id.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-rest-obj-prop-id.js
-  - [ ] test/language/statements/for-of/dstr/var-obj-init-null.js
-  - [ ] test/language/statements/for-of/dstr/var-obj-init-undefined.js
-  - [ ] test/language/statements/for-of/dstr/var-obj-ptrn-empty.js
-  - [ ] test/language/statements/for-of/dstr/var-obj-ptrn-id-get-value-err.js
-  - [ ] test/language/statements/for-of/dstr/var-obj-ptrn-id-init-fn-name-arrow.js
-  - [ ] test/language/statements/for-of/dstr/var-obj-ptrn-id-init-fn-name-class.js
-  - [ ] test/language/statements/for-of/dstr/var-obj-ptrn-id-init-fn-name-cover.js
-  - [ ] test/language/statements/for-of/dstr/var-obj-ptrn-id-init-fn-name-fn.js
-  - [ ] test/language/statements/for-of/dstr/var-obj-ptrn-id-init-fn-name-gen.js
-  - [ ] test/language/statements/for-of/dstr/var-obj-ptrn-id-init-skipped.js
-  - [ ] test/language/statements/for-of/dstr/var-obj-ptrn-id-init-throws.js
-  - [ ] test/language/statements/for-of/dstr/var-obj-ptrn-id-init-unresolvable.js
-  - [ ] test/language/statements/for-of/dstr/var-obj-ptrn-id-trailing-comma.js
-  - [ ] test/language/statements/for-of/dstr/var-obj-ptrn-init-err.js
-  - [ ] test/language/statements/for-of/dstr/var-obj-ptrn-list-err.js
-  - [ ] test/language/statements/for-of/dstr/var-obj-ptrn-prop-ary-init.js
-  - [ ] test/language/statements/for-of/dstr/var-obj-ptrn-prop-ary-trailing-comma.js
-  - [ ] test/language/statements/for-of/dstr/var-obj-ptrn-prop-ary-value-null.js
-  - [ ] test/language/statements/for-of/dstr/var-obj-ptrn-prop-ary.js
-  - [ ] test/language/statements/for-of/dstr/var-obj-ptrn-prop-eval-err.js
-  - [ ] test/language/statements/for-of/dstr/var-obj-ptrn-prop-id-get-value-err.js
-  - [ ] test/language/statements/for-of/dstr/var-obj-ptrn-prop-id-init-skipped.js
-  - [ ] test/language/statements/for-of/dstr/var-obj-ptrn-prop-id-init-throws.js
-  - [ ] test/language/statements/for-of/dstr/var-obj-ptrn-prop-id-init-unresolvable.js
-  - [ ] test/language/statements/for-of/dstr/var-obj-ptrn-prop-id-init.js
-  - [ ] test/language/statements/for-of/dstr/var-obj-ptrn-prop-id-trailing-comma.js
-  - [ ] test/language/statements/for-of/dstr/var-obj-ptrn-prop-id.js
-  - [ ] test/language/statements/for-of/dstr/var-obj-ptrn-prop-obj-init.js
-  - [ ] test/language/statements/for-of/dstr/var-obj-ptrn-prop-obj-value-null.js
-  - [ ] test/language/statements/for-of/dstr/var-obj-ptrn-prop-obj-value-undef.js
-  - [ ] test/language/statements/for-of/dstr/var-obj-ptrn-prop-obj.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-rest-init-ary.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-rest-init-id.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-rest-init-obj.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-rest-not-final-ary.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-rest-not-final-id.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-rest-not-final-obj.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-rest-obj-id.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-rest-obj-prop-id.js
+  - [x] test/language/statements/for-of/dstr/var-obj-init-null.js
+  - [x] test/language/statements/for-of/dstr/var-obj-init-undefined.js
+  - [x] test/language/statements/for-of/dstr/var-obj-ptrn-empty.js
+  - [x] test/language/statements/for-of/dstr/var-obj-ptrn-id-get-value-err.js
+  - [x] test/language/statements/for-of/dstr/var-obj-ptrn-id-init-fn-name-arrow.js
+  - [x] test/language/statements/for-of/dstr/var-obj-ptrn-id-init-fn-name-class.js
+  - [x] test/language/statements/for-of/dstr/var-obj-ptrn-id-init-fn-name-cover.js
+  - [x] test/language/statements/for-of/dstr/var-obj-ptrn-id-init-fn-name-fn.js
+  - [x] test/language/statements/for-of/dstr/var-obj-ptrn-id-init-fn-name-gen.js
+  - [x] test/language/statements/for-of/dstr/var-obj-ptrn-id-init-skipped.js
+  - [x] test/language/statements/for-of/dstr/var-obj-ptrn-id-init-throws.js
+  - [x] test/language/statements/for-of/dstr/var-obj-ptrn-id-init-unresolvable.js
+  - [x] test/language/statements/for-of/dstr/var-obj-ptrn-id-trailing-comma.js
+  - [x] test/language/statements/for-of/dstr/var-obj-ptrn-init-err.js
+  - [x] test/language/statements/for-of/dstr/var-obj-ptrn-list-err.js
+  - [x] test/language/statements/for-of/dstr/var-obj-ptrn-prop-ary-init.js
+  - [x] test/language/statements/for-of/dstr/var-obj-ptrn-prop-ary-trailing-comma.js
+  - [x] test/language/statements/for-of/dstr/var-obj-ptrn-prop-ary-value-null.js
+  - [x] test/language/statements/for-of/dstr/var-obj-ptrn-prop-ary.js
+  - [x] test/language/statements/for-of/dstr/var-obj-ptrn-prop-eval-err.js
+  - [x] test/language/statements/for-of/dstr/var-obj-ptrn-prop-id-get-value-err.js
+  - [x] test/language/statements/for-of/dstr/var-obj-ptrn-prop-id-init-skipped.js
+  - [x] test/language/statements/for-of/dstr/var-obj-ptrn-prop-id-init-throws.js
+  - [x] test/language/statements/for-of/dstr/var-obj-ptrn-prop-id-init-unresolvable.js
+  - [x] test/language/statements/for-of/dstr/var-obj-ptrn-prop-id-init.js
+  - [x] test/language/statements/for-of/dstr/var-obj-ptrn-prop-id-trailing-comma.js
+  - [x] test/language/statements/for-of/dstr/var-obj-ptrn-prop-id.js
+  - [x] test/language/statements/for-of/dstr/var-obj-ptrn-prop-obj-init.js
+  - [x] test/language/statements/for-of/dstr/var-obj-ptrn-prop-obj-value-null.js
+  - [x] test/language/statements/for-of/dstr/var-obj-ptrn-prop-obj-value-undef.js
+  - [x] test/language/statements/for-of/dstr/var-obj-ptrn-prop-obj.js
   - [ ] test/language/statements/for-of/dstr/var-obj-ptrn-rest-getter.js
-  - [ ] test/language/statements/for-of/dstr/var-obj-ptrn-rest-skip-non-enumerable.js
-  - [ ] test/language/statements/for-of/dstr/var-obj-ptrn-rest-val-obj.js
-  - [ ] test/language/statements/for-of/escaped-of.js
+  - [x] test/language/statements/for-of/dstr/var-obj-ptrn-rest-skip-non-enumerable.js
+  - [x] test/language/statements/for-of/dstr/var-obj-ptrn-rest-val-obj.js
+  - [x] test/language/statements/for-of/escaped-of.js
   - [ ] test/language/statements/for-of/float32array-mutate.js
   - [ ] test/language/statements/for-of/float32array.js
   - [ ] test/language/statements/for-of/float64array-mutate.js
   - [ ] test/language/statements/for-of/float64array.js
-  - [ ] test/language/statements/for-of/generator-close-via-break.js
-  - [ ] test/language/statements/for-of/generator-close-via-continue.js
+  - [x] test/language/statements/for-of/generator-close-via-break.js
+  - [x] test/language/statements/for-of/generator-close-via-continue.js
   - [ ] test/language/statements/for-of/generator-close-via-return.js
-  - [ ] test/language/statements/for-of/generator-close-via-throw.js
-  - [ ] test/language/statements/for-of/generator-next-error.js
-  - [ ] test/language/statements/for-of/generator.js
+  - [x] test/language/statements/for-of/generator-close-via-throw.js
+  - [x] test/language/statements/for-of/generator-next-error.js
+  - [x] test/language/statements/for-of/generator.js
   - [ ] test/language/statements/for-of/generic-iterable.js
-  - [ ] test/language/statements/for-of/head-await-using-bound-names-fordecl-tdz.js
-  - [ ] test/language/statements/for-of/head-await-using-bound-names-in-stmt.js
-  - [ ] test/language/statements/for-of/head-await-using-bound-names-let.js
-  - [ ] test/language/statements/for-of/head-await-using-fresh-binding-per-iteration.js
-  - [ ] test/language/statements/for-of/head-await-using-init.js
-  - [ ] test/language/statements/for-of/head-const-bound-names-dup.js
-  - [ ] test/language/statements/for-of/head-const-bound-names-fordecl-tdz.js
-  - [ ] test/language/statements/for-of/head-const-bound-names-in-stmt.js
-  - [ ] test/language/statements/for-of/head-const-bound-names-let.js
-  - [ ] test/language/statements/for-of/head-const-fresh-binding-per-iteration.js
-  - [ ] test/language/statements/for-of/head-const-init.js
-  - [ ] test/language/statements/for-of/head-decl-no-expr.js
-  - [ ] test/language/statements/for-of/head-expr-no-expr.js
-  - [ ] test/language/statements/for-of/head-expr-obj-iterator-method.js
-  - [ ] test/language/statements/for-of/head-expr-primitive-iterator-method.js
-  - [ ] test/language/statements/for-of/head-expr-to-obj.js
-  - [ ] test/language/statements/for-of/head-let-bound-names-dup.js
-  - [ ] test/language/statements/for-of/head-let-bound-names-fordecl-tdz.js
-  - [ ] test/language/statements/for-of/head-let-bound-names-in-stmt.js
-  - [ ] test/language/statements/for-of/head-let-bound-names-let.js
-  - [ ] test/language/statements/for-of/head-let-destructuring.js
-  - [ ] test/language/statements/for-of/head-let-fresh-binding-per-iteration.js
-  - [ ] test/language/statements/for-of/head-let-init.js
-  - [ ] test/language/statements/for-of/head-lhs-async-dot.js
-  - [ ] test/language/statements/for-of/head-lhs-async-escaped.js
-  - [ ] test/language/statements/for-of/head-lhs-async-invalid.js
-  - [ ] test/language/statements/for-of/head-lhs-async-parens.js
-  - [ ] test/language/statements/for-of/head-lhs-cover-non-asnmt-trgt.js
-  - [ ] test/language/statements/for-of/head-lhs-cover.js
-  - [ ] test/language/statements/for-of/head-lhs-invalid-asnmt-ptrn-ary.js
-  - [ ] test/language/statements/for-of/head-lhs-invalid-asnmt-ptrn-obj.js
-  - [ ] test/language/statements/for-of/head-lhs-let.js
-  - [ ] test/language/statements/for-of/head-lhs-member.js
-  - [ ] test/language/statements/for-of/head-lhs-non-asnmt-trgt.js
-  - [ ] test/language/statements/for-of/head-using-bound-names-fordecl-tdz.js
-  - [ ] test/language/statements/for-of/head-using-bound-names-in-stmt.js
-  - [ ] test/language/statements/for-of/head-using-bound-names-let.js
-  - [ ] test/language/statements/for-of/head-using-fresh-binding-per-iteration.js
-  - [ ] test/language/statements/for-of/head-using-init.js
-  - [ ] test/language/statements/for-of/head-var-bound-names-dup.js
-  - [ ] test/language/statements/for-of/head-var-bound-names-in-stmt.js
-  - [ ] test/language/statements/for-of/head-var-bound-names-let.js
-  - [ ] test/language/statements/for-of/head-var-init.js
-  - [ ] test/language/statements/for-of/head-var-no-expr.js
+  - [x] test/language/statements/for-of/head-await-using-bound-names-fordecl-tdz.js
+  - [x] test/language/statements/for-of/head-await-using-bound-names-in-stmt.js
+  - [x] test/language/statements/for-of/head-await-using-bound-names-let.js
+  - [x] test/language/statements/for-of/head-await-using-fresh-binding-per-iteration.js
+  - [x] test/language/statements/for-of/head-await-using-init.js
+  - [x] test/language/statements/for-of/head-const-bound-names-dup.js
+  - [x] test/language/statements/for-of/head-const-bound-names-fordecl-tdz.js
+  - [x] test/language/statements/for-of/head-const-bound-names-in-stmt.js
+  - [x] test/language/statements/for-of/head-const-bound-names-let.js
+  - [x] test/language/statements/for-of/head-const-fresh-binding-per-iteration.js
+  - [x] test/language/statements/for-of/head-const-init.js
+  - [x] test/language/statements/for-of/head-decl-no-expr.js
+  - [x] test/language/statements/for-of/head-expr-no-expr.js
+  - [x] test/language/statements/for-of/head-expr-obj-iterator-method.js
+  - [x] test/language/statements/for-of/head-expr-primitive-iterator-method.js
+  - [x] test/language/statements/for-of/head-expr-to-obj.js
+  - [x] test/language/statements/for-of/head-let-bound-names-dup.js
+  - [x] test/language/statements/for-of/head-let-bound-names-fordecl-tdz.js
+  - [x] test/language/statements/for-of/head-let-bound-names-in-stmt.js
+  - [x] test/language/statements/for-of/head-let-bound-names-let.js
+  - [x] test/language/statements/for-of/head-let-destructuring.js
+  - [x] test/language/statements/for-of/head-let-fresh-binding-per-iteration.js
+  - [x] test/language/statements/for-of/head-let-init.js
+  - [x] test/language/statements/for-of/head-lhs-async-dot.js
+  - [x] test/language/statements/for-of/head-lhs-async-escaped.js
+  - [x] test/language/statements/for-of/head-lhs-async-invalid.js
+  - [x] test/language/statements/for-of/head-lhs-async-parens.js
+  - [x] test/language/statements/for-of/head-lhs-cover-non-asnmt-trgt.js
+  - [x] test/language/statements/for-of/head-lhs-cover.js
+  - [x] test/language/statements/for-of/head-lhs-invalid-asnmt-ptrn-ary.js
+  - [x] test/language/statements/for-of/head-lhs-invalid-asnmt-ptrn-obj.js
+  - [x] test/language/statements/for-of/head-lhs-let.js
+  - [x] test/language/statements/for-of/head-lhs-member.js
+  - [x] test/language/statements/for-of/head-lhs-non-asnmt-trgt.js
+  - [x] test/language/statements/for-of/head-using-bound-names-fordecl-tdz.js
+  - [x] test/language/statements/for-of/head-using-bound-names-in-stmt.js
+  - [x] test/language/statements/for-of/head-using-bound-names-let.js
+  - [x] test/language/statements/for-of/head-using-fresh-binding-per-iteration.js
+  - [x] test/language/statements/for-of/head-using-init.js
+  - [x] test/language/statements/for-of/head-var-bound-names-dup.js
+  - [x] test/language/statements/for-of/head-var-bound-names-in-stmt.js
+  - [x] test/language/statements/for-of/head-var-bound-names-let.js
+  - [x] test/language/statements/for-of/head-var-init.js
+  - [x] test/language/statements/for-of/head-var-no-expr.js
   - [ ] test/language/statements/for-of/int16array-mutate.js
   - [ ] test/language/statements/for-of/int16array.js
   - [ ] test/language/statements/for-of/int32array-mutate.js
@@ -8862,57 +8862,57 @@ Sub-category progress
   - [ ] test/language/statements/for-of/int8array-mutate.js
   - [ ] test/language/statements/for-of/int8array.js
   - [ ] test/language/statements/for-of/iterator-as-proxy.js
-  - [ ] test/language/statements/for-of/iterator-close-non-object.js
-  - [ ] test/language/statements/for-of/iterator-close-non-throw-get-method-abrupt.js
-  - [ ] test/language/statements/for-of/iterator-close-non-throw-get-method-is-null.js
-  - [ ] test/language/statements/for-of/iterator-close-non-throw-get-method-non-callable.js
-  - [ ] test/language/statements/for-of/iterator-close-throw-get-method-abrupt.js
-  - [ ] test/language/statements/for-of/iterator-close-throw-get-method-non-callable.js
-  - [ ] test/language/statements/for-of/iterator-close-via-break.js
-  - [ ] test/language/statements/for-of/iterator-close-via-continue.js
-  - [ ] test/language/statements/for-of/iterator-close-via-return.js
-  - [ ] test/language/statements/for-of/iterator-close-via-throw.js
-  - [ ] test/language/statements/for-of/iterator-next-error.js
-  - [ ] test/language/statements/for-of/iterator-next-reference.js
+  - [x] test/language/statements/for-of/iterator-close-non-object.js
+  - [x] test/language/statements/for-of/iterator-close-non-throw-get-method-abrupt.js
+  - [x] test/language/statements/for-of/iterator-close-non-throw-get-method-is-null.js
+  - [x] test/language/statements/for-of/iterator-close-non-throw-get-method-non-callable.js
+  - [x] test/language/statements/for-of/iterator-close-throw-get-method-abrupt.js
+  - [x] test/language/statements/for-of/iterator-close-throw-get-method-non-callable.js
+  - [x] test/language/statements/for-of/iterator-close-via-break.js
+  - [x] test/language/statements/for-of/iterator-close-via-continue.js
+  - [x] test/language/statements/for-of/iterator-close-via-return.js
+  - [x] test/language/statements/for-of/iterator-close-via-throw.js
+  - [x] test/language/statements/for-of/iterator-next-error.js
+  - [x] test/language/statements/for-of/iterator-next-reference.js
   - [ ] test/language/statements/for-of/iterator-next-result-done-attr.js
   - [ ] test/language/statements/for-of/iterator-next-result-type.js
   - [ ] test/language/statements/for-of/iterator-next-result-value-attr-error.js
   - [ ] test/language/statements/for-of/iterator-next-result-value-attr.js
-  - [ ] test/language/statements/for-of/labelled-fn-stmt-const.js
-  - [ ] test/language/statements/for-of/labelled-fn-stmt-let.js
-  - [ ] test/language/statements/for-of/labelled-fn-stmt-lhs.js
-  - [ ] test/language/statements/for-of/labelled-fn-stmt-var.js
-  - [ ] test/language/statements/for-of/let-array-with-newline.js
-  - [ ] test/language/statements/for-of/let-block-with-newline.js
-  - [ ] test/language/statements/for-of/let-identifier-with-newline.js
+  - [x] test/language/statements/for-of/labelled-fn-stmt-const.js
+  - [x] test/language/statements/for-of/labelled-fn-stmt-let.js
+  - [x] test/language/statements/for-of/labelled-fn-stmt-lhs.js
+  - [x] test/language/statements/for-of/labelled-fn-stmt-var.js
+  - [x] test/language/statements/for-of/let-array-with-newline.js
+  - [x] test/language/statements/for-of/let-block-with-newline.js
+  - [x] test/language/statements/for-of/let-identifier-with-newline.js
   - [ ] test/language/statements/for-of/map-contract-expand.js
   - [ ] test/language/statements/for-of/map-contract.js
   - [ ] test/language/statements/for-of/map-expand-contract.js
   - [ ] test/language/statements/for-of/map-expand.js
   - [ ] test/language/statements/for-of/map.js
-  - [ ] test/language/statements/for-of/nested.js
-  - [ ] test/language/statements/for-of/return-from-catch.js
-  - [ ] test/language/statements/for-of/return-from-finally.js
-  - [ ] test/language/statements/for-of/return-from-try.js
-  - [ ] test/language/statements/for-of/return.js
+  - [x] test/language/statements/for-of/nested.js
+  - [x] test/language/statements/for-of/return-from-catch.js
+  - [x] test/language/statements/for-of/return-from-finally.js
+  - [x] test/language/statements/for-of/return-from-try.js
+  - [x] test/language/statements/for-of/return.js
   - [ ] test/language/statements/for-of/scope-body-lex-boundary.js
   - [ ] test/language/statements/for-of/scope-body-lex-close.js
   - [ ] test/language/statements/for-of/scope-body-lex-open.js
-  - [ ] test/language/statements/for-of/scope-body-var-none.js
+  - [x] test/language/statements/for-of/scope-body-var-none.js
   - [ ] test/language/statements/for-of/scope-head-lex-close.js
-  - [ ] test/language/statements/for-of/scope-head-lex-open.js
+  - [x] test/language/statements/for-of/scope-head-lex-open.js
   - [ ] test/language/statements/for-of/scope-head-var-none.js
-  - [ ] test/language/statements/for-of/set-contract-expand.js
-  - [ ] test/language/statements/for-of/set-contract.js
-  - [ ] test/language/statements/for-of/set-expand-contract.js
-  - [ ] test/language/statements/for-of/set-expand.js
-  - [ ] test/language/statements/for-of/set.js
-  - [ ] test/language/statements/for-of/string-astral-truncated.js
-  - [ ] test/language/statements/for-of/string-astral.js
-  - [ ] test/language/statements/for-of/string-bmp.js
-  - [ ] test/language/statements/for-of/throw-from-catch.js
-  - [ ] test/language/statements/for-of/throw-from-finally.js
-  - [ ] test/language/statements/for-of/throw.js
+  - [x] test/language/statements/for-of/set-contract-expand.js
+  - [x] test/language/statements/for-of/set-contract.js
+  - [x] test/language/statements/for-of/set-expand-contract.js
+  - [x] test/language/statements/for-of/set-expand.js
+  - [x] test/language/statements/for-of/set.js
+  - [x] test/language/statements/for-of/string-astral-truncated.js
+  - [x] test/language/statements/for-of/string-astral.js
+  - [x] test/language/statements/for-of/string-bmp.js
+  - [x] test/language/statements/for-of/throw-from-catch.js
+  - [x] test/language/statements/for-of/throw-from-finally.js
+  - [x] test/language/statements/for-of/throw.js
   - [ ] test/language/statements/for-of/typedarray-backed-by-resizable-buffer-grow-before-end.js
   - [ ] test/language/statements/for-of/typedarray-backed-by-resizable-buffer-grow-mid-iteration.js
   - [ ] test/language/statements/for-of/typedarray-backed-by-resizable-buffer-shrink-mid-iteration.js
@@ -8926,114 +8926,114 @@ Sub-category progress
   - [ ] test/language/statements/for-of/uint8array.js
   - [ ] test/language/statements/for-of/uint8clampedarray-mutate.js
   - [ ] test/language/statements/for-of/uint8clampedarray.js
-  - [ ] test/language/statements/for-of/yield-from-catch.js
-  - [ ] test/language/statements/for-of/yield-from-finally.js
-  - [ ] test/language/statements/for-of/yield-from-try.js
-  - [ ] test/language/statements/for-of/yield-star-from-catch.js
-  - [ ] test/language/statements/for-of/yield-star-from-finally.js
-  - [ ] test/language/statements/for-of/yield-star-from-try.js
-  - [ ] test/language/statements/for-of/yield-star.js
-  - [ ] test/language/statements/for-of/yield.js
-  - [ ] test/language/statements/function/13.0-12-s.js
-  - [ ] test/language/statements/function/13.0-13-s.js
-  - [ ] test/language/statements/function/13.0-14-s.js
-  - [ ] test/language/statements/function/13.0-15-s.js
-  - [ ] test/language/statements/function/13.0-16-s.js
-  - [ ] test/language/statements/function/13.0-17-s.js
-  - [ ] test/language/statements/function/13.0-7-s.js
-  - [ ] test/language/statements/function/13.0-8-s.js
-  - [ ] test/language/statements/function/13.0_4-17gs.js
-  - [ ] test/language/statements/function/13.0_4-5gs.js
-  - [ ] test/language/statements/function/13.1-13gs.js
-  - [ ] test/language/statements/function/13.1-19-s.js
-  - [ ] test/language/statements/function/13.1-1gs.js
-  - [ ] test/language/statements/function/13.1-2-s.js
-  - [ ] test/language/statements/function/13.1-21-s.js
-  - [ ] test/language/statements/function/13.1-22-s.js
-  - [ ] test/language/statements/function/13.1-23-s.js
-  - [ ] test/language/statements/function/13.1-25-s.js
-  - [ ] test/language/statements/function/13.1-27-s.js
-  - [ ] test/language/statements/function/13.1-29-s.js
-  - [ ] test/language/statements/function/13.1-31-s.js
-  - [ ] test/language/statements/function/13.1-33-s.js
-  - [ ] test/language/statements/function/13.1-39-s.js
-  - [ ] test/language/statements/function/13.1-4-s.js
-  - [ ] test/language/statements/function/13.1-41-s.js
-  - [ ] test/language/statements/function/13.1-4gs.js
-  - [ ] test/language/statements/function/13.1-5gs.js
-  - [ ] test/language/statements/function/13.1-8gs.js
-  - [ ] test/language/statements/function/13.2-1-s.js
-  - [ ] test/language/statements/function/13.2-10-s.js
-  - [ ] test/language/statements/function/13.2-11-s.js
-  - [ ] test/language/statements/function/13.2-12-s.js
-  - [ ] test/language/statements/function/13.2-13-s.js
-  - [ ] test/language/statements/function/13.2-14-s.js
-  - [ ] test/language/statements/function/13.2-15-1.js
-  - [ ] test/language/statements/function/13.2-15-s.js
-  - [ ] test/language/statements/function/13.2-16-s.js
-  - [ ] test/language/statements/function/13.2-17-1.js
-  - [ ] test/language/statements/function/13.2-17-s.js
-  - [ ] test/language/statements/function/13.2-18-1.js
-  - [ ] test/language/statements/function/13.2-18-s.js
-  - [ ] test/language/statements/function/13.2-19-b-3gs.js
-  - [ ] test/language/statements/function/13.2-19-s.js
-  - [ ] test/language/statements/function/13.2-2-s.js
-  - [ ] test/language/statements/function/13.2-20-s.js
-  - [ ] test/language/statements/function/13.2-21-s.js
-  - [ ] test/language/statements/function/13.2-22-s.js
-  - [ ] test/language/statements/function/13.2-23-s.js
-  - [ ] test/language/statements/function/13.2-24-s.js
-  - [ ] test/language/statements/function/13.2-25-s.js
-  - [ ] test/language/statements/function/13.2-26-s.js
-  - [ ] test/language/statements/function/13.2-27-s.js
-  - [ ] test/language/statements/function/13.2-28-s.js
-  - [ ] test/language/statements/function/13.2-3-s.js
-  - [ ] test/language/statements/function/13.2-30-s.js
-  - [ ] test/language/statements/function/13.2-4-s.js
-  - [ ] test/language/statements/function/13.2-5-s.js
-  - [ ] test/language/statements/function/13.2-6-s.js
-  - [ ] test/language/statements/function/13.2-7-s.js
-  - [ ] test/language/statements/function/13.2-8-s.js
-  - [ ] test/language/statements/function/13.2-9-s.js
-  - [ ] test/language/statements/function/S10.1.1_A1_T1.js
-  - [ ] test/language/statements/function/S13.2.1_A1_T1.js
-  - [ ] test/language/statements/function/S13.2.1_A4_T1.js
-  - [ ] test/language/statements/function/S13.2.1_A4_T2.js
+  - [x] test/language/statements/for-of/yield-from-catch.js
+  - [x] test/language/statements/for-of/yield-from-finally.js
+  - [x] test/language/statements/for-of/yield-from-try.js
+  - [x] test/language/statements/for-of/yield-star-from-catch.js
+  - [x] test/language/statements/for-of/yield-star-from-finally.js
+  - [x] test/language/statements/for-of/yield-star-from-try.js
+  - [x] test/language/statements/for-of/yield-star.js
+  - [x] test/language/statements/for-of/yield.js
+  - [x] test/language/statements/function/13.0-12-s.js
+  - [x] test/language/statements/function/13.0-13-s.js
+  - [x] test/language/statements/function/13.0-14-s.js
+  - [x] test/language/statements/function/13.0-15-s.js
+  - [x] test/language/statements/function/13.0-16-s.js
+  - [x] test/language/statements/function/13.0-17-s.js
+  - [x] test/language/statements/function/13.0-7-s.js
+  - [x] test/language/statements/function/13.0-8-s.js
+  - [x] test/language/statements/function/13.0_4-17gs.js
+  - [x] test/language/statements/function/13.0_4-5gs.js
+  - [x] test/language/statements/function/13.1-13gs.js
+  - [x] test/language/statements/function/13.1-19-s.js
+  - [x] test/language/statements/function/13.1-1gs.js
+  - [x] test/language/statements/function/13.1-2-s.js
+  - [x] test/language/statements/function/13.1-21-s.js
+  - [x] test/language/statements/function/13.1-22-s.js
+  - [x] test/language/statements/function/13.1-23-s.js
+  - [x] test/language/statements/function/13.1-25-s.js
+  - [x] test/language/statements/function/13.1-27-s.js
+  - [x] test/language/statements/function/13.1-29-s.js
+  - [x] test/language/statements/function/13.1-31-s.js
+  - [x] test/language/statements/function/13.1-33-s.js
+  - [x] test/language/statements/function/13.1-39-s.js
+  - [x] test/language/statements/function/13.1-4-s.js
+  - [x] test/language/statements/function/13.1-41-s.js
+  - [x] test/language/statements/function/13.1-4gs.js
+  - [x] test/language/statements/function/13.1-5gs.js
+  - [x] test/language/statements/function/13.1-8gs.js
+  - [x] test/language/statements/function/13.2-1-s.js
+  - [x] test/language/statements/function/13.2-10-s.js
+  - [x] test/language/statements/function/13.2-11-s.js
+  - [x] test/language/statements/function/13.2-12-s.js
+  - [x] test/language/statements/function/13.2-13-s.js
+  - [x] test/language/statements/function/13.2-14-s.js
+  - [x] test/language/statements/function/13.2-15-1.js
+  - [x] test/language/statements/function/13.2-15-s.js
+  - [x] test/language/statements/function/13.2-16-s.js
+  - [x] test/language/statements/function/13.2-17-1.js
+  - [x] test/language/statements/function/13.2-17-s.js
+  - [x] test/language/statements/function/13.2-18-1.js
+  - [x] test/language/statements/function/13.2-18-s.js
+  - [x] test/language/statements/function/13.2-19-b-3gs.js
+  - [x] test/language/statements/function/13.2-19-s.js
+  - [x] test/language/statements/function/13.2-2-s.js
+  - [x] test/language/statements/function/13.2-20-s.js
+  - [x] test/language/statements/function/13.2-21-s.js
+  - [x] test/language/statements/function/13.2-22-s.js
+  - [x] test/language/statements/function/13.2-23-s.js
+  - [x] test/language/statements/function/13.2-24-s.js
+  - [x] test/language/statements/function/13.2-25-s.js
+  - [x] test/language/statements/function/13.2-26-s.js
+  - [x] test/language/statements/function/13.2-27-s.js
+  - [x] test/language/statements/function/13.2-28-s.js
+  - [x] test/language/statements/function/13.2-3-s.js
+  - [x] test/language/statements/function/13.2-30-s.js
+  - [x] test/language/statements/function/13.2-4-s.js
+  - [x] test/language/statements/function/13.2-5-s.js
+  - [x] test/language/statements/function/13.2-6-s.js
+  - [x] test/language/statements/function/13.2-7-s.js
+  - [x] test/language/statements/function/13.2-8-s.js
+  - [x] test/language/statements/function/13.2-9-s.js
+  - [x] test/language/statements/function/S10.1.1_A1_T1.js
+  - [x] test/language/statements/function/S13.2.1_A1_T1.js
+  - [x] test/language/statements/function/S13.2.1_A4_T1.js
+  - [x] test/language/statements/function/S13.2.1_A4_T2.js
   - [ ] test/language/statements/function/S13.2.1_A4_T3.js
   - [ ] test/language/statements/function/S13.2.1_A4_T4.js
-  - [ ] test/language/statements/function/S13.2.1_A5_T1.js
-  - [ ] test/language/statements/function/S13.2.1_A5_T2.js
-  - [ ] test/language/statements/function/S13.2.1_A6_T1.js
-  - [ ] test/language/statements/function/S13.2.1_A6_T2.js
-  - [ ] test/language/statements/function/S13.2.1_A6_T3.js
-  - [ ] test/language/statements/function/S13.2.1_A6_T4.js
-  - [ ] test/language/statements/function/S13.2.1_A7_T1.js
-  - [ ] test/language/statements/function/S13.2.1_A7_T2.js
+  - [x] test/language/statements/function/S13.2.1_A5_T1.js
+  - [x] test/language/statements/function/S13.2.1_A5_T2.js
+  - [x] test/language/statements/function/S13.2.1_A6_T1.js
+  - [x] test/language/statements/function/S13.2.1_A6_T2.js
+  - [x] test/language/statements/function/S13.2.1_A6_T3.js
+  - [x] test/language/statements/function/S13.2.1_A6_T4.js
+  - [x] test/language/statements/function/S13.2.1_A7_T1.js
+  - [x] test/language/statements/function/S13.2.1_A7_T2.js
   - [ ] test/language/statements/function/S13.2.1_A7_T3.js
   - [ ] test/language/statements/function/S13.2.1_A7_T4.js
-  - [ ] test/language/statements/function/S13.2.1_A8_T1.js
-  - [ ] test/language/statements/function/S13.2.1_A8_T2.js
-  - [ ] test/language/statements/function/S13.2.1_A9.1_T1.js
-  - [ ] test/language/statements/function/S13.2.1_A9.1_T2.js
-  - [ ] test/language/statements/function/S13.2.1_A9_T1.js
-  - [ ] test/language/statements/function/S13.2.1_A9_T2.js
-  - [ ] test/language/statements/function/S13.2.2_A10.js
+  - [x] test/language/statements/function/S13.2.1_A8_T1.js
+  - [x] test/language/statements/function/S13.2.1_A8_T2.js
+  - [x] test/language/statements/function/S13.2.1_A9.1_T1.js
+  - [x] test/language/statements/function/S13.2.1_A9.1_T2.js
+  - [x] test/language/statements/function/S13.2.1_A9_T1.js
+  - [x] test/language/statements/function/S13.2.1_A9_T2.js
+  - [x] test/language/statements/function/S13.2.2_A10.js
   - [ ] test/language/statements/function/S13.2.2_A11.js
-  - [ ] test/language/statements/function/S13.2.2_A12.js
+  - [x] test/language/statements/function/S13.2.2_A12.js
   - [ ] test/language/statements/function/S13.2.2_A13.js
   - [ ] test/language/statements/function/S13.2.2_A14.js
-  - [ ] test/language/statements/function/S13.2.2_A15_T1.js
-  - [ ] test/language/statements/function/S13.2.2_A15_T2.js
-  - [ ] test/language/statements/function/S13.2.2_A15_T3.js
-  - [ ] test/language/statements/function/S13.2.2_A15_T4.js
-  - [ ] test/language/statements/function/S13.2.2_A16_T1.js
-  - [ ] test/language/statements/function/S13.2.2_A16_T2.js
+  - [x] test/language/statements/function/S13.2.2_A15_T1.js
+  - [x] test/language/statements/function/S13.2.2_A15_T2.js
+  - [x] test/language/statements/function/S13.2.2_A15_T3.js
+  - [x] test/language/statements/function/S13.2.2_A15_T4.js
+  - [x] test/language/statements/function/S13.2.2_A16_T1.js
+  - [x] test/language/statements/function/S13.2.2_A16_T2.js
   - [ ] test/language/statements/function/S13.2.2_A16_T3.js
-  - [ ] test/language/statements/function/S13.2.2_A17_T2.js
-  - [ ] test/language/statements/function/S13.2.2_A17_T3.js
-  - [ ] test/language/statements/function/S13.2.2_A18_T1.js
-  - [ ] test/language/statements/function/S13.2.2_A18_T2.js
-  - [ ] test/language/statements/function/S13.2.2_A19_T1.js
+  - [x] test/language/statements/function/S13.2.2_A17_T2.js
+  - [x] test/language/statements/function/S13.2.2_A17_T3.js
+  - [x] test/language/statements/function/S13.2.2_A18_T1.js
+  - [x] test/language/statements/function/S13.2.2_A18_T2.js
+  - [x] test/language/statements/function/S13.2.2_A19_T1.js
   - [ ] test/language/statements/function/S13.2.2_A19_T2.js
   - [ ] test/language/statements/function/S13.2.2_A19_T3.js
   - [ ] test/language/statements/function/S13.2.2_A19_T4.js
@@ -9115,264 +9115,264 @@ Sub-category progress
   - [ ] test/language/statements/function/S14_A3.js
   - [ ] test/language/statements/function/S14_A5_T1.js
   - [ ] test/language/statements/function/S14_A5_T2.js
-  - [ ] test/language/statements/function/arguments-with-arguments-fn.js
-  - [ ] test/language/statements/function/arguments-with-arguments-lex.js
-  - [ ] test/language/statements/function/array-destructuring-param-strict-body.js
-  - [ ] test/language/statements/function/cptn-decl.js
-  - [ ] test/language/statements/function/dflt-params-abrupt.js
-  - [ ] test/language/statements/function/dflt-params-arg-val-not-undefined.js
-  - [ ] test/language/statements/function/dflt-params-arg-val-undefined.js
-  - [ ] test/language/statements/function/dflt-params-duplicates.js
-  - [ ] test/language/statements/function/dflt-params-ref-later.js
-  - [ ] test/language/statements/function/dflt-params-ref-prior.js
-  - [ ] test/language/statements/function/dflt-params-ref-self.js
-  - [ ] test/language/statements/function/dflt-params-rest.js
-  - [ ] test/language/statements/function/dflt-params-trailing-comma.js
+  - [x] test/language/statements/function/arguments-with-arguments-fn.js
+  - [x] test/language/statements/function/arguments-with-arguments-lex.js
+  - [x] test/language/statements/function/array-destructuring-param-strict-body.js
+  - [x] test/language/statements/function/cptn-decl.js
+  - [x] test/language/statements/function/dflt-params-abrupt.js
+  - [x] test/language/statements/function/dflt-params-arg-val-not-undefined.js
+  - [x] test/language/statements/function/dflt-params-arg-val-undefined.js
+  - [x] test/language/statements/function/dflt-params-duplicates.js
+  - [x] test/language/statements/function/dflt-params-ref-later.js
+  - [x] test/language/statements/function/dflt-params-ref-prior.js
+  - [x] test/language/statements/function/dflt-params-ref-self.js
+  - [x] test/language/statements/function/dflt-params-rest.js
+  - [x] test/language/statements/function/dflt-params-trailing-comma.js
   - [ ] test/language/statements/function/dstr/ary-init-iter-close.js
-  - [ ] test/language/statements/function/dstr/ary-init-iter-get-err-array-prototype.js
-  - [ ] test/language/statements/function/dstr/ary-init-iter-get-err.js
+  - [x] test/language/statements/function/dstr/ary-init-iter-get-err-array-prototype.js
+  - [x] test/language/statements/function/dstr/ary-init-iter-get-err.js
   - [ ] test/language/statements/function/dstr/ary-init-iter-no-close.js
-  - [ ] test/language/statements/function/dstr/ary-name-iter-val.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-elem-ary-elem-init.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-elem-ary-elem-iter.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-elem-ary-elision-init.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-elem-ary-elision-iter.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-elem-ary-empty-init.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-elem-ary-empty-iter.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-elem-ary-rest-init.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-elem-ary-rest-iter.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-elem-ary-val-null.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-elem-id-init-exhausted.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-elem-id-init-fn-name-arrow.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-elem-id-init-fn-name-class.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-elem-id-init-fn-name-cover.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-elem-id-init-fn-name-fn.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-elem-id-init-fn-name-gen.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-elem-id-init-hole.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-elem-id-init-skipped.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-elem-id-init-throws.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-elem-id-init-undef.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-elem-id-init-unresolvable.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-elem-id-iter-complete.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-elem-id-iter-done.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-elem-id-iter-step-err.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-elem-id-iter-val-array-prototype.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-elem-id-iter-val-err.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-elem-id-iter-val.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-elem-obj-id-init.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-elem-obj-id.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-elem-obj-prop-id-init.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-elem-obj-prop-id.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-elem-obj-val-null.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-elem-obj-val-undef.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-elision-exhausted.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-elision-step-err.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-elision.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-empty.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-rest-ary-elem.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-rest-ary-elision.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-rest-ary-empty.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-rest-ary-rest.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-rest-id-direct.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-rest-id-elision-next-err.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-rest-id-elision.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-rest-id-exhausted.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-rest-id-iter-step-err.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-rest-id-iter-val-err.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-rest-id.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-rest-init-ary.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-rest-init-id.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-rest-init-obj.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-rest-not-final-ary.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-rest-not-final-id.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-rest-not-final-obj.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-rest-obj-id.js
-  - [ ] test/language/statements/function/dstr/ary-ptrn-rest-obj-prop-id.js
+  - [x] test/language/statements/function/dstr/ary-name-iter-val.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-elem-ary-elem-init.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-elem-ary-elem-iter.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-elem-ary-elision-init.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-elem-ary-elision-iter.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-elem-ary-empty-init.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-elem-ary-empty-iter.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-elem-ary-rest-init.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-elem-ary-rest-iter.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-elem-ary-val-null.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-elem-id-init-exhausted.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-elem-id-init-fn-name-arrow.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-elem-id-init-fn-name-class.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-elem-id-init-fn-name-cover.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-elem-id-init-fn-name-fn.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-elem-id-init-fn-name-gen.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-elem-id-init-hole.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-elem-id-init-skipped.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-elem-id-init-throws.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-elem-id-init-undef.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-elem-id-init-unresolvable.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-elem-id-iter-complete.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-elem-id-iter-done.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-elem-id-iter-step-err.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-elem-id-iter-val-array-prototype.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-elem-id-iter-val-err.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-elem-id-iter-val.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-elem-obj-id-init.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-elem-obj-id.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-elem-obj-prop-id-init.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-elem-obj-prop-id.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-elem-obj-val-null.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-elem-obj-val-undef.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-elision-exhausted.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-elision-step-err.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-elision.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-empty.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-rest-ary-elem.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-rest-ary-elision.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-rest-ary-empty.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-rest-ary-rest.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-rest-id-direct.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-rest-id-elision-next-err.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-rest-id-elision.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-rest-id-exhausted.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-rest-id-iter-step-err.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-rest-id-iter-val-err.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-rest-id.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-rest-init-ary.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-rest-init-id.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-rest-init-obj.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-rest-not-final-ary.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-rest-not-final-id.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-rest-not-final-obj.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-rest-obj-id.js
+  - [x] test/language/statements/function/dstr/ary-ptrn-rest-obj-prop-id.js
   - [ ] test/language/statements/function/dstr/dflt-ary-init-iter-close.js
   - [ ] test/language/statements/function/dstr/dflt-ary-init-iter-get-err-array-prototype.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-init-iter-get-err.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-init-iter-no-close.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-name-iter-val.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-elem-ary-elem-init.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-elem-ary-elem-iter.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-elem-ary-elision-init.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-elem-ary-elision-iter.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-elem-ary-empty-init.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-elem-ary-empty-iter.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-elem-ary-rest-init.js
+  - [x] test/language/statements/function/dstr/dflt-ary-init-iter-get-err.js
+  - [x] test/language/statements/function/dstr/dflt-ary-init-iter-no-close.js
+  - [x] test/language/statements/function/dstr/dflt-ary-name-iter-val.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elem-ary-elem-init.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elem-ary-elem-iter.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elem-ary-elision-init.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elem-ary-elision-iter.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elem-ary-empty-init.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elem-ary-empty-iter.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elem-ary-rest-init.js
   - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-elem-ary-rest-iter.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-elem-ary-val-null.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-elem-id-init-exhausted.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-elem-id-init-fn-name-arrow.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-elem-id-init-fn-name-class.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-elem-id-init-fn-name-cover.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-elem-id-init-fn-name-fn.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-elem-id-init-fn-name-gen.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-elem-id-init-hole.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-elem-id-init-skipped.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-elem-id-init-throws.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-elem-id-init-undef.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-elem-id-init-unresolvable.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-elem-id-iter-complete.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-elem-id-iter-done.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-elem-id-iter-step-err.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-elem-id-iter-val-array-prototype.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elem-ary-val-null.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elem-id-init-exhausted.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elem-id-init-fn-name-arrow.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elem-id-init-fn-name-class.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elem-id-init-fn-name-cover.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elem-id-init-fn-name-fn.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elem-id-init-fn-name-gen.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elem-id-init-hole.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elem-id-init-skipped.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elem-id-init-throws.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elem-id-init-undef.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elem-id-init-unresolvable.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elem-id-iter-complete.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elem-id-iter-done.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elem-id-iter-step-err.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elem-id-iter-val-array-prototype.js
   - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-elem-id-iter-val-err.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-elem-id-iter-val.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-elem-obj-id-init.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-elem-obj-id.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-elem-obj-prop-id-init.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-elem-obj-prop-id.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-elem-obj-val-null.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-elem-obj-val-undef.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-elision-exhausted.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-elision-step-err.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-elision.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-empty.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-rest-ary-elem.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-rest-ary-elision.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-rest-ary-empty.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-rest-ary-rest.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-rest-id-direct.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-rest-id-elision-next-err.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elem-id-iter-val.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elem-obj-id-init.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elem-obj-id.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elem-obj-prop-id-init.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elem-obj-prop-id.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elem-obj-val-null.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elem-obj-val-undef.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elision-exhausted.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elision-step-err.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elision.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-empty.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-rest-ary-elem.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-rest-ary-elision.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-rest-ary-empty.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-rest-ary-rest.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-rest-id-direct.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-rest-id-elision-next-err.js
   - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-rest-id-elision.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-rest-id-exhausted.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-rest-id-iter-step-err.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-rest-id-exhausted.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-rest-id-iter-step-err.js
   - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-rest-id-iter-val-err.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-rest-id.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-rest-init-ary.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-rest-init-id.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-rest-init-obj.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-rest-not-final-ary.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-rest-not-final-id.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-rest-not-final-obj.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-rest-obj-id.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-rest-obj-prop-id.js
-  - [ ] test/language/statements/function/dstr/dflt-obj-init-null.js
-  - [ ] test/language/statements/function/dstr/dflt-obj-init-undefined.js
-  - [ ] test/language/statements/function/dstr/dflt-obj-ptrn-empty.js
-  - [ ] test/language/statements/function/dstr/dflt-obj-ptrn-id-get-value-err.js
-  - [ ] test/language/statements/function/dstr/dflt-obj-ptrn-id-init-fn-name-arrow.js
-  - [ ] test/language/statements/function/dstr/dflt-obj-ptrn-id-init-fn-name-class.js
-  - [ ] test/language/statements/function/dstr/dflt-obj-ptrn-id-init-fn-name-cover.js
-  - [ ] test/language/statements/function/dstr/dflt-obj-ptrn-id-init-fn-name-fn.js
-  - [ ] test/language/statements/function/dstr/dflt-obj-ptrn-id-init-fn-name-gen.js
-  - [ ] test/language/statements/function/dstr/dflt-obj-ptrn-id-init-skipped.js
-  - [ ] test/language/statements/function/dstr/dflt-obj-ptrn-id-init-throws.js
-  - [ ] test/language/statements/function/dstr/dflt-obj-ptrn-id-init-unresolvable.js
-  - [ ] test/language/statements/function/dstr/dflt-obj-ptrn-id-trailing-comma.js
-  - [ ] test/language/statements/function/dstr/dflt-obj-ptrn-list-err.js
-  - [ ] test/language/statements/function/dstr/dflt-obj-ptrn-prop-ary-init.js
-  - [ ] test/language/statements/function/dstr/dflt-obj-ptrn-prop-ary-trailing-comma.js
-  - [ ] test/language/statements/function/dstr/dflt-obj-ptrn-prop-ary-value-null.js
-  - [ ] test/language/statements/function/dstr/dflt-obj-ptrn-prop-ary.js
-  - [ ] test/language/statements/function/dstr/dflt-obj-ptrn-prop-eval-err.js
-  - [ ] test/language/statements/function/dstr/dflt-obj-ptrn-prop-id-get-value-err.js
-  - [ ] test/language/statements/function/dstr/dflt-obj-ptrn-prop-id-init-skipped.js
-  - [ ] test/language/statements/function/dstr/dflt-obj-ptrn-prop-id-init-throws.js
-  - [ ] test/language/statements/function/dstr/dflt-obj-ptrn-prop-id-init-unresolvable.js
-  - [ ] test/language/statements/function/dstr/dflt-obj-ptrn-prop-id-init.js
-  - [ ] test/language/statements/function/dstr/dflt-obj-ptrn-prop-id-trailing-comma.js
-  - [ ] test/language/statements/function/dstr/dflt-obj-ptrn-prop-id.js
-  - [ ] test/language/statements/function/dstr/dflt-obj-ptrn-prop-obj-init.js
-  - [ ] test/language/statements/function/dstr/dflt-obj-ptrn-prop-obj-value-null.js
-  - [ ] test/language/statements/function/dstr/dflt-obj-ptrn-prop-obj-value-undef.js
-  - [ ] test/language/statements/function/dstr/dflt-obj-ptrn-prop-obj.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-rest-id.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-rest-init-ary.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-rest-init-id.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-rest-init-obj.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-rest-not-final-ary.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-rest-not-final-id.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-rest-not-final-obj.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-rest-obj-id.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-rest-obj-prop-id.js
+  - [x] test/language/statements/function/dstr/dflt-obj-init-null.js
+  - [x] test/language/statements/function/dstr/dflt-obj-init-undefined.js
+  - [x] test/language/statements/function/dstr/dflt-obj-ptrn-empty.js
+  - [x] test/language/statements/function/dstr/dflt-obj-ptrn-id-get-value-err.js
+  - [x] test/language/statements/function/dstr/dflt-obj-ptrn-id-init-fn-name-arrow.js
+  - [x] test/language/statements/function/dstr/dflt-obj-ptrn-id-init-fn-name-class.js
+  - [x] test/language/statements/function/dstr/dflt-obj-ptrn-id-init-fn-name-cover.js
+  - [x] test/language/statements/function/dstr/dflt-obj-ptrn-id-init-fn-name-fn.js
+  - [x] test/language/statements/function/dstr/dflt-obj-ptrn-id-init-fn-name-gen.js
+  - [x] test/language/statements/function/dstr/dflt-obj-ptrn-id-init-skipped.js
+  - [x] test/language/statements/function/dstr/dflt-obj-ptrn-id-init-throws.js
+  - [x] test/language/statements/function/dstr/dflt-obj-ptrn-id-init-unresolvable.js
+  - [x] test/language/statements/function/dstr/dflt-obj-ptrn-id-trailing-comma.js
+  - [x] test/language/statements/function/dstr/dflt-obj-ptrn-list-err.js
+  - [x] test/language/statements/function/dstr/dflt-obj-ptrn-prop-ary-init.js
+  - [x] test/language/statements/function/dstr/dflt-obj-ptrn-prop-ary-trailing-comma.js
+  - [x] test/language/statements/function/dstr/dflt-obj-ptrn-prop-ary-value-null.js
+  - [x] test/language/statements/function/dstr/dflt-obj-ptrn-prop-ary.js
+  - [x] test/language/statements/function/dstr/dflt-obj-ptrn-prop-eval-err.js
+  - [x] test/language/statements/function/dstr/dflt-obj-ptrn-prop-id-get-value-err.js
+  - [x] test/language/statements/function/dstr/dflt-obj-ptrn-prop-id-init-skipped.js
+  - [x] test/language/statements/function/dstr/dflt-obj-ptrn-prop-id-init-throws.js
+  - [x] test/language/statements/function/dstr/dflt-obj-ptrn-prop-id-init-unresolvable.js
+  - [x] test/language/statements/function/dstr/dflt-obj-ptrn-prop-id-init.js
+  - [x] test/language/statements/function/dstr/dflt-obj-ptrn-prop-id-trailing-comma.js
+  - [x] test/language/statements/function/dstr/dflt-obj-ptrn-prop-id.js
+  - [x] test/language/statements/function/dstr/dflt-obj-ptrn-prop-obj-init.js
+  - [x] test/language/statements/function/dstr/dflt-obj-ptrn-prop-obj-value-null.js
+  - [x] test/language/statements/function/dstr/dflt-obj-ptrn-prop-obj-value-undef.js
+  - [x] test/language/statements/function/dstr/dflt-obj-ptrn-prop-obj.js
   - [ ] test/language/statements/function/dstr/dflt-obj-ptrn-rest-getter.js
-  - [ ] test/language/statements/function/dstr/dflt-obj-ptrn-rest-skip-non-enumerable.js
-  - [ ] test/language/statements/function/dstr/dflt-obj-ptrn-rest-val-obj.js
-  - [ ] test/language/statements/function/dstr/obj-init-null.js
-  - [ ] test/language/statements/function/dstr/obj-init-undefined.js
-  - [ ] test/language/statements/function/dstr/obj-ptrn-empty.js
-  - [ ] test/language/statements/function/dstr/obj-ptrn-id-get-value-err.js
-  - [ ] test/language/statements/function/dstr/obj-ptrn-id-init-fn-name-arrow.js
-  - [ ] test/language/statements/function/dstr/obj-ptrn-id-init-fn-name-class.js
-  - [ ] test/language/statements/function/dstr/obj-ptrn-id-init-fn-name-cover.js
-  - [ ] test/language/statements/function/dstr/obj-ptrn-id-init-fn-name-fn.js
-  - [ ] test/language/statements/function/dstr/obj-ptrn-id-init-fn-name-gen.js
-  - [ ] test/language/statements/function/dstr/obj-ptrn-id-init-skipped.js
-  - [ ] test/language/statements/function/dstr/obj-ptrn-id-init-throws.js
-  - [ ] test/language/statements/function/dstr/obj-ptrn-id-init-unresolvable.js
-  - [ ] test/language/statements/function/dstr/obj-ptrn-id-trailing-comma.js
-  - [ ] test/language/statements/function/dstr/obj-ptrn-list-err.js
-  - [ ] test/language/statements/function/dstr/obj-ptrn-prop-ary-init.js
-  - [ ] test/language/statements/function/dstr/obj-ptrn-prop-ary-trailing-comma.js
-  - [ ] test/language/statements/function/dstr/obj-ptrn-prop-ary-value-null.js
-  - [ ] test/language/statements/function/dstr/obj-ptrn-prop-ary.js
-  - [ ] test/language/statements/function/dstr/obj-ptrn-prop-eval-err.js
-  - [ ] test/language/statements/function/dstr/obj-ptrn-prop-id-get-value-err.js
-  - [ ] test/language/statements/function/dstr/obj-ptrn-prop-id-init-skipped.js
-  - [ ] test/language/statements/function/dstr/obj-ptrn-prop-id-init-throws.js
-  - [ ] test/language/statements/function/dstr/obj-ptrn-prop-id-init-unresolvable.js
-  - [ ] test/language/statements/function/dstr/obj-ptrn-prop-id-init.js
-  - [ ] test/language/statements/function/dstr/obj-ptrn-prop-id-trailing-comma.js
-  - [ ] test/language/statements/function/dstr/obj-ptrn-prop-id.js
-  - [ ] test/language/statements/function/dstr/obj-ptrn-prop-obj-init.js
-  - [ ] test/language/statements/function/dstr/obj-ptrn-prop-obj-value-null.js
-  - [ ] test/language/statements/function/dstr/obj-ptrn-prop-obj-value-undef.js
-  - [ ] test/language/statements/function/dstr/obj-ptrn-prop-obj.js
+  - [x] test/language/statements/function/dstr/dflt-obj-ptrn-rest-skip-non-enumerable.js
+  - [x] test/language/statements/function/dstr/dflt-obj-ptrn-rest-val-obj.js
+  - [x] test/language/statements/function/dstr/obj-init-null.js
+  - [x] test/language/statements/function/dstr/obj-init-undefined.js
+  - [x] test/language/statements/function/dstr/obj-ptrn-empty.js
+  - [x] test/language/statements/function/dstr/obj-ptrn-id-get-value-err.js
+  - [x] test/language/statements/function/dstr/obj-ptrn-id-init-fn-name-arrow.js
+  - [x] test/language/statements/function/dstr/obj-ptrn-id-init-fn-name-class.js
+  - [x] test/language/statements/function/dstr/obj-ptrn-id-init-fn-name-cover.js
+  - [x] test/language/statements/function/dstr/obj-ptrn-id-init-fn-name-fn.js
+  - [x] test/language/statements/function/dstr/obj-ptrn-id-init-fn-name-gen.js
+  - [x] test/language/statements/function/dstr/obj-ptrn-id-init-skipped.js
+  - [x] test/language/statements/function/dstr/obj-ptrn-id-init-throws.js
+  - [x] test/language/statements/function/dstr/obj-ptrn-id-init-unresolvable.js
+  - [x] test/language/statements/function/dstr/obj-ptrn-id-trailing-comma.js
+  - [x] test/language/statements/function/dstr/obj-ptrn-list-err.js
+  - [x] test/language/statements/function/dstr/obj-ptrn-prop-ary-init.js
+  - [x] test/language/statements/function/dstr/obj-ptrn-prop-ary-trailing-comma.js
+  - [x] test/language/statements/function/dstr/obj-ptrn-prop-ary-value-null.js
+  - [x] test/language/statements/function/dstr/obj-ptrn-prop-ary.js
+  - [x] test/language/statements/function/dstr/obj-ptrn-prop-eval-err.js
+  - [x] test/language/statements/function/dstr/obj-ptrn-prop-id-get-value-err.js
+  - [x] test/language/statements/function/dstr/obj-ptrn-prop-id-init-skipped.js
+  - [x] test/language/statements/function/dstr/obj-ptrn-prop-id-init-throws.js
+  - [x] test/language/statements/function/dstr/obj-ptrn-prop-id-init-unresolvable.js
+  - [x] test/language/statements/function/dstr/obj-ptrn-prop-id-init.js
+  - [x] test/language/statements/function/dstr/obj-ptrn-prop-id-trailing-comma.js
+  - [x] test/language/statements/function/dstr/obj-ptrn-prop-id.js
+  - [x] test/language/statements/function/dstr/obj-ptrn-prop-obj-init.js
+  - [x] test/language/statements/function/dstr/obj-ptrn-prop-obj-value-null.js
+  - [x] test/language/statements/function/dstr/obj-ptrn-prop-obj-value-undef.js
+  - [x] test/language/statements/function/dstr/obj-ptrn-prop-obj.js
   - [ ] test/language/statements/function/dstr/obj-ptrn-rest-getter.js
-  - [ ] test/language/statements/function/dstr/obj-ptrn-rest-skip-non-enumerable.js
-  - [ ] test/language/statements/function/dstr/obj-ptrn-rest-val-obj.js
-  - [ ] test/language/statements/function/early-body-super-call.js
-  - [ ] test/language/statements/function/early-body-super-prop.js
-  - [ ] test/language/statements/function/early-errors/invalid-names-call-expression-bad-reference.js
-  - [ ] test/language/statements/function/early-errors/invalid-names-call-expression-this.js
-  - [ ] test/language/statements/function/early-errors/invalid-names-member-expression-bad-reference.js
-  - [ ] test/language/statements/function/early-errors/invalid-names-member-expression-this.js
-  - [ ] test/language/statements/function/early-params-super-call.js
-  - [ ] test/language/statements/function/early-params-super-prop.js
-  - [ ] test/language/statements/function/enable-strict-via-body.js
-  - [ ] test/language/statements/function/enable-strict-via-outer-body.js
-  - [ ] test/language/statements/function/enable-strict-via-outer-script.js
-  - [ ] test/language/statements/function/eval-var-scope-syntax-err.js
-  - [ ] test/language/statements/function/forbidden-ext/b1/cls-expr-meth-forbidden-ext-direct-access-prop-arguments.js
-  - [ ] test/language/statements/function/forbidden-ext/b1/cls-expr-meth-forbidden-ext-direct-access-prop-caller.js
-  - [ ] test/language/statements/function/forbidden-ext/b2/func-decl-forbidden-ext-indirect-access-own-prop-caller-get.js
-  - [ ] test/language/statements/function/forbidden-ext/b2/func-decl-forbidden-ext-indirect-access-own-prop-caller-value.js
-  - [ ] test/language/statements/function/forbidden-ext/b2/func-decl-forbidden-ext-indirect-access-prop-caller.js
-  - [ ] test/language/statements/function/invalid-2-names.js
-  - [ ] test/language/statements/function/invalid-3-names.js
-  - [ ] test/language/statements/function/invalid-function-body-1.js
-  - [ ] test/language/statements/function/invalid-function-body-2.js
-  - [ ] test/language/statements/function/invalid-function-body-3.js
-  - [ ] test/language/statements/function/invalid-name-dot.js
-  - [ ] test/language/statements/function/invalid-name-two-dots.js
-  - [ ] test/language/statements/function/length-dflt.js
-  - [ ] test/language/statements/function/line-terminator.js
-  - [ ] test/language/statements/function/name-arguments-non-strict.js
-  - [ ] test/language/statements/function/name-arguments-strict-body.js
-  - [ ] test/language/statements/function/name-arguments-strict.js
-  - [ ] test/language/statements/function/name-eval-non-strict.js
-  - [ ] test/language/statements/function/name-eval-strict-body.js
-  - [ ] test/language/statements/function/name-eval-strict.js
-  - [ ] test/language/statements/function/name-eval-stricteval.js
-  - [ ] test/language/statements/function/name-unicode.js
-  - [ ] test/language/statements/function/name.js
-  - [ ] test/language/statements/function/object-destructuring-param-strict-body.js
-  - [ ] test/language/statements/function/param-arguments-non-strict.js
-  - [ ] test/language/statements/function/param-arguments-strict-body.js
-  - [ ] test/language/statements/function/param-arguments-strict.js
-  - [ ] test/language/statements/function/param-dflt-yield-non-strict.js
-  - [ ] test/language/statements/function/param-dflt-yield-strict.js
-  - [ ] test/language/statements/function/param-duplicated-non-strict.js
-  - [ ] test/language/statements/function/param-duplicated-strict-1.js
-  - [ ] test/language/statements/function/param-duplicated-strict-2.js
-  - [ ] test/language/statements/function/param-duplicated-strict-3.js
-  - [ ] test/language/statements/function/param-duplicated-strict-body-1.js
-  - [ ] test/language/statements/function/param-duplicated-strict-body-2.js
-  - [ ] test/language/statements/function/param-duplicated-strict-body-3.js
-  - [ ] test/language/statements/function/param-eval-non-strict-is-correct-value.js
-  - [ ] test/language/statements/function/param-eval-non-strict.js
-  - [ ] test/language/statements/function/param-eval-strict-body.js
-  - [ ] test/language/statements/function/param-eval-strict.js
-  - [ ] test/language/statements/function/param-eval-stricteval.js
-  - [ ] test/language/statements/function/params-dflt-args-unmapped.js
-  - [ ] test/language/statements/function/params-dflt-ref-arguments.js
-  - [ ] test/language/statements/function/params-trailing-comma-multiple.js
-  - [ ] test/language/statements/function/params-trailing-comma-single.js
-  - [ ] test/language/statements/function/rest-param-strict-body.js
-  - [ ] test/language/statements/function/rest-params-trailing-comma-early-error.js
+  - [x] test/language/statements/function/dstr/obj-ptrn-rest-skip-non-enumerable.js
+  - [x] test/language/statements/function/dstr/obj-ptrn-rest-val-obj.js
+  - [x] test/language/statements/function/early-body-super-call.js
+  - [x] test/language/statements/function/early-body-super-prop.js
+  - [x] test/language/statements/function/early-errors/invalid-names-call-expression-bad-reference.js
+  - [x] test/language/statements/function/early-errors/invalid-names-call-expression-this.js
+  - [x] test/language/statements/function/early-errors/invalid-names-member-expression-bad-reference.js
+  - [x] test/language/statements/function/early-errors/invalid-names-member-expression-this.js
+  - [x] test/language/statements/function/early-params-super-call.js
+  - [x] test/language/statements/function/early-params-super-prop.js
+  - [x] test/language/statements/function/enable-strict-via-body.js
+  - [x] test/language/statements/function/enable-strict-via-outer-body.js
+  - [x] test/language/statements/function/enable-strict-via-outer-script.js
+  - [x] test/language/statements/function/eval-var-scope-syntax-err.js
+  - [x] test/language/statements/function/forbidden-ext/b1/cls-expr-meth-forbidden-ext-direct-access-prop-arguments.js
+  - [x] test/language/statements/function/forbidden-ext/b1/cls-expr-meth-forbidden-ext-direct-access-prop-caller.js
+  - [x] test/language/statements/function/forbidden-ext/b2/func-decl-forbidden-ext-indirect-access-own-prop-caller-get.js
+  - [x] test/language/statements/function/forbidden-ext/b2/func-decl-forbidden-ext-indirect-access-own-prop-caller-value.js
+  - [x] test/language/statements/function/forbidden-ext/b2/func-decl-forbidden-ext-indirect-access-prop-caller.js
+  - [x] test/language/statements/function/invalid-2-names.js
+  - [x] test/language/statements/function/invalid-3-names.js
+  - [x] test/language/statements/function/invalid-function-body-1.js
+  - [x] test/language/statements/function/invalid-function-body-2.js
+  - [x] test/language/statements/function/invalid-function-body-3.js
+  - [x] test/language/statements/function/invalid-name-dot.js
+  - [x] test/language/statements/function/invalid-name-two-dots.js
+  - [x] test/language/statements/function/length-dflt.js
+  - [x] test/language/statements/function/line-terminator.js
+  - [x] test/language/statements/function/name-arguments-non-strict.js
+  - [x] test/language/statements/function/name-arguments-strict-body.js
+  - [x] test/language/statements/function/name-arguments-strict.js
+  - [x] test/language/statements/function/name-eval-non-strict.js
+  - [x] test/language/statements/function/name-eval-strict-body.js
+  - [x] test/language/statements/function/name-eval-strict.js
+  - [x] test/language/statements/function/name-eval-stricteval.js
+  - [x] test/language/statements/function/name-unicode.js
+  - [x] test/language/statements/function/name.js
+  - [x] test/language/statements/function/object-destructuring-param-strict-body.js
+  - [x] test/language/statements/function/param-arguments-non-strict.js
+  - [x] test/language/statements/function/param-arguments-strict-body.js
+  - [x] test/language/statements/function/param-arguments-strict.js
+  - [x] test/language/statements/function/param-dflt-yield-non-strict.js
+  - [x] test/language/statements/function/param-dflt-yield-strict.js
+  - [x] test/language/statements/function/param-duplicated-non-strict.js
+  - [x] test/language/statements/function/param-duplicated-strict-1.js
+  - [x] test/language/statements/function/param-duplicated-strict-2.js
+  - [x] test/language/statements/function/param-duplicated-strict-3.js
+  - [x] test/language/statements/function/param-duplicated-strict-body-1.js
+  - [x] test/language/statements/function/param-duplicated-strict-body-2.js
+  - [x] test/language/statements/function/param-duplicated-strict-body-3.js
+  - [x] test/language/statements/function/param-eval-non-strict-is-correct-value.js
+  - [x] test/language/statements/function/param-eval-non-strict.js
+  - [x] test/language/statements/function/param-eval-strict-body.js
+  - [x] test/language/statements/function/param-eval-strict.js
+  - [x] test/language/statements/function/param-eval-stricteval.js
+  - [x] test/language/statements/function/params-dflt-args-unmapped.js
+  - [x] test/language/statements/function/params-dflt-ref-arguments.js
+  - [x] test/language/statements/function/params-trailing-comma-multiple.js
+  - [x] test/language/statements/function/params-trailing-comma-single.js
+  - [x] test/language/statements/function/rest-param-strict-body.js
+  - [x] test/language/statements/function/rest-params-trailing-comma-early-error.js
   - [ ] test/language/statements/function/scope-body-lex-distinct.js
   - [ ] test/language/statements/function/scope-param-elem-var-close.js
   - [ ] test/language/statements/function/scope-param-elem-var-open.js
@@ -10707,313 +10707,313 @@ Sub-category progress
   - [ ] test/language/statements/with/unscopables-not-referenced-for-undef.js
   - [ ] test/language/statements/with/unscopables-prop-get-err.js
 - [ ] expressions
-  - [ ] test/language/expressions/addition/S11.6.1_A1.js
-  - [ ] test/language/expressions/addition/S11.6.1_A2.1_T1.js
-  - [ ] test/language/expressions/addition/S11.6.1_A2.1_T2.js
-  - [ ] test/language/expressions/addition/S11.6.1_A2.1_T3.js
-  - [ ] test/language/expressions/addition/S11.6.1_A2.2_T1.js
+  - [x] test/language/expressions/addition/S11.6.1_A1.js
+  - [x] test/language/expressions/addition/S11.6.1_A2.1_T1.js
+  - [x] test/language/expressions/addition/S11.6.1_A2.1_T2.js
+  - [x] test/language/expressions/addition/S11.6.1_A2.1_T3.js
+  - [x] test/language/expressions/addition/S11.6.1_A2.2_T1.js
   - [ ] test/language/expressions/addition/S11.6.1_A2.2_T2.js
-  - [ ] test/language/expressions/addition/S11.6.1_A2.2_T3.js
-  - [ ] test/language/expressions/addition/S11.6.1_A2.3_T1.js
-  - [ ] test/language/expressions/addition/S11.6.1_A2.4_T1.js
-  - [ ] test/language/expressions/addition/S11.6.1_A2.4_T2.js
-  - [ ] test/language/expressions/addition/S11.6.1_A2.4_T3.js
-  - [ ] test/language/expressions/addition/S11.6.1_A2.4_T4.js
-  - [ ] test/language/expressions/addition/S11.6.1_A3.1_T1.1.js
-  - [ ] test/language/expressions/addition/S11.6.1_A3.1_T1.2.js
-  - [ ] test/language/expressions/addition/S11.6.1_A3.1_T1.3.js
-  - [ ] test/language/expressions/addition/S11.6.1_A3.1_T2.1.js
-  - [ ] test/language/expressions/addition/S11.6.1_A3.1_T2.2.js
-  - [ ] test/language/expressions/addition/S11.6.1_A3.1_T2.3.js
-  - [ ] test/language/expressions/addition/S11.6.1_A3.1_T2.4.js
-  - [ ] test/language/expressions/addition/S11.6.1_A3.1_T2.5.js
-  - [ ] test/language/expressions/addition/S11.6.1_A3.2_T1.1.js
-  - [ ] test/language/expressions/addition/S11.6.1_A3.2_T1.2.js
-  - [ ] test/language/expressions/addition/S11.6.1_A3.2_T2.1.js
-  - [ ] test/language/expressions/addition/S11.6.1_A3.2_T2.2.js
-  - [ ] test/language/expressions/addition/S11.6.1_A3.2_T2.3.js
-  - [ ] test/language/expressions/addition/S11.6.1_A3.2_T2.4.js
-  - [ ] test/language/expressions/addition/S11.6.1_A4_T1.js
-  - [ ] test/language/expressions/addition/S11.6.1_A4_T2.js
-  - [ ] test/language/expressions/addition/S11.6.1_A4_T3.js
-  - [ ] test/language/expressions/addition/S11.6.1_A4_T4.js
-  - [ ] test/language/expressions/addition/S11.6.1_A4_T5.js
-  - [ ] test/language/expressions/addition/S11.6.1_A4_T6.js
-  - [ ] test/language/expressions/addition/S11.6.1_A4_T7.js
-  - [ ] test/language/expressions/addition/S11.6.1_A4_T8.js
-  - [ ] test/language/expressions/addition/S11.6.1_A4_T9.js
-  - [ ] test/language/expressions/addition/bigint-and-number.js
-  - [ ] test/language/expressions/addition/bigint-arithmetic.js
+  - [x] test/language/expressions/addition/S11.6.1_A2.2_T3.js
+  - [x] test/language/expressions/addition/S11.6.1_A2.3_T1.js
+  - [x] test/language/expressions/addition/S11.6.1_A2.4_T1.js
+  - [x] test/language/expressions/addition/S11.6.1_A2.4_T2.js
+  - [x] test/language/expressions/addition/S11.6.1_A2.4_T3.js
+  - [x] test/language/expressions/addition/S11.6.1_A2.4_T4.js
+  - [x] test/language/expressions/addition/S11.6.1_A3.1_T1.1.js
+  - [x] test/language/expressions/addition/S11.6.1_A3.1_T1.2.js
+  - [x] test/language/expressions/addition/S11.6.1_A3.1_T1.3.js
+  - [x] test/language/expressions/addition/S11.6.1_A3.1_T2.1.js
+  - [x] test/language/expressions/addition/S11.6.1_A3.1_T2.2.js
+  - [x] test/language/expressions/addition/S11.6.1_A3.1_T2.3.js
+  - [x] test/language/expressions/addition/S11.6.1_A3.1_T2.4.js
+  - [x] test/language/expressions/addition/S11.6.1_A3.1_T2.5.js
+  - [x] test/language/expressions/addition/S11.6.1_A3.2_T1.1.js
+  - [x] test/language/expressions/addition/S11.6.1_A3.2_T1.2.js
+  - [x] test/language/expressions/addition/S11.6.1_A3.2_T2.1.js
+  - [x] test/language/expressions/addition/S11.6.1_A3.2_T2.2.js
+  - [x] test/language/expressions/addition/S11.6.1_A3.2_T2.3.js
+  - [x] test/language/expressions/addition/S11.6.1_A3.2_T2.4.js
+  - [x] test/language/expressions/addition/S11.6.1_A4_T1.js
+  - [x] test/language/expressions/addition/S11.6.1_A4_T2.js
+  - [x] test/language/expressions/addition/S11.6.1_A4_T3.js
+  - [x] test/language/expressions/addition/S11.6.1_A4_T4.js
+  - [x] test/language/expressions/addition/S11.6.1_A4_T5.js
+  - [x] test/language/expressions/addition/S11.6.1_A4_T6.js
+  - [x] test/language/expressions/addition/S11.6.1_A4_T7.js
+  - [x] test/language/expressions/addition/S11.6.1_A4_T8.js
+  - [x] test/language/expressions/addition/S11.6.1_A4_T9.js
+  - [x] test/language/expressions/addition/bigint-and-number.js
+  - [x] test/language/expressions/addition/bigint-arithmetic.js
   - [ ] test/language/expressions/addition/bigint-errors.js
-  - [ ] test/language/expressions/addition/bigint-toprimitive.js
-  - [ ] test/language/expressions/addition/bigint-wrapped-values.js
-  - [ ] test/language/expressions/addition/coerce-bigint-to-string.js
+  - [x] test/language/expressions/addition/bigint-toprimitive.js
+  - [x] test/language/expressions/addition/bigint-wrapped-values.js
+  - [x] test/language/expressions/addition/coerce-bigint-to-string.js
   - [ ] test/language/expressions/addition/coerce-symbol-to-prim-err.js
-  - [ ] test/language/expressions/addition/coerce-symbol-to-prim-invocation.js
-  - [ ] test/language/expressions/addition/coerce-symbol-to-prim-return-obj.js
-  - [ ] test/language/expressions/addition/coerce-symbol-to-prim-return-prim.js
+  - [x] test/language/expressions/addition/coerce-symbol-to-prim-invocation.js
+  - [x] test/language/expressions/addition/coerce-symbol-to-prim-return-obj.js
+  - [x] test/language/expressions/addition/coerce-symbol-to-prim-return-prim.js
   - [ ] test/language/expressions/addition/get-symbol-to-prim-err.js
   - [ ] test/language/expressions/addition/order-of-evaluation.js
-  - [ ] test/language/expressions/addition/symbol-to-string.js
-  - [ ] test/language/expressions/array/11.1.4-0.js
-  - [ ] test/language/expressions/array/11.1.4_4-5-1.js
-  - [ ] test/language/expressions/array/11.1.4_5-6-1.js
-  - [ ] test/language/expressions/array/S11.1.4_A1.1.js
-  - [ ] test/language/expressions/array/S11.1.4_A1.2.js
-  - [ ] test/language/expressions/array/S11.1.4_A1.3.js
-  - [ ] test/language/expressions/array/S11.1.4_A1.4.js
-  - [ ] test/language/expressions/array/S11.1.4_A1.5.js
-  - [ ] test/language/expressions/array/S11.1.4_A1.6.js
-  - [ ] test/language/expressions/array/S11.1.4_A1.7.js
+  - [x] test/language/expressions/addition/symbol-to-string.js
+  - [x] test/language/expressions/array/11.1.4-0.js
+  - [x] test/language/expressions/array/11.1.4_4-5-1.js
+  - [x] test/language/expressions/array/11.1.4_5-6-1.js
+  - [x] test/language/expressions/array/S11.1.4_A1.1.js
+  - [x] test/language/expressions/array/S11.1.4_A1.2.js
+  - [x] test/language/expressions/array/S11.1.4_A1.3.js
+  - [x] test/language/expressions/array/S11.1.4_A1.4.js
+  - [x] test/language/expressions/array/S11.1.4_A1.5.js
+  - [x] test/language/expressions/array/S11.1.4_A1.6.js
+  - [x] test/language/expressions/array/S11.1.4_A1.7.js
   - [ ] test/language/expressions/array/S11.1.4_A2.js
-  - [ ] test/language/expressions/array/spread-err-mult-err-expr-throws.js
-  - [ ] test/language/expressions/array/spread-err-mult-err-iter-get-value.js
-  - [ ] test/language/expressions/array/spread-err-mult-err-itr-get-call.js
-  - [ ] test/language/expressions/array/spread-err-mult-err-itr-get-get.js
-  - [ ] test/language/expressions/array/spread-err-mult-err-itr-step.js
-  - [ ] test/language/expressions/array/spread-err-mult-err-itr-value.js
-  - [ ] test/language/expressions/array/spread-err-mult-err-obj-unresolvable.js
-  - [ ] test/language/expressions/array/spread-err-mult-err-unresolvable.js
-  - [ ] test/language/expressions/array/spread-err-sngl-err-expr-throws.js
-  - [ ] test/language/expressions/array/spread-err-sngl-err-itr-get-call.js
-  - [ ] test/language/expressions/array/spread-err-sngl-err-itr-get-get.js
-  - [ ] test/language/expressions/array/spread-err-sngl-err-itr-get-value.js
-  - [ ] test/language/expressions/array/spread-err-sngl-err-itr-step.js
-  - [ ] test/language/expressions/array/spread-err-sngl-err-itr-value.js
-  - [ ] test/language/expressions/array/spread-err-sngl-err-obj-unresolvable.js
-  - [ ] test/language/expressions/array/spread-err-sngl-err-unresolvable.js
-  - [ ] test/language/expressions/array/spread-mult-empty.js
-  - [ ] test/language/expressions/array/spread-mult-expr.js
+  - [x] test/language/expressions/array/spread-err-mult-err-expr-throws.js
+  - [x] test/language/expressions/array/spread-err-mult-err-iter-get-value.js
+  - [x] test/language/expressions/array/spread-err-mult-err-itr-get-call.js
+  - [x] test/language/expressions/array/spread-err-mult-err-itr-get-get.js
+  - [x] test/language/expressions/array/spread-err-mult-err-itr-step.js
+  - [x] test/language/expressions/array/spread-err-mult-err-itr-value.js
+  - [x] test/language/expressions/array/spread-err-mult-err-obj-unresolvable.js
+  - [x] test/language/expressions/array/spread-err-mult-err-unresolvable.js
+  - [x] test/language/expressions/array/spread-err-sngl-err-expr-throws.js
+  - [x] test/language/expressions/array/spread-err-sngl-err-itr-get-call.js
+  - [x] test/language/expressions/array/spread-err-sngl-err-itr-get-get.js
+  - [x] test/language/expressions/array/spread-err-sngl-err-itr-get-value.js
+  - [x] test/language/expressions/array/spread-err-sngl-err-itr-step.js
+  - [x] test/language/expressions/array/spread-err-sngl-err-itr-value.js
+  - [x] test/language/expressions/array/spread-err-sngl-err-obj-unresolvable.js
+  - [x] test/language/expressions/array/spread-err-sngl-err-unresolvable.js
+  - [x] test/language/expressions/array/spread-mult-empty.js
+  - [x] test/language/expressions/array/spread-mult-expr.js
   - [ ] test/language/expressions/array/spread-mult-iter.js
-  - [ ] test/language/expressions/array/spread-mult-literal.js
-  - [ ] test/language/expressions/array/spread-mult-obj-ident.js
-  - [ ] test/language/expressions/array/spread-mult-obj-null.js
-  - [ ] test/language/expressions/array/spread-mult-obj-undefined.js
-  - [ ] test/language/expressions/array/spread-obj-getter-descriptor.js
-  - [ ] test/language/expressions/array/spread-obj-getter-init.js
-  - [ ] test/language/expressions/array/spread-obj-manipulate-outter-obj-in-getter.js
-  - [ ] test/language/expressions/array/spread-obj-mult-spread-getter.js
-  - [ ] test/language/expressions/array/spread-obj-mult-spread.js
-  - [ ] test/language/expressions/array/spread-obj-null.js
-  - [ ] test/language/expressions/array/spread-obj-override-immutable.js
-  - [ ] test/language/expressions/array/spread-obj-overrides-prev-properties.js
-  - [ ] test/language/expressions/array/spread-obj-skip-non-enumerable.js
+  - [x] test/language/expressions/array/spread-mult-literal.js
+  - [x] test/language/expressions/array/spread-mult-obj-ident.js
+  - [x] test/language/expressions/array/spread-mult-obj-null.js
+  - [x] test/language/expressions/array/spread-mult-obj-undefined.js
+  - [x] test/language/expressions/array/spread-obj-getter-descriptor.js
+  - [x] test/language/expressions/array/spread-obj-getter-init.js
+  - [x] test/language/expressions/array/spread-obj-manipulate-outter-obj-in-getter.js
+  - [x] test/language/expressions/array/spread-obj-mult-spread-getter.js
+  - [x] test/language/expressions/array/spread-obj-mult-spread.js
+  - [x] test/language/expressions/array/spread-obj-null.js
+  - [x] test/language/expressions/array/spread-obj-override-immutable.js
+  - [x] test/language/expressions/array/spread-obj-overrides-prev-properties.js
+  - [x] test/language/expressions/array/spread-obj-skip-non-enumerable.js
   - [ ] test/language/expressions/array/spread-obj-spread-order.js
-  - [ ] test/language/expressions/array/spread-obj-symbol-property.js
-  - [ ] test/language/expressions/array/spread-obj-undefined.js
-  - [ ] test/language/expressions/array/spread-obj-with-overrides.js
-  - [ ] test/language/expressions/array/spread-sngl-empty.js
-  - [ ] test/language/expressions/array/spread-sngl-expr.js
+  - [x] test/language/expressions/array/spread-obj-symbol-property.js
+  - [x] test/language/expressions/array/spread-obj-undefined.js
+  - [x] test/language/expressions/array/spread-obj-with-overrides.js
+  - [x] test/language/expressions/array/spread-sngl-empty.js
+  - [x] test/language/expressions/array/spread-sngl-expr.js
   - [ ] test/language/expressions/array/spread-sngl-iter.js
-  - [ ] test/language/expressions/array/spread-sngl-literal.js
-  - [ ] test/language/expressions/array/spread-sngl-obj-ident.js
-  - [ ] test/language/expressions/arrow-function/ArrowFunction_restricted-properties.js
-  - [ ] test/language/expressions/arrow-function/array-destructuring-param-strict-body.js
-  - [ ] test/language/expressions/arrow-function/arrow/binding-tests-1.js
-  - [ ] test/language/expressions/arrow-function/arrow/binding-tests-2.js
-  - [ ] test/language/expressions/arrow-function/arrow/binding-tests-3.js
-  - [ ] test/language/expressions/arrow-function/arrow/capturing-closure-variables-1.js
-  - [ ] test/language/expressions/arrow-function/arrow/capturing-closure-variables-2.js
-  - [ ] test/language/expressions/arrow-function/arrow/concisebody-lookahead-assignmentexpression-1.js
-  - [ ] test/language/expressions/arrow-function/arrow/concisebody-lookahead-assignmentexpression-2.js
-  - [ ] test/language/expressions/arrow-function/cannot-override-this-with-thisArg.js
-  - [ ] test/language/expressions/arrow-function/dflt-params-abrupt.js
-  - [ ] test/language/expressions/arrow-function/dflt-params-arg-val-not-undefined.js
-  - [ ] test/language/expressions/arrow-function/dflt-params-arg-val-undefined.js
-  - [ ] test/language/expressions/arrow-function/dflt-params-duplicates.js
-  - [ ] test/language/expressions/arrow-function/dflt-params-ref-later.js
-  - [ ] test/language/expressions/arrow-function/dflt-params-ref-prior.js
-  - [ ] test/language/expressions/arrow-function/dflt-params-ref-self.js
-  - [ ] test/language/expressions/arrow-function/dflt-params-rest.js
-  - [ ] test/language/expressions/arrow-function/dflt-params-trailing-comma.js
+  - [x] test/language/expressions/array/spread-sngl-literal.js
+  - [x] test/language/expressions/array/spread-sngl-obj-ident.js
+  - [x] test/language/expressions/arrow-function/ArrowFunction_restricted-properties.js
+  - [x] test/language/expressions/arrow-function/array-destructuring-param-strict-body.js
+  - [x] test/language/expressions/arrow-function/arrow/binding-tests-1.js
+  - [x] test/language/expressions/arrow-function/arrow/binding-tests-2.js
+  - [x] test/language/expressions/arrow-function/arrow/binding-tests-3.js
+  - [x] test/language/expressions/arrow-function/arrow/capturing-closure-variables-1.js
+  - [x] test/language/expressions/arrow-function/arrow/capturing-closure-variables-2.js
+  - [x] test/language/expressions/arrow-function/arrow/concisebody-lookahead-assignmentexpression-1.js
+  - [x] test/language/expressions/arrow-function/arrow/concisebody-lookahead-assignmentexpression-2.js
+  - [x] test/language/expressions/arrow-function/cannot-override-this-with-thisArg.js
+  - [x] test/language/expressions/arrow-function/dflt-params-abrupt.js
+  - [x] test/language/expressions/arrow-function/dflt-params-arg-val-not-undefined.js
+  - [x] test/language/expressions/arrow-function/dflt-params-arg-val-undefined.js
+  - [x] test/language/expressions/arrow-function/dflt-params-duplicates.js
+  - [x] test/language/expressions/arrow-function/dflt-params-ref-later.js
+  - [x] test/language/expressions/arrow-function/dflt-params-ref-prior.js
+  - [x] test/language/expressions/arrow-function/dflt-params-ref-self.js
+  - [x] test/language/expressions/arrow-function/dflt-params-rest.js
+  - [x] test/language/expressions/arrow-function/dflt-params-trailing-comma.js
   - [ ] test/language/expressions/arrow-function/dstr/ary-init-iter-close.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-init-iter-get-err-array-prototype.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-init-iter-get-err.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-init-iter-get-err-array-prototype.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-init-iter-get-err.js
   - [ ] test/language/expressions/arrow-function/dstr/ary-init-iter-no-close.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-name-iter-val.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-ary-elem-init.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-ary-elem-iter.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-ary-elision-init.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-ary-elision-iter.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-ary-empty-init.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-ary-empty-iter.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-ary-rest-init.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-ary-rest-iter.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-ary-val-null.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-id-init-exhausted.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-id-init-fn-name-arrow.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-id-init-fn-name-class.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-id-init-fn-name-cover.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-id-init-fn-name-fn.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-id-init-fn-name-gen.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-id-init-hole.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-id-init-skipped.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-id-init-throws.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-id-init-undef.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-id-init-unresolvable.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-id-iter-complete.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-id-iter-done.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-id-iter-step-err.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-id-iter-val-array-prototype.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-id-iter-val-err.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-id-iter-val.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-obj-id-init.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-obj-id.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-obj-prop-id-init.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-obj-prop-id.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-obj-val-null.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-obj-val-undef.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-elision-exhausted.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-elision-step-err.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-elision.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-empty.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-rest-ary-elem.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-rest-ary-elision.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-rest-ary-empty.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-rest-ary-rest.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-rest-id-direct.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-rest-id-elision-next-err.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-rest-id-elision.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-rest-id-exhausted.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-rest-id-iter-step-err.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-rest-id-iter-val-err.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-rest-id.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-rest-init-ary.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-rest-init-id.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-rest-init-obj.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-rest-not-final-ary.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-rest-not-final-id.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-rest-not-final-obj.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-rest-obj-id.js
-  - [ ] test/language/expressions/arrow-function/dstr/ary-ptrn-rest-obj-prop-id.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-name-iter-val.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-ary-elem-init.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-ary-elem-iter.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-ary-elision-init.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-ary-elision-iter.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-ary-empty-init.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-ary-empty-iter.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-ary-rest-init.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-ary-rest-iter.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-ary-val-null.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-id-init-exhausted.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-id-init-fn-name-arrow.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-id-init-fn-name-class.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-id-init-fn-name-cover.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-id-init-fn-name-fn.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-id-init-fn-name-gen.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-id-init-hole.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-id-init-skipped.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-id-init-throws.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-id-init-undef.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-id-init-unresolvable.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-id-iter-complete.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-id-iter-done.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-id-iter-step-err.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-id-iter-val-array-prototype.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-id-iter-val-err.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-id-iter-val.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-obj-id-init.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-obj-id.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-obj-prop-id-init.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-obj-prop-id.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-obj-val-null.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-elem-obj-val-undef.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-elision-exhausted.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-elision-step-err.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-elision.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-empty.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-rest-ary-elem.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-rest-ary-elision.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-rest-ary-empty.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-rest-ary-rest.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-rest-id-direct.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-rest-id-elision-next-err.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-rest-id-elision.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-rest-id-exhausted.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-rest-id-iter-step-err.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-rest-id-iter-val-err.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-rest-id.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-rest-init-ary.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-rest-init-id.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-rest-init-obj.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-rest-not-final-ary.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-rest-not-final-id.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-rest-not-final-obj.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-rest-obj-id.js
+  - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-rest-obj-prop-id.js
   - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-init-iter-close.js
   - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-init-iter-get-err-array-prototype.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-init-iter-get-err.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-init-iter-no-close.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-name-iter-val.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-ary-elem-init.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-ary-elem-iter.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-ary-elision-init.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-ary-elision-iter.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-ary-empty-init.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-ary-empty-iter.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-ary-rest-init.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-init-iter-get-err.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-init-iter-no-close.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-name-iter-val.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-ary-elem-init.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-ary-elem-iter.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-ary-elision-init.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-ary-elision-iter.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-ary-empty-init.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-ary-empty-iter.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-ary-rest-init.js
   - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-ary-rest-iter.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-ary-val-null.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-id-init-exhausted.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-id-init-fn-name-arrow.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-id-init-fn-name-class.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-id-init-fn-name-cover.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-id-init-fn-name-fn.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-id-init-fn-name-gen.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-id-init-hole.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-id-init-skipped.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-id-init-throws.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-id-init-undef.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-id-init-unresolvable.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-id-iter-complete.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-id-iter-done.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-id-iter-step-err.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-id-iter-val-array-prototype.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-ary-val-null.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-id-init-exhausted.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-id-init-fn-name-arrow.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-id-init-fn-name-class.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-id-init-fn-name-cover.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-id-init-fn-name-fn.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-id-init-fn-name-gen.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-id-init-hole.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-id-init-skipped.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-id-init-throws.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-id-init-undef.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-id-init-unresolvable.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-id-iter-complete.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-id-iter-done.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-id-iter-step-err.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-id-iter-val-array-prototype.js
   - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-id-iter-val-err.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-id-iter-val.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-obj-id-init.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-obj-id.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-obj-prop-id-init.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-obj-prop-id.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-obj-val-null.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-obj-val-undef.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elision-exhausted.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elision-step-err.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elision.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-empty.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-rest-ary-elem.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-rest-ary-elision.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-rest-ary-empty.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-rest-ary-rest.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-rest-id-direct.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-rest-id-elision-next-err.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-id-iter-val.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-obj-id-init.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-obj-id.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-obj-prop-id-init.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-obj-prop-id.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-obj-val-null.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-obj-val-undef.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elision-exhausted.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elision-step-err.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elision.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-empty.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-rest-ary-elem.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-rest-ary-elision.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-rest-ary-empty.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-rest-ary-rest.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-rest-id-direct.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-rest-id-elision-next-err.js
   - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-rest-id-elision.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-rest-id-exhausted.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-rest-id-iter-step-err.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-rest-id-exhausted.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-rest-id-iter-step-err.js
   - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-rest-id-iter-val-err.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-rest-id.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-rest-init-ary.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-rest-init-id.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-rest-init-obj.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-rest-not-final-ary.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-rest-not-final-id.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-rest-not-final-obj.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-rest-obj-id.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-rest-obj-prop-id.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-obj-init-null.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-obj-init-undefined.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-empty.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-id-get-value-err.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-id-init-fn-name-arrow.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-id-init-fn-name-class.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-id-init-fn-name-cover.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-id-init-fn-name-fn.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-id-init-fn-name-gen.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-id-init-skipped.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-id-init-throws.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-id-init-unresolvable.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-id-trailing-comma.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-list-err.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-prop-ary-init.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-prop-ary-trailing-comma.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-prop-ary-value-null.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-prop-ary.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-prop-eval-err.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-prop-id-get-value-err.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-prop-id-init-skipped.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-prop-id-init-throws.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-prop-id-init-unresolvable.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-prop-id-init.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-prop-id-trailing-comma.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-prop-id.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-prop-obj-init.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-prop-obj-value-null.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-prop-obj-value-undef.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-prop-obj.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-rest-id.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-rest-init-ary.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-rest-init-id.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-rest-init-obj.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-rest-not-final-ary.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-rest-not-final-id.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-rest-not-final-obj.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-rest-obj-id.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-rest-obj-prop-id.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-obj-init-null.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-obj-init-undefined.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-empty.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-id-get-value-err.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-id-init-fn-name-arrow.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-id-init-fn-name-class.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-id-init-fn-name-cover.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-id-init-fn-name-fn.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-id-init-fn-name-gen.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-id-init-skipped.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-id-init-throws.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-id-init-unresolvable.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-id-trailing-comma.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-list-err.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-prop-ary-init.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-prop-ary-trailing-comma.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-prop-ary-value-null.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-prop-ary.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-prop-eval-err.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-prop-id-get-value-err.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-prop-id-init-skipped.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-prop-id-init-throws.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-prop-id-init-unresolvable.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-prop-id-init.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-prop-id-trailing-comma.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-prop-id.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-prop-obj-init.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-prop-obj-value-null.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-prop-obj-value-undef.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-prop-obj.js
   - [ ] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-rest-getter.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-rest-skip-non-enumerable.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-rest-val-obj.js
-  - [ ] test/language/expressions/arrow-function/dstr/obj-init-null.js
-  - [ ] test/language/expressions/arrow-function/dstr/obj-init-undefined.js
-  - [ ] test/language/expressions/arrow-function/dstr/obj-ptrn-empty.js
-  - [ ] test/language/expressions/arrow-function/dstr/obj-ptrn-id-get-value-err.js
-  - [ ] test/language/expressions/arrow-function/dstr/obj-ptrn-id-init-fn-name-arrow.js
-  - [ ] test/language/expressions/arrow-function/dstr/obj-ptrn-id-init-fn-name-class.js
-  - [ ] test/language/expressions/arrow-function/dstr/obj-ptrn-id-init-fn-name-cover.js
-  - [ ] test/language/expressions/arrow-function/dstr/obj-ptrn-id-init-fn-name-fn.js
-  - [ ] test/language/expressions/arrow-function/dstr/obj-ptrn-id-init-fn-name-gen.js
-  - [ ] test/language/expressions/arrow-function/dstr/obj-ptrn-id-init-skipped.js
-  - [ ] test/language/expressions/arrow-function/dstr/obj-ptrn-id-init-throws.js
-  - [ ] test/language/expressions/arrow-function/dstr/obj-ptrn-id-init-unresolvable.js
-  - [ ] test/language/expressions/arrow-function/dstr/obj-ptrn-id-trailing-comma.js
-  - [ ] test/language/expressions/arrow-function/dstr/obj-ptrn-list-err.js
-  - [ ] test/language/expressions/arrow-function/dstr/obj-ptrn-prop-ary-init.js
-  - [ ] test/language/expressions/arrow-function/dstr/obj-ptrn-prop-ary-trailing-comma.js
-  - [ ] test/language/expressions/arrow-function/dstr/obj-ptrn-prop-ary-value-null.js
-  - [ ] test/language/expressions/arrow-function/dstr/obj-ptrn-prop-ary.js
-  - [ ] test/language/expressions/arrow-function/dstr/obj-ptrn-prop-eval-err.js
-  - [ ] test/language/expressions/arrow-function/dstr/obj-ptrn-prop-id-get-value-err.js
-  - [ ] test/language/expressions/arrow-function/dstr/obj-ptrn-prop-id-init-skipped.js
-  - [ ] test/language/expressions/arrow-function/dstr/obj-ptrn-prop-id-init-throws.js
-  - [ ] test/language/expressions/arrow-function/dstr/obj-ptrn-prop-id-init-unresolvable.js
-  - [ ] test/language/expressions/arrow-function/dstr/obj-ptrn-prop-id-init.js
-  - [ ] test/language/expressions/arrow-function/dstr/obj-ptrn-prop-id-trailing-comma.js
-  - [ ] test/language/expressions/arrow-function/dstr/obj-ptrn-prop-id.js
-  - [ ] test/language/expressions/arrow-function/dstr/obj-ptrn-prop-obj-init.js
-  - [ ] test/language/expressions/arrow-function/dstr/obj-ptrn-prop-obj-value-null.js
-  - [ ] test/language/expressions/arrow-function/dstr/obj-ptrn-prop-obj-value-undef.js
-  - [ ] test/language/expressions/arrow-function/dstr/obj-ptrn-prop-obj.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-rest-skip-non-enumerable.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-rest-val-obj.js
+  - [x] test/language/expressions/arrow-function/dstr/obj-init-null.js
+  - [x] test/language/expressions/arrow-function/dstr/obj-init-undefined.js
+  - [x] test/language/expressions/arrow-function/dstr/obj-ptrn-empty.js
+  - [x] test/language/expressions/arrow-function/dstr/obj-ptrn-id-get-value-err.js
+  - [x] test/language/expressions/arrow-function/dstr/obj-ptrn-id-init-fn-name-arrow.js
+  - [x] test/language/expressions/arrow-function/dstr/obj-ptrn-id-init-fn-name-class.js
+  - [x] test/language/expressions/arrow-function/dstr/obj-ptrn-id-init-fn-name-cover.js
+  - [x] test/language/expressions/arrow-function/dstr/obj-ptrn-id-init-fn-name-fn.js
+  - [x] test/language/expressions/arrow-function/dstr/obj-ptrn-id-init-fn-name-gen.js
+  - [x] test/language/expressions/arrow-function/dstr/obj-ptrn-id-init-skipped.js
+  - [x] test/language/expressions/arrow-function/dstr/obj-ptrn-id-init-throws.js
+  - [x] test/language/expressions/arrow-function/dstr/obj-ptrn-id-init-unresolvable.js
+  - [x] test/language/expressions/arrow-function/dstr/obj-ptrn-id-trailing-comma.js
+  - [x] test/language/expressions/arrow-function/dstr/obj-ptrn-list-err.js
+  - [x] test/language/expressions/arrow-function/dstr/obj-ptrn-prop-ary-init.js
+  - [x] test/language/expressions/arrow-function/dstr/obj-ptrn-prop-ary-trailing-comma.js
+  - [x] test/language/expressions/arrow-function/dstr/obj-ptrn-prop-ary-value-null.js
+  - [x] test/language/expressions/arrow-function/dstr/obj-ptrn-prop-ary.js
+  - [x] test/language/expressions/arrow-function/dstr/obj-ptrn-prop-eval-err.js
+  - [x] test/language/expressions/arrow-function/dstr/obj-ptrn-prop-id-get-value-err.js
+  - [x] test/language/expressions/arrow-function/dstr/obj-ptrn-prop-id-init-skipped.js
+  - [x] test/language/expressions/arrow-function/dstr/obj-ptrn-prop-id-init-throws.js
+  - [x] test/language/expressions/arrow-function/dstr/obj-ptrn-prop-id-init-unresolvable.js
+  - [x] test/language/expressions/arrow-function/dstr/obj-ptrn-prop-id-init.js
+  - [x] test/language/expressions/arrow-function/dstr/obj-ptrn-prop-id-trailing-comma.js
+  - [x] test/language/expressions/arrow-function/dstr/obj-ptrn-prop-id.js
+  - [x] test/language/expressions/arrow-function/dstr/obj-ptrn-prop-obj-init.js
+  - [x] test/language/expressions/arrow-function/dstr/obj-ptrn-prop-obj-value-null.js
+  - [x] test/language/expressions/arrow-function/dstr/obj-ptrn-prop-obj-value-undef.js
+  - [x] test/language/expressions/arrow-function/dstr/obj-ptrn-prop-obj.js
   - [ ] test/language/expressions/arrow-function/dstr/obj-ptrn-rest-getter.js
-  - [ ] test/language/expressions/arrow-function/dstr/obj-ptrn-rest-skip-non-enumerable.js
-  - [ ] test/language/expressions/arrow-function/dstr/obj-ptrn-rest-val-obj.js
-  - [ ] test/language/expressions/arrow-function/dstr/syntax-error-ident-ref-break-escaped.js
-  - [ ] test/language/expressions/arrow-function/dstr/syntax-error-ident-ref-case-escaped.js
+  - [x] test/language/expressions/arrow-function/dstr/obj-ptrn-rest-skip-non-enumerable.js
+  - [x] test/language/expressions/arrow-function/dstr/obj-ptrn-rest-val-obj.js
+  - [x] test/language/expressions/arrow-function/dstr/syntax-error-ident-ref-break-escaped.js
+  - [x] test/language/expressions/arrow-function/dstr/syntax-error-ident-ref-case-escaped.js
   - [x] test/language/expressions/arrow-function/dstr/syntax-error-ident-ref-catch-escaped.js
   - [x] test/language/expressions/arrow-function/dstr/syntax-error-ident-ref-class-escaped.js
   - [x] test/language/expressions/arrow-function/dstr/syntax-error-ident-ref-const-escaped.js
@@ -12953,80 +12953,80 @@ Sub-category progress
   - [ ] test/language/expressions/call/tco-non-eval-function.js
   - [ ] test/language/expressions/call/tco-non-eval-global.js
   - [ ] test/language/expressions/call/tco-non-eval-with.js
-  - [ ] test/language/expressions/call/trailing-comma.js
-  - [ ] test/language/expressions/call/with-base-obj.js
-  - [ ] test/language/expressions/class/accessor-name-inst/computed-err-evaluation.js
-  - [ ] test/language/expressions/class/accessor-name-inst/computed-err-to-prop-key.js
-  - [ ] test/language/expressions/class/accessor-name-inst/computed-err-unresolvable.js
+  - [x] test/language/expressions/call/trailing-comma.js
+  - [x] test/language/expressions/call/with-base-obj.js
+  - [x] test/language/expressions/class/accessor-name-inst/computed-err-evaluation.js
+  - [x] test/language/expressions/class/accessor-name-inst/computed-err-to-prop-key.js
+  - [x] test/language/expressions/class/accessor-name-inst/computed-err-unresolvable.js
   - [ ] test/language/expressions/class/accessor-name-inst/computed.js
-  - [ ] test/language/expressions/class/accessor-name-inst/literal-numeric-binary.js
-  - [ ] test/language/expressions/class/accessor-name-inst/literal-numeric-exponent.js
-  - [ ] test/language/expressions/class/accessor-name-inst/literal-numeric-hex.js
-  - [ ] test/language/expressions/class/accessor-name-inst/literal-numeric-leading-decimal.js
-  - [ ] test/language/expressions/class/accessor-name-inst/literal-numeric-non-canonical.js
-  - [ ] test/language/expressions/class/accessor-name-inst/literal-numeric-octal.js
-  - [ ] test/language/expressions/class/accessor-name-inst/literal-numeric-zero.js
-  - [ ] test/language/expressions/class/accessor-name-inst/literal-string-char-escape.js
-  - [ ] test/language/expressions/class/accessor-name-inst/literal-string-default-escaped-ext.js
-  - [ ] test/language/expressions/class/accessor-name-inst/literal-string-default-escaped.js
-  - [ ] test/language/expressions/class/accessor-name-inst/literal-string-default.js
-  - [ ] test/language/expressions/class/accessor-name-inst/literal-string-double-quote.js
-  - [ ] test/language/expressions/class/accessor-name-inst/literal-string-empty.js
-  - [ ] test/language/expressions/class/accessor-name-inst/literal-string-hex-escape.js
-  - [ ] test/language/expressions/class/accessor-name-inst/literal-string-line-continuation.js
-  - [ ] test/language/expressions/class/accessor-name-inst/literal-string-single-quote.js
-  - [ ] test/language/expressions/class/accessor-name-inst/literal-string-unicode-escape.js
+  - [x] test/language/expressions/class/accessor-name-inst/literal-numeric-binary.js
+  - [x] test/language/expressions/class/accessor-name-inst/literal-numeric-exponent.js
+  - [x] test/language/expressions/class/accessor-name-inst/literal-numeric-hex.js
+  - [x] test/language/expressions/class/accessor-name-inst/literal-numeric-leading-decimal.js
+  - [x] test/language/expressions/class/accessor-name-inst/literal-numeric-non-canonical.js
+  - [x] test/language/expressions/class/accessor-name-inst/literal-numeric-octal.js
+  - [x] test/language/expressions/class/accessor-name-inst/literal-numeric-zero.js
+  - [x] test/language/expressions/class/accessor-name-inst/literal-string-char-escape.js
+  - [x] test/language/expressions/class/accessor-name-inst/literal-string-default-escaped-ext.js
+  - [x] test/language/expressions/class/accessor-name-inst/literal-string-default-escaped.js
+  - [x] test/language/expressions/class/accessor-name-inst/literal-string-default.js
+  - [x] test/language/expressions/class/accessor-name-inst/literal-string-double-quote.js
+  - [x] test/language/expressions/class/accessor-name-inst/literal-string-empty.js
+  - [x] test/language/expressions/class/accessor-name-inst/literal-string-hex-escape.js
+  - [x] test/language/expressions/class/accessor-name-inst/literal-string-line-continuation.js
+  - [x] test/language/expressions/class/accessor-name-inst/literal-string-single-quote.js
+  - [x] test/language/expressions/class/accessor-name-inst/literal-string-unicode-escape.js
   - [ ] test/language/expressions/class/accessor-name-inst-computed-in.js
-  - [ ] test/language/expressions/class/accessor-name-inst-computed-yield-expr.js
-  - [ ] test/language/expressions/class/accessor-name-static/computed-err-evaluation.js
-  - [ ] test/language/expressions/class/accessor-name-static/computed-err-to-prop-key.js
-  - [ ] test/language/expressions/class/accessor-name-static/computed-err-unresolvable.js
-  - [ ] test/language/expressions/class/accessor-name-static/computed.js
-  - [ ] test/language/expressions/class/accessor-name-static/literal-numeric-binary.js
-  - [ ] test/language/expressions/class/accessor-name-static/literal-numeric-exponent.js
-  - [ ] test/language/expressions/class/accessor-name-static/literal-numeric-hex.js
-  - [ ] test/language/expressions/class/accessor-name-static/literal-numeric-leading-decimal.js
-  - [ ] test/language/expressions/class/accessor-name-static/literal-numeric-non-canonical.js
-  - [ ] test/language/expressions/class/accessor-name-static/literal-numeric-octal.js
-  - [ ] test/language/expressions/class/accessor-name-static/literal-numeric-zero.js
-  - [ ] test/language/expressions/class/accessor-name-static/literal-string-char-escape.js
-  - [ ] test/language/expressions/class/accessor-name-static/literal-string-default-escaped-ext.js
-  - [ ] test/language/expressions/class/accessor-name-static/literal-string-default-escaped.js
-  - [ ] test/language/expressions/class/accessor-name-static/literal-string-default.js
-  - [ ] test/language/expressions/class/accessor-name-static/literal-string-double-quote.js
-  - [ ] test/language/expressions/class/accessor-name-static/literal-string-empty.js
-  - [ ] test/language/expressions/class/accessor-name-static/literal-string-hex-escape.js
-  - [ ] test/language/expressions/class/accessor-name-static/literal-string-line-continuation.js
-  - [ ] test/language/expressions/class/accessor-name-static/literal-string-single-quote.js
-  - [ ] test/language/expressions/class/accessor-name-static/literal-string-unicode-escape.js
+  - [x] test/language/expressions/class/accessor-name-inst-computed-yield-expr.js
+  - [x] test/language/expressions/class/accessor-name-static/computed-err-evaluation.js
+  - [x] test/language/expressions/class/accessor-name-static/computed-err-to-prop-key.js
+  - [x] test/language/expressions/class/accessor-name-static/computed-err-unresolvable.js
+  - [x] test/language/expressions/class/accessor-name-static/computed.js
+  - [x] test/language/expressions/class/accessor-name-static/literal-numeric-binary.js
+  - [x] test/language/expressions/class/accessor-name-static/literal-numeric-exponent.js
+  - [x] test/language/expressions/class/accessor-name-static/literal-numeric-hex.js
+  - [x] test/language/expressions/class/accessor-name-static/literal-numeric-leading-decimal.js
+  - [x] test/language/expressions/class/accessor-name-static/literal-numeric-non-canonical.js
+  - [x] test/language/expressions/class/accessor-name-static/literal-numeric-octal.js
+  - [x] test/language/expressions/class/accessor-name-static/literal-numeric-zero.js
+  - [x] test/language/expressions/class/accessor-name-static/literal-string-char-escape.js
+  - [x] test/language/expressions/class/accessor-name-static/literal-string-default-escaped-ext.js
+  - [x] test/language/expressions/class/accessor-name-static/literal-string-default-escaped.js
+  - [x] test/language/expressions/class/accessor-name-static/literal-string-default.js
+  - [x] test/language/expressions/class/accessor-name-static/literal-string-double-quote.js
+  - [x] test/language/expressions/class/accessor-name-static/literal-string-empty.js
+  - [x] test/language/expressions/class/accessor-name-static/literal-string-hex-escape.js
+  - [x] test/language/expressions/class/accessor-name-static/literal-string-line-continuation.js
+  - [x] test/language/expressions/class/accessor-name-static/literal-string-single-quote.js
+  - [x] test/language/expressions/class/accessor-name-static/literal-string-unicode-escape.js
   - [ ] test/language/expressions/class/accessor-name-static-computed-in.js
-  - [ ] test/language/expressions/class/accessor-name-static-computed-yield-expr.js
-  - [ ] test/language/expressions/class/async-gen-method/array-destructuring-param-strict-body.js
-  - [ ] test/language/expressions/class/async-gen-method/await-as-binding-identifier-escaped.js
-  - [ ] test/language/expressions/class/async-gen-method/await-as-binding-identifier.js
-  - [ ] test/language/expressions/class/async-gen-method/await-as-identifier-reference-escaped.js
-  - [ ] test/language/expressions/class/async-gen-method/await-as-identifier-reference.js
-  - [ ] test/language/expressions/class/async-gen-method/await-as-label-identifier-escaped.js
-  - [ ] test/language/expressions/class/async-gen-method/await-as-label-identifier.js
-  - [ ] test/language/expressions/class/async-gen-method/dflt-params-abrupt.js
-  - [ ] test/language/expressions/class/async-gen-method/dflt-params-arg-val-not-undefined.js
-  - [ ] test/language/expressions/class/async-gen-method/dflt-params-arg-val-undefined.js
-  - [ ] test/language/expressions/class/async-gen-method/dflt-params-duplicates.js
-  - [ ] test/language/expressions/class/async-gen-method/dflt-params-ref-later.js
-  - [ ] test/language/expressions/class/async-gen-method/dflt-params-ref-prior.js
-  - [ ] test/language/expressions/class/async-gen-method/dflt-params-ref-self.js
-  - [ ] test/language/expressions/class/async-gen-method/dflt-params-rest.js
-  - [ ] test/language/expressions/class/async-gen-method/dflt-params-trailing-comma.js
-  - [ ] test/language/expressions/class/async-gen-method/forbidden-ext/b1/cls-expr-async-gen-meth-forbidden-ext-direct-access-prop-arguments.js
-  - [ ] test/language/expressions/class/async-gen-method/forbidden-ext/b1/cls-expr-async-gen-meth-forbidden-ext-direct-access-prop-caller.js
-  - [ ] test/language/expressions/class/async-gen-method/forbidden-ext/b2/cls-expr-async-gen-meth-forbidden-ext-indirect-access-own-prop-caller-get.js
-  - [ ] test/language/expressions/class/async-gen-method/forbidden-ext/b2/cls-expr-async-gen-meth-forbidden-ext-indirect-access-own-prop-caller-value.js
-  - [ ] test/language/expressions/class/async-gen-method/forbidden-ext/b2/cls-expr-async-gen-meth-forbidden-ext-indirect-access-prop-caller.js
-  - [ ] test/language/expressions/class/async-gen-method/object-destructuring-param-strict-body.js
-  - [ ] test/language/expressions/class/async-gen-method/params-trailing-comma-multiple.js
-  - [ ] test/language/expressions/class/async-gen-method/params-trailing-comma-single.js
-  - [ ] test/language/expressions/class/async-gen-method/rest-param-strict-body.js
-  - [ ] test/language/expressions/class/async-gen-method/rest-params-trailing-comma-early-error.js
+  - [x] test/language/expressions/class/accessor-name-static-computed-yield-expr.js
+  - [x] test/language/expressions/class/async-gen-method/array-destructuring-param-strict-body.js
+  - [x] test/language/expressions/class/async-gen-method/await-as-binding-identifier-escaped.js
+  - [x] test/language/expressions/class/async-gen-method/await-as-binding-identifier.js
+  - [x] test/language/expressions/class/async-gen-method/await-as-identifier-reference-escaped.js
+  - [x] test/language/expressions/class/async-gen-method/await-as-identifier-reference.js
+  - [x] test/language/expressions/class/async-gen-method/await-as-label-identifier-escaped.js
+  - [x] test/language/expressions/class/async-gen-method/await-as-label-identifier.js
+  - [x] test/language/expressions/class/async-gen-method/dflt-params-abrupt.js
+  - [x] test/language/expressions/class/async-gen-method/dflt-params-arg-val-not-undefined.js
+  - [x] test/language/expressions/class/async-gen-method/dflt-params-arg-val-undefined.js
+  - [x] test/language/expressions/class/async-gen-method/dflt-params-duplicates.js
+  - [x] test/language/expressions/class/async-gen-method/dflt-params-ref-later.js
+  - [x] test/language/expressions/class/async-gen-method/dflt-params-ref-prior.js
+  - [x] test/language/expressions/class/async-gen-method/dflt-params-ref-self.js
+  - [x] test/language/expressions/class/async-gen-method/dflt-params-rest.js
+  - [x] test/language/expressions/class/async-gen-method/dflt-params-trailing-comma.js
+  - [x] test/language/expressions/class/async-gen-method/forbidden-ext/b1/cls-expr-async-gen-meth-forbidden-ext-direct-access-prop-arguments.js
+  - [x] test/language/expressions/class/async-gen-method/forbidden-ext/b1/cls-expr-async-gen-meth-forbidden-ext-direct-access-prop-caller.js
+  - [x] test/language/expressions/class/async-gen-method/forbidden-ext/b2/cls-expr-async-gen-meth-forbidden-ext-indirect-access-own-prop-caller-get.js
+  - [x] test/language/expressions/class/async-gen-method/forbidden-ext/b2/cls-expr-async-gen-meth-forbidden-ext-indirect-access-own-prop-caller-value.js
+  - [x] test/language/expressions/class/async-gen-method/forbidden-ext/b2/cls-expr-async-gen-meth-forbidden-ext-indirect-access-prop-caller.js
+  - [x] test/language/expressions/class/async-gen-method/object-destructuring-param-strict-body.js
+  - [x] test/language/expressions/class/async-gen-method/params-trailing-comma-multiple.js
+  - [x] test/language/expressions/class/async-gen-method/params-trailing-comma-single.js
+  - [x] test/language/expressions/class/async-gen-method/rest-param-strict-body.js
+  - [x] test/language/expressions/class/async-gen-method/rest-params-trailing-comma-early-error.js
   - [ ] test/language/expressions/class/async-gen-method/yield-as-binding-identifier-escaped.js
   - [ ] test/language/expressions/class/async-gen-method/yield-as-binding-identifier.js
   - [ ] test/language/expressions/class/async-gen-method/yield-as-identifier-reference-escaped.js
@@ -13100,49 +13100,49 @@ Sub-category progress
   - [ ] test/language/expressions/class/async-gen-method/yield-star-sync-next.js
   - [ ] test/language/expressions/class/async-gen-method/yield-star-sync-return.js
   - [ ] test/language/expressions/class/async-gen-method/yield-star-sync-throw.js
-  - [ ] test/language/expressions/class/async-gen-method-static/array-destructuring-param-strict-body.js
-  - [ ] test/language/expressions/class/async-gen-method-static/await-as-binding-identifier-escaped.js
-  - [ ] test/language/expressions/class/async-gen-method-static/await-as-binding-identifier.js
-  - [ ] test/language/expressions/class/async-gen-method-static/await-as-identifier-reference-escaped.js
-  - [ ] test/language/expressions/class/async-gen-method-static/await-as-identifier-reference.js
-  - [ ] test/language/expressions/class/async-gen-method-static/await-as-label-identifier-escaped.js
-  - [ ] test/language/expressions/class/async-gen-method-static/await-as-label-identifier.js
-  - [ ] test/language/expressions/class/async-gen-method-static/dflt-params-abrupt.js
-  - [ ] test/language/expressions/class/async-gen-method-static/dflt-params-arg-val-not-undefined.js
-  - [ ] test/language/expressions/class/async-gen-method-static/dflt-params-arg-val-undefined.js
-  - [ ] test/language/expressions/class/async-gen-method-static/dflt-params-duplicates.js
-  - [ ] test/language/expressions/class/async-gen-method-static/dflt-params-ref-later.js
-  - [ ] test/language/expressions/class/async-gen-method-static/dflt-params-ref-prior.js
-  - [ ] test/language/expressions/class/async-gen-method-static/dflt-params-ref-self.js
-  - [ ] test/language/expressions/class/async-gen-method-static/dflt-params-rest.js
-  - [ ] test/language/expressions/class/async-gen-method-static/dflt-params-trailing-comma.js
-  - [ ] test/language/expressions/class/async-gen-method-static/forbidden-ext/b1/cls-expr-async-gen-meth-static-forbidden-ext-direct-access-prop-arguments.js
-  - [ ] test/language/expressions/class/async-gen-method-static/forbidden-ext/b1/cls-expr-async-gen-meth-static-forbidden-ext-direct-access-prop-caller.js
-  - [ ] test/language/expressions/class/async-gen-method-static/forbidden-ext/b2/cls-expr-async-gen-meth-static-forbidden-ext-indirect-access-own-prop-caller-get.js
-  - [ ] test/language/expressions/class/async-gen-method-static/forbidden-ext/b2/cls-expr-async-gen-meth-static-forbidden-ext-indirect-access-own-prop-caller-value.js
-  - [ ] test/language/expressions/class/async-gen-method-static/forbidden-ext/b2/cls-expr-async-gen-meth-static-forbidden-ext-indirect-access-prop-caller.js
-  - [ ] test/language/expressions/class/async-gen-method-static/object-destructuring-param-strict-body.js
-  - [ ] test/language/expressions/class/async-gen-method-static/params-trailing-comma-multiple.js
-  - [ ] test/language/expressions/class/async-gen-method-static/params-trailing-comma-single.js
-  - [ ] test/language/expressions/class/async-gen-method-static/rest-param-strict-body.js
-  - [ ] test/language/expressions/class/async-gen-method-static/rest-params-trailing-comma-early-error.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-as-binding-identifier-escaped.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-as-binding-identifier.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-as-identifier-reference-escaped.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-as-identifier-reference.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-as-label-identifier-escaped.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-as-label-identifier.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-identifier-spread-strict.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-identifier-strict.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-promise-reject-next-catch.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-promise-reject-next-for-await-of-async-iterator.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-promise-reject-next-for-await-of-sync-iterator.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-promise-reject-next-yield-star-async-iterator.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-promise-reject-next-yield-star-sync-iterator.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-promise-reject-next.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-spread-arr-multiple.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-spread-arr-single.js
-  - [ ] test/language/expressions/class/async-gen-method-static/yield-spread-obj.js
+  - [x] test/language/expressions/class/async-gen-method-static/array-destructuring-param-strict-body.js
+  - [x] test/language/expressions/class/async-gen-method-static/await-as-binding-identifier-escaped.js
+  - [x] test/language/expressions/class/async-gen-method-static/await-as-binding-identifier.js
+  - [x] test/language/expressions/class/async-gen-method-static/await-as-identifier-reference-escaped.js
+  - [x] test/language/expressions/class/async-gen-method-static/await-as-identifier-reference.js
+  - [x] test/language/expressions/class/async-gen-method-static/await-as-label-identifier-escaped.js
+  - [x] test/language/expressions/class/async-gen-method-static/await-as-label-identifier.js
+  - [x] test/language/expressions/class/async-gen-method-static/dflt-params-abrupt.js
+  - [x] test/language/expressions/class/async-gen-method-static/dflt-params-arg-val-not-undefined.js
+  - [x] test/language/expressions/class/async-gen-method-static/dflt-params-arg-val-undefined.js
+  - [x] test/language/expressions/class/async-gen-method-static/dflt-params-duplicates.js
+  - [x] test/language/expressions/class/async-gen-method-static/dflt-params-ref-later.js
+  - [x] test/language/expressions/class/async-gen-method-static/dflt-params-ref-prior.js
+  - [x] test/language/expressions/class/async-gen-method-static/dflt-params-ref-self.js
+  - [x] test/language/expressions/class/async-gen-method-static/dflt-params-rest.js
+  - [x] test/language/expressions/class/async-gen-method-static/dflt-params-trailing-comma.js
+  - [x] test/language/expressions/class/async-gen-method-static/forbidden-ext/b1/cls-expr-async-gen-meth-static-forbidden-ext-direct-access-prop-arguments.js
+  - [x] test/language/expressions/class/async-gen-method-static/forbidden-ext/b1/cls-expr-async-gen-meth-static-forbidden-ext-direct-access-prop-caller.js
+  - [x] test/language/expressions/class/async-gen-method-static/forbidden-ext/b2/cls-expr-async-gen-meth-static-forbidden-ext-indirect-access-own-prop-caller-get.js
+  - [x] test/language/expressions/class/async-gen-method-static/forbidden-ext/b2/cls-expr-async-gen-meth-static-forbidden-ext-indirect-access-own-prop-caller-value.js
+  - [x] test/language/expressions/class/async-gen-method-static/forbidden-ext/b2/cls-expr-async-gen-meth-static-forbidden-ext-indirect-access-prop-caller.js
+  - [x] test/language/expressions/class/async-gen-method-static/object-destructuring-param-strict-body.js
+  - [x] test/language/expressions/class/async-gen-method-static/params-trailing-comma-multiple.js
+  - [x] test/language/expressions/class/async-gen-method-static/params-trailing-comma-single.js
+  - [x] test/language/expressions/class/async-gen-method-static/rest-param-strict-body.js
+  - [x] test/language/expressions/class/async-gen-method-static/rest-params-trailing-comma-early-error.js
+  - [x] test/language/expressions/class/async-gen-method-static/yield-as-binding-identifier-escaped.js
+  - [x] test/language/expressions/class/async-gen-method-static/yield-as-binding-identifier.js
+  - [x] test/language/expressions/class/async-gen-method-static/yield-as-identifier-reference-escaped.js
+  - [x] test/language/expressions/class/async-gen-method-static/yield-as-identifier-reference.js
+  - [x] test/language/expressions/class/async-gen-method-static/yield-as-label-identifier-escaped.js
+  - [x] test/language/expressions/class/async-gen-method-static/yield-as-label-identifier.js
+  - [x] test/language/expressions/class/async-gen-method-static/yield-identifier-spread-strict.js
+  - [x] test/language/expressions/class/async-gen-method-static/yield-identifier-strict.js
+  - [x] test/language/expressions/class/async-gen-method-static/yield-promise-reject-next-catch.js
+  - [x] test/language/expressions/class/async-gen-method-static/yield-promise-reject-next-for-await-of-async-iterator.js
+  - [x] test/language/expressions/class/async-gen-method-static/yield-promise-reject-next-for-await-of-sync-iterator.js
+  - [x] test/language/expressions/class/async-gen-method-static/yield-promise-reject-next-yield-star-async-iterator.js
+  - [x] test/language/expressions/class/async-gen-method-static/yield-promise-reject-next-yield-star-sync-iterator.js
+  - [x] test/language/expressions/class/async-gen-method-static/yield-promise-reject-next.js
+  - [x] test/language/expressions/class/async-gen-method-static/yield-spread-arr-multiple.js
+  - [x] test/language/expressions/class/async-gen-method-static/yield-spread-arr-single.js
+  - [x] test/language/expressions/class/async-gen-method-static/yield-spread-obj.js
   - [ ] test/language/expressions/class/async-gen-method-static/yield-star-async-next.js
   - [ ] test/language/expressions/class/async-gen-method-static/yield-star-async-return.js
   - [ ] test/language/expressions/class/async-gen-method-static/yield-star-async-throw.js
@@ -15444,17 +15444,17 @@ Sub-category progress
   - [ ] test/language/expressions/class/elements/after-same-line-static-async-gen-rs-static-privatename-identifier.js
   - [ ] test/language/expressions/class/elements/after-same-line-static-async-gen-static-private-fields.js
   - [ ] test/language/expressions/class/elements/after-same-line-static-async-gen-static-private-methods-with-fields.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-async-gen-static-private-methods.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-async-gen-string-literal-names.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-async-method-computed-names.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-async-gen-static-private-methods.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-async-gen-string-literal-names.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-async-method-computed-names.js
   - [ ] test/language/expressions/class/elements/after-same-line-static-async-method-computed-symbol-names.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-async-method-grammar-privatename-identifier-semantics-stringvalue.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-async-method-literal-names-asi.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-async-method-literal-names.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-async-method-private-field-usage.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-async-method-private-method-getter-usage.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-async-method-private-method-usage.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-async-method-private-names.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-async-method-grammar-privatename-identifier-semantics-stringvalue.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-async-method-literal-names-asi.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-async-method-literal-names.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-async-method-private-field-usage.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-async-method-private-method-getter-usage.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-async-method-private-method-usage.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-async-method-private-names.js
   - [ ] test/language/expressions/class/elements/after-same-line-static-async-method-rs-field-identifier-initializer.js
   - [ ] test/language/expressions/class/elements/after-same-line-static-async-method-rs-field-identifier.js
   - [ ] test/language/expressions/class/elements/after-same-line-static-async-method-rs-private-getter-alt.js
@@ -15484,17 +15484,17 @@ Sub-category progress
   - [ ] test/language/expressions/class/elements/after-same-line-static-async-method-rs-static-privatename-identifier.js
   - [ ] test/language/expressions/class/elements/after-same-line-static-async-method-static-private-fields.js
   - [ ] test/language/expressions/class/elements/after-same-line-static-async-method-static-private-methods-with-fields.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-async-method-static-private-methods.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-async-method-string-literal-names.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-gen-computed-names.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-async-method-static-private-methods.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-async-method-string-literal-names.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-gen-computed-names.js
   - [ ] test/language/expressions/class/elements/after-same-line-static-gen-computed-symbol-names.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-gen-grammar-privatename-identifier-semantics-stringvalue.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-gen-literal-names-asi.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-gen-literal-names.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-gen-private-field-usage.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-gen-private-method-getter-usage.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-gen-private-method-usage.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-gen-private-names.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-gen-grammar-privatename-identifier-semantics-stringvalue.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-gen-literal-names-asi.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-gen-literal-names.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-gen-private-field-usage.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-gen-private-method-getter-usage.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-gen-private-method-usage.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-gen-private-names.js
   - [ ] test/language/expressions/class/elements/after-same-line-static-gen-rs-field-identifier-initializer.js
   - [ ] test/language/expressions/class/elements/after-same-line-static-gen-rs-field-identifier.js
   - [ ] test/language/expressions/class/elements/after-same-line-static-gen-rs-private-getter-alt.js
@@ -15524,17 +15524,17 @@ Sub-category progress
   - [ ] test/language/expressions/class/elements/after-same-line-static-gen-rs-static-privatename-identifier.js
   - [ ] test/language/expressions/class/elements/after-same-line-static-gen-static-private-fields.js
   - [ ] test/language/expressions/class/elements/after-same-line-static-gen-static-private-methods-with-fields.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-gen-static-private-methods.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-gen-string-literal-names.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-method-computed-names.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-gen-static-private-methods.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-gen-string-literal-names.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-method-computed-names.js
   - [ ] test/language/expressions/class/elements/after-same-line-static-method-computed-symbol-names.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-method-grammar-privatename-identifier-semantics-stringvalue.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-method-literal-names-asi.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-method-literal-names.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-method-private-field-usage.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-method-private-method-getter-usage.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-method-private-method-usage.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-method-private-names.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-method-grammar-privatename-identifier-semantics-stringvalue.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-method-literal-names-asi.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-method-literal-names.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-method-private-field-usage.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-method-private-method-getter-usage.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-method-private-method-usage.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-method-private-names.js
   - [ ] test/language/expressions/class/elements/after-same-line-static-method-rs-field-identifier-initializer.js
   - [ ] test/language/expressions/class/elements/after-same-line-static-method-rs-field-identifier.js
   - [ ] test/language/expressions/class/elements/after-same-line-static-method-rs-private-getter-alt.js
@@ -15564,36 +15564,36 @@ Sub-category progress
   - [ ] test/language/expressions/class/elements/after-same-line-static-method-rs-static-privatename-identifier.js
   - [ ] test/language/expressions/class/elements/after-same-line-static-method-static-private-fields.js
   - [ ] test/language/expressions/class/elements/after-same-line-static-method-static-private-methods-with-fields.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-method-static-private-methods.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-method-string-literal-names.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-method-static-private-methods.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-method-string-literal-names.js
   - [ ] test/language/expressions/class/elements/arrow-body-derived-cls-direct-eval-contains-superproperty-1.js
   - [ ] test/language/expressions/class/elements/arrow-body-derived-cls-direct-eval-contains-superproperty-2.js
-  - [ ] test/language/expressions/class/elements/arrow-body-derived-cls-direct-eval-err-contains-supercall-1.js
-  - [ ] test/language/expressions/class/elements/arrow-body-derived-cls-direct-eval-err-contains-supercall-2.js
-  - [ ] test/language/expressions/class/elements/arrow-body-derived-cls-direct-eval-err-contains-supercall.js
-  - [ ] test/language/expressions/class/elements/arrow-body-derived-cls-indirect-eval-contains-superproperty-1.js
-  - [ ] test/language/expressions/class/elements/arrow-body-derived-cls-indirect-eval-contains-superproperty-2.js
-  - [ ] test/language/expressions/class/elements/arrow-body-derived-cls-indirect-eval-err-contains-supercall-1.js
-  - [ ] test/language/expressions/class/elements/arrow-body-derived-cls-indirect-eval-err-contains-supercall-2.js
-  - [ ] test/language/expressions/class/elements/arrow-body-derived-cls-indirect-eval-err-contains-supercall.js
-  - [ ] test/language/expressions/class/elements/arrow-body-direct-eval-err-contains-arguments.js
-  - [ ] test/language/expressions/class/elements/arrow-body-direct-eval-err-contains-newtarget.js
-  - [ ] test/language/expressions/class/elements/arrow-body-indirect-eval-err-contains-newtarget.js
+  - [x] test/language/expressions/class/elements/arrow-body-derived-cls-direct-eval-err-contains-supercall-1.js
+  - [x] test/language/expressions/class/elements/arrow-body-derived-cls-direct-eval-err-contains-supercall-2.js
+  - [x] test/language/expressions/class/elements/arrow-body-derived-cls-direct-eval-err-contains-supercall.js
+  - [x] test/language/expressions/class/elements/arrow-body-derived-cls-indirect-eval-contains-superproperty-1.js
+  - [x] test/language/expressions/class/elements/arrow-body-derived-cls-indirect-eval-contains-superproperty-2.js
+  - [x] test/language/expressions/class/elements/arrow-body-derived-cls-indirect-eval-err-contains-supercall-1.js
+  - [x] test/language/expressions/class/elements/arrow-body-derived-cls-indirect-eval-err-contains-supercall-2.js
+  - [x] test/language/expressions/class/elements/arrow-body-derived-cls-indirect-eval-err-contains-supercall.js
+  - [x] test/language/expressions/class/elements/arrow-body-direct-eval-err-contains-arguments.js
+  - [x] test/language/expressions/class/elements/arrow-body-direct-eval-err-contains-newtarget.js
+  - [x] test/language/expressions/class/elements/arrow-body-indirect-eval-err-contains-newtarget.js
   - [ ] test/language/expressions/class/elements/arrow-body-private-derived-cls-direct-eval-contains-superproperty-1.js
   - [ ] test/language/expressions/class/elements/arrow-body-private-derived-cls-direct-eval-contains-superproperty-2.js
-  - [ ] test/language/expressions/class/elements/arrow-body-private-derived-cls-direct-eval-err-contains-supercall-1.js
-  - [ ] test/language/expressions/class/elements/arrow-body-private-derived-cls-direct-eval-err-contains-supercall-2.js
-  - [ ] test/language/expressions/class/elements/arrow-body-private-derived-cls-direct-eval-err-contains-supercall.js
-  - [ ] test/language/expressions/class/elements/arrow-body-private-derived-cls-indirect-eval-contains-superproperty-1.js
-  - [ ] test/language/expressions/class/elements/arrow-body-private-derived-cls-indirect-eval-contains-superproperty-2.js
-  - [ ] test/language/expressions/class/elements/arrow-body-private-derived-cls-indirect-eval-err-contains-supercall-1.js
-  - [ ] test/language/expressions/class/elements/arrow-body-private-derived-cls-indirect-eval-err-contains-supercall-2.js
-  - [ ] test/language/expressions/class/elements/arrow-body-private-derived-cls-indirect-eval-err-contains-supercall.js
-  - [ ] test/language/expressions/class/elements/arrow-body-private-direct-eval-err-contains-arguments.js
-  - [ ] test/language/expressions/class/elements/arrow-body-private-direct-eval-err-contains-newtarget.js
-  - [ ] test/language/expressions/class/elements/arrow-body-private-indirect-eval-err-contains-newtarget.js
-  - [ ] test/language/expressions/class/elements/arrow-fnc-init-err-contains-arguments.js
-  - [ ] test/language/expressions/class/elements/arrow-fnc-init-err-contains-super.js
+  - [x] test/language/expressions/class/elements/arrow-body-private-derived-cls-direct-eval-err-contains-supercall-1.js
+  - [x] test/language/expressions/class/elements/arrow-body-private-derived-cls-direct-eval-err-contains-supercall-2.js
+  - [x] test/language/expressions/class/elements/arrow-body-private-derived-cls-direct-eval-err-contains-supercall.js
+  - [x] test/language/expressions/class/elements/arrow-body-private-derived-cls-indirect-eval-contains-superproperty-1.js
+  - [x] test/language/expressions/class/elements/arrow-body-private-derived-cls-indirect-eval-contains-superproperty-2.js
+  - [x] test/language/expressions/class/elements/arrow-body-private-derived-cls-indirect-eval-err-contains-supercall-1.js
+  - [x] test/language/expressions/class/elements/arrow-body-private-derived-cls-indirect-eval-err-contains-supercall-2.js
+  - [x] test/language/expressions/class/elements/arrow-body-private-derived-cls-indirect-eval-err-contains-supercall.js
+  - [x] test/language/expressions/class/elements/arrow-body-private-direct-eval-err-contains-arguments.js
+  - [x] test/language/expressions/class/elements/arrow-body-private-direct-eval-err-contains-newtarget.js
+  - [x] test/language/expressions/class/elements/arrow-body-private-indirect-eval-err-contains-newtarget.js
+  - [x] test/language/expressions/class/elements/arrow-fnc-init-err-contains-arguments.js
+  - [x] test/language/expressions/class/elements/arrow-fnc-init-err-contains-super.js
   - [ ] test/language/expressions/class/elements/async-gen-private-method/await-as-binding-identifier-escaped.js
   - [ ] test/language/expressions/class/elements/async-gen-private-method/await-as-binding-identifier.js
   - [ ] test/language/expressions/class/elements/async-gen-private-method/await-as-identifier-reference-escaped.js
@@ -15752,119 +15752,119 @@ Sub-category progress
   - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-sync-next.js
   - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-sync-return.js
   - [ ] test/language/expressions/class/elements/async-gen-private-method-static/yield-star-sync-throw.js
-  - [ ] test/language/expressions/class/elements/async-private-method/await-as-binding-identifier-escaped.js
-  - [ ] test/language/expressions/class/elements/async-private-method/await-as-binding-identifier.js
-  - [ ] test/language/expressions/class/elements/async-private-method/await-as-identifier-reference-escaped.js
-  - [ ] test/language/expressions/class/elements/async-private-method/await-as-identifier-reference.js
-  - [ ] test/language/expressions/class/elements/async-private-method/await-as-label-identifier-escaped.js
-  - [ ] test/language/expressions/class/elements/async-private-method/await-as-label-identifier.js
-  - [ ] test/language/expressions/class/elements/async-private-method/returns-async-arrow-returns-arguments-from-parent-function.js
-  - [ ] test/language/expressions/class/elements/async-private-method/returns-async-arrow-returns-newtarget.js
-  - [ ] test/language/expressions/class/elements/async-private-method/returns-async-arrow.js
-  - [ ] test/language/expressions/class/elements/async-private-method/returns-async-function-returns-arguments-from-own-function.js
-  - [ ] test/language/expressions/class/elements/async-private-method/returns-async-function-returns-newtarget.js
-  - [ ] test/language/expressions/class/elements/async-private-method/returns-async-function.js
-  - [ ] test/language/expressions/class/elements/async-private-method-static/await-as-binding-identifier-escaped.js
-  - [ ] test/language/expressions/class/elements/async-private-method-static/await-as-binding-identifier.js
-  - [ ] test/language/expressions/class/elements/async-private-method-static/await-as-identifier-reference-escaped.js
-  - [ ] test/language/expressions/class/elements/async-private-method-static/await-as-identifier-reference.js
-  - [ ] test/language/expressions/class/elements/async-private-method-static/await-as-label-identifier-escaped.js
-  - [ ] test/language/expressions/class/elements/async-private-method-static/await-as-label-identifier.js
-  - [ ] test/language/expressions/class/elements/async-private-method-static/returns-async-arrow-returns-arguments-from-parent-function.js
-  - [ ] test/language/expressions/class/elements/async-private-method-static/returns-async-arrow-returns-newtarget.js
-  - [ ] test/language/expressions/class/elements/async-private-method-static/returns-async-arrow.js
-  - [ ] test/language/expressions/class/elements/async-private-method-static/returns-async-function-returns-arguments-from-own-function.js
-  - [ ] test/language/expressions/class/elements/async-private-method-static/returns-async-function-returns-newtarget.js
-  - [ ] test/language/expressions/class/elements/async-private-method-static/returns-async-function.js
-  - [ ] test/language/expressions/class/elements/class-name-static-initializer-anonymous.js
-  - [ ] test/language/expressions/class/elements/class-name-static-initializer-decl.js
-  - [ ] test/language/expressions/class/elements/class-name-static-initializer-default-export.js
-  - [ ] test/language/expressions/class/elements/class-name-static-initializer-expr.js
-  - [ ] test/language/expressions/class/elements/comp-name-init-err-contains-arguments.js
-  - [ ] test/language/expressions/class/elements/comp-name-init-err-contains-super.js
-  - [ ] test/language/expressions/class/elements/computed-name-toprimitive-symbol.js
-  - [ ] test/language/expressions/class/elements/computed-name-toprimitive.js
-  - [ ] test/language/expressions/class/elements/ctor-called-after-fields-init.js
-  - [ ] test/language/expressions/class/elements/derived-cls-direct-eval-contains-superproperty-1.js
-  - [ ] test/language/expressions/class/elements/derived-cls-direct-eval-contains-superproperty-2.js
-  - [ ] test/language/expressions/class/elements/derived-cls-direct-eval-err-contains-supercall-1.js
-  - [ ] test/language/expressions/class/elements/derived-cls-direct-eval-err-contains-supercall-2.js
-  - [ ] test/language/expressions/class/elements/derived-cls-direct-eval-err-contains-supercall.js
-  - [ ] test/language/expressions/class/elements/derived-cls-indirect-eval-contains-superproperty-1.js
-  - [ ] test/language/expressions/class/elements/derived-cls-indirect-eval-contains-superproperty-2.js
-  - [ ] test/language/expressions/class/elements/derived-cls-indirect-eval-err-contains-supercall-1.js
-  - [ ] test/language/expressions/class/elements/derived-cls-indirect-eval-err-contains-supercall-2.js
-  - [ ] test/language/expressions/class/elements/derived-cls-indirect-eval-err-contains-supercall.js
-  - [ ] test/language/expressions/class/elements/direct-eval-err-contains-arguments.js
-  - [ ] test/language/expressions/class/elements/direct-eval-err-contains-newtarget.js
-  - [ ] test/language/expressions/class/elements/equality-init-err-contains-arguments.js
-  - [ ] test/language/expressions/class/elements/equality-init-err-contains-super.js
-  - [ ] test/language/expressions/class/elements/evaluation-error/computed-name-referenceerror.js
+  - [x] test/language/expressions/class/elements/async-private-method/await-as-binding-identifier-escaped.js
+  - [x] test/language/expressions/class/elements/async-private-method/await-as-binding-identifier.js
+  - [x] test/language/expressions/class/elements/async-private-method/await-as-identifier-reference-escaped.js
+  - [x] test/language/expressions/class/elements/async-private-method/await-as-identifier-reference.js
+  - [x] test/language/expressions/class/elements/async-private-method/await-as-label-identifier-escaped.js
+  - [x] test/language/expressions/class/elements/async-private-method/await-as-label-identifier.js
+  - [x] test/language/expressions/class/elements/async-private-method/returns-async-arrow-returns-arguments-from-parent-function.js
+  - [x] test/language/expressions/class/elements/async-private-method/returns-async-arrow-returns-newtarget.js
+  - [x] test/language/expressions/class/elements/async-private-method/returns-async-arrow.js
+  - [x] test/language/expressions/class/elements/async-private-method/returns-async-function-returns-arguments-from-own-function.js
+  - [x] test/language/expressions/class/elements/async-private-method/returns-async-function-returns-newtarget.js
+  - [x] test/language/expressions/class/elements/async-private-method/returns-async-function.js
+  - [x] test/language/expressions/class/elements/async-private-method-static/await-as-binding-identifier-escaped.js
+  - [x] test/language/expressions/class/elements/async-private-method-static/await-as-binding-identifier.js
+  - [x] test/language/expressions/class/elements/async-private-method-static/await-as-identifier-reference-escaped.js
+  - [x] test/language/expressions/class/elements/async-private-method-static/await-as-identifier-reference.js
+  - [x] test/language/expressions/class/elements/async-private-method-static/await-as-label-identifier-escaped.js
+  - [x] test/language/expressions/class/elements/async-private-method-static/await-as-label-identifier.js
+  - [x] test/language/expressions/class/elements/async-private-method-static/returns-async-arrow-returns-arguments-from-parent-function.js
+  - [x] test/language/expressions/class/elements/async-private-method-static/returns-async-arrow-returns-newtarget.js
+  - [x] test/language/expressions/class/elements/async-private-method-static/returns-async-arrow.js
+  - [x] test/language/expressions/class/elements/async-private-method-static/returns-async-function-returns-arguments-from-own-function.js
+  - [x] test/language/expressions/class/elements/async-private-method-static/returns-async-function-returns-newtarget.js
+  - [x] test/language/expressions/class/elements/async-private-method-static/returns-async-function.js
+  - [x] test/language/expressions/class/elements/class-name-static-initializer-anonymous.js
+  - [x] test/language/expressions/class/elements/class-name-static-initializer-decl.js
+  - [x] test/language/expressions/class/elements/class-name-static-initializer-default-export.js
+  - [x] test/language/expressions/class/elements/class-name-static-initializer-expr.js
+  - [x] test/language/expressions/class/elements/comp-name-init-err-contains-arguments.js
+  - [x] test/language/expressions/class/elements/comp-name-init-err-contains-super.js
+  - [x] test/language/expressions/class/elements/computed-name-toprimitive-symbol.js
+  - [x] test/language/expressions/class/elements/computed-name-toprimitive.js
+  - [x] test/language/expressions/class/elements/ctor-called-after-fields-init.js
+  - [x] test/language/expressions/class/elements/derived-cls-direct-eval-contains-superproperty-1.js
+  - [x] test/language/expressions/class/elements/derived-cls-direct-eval-contains-superproperty-2.js
+  - [x] test/language/expressions/class/elements/derived-cls-direct-eval-err-contains-supercall-1.js
+  - [x] test/language/expressions/class/elements/derived-cls-direct-eval-err-contains-supercall-2.js
+  - [x] test/language/expressions/class/elements/derived-cls-direct-eval-err-contains-supercall.js
+  - [x] test/language/expressions/class/elements/derived-cls-indirect-eval-contains-superproperty-1.js
+  - [x] test/language/expressions/class/elements/derived-cls-indirect-eval-contains-superproperty-2.js
+  - [x] test/language/expressions/class/elements/derived-cls-indirect-eval-err-contains-supercall-1.js
+  - [x] test/language/expressions/class/elements/derived-cls-indirect-eval-err-contains-supercall-2.js
+  - [x] test/language/expressions/class/elements/derived-cls-indirect-eval-err-contains-supercall.js
+  - [x] test/language/expressions/class/elements/direct-eval-err-contains-arguments.js
+  - [x] test/language/expressions/class/elements/direct-eval-err-contains-newtarget.js
+  - [x] test/language/expressions/class/elements/equality-init-err-contains-arguments.js
+  - [x] test/language/expressions/class/elements/equality-init-err-contains-super.js
+  - [x] test/language/expressions/class/elements/evaluation-error/computed-name-referenceerror.js
   - [ ] test/language/expressions/class/elements/evaluation-error/computed-name-toprimitive-err.js
-  - [ ] test/language/expressions/class/elements/evaluation-error/computed-name-toprimitive-returns-noncallable.js
-  - [ ] test/language/expressions/class/elements/evaluation-error/computed-name-toprimitive-returns-nonobject.js
+  - [x] test/language/expressions/class/elements/evaluation-error/computed-name-toprimitive-returns-noncallable.js
+  - [x] test/language/expressions/class/elements/evaluation-error/computed-name-toprimitive-returns-nonobject.js
   - [ ] test/language/expressions/class/elements/evaluation-error/computed-name-tostring-err.js
   - [ ] test/language/expressions/class/elements/evaluation-error/computed-name-valueof-err.js
-  - [ ] test/language/expressions/class/elements/field-declaration.js
-  - [ ] test/language/expressions/class/elements/field-definition-accessor-no-line-terminator.js
-  - [ ] test/language/expressions/class/elements/fields-anonymous-function-length.js
+  - [x] test/language/expressions/class/elements/field-declaration.js
+  - [x] test/language/expressions/class/elements/field-definition-accessor-no-line-terminator.js
+  - [x] test/language/expressions/class/elements/fields-anonymous-function-length.js
   - [ ] test/language/expressions/class/elements/fields-asi-1.js
   - [ ] test/language/expressions/class/elements/fields-asi-2.js
-  - [ ] test/language/expressions/class/elements/fields-asi-3.js
-  - [ ] test/language/expressions/class/elements/fields-asi-4.js
-  - [ ] test/language/expressions/class/elements/fields-asi-5.js
-  - [ ] test/language/expressions/class/elements/fields-asi-same-line-1.js
-  - [ ] test/language/expressions/class/elements/fields-asi-same-line-2.js
-  - [ ] test/language/expressions/class/elements/fields-computed-name-static-propname-prototype.js
-  - [ ] test/language/expressions/class/elements/fields-duplicate-privatenames.js
-  - [ ] test/language/expressions/class/elements/fields-literal-name-propname-constructor.js
-  - [ ] test/language/expressions/class/elements/fields-literal-name-static-propname-constructor.js
-  - [ ] test/language/expressions/class/elements/fields-literal-name-static-propname-prototype.js
-  - [ ] test/language/expressions/class/elements/fields-multiple-definitions-static-private-methods-proxy.js
+  - [x] test/language/expressions/class/elements/fields-asi-3.js
+  - [x] test/language/expressions/class/elements/fields-asi-4.js
+  - [x] test/language/expressions/class/elements/fields-asi-5.js
+  - [x] test/language/expressions/class/elements/fields-asi-same-line-1.js
+  - [x] test/language/expressions/class/elements/fields-asi-same-line-2.js
+  - [x] test/language/expressions/class/elements/fields-computed-name-static-propname-prototype.js
+  - [x] test/language/expressions/class/elements/fields-duplicate-privatenames.js
+  - [x] test/language/expressions/class/elements/fields-literal-name-propname-constructor.js
+  - [x] test/language/expressions/class/elements/fields-literal-name-static-propname-constructor.js
+  - [x] test/language/expressions/class/elements/fields-literal-name-static-propname-prototype.js
+  - [x] test/language/expressions/class/elements/fields-multiple-definitions-static-private-methods-proxy.js
   - [ ] test/language/expressions/class/elements/fields-run-once-on-double-super.js
-  - [ ] test/language/expressions/class/elements/fields-string-name-propname-constructor.js
-  - [ ] test/language/expressions/class/elements/fields-string-name-static-propname-constructor.js
-  - [ ] test/language/expressions/class/elements/fields-string-name-static-propname-prototype.js
-  - [ ] test/language/expressions/class/elements/gen-private-method/yield-as-binding-identifier-escaped.js
-  - [ ] test/language/expressions/class/elements/gen-private-method/yield-as-binding-identifier.js
-  - [ ] test/language/expressions/class/elements/gen-private-method/yield-as-identifier-reference-escaped.js
-  - [ ] test/language/expressions/class/elements/gen-private-method/yield-as-identifier-reference.js
-  - [ ] test/language/expressions/class/elements/gen-private-method/yield-as-label-identifier-escaped.js
-  - [ ] test/language/expressions/class/elements/gen-private-method/yield-as-label-identifier.js
-  - [ ] test/language/expressions/class/elements/gen-private-method/yield-identifier-spread-strict.js
-  - [ ] test/language/expressions/class/elements/gen-private-method/yield-identifier-strict.js
-  - [ ] test/language/expressions/class/elements/gen-private-method/yield-spread-arr-multiple.js
-  - [ ] test/language/expressions/class/elements/gen-private-method/yield-spread-arr-single.js
-  - [ ] test/language/expressions/class/elements/gen-private-method/yield-spread-obj.js
-  - [ ] test/language/expressions/class/elements/gen-private-method-static/yield-as-binding-identifier-escaped.js
-  - [ ] test/language/expressions/class/elements/gen-private-method-static/yield-as-binding-identifier.js
-  - [ ] test/language/expressions/class/elements/gen-private-method-static/yield-as-identifier-reference-escaped.js
-  - [ ] test/language/expressions/class/elements/gen-private-method-static/yield-as-identifier-reference.js
-  - [ ] test/language/expressions/class/elements/gen-private-method-static/yield-as-label-identifier-escaped.js
-  - [ ] test/language/expressions/class/elements/gen-private-method-static/yield-as-label-identifier.js
-  - [ ] test/language/expressions/class/elements/gen-private-method-static/yield-identifier-spread-strict.js
-  - [ ] test/language/expressions/class/elements/gen-private-method-static/yield-identifier-strict.js
-  - [ ] test/language/expressions/class/elements/gen-private-method-static/yield-spread-arr-multiple.js
-  - [ ] test/language/expressions/class/elements/gen-private-method-static/yield-spread-arr-single.js
-  - [ ] test/language/expressions/class/elements/gen-private-method-static/yield-spread-obj.js
+  - [x] test/language/expressions/class/elements/fields-string-name-propname-constructor.js
+  - [x] test/language/expressions/class/elements/fields-string-name-static-propname-constructor.js
+  - [x] test/language/expressions/class/elements/fields-string-name-static-propname-prototype.js
+  - [x] test/language/expressions/class/elements/gen-private-method/yield-as-binding-identifier-escaped.js
+  - [x] test/language/expressions/class/elements/gen-private-method/yield-as-binding-identifier.js
+  - [x] test/language/expressions/class/elements/gen-private-method/yield-as-identifier-reference-escaped.js
+  - [x] test/language/expressions/class/elements/gen-private-method/yield-as-identifier-reference.js
+  - [x] test/language/expressions/class/elements/gen-private-method/yield-as-label-identifier-escaped.js
+  - [x] test/language/expressions/class/elements/gen-private-method/yield-as-label-identifier.js
+  - [x] test/language/expressions/class/elements/gen-private-method/yield-identifier-spread-strict.js
+  - [x] test/language/expressions/class/elements/gen-private-method/yield-identifier-strict.js
+  - [x] test/language/expressions/class/elements/gen-private-method/yield-spread-arr-multiple.js
+  - [x] test/language/expressions/class/elements/gen-private-method/yield-spread-arr-single.js
+  - [x] test/language/expressions/class/elements/gen-private-method/yield-spread-obj.js
+  - [x] test/language/expressions/class/elements/gen-private-method-static/yield-as-binding-identifier-escaped.js
+  - [x] test/language/expressions/class/elements/gen-private-method-static/yield-as-binding-identifier.js
+  - [x] test/language/expressions/class/elements/gen-private-method-static/yield-as-identifier-reference-escaped.js
+  - [x] test/language/expressions/class/elements/gen-private-method-static/yield-as-identifier-reference.js
+  - [x] test/language/expressions/class/elements/gen-private-method-static/yield-as-label-identifier-escaped.js
+  - [x] test/language/expressions/class/elements/gen-private-method-static/yield-as-label-identifier.js
+  - [x] test/language/expressions/class/elements/gen-private-method-static/yield-identifier-spread-strict.js
+  - [x] test/language/expressions/class/elements/gen-private-method-static/yield-identifier-strict.js
+  - [x] test/language/expressions/class/elements/gen-private-method-static/yield-spread-arr-multiple.js
+  - [x] test/language/expressions/class/elements/gen-private-method-static/yield-spread-arr-single.js
+  - [x] test/language/expressions/class/elements/gen-private-method-static/yield-spread-obj.js
   - [ ] test/language/expressions/class/elements/grammar-private-field-optional-chaining.js
-  - [ ] test/language/expressions/class/elements/indirect-eval-contains-arguments.js
-  - [ ] test/language/expressions/class/elements/indirect-eval-err-contains-newtarget.js
-  - [ ] test/language/expressions/class/elements/init-err-evaluation.js
+  - [x] test/language/expressions/class/elements/indirect-eval-contains-arguments.js
+  - [x] test/language/expressions/class/elements/indirect-eval-err-contains-newtarget.js
+  - [x] test/language/expressions/class/elements/init-err-evaluation.js
   - [ ] test/language/expressions/class/elements/init-value-defined-after-class.js
   - [ ] test/language/expressions/class/elements/init-value-incremental.js
   - [ ] test/language/expressions/class/elements/intercalated-static-non-static-computed-fields.js
-  - [ ] test/language/expressions/class/elements/literal-name-init-err-contains-arguments.js
-  - [ ] test/language/expressions/class/elements/literal-name-init-err-contains-super.js
-  - [ ] test/language/expressions/class/elements/multiple-definitions-computed-names.js
+  - [x] test/language/expressions/class/elements/literal-name-init-err-contains-arguments.js
+  - [x] test/language/expressions/class/elements/literal-name-init-err-contains-super.js
+  - [x] test/language/expressions/class/elements/multiple-definitions-computed-names.js
   - [ ] test/language/expressions/class/elements/multiple-definitions-computed-symbol-names.js
-  - [ ] test/language/expressions/class/elements/multiple-definitions-grammar-privatename-identifier-semantics-stringvalue.js
-  - [ ] test/language/expressions/class/elements/multiple-definitions-literal-names-asi.js
-  - [ ] test/language/expressions/class/elements/multiple-definitions-literal-names.js
-  - [ ] test/language/expressions/class/elements/multiple-definitions-private-field-usage.js
-  - [ ] test/language/expressions/class/elements/multiple-definitions-private-method-getter-usage.js
-  - [ ] test/language/expressions/class/elements/multiple-definitions-private-method-usage.js
-  - [ ] test/language/expressions/class/elements/multiple-definitions-private-names.js
+  - [x] test/language/expressions/class/elements/multiple-definitions-grammar-privatename-identifier-semantics-stringvalue.js
+  - [x] test/language/expressions/class/elements/multiple-definitions-literal-names-asi.js
+  - [x] test/language/expressions/class/elements/multiple-definitions-literal-names.js
+  - [x] test/language/expressions/class/elements/multiple-definitions-private-field-usage.js
+  - [x] test/language/expressions/class/elements/multiple-definitions-private-method-getter-usage.js
+  - [x] test/language/expressions/class/elements/multiple-definitions-private-method-usage.js
+  - [x] test/language/expressions/class/elements/multiple-definitions-private-names.js
   - [ ] test/language/expressions/class/elements/multiple-definitions-rs-field-identifier-initializer.js
   - [ ] test/language/expressions/class/elements/multiple-definitions-rs-field-identifier.js
   - [ ] test/language/expressions/class/elements/multiple-definitions-rs-private-getter-alt.js
@@ -15892,19 +15892,19 @@ Sub-category progress
   - [ ] test/language/expressions/class/elements/multiple-definitions-rs-static-privatename-identifier-initializer-alt.js
   - [ ] test/language/expressions/class/elements/multiple-definitions-rs-static-privatename-identifier-initializer.js
   - [ ] test/language/expressions/class/elements/multiple-definitions-rs-static-privatename-identifier.js
-  - [ ] test/language/expressions/class/elements/multiple-definitions-static-private-fields.js
+  - [x] test/language/expressions/class/elements/multiple-definitions-static-private-fields.js
   - [ ] test/language/expressions/class/elements/multiple-definitions-static-private-methods-with-fields.js
-  - [ ] test/language/expressions/class/elements/multiple-definitions-static-private-methods.js
-  - [ ] test/language/expressions/class/elements/multiple-definitions-string-literal-names.js
-  - [ ] test/language/expressions/class/elements/multiple-stacked-definitions-computed-names.js
+  - [x] test/language/expressions/class/elements/multiple-definitions-static-private-methods.js
+  - [x] test/language/expressions/class/elements/multiple-definitions-string-literal-names.js
+  - [x] test/language/expressions/class/elements/multiple-stacked-definitions-computed-names.js
   - [ ] test/language/expressions/class/elements/multiple-stacked-definitions-computed-symbol-names.js
-  - [ ] test/language/expressions/class/elements/multiple-stacked-definitions-grammar-privatename-identifier-semantics-stringvalue.js
-  - [ ] test/language/expressions/class/elements/multiple-stacked-definitions-literal-names-asi.js
-  - [ ] test/language/expressions/class/elements/multiple-stacked-definitions-literal-names.js
-  - [ ] test/language/expressions/class/elements/multiple-stacked-definitions-private-field-usage.js
-  - [ ] test/language/expressions/class/elements/multiple-stacked-definitions-private-method-getter-usage.js
-  - [ ] test/language/expressions/class/elements/multiple-stacked-definitions-private-method-usage.js
-  - [ ] test/language/expressions/class/elements/multiple-stacked-definitions-private-names.js
+  - [x] test/language/expressions/class/elements/multiple-stacked-definitions-grammar-privatename-identifier-semantics-stringvalue.js
+  - [x] test/language/expressions/class/elements/multiple-stacked-definitions-literal-names-asi.js
+  - [x] test/language/expressions/class/elements/multiple-stacked-definitions-literal-names.js
+  - [x] test/language/expressions/class/elements/multiple-stacked-definitions-private-field-usage.js
+  - [x] test/language/expressions/class/elements/multiple-stacked-definitions-private-method-getter-usage.js
+  - [x] test/language/expressions/class/elements/multiple-stacked-definitions-private-method-usage.js
+  - [x] test/language/expressions/class/elements/multiple-stacked-definitions-private-names.js
   - [ ] test/language/expressions/class/elements/multiple-stacked-definitions-rs-field-identifier-initializer.js
   - [ ] test/language/expressions/class/elements/multiple-stacked-definitions-rs-field-identifier.js
   - [ ] test/language/expressions/class/elements/multiple-stacked-definitions-rs-private-getter-alt.js
@@ -15934,75 +15934,75 @@ Sub-category progress
   - [ ] test/language/expressions/class/elements/multiple-stacked-definitions-rs-static-privatename-identifier.js
   - [ ] test/language/expressions/class/elements/multiple-stacked-definitions-static-private-fields.js
   - [ ] test/language/expressions/class/elements/multiple-stacked-definitions-static-private-methods-with-fields.js
-  - [ ] test/language/expressions/class/elements/multiple-stacked-definitions-static-private-methods.js
-  - [ ] test/language/expressions/class/elements/multiple-stacked-definitions-string-literal-names.js
-  - [ ] test/language/expressions/class/elements/nested-arrow-fnc-init-err-contains-arguments.js
-  - [ ] test/language/expressions/class/elements/nested-arrow-fnc-init-err-contains-super.js
-  - [ ] test/language/expressions/class/elements/nested-comp-name-init-err-contains-arguments.js
-  - [ ] test/language/expressions/class/elements/nested-comp-name-init-err-contains-super.js
-  - [ ] test/language/expressions/class/elements/nested-derived-cls-direct-eval-contains-superproperty-1.js
-  - [ ] test/language/expressions/class/elements/nested-derived-cls-direct-eval-contains-superproperty-2.js
-  - [ ] test/language/expressions/class/elements/nested-derived-cls-direct-eval-err-contains-supercall-1.js
-  - [ ] test/language/expressions/class/elements/nested-derived-cls-direct-eval-err-contains-supercall-2.js
-  - [ ] test/language/expressions/class/elements/nested-derived-cls-direct-eval-err-contains-supercall.js
-  - [ ] test/language/expressions/class/elements/nested-derived-cls-indirect-eval-contains-superproperty-1.js
-  - [ ] test/language/expressions/class/elements/nested-derived-cls-indirect-eval-contains-superproperty-2.js
-  - [ ] test/language/expressions/class/elements/nested-derived-cls-indirect-eval-err-contains-supercall-1.js
-  - [ ] test/language/expressions/class/elements/nested-derived-cls-indirect-eval-err-contains-supercall-2.js
-  - [ ] test/language/expressions/class/elements/nested-derived-cls-indirect-eval-err-contains-supercall.js
-  - [ ] test/language/expressions/class/elements/nested-direct-eval-err-contains-arguments.js
-  - [ ] test/language/expressions/class/elements/nested-direct-eval-err-contains-newtarget.js
-  - [ ] test/language/expressions/class/elements/nested-equality-init-err-contains-arguments.js
-  - [ ] test/language/expressions/class/elements/nested-equality-init-err-contains-super.js
-  - [ ] test/language/expressions/class/elements/nested-indirect-eval-contains-arguments.js
-  - [ ] test/language/expressions/class/elements/nested-indirect-eval-err-contains-newtarget.js
-  - [ ] test/language/expressions/class/elements/nested-literal-name-init-err-contains-arguments.js
-  - [ ] test/language/expressions/class/elements/nested-literal-name-init-err-contains-super.js
-  - [ ] test/language/expressions/class/elements/nested-private-arrow-fnc-init-err-contains-arguments.js
-  - [ ] test/language/expressions/class/elements/nested-private-arrow-fnc-init-err-contains-super.js
-  - [ ] test/language/expressions/class/elements/nested-private-derived-cls-direct-eval-contains-superproperty-1.js
-  - [ ] test/language/expressions/class/elements/nested-private-derived-cls-direct-eval-contains-superproperty-2.js
-  - [ ] test/language/expressions/class/elements/nested-private-derived-cls-direct-eval-err-contains-supercall-1.js
-  - [ ] test/language/expressions/class/elements/nested-private-derived-cls-direct-eval-err-contains-supercall-2.js
-  - [ ] test/language/expressions/class/elements/nested-private-derived-cls-direct-eval-err-contains-supercall.js
-  - [ ] test/language/expressions/class/elements/nested-private-derived-cls-indirect-eval-contains-superproperty-1.js
-  - [ ] test/language/expressions/class/elements/nested-private-derived-cls-indirect-eval-contains-superproperty-2.js
-  - [ ] test/language/expressions/class/elements/nested-private-derived-cls-indirect-eval-err-contains-supercall-1.js
-  - [ ] test/language/expressions/class/elements/nested-private-derived-cls-indirect-eval-err-contains-supercall-2.js
-  - [ ] test/language/expressions/class/elements/nested-private-derived-cls-indirect-eval-err-contains-supercall.js
-  - [ ] test/language/expressions/class/elements/nested-private-direct-eval-err-contains-arguments.js
-  - [ ] test/language/expressions/class/elements/nested-private-direct-eval-err-contains-newtarget.js
+  - [x] test/language/expressions/class/elements/multiple-stacked-definitions-static-private-methods.js
+  - [x] test/language/expressions/class/elements/multiple-stacked-definitions-string-literal-names.js
+  - [x] test/language/expressions/class/elements/nested-arrow-fnc-init-err-contains-arguments.js
+  - [x] test/language/expressions/class/elements/nested-arrow-fnc-init-err-contains-super.js
+  - [x] test/language/expressions/class/elements/nested-comp-name-init-err-contains-arguments.js
+  - [x] test/language/expressions/class/elements/nested-comp-name-init-err-contains-super.js
+  - [x] test/language/expressions/class/elements/nested-derived-cls-direct-eval-contains-superproperty-1.js
+  - [x] test/language/expressions/class/elements/nested-derived-cls-direct-eval-contains-superproperty-2.js
+  - [x] test/language/expressions/class/elements/nested-derived-cls-direct-eval-err-contains-supercall-1.js
+  - [x] test/language/expressions/class/elements/nested-derived-cls-direct-eval-err-contains-supercall-2.js
+  - [x] test/language/expressions/class/elements/nested-derived-cls-direct-eval-err-contains-supercall.js
+  - [x] test/language/expressions/class/elements/nested-derived-cls-indirect-eval-contains-superproperty-1.js
+  - [x] test/language/expressions/class/elements/nested-derived-cls-indirect-eval-contains-superproperty-2.js
+  - [x] test/language/expressions/class/elements/nested-derived-cls-indirect-eval-err-contains-supercall-1.js
+  - [x] test/language/expressions/class/elements/nested-derived-cls-indirect-eval-err-contains-supercall-2.js
+  - [x] test/language/expressions/class/elements/nested-derived-cls-indirect-eval-err-contains-supercall.js
+  - [x] test/language/expressions/class/elements/nested-direct-eval-err-contains-arguments.js
+  - [x] test/language/expressions/class/elements/nested-direct-eval-err-contains-newtarget.js
+  - [x] test/language/expressions/class/elements/nested-equality-init-err-contains-arguments.js
+  - [x] test/language/expressions/class/elements/nested-equality-init-err-contains-super.js
+  - [x] test/language/expressions/class/elements/nested-indirect-eval-contains-arguments.js
+  - [x] test/language/expressions/class/elements/nested-indirect-eval-err-contains-newtarget.js
+  - [x] test/language/expressions/class/elements/nested-literal-name-init-err-contains-arguments.js
+  - [x] test/language/expressions/class/elements/nested-literal-name-init-err-contains-super.js
+  - [x] test/language/expressions/class/elements/nested-private-arrow-fnc-init-err-contains-arguments.js
+  - [x] test/language/expressions/class/elements/nested-private-arrow-fnc-init-err-contains-super.js
+  - [x] test/language/expressions/class/elements/nested-private-derived-cls-direct-eval-contains-superproperty-1.js
+  - [x] test/language/expressions/class/elements/nested-private-derived-cls-direct-eval-contains-superproperty-2.js
+  - [x] test/language/expressions/class/elements/nested-private-derived-cls-direct-eval-err-contains-supercall-1.js
+  - [x] test/language/expressions/class/elements/nested-private-derived-cls-direct-eval-err-contains-supercall-2.js
+  - [x] test/language/expressions/class/elements/nested-private-derived-cls-direct-eval-err-contains-supercall.js
+  - [x] test/language/expressions/class/elements/nested-private-derived-cls-indirect-eval-contains-superproperty-1.js
+  - [x] test/language/expressions/class/elements/nested-private-derived-cls-indirect-eval-contains-superproperty-2.js
+  - [x] test/language/expressions/class/elements/nested-private-derived-cls-indirect-eval-err-contains-supercall-1.js
+  - [x] test/language/expressions/class/elements/nested-private-derived-cls-indirect-eval-err-contains-supercall-2.js
+  - [x] test/language/expressions/class/elements/nested-private-derived-cls-indirect-eval-err-contains-supercall.js
+  - [x] test/language/expressions/class/elements/nested-private-direct-eval-err-contains-arguments.js
+  - [x] test/language/expressions/class/elements/nested-private-direct-eval-err-contains-newtarget.js
   - [ ] test/language/expressions/class/elements/nested-private-indirect-eval-contains-arguments.js
-  - [ ] test/language/expressions/class/elements/nested-private-indirect-eval-err-contains-newtarget.js
-  - [ ] test/language/expressions/class/elements/nested-private-literal-name-init-err-contains-arguments.js
-  - [ ] test/language/expressions/class/elements/nested-private-literal-name-init-err-contains-super.js
-  - [ ] test/language/expressions/class/elements/nested-private-ternary-init-err-contains-arguments.js
-  - [ ] test/language/expressions/class/elements/nested-private-ternary-init-err-contains-super.js
-  - [ ] test/language/expressions/class/elements/nested-private-typeof-init-err-contains-arguments.js
-  - [ ] test/language/expressions/class/elements/nested-private-typeof-init-err-contains-super.js
-  - [ ] test/language/expressions/class/elements/nested-static-comp-name-init-err-contains-arguments.js
-  - [ ] test/language/expressions/class/elements/nested-static-comp-name-init-err-contains-super.js
-  - [ ] test/language/expressions/class/elements/nested-static-literal-init-err-contains-arguments.js
-  - [ ] test/language/expressions/class/elements/nested-static-literal-init-err-contains-super.js
-  - [ ] test/language/expressions/class/elements/nested-static-private-init-err-contains-arguments.js
-  - [ ] test/language/expressions/class/elements/nested-static-private-init-err-contains-super.js
-  - [ ] test/language/expressions/class/elements/nested-static-string-literal-name-init-err-contains-arguments.js
-  - [ ] test/language/expressions/class/elements/nested-static-string-literal-name-init-err-contains-super.js
-  - [ ] test/language/expressions/class/elements/nested-string-literal-name-init-err-contains-arguments.js
-  - [ ] test/language/expressions/class/elements/nested-string-literal-name-init-err-contains-super.js
-  - [ ] test/language/expressions/class/elements/nested-ternary-init-err-contains-arguments.js
-  - [ ] test/language/expressions/class/elements/nested-ternary-init-err-contains-super.js
-  - [ ] test/language/expressions/class/elements/nested-typeof-init-err-contains-arguments.js
-  - [ ] test/language/expressions/class/elements/nested-typeof-init-err-contains-super.js
-  - [ ] test/language/expressions/class/elements/new-no-sc-line-method-computed-names.js
+  - [x] test/language/expressions/class/elements/nested-private-indirect-eval-err-contains-newtarget.js
+  - [x] test/language/expressions/class/elements/nested-private-literal-name-init-err-contains-arguments.js
+  - [x] test/language/expressions/class/elements/nested-private-literal-name-init-err-contains-super.js
+  - [x] test/language/expressions/class/elements/nested-private-ternary-init-err-contains-arguments.js
+  - [x] test/language/expressions/class/elements/nested-private-ternary-init-err-contains-super.js
+  - [x] test/language/expressions/class/elements/nested-private-typeof-init-err-contains-arguments.js
+  - [x] test/language/expressions/class/elements/nested-private-typeof-init-err-contains-super.js
+  - [x] test/language/expressions/class/elements/nested-static-comp-name-init-err-contains-arguments.js
+  - [x] test/language/expressions/class/elements/nested-static-comp-name-init-err-contains-super.js
+  - [x] test/language/expressions/class/elements/nested-static-literal-init-err-contains-arguments.js
+  - [x] test/language/expressions/class/elements/nested-static-literal-init-err-contains-super.js
+  - [x] test/language/expressions/class/elements/nested-static-private-init-err-contains-arguments.js
+  - [x] test/language/expressions/class/elements/nested-static-private-init-err-contains-super.js
+  - [x] test/language/expressions/class/elements/nested-static-string-literal-name-init-err-contains-arguments.js
+  - [x] test/language/expressions/class/elements/nested-static-string-literal-name-init-err-contains-super.js
+  - [x] test/language/expressions/class/elements/nested-string-literal-name-init-err-contains-arguments.js
+  - [x] test/language/expressions/class/elements/nested-string-literal-name-init-err-contains-super.js
+  - [x] test/language/expressions/class/elements/nested-ternary-init-err-contains-arguments.js
+  - [x] test/language/expressions/class/elements/nested-ternary-init-err-contains-super.js
+  - [x] test/language/expressions/class/elements/nested-typeof-init-err-contains-arguments.js
+  - [x] test/language/expressions/class/elements/nested-typeof-init-err-contains-super.js
+  - [x] test/language/expressions/class/elements/new-no-sc-line-method-computed-names.js
   - [ ] test/language/expressions/class/elements/new-no-sc-line-method-computed-symbol-names.js
-  - [ ] test/language/expressions/class/elements/new-no-sc-line-method-grammar-privatename-identifier-semantics-stringvalue.js
-  - [ ] test/language/expressions/class/elements/new-no-sc-line-method-literal-names-asi.js
-  - [ ] test/language/expressions/class/elements/new-no-sc-line-method-literal-names.js
-  - [ ] test/language/expressions/class/elements/new-no-sc-line-method-private-field-usage.js
-  - [ ] test/language/expressions/class/elements/new-no-sc-line-method-private-method-getter-usage.js
-  - [ ] test/language/expressions/class/elements/new-no-sc-line-method-private-method-usage.js
-  - [ ] test/language/expressions/class/elements/new-no-sc-line-method-private-names.js
+  - [x] test/language/expressions/class/elements/new-no-sc-line-method-grammar-privatename-identifier-semantics-stringvalue.js
+  - [x] test/language/expressions/class/elements/new-no-sc-line-method-literal-names-asi.js
+  - [x] test/language/expressions/class/elements/new-no-sc-line-method-literal-names.js
+  - [x] test/language/expressions/class/elements/new-no-sc-line-method-private-field-usage.js
+  - [x] test/language/expressions/class/elements/new-no-sc-line-method-private-method-getter-usage.js
+  - [x] test/language/expressions/class/elements/new-no-sc-line-method-private-method-usage.js
+  - [x] test/language/expressions/class/elements/new-no-sc-line-method-private-names.js
   - [ ] test/language/expressions/class/elements/new-no-sc-line-method-rs-field-identifier-initializer.js
   - [ ] test/language/expressions/class/elements/new-no-sc-line-method-rs-field-identifier.js
   - [ ] test/language/expressions/class/elements/new-no-sc-line-method-rs-private-getter-alt.js
@@ -16030,19 +16030,19 @@ Sub-category progress
   - [ ] test/language/expressions/class/elements/new-no-sc-line-method-rs-static-privatename-identifier-initializer-alt.js
   - [ ] test/language/expressions/class/elements/new-no-sc-line-method-rs-static-privatename-identifier-initializer.js
   - [ ] test/language/expressions/class/elements/new-no-sc-line-method-rs-static-privatename-identifier.js
-  - [ ] test/language/expressions/class/elements/new-no-sc-line-method-static-private-fields.js
+  - [x] test/language/expressions/class/elements/new-no-sc-line-method-static-private-fields.js
   - [ ] test/language/expressions/class/elements/new-no-sc-line-method-static-private-methods-with-fields.js
-  - [ ] test/language/expressions/class/elements/new-no-sc-line-method-static-private-methods.js
-  - [ ] test/language/expressions/class/elements/new-no-sc-line-method-string-literal-names.js
-  - [ ] test/language/expressions/class/elements/new-sc-line-gen-computed-names.js
+  - [x] test/language/expressions/class/elements/new-no-sc-line-method-static-private-methods.js
+  - [x] test/language/expressions/class/elements/new-no-sc-line-method-string-literal-names.js
+  - [x] test/language/expressions/class/elements/new-sc-line-gen-computed-names.js
   - [ ] test/language/expressions/class/elements/new-sc-line-gen-computed-symbol-names.js
-  - [ ] test/language/expressions/class/elements/new-sc-line-gen-grammar-privatename-identifier-semantics-stringvalue.js
-  - [ ] test/language/expressions/class/elements/new-sc-line-gen-literal-names-asi.js
-  - [ ] test/language/expressions/class/elements/new-sc-line-gen-literal-names.js
-  - [ ] test/language/expressions/class/elements/new-sc-line-gen-private-field-usage.js
-  - [ ] test/language/expressions/class/elements/new-sc-line-gen-private-method-getter-usage.js
-  - [ ] test/language/expressions/class/elements/new-sc-line-gen-private-method-usage.js
-  - [ ] test/language/expressions/class/elements/new-sc-line-gen-private-names.js
+  - [x] test/language/expressions/class/elements/new-sc-line-gen-grammar-privatename-identifier-semantics-stringvalue.js
+  - [x] test/language/expressions/class/elements/new-sc-line-gen-literal-names-asi.js
+  - [x] test/language/expressions/class/elements/new-sc-line-gen-literal-names.js
+  - [x] test/language/expressions/class/elements/new-sc-line-gen-private-field-usage.js
+  - [x] test/language/expressions/class/elements/new-sc-line-gen-private-method-getter-usage.js
+  - [x] test/language/expressions/class/elements/new-sc-line-gen-private-method-usage.js
+  - [x] test/language/expressions/class/elements/new-sc-line-gen-private-names.js
   - [ ] test/language/expressions/class/elements/new-sc-line-gen-rs-field-identifier-initializer.js
   - [ ] test/language/expressions/class/elements/new-sc-line-gen-rs-field-identifier.js
   - [ ] test/language/expressions/class/elements/new-sc-line-gen-rs-private-getter-alt.js
@@ -16070,19 +16070,19 @@ Sub-category progress
   - [ ] test/language/expressions/class/elements/new-sc-line-gen-rs-static-privatename-identifier-initializer-alt.js
   - [ ] test/language/expressions/class/elements/new-sc-line-gen-rs-static-privatename-identifier-initializer.js
   - [ ] test/language/expressions/class/elements/new-sc-line-gen-rs-static-privatename-identifier.js
-  - [ ] test/language/expressions/class/elements/new-sc-line-gen-static-private-fields.js
+  - [x] test/language/expressions/class/elements/new-sc-line-gen-static-private-fields.js
   - [ ] test/language/expressions/class/elements/new-sc-line-gen-static-private-methods-with-fields.js
-  - [ ] test/language/expressions/class/elements/new-sc-line-gen-static-private-methods.js
-  - [ ] test/language/expressions/class/elements/new-sc-line-gen-string-literal-names.js
-  - [ ] test/language/expressions/class/elements/new-sc-line-method-computed-names.js
+  - [x] test/language/expressions/class/elements/new-sc-line-gen-static-private-methods.js
+  - [x] test/language/expressions/class/elements/new-sc-line-gen-string-literal-names.js
+  - [x] test/language/expressions/class/elements/new-sc-line-method-computed-names.js
   - [ ] test/language/expressions/class/elements/new-sc-line-method-computed-symbol-names.js
-  - [ ] test/language/expressions/class/elements/new-sc-line-method-grammar-privatename-identifier-semantics-stringvalue.js
-  - [ ] test/language/expressions/class/elements/new-sc-line-method-literal-names-asi.js
-  - [ ] test/language/expressions/class/elements/new-sc-line-method-literal-names.js
-  - [ ] test/language/expressions/class/elements/new-sc-line-method-private-field-usage.js
-  - [ ] test/language/expressions/class/elements/new-sc-line-method-private-method-getter-usage.js
-  - [ ] test/language/expressions/class/elements/new-sc-line-method-private-method-usage.js
-  - [ ] test/language/expressions/class/elements/new-sc-line-method-private-names.js
+  - [x] test/language/expressions/class/elements/new-sc-line-method-grammar-privatename-identifier-semantics-stringvalue.js
+  - [x] test/language/expressions/class/elements/new-sc-line-method-literal-names-asi.js
+  - [x] test/language/expressions/class/elements/new-sc-line-method-literal-names.js
+  - [x] test/language/expressions/class/elements/new-sc-line-method-private-field-usage.js
+  - [x] test/language/expressions/class/elements/new-sc-line-method-private-method-getter-usage.js
+  - [x] test/language/expressions/class/elements/new-sc-line-method-private-method-usage.js
+  - [x] test/language/expressions/class/elements/new-sc-line-method-private-names.js
   - [ ] test/language/expressions/class/elements/new-sc-line-method-rs-field-identifier-initializer.js
   - [ ] test/language/expressions/class/elements/new-sc-line-method-rs-field-identifier.js
   - [ ] test/language/expressions/class/elements/new-sc-line-method-rs-private-getter-alt.js
@@ -16110,20 +16110,20 @@ Sub-category progress
   - [ ] test/language/expressions/class/elements/new-sc-line-method-rs-static-privatename-identifier-initializer-alt.js
   - [ ] test/language/expressions/class/elements/new-sc-line-method-rs-static-privatename-identifier-initializer.js
   - [ ] test/language/expressions/class/elements/new-sc-line-method-rs-static-privatename-identifier.js
-  - [ ] test/language/expressions/class/elements/new-sc-line-method-static-private-fields.js
+  - [x] test/language/expressions/class/elements/new-sc-line-method-static-private-fields.js
   - [ ] test/language/expressions/class/elements/new-sc-line-method-static-private-methods-with-fields.js
-  - [ ] test/language/expressions/class/elements/new-sc-line-method-static-private-methods.js
-  - [ ] test/language/expressions/class/elements/new-sc-line-method-string-literal-names.js
-  - [ ] test/language/expressions/class/elements/private-accessor-name/inst-private-escape-sequence-ZWJ.js
-  - [ ] test/language/expressions/class/elements/private-accessor-name/inst-private-escape-sequence-ZWNJ.js
-  - [ ] test/language/expressions/class/elements/private-accessor-name/inst-private-escape-sequence-u2118.js
-  - [ ] test/language/expressions/class/elements/private-accessor-name/inst-private-escape-sequence-u6F.js
-  - [ ] test/language/expressions/class/elements/private-accessor-name/inst-private-name-ZWJ.js
-  - [ ] test/language/expressions/class/elements/private-accessor-name/inst-private-name-ZWNJ.js
-  - [ ] test/language/expressions/class/elements/private-accessor-name/inst-private-name-common.js
-  - [ ] test/language/expressions/class/elements/private-accessor-name/inst-private-name-dollar.js
-  - [ ] test/language/expressions/class/elements/private-accessor-name/inst-private-name-u2118.js
-  - [ ] test/language/expressions/class/elements/private-accessor-name/inst-private-name-underscore.js
+  - [x] test/language/expressions/class/elements/new-sc-line-method-static-private-methods.js
+  - [x] test/language/expressions/class/elements/new-sc-line-method-string-literal-names.js
+  - [x] test/language/expressions/class/elements/private-accessor-name/inst-private-escape-sequence-ZWJ.js
+  - [x] test/language/expressions/class/elements/private-accessor-name/inst-private-escape-sequence-ZWNJ.js
+  - [x] test/language/expressions/class/elements/private-accessor-name/inst-private-escape-sequence-u2118.js
+  - [x] test/language/expressions/class/elements/private-accessor-name/inst-private-escape-sequence-u6F.js
+  - [x] test/language/expressions/class/elements/private-accessor-name/inst-private-name-ZWJ.js
+  - [x] test/language/expressions/class/elements/private-accessor-name/inst-private-name-ZWNJ.js
+  - [x] test/language/expressions/class/elements/private-accessor-name/inst-private-name-common.js
+  - [x] test/language/expressions/class/elements/private-accessor-name/inst-private-name-dollar.js
+  - [x] test/language/expressions/class/elements/private-accessor-name/inst-private-name-u2118.js
+  - [x] test/language/expressions/class/elements/private-accessor-name/inst-private-name-underscore.js
   - [ ] test/language/expressions/class/elements/private-accessor-name/static-private-escape-sequence-ZWJ.js
   - [ ] test/language/expressions/class/elements/private-accessor-name/static-private-escape-sequence-ZWNJ.js
   - [ ] test/language/expressions/class/elements/private-accessor-name/static-private-escape-sequence-u2118.js
@@ -16134,89 +16134,89 @@ Sub-category progress
   - [ ] test/language/expressions/class/elements/private-accessor-name/static-private-name-dollar.js
   - [ ] test/language/expressions/class/elements/private-accessor-name/static-private-name-u2118.js
   - [ ] test/language/expressions/class/elements/private-accessor-name/static-private-name-underscore.js
-  - [ ] test/language/expressions/class/elements/private-arrow-fnc-init-err-contains-arguments.js
-  - [ ] test/language/expressions/class/elements/private-arrow-fnc-init-err-contains-super.js
+  - [x] test/language/expressions/class/elements/private-arrow-fnc-init-err-contains-arguments.js
+  - [x] test/language/expressions/class/elements/private-arrow-fnc-init-err-contains-super.js
   - [ ] test/language/expressions/class/elements/private-async-generator-method-name.js
-  - [ ] test/language/expressions/class/elements/private-async-method-name.js
-  - [ ] test/language/expressions/class/elements/private-derived-cls-direct-eval-contains-superproperty-1.js
-  - [ ] test/language/expressions/class/elements/private-derived-cls-direct-eval-contains-superproperty-2.js
-  - [ ] test/language/expressions/class/elements/private-derived-cls-direct-eval-err-contains-supercall-1.js
-  - [ ] test/language/expressions/class/elements/private-derived-cls-direct-eval-err-contains-supercall-2.js
-  - [ ] test/language/expressions/class/elements/private-derived-cls-direct-eval-err-contains-supercall.js
-  - [ ] test/language/expressions/class/elements/private-derived-cls-indirect-eval-contains-superproperty-1.js
-  - [ ] test/language/expressions/class/elements/private-derived-cls-indirect-eval-contains-superproperty-2.js
-  - [ ] test/language/expressions/class/elements/private-derived-cls-indirect-eval-err-contains-supercall-1.js
-  - [ ] test/language/expressions/class/elements/private-derived-cls-indirect-eval-err-contains-supercall-2.js
-  - [ ] test/language/expressions/class/elements/private-derived-cls-indirect-eval-err-contains-supercall.js
-  - [ ] test/language/expressions/class/elements/private-direct-eval-err-contains-arguments.js
-  - [ ] test/language/expressions/class/elements/private-direct-eval-err-contains-newtarget.js
+  - [x] test/language/expressions/class/elements/private-async-method-name.js
+  - [x] test/language/expressions/class/elements/private-derived-cls-direct-eval-contains-superproperty-1.js
+  - [x] test/language/expressions/class/elements/private-derived-cls-direct-eval-contains-superproperty-2.js
+  - [x] test/language/expressions/class/elements/private-derived-cls-direct-eval-err-contains-supercall-1.js
+  - [x] test/language/expressions/class/elements/private-derived-cls-direct-eval-err-contains-supercall-2.js
+  - [x] test/language/expressions/class/elements/private-derived-cls-direct-eval-err-contains-supercall.js
+  - [x] test/language/expressions/class/elements/private-derived-cls-indirect-eval-contains-superproperty-1.js
+  - [x] test/language/expressions/class/elements/private-derived-cls-indirect-eval-contains-superproperty-2.js
+  - [x] test/language/expressions/class/elements/private-derived-cls-indirect-eval-err-contains-supercall-1.js
+  - [x] test/language/expressions/class/elements/private-derived-cls-indirect-eval-err-contains-supercall-2.js
+  - [x] test/language/expressions/class/elements/private-derived-cls-indirect-eval-err-contains-supercall.js
+  - [x] test/language/expressions/class/elements/private-direct-eval-err-contains-arguments.js
+  - [x] test/language/expressions/class/elements/private-direct-eval-err-contains-newtarget.js
   - [ ] test/language/expressions/class/elements/private-field-access-on-inner-arrow-function.js
   - [ ] test/language/expressions/class/elements/private-field-access-on-inner-function.js
   - [ ] test/language/expressions/class/elements/private-field-after-optional-chain.js
-  - [ ] test/language/expressions/class/elements/private-field-as-arrow-function.js
-  - [ ] test/language/expressions/class/elements/private-field-as-async-arrow-function.js
-  - [ ] test/language/expressions/class/elements/private-field-as-async-function.js
-  - [ ] test/language/expressions/class/elements/private-field-as-function.js
+  - [x] test/language/expressions/class/elements/private-field-as-arrow-function.js
+  - [x] test/language/expressions/class/elements/private-field-as-async-arrow-function.js
+  - [x] test/language/expressions/class/elements/private-field-as-async-function.js
+  - [x] test/language/expressions/class/elements/private-field-as-function.js
   - [ ] test/language/expressions/class/elements/private-field-on-nested-class.js
-  - [ ] test/language/expressions/class/elements/private-fields-proxy-default-handler-throws.js
-  - [ ] test/language/expressions/class/elements/private-generator-method-name.js
+  - [x] test/language/expressions/class/elements/private-fields-proxy-default-handler-throws.js
+  - [x] test/language/expressions/class/elements/private-generator-method-name.js
   - [ ] test/language/expressions/class/elements/private-getter-access-on-inner-arrow-function.js
   - [ ] test/language/expressions/class/elements/private-getter-access-on-inner-function.js
-  - [ ] test/language/expressions/class/elements/private-getter-is-not-a-own-property.js
+  - [x] test/language/expressions/class/elements/private-getter-is-not-a-own-property.js
   - [ ] test/language/expressions/class/elements/private-getter-on-nested-class.js
   - [ ] test/language/expressions/class/elements/private-getter-shadowed-by-field-on-nested-class.js
   - [ ] test/language/expressions/class/elements/private-getter-shadowed-by-getter-on-nested-class.js
   - [ ] test/language/expressions/class/elements/private-getter-shadowed-by-method-on-nested-class.js
   - [ ] test/language/expressions/class/elements/private-getter-shadowed-by-setter-on-nested-class.js
   - [ ] test/language/expressions/class/elements/private-indirect-eval-contains-arguments.js
-  - [ ] test/language/expressions/class/elements/private-indirect-eval-err-contains-newtarget.js
-  - [ ] test/language/expressions/class/elements/private-literal-name-init-err-contains-arguments.js
-  - [ ] test/language/expressions/class/elements/private-literal-name-init-err-contains-super.js
+  - [x] test/language/expressions/class/elements/private-indirect-eval-err-contains-newtarget.js
+  - [x] test/language/expressions/class/elements/private-literal-name-init-err-contains-arguments.js
+  - [x] test/language/expressions/class/elements/private-literal-name-init-err-contains-super.js
   - [ ] test/language/expressions/class/elements/private-method-access-on-inner-arrow-function.js
   - [ ] test/language/expressions/class/elements/private-method-access-on-inner-function.js
-  - [ ] test/language/expressions/class/elements/private-method-comparison.js
+  - [x] test/language/expressions/class/elements/private-method-comparison.js
   - [ ] test/language/expressions/class/elements/private-method-get-and-call.js
-  - [ ] test/language/expressions/class/elements/private-method-is-not-a-own-property.js
-  - [ ] test/language/expressions/class/elements/private-method-length.js
-  - [ ] test/language/expressions/class/elements/private-method-on-nested-class.js
+  - [x] test/language/expressions/class/elements/private-method-is-not-a-own-property.js
+  - [x] test/language/expressions/class/elements/private-method-length.js
+  - [x] test/language/expressions/class/elements/private-method-on-nested-class.js
   - [ ] test/language/expressions/class/elements/private-method-referenced-from-static-method.js
   - [ ] test/language/expressions/class/elements/private-method-shadowed-by-field-on-nested-class.js
   - [ ] test/language/expressions/class/elements/private-method-shadowed-by-getter-on-nested-class.js
   - [ ] test/language/expressions/class/elements/private-method-shadowed-by-setter-on-nested-class.js
-  - [ ] test/language/expressions/class/elements/private-method-shadowed-on-nested-class.js
+  - [x] test/language/expressions/class/elements/private-method-shadowed-on-nested-class.js
   - [ ] test/language/expressions/class/elements/private-methods/prod-private-async-generator.js
   - [ ] test/language/expressions/class/elements/private-methods/prod-private-async-method.js
-  - [ ] test/language/expressions/class/elements/private-methods/prod-private-generator.js
+  - [x] test/language/expressions/class/elements/private-methods/prod-private-generator.js
   - [ ] test/language/expressions/class/elements/private-methods/prod-private-method-initialize-order.js
-  - [ ] test/language/expressions/class/elements/private-methods/prod-private-method.js
+  - [x] test/language/expressions/class/elements/private-methods/prod-private-method.js
   - [ ] test/language/expressions/class/elements/private-setter-access-on-inner-arrow-function.js
   - [ ] test/language/expressions/class/elements/private-setter-access-on-inner-function.js
-  - [ ] test/language/expressions/class/elements/private-setter-is-not-a-own-property.js
+  - [x] test/language/expressions/class/elements/private-setter-is-not-a-own-property.js
   - [ ] test/language/expressions/class/elements/private-setter-on-nested-class.js
   - [ ] test/language/expressions/class/elements/private-setter-shadowed-by-field-on-nested-class.js
   - [ ] test/language/expressions/class/elements/private-setter-shadowed-by-getter-on-nested-class.js
   - [ ] test/language/expressions/class/elements/private-setter-shadowed-by-method-on-nested-class.js
   - [ ] test/language/expressions/class/elements/private-setter-shadowed-by-setter-on-nested-class.js
   - [ ] test/language/expressions/class/elements/private-static-async-generator-method-name.js
-  - [ ] test/language/expressions/class/elements/private-static-async-method-name.js
+  - [x] test/language/expressions/class/elements/private-static-async-method-name.js
   - [ ] test/language/expressions/class/elements/private-static-field-shadowed-by-field-on-nested-class.js
   - [ ] test/language/expressions/class/elements/private-static-field-shadowed-by-getter-on-nested-class.js
   - [ ] test/language/expressions/class/elements/private-static-field-shadowed-by-method-on-nested-class.js
   - [ ] test/language/expressions/class/elements/private-static-field-shadowed-by-setter-on-nested-class.js
   - [ ] test/language/expressions/class/elements/private-static-field-usage-inside-nested-class.js
-  - [ ] test/language/expressions/class/elements/private-static-generator-method-name.js
-  - [ ] test/language/expressions/class/elements/private-static-method-length.js
-  - [ ] test/language/expressions/class/elements/private-static-method-name.js
+  - [x] test/language/expressions/class/elements/private-static-generator-method-name.js
+  - [x] test/language/expressions/class/elements/private-static-method-length.js
+  - [x] test/language/expressions/class/elements/private-static-method-name.js
   - [ ] test/language/expressions/class/elements/private-static-method-shadowed-by-field-on-nested-class.js
   - [ ] test/language/expressions/class/elements/private-static-method-shadowed-by-getter-on-nested-class.js
   - [ ] test/language/expressions/class/elements/private-static-method-shadowed-by-method-on-nested-class.js
   - [ ] test/language/expressions/class/elements/private-static-method-shadowed-by-setter-on-nested-class.js
   - [ ] test/language/expressions/class/elements/private-static-method-usage-inside-nested-class.js
-  - [ ] test/language/expressions/class/elements/private-ternary-init-err-contains-arguments.js
-  - [ ] test/language/expressions/class/elements/private-ternary-init-err-contains-super.js
-  - [ ] test/language/expressions/class/elements/private-typeof-init-err-contains-arguments.js
-  - [ ] test/language/expressions/class/elements/private-typeof-init-err-contains-super.js
-  - [ ] test/language/expressions/class/elements/prod-private-getter-before-super-return-in-constructor.js
+  - [x] test/language/expressions/class/elements/private-ternary-init-err-contains-arguments.js
+  - [x] test/language/expressions/class/elements/private-ternary-init-err-contains-super.js
+  - [x] test/language/expressions/class/elements/private-typeof-init-err-contains-arguments.js
+  - [x] test/language/expressions/class/elements/private-typeof-init-err-contains-super.js
+  - [x] test/language/expressions/class/elements/prod-private-getter-before-super-return-in-constructor.js
   - [ ] test/language/expressions/class/elements/prod-private-getter-before-super-return-in-field-initializer.js
   - [ ] test/language/expressions/class/elements/prod-private-method-before-super-return-in-constructor.js
   - [ ] test/language/expressions/class/elements/prod-private-method-before-super-return-in-field-initializer.js
@@ -16939,7 +16939,7 @@ Sub-category progress
   - [ ] test/language/expressions/class/private-static-field-multiple-evaluations-of-class-direct-eval.js
   - [ ] test/language/expressions/class/private-static-field-multiple-evaluations-of-class-eval-indirect.js
   - [ ] test/language/expressions/class/private-static-field-multiple-evaluations-of-class-factory.js
-  - [ ] test/language/expressions/class/private-static-field-multiple-evaluations-of-class-function-ctor.js
+  - [x] test/language/expressions/class/private-static-field-multiple-evaluations-of-class-function-ctor.js
   - [ ] test/language/expressions/class/private-static-field-multiple-evaluations-of-class-realm.js
   - [ ] test/language/expressions/class/private-static-getter-multiple-evaluations-of-class-direct-eval.js
   - [ ] test/language/expressions/class/private-static-getter-multiple-evaluations-of-class-eval-indirect.js
@@ -16956,28 +16956,28 @@ Sub-category progress
   - [ ] test/language/expressions/class/private-static-setter-multiple-evaluations-of-class-factory.js
   - [ ] test/language/expressions/class/private-static-setter-multiple-evaluations-of-class-function-ctor.js
   - [ ] test/language/expressions/class/private-static-setter-multiple-evaluations-of-class-realm.js
-  - [ ] test/language/expressions/class/restricted-properties.js
-  - [ ] test/language/expressions/class/scope-gen-meth-paramsbody-var-close.js
-  - [ ] test/language/expressions/class/scope-gen-meth-paramsbody-var-open.js
-  - [ ] test/language/expressions/class/scope-meth-paramsbody-var-close.js
-  - [ ] test/language/expressions/class/scope-meth-paramsbody-var-open.js
-  - [ ] test/language/expressions/class/scope-name-lex-close.js
+  - [x] test/language/expressions/class/restricted-properties.js
+  - [x] test/language/expressions/class/scope-gen-meth-paramsbody-var-close.js
+  - [x] test/language/expressions/class/scope-gen-meth-paramsbody-var-open.js
+  - [x] test/language/expressions/class/scope-meth-paramsbody-var-close.js
+  - [x] test/language/expressions/class/scope-meth-paramsbody-var-open.js
+  - [x] test/language/expressions/class/scope-name-lex-close.js
   - [ ] test/language/expressions/class/scope-name-lex-open-heritage.js
   - [ ] test/language/expressions/class/scope-name-lex-open-no-heritage.js
-  - [ ] test/language/expressions/class/scope-setter-paramsbody-var-close.js
-  - [ ] test/language/expressions/class/scope-setter-paramsbody-var-open.js
-  - [ ] test/language/expressions/class/scope-static-gen-meth-paramsbody-var-close.js
-  - [ ] test/language/expressions/class/scope-static-gen-meth-paramsbody-var-open.js
-  - [ ] test/language/expressions/class/scope-static-meth-paramsbody-var-close.js
-  - [ ] test/language/expressions/class/scope-static-meth-paramsbody-var-open.js
-  - [ ] test/language/expressions/class/scope-static-setter-paramsbody-var-close.js
-  - [ ] test/language/expressions/class/scope-static-setter-paramsbody-var-open.js
-  - [ ] test/language/expressions/class/setter-length-dflt.js
-  - [ ] test/language/expressions/class/static-gen-method-param-dflt-yield.js
-  - [ ] test/language/expressions/class/static-init-await-binding.js
-  - [ ] test/language/expressions/class/static-init-await-reference.js
-  - [ ] test/language/expressions/class/static-method-length-dflt.js
-  - [ ] test/language/expressions/class/static-method-param-dflt-yield.js
+  - [x] test/language/expressions/class/scope-setter-paramsbody-var-close.js
+  - [x] test/language/expressions/class/scope-setter-paramsbody-var-open.js
+  - [x] test/language/expressions/class/scope-static-gen-meth-paramsbody-var-close.js
+  - [x] test/language/expressions/class/scope-static-gen-meth-paramsbody-var-open.js
+  - [x] test/language/expressions/class/scope-static-meth-paramsbody-var-close.js
+  - [x] test/language/expressions/class/scope-static-meth-paramsbody-var-open.js
+  - [x] test/language/expressions/class/scope-static-setter-paramsbody-var-close.js
+  - [x] test/language/expressions/class/scope-static-setter-paramsbody-var-open.js
+  - [x] test/language/expressions/class/setter-length-dflt.js
+  - [x] test/language/expressions/class/static-gen-method-param-dflt-yield.js
+  - [x] test/language/expressions/class/static-init-await-binding.js
+  - [x] test/language/expressions/class/static-init-await-reference.js
+  - [x] test/language/expressions/class/static-method-length-dflt.js
+  - [x] test/language/expressions/class/static-method-param-dflt-yield.js
   - [ ] test/language/expressions/class/subclass-builtins/subclass-AggregateError.js
   - [ ] test/language/expressions/class/subclass-builtins/subclass-Array.js
   - [ ] test/language/expressions/class/subclass-builtins/subclass-ArrayBuffer.js
@@ -17014,79 +17014,79 @@ Sub-category progress
   - [ ] test/language/expressions/class/subclass-builtins/subclass-WeakMap.js
   - [ ] test/language/expressions/class/subclass-builtins/subclass-WeakRef.js
   - [ ] test/language/expressions/class/subclass-builtins/subclass-WeakSet.js
-  - [ ] test/language/expressions/coalesce/abrupt-is-a-short-circuit.js
-  - [ ] test/language/expressions/coalesce/cannot-chain-head-with-logical-and.js
-  - [ ] test/language/expressions/coalesce/cannot-chain-head-with-logical-or.js
-  - [ ] test/language/expressions/coalesce/cannot-chain-tail-with-logical-and.js
-  - [ ] test/language/expressions/coalesce/cannot-chain-tail-with-logical-or.js
-  - [ ] test/language/expressions/coalesce/chainable-if-parenthesis-covered-logical-and.js
-  - [ ] test/language/expressions/coalesce/chainable-if-parenthesis-covered-logical-or.js
-  - [ ] test/language/expressions/coalesce/chainable-with-bitwise-and.js
-  - [ ] test/language/expressions/coalesce/chainable-with-bitwise-or.js
-  - [ ] test/language/expressions/coalesce/chainable-with-bitwise-xor.js
-  - [ ] test/language/expressions/coalesce/chainable.js
-  - [ ] test/language/expressions/coalesce/follows-null.js
-  - [ ] test/language/expressions/coalesce/follows-undefined.js
-  - [ ] test/language/expressions/coalesce/short-circuit-number-0.js
-  - [ ] test/language/expressions/coalesce/short-circuit-number-42.js
-  - [ ] test/language/expressions/coalesce/short-circuit-number-empty-string.js
-  - [ ] test/language/expressions/coalesce/short-circuit-number-false.js
-  - [ ] test/language/expressions/coalesce/short-circuit-number-object.js
-  - [ ] test/language/expressions/coalesce/short-circuit-number-string.js
-  - [ ] test/language/expressions/coalesce/short-circuit-number-symbol.js
-  - [ ] test/language/expressions/coalesce/short-circuit-number-true.js
-  - [ ] test/language/expressions/coalesce/short-circuit-prevents-evaluation.js
+  - [x] test/language/expressions/coalesce/abrupt-is-a-short-circuit.js
+  - [x] test/language/expressions/coalesce/cannot-chain-head-with-logical-and.js
+  - [x] test/language/expressions/coalesce/cannot-chain-head-with-logical-or.js
+  - [x] test/language/expressions/coalesce/cannot-chain-tail-with-logical-and.js
+  - [x] test/language/expressions/coalesce/cannot-chain-tail-with-logical-or.js
+  - [x] test/language/expressions/coalesce/chainable-if-parenthesis-covered-logical-and.js
+  - [x] test/language/expressions/coalesce/chainable-if-parenthesis-covered-logical-or.js
+  - [x] test/language/expressions/coalesce/chainable-with-bitwise-and.js
+  - [x] test/language/expressions/coalesce/chainable-with-bitwise-or.js
+  - [x] test/language/expressions/coalesce/chainable-with-bitwise-xor.js
+  - [x] test/language/expressions/coalesce/chainable.js
+  - [x] test/language/expressions/coalesce/follows-null.js
+  - [x] test/language/expressions/coalesce/follows-undefined.js
+  - [x] test/language/expressions/coalesce/short-circuit-number-0.js
+  - [x] test/language/expressions/coalesce/short-circuit-number-42.js
+  - [x] test/language/expressions/coalesce/short-circuit-number-empty-string.js
+  - [x] test/language/expressions/coalesce/short-circuit-number-false.js
+  - [x] test/language/expressions/coalesce/short-circuit-number-object.js
+  - [x] test/language/expressions/coalesce/short-circuit-number-string.js
+  - [x] test/language/expressions/coalesce/short-circuit-number-symbol.js
+  - [x] test/language/expressions/coalesce/short-circuit-number-true.js
+  - [x] test/language/expressions/coalesce/short-circuit-prevents-evaluation.js
   - [x] test/language/expressions/coalesce/tco-pos-null.js
   - [x] test/language/expressions/coalesce/tco-pos-undefined.js
-  - [ ] test/language/expressions/comma/S11.14_A1.js
-  - [ ] test/language/expressions/comma/S11.14_A2.1_T1.js
-  - [ ] test/language/expressions/comma/S11.14_A2.1_T2.js
-  - [ ] test/language/expressions/comma/S11.14_A2.1_T3.js
-  - [ ] test/language/expressions/comma/S11.14_A3.js
+  - [x] test/language/expressions/comma/S11.14_A1.js
+  - [x] test/language/expressions/comma/S11.14_A2.1_T1.js
+  - [x] test/language/expressions/comma/S11.14_A2.1_T2.js
+  - [x] test/language/expressions/comma/S11.14_A2.1_T3.js
+  - [x] test/language/expressions/comma/S11.14_A3.js
   - [x] test/language/expressions/comma/tco-final.js
-  - [ ] test/language/expressions/compound-assignment/11.13.2-1-s.js
-  - [ ] test/language/expressions/compound-assignment/11.13.2-10-s.js
-  - [ ] test/language/expressions/compound-assignment/11.13.2-11-s.js
-  - [ ] test/language/expressions/compound-assignment/11.13.2-12-s.js
-  - [ ] test/language/expressions/compound-assignment/11.13.2-13-s.js
-  - [ ] test/language/expressions/compound-assignment/11.13.2-14-s.js
-  - [ ] test/language/expressions/compound-assignment/11.13.2-15-s.js
-  - [ ] test/language/expressions/compound-assignment/11.13.2-16-s.js
-  - [ ] test/language/expressions/compound-assignment/11.13.2-17-s.js
-  - [ ] test/language/expressions/compound-assignment/11.13.2-18-s.js
-  - [ ] test/language/expressions/compound-assignment/11.13.2-19-s.js
-  - [ ] test/language/expressions/compound-assignment/11.13.2-2-s.js
-  - [ ] test/language/expressions/compound-assignment/11.13.2-20-s.js
-  - [ ] test/language/expressions/compound-assignment/11.13.2-21-s.js
-  - [ ] test/language/expressions/compound-assignment/11.13.2-22-s.js
-  - [ ] test/language/expressions/compound-assignment/11.13.2-23-s.js
-  - [ ] test/language/expressions/compound-assignment/11.13.2-24-s.js
-  - [ ] test/language/expressions/compound-assignment/11.13.2-25-s.js
-  - [ ] test/language/expressions/compound-assignment/11.13.2-26-s.js
-  - [ ] test/language/expressions/compound-assignment/11.13.2-27-s.js
-  - [ ] test/language/expressions/compound-assignment/11.13.2-28-s.js
-  - [ ] test/language/expressions/compound-assignment/11.13.2-29-s.js
-  - [ ] test/language/expressions/compound-assignment/11.13.2-30-s.js
-  - [ ] test/language/expressions/compound-assignment/11.13.2-31-s.js
-  - [ ] test/language/expressions/compound-assignment/11.13.2-32-s.js
-  - [ ] test/language/expressions/compound-assignment/11.13.2-33-s.js
-  - [ ] test/language/expressions/compound-assignment/11.13.2-34-s.js
-  - [ ] test/language/expressions/compound-assignment/11.13.2-35-s.js
-  - [ ] test/language/expressions/compound-assignment/11.13.2-36-s.js
-  - [ ] test/language/expressions/compound-assignment/11.13.2-37-s.js
-  - [ ] test/language/expressions/compound-assignment/11.13.2-38-s.js
-  - [ ] test/language/expressions/compound-assignment/11.13.2-39-s.js
+  - [x] test/language/expressions/compound-assignment/11.13.2-1-s.js
+  - [x] test/language/expressions/compound-assignment/11.13.2-10-s.js
+  - [x] test/language/expressions/compound-assignment/11.13.2-11-s.js
+  - [x] test/language/expressions/compound-assignment/11.13.2-12-s.js
+  - [x] test/language/expressions/compound-assignment/11.13.2-13-s.js
+  - [x] test/language/expressions/compound-assignment/11.13.2-14-s.js
+  - [x] test/language/expressions/compound-assignment/11.13.2-15-s.js
+  - [x] test/language/expressions/compound-assignment/11.13.2-16-s.js
+  - [x] test/language/expressions/compound-assignment/11.13.2-17-s.js
+  - [x] test/language/expressions/compound-assignment/11.13.2-18-s.js
+  - [x] test/language/expressions/compound-assignment/11.13.2-19-s.js
+  - [x] test/language/expressions/compound-assignment/11.13.2-2-s.js
+  - [x] test/language/expressions/compound-assignment/11.13.2-20-s.js
+  - [x] test/language/expressions/compound-assignment/11.13.2-21-s.js
+  - [x] test/language/expressions/compound-assignment/11.13.2-22-s.js
+  - [x] test/language/expressions/compound-assignment/11.13.2-23-s.js
+  - [x] test/language/expressions/compound-assignment/11.13.2-24-s.js
+  - [x] test/language/expressions/compound-assignment/11.13.2-25-s.js
+  - [x] test/language/expressions/compound-assignment/11.13.2-26-s.js
+  - [x] test/language/expressions/compound-assignment/11.13.2-27-s.js
+  - [x] test/language/expressions/compound-assignment/11.13.2-28-s.js
+  - [x] test/language/expressions/compound-assignment/11.13.2-29-s.js
+  - [x] test/language/expressions/compound-assignment/11.13.2-30-s.js
+  - [x] test/language/expressions/compound-assignment/11.13.2-31-s.js
+  - [x] test/language/expressions/compound-assignment/11.13.2-32-s.js
+  - [x] test/language/expressions/compound-assignment/11.13.2-33-s.js
+  - [x] test/language/expressions/compound-assignment/11.13.2-34-s.js
+  - [x] test/language/expressions/compound-assignment/11.13.2-35-s.js
+  - [x] test/language/expressions/compound-assignment/11.13.2-36-s.js
+  - [x] test/language/expressions/compound-assignment/11.13.2-37-s.js
+  - [x] test/language/expressions/compound-assignment/11.13.2-38-s.js
+  - [x] test/language/expressions/compound-assignment/11.13.2-39-s.js
   - [ ] test/language/expressions/compound-assignment/11.13.2-4-s.js
-  - [ ] test/language/expressions/compound-assignment/11.13.2-40-s.js
-  - [ ] test/language/expressions/compound-assignment/11.13.2-41-s.js
-  - [ ] test/language/expressions/compound-assignment/11.13.2-42-s.js
-  - [ ] test/language/expressions/compound-assignment/11.13.2-43-s.js
-  - [ ] test/language/expressions/compound-assignment/11.13.2-44-s.js
-  - [ ] test/language/expressions/compound-assignment/11.13.2-45-s.js
-  - [ ] test/language/expressions/compound-assignment/11.13.2-46-s.js
-  - [ ] test/language/expressions/compound-assignment/11.13.2-47-s.js
-  - [ ] test/language/expressions/compound-assignment/11.13.2-48-s.js
-  - [ ] test/language/expressions/compound-assignment/11.13.2-49-s.js
+  - [x] test/language/expressions/compound-assignment/11.13.2-40-s.js
+  - [x] test/language/expressions/compound-assignment/11.13.2-41-s.js
+  - [x] test/language/expressions/compound-assignment/11.13.2-42-s.js
+  - [x] test/language/expressions/compound-assignment/11.13.2-43-s.js
+  - [x] test/language/expressions/compound-assignment/11.13.2-44-s.js
+  - [x] test/language/expressions/compound-assignment/11.13.2-45-s.js
+  - [x] test/language/expressions/compound-assignment/11.13.2-46-s.js
+  - [x] test/language/expressions/compound-assignment/11.13.2-47-s.js
+  - [x] test/language/expressions/compound-assignment/11.13.2-48-s.js
+  - [x] test/language/expressions/compound-assignment/11.13.2-49-s.js
   - [ ] test/language/expressions/compound-assignment/11.13.2-5-s.js
   - [ ] test/language/expressions/compound-assignment/11.13.2-50-s.js
   - [ ] test/language/expressions/compound-assignment/11.13.2-51-s.js
@@ -21198,38 +21198,38 @@ Sub-category progress
   - [x] test/language/expressions/prefix-decrement/11.4.5-2-2gs.js
   - [x] test/language/expressions/prefix-decrement/11.4.5-2-3-s.js
   - [ ] test/language/expressions/prefix-decrement/S11.4.5_A2.1_T1.js
-  - [ ] test/language/expressions/prefix-decrement/S11.4.5_A2.1_T2.js
-  - [ ] test/language/expressions/prefix-decrement/S11.4.5_A2.2_T1.js
+  - [x] test/language/expressions/prefix-decrement/S11.4.5_A2.1_T2.js
+  - [x] test/language/expressions/prefix-decrement/S11.4.5_A2.2_T1.js
   - [ ] test/language/expressions/prefix-decrement/S11.4.5_A3_T1.js
   - [ ] test/language/expressions/prefix-decrement/S11.4.5_A3_T2.js
   - [ ] test/language/expressions/prefix-decrement/S11.4.5_A3_T3.js
-  - [ ] test/language/expressions/prefix-decrement/S11.4.5_A3_T4.js
-  - [ ] test/language/expressions/prefix-decrement/S11.4.5_A3_T5.js
+  - [x] test/language/expressions/prefix-decrement/S11.4.5_A3_T4.js
+  - [x] test/language/expressions/prefix-decrement/S11.4.5_A3_T5.js
   - [ ] test/language/expressions/prefix-decrement/S11.4.5_A4_T1.js
   - [ ] test/language/expressions/prefix-decrement/S11.4.5_A4_T2.js
   - [ ] test/language/expressions/prefix-decrement/S11.4.5_A4_T3.js
-  - [ ] test/language/expressions/prefix-decrement/S11.4.5_A4_T4.js
-  - [ ] test/language/expressions/prefix-decrement/S11.4.5_A4_T5.js
+  - [x] test/language/expressions/prefix-decrement/S11.4.5_A4_T4.js
+  - [x] test/language/expressions/prefix-decrement/S11.4.5_A4_T5.js
   - [ ] test/language/expressions/prefix-decrement/S11.4.5_A5_T1.js
   - [ ] test/language/expressions/prefix-decrement/S11.4.5_A5_T2.js
   - [ ] test/language/expressions/prefix-decrement/S11.4.5_A5_T3.js
-  - [ ] test/language/expressions/prefix-decrement/S11.4.5_A6_T1.js
-  - [ ] test/language/expressions/prefix-decrement/S11.4.5_A6_T2.js
-  - [ ] test/language/expressions/prefix-decrement/S11.4.5_A6_T3.js
-  - [ ] test/language/expressions/prefix-decrement/arguments-nostrict.js
-  - [ ] test/language/expressions/prefix-decrement/arguments.js
+  - [x] test/language/expressions/prefix-decrement/S11.4.5_A6_T1.js
+  - [x] test/language/expressions/prefix-decrement/S11.4.5_A6_T2.js
+  - [x] test/language/expressions/prefix-decrement/S11.4.5_A6_T3.js
+  - [x] test/language/expressions/prefix-decrement/arguments-nostrict.js
+  - [x] test/language/expressions/prefix-decrement/arguments.js
   - [ ] test/language/expressions/prefix-decrement/bigint.js
-  - [ ] test/language/expressions/prefix-decrement/eval-nostrict.js
-  - [ ] test/language/expressions/prefix-decrement/eval.js
+  - [x] test/language/expressions/prefix-decrement/eval-nostrict.js
+  - [x] test/language/expressions/prefix-decrement/eval.js
   - [ ] test/language/expressions/prefix-decrement/operator-prefix-decrement-x-calls-putvalue-lhs-newvalue--1.js
   - [ ] test/language/expressions/prefix-decrement/operator-prefix-decrement-x-calls-putvalue-lhs-newvalue-.js
-  - [ ] test/language/expressions/prefix-decrement/target-cover-id.js
-  - [ ] test/language/expressions/prefix-decrement/target-cover-newtarget.js
-  - [ ] test/language/expressions/prefix-decrement/target-cover-yieldexpr.js
-  - [ ] test/language/expressions/prefix-decrement/target-newtarget.js
-  - [ ] test/language/expressions/prefix-decrement/this.js
-  - [ ] test/language/expressions/prefix-decrement/whitespace.js
-  - [ ] test/language/expressions/prefix-increment/11.4.4-2-3-s.js
+  - [x] test/language/expressions/prefix-decrement/target-cover-id.js
+  - [x] test/language/expressions/prefix-decrement/target-cover-newtarget.js
+  - [x] test/language/expressions/prefix-decrement/target-cover-yieldexpr.js
+  - [x] test/language/expressions/prefix-decrement/target-newtarget.js
+  - [x] test/language/expressions/prefix-decrement/this.js
+  - [x] test/language/expressions/prefix-decrement/whitespace.js
+  - [x] test/language/expressions/prefix-increment/11.4.4-2-3-s.js
   - [ ] test/language/expressions/prefix-increment/S11.4.4_A2.1_T1.js
   - [ ] test/language/expressions/prefix-increment/S11.4.4_A2.1_T2.js
   - [ ] test/language/expressions/prefix-increment/S11.4.4_A2.2_T1.js
@@ -21249,8 +21249,8 @@ Sub-category progress
   - [ ] test/language/expressions/prefix-increment/S11.4.4_A6_T1.js
   - [ ] test/language/expressions/prefix-increment/S11.4.4_A6_T2.js
   - [ ] test/language/expressions/prefix-increment/S11.4.4_A6_T3.js
-  - [ ] test/language/expressions/prefix-increment/arguments-nostrict.js
-  - [ ] test/language/expressions/prefix-increment/arguments.js
+  - [x] test/language/expressions/prefix-increment/arguments-nostrict.js
+  - [x] test/language/expressions/prefix-increment/arguments.js
   - [ ] test/language/expressions/prefix-increment/bigint.js
   - [ ] test/language/expressions/prefix-increment/eval-nostrict.js
   - [ ] test/language/expressions/prefix-increment/eval.js
@@ -22144,269 +22144,269 @@ Sub-category progress
   - [ ] test/language/global-code/yield-non-strict.js
   - [ ] test/language/global-code/yield-strict.js
 - [ ] arguments-object
-  - [ ] test/language/arguments-object/10.5-1-s.js
-  - [ ] test/language/arguments-object/10.5-1gs.js
-  - [ ] test/language/arguments-object/10.5-7-b-1-s.js
-  - [ ] test/language/arguments-object/10.5-7-b-2-s.js
-  - [ ] test/language/arguments-object/10.5-7-b-3-s.js
-  - [ ] test/language/arguments-object/10.5-7-b-4-s.js
-  - [ ] test/language/arguments-object/10.6-10-c-ii-1-s.js
-  - [ ] test/language/arguments-object/10.6-10-c-ii-1.js
-  - [ ] test/language/arguments-object/10.6-10-c-ii-2.js
-  - [ ] test/language/arguments-object/10.6-11-b-1.js
-  - [ ] test/language/arguments-object/10.6-12-1.js
-  - [ ] test/language/arguments-object/10.6-12-2.js
-  - [ ] test/language/arguments-object/10.6-13-a-1.js
-  - [ ] test/language/arguments-object/10.6-13-a-2.js
-  - [ ] test/language/arguments-object/10.6-13-a-3.js
-  - [ ] test/language/arguments-object/10.6-13-c-1-s.js
-  - [ ] test/language/arguments-object/10.6-13-c-2-s.js
+  - [x] test/language/arguments-object/10.5-1-s.js
+  - [x] test/language/arguments-object/10.5-1gs.js
+  - [x] test/language/arguments-object/10.5-7-b-1-s.js
+  - [x] test/language/arguments-object/10.5-7-b-2-s.js
+  - [x] test/language/arguments-object/10.5-7-b-3-s.js
+  - [x] test/language/arguments-object/10.5-7-b-4-s.js
+  - [x] test/language/arguments-object/10.6-10-c-ii-1-s.js
+  - [x] test/language/arguments-object/10.6-10-c-ii-1.js
+  - [x] test/language/arguments-object/10.6-10-c-ii-2.js
+  - [x] test/language/arguments-object/10.6-11-b-1.js
+  - [x] test/language/arguments-object/10.6-12-1.js
+  - [x] test/language/arguments-object/10.6-12-2.js
+  - [x] test/language/arguments-object/10.6-13-a-1.js
+  - [x] test/language/arguments-object/10.6-13-a-2.js
+  - [x] test/language/arguments-object/10.6-13-a-3.js
+  - [x] test/language/arguments-object/10.6-13-c-1-s.js
+  - [x] test/language/arguments-object/10.6-13-c-2-s.js
   - [ ] test/language/arguments-object/10.6-13-c-3-s.js
-  - [ ] test/language/arguments-object/10.6-14-c-1-s.js
-  - [ ] test/language/arguments-object/10.6-14-c-4-s.js
-  - [ ] test/language/arguments-object/10.6-2gs.js
-  - [ ] test/language/arguments-object/10.6-5-1.js
-  - [ ] test/language/arguments-object/10.6-6-1.js
-  - [ ] test/language/arguments-object/10.6-6-2.js
-  - [ ] test/language/arguments-object/10.6-6-3-s.js
-  - [ ] test/language/arguments-object/10.6-6-3.js
-  - [ ] test/language/arguments-object/10.6-6-4-s.js
-  - [ ] test/language/arguments-object/10.6-6-4.js
-  - [ ] test/language/arguments-object/10.6-7-1.js
-  - [ ] test/language/arguments-object/S10.1.6_A1_T2.js
-  - [ ] test/language/arguments-object/S10.6_A1.js
-  - [ ] test/language/arguments-object/S10.6_A2.js
-  - [ ] test/language/arguments-object/S10.6_A3_T1.js
-  - [ ] test/language/arguments-object/S10.6_A3_T2.js
-  - [ ] test/language/arguments-object/S10.6_A3_T3.js
-  - [ ] test/language/arguments-object/S10.6_A3_T4.js
-  - [ ] test/language/arguments-object/S10.6_A4.js
-  - [ ] test/language/arguments-object/S10.6_A5_T1.js
-  - [ ] test/language/arguments-object/S10.6_A5_T2.js
-  - [ ] test/language/arguments-object/S10.6_A5_T3.js
-  - [ ] test/language/arguments-object/S10.6_A5_T4.js
-  - [ ] test/language/arguments-object/S10.6_A6.js
-  - [ ] test/language/arguments-object/S10.6_A7.js
-  - [ ] test/language/arguments-object/arguments-caller.js
-  - [ ] test/language/arguments-object/async-gen-meth-args-trailing-comma-multiple.js
-  - [ ] test/language/arguments-object/async-gen-meth-args-trailing-comma-null.js
-  - [ ] test/language/arguments-object/async-gen-meth-args-trailing-comma-single-args.js
-  - [ ] test/language/arguments-object/async-gen-meth-args-trailing-comma-spread-operator.js
-  - [ ] test/language/arguments-object/async-gen-meth-args-trailing-comma-undefined.js
-  - [ ] test/language/arguments-object/async-gen-named-func-expr-args-trailing-comma-multiple.js
-  - [ ] test/language/arguments-object/async-gen-named-func-expr-args-trailing-comma-null.js
-  - [ ] test/language/arguments-object/async-gen-named-func-expr-args-trailing-comma-single-args.js
-  - [ ] test/language/arguments-object/async-gen-named-func-expr-args-trailing-comma-spread-operator.js
-  - [ ] test/language/arguments-object/async-gen-named-func-expr-args-trailing-comma-undefined.js
-  - [ ] test/language/arguments-object/cls-decl-async-gen-func-args-trailing-comma-multiple.js
-  - [ ] test/language/arguments-object/cls-decl-async-gen-func-args-trailing-comma-null.js
-  - [ ] test/language/arguments-object/cls-decl-async-gen-func-args-trailing-comma-single-args.js
-  - [ ] test/language/arguments-object/cls-decl-async-gen-func-args-trailing-comma-spread-operator.js
-  - [ ] test/language/arguments-object/cls-decl-async-gen-func-args-trailing-comma-undefined.js
-  - [ ] test/language/arguments-object/cls-decl-async-gen-meth-args-trailing-comma-multiple.js
-  - [ ] test/language/arguments-object/cls-decl-async-gen-meth-args-trailing-comma-null.js
-  - [ ] test/language/arguments-object/cls-decl-async-gen-meth-args-trailing-comma-single-args.js
-  - [ ] test/language/arguments-object/cls-decl-async-gen-meth-args-trailing-comma-spread-operator.js
-  - [ ] test/language/arguments-object/cls-decl-async-gen-meth-args-trailing-comma-undefined.js
-  - [ ] test/language/arguments-object/cls-decl-async-gen-meth-static-args-trailing-comma-multiple.js
-  - [ ] test/language/arguments-object/cls-decl-async-gen-meth-static-args-trailing-comma-null.js
-  - [ ] test/language/arguments-object/cls-decl-async-gen-meth-static-args-trailing-comma-single-args.js
-  - [ ] test/language/arguments-object/cls-decl-async-gen-meth-static-args-trailing-comma-spread-operator.js
-  - [ ] test/language/arguments-object/cls-decl-async-gen-meth-static-args-trailing-comma-undefined.js
-  - [ ] test/language/arguments-object/cls-decl-async-private-gen-meth-args-trailing-comma-multiple.js
-  - [ ] test/language/arguments-object/cls-decl-async-private-gen-meth-args-trailing-comma-null.js
-  - [ ] test/language/arguments-object/cls-decl-async-private-gen-meth-args-trailing-comma-single-args.js
-  - [ ] test/language/arguments-object/cls-decl-async-private-gen-meth-args-trailing-comma-spread-operator.js
-  - [ ] test/language/arguments-object/cls-decl-async-private-gen-meth-args-trailing-comma-undefined.js
-  - [ ] test/language/arguments-object/cls-decl-async-private-gen-meth-static-args-trailing-comma-multiple.js
-  - [ ] test/language/arguments-object/cls-decl-async-private-gen-meth-static-args-trailing-comma-null.js
-  - [ ] test/language/arguments-object/cls-decl-async-private-gen-meth-static-args-trailing-comma-single-args.js
-  - [ ] test/language/arguments-object/cls-decl-async-private-gen-meth-static-args-trailing-comma-spread-operator.js
-  - [ ] test/language/arguments-object/cls-decl-async-private-gen-meth-static-args-trailing-comma-undefined.js
-  - [ ] test/language/arguments-object/cls-decl-gen-meth-args-trailing-comma-multiple.js
-  - [ ] test/language/arguments-object/cls-decl-gen-meth-args-trailing-comma-null.js
-  - [ ] test/language/arguments-object/cls-decl-gen-meth-args-trailing-comma-single-args.js
-  - [ ] test/language/arguments-object/cls-decl-gen-meth-args-trailing-comma-spread-operator.js
-  - [ ] test/language/arguments-object/cls-decl-gen-meth-args-trailing-comma-undefined.js
-  - [ ] test/language/arguments-object/cls-decl-gen-meth-static-args-trailing-comma-multiple.js
-  - [ ] test/language/arguments-object/cls-decl-gen-meth-static-args-trailing-comma-null.js
-  - [ ] test/language/arguments-object/cls-decl-gen-meth-static-args-trailing-comma-single-args.js
-  - [ ] test/language/arguments-object/cls-decl-gen-meth-static-args-trailing-comma-spread-operator.js
-  - [ ] test/language/arguments-object/cls-decl-gen-meth-static-args-trailing-comma-undefined.js
-  - [ ] test/language/arguments-object/cls-decl-meth-args-trailing-comma-multiple.js
-  - [ ] test/language/arguments-object/cls-decl-meth-args-trailing-comma-null.js
-  - [ ] test/language/arguments-object/cls-decl-meth-args-trailing-comma-single-args.js
-  - [ ] test/language/arguments-object/cls-decl-meth-args-trailing-comma-spread-operator.js
-  - [ ] test/language/arguments-object/cls-decl-meth-args-trailing-comma-undefined.js
-  - [ ] test/language/arguments-object/cls-decl-meth-static-args-trailing-comma-multiple.js
-  - [ ] test/language/arguments-object/cls-decl-meth-static-args-trailing-comma-null.js
-  - [ ] test/language/arguments-object/cls-decl-meth-static-args-trailing-comma-single-args.js
-  - [ ] test/language/arguments-object/cls-decl-meth-static-args-trailing-comma-spread-operator.js
-  - [ ] test/language/arguments-object/cls-decl-meth-static-args-trailing-comma-undefined.js
-  - [ ] test/language/arguments-object/cls-decl-private-gen-meth-args-trailing-comma-multiple.js
-  - [ ] test/language/arguments-object/cls-decl-private-gen-meth-args-trailing-comma-null.js
-  - [ ] test/language/arguments-object/cls-decl-private-gen-meth-args-trailing-comma-single-args.js
-  - [ ] test/language/arguments-object/cls-decl-private-gen-meth-args-trailing-comma-spread-operator.js
-  - [ ] test/language/arguments-object/cls-decl-private-gen-meth-args-trailing-comma-undefined.js
-  - [ ] test/language/arguments-object/cls-decl-private-gen-meth-static-args-trailing-comma-multiple.js
-  - [ ] test/language/arguments-object/cls-decl-private-gen-meth-static-args-trailing-comma-null.js
-  - [ ] test/language/arguments-object/cls-decl-private-gen-meth-static-args-trailing-comma-single-args.js
-  - [ ] test/language/arguments-object/cls-decl-private-gen-meth-static-args-trailing-comma-spread-operator.js
-  - [ ] test/language/arguments-object/cls-decl-private-gen-meth-static-args-trailing-comma-undefined.js
-  - [ ] test/language/arguments-object/cls-decl-private-meth-args-trailing-comma-multiple.js
-  - [ ] test/language/arguments-object/cls-decl-private-meth-args-trailing-comma-null.js
-  - [ ] test/language/arguments-object/cls-decl-private-meth-args-trailing-comma-single-args.js
-  - [ ] test/language/arguments-object/cls-decl-private-meth-args-trailing-comma-spread-operator.js
-  - [ ] test/language/arguments-object/cls-decl-private-meth-args-trailing-comma-undefined.js
-  - [ ] test/language/arguments-object/cls-decl-private-meth-static-args-trailing-comma-multiple.js
-  - [ ] test/language/arguments-object/cls-decl-private-meth-static-args-trailing-comma-null.js
-  - [ ] test/language/arguments-object/cls-decl-private-meth-static-args-trailing-comma-single-args.js
-  - [ ] test/language/arguments-object/cls-decl-private-meth-static-args-trailing-comma-spread-operator.js
-  - [ ] test/language/arguments-object/cls-decl-private-meth-static-args-trailing-comma-undefined.js
-  - [ ] test/language/arguments-object/cls-expr-async-gen-func-args-trailing-comma-multiple.js
-  - [ ] test/language/arguments-object/cls-expr-async-gen-func-args-trailing-comma-null.js
-  - [ ] test/language/arguments-object/cls-expr-async-gen-func-args-trailing-comma-single-args.js
-  - [ ] test/language/arguments-object/cls-expr-async-gen-func-args-trailing-comma-spread-operator.js
-  - [ ] test/language/arguments-object/cls-expr-async-gen-func-args-trailing-comma-undefined.js
-  - [ ] test/language/arguments-object/cls-expr-async-gen-meth-args-trailing-comma-multiple.js
-  - [ ] test/language/arguments-object/cls-expr-async-gen-meth-args-trailing-comma-null.js
-  - [ ] test/language/arguments-object/cls-expr-async-gen-meth-args-trailing-comma-single-args.js
-  - [ ] test/language/arguments-object/cls-expr-async-gen-meth-args-trailing-comma-spread-operator.js
-  - [ ] test/language/arguments-object/cls-expr-async-gen-meth-args-trailing-comma-undefined.js
-  - [ ] test/language/arguments-object/cls-expr-async-gen-meth-static-args-trailing-comma-multiple.js
-  - [ ] test/language/arguments-object/cls-expr-async-gen-meth-static-args-trailing-comma-null.js
-  - [ ] test/language/arguments-object/cls-expr-async-gen-meth-static-args-trailing-comma-single-args.js
-  - [ ] test/language/arguments-object/cls-expr-async-gen-meth-static-args-trailing-comma-spread-operator.js
-  - [ ] test/language/arguments-object/cls-expr-async-gen-meth-static-args-trailing-comma-undefined.js
-  - [ ] test/language/arguments-object/cls-expr-async-private-gen-meth-args-trailing-comma-multiple.js
-  - [ ] test/language/arguments-object/cls-expr-async-private-gen-meth-args-trailing-comma-null.js
-  - [ ] test/language/arguments-object/cls-expr-async-private-gen-meth-args-trailing-comma-single-args.js
-  - [ ] test/language/arguments-object/cls-expr-async-private-gen-meth-args-trailing-comma-spread-operator.js
-  - [ ] test/language/arguments-object/cls-expr-async-private-gen-meth-args-trailing-comma-undefined.js
-  - [ ] test/language/arguments-object/cls-expr-async-private-gen-meth-static-args-trailing-comma-multiple.js
-  - [ ] test/language/arguments-object/cls-expr-async-private-gen-meth-static-args-trailing-comma-null.js
-  - [ ] test/language/arguments-object/cls-expr-async-private-gen-meth-static-args-trailing-comma-single-args.js
-  - [ ] test/language/arguments-object/cls-expr-async-private-gen-meth-static-args-trailing-comma-spread-operator.js
-  - [ ] test/language/arguments-object/cls-expr-async-private-gen-meth-static-args-trailing-comma-undefined.js
-  - [ ] test/language/arguments-object/cls-expr-gen-meth-args-trailing-comma-multiple.js
-  - [ ] test/language/arguments-object/cls-expr-gen-meth-args-trailing-comma-null.js
-  - [ ] test/language/arguments-object/cls-expr-gen-meth-args-trailing-comma-single-args.js
-  - [ ] test/language/arguments-object/cls-expr-gen-meth-args-trailing-comma-spread-operator.js
-  - [ ] test/language/arguments-object/cls-expr-gen-meth-args-trailing-comma-undefined.js
-  - [ ] test/language/arguments-object/cls-expr-gen-meth-static-args-trailing-comma-multiple.js
-  - [ ] test/language/arguments-object/cls-expr-gen-meth-static-args-trailing-comma-null.js
-  - [ ] test/language/arguments-object/cls-expr-gen-meth-static-args-trailing-comma-single-args.js
-  - [ ] test/language/arguments-object/cls-expr-gen-meth-static-args-trailing-comma-spread-operator.js
-  - [ ] test/language/arguments-object/cls-expr-gen-meth-static-args-trailing-comma-undefined.js
-  - [ ] test/language/arguments-object/cls-expr-meth-args-trailing-comma-multiple.js
-  - [ ] test/language/arguments-object/cls-expr-meth-args-trailing-comma-null.js
-  - [ ] test/language/arguments-object/cls-expr-meth-args-trailing-comma-single-args.js
-  - [ ] test/language/arguments-object/cls-expr-meth-args-trailing-comma-spread-operator.js
-  - [ ] test/language/arguments-object/cls-expr-meth-args-trailing-comma-undefined.js
-  - [ ] test/language/arguments-object/cls-expr-meth-static-args-trailing-comma-multiple.js
-  - [ ] test/language/arguments-object/cls-expr-meth-static-args-trailing-comma-null.js
-  - [ ] test/language/arguments-object/cls-expr-meth-static-args-trailing-comma-single-args.js
-  - [ ] test/language/arguments-object/cls-expr-meth-static-args-trailing-comma-spread-operator.js
-  - [ ] test/language/arguments-object/cls-expr-meth-static-args-trailing-comma-undefined.js
-  - [ ] test/language/arguments-object/cls-expr-private-gen-meth-args-trailing-comma-multiple.js
-  - [ ] test/language/arguments-object/cls-expr-private-gen-meth-args-trailing-comma-null.js
-  - [ ] test/language/arguments-object/cls-expr-private-gen-meth-args-trailing-comma-single-args.js
-  - [ ] test/language/arguments-object/cls-expr-private-gen-meth-args-trailing-comma-spread-operator.js
-  - [ ] test/language/arguments-object/cls-expr-private-gen-meth-args-trailing-comma-undefined.js
-  - [ ] test/language/arguments-object/cls-expr-private-gen-meth-static-args-trailing-comma-multiple.js
-  - [ ] test/language/arguments-object/cls-expr-private-gen-meth-static-args-trailing-comma-null.js
-  - [ ] test/language/arguments-object/cls-expr-private-gen-meth-static-args-trailing-comma-single-args.js
-  - [ ] test/language/arguments-object/cls-expr-private-gen-meth-static-args-trailing-comma-spread-operator.js
-  - [ ] test/language/arguments-object/cls-expr-private-gen-meth-static-args-trailing-comma-undefined.js
-  - [ ] test/language/arguments-object/cls-expr-private-meth-args-trailing-comma-multiple.js
-  - [ ] test/language/arguments-object/cls-expr-private-meth-args-trailing-comma-null.js
-  - [ ] test/language/arguments-object/cls-expr-private-meth-args-trailing-comma-single-args.js
-  - [ ] test/language/arguments-object/cls-expr-private-meth-args-trailing-comma-spread-operator.js
-  - [ ] test/language/arguments-object/cls-expr-private-meth-args-trailing-comma-undefined.js
-  - [ ] test/language/arguments-object/cls-expr-private-meth-static-args-trailing-comma-multiple.js
-  - [ ] test/language/arguments-object/cls-expr-private-meth-static-args-trailing-comma-null.js
-  - [ ] test/language/arguments-object/cls-expr-private-meth-static-args-trailing-comma-single-args.js
-  - [ ] test/language/arguments-object/cls-expr-private-meth-static-args-trailing-comma-spread-operator.js
-  - [ ] test/language/arguments-object/cls-expr-private-meth-static-args-trailing-comma-undefined.js
-  - [ ] test/language/arguments-object/func-decl-args-trailing-comma-multiple.js
-  - [ ] test/language/arguments-object/func-decl-args-trailing-comma-null.js
-  - [ ] test/language/arguments-object/func-decl-args-trailing-comma-single-args.js
-  - [ ] test/language/arguments-object/func-decl-args-trailing-comma-spread-operator.js
-  - [ ] test/language/arguments-object/func-decl-args-trailing-comma-undefined.js
-  - [ ] test/language/arguments-object/func-expr-args-trailing-comma-multiple.js
-  - [ ] test/language/arguments-object/func-expr-args-trailing-comma-null.js
-  - [ ] test/language/arguments-object/func-expr-args-trailing-comma-single-args.js
-  - [ ] test/language/arguments-object/func-expr-args-trailing-comma-spread-operator.js
-  - [ ] test/language/arguments-object/func-expr-args-trailing-comma-undefined.js
-  - [ ] test/language/arguments-object/gen-func-decl-args-trailing-comma-multiple.js
-  - [ ] test/language/arguments-object/gen-func-decl-args-trailing-comma-null.js
-  - [ ] test/language/arguments-object/gen-func-decl-args-trailing-comma-single-args.js
-  - [ ] test/language/arguments-object/gen-func-decl-args-trailing-comma-spread-operator.js
-  - [ ] test/language/arguments-object/gen-func-decl-args-trailing-comma-undefined.js
-  - [ ] test/language/arguments-object/gen-func-expr-args-trailing-comma-multiple.js
-  - [ ] test/language/arguments-object/gen-func-expr-args-trailing-comma-null.js
-  - [ ] test/language/arguments-object/gen-func-expr-args-trailing-comma-single-args.js
-  - [ ] test/language/arguments-object/gen-func-expr-args-trailing-comma-spread-operator.js
-  - [ ] test/language/arguments-object/gen-func-expr-args-trailing-comma-undefined.js
-  - [ ] test/language/arguments-object/gen-meth-args-trailing-comma-multiple.js
-  - [ ] test/language/arguments-object/gen-meth-args-trailing-comma-null.js
-  - [ ] test/language/arguments-object/gen-meth-args-trailing-comma-single-args.js
-  - [ ] test/language/arguments-object/gen-meth-args-trailing-comma-spread-operator.js
-  - [ ] test/language/arguments-object/gen-meth-args-trailing-comma-undefined.js
-  - [ ] test/language/arguments-object/mapped/Symbol.iterator.js
-  - [ ] test/language/arguments-object/mapped/enumerable-configurable-accessor-descriptor.js
-  - [ ] test/language/arguments-object/mapped/mapped-arguments-nonconfigurable-1.js
-  - [ ] test/language/arguments-object/mapped/mapped-arguments-nonconfigurable-2.js
-  - [ ] test/language/arguments-object/mapped/mapped-arguments-nonconfigurable-3.js
-  - [ ] test/language/arguments-object/mapped/mapped-arguments-nonconfigurable-4.js
-  - [ ] test/language/arguments-object/mapped/mapped-arguments-nonconfigurable-delete-1.js
-  - [ ] test/language/arguments-object/mapped/mapped-arguments-nonconfigurable-delete-2.js
-  - [ ] test/language/arguments-object/mapped/mapped-arguments-nonconfigurable-delete-3.js
-  - [ ] test/language/arguments-object/mapped/mapped-arguments-nonconfigurable-delete-4.js
-  - [ ] test/language/arguments-object/mapped/mapped-arguments-nonconfigurable-nonwritable-1.js
-  - [ ] test/language/arguments-object/mapped/mapped-arguments-nonconfigurable-nonwritable-2.js
-  - [ ] test/language/arguments-object/mapped/mapped-arguments-nonconfigurable-nonwritable-3.js
-  - [ ] test/language/arguments-object/mapped/mapped-arguments-nonconfigurable-nonwritable-4.js
-  - [ ] test/language/arguments-object/mapped/mapped-arguments-nonconfigurable-nonwritable-5.js
-  - [ ] test/language/arguments-object/mapped/mapped-arguments-nonconfigurable-strict-delete-1.js
-  - [ ] test/language/arguments-object/mapped/mapped-arguments-nonconfigurable-strict-delete-2.js
-  - [ ] test/language/arguments-object/mapped/mapped-arguments-nonconfigurable-strict-delete-3.js
-  - [ ] test/language/arguments-object/mapped/mapped-arguments-nonconfigurable-strict-delete-4.js
-  - [ ] test/language/arguments-object/mapped/mapped-arguments-nonwritable-nonconfigurable-1.js
-  - [ ] test/language/arguments-object/mapped/mapped-arguments-nonwritable-nonconfigurable-2.js
-  - [ ] test/language/arguments-object/mapped/mapped-arguments-nonwritable-nonconfigurable-3.js
-  - [ ] test/language/arguments-object/mapped/mapped-arguments-nonwritable-nonconfigurable-4.js
-  - [ ] test/language/arguments-object/mapped/nonconfigurable-descriptors-basic.js
-  - [ ] test/language/arguments-object/mapped/nonconfigurable-descriptors-define-failure.js
-  - [ ] test/language/arguments-object/mapped/nonconfigurable-descriptors-set-value-by-arguments.js
-  - [ ] test/language/arguments-object/mapped/nonconfigurable-descriptors-set-value-with-define-property.js
-  - [ ] test/language/arguments-object/mapped/nonconfigurable-descriptors-with-param-assign.js
-  - [ ] test/language/arguments-object/mapped/nonconfigurable-nonenumerable-nonwritable-descriptors-basic.js
-  - [ ] test/language/arguments-object/mapped/nonconfigurable-nonenumerable-nonwritable-descriptors-set-by-arguments.js
-  - [ ] test/language/arguments-object/mapped/nonconfigurable-nonenumerable-nonwritable-descriptors-set-by-param.js
-  - [ ] test/language/arguments-object/mapped/nonconfigurable-nonwritable-descriptors-basic.js
-  - [ ] test/language/arguments-object/mapped/nonconfigurable-nonwritable-descriptors-define-property-consecutive.js
-  - [ ] test/language/arguments-object/mapped/nonconfigurable-nonwritable-descriptors-set-by-arguments.js
-  - [ ] test/language/arguments-object/mapped/nonconfigurable-nonwritable-descriptors-set-by-param.js
-  - [ ] test/language/arguments-object/mapped/nonwritable-nonconfigurable-descriptors-basic.js
-  - [ ] test/language/arguments-object/mapped/nonwritable-nonconfigurable-descriptors-set-by-arguments.js
-  - [ ] test/language/arguments-object/mapped/nonwritable-nonconfigurable-descriptors-set-by-param.js
-  - [ ] test/language/arguments-object/mapped/nonwritable-nonenumerable-nonconfigurable-descriptors-basic.js
-  - [ ] test/language/arguments-object/mapped/nonwritable-nonenumerable-nonconfigurable-descriptors-set-by-arguments.js
-  - [ ] test/language/arguments-object/mapped/nonwritable-nonenumerable-nonconfigurable-descriptors-set-by-define-property.js
-  - [ ] test/language/arguments-object/mapped/nonwritable-nonenumerable-nonconfigurable-descriptors-set-by-param.js
-  - [ ] test/language/arguments-object/mapped/writable-enumerable-configurable-descriptor.js
-  - [ ] test/language/arguments-object/meth-args-trailing-comma-multiple.js
-  - [ ] test/language/arguments-object/meth-args-trailing-comma-null.js
-  - [ ] test/language/arguments-object/meth-args-trailing-comma-single-args.js
-  - [ ] test/language/arguments-object/meth-args-trailing-comma-spread-operator.js
-  - [ ] test/language/arguments-object/meth-args-trailing-comma-undefined.js
-  - [ ] test/language/arguments-object/non-strict-arguments-object-is-immutable.js
-  - [ ] test/language/arguments-object/unmapped/Symbol.iterator.js
-  - [ ] test/language/arguments-object/unmapped/via-params-dflt.js
-  - [ ] test/language/arguments-object/unmapped/via-params-dstr.js
-  - [ ] test/language/arguments-object/unmapped/via-params-rest.js
-  - [ ] test/language/arguments-object/unmapped/via-strict.js
+  - [x] test/language/arguments-object/10.6-14-c-1-s.js
+  - [x] test/language/arguments-object/10.6-14-c-4-s.js
+  - [x] test/language/arguments-object/10.6-2gs.js
+  - [x] test/language/arguments-object/10.6-5-1.js
+  - [x] test/language/arguments-object/10.6-6-1.js
+  - [x] test/language/arguments-object/10.6-6-2.js
+  - [x] test/language/arguments-object/10.6-6-3-s.js
+  - [x] test/language/arguments-object/10.6-6-3.js
+  - [x] test/language/arguments-object/10.6-6-4-s.js
+  - [x] test/language/arguments-object/10.6-6-4.js
+  - [x] test/language/arguments-object/10.6-7-1.js
+  - [x] test/language/arguments-object/S10.1.6_A1_T2.js
+  - [x] test/language/arguments-object/S10.6_A1.js
+  - [x] test/language/arguments-object/S10.6_A2.js
+  - [x] test/language/arguments-object/S10.6_A3_T1.js
+  - [x] test/language/arguments-object/S10.6_A3_T2.js
+  - [x] test/language/arguments-object/S10.6_A3_T3.js
+  - [x] test/language/arguments-object/S10.6_A3_T4.js
+  - [x] test/language/arguments-object/S10.6_A4.js
+  - [x] test/language/arguments-object/S10.6_A5_T1.js
+  - [x] test/language/arguments-object/S10.6_A5_T2.js
+  - [x] test/language/arguments-object/S10.6_A5_T3.js
+  - [x] test/language/arguments-object/S10.6_A5_T4.js
+  - [x] test/language/arguments-object/S10.6_A6.js
+  - [x] test/language/arguments-object/S10.6_A7.js
+  - [x] test/language/arguments-object/arguments-caller.js
+  - [x] test/language/arguments-object/async-gen-meth-args-trailing-comma-multiple.js
+  - [x] test/language/arguments-object/async-gen-meth-args-trailing-comma-null.js
+  - [x] test/language/arguments-object/async-gen-meth-args-trailing-comma-single-args.js
+  - [x] test/language/arguments-object/async-gen-meth-args-trailing-comma-spread-operator.js
+  - [x] test/language/arguments-object/async-gen-meth-args-trailing-comma-undefined.js
+  - [x] test/language/arguments-object/async-gen-named-func-expr-args-trailing-comma-multiple.js
+  - [x] test/language/arguments-object/async-gen-named-func-expr-args-trailing-comma-null.js
+  - [x] test/language/arguments-object/async-gen-named-func-expr-args-trailing-comma-single-args.js
+  - [x] test/language/arguments-object/async-gen-named-func-expr-args-trailing-comma-spread-operator.js
+  - [x] test/language/arguments-object/async-gen-named-func-expr-args-trailing-comma-undefined.js
+  - [x] test/language/arguments-object/cls-decl-async-gen-func-args-trailing-comma-multiple.js
+  - [x] test/language/arguments-object/cls-decl-async-gen-func-args-trailing-comma-null.js
+  - [x] test/language/arguments-object/cls-decl-async-gen-func-args-trailing-comma-single-args.js
+  - [x] test/language/arguments-object/cls-decl-async-gen-func-args-trailing-comma-spread-operator.js
+  - [x] test/language/arguments-object/cls-decl-async-gen-func-args-trailing-comma-undefined.js
+  - [x] test/language/arguments-object/cls-decl-async-gen-meth-args-trailing-comma-multiple.js
+  - [x] test/language/arguments-object/cls-decl-async-gen-meth-args-trailing-comma-null.js
+  - [x] test/language/arguments-object/cls-decl-async-gen-meth-args-trailing-comma-single-args.js
+  - [x] test/language/arguments-object/cls-decl-async-gen-meth-args-trailing-comma-spread-operator.js
+  - [x] test/language/arguments-object/cls-decl-async-gen-meth-args-trailing-comma-undefined.js
+  - [x] test/language/arguments-object/cls-decl-async-gen-meth-static-args-trailing-comma-multiple.js
+  - [x] test/language/arguments-object/cls-decl-async-gen-meth-static-args-trailing-comma-null.js
+  - [x] test/language/arguments-object/cls-decl-async-gen-meth-static-args-trailing-comma-single-args.js
+  - [x] test/language/arguments-object/cls-decl-async-gen-meth-static-args-trailing-comma-spread-operator.js
+  - [x] test/language/arguments-object/cls-decl-async-gen-meth-static-args-trailing-comma-undefined.js
+  - [x] test/language/arguments-object/cls-decl-async-private-gen-meth-args-trailing-comma-multiple.js
+  - [x] test/language/arguments-object/cls-decl-async-private-gen-meth-args-trailing-comma-null.js
+  - [x] test/language/arguments-object/cls-decl-async-private-gen-meth-args-trailing-comma-single-args.js
+  - [x] test/language/arguments-object/cls-decl-async-private-gen-meth-args-trailing-comma-spread-operator.js
+  - [x] test/language/arguments-object/cls-decl-async-private-gen-meth-args-trailing-comma-undefined.js
+  - [x] test/language/arguments-object/cls-decl-async-private-gen-meth-static-args-trailing-comma-multiple.js
+  - [x] test/language/arguments-object/cls-decl-async-private-gen-meth-static-args-trailing-comma-null.js
+  - [x] test/language/arguments-object/cls-decl-async-private-gen-meth-static-args-trailing-comma-single-args.js
+  - [x] test/language/arguments-object/cls-decl-async-private-gen-meth-static-args-trailing-comma-spread-operator.js
+  - [x] test/language/arguments-object/cls-decl-async-private-gen-meth-static-args-trailing-comma-undefined.js
+  - [x] test/language/arguments-object/cls-decl-gen-meth-args-trailing-comma-multiple.js
+  - [x] test/language/arguments-object/cls-decl-gen-meth-args-trailing-comma-null.js
+  - [x] test/language/arguments-object/cls-decl-gen-meth-args-trailing-comma-single-args.js
+  - [x] test/language/arguments-object/cls-decl-gen-meth-args-trailing-comma-spread-operator.js
+  - [x] test/language/arguments-object/cls-decl-gen-meth-args-trailing-comma-undefined.js
+  - [x] test/language/arguments-object/cls-decl-gen-meth-static-args-trailing-comma-multiple.js
+  - [x] test/language/arguments-object/cls-decl-gen-meth-static-args-trailing-comma-null.js
+  - [x] test/language/arguments-object/cls-decl-gen-meth-static-args-trailing-comma-single-args.js
+  - [x] test/language/arguments-object/cls-decl-gen-meth-static-args-trailing-comma-spread-operator.js
+  - [x] test/language/arguments-object/cls-decl-gen-meth-static-args-trailing-comma-undefined.js
+  - [x] test/language/arguments-object/cls-decl-meth-args-trailing-comma-multiple.js
+  - [x] test/language/arguments-object/cls-decl-meth-args-trailing-comma-null.js
+  - [x] test/language/arguments-object/cls-decl-meth-args-trailing-comma-single-args.js
+  - [x] test/language/arguments-object/cls-decl-meth-args-trailing-comma-spread-operator.js
+  - [x] test/language/arguments-object/cls-decl-meth-args-trailing-comma-undefined.js
+  - [x] test/language/arguments-object/cls-decl-meth-static-args-trailing-comma-multiple.js
+  - [x] test/language/arguments-object/cls-decl-meth-static-args-trailing-comma-null.js
+  - [x] test/language/arguments-object/cls-decl-meth-static-args-trailing-comma-single-args.js
+  - [x] test/language/arguments-object/cls-decl-meth-static-args-trailing-comma-spread-operator.js
+  - [x] test/language/arguments-object/cls-decl-meth-static-args-trailing-comma-undefined.js
+  - [x] test/language/arguments-object/cls-decl-private-gen-meth-args-trailing-comma-multiple.js
+  - [x] test/language/arguments-object/cls-decl-private-gen-meth-args-trailing-comma-null.js
+  - [x] test/language/arguments-object/cls-decl-private-gen-meth-args-trailing-comma-single-args.js
+  - [x] test/language/arguments-object/cls-decl-private-gen-meth-args-trailing-comma-spread-operator.js
+  - [x] test/language/arguments-object/cls-decl-private-gen-meth-args-trailing-comma-undefined.js
+  - [x] test/language/arguments-object/cls-decl-private-gen-meth-static-args-trailing-comma-multiple.js
+  - [x] test/language/arguments-object/cls-decl-private-gen-meth-static-args-trailing-comma-null.js
+  - [x] test/language/arguments-object/cls-decl-private-gen-meth-static-args-trailing-comma-single-args.js
+  - [x] test/language/arguments-object/cls-decl-private-gen-meth-static-args-trailing-comma-spread-operator.js
+  - [x] test/language/arguments-object/cls-decl-private-gen-meth-static-args-trailing-comma-undefined.js
+  - [x] test/language/arguments-object/cls-decl-private-meth-args-trailing-comma-multiple.js
+  - [x] test/language/arguments-object/cls-decl-private-meth-args-trailing-comma-null.js
+  - [x] test/language/arguments-object/cls-decl-private-meth-args-trailing-comma-single-args.js
+  - [x] test/language/arguments-object/cls-decl-private-meth-args-trailing-comma-spread-operator.js
+  - [x] test/language/arguments-object/cls-decl-private-meth-args-trailing-comma-undefined.js
+  - [x] test/language/arguments-object/cls-decl-private-meth-static-args-trailing-comma-multiple.js
+  - [x] test/language/arguments-object/cls-decl-private-meth-static-args-trailing-comma-null.js
+  - [x] test/language/arguments-object/cls-decl-private-meth-static-args-trailing-comma-single-args.js
+  - [x] test/language/arguments-object/cls-decl-private-meth-static-args-trailing-comma-spread-operator.js
+  - [x] test/language/arguments-object/cls-decl-private-meth-static-args-trailing-comma-undefined.js
+  - [x] test/language/arguments-object/cls-expr-async-gen-func-args-trailing-comma-multiple.js
+  - [x] test/language/arguments-object/cls-expr-async-gen-func-args-trailing-comma-null.js
+  - [x] test/language/arguments-object/cls-expr-async-gen-func-args-trailing-comma-single-args.js
+  - [x] test/language/arguments-object/cls-expr-async-gen-func-args-trailing-comma-spread-operator.js
+  - [x] test/language/arguments-object/cls-expr-async-gen-func-args-trailing-comma-undefined.js
+  - [x] test/language/arguments-object/cls-expr-async-gen-meth-args-trailing-comma-multiple.js
+  - [x] test/language/arguments-object/cls-expr-async-gen-meth-args-trailing-comma-null.js
+  - [x] test/language/arguments-object/cls-expr-async-gen-meth-args-trailing-comma-single-args.js
+  - [x] test/language/arguments-object/cls-expr-async-gen-meth-args-trailing-comma-spread-operator.js
+  - [x] test/language/arguments-object/cls-expr-async-gen-meth-args-trailing-comma-undefined.js
+  - [x] test/language/arguments-object/cls-expr-async-gen-meth-static-args-trailing-comma-multiple.js
+  - [x] test/language/arguments-object/cls-expr-async-gen-meth-static-args-trailing-comma-null.js
+  - [x] test/language/arguments-object/cls-expr-async-gen-meth-static-args-trailing-comma-single-args.js
+  - [x] test/language/arguments-object/cls-expr-async-gen-meth-static-args-trailing-comma-spread-operator.js
+  - [x] test/language/arguments-object/cls-expr-async-gen-meth-static-args-trailing-comma-undefined.js
+  - [x] test/language/arguments-object/cls-expr-async-private-gen-meth-args-trailing-comma-multiple.js
+  - [x] test/language/arguments-object/cls-expr-async-private-gen-meth-args-trailing-comma-null.js
+  - [x] test/language/arguments-object/cls-expr-async-private-gen-meth-args-trailing-comma-single-args.js
+  - [x] test/language/arguments-object/cls-expr-async-private-gen-meth-args-trailing-comma-spread-operator.js
+  - [x] test/language/arguments-object/cls-expr-async-private-gen-meth-args-trailing-comma-undefined.js
+  - [x] test/language/arguments-object/cls-expr-async-private-gen-meth-static-args-trailing-comma-multiple.js
+  - [x] test/language/arguments-object/cls-expr-async-private-gen-meth-static-args-trailing-comma-null.js
+  - [x] test/language/arguments-object/cls-expr-async-private-gen-meth-static-args-trailing-comma-single-args.js
+  - [x] test/language/arguments-object/cls-expr-async-private-gen-meth-static-args-trailing-comma-spread-operator.js
+  - [x] test/language/arguments-object/cls-expr-async-private-gen-meth-static-args-trailing-comma-undefined.js
+  - [x] test/language/arguments-object/cls-expr-gen-meth-args-trailing-comma-multiple.js
+  - [x] test/language/arguments-object/cls-expr-gen-meth-args-trailing-comma-null.js
+  - [x] test/language/arguments-object/cls-expr-gen-meth-args-trailing-comma-single-args.js
+  - [x] test/language/arguments-object/cls-expr-gen-meth-args-trailing-comma-spread-operator.js
+  - [x] test/language/arguments-object/cls-expr-gen-meth-args-trailing-comma-undefined.js
+  - [x] test/language/arguments-object/cls-expr-gen-meth-static-args-trailing-comma-multiple.js
+  - [x] test/language/arguments-object/cls-expr-gen-meth-static-args-trailing-comma-null.js
+  - [x] test/language/arguments-object/cls-expr-gen-meth-static-args-trailing-comma-single-args.js
+  - [x] test/language/arguments-object/cls-expr-gen-meth-static-args-trailing-comma-spread-operator.js
+  - [x] test/language/arguments-object/cls-expr-gen-meth-static-args-trailing-comma-undefined.js
+  - [x] test/language/arguments-object/cls-expr-meth-args-trailing-comma-multiple.js
+  - [x] test/language/arguments-object/cls-expr-meth-args-trailing-comma-null.js
+  - [x] test/language/arguments-object/cls-expr-meth-args-trailing-comma-single-args.js
+  - [x] test/language/arguments-object/cls-expr-meth-args-trailing-comma-spread-operator.js
+  - [x] test/language/arguments-object/cls-expr-meth-args-trailing-comma-undefined.js
+  - [x] test/language/arguments-object/cls-expr-meth-static-args-trailing-comma-multiple.js
+  - [x] test/language/arguments-object/cls-expr-meth-static-args-trailing-comma-null.js
+  - [x] test/language/arguments-object/cls-expr-meth-static-args-trailing-comma-single-args.js
+  - [x] test/language/arguments-object/cls-expr-meth-static-args-trailing-comma-spread-operator.js
+  - [x] test/language/arguments-object/cls-expr-meth-static-args-trailing-comma-undefined.js
+  - [x] test/language/arguments-object/cls-expr-private-gen-meth-args-trailing-comma-multiple.js
+  - [x] test/language/arguments-object/cls-expr-private-gen-meth-args-trailing-comma-null.js
+  - [x] test/language/arguments-object/cls-expr-private-gen-meth-args-trailing-comma-single-args.js
+  - [x] test/language/arguments-object/cls-expr-private-gen-meth-args-trailing-comma-spread-operator.js
+  - [x] test/language/arguments-object/cls-expr-private-gen-meth-args-trailing-comma-undefined.js
+  - [x] test/language/arguments-object/cls-expr-private-gen-meth-static-args-trailing-comma-multiple.js
+  - [x] test/language/arguments-object/cls-expr-private-gen-meth-static-args-trailing-comma-null.js
+  - [x] test/language/arguments-object/cls-expr-private-gen-meth-static-args-trailing-comma-single-args.js
+  - [x] test/language/arguments-object/cls-expr-private-gen-meth-static-args-trailing-comma-spread-operator.js
+  - [x] test/language/arguments-object/cls-expr-private-gen-meth-static-args-trailing-comma-undefined.js
+  - [x] test/language/arguments-object/cls-expr-private-meth-args-trailing-comma-multiple.js
+  - [x] test/language/arguments-object/cls-expr-private-meth-args-trailing-comma-null.js
+  - [x] test/language/arguments-object/cls-expr-private-meth-args-trailing-comma-single-args.js
+  - [x] test/language/arguments-object/cls-expr-private-meth-args-trailing-comma-spread-operator.js
+  - [x] test/language/arguments-object/cls-expr-private-meth-args-trailing-comma-undefined.js
+  - [x] test/language/arguments-object/cls-expr-private-meth-static-args-trailing-comma-multiple.js
+  - [x] test/language/arguments-object/cls-expr-private-meth-static-args-trailing-comma-null.js
+  - [x] test/language/arguments-object/cls-expr-private-meth-static-args-trailing-comma-single-args.js
+  - [x] test/language/arguments-object/cls-expr-private-meth-static-args-trailing-comma-spread-operator.js
+  - [x] test/language/arguments-object/cls-expr-private-meth-static-args-trailing-comma-undefined.js
+  - [x] test/language/arguments-object/func-decl-args-trailing-comma-multiple.js
+  - [x] test/language/arguments-object/func-decl-args-trailing-comma-null.js
+  - [x] test/language/arguments-object/func-decl-args-trailing-comma-single-args.js
+  - [x] test/language/arguments-object/func-decl-args-trailing-comma-spread-operator.js
+  - [x] test/language/arguments-object/func-decl-args-trailing-comma-undefined.js
+  - [x] test/language/arguments-object/func-expr-args-trailing-comma-multiple.js
+  - [x] test/language/arguments-object/func-expr-args-trailing-comma-null.js
+  - [x] test/language/arguments-object/func-expr-args-trailing-comma-single-args.js
+  - [x] test/language/arguments-object/func-expr-args-trailing-comma-spread-operator.js
+  - [x] test/language/arguments-object/func-expr-args-trailing-comma-undefined.js
+  - [x] test/language/arguments-object/gen-func-decl-args-trailing-comma-multiple.js
+  - [x] test/language/arguments-object/gen-func-decl-args-trailing-comma-null.js
+  - [x] test/language/arguments-object/gen-func-decl-args-trailing-comma-single-args.js
+  - [x] test/language/arguments-object/gen-func-decl-args-trailing-comma-spread-operator.js
+  - [x] test/language/arguments-object/gen-func-decl-args-trailing-comma-undefined.js
+  - [x] test/language/arguments-object/gen-func-expr-args-trailing-comma-multiple.js
+  - [x] test/language/arguments-object/gen-func-expr-args-trailing-comma-null.js
+  - [x] test/language/arguments-object/gen-func-expr-args-trailing-comma-single-args.js
+  - [x] test/language/arguments-object/gen-func-expr-args-trailing-comma-spread-operator.js
+  - [x] test/language/arguments-object/gen-func-expr-args-trailing-comma-undefined.js
+  - [x] test/language/arguments-object/gen-meth-args-trailing-comma-multiple.js
+  - [x] test/language/arguments-object/gen-meth-args-trailing-comma-null.js
+  - [x] test/language/arguments-object/gen-meth-args-trailing-comma-single-args.js
+  - [x] test/language/arguments-object/gen-meth-args-trailing-comma-spread-operator.js
+  - [x] test/language/arguments-object/gen-meth-args-trailing-comma-undefined.js
+  - [x] test/language/arguments-object/mapped/Symbol.iterator.js
+  - [x] test/language/arguments-object/mapped/enumerable-configurable-accessor-descriptor.js
+  - [x] test/language/arguments-object/mapped/mapped-arguments-nonconfigurable-1.js
+  - [x] test/language/arguments-object/mapped/mapped-arguments-nonconfigurable-2.js
+  - [x] test/language/arguments-object/mapped/mapped-arguments-nonconfigurable-3.js
+  - [x] test/language/arguments-object/mapped/mapped-arguments-nonconfigurable-4.js
+  - [x] test/language/arguments-object/mapped/mapped-arguments-nonconfigurable-delete-1.js
+  - [x] test/language/arguments-object/mapped/mapped-arguments-nonconfigurable-delete-2.js
+  - [x] test/language/arguments-object/mapped/mapped-arguments-nonconfigurable-delete-3.js
+  - [x] test/language/arguments-object/mapped/mapped-arguments-nonconfigurable-delete-4.js
+  - [x] test/language/arguments-object/mapped/mapped-arguments-nonconfigurable-nonwritable-1.js
+  - [x] test/language/arguments-object/mapped/mapped-arguments-nonconfigurable-nonwritable-2.js
+  - [x] test/language/arguments-object/mapped/mapped-arguments-nonconfigurable-nonwritable-3.js
+  - [x] test/language/arguments-object/mapped/mapped-arguments-nonconfigurable-nonwritable-4.js
+  - [x] test/language/arguments-object/mapped/mapped-arguments-nonconfigurable-nonwritable-5.js
+  - [x] test/language/arguments-object/mapped/mapped-arguments-nonconfigurable-strict-delete-1.js
+  - [x] test/language/arguments-object/mapped/mapped-arguments-nonconfigurable-strict-delete-2.js
+  - [x] test/language/arguments-object/mapped/mapped-arguments-nonconfigurable-strict-delete-3.js
+  - [x] test/language/arguments-object/mapped/mapped-arguments-nonconfigurable-strict-delete-4.js
+  - [x] test/language/arguments-object/mapped/mapped-arguments-nonwritable-nonconfigurable-1.js
+  - [x] test/language/arguments-object/mapped/mapped-arguments-nonwritable-nonconfigurable-2.js
+  - [x] test/language/arguments-object/mapped/mapped-arguments-nonwritable-nonconfigurable-3.js
+  - [x] test/language/arguments-object/mapped/mapped-arguments-nonwritable-nonconfigurable-4.js
+  - [x] test/language/arguments-object/mapped/nonconfigurable-descriptors-basic.js
+  - [x] test/language/arguments-object/mapped/nonconfigurable-descriptors-define-failure.js
+  - [x] test/language/arguments-object/mapped/nonconfigurable-descriptors-set-value-by-arguments.js
+  - [x] test/language/arguments-object/mapped/nonconfigurable-descriptors-set-value-with-define-property.js
+  - [x] test/language/arguments-object/mapped/nonconfigurable-descriptors-with-param-assign.js
+  - [x] test/language/arguments-object/mapped/nonconfigurable-nonenumerable-nonwritable-descriptors-basic.js
+  - [x] test/language/arguments-object/mapped/nonconfigurable-nonenumerable-nonwritable-descriptors-set-by-arguments.js
+  - [x] test/language/arguments-object/mapped/nonconfigurable-nonenumerable-nonwritable-descriptors-set-by-param.js
+  - [x] test/language/arguments-object/mapped/nonconfigurable-nonwritable-descriptors-basic.js
+  - [x] test/language/arguments-object/mapped/nonconfigurable-nonwritable-descriptors-define-property-consecutive.js
+  - [x] test/language/arguments-object/mapped/nonconfigurable-nonwritable-descriptors-set-by-arguments.js
+  - [x] test/language/arguments-object/mapped/nonconfigurable-nonwritable-descriptors-set-by-param.js
+  - [x] test/language/arguments-object/mapped/nonwritable-nonconfigurable-descriptors-basic.js
+  - [x] test/language/arguments-object/mapped/nonwritable-nonconfigurable-descriptors-set-by-arguments.js
+  - [x] test/language/arguments-object/mapped/nonwritable-nonconfigurable-descriptors-set-by-param.js
+  - [x] test/language/arguments-object/mapped/nonwritable-nonenumerable-nonconfigurable-descriptors-basic.js
+  - [x] test/language/arguments-object/mapped/nonwritable-nonenumerable-nonconfigurable-descriptors-set-by-arguments.js
+  - [x] test/language/arguments-object/mapped/nonwritable-nonenumerable-nonconfigurable-descriptors-set-by-define-property.js
+  - [x] test/language/arguments-object/mapped/nonwritable-nonenumerable-nonconfigurable-descriptors-set-by-param.js
+  - [x] test/language/arguments-object/mapped/writable-enumerable-configurable-descriptor.js
+  - [x] test/language/arguments-object/meth-args-trailing-comma-multiple.js
+  - [x] test/language/arguments-object/meth-args-trailing-comma-null.js
+  - [x] test/language/arguments-object/meth-args-trailing-comma-single-args.js
+  - [x] test/language/arguments-object/meth-args-trailing-comma-spread-operator.js
+  - [x] test/language/arguments-object/meth-args-trailing-comma-undefined.js
+  - [x] test/language/arguments-object/non-strict-arguments-object-is-immutable.js
+  - [x] test/language/arguments-object/unmapped/Symbol.iterator.js
+  - [x] test/language/arguments-object/unmapped/via-params-dflt.js
+  - [x] test/language/arguments-object/unmapped/via-params-dstr.js
+  - [x] test/language/arguments-object/unmapped/via-params-rest.js
+  - [x] test/language/arguments-object/unmapped/via-strict.js
 - [ ] rest-parameters
   - [ ] test/language/rest-parameters/array-pattern.js
   - [ ] test/language/rest-parameters/arrow-function.js
@@ -22419,152 +22419,152 @@ Sub-category progress
   - [ ] test/language/rest-parameters/rest-parameters-call.js
   - [ ] test/language/rest-parameters/rest-parameters-produce-an-array.js
   - [ ] test/language/rest-parameters/with-new-target.js
-- [ ] block-scope
-  - [ ] test/language/block-scope/leave/finally-block-let-declaration-only-shadows-outer-parameter-value-1.js
-  - [ ] test/language/block-scope/leave/finally-block-let-declaration-only-shadows-outer-parameter-value-2.js
-  - [ ] test/language/block-scope/leave/for-loop-block-let-declaration-only-shadows-outer-parameter-value-1.js
-  - [ ] test/language/block-scope/leave/for-loop-block-let-declaration-only-shadows-outer-parameter-value-2.js
-  - [ ] test/language/block-scope/leave/nested-block-let-declaration-only-shadows-outer-parameter-value-1.js
-  - [ ] test/language/block-scope/leave/nested-block-let-declaration-only-shadows-outer-parameter-value-2.js
-  - [ ] test/language/block-scope/leave/outermost-binding-updated-in-catch-block-nested-block-let-declaration-unseen-outside-of-block.js
-  - [ ] test/language/block-scope/leave/try-block-let-declaration-only-shadows-outer-parameter-value-1.js
-  - [ ] test/language/block-scope/leave/try-block-let-declaration-only-shadows-outer-parameter-value-2.js
-  - [ ] test/language/block-scope/leave/verify-context-in-finally-block.js
-  - [ ] test/language/block-scope/leave/verify-context-in-for-loop-block.js
-  - [ ] test/language/block-scope/leave/verify-context-in-labelled-block.js
-  - [ ] test/language/block-scope/leave/verify-context-in-try-block.js
-  - [ ] test/language/block-scope/leave/x-after-break-to-label.js
-  - [ ] test/language/block-scope/leave/x-before-continue.js
-  - [ ] test/language/block-scope/return-from/block-const.js
-  - [ ] test/language/block-scope/return-from/block-let.js
-  - [ ] test/language/block-scope/shadowing/catch-parameter-shadowing-catch-parameter.js
-  - [ ] test/language/block-scope/shadowing/catch-parameter-shadowing-function-parameter-name.js
-  - [ ] test/language/block-scope/shadowing/catch-parameter-shadowing-let-declaration.js
-  - [ ] test/language/block-scope/shadowing/catch-parameter-shadowing-var-variable.js
-  - [ ] test/language/block-scope/shadowing/const-declaration-shadowing-catch-parameter.js
-  - [ ] test/language/block-scope/shadowing/const-declarations-shadowing-parameter-name-let-const-and-var-variables.js
-  - [ ] test/language/block-scope/shadowing/dynamic-lookup-from-closure.js
-  - [ ] test/language/block-scope/shadowing/dynamic-lookup-in-and-through-block-contexts.js
-  - [ ] test/language/block-scope/shadowing/hoisting-var-declarations-out-of-blocks.js
-  - [ ] test/language/block-scope/shadowing/let-declaration-shadowing-catch-parameter.js
-  - [ ] test/language/block-scope/shadowing/let-declarations-shadowing-parameter-name-let-const-and-var.js
-  - [ ] test/language/block-scope/shadowing/lookup-from-closure.js
-  - [ ] test/language/block-scope/shadowing/lookup-in-and-through-block-contexts.js
-  - [ ] test/language/block-scope/shadowing/parameter-name-shadowing-catch-parameter.js
-  - [ ] test/language/block-scope/shadowing/parameter-name-shadowing-parameter-name-let-const-and-var.js
-  - [ ] test/language/block-scope/syntax/for-in/acquire-properties-from-array.js
-  - [ ] test/language/block-scope/syntax/for-in/acquire-properties-from-object.js
-  - [ ] test/language/block-scope/syntax/for-in/disallow-initialization-assignment.js
-  - [ ] test/language/block-scope/syntax/for-in/disallow-multiple-lexical-bindings-with-and-without-initializer.js
-  - [ ] test/language/block-scope/syntax/for-in/disallow-multiple-lexical-bindings-with-initializer.js
-  - [ ] test/language/block-scope/syntax/for-in/disallow-multiple-lexical-bindings-without-and-with-initializer.js
-  - [ ] test/language/block-scope/syntax/for-in/disallow-multiple-lexical-bindings.js
-  - [ ] test/language/block-scope/syntax/for-in/mixed-values-in-iteration.js
-  - [ ] test/language/block-scope/syntax/function-declarations/in-statement-position-case-expression-statement-list.js
-  - [ ] test/language/block-scope/syntax/function-declarations/in-statement-position-default-statement-list.js
-  - [ ] test/language/block-scope/syntax/function-declarations/in-statement-position-do-statement-while-expression.js
-  - [ ] test/language/block-scope/syntax/function-declarations/in-statement-position-for-statement.js
-  - [ ] test/language/block-scope/syntax/function-declarations/in-statement-position-if-expression-statement-else-statement.js
-  - [ ] test/language/block-scope/syntax/function-declarations/in-statement-position-if-expression-statement.js
-  - [ ] test/language/block-scope/syntax/function-declarations/in-statement-position-while-expression-statement.js
-  - [ ] test/language/block-scope/syntax/redeclaration/async-function-name-redeclaration-attempt-with-async-function.js
-  - [ ] test/language/block-scope/syntax/redeclaration/async-function-name-redeclaration-attempt-with-async-generator.js
-  - [ ] test/language/block-scope/syntax/redeclaration/async-function-name-redeclaration-attempt-with-class.js
-  - [ ] test/language/block-scope/syntax/redeclaration/async-function-name-redeclaration-attempt-with-const.js
-  - [ ] test/language/block-scope/syntax/redeclaration/async-function-name-redeclaration-attempt-with-function.js
-  - [ ] test/language/block-scope/syntax/redeclaration/async-function-name-redeclaration-attempt-with-generator.js
-  - [ ] test/language/block-scope/syntax/redeclaration/async-function-name-redeclaration-attempt-with-let.js
-  - [ ] test/language/block-scope/syntax/redeclaration/async-function-name-redeclaration-attempt-with-var.js
-  - [ ] test/language/block-scope/syntax/redeclaration/async-generator-name-redeclaration-attempt-with-async-function.js
-  - [ ] test/language/block-scope/syntax/redeclaration/async-generator-name-redeclaration-attempt-with-async-generator.js
-  - [ ] test/language/block-scope/syntax/redeclaration/async-generator-name-redeclaration-attempt-with-class.js
-  - [ ] test/language/block-scope/syntax/redeclaration/async-generator-name-redeclaration-attempt-with-const.js
-  - [ ] test/language/block-scope/syntax/redeclaration/async-generator-name-redeclaration-attempt-with-function.js
-  - [ ] test/language/block-scope/syntax/redeclaration/async-generator-name-redeclaration-attempt-with-generator.js
-  - [ ] test/language/block-scope/syntax/redeclaration/async-generator-name-redeclaration-attempt-with-let.js
-  - [ ] test/language/block-scope/syntax/redeclaration/async-generator-name-redeclaration-attempt-with-var.js
-  - [ ] test/language/block-scope/syntax/redeclaration/class-name-redeclaration-attempt-with-async-function.js
-  - [ ] test/language/block-scope/syntax/redeclaration/class-name-redeclaration-attempt-with-async-generator.js
-  - [ ] test/language/block-scope/syntax/redeclaration/class-name-redeclaration-attempt-with-class.js
-  - [ ] test/language/block-scope/syntax/redeclaration/class-name-redeclaration-attempt-with-const.js
-  - [ ] test/language/block-scope/syntax/redeclaration/class-name-redeclaration-attempt-with-function.js
-  - [ ] test/language/block-scope/syntax/redeclaration/class-name-redeclaration-attempt-with-generator.js
-  - [ ] test/language/block-scope/syntax/redeclaration/class-name-redeclaration-attempt-with-let.js
-  - [ ] test/language/block-scope/syntax/redeclaration/class-name-redeclaration-attempt-with-var.js
-  - [ ] test/language/block-scope/syntax/redeclaration/const-name-redeclaration-attempt-with-async-function.js
-  - [ ] test/language/block-scope/syntax/redeclaration/const-name-redeclaration-attempt-with-async-generator.js
-  - [ ] test/language/block-scope/syntax/redeclaration/const-name-redeclaration-attempt-with-class.js
-  - [ ] test/language/block-scope/syntax/redeclaration/const-name-redeclaration-attempt-with-const.js
-  - [ ] test/language/block-scope/syntax/redeclaration/const-name-redeclaration-attempt-with-function.js
-  - [ ] test/language/block-scope/syntax/redeclaration/const-name-redeclaration-attempt-with-generator.js
-  - [ ] test/language/block-scope/syntax/redeclaration/const-name-redeclaration-attempt-with-let.js
-  - [ ] test/language/block-scope/syntax/redeclaration/const-name-redeclaration-attempt-with-var.js
-  - [ ] test/language/block-scope/syntax/redeclaration/fn-scope-var-name-redeclaration-attempt-with-async-function.js
-  - [ ] test/language/block-scope/syntax/redeclaration/fn-scope-var-name-redeclaration-attempt-with-async-generator.js
-  - [ ] test/language/block-scope/syntax/redeclaration/fn-scope-var-name-redeclaration-attempt-with-class.js
-  - [ ] test/language/block-scope/syntax/redeclaration/fn-scope-var-name-redeclaration-attempt-with-const.js
-  - [ ] test/language/block-scope/syntax/redeclaration/fn-scope-var-name-redeclaration-attempt-with-function.js
-  - [ ] test/language/block-scope/syntax/redeclaration/fn-scope-var-name-redeclaration-attempt-with-generator.js
-  - [ ] test/language/block-scope/syntax/redeclaration/fn-scope-var-name-redeclaration-attempt-with-let.js
-  - [ ] test/language/block-scope/syntax/redeclaration/fn-scope-var-name-redeclaration-attempt-with-var.js
-  - [ ] test/language/block-scope/syntax/redeclaration/function-declaration-attempt-to-redeclare-with-var-declaration-nested-in-function.js
-  - [ ] test/language/block-scope/syntax/redeclaration/function-name-redeclaration-attempt-with-async-function.js
-  - [ ] test/language/block-scope/syntax/redeclaration/function-name-redeclaration-attempt-with-async-generator.js
-  - [ ] test/language/block-scope/syntax/redeclaration/function-name-redeclaration-attempt-with-class.js
-  - [ ] test/language/block-scope/syntax/redeclaration/function-name-redeclaration-attempt-with-const.js
-  - [ ] test/language/block-scope/syntax/redeclaration/function-name-redeclaration-attempt-with-function.js
-  - [ ] test/language/block-scope/syntax/redeclaration/function-name-redeclaration-attempt-with-generator.js
-  - [ ] test/language/block-scope/syntax/redeclaration/function-name-redeclaration-attempt-with-let.js
-  - [ ] test/language/block-scope/syntax/redeclaration/function-name-redeclaration-attempt-with-var.js
-  - [ ] test/language/block-scope/syntax/redeclaration/generator-name-redeclaration-attempt-with-async-function.js
-  - [ ] test/language/block-scope/syntax/redeclaration/generator-name-redeclaration-attempt-with-async-generator.js
-  - [ ] test/language/block-scope/syntax/redeclaration/generator-name-redeclaration-attempt-with-class.js
-  - [ ] test/language/block-scope/syntax/redeclaration/generator-name-redeclaration-attempt-with-const.js
-  - [ ] test/language/block-scope/syntax/redeclaration/generator-name-redeclaration-attempt-with-function.js
-  - [ ] test/language/block-scope/syntax/redeclaration/generator-name-redeclaration-attempt-with-generator.js
-  - [ ] test/language/block-scope/syntax/redeclaration/generator-name-redeclaration-attempt-with-let.js
-  - [ ] test/language/block-scope/syntax/redeclaration/generator-name-redeclaration-attempt-with-var.js
-  - [ ] test/language/block-scope/syntax/redeclaration/inner-block-var-name-redeclaration-attempt-with-async-function.js
-  - [ ] test/language/block-scope/syntax/redeclaration/inner-block-var-name-redeclaration-attempt-with-async-generator.js
-  - [ ] test/language/block-scope/syntax/redeclaration/inner-block-var-name-redeclaration-attempt-with-class.js
-  - [ ] test/language/block-scope/syntax/redeclaration/inner-block-var-name-redeclaration-attempt-with-const.js
-  - [ ] test/language/block-scope/syntax/redeclaration/inner-block-var-name-redeclaration-attempt-with-function.js
-  - [ ] test/language/block-scope/syntax/redeclaration/inner-block-var-name-redeclaration-attempt-with-generator.js
-  - [ ] test/language/block-scope/syntax/redeclaration/inner-block-var-name-redeclaration-attempt-with-let.js
-  - [ ] test/language/block-scope/syntax/redeclaration/inner-block-var-name-redeclaration-attempt-with-var.js
-  - [ ] test/language/block-scope/syntax/redeclaration/inner-block-var-redeclaration-attempt-after-async-function.js
-  - [ ] test/language/block-scope/syntax/redeclaration/inner-block-var-redeclaration-attempt-after-async-generator.js
-  - [ ] test/language/block-scope/syntax/redeclaration/inner-block-var-redeclaration-attempt-after-class.js
-  - [ ] test/language/block-scope/syntax/redeclaration/inner-block-var-redeclaration-attempt-after-const.js
-  - [ ] test/language/block-scope/syntax/redeclaration/inner-block-var-redeclaration-attempt-after-function.js
-  - [ ] test/language/block-scope/syntax/redeclaration/inner-block-var-redeclaration-attempt-after-generator.js
-  - [ ] test/language/block-scope/syntax/redeclaration/inner-block-var-redeclaration-attempt-after-let.js
-  - [ ] test/language/block-scope/syntax/redeclaration/let-name-redeclaration-attempt-with-async-function.js
-  - [ ] test/language/block-scope/syntax/redeclaration/let-name-redeclaration-attempt-with-async-generator.js
-  - [ ] test/language/block-scope/syntax/redeclaration/let-name-redeclaration-attempt-with-class.js
-  - [ ] test/language/block-scope/syntax/redeclaration/let-name-redeclaration-attempt-with-const.js
-  - [ ] test/language/block-scope/syntax/redeclaration/let-name-redeclaration-attempt-with-function.js
-  - [ ] test/language/block-scope/syntax/redeclaration/let-name-redeclaration-attempt-with-generator.js
-  - [ ] test/language/block-scope/syntax/redeclaration/let-name-redeclaration-attempt-with-let.js
-  - [ ] test/language/block-scope/syntax/redeclaration/let-name-redeclaration-attempt-with-var.js
-  - [ ] test/language/block-scope/syntax/redeclaration/var-name-redeclaration-attempt-with-async-function.js
-  - [ ] test/language/block-scope/syntax/redeclaration/var-name-redeclaration-attempt-with-async-generator.js
-  - [ ] test/language/block-scope/syntax/redeclaration/var-name-redeclaration-attempt-with-class.js
-  - [ ] test/language/block-scope/syntax/redeclaration/var-name-redeclaration-attempt-with-const.js
-  - [ ] test/language/block-scope/syntax/redeclaration/var-name-redeclaration-attempt-with-function.js
-  - [ ] test/language/block-scope/syntax/redeclaration/var-name-redeclaration-attempt-with-generator.js
-  - [ ] test/language/block-scope/syntax/redeclaration/var-name-redeclaration-attempt-with-let.js
-  - [ ] test/language/block-scope/syntax/redeclaration/var-name-redeclaration-attempt-with-var.js
-  - [ ] test/language/block-scope/syntax/redeclaration/var-redeclaration-attempt-after-async-function.js
-  - [ ] test/language/block-scope/syntax/redeclaration/var-redeclaration-attempt-after-async-generator.js
-  - [ ] test/language/block-scope/syntax/redeclaration/var-redeclaration-attempt-after-class.js
-  - [ ] test/language/block-scope/syntax/redeclaration/var-redeclaration-attempt-after-const.js
-  - [ ] test/language/block-scope/syntax/redeclaration/var-redeclaration-attempt-after-function.js
-  - [ ] test/language/block-scope/syntax/redeclaration/var-redeclaration-attempt-after-generator.js
-  - [ ] test/language/block-scope/syntax/redeclaration/var-redeclaration-attempt-after-let.js
-  - [ ] test/language/block-scope/syntax/redeclaration-global/allowed-to-declare-function-with-function-declaration.js
-  - [ ] test/language/block-scope/syntax/redeclaration-global/allowed-to-redeclare-function-declaration-with-var.js
-  - [ ] test/language/block-scope/syntax/redeclaration-global/allowed-to-redeclare-var-with-function-declaration.js
+- [x] block-scope
+  - [x] test/language/block-scope/leave/finally-block-let-declaration-only-shadows-outer-parameter-value-1.js
+  - [x] test/language/block-scope/leave/finally-block-let-declaration-only-shadows-outer-parameter-value-2.js
+  - [x] test/language/block-scope/leave/for-loop-block-let-declaration-only-shadows-outer-parameter-value-1.js
+  - [x] test/language/block-scope/leave/for-loop-block-let-declaration-only-shadows-outer-parameter-value-2.js
+  - [x] test/language/block-scope/leave/nested-block-let-declaration-only-shadows-outer-parameter-value-1.js
+  - [x] test/language/block-scope/leave/nested-block-let-declaration-only-shadows-outer-parameter-value-2.js
+  - [x] test/language/block-scope/leave/outermost-binding-updated-in-catch-block-nested-block-let-declaration-unseen-outside-of-block.js
+  - [x] test/language/block-scope/leave/try-block-let-declaration-only-shadows-outer-parameter-value-1.js
+  - [x] test/language/block-scope/leave/try-block-let-declaration-only-shadows-outer-parameter-value-2.js
+  - [x] test/language/block-scope/leave/verify-context-in-finally-block.js
+  - [x] test/language/block-scope/leave/verify-context-in-for-loop-block.js
+  - [x] test/language/block-scope/leave/verify-context-in-labelled-block.js
+  - [x] test/language/block-scope/leave/verify-context-in-try-block.js
+  - [x] test/language/block-scope/leave/x-after-break-to-label.js
+  - [x] test/language/block-scope/leave/x-before-continue.js
+  - [x] test/language/block-scope/return-from/block-const.js
+  - [x] test/language/block-scope/return-from/block-let.js
+  - [x] test/language/block-scope/shadowing/catch-parameter-shadowing-catch-parameter.js
+  - [x] test/language/block-scope/shadowing/catch-parameter-shadowing-function-parameter-name.js
+  - [x] test/language/block-scope/shadowing/catch-parameter-shadowing-let-declaration.js
+  - [x] test/language/block-scope/shadowing/catch-parameter-shadowing-var-variable.js
+  - [x] test/language/block-scope/shadowing/const-declaration-shadowing-catch-parameter.js
+  - [x] test/language/block-scope/shadowing/const-declarations-shadowing-parameter-name-let-const-and-var-variables.js
+  - [x] test/language/block-scope/shadowing/dynamic-lookup-from-closure.js
+  - [x] test/language/block-scope/shadowing/dynamic-lookup-in-and-through-block-contexts.js
+  - [x] test/language/block-scope/shadowing/hoisting-var-declarations-out-of-blocks.js
+  - [x] test/language/block-scope/shadowing/let-declaration-shadowing-catch-parameter.js
+  - [x] test/language/block-scope/shadowing/let-declarations-shadowing-parameter-name-let-const-and-var.js
+  - [x] test/language/block-scope/shadowing/lookup-from-closure.js
+  - [x] test/language/block-scope/shadowing/lookup-in-and-through-block-contexts.js
+  - [x] test/language/block-scope/shadowing/parameter-name-shadowing-catch-parameter.js
+  - [x] test/language/block-scope/shadowing/parameter-name-shadowing-parameter-name-let-const-and-var.js
+  - [x] test/language/block-scope/syntax/for-in/acquire-properties-from-array.js
+  - [x] test/language/block-scope/syntax/for-in/acquire-properties-from-object.js
+  - [x] test/language/block-scope/syntax/for-in/disallow-initialization-assignment.js
+  - [x] test/language/block-scope/syntax/for-in/disallow-multiple-lexical-bindings-with-and-without-initializer.js
+  - [x] test/language/block-scope/syntax/for-in/disallow-multiple-lexical-bindings-with-initializer.js
+  - [x] test/language/block-scope/syntax/for-in/disallow-multiple-lexical-bindings-without-and-with-initializer.js
+  - [x] test/language/block-scope/syntax/for-in/disallow-multiple-lexical-bindings.js
+  - [x] test/language/block-scope/syntax/for-in/mixed-values-in-iteration.js
+  - [x] test/language/block-scope/syntax/function-declarations/in-statement-position-case-expression-statement-list.js
+  - [x] test/language/block-scope/syntax/function-declarations/in-statement-position-default-statement-list.js
+  - [x] test/language/block-scope/syntax/function-declarations/in-statement-position-do-statement-while-expression.js
+  - [x] test/language/block-scope/syntax/function-declarations/in-statement-position-for-statement.js
+  - [x] test/language/block-scope/syntax/function-declarations/in-statement-position-if-expression-statement-else-statement.js
+  - [x] test/language/block-scope/syntax/function-declarations/in-statement-position-if-expression-statement.js
+  - [x] test/language/block-scope/syntax/function-declarations/in-statement-position-while-expression-statement.js
+  - [x] test/language/block-scope/syntax/redeclaration/async-function-name-redeclaration-attempt-with-async-function.js
+  - [x] test/language/block-scope/syntax/redeclaration/async-function-name-redeclaration-attempt-with-async-generator.js
+  - [x] test/language/block-scope/syntax/redeclaration/async-function-name-redeclaration-attempt-with-class.js
+  - [x] test/language/block-scope/syntax/redeclaration/async-function-name-redeclaration-attempt-with-const.js
+  - [x] test/language/block-scope/syntax/redeclaration/async-function-name-redeclaration-attempt-with-function.js
+  - [x] test/language/block-scope/syntax/redeclaration/async-function-name-redeclaration-attempt-with-generator.js
+  - [x] test/language/block-scope/syntax/redeclaration/async-function-name-redeclaration-attempt-with-let.js
+  - [x] test/language/block-scope/syntax/redeclaration/async-function-name-redeclaration-attempt-with-var.js
+  - [x] test/language/block-scope/syntax/redeclaration/async-generator-name-redeclaration-attempt-with-async-function.js
+  - [x] test/language/block-scope/syntax/redeclaration/async-generator-name-redeclaration-attempt-with-async-generator.js
+  - [x] test/language/block-scope/syntax/redeclaration/async-generator-name-redeclaration-attempt-with-class.js
+  - [x] test/language/block-scope/syntax/redeclaration/async-generator-name-redeclaration-attempt-with-const.js
+  - [x] test/language/block-scope/syntax/redeclaration/async-generator-name-redeclaration-attempt-with-function.js
+  - [x] test/language/block-scope/syntax/redeclaration/async-generator-name-redeclaration-attempt-with-generator.js
+  - [x] test/language/block-scope/syntax/redeclaration/async-generator-name-redeclaration-attempt-with-let.js
+  - [x] test/language/block-scope/syntax/redeclaration/async-generator-name-redeclaration-attempt-with-var.js
+  - [x] test/language/block-scope/syntax/redeclaration/class-name-redeclaration-attempt-with-async-function.js
+  - [x] test/language/block-scope/syntax/redeclaration/class-name-redeclaration-attempt-with-async-generator.js
+  - [x] test/language/block-scope/syntax/redeclaration/class-name-redeclaration-attempt-with-class.js
+  - [x] test/language/block-scope/syntax/redeclaration/class-name-redeclaration-attempt-with-const.js
+  - [x] test/language/block-scope/syntax/redeclaration/class-name-redeclaration-attempt-with-function.js
+  - [x] test/language/block-scope/syntax/redeclaration/class-name-redeclaration-attempt-with-generator.js
+  - [x] test/language/block-scope/syntax/redeclaration/class-name-redeclaration-attempt-with-let.js
+  - [x] test/language/block-scope/syntax/redeclaration/class-name-redeclaration-attempt-with-var.js
+  - [x] test/language/block-scope/syntax/redeclaration/const-name-redeclaration-attempt-with-async-function.js
+  - [x] test/language/block-scope/syntax/redeclaration/const-name-redeclaration-attempt-with-async-generator.js
+  - [x] test/language/block-scope/syntax/redeclaration/const-name-redeclaration-attempt-with-class.js
+  - [x] test/language/block-scope/syntax/redeclaration/const-name-redeclaration-attempt-with-const.js
+  - [x] test/language/block-scope/syntax/redeclaration/const-name-redeclaration-attempt-with-function.js
+  - [x] test/language/block-scope/syntax/redeclaration/const-name-redeclaration-attempt-with-generator.js
+  - [x] test/language/block-scope/syntax/redeclaration/const-name-redeclaration-attempt-with-let.js
+  - [x] test/language/block-scope/syntax/redeclaration/const-name-redeclaration-attempt-with-var.js
+  - [x] test/language/block-scope/syntax/redeclaration/fn-scope-var-name-redeclaration-attempt-with-async-function.js
+  - [x] test/language/block-scope/syntax/redeclaration/fn-scope-var-name-redeclaration-attempt-with-async-generator.js
+  - [x] test/language/block-scope/syntax/redeclaration/fn-scope-var-name-redeclaration-attempt-with-class.js
+  - [x] test/language/block-scope/syntax/redeclaration/fn-scope-var-name-redeclaration-attempt-with-const.js
+  - [x] test/language/block-scope/syntax/redeclaration/fn-scope-var-name-redeclaration-attempt-with-function.js
+  - [x] test/language/block-scope/syntax/redeclaration/fn-scope-var-name-redeclaration-attempt-with-generator.js
+  - [x] test/language/block-scope/syntax/redeclaration/fn-scope-var-name-redeclaration-attempt-with-let.js
+  - [x] test/language/block-scope/syntax/redeclaration/fn-scope-var-name-redeclaration-attempt-with-var.js
+  - [x] test/language/block-scope/syntax/redeclaration/function-declaration-attempt-to-redeclare-with-var-declaration-nested-in-function.js
+  - [x] test/language/block-scope/syntax/redeclaration/function-name-redeclaration-attempt-with-async-function.js
+  - [x] test/language/block-scope/syntax/redeclaration/function-name-redeclaration-attempt-with-async-generator.js
+  - [x] test/language/block-scope/syntax/redeclaration/function-name-redeclaration-attempt-with-class.js
+  - [x] test/language/block-scope/syntax/redeclaration/function-name-redeclaration-attempt-with-const.js
+  - [x] test/language/block-scope/syntax/redeclaration/function-name-redeclaration-attempt-with-function.js
+  - [x] test/language/block-scope/syntax/redeclaration/function-name-redeclaration-attempt-with-generator.js
+  - [x] test/language/block-scope/syntax/redeclaration/function-name-redeclaration-attempt-with-let.js
+  - [x] test/language/block-scope/syntax/redeclaration/function-name-redeclaration-attempt-with-var.js
+  - [x] test/language/block-scope/syntax/redeclaration/generator-name-redeclaration-attempt-with-async-function.js
+  - [x] test/language/block-scope/syntax/redeclaration/generator-name-redeclaration-attempt-with-async-generator.js
+  - [x] test/language/block-scope/syntax/redeclaration/generator-name-redeclaration-attempt-with-class.js
+  - [x] test/language/block-scope/syntax/redeclaration/generator-name-redeclaration-attempt-with-const.js
+  - [x] test/language/block-scope/syntax/redeclaration/generator-name-redeclaration-attempt-with-function.js
+  - [x] test/language/block-scope/syntax/redeclaration/generator-name-redeclaration-attempt-with-generator.js
+  - [x] test/language/block-scope/syntax/redeclaration/generator-name-redeclaration-attempt-with-let.js
+  - [x] test/language/block-scope/syntax/redeclaration/generator-name-redeclaration-attempt-with-var.js
+  - [x] test/language/block-scope/syntax/redeclaration/inner-block-var-name-redeclaration-attempt-with-async-function.js
+  - [x] test/language/block-scope/syntax/redeclaration/inner-block-var-name-redeclaration-attempt-with-async-generator.js
+  - [x] test/language/block-scope/syntax/redeclaration/inner-block-var-name-redeclaration-attempt-with-class.js
+  - [x] test/language/block-scope/syntax/redeclaration/inner-block-var-name-redeclaration-attempt-with-const.js
+  - [x] test/language/block-scope/syntax/redeclaration/inner-block-var-name-redeclaration-attempt-with-function.js
+  - [x] test/language/block-scope/syntax/redeclaration/inner-block-var-name-redeclaration-attempt-with-generator.js
+  - [x] test/language/block-scope/syntax/redeclaration/inner-block-var-name-redeclaration-attempt-with-let.js
+  - [x] test/language/block-scope/syntax/redeclaration/inner-block-var-name-redeclaration-attempt-with-var.js
+  - [x] test/language/block-scope/syntax/redeclaration/inner-block-var-redeclaration-attempt-after-async-function.js
+  - [x] test/language/block-scope/syntax/redeclaration/inner-block-var-redeclaration-attempt-after-async-generator.js
+  - [x] test/language/block-scope/syntax/redeclaration/inner-block-var-redeclaration-attempt-after-class.js
+  - [x] test/language/block-scope/syntax/redeclaration/inner-block-var-redeclaration-attempt-after-const.js
+  - [x] test/language/block-scope/syntax/redeclaration/inner-block-var-redeclaration-attempt-after-function.js
+  - [x] test/language/block-scope/syntax/redeclaration/inner-block-var-redeclaration-attempt-after-generator.js
+  - [x] test/language/block-scope/syntax/redeclaration/inner-block-var-redeclaration-attempt-after-let.js
+  - [x] test/language/block-scope/syntax/redeclaration/let-name-redeclaration-attempt-with-async-function.js
+  - [x] test/language/block-scope/syntax/redeclaration/let-name-redeclaration-attempt-with-async-generator.js
+  - [x] test/language/block-scope/syntax/redeclaration/let-name-redeclaration-attempt-with-class.js
+  - [x] test/language/block-scope/syntax/redeclaration/let-name-redeclaration-attempt-with-const.js
+  - [x] test/language/block-scope/syntax/redeclaration/let-name-redeclaration-attempt-with-function.js
+  - [x] test/language/block-scope/syntax/redeclaration/let-name-redeclaration-attempt-with-generator.js
+  - [x] test/language/block-scope/syntax/redeclaration/let-name-redeclaration-attempt-with-let.js
+  - [x] test/language/block-scope/syntax/redeclaration/let-name-redeclaration-attempt-with-var.js
+  - [x] test/language/block-scope/syntax/redeclaration/var-name-redeclaration-attempt-with-async-function.js
+  - [x] test/language/block-scope/syntax/redeclaration/var-name-redeclaration-attempt-with-async-generator.js
+  - [x] test/language/block-scope/syntax/redeclaration/var-name-redeclaration-attempt-with-class.js
+  - [x] test/language/block-scope/syntax/redeclaration/var-name-redeclaration-attempt-with-const.js
+  - [x] test/language/block-scope/syntax/redeclaration/var-name-redeclaration-attempt-with-function.js
+  - [x] test/language/block-scope/syntax/redeclaration/var-name-redeclaration-attempt-with-generator.js
+  - [x] test/language/block-scope/syntax/redeclaration/var-name-redeclaration-attempt-with-let.js
+  - [x] test/language/block-scope/syntax/redeclaration/var-name-redeclaration-attempt-with-var.js
+  - [x] test/language/block-scope/syntax/redeclaration/var-redeclaration-attempt-after-async-function.js
+  - [x] test/language/block-scope/syntax/redeclaration/var-redeclaration-attempt-after-async-generator.js
+  - [x] test/language/block-scope/syntax/redeclaration/var-redeclaration-attempt-after-class.js
+  - [x] test/language/block-scope/syntax/redeclaration/var-redeclaration-attempt-after-const.js
+  - [x] test/language/block-scope/syntax/redeclaration/var-redeclaration-attempt-after-function.js
+  - [x] test/language/block-scope/syntax/redeclaration/var-redeclaration-attempt-after-generator.js
+  - [x] test/language/block-scope/syntax/redeclaration/var-redeclaration-attempt-after-let.js
+  - [x] test/language/block-scope/syntax/redeclaration-global/allowed-to-declare-function-with-function-declaration.js
+  - [x] test/language/block-scope/syntax/redeclaration-global/allowed-to-redeclare-function-declaration-with-var.js
+  - [x] test/language/block-scope/syntax/redeclaration-global/allowed-to-redeclare-var-with-function-declaration.js
 - [ ] identifier-resolution
   - [ ] test/language/identifier-resolution/S10.2.2_A1_T1.js
   - [ ] test/language/identifier-resolution/S10.2.2_A1_T2.js
@@ -22581,87 +22581,87 @@ Sub-category progress
   - [ ] test/language/identifier-resolution/static-init-invalid-await.js
   - [ ] test/language/identifier-resolution/unscopables.js
 - [ ] computed-property-names
-  - [ ] test/language/computed-property-names/basics/number.js
-  - [ ] test/language/computed-property-names/basics/string.js
-  - [ ] test/language/computed-property-names/basics/symbol.js
-  - [ ] test/language/computed-property-names/class/accessor/getter-duplicates.js
-  - [ ] test/language/computed-property-names/class/accessor/getter.js
-  - [ ] test/language/computed-property-names/class/accessor/setter-duplicates.js
-  - [ ] test/language/computed-property-names/class/accessor/setter.js
-  - [ ] test/language/computed-property-names/class/method/constructor-can-be-generator.js
-  - [ ] test/language/computed-property-names/class/method/constructor-can-be-getter.js
-  - [ ] test/language/computed-property-names/class/method/constructor-can-be-setter.js
-  - [ ] test/language/computed-property-names/class/method/constructor-duplicate-1.js
-  - [ ] test/language/computed-property-names/class/method/constructor-duplicate-2.js
-  - [ ] test/language/computed-property-names/class/method/constructor-duplicate-3.js
-  - [ ] test/language/computed-property-names/class/method/constructor.js
-  - [ ] test/language/computed-property-names/class/method/generator.js
-  - [ ] test/language/computed-property-names/class/method/number.js
-  - [ ] test/language/computed-property-names/class/method/string.js
-  - [ ] test/language/computed-property-names/class/method/symbol.js
-  - [ ] test/language/computed-property-names/class/static/generator-constructor.js
-  - [ ] test/language/computed-property-names/class/static/generator-prototype.js
-  - [ ] test/language/computed-property-names/class/static/getter-constructor.js
-  - [ ] test/language/computed-property-names/class/static/getter-prototype.js
-  - [ ] test/language/computed-property-names/class/static/method-constructor.js
-  - [ ] test/language/computed-property-names/class/static/method-number-order.js
-  - [ ] test/language/computed-property-names/class/static/method-number.js
-  - [ ] test/language/computed-property-names/class/static/method-prototype.js
-  - [ ] test/language/computed-property-names/class/static/method-string-order.js
-  - [ ] test/language/computed-property-names/class/static/method-string.js
-  - [ ] test/language/computed-property-names/class/static/method-symbol-order.js
-  - [ ] test/language/computed-property-names/class/static/method-symbol.js
-  - [ ] test/language/computed-property-names/class/static/setter-constructor.js
-  - [ ] test/language/computed-property-names/class/static/setter-prototype.js
-  - [ ] test/language/computed-property-names/object/accessor/getter-duplicates.js
-  - [ ] test/language/computed-property-names/object/accessor/getter-super.js
-  - [ ] test/language/computed-property-names/object/accessor/getter.js
-  - [ ] test/language/computed-property-names/object/accessor/setter-duplicates.js
-  - [ ] test/language/computed-property-names/object/accessor/setter-super.js
+  - [x] test/language/computed-property-names/basics/number.js
+  - [x] test/language/computed-property-names/basics/string.js
+  - [x] test/language/computed-property-names/basics/symbol.js
+  - [x] test/language/computed-property-names/class/accessor/getter-duplicates.js
+  - [x] test/language/computed-property-names/class/accessor/getter.js
+  - [x] test/language/computed-property-names/class/accessor/setter-duplicates.js
+  - [x] test/language/computed-property-names/class/accessor/setter.js
+  - [x] test/language/computed-property-names/class/method/constructor-can-be-generator.js
+  - [x] test/language/computed-property-names/class/method/constructor-can-be-getter.js
+  - [x] test/language/computed-property-names/class/method/constructor-can-be-setter.js
+  - [x] test/language/computed-property-names/class/method/constructor-duplicate-1.js
+  - [x] test/language/computed-property-names/class/method/constructor-duplicate-2.js
+  - [x] test/language/computed-property-names/class/method/constructor-duplicate-3.js
+  - [x] test/language/computed-property-names/class/method/constructor.js
+  - [x] test/language/computed-property-names/class/method/generator.js
+  - [x] test/language/computed-property-names/class/method/number.js
+  - [x] test/language/computed-property-names/class/method/string.js
+  - [x] test/language/computed-property-names/class/method/symbol.js
+  - [x] test/language/computed-property-names/class/static/generator-constructor.js
+  - [x] test/language/computed-property-names/class/static/generator-prototype.js
+  - [x] test/language/computed-property-names/class/static/getter-constructor.js
+  - [x] test/language/computed-property-names/class/static/getter-prototype.js
+  - [x] test/language/computed-property-names/class/static/method-constructor.js
+  - [x] test/language/computed-property-names/class/static/method-number-order.js
+  - [x] test/language/computed-property-names/class/static/method-number.js
+  - [x] test/language/computed-property-names/class/static/method-prototype.js
+  - [x] test/language/computed-property-names/class/static/method-string-order.js
+  - [x] test/language/computed-property-names/class/static/method-string.js
+  - [x] test/language/computed-property-names/class/static/method-symbol-order.js
+  - [x] test/language/computed-property-names/class/static/method-symbol.js
+  - [x] test/language/computed-property-names/class/static/setter-constructor.js
+  - [x] test/language/computed-property-names/class/static/setter-prototype.js
+  - [x] test/language/computed-property-names/object/accessor/getter-duplicates.js
+  - [x] test/language/computed-property-names/object/accessor/getter-super.js
+  - [x] test/language/computed-property-names/object/accessor/getter.js
+  - [x] test/language/computed-property-names/object/accessor/setter-duplicates.js
+  - [x] test/language/computed-property-names/object/accessor/setter-super.js
   - [ ] test/language/computed-property-names/object/accessor/setter.js
-  - [ ] test/language/computed-property-names/object/method/generator.js
-  - [ ] test/language/computed-property-names/object/method/number.js
-  - [ ] test/language/computed-property-names/object/method/string.js
-  - [ ] test/language/computed-property-names/object/method/super.js
-  - [ ] test/language/computed-property-names/object/method/symbol.js
-  - [ ] test/language/computed-property-names/object/property/number-duplicates.js
-  - [ ] test/language/computed-property-names/to-name-side-effects/class.js
-  - [ ] test/language/computed-property-names/to-name-side-effects/numbers-class.js
-  - [ ] test/language/computed-property-names/to-name-side-effects/numbers-object.js
-  - [ ] test/language/computed-property-names/to-name-side-effects/object.js
+  - [x] test/language/computed-property-names/object/method/generator.js
+  - [x] test/language/computed-property-names/object/method/number.js
+  - [x] test/language/computed-property-names/object/method/string.js
+  - [x] test/language/computed-property-names/object/method/super.js
+  - [x] test/language/computed-property-names/object/method/symbol.js
+  - [x] test/language/computed-property-names/object/property/number-duplicates.js
+  - [x] test/language/computed-property-names/to-name-side-effects/class.js
+  - [x] test/language/computed-property-names/to-name-side-effects/numbers-class.js
+  - [x] test/language/computed-property-names/to-name-side-effects/numbers-object.js
+  - [x] test/language/computed-property-names/to-name-side-effects/object.js
 - [ ] destructuring
-  - [ ] test/language/destructuring/binding/initialization-requires-object-coercible-null.js
-  - [ ] test/language/destructuring/binding/initialization-requires-object-coercible-undefined.js
-  - [ ] test/language/destructuring/binding/initialization-returns-normal-completion-for-empty-objects.js
+  - [x] test/language/destructuring/binding/initialization-requires-object-coercible-null.js
+  - [x] test/language/destructuring/binding/initialization-requires-object-coercible-undefined.js
+  - [x] test/language/destructuring/binding/initialization-returns-normal-completion-for-empty-objects.js
   - [ ] test/language/destructuring/binding/keyed-destructuring-property-reference-target-evaluation-order-with-bindings.js
-  - [ ] test/language/destructuring/binding/syntax/array-elements-with-initializer.js
-  - [ ] test/language/destructuring/binding/syntax/array-elements-with-object-patterns.js
-  - [ ] test/language/destructuring/binding/syntax/array-elements-without-initializer.js
-  - [ ] test/language/destructuring/binding/syntax/array-pattern-with-elisions.js
-  - [ ] test/language/destructuring/binding/syntax/array-pattern-with-no-elements.js
-  - [ ] test/language/destructuring/binding/syntax/array-rest-elements.js
-  - [ ] test/language/destructuring/binding/syntax/destructuring-array-parameters-function-arguments-length.js
-  - [ ] test/language/destructuring/binding/syntax/destructuring-object-parameters-function-arguments-length.js
-  - [ ] test/language/destructuring/binding/syntax/object-pattern-with-no-property-list.js
-  - [ ] test/language/destructuring/binding/syntax/property-list-bindings-elements.js
-  - [ ] test/language/destructuring/binding/syntax/property-list-followed-by-a-single-comma.js
-  - [ ] test/language/destructuring/binding/syntax/property-list-single-name-bindings.js
-  - [ ] test/language/destructuring/binding/syntax/property-list-with-property-list.js
-  - [ ] test/language/destructuring/binding/syntax/recursive-array-and-object-patterns.js
+  - [x] test/language/destructuring/binding/syntax/array-elements-with-initializer.js
+  - [x] test/language/destructuring/binding/syntax/array-elements-with-object-patterns.js
+  - [x] test/language/destructuring/binding/syntax/array-elements-without-initializer.js
+  - [x] test/language/destructuring/binding/syntax/array-pattern-with-elisions.js
+  - [x] test/language/destructuring/binding/syntax/array-pattern-with-no-elements.js
+  - [x] test/language/destructuring/binding/syntax/array-rest-elements.js
+  - [x] test/language/destructuring/binding/syntax/destructuring-array-parameters-function-arguments-length.js
+  - [x] test/language/destructuring/binding/syntax/destructuring-object-parameters-function-arguments-length.js
+  - [x] test/language/destructuring/binding/syntax/object-pattern-with-no-property-list.js
+  - [x] test/language/destructuring/binding/syntax/property-list-bindings-elements.js
+  - [x] test/language/destructuring/binding/syntax/property-list-followed-by-a-single-comma.js
+  - [x] test/language/destructuring/binding/syntax/property-list-single-name-bindings.js
+  - [x] test/language/destructuring/binding/syntax/property-list-with-property-list.js
+  - [x] test/language/destructuring/binding/syntax/recursive-array-and-object-patterns.js
   - [ ] test/language/destructuring/binding/typedarray-backed-by-resizable-buffer.js
 - [ ] eval-code
-  - [ ] test/language/eval-code/direct/arrow-fn-a-following-parameter-is-named-arguments-arrow-func-declare-arguments-assign-incl-def-param-arrow-arguments.js
-  - [ ] test/language/eval-code/direct/arrow-fn-a-following-parameter-is-named-arguments-arrow-func-declare-arguments-assign.js
-  - [ ] test/language/eval-code/direct/arrow-fn-a-preceding-parameter-is-named-arguments-arrow-func-declare-arguments-assign-incl-def-param-arrow-arguments.js
-  - [ ] test/language/eval-code/direct/arrow-fn-a-preceding-parameter-is-named-arguments-arrow-func-declare-arguments-assign.js
-  - [ ] test/language/eval-code/direct/arrow-fn-body-cntns-arguments-func-decl-arrow-func-declare-arguments-assign-incl-def-param-arrow-arguments.js
-  - [ ] test/language/eval-code/direct/arrow-fn-body-cntns-arguments-func-decl-arrow-func-declare-arguments-assign.js
-  - [ ] test/language/eval-code/direct/arrow-fn-body-cntns-arguments-lex-bind-arrow-func-declare-arguments-assign-incl-def-param-arrow-arguments.js
-  - [ ] test/language/eval-code/direct/arrow-fn-body-cntns-arguments-lex-bind-arrow-func-declare-arguments-assign.js
-  - [ ] test/language/eval-code/direct/arrow-fn-body-cntns-arguments-var-bind-arrow-func-declare-arguments-assign-incl-def-param-arrow-arguments.js
-  - [ ] test/language/eval-code/direct/arrow-fn-body-cntns-arguments-var-bind-arrow-func-declare-arguments-assign.js
-  - [ ] test/language/eval-code/direct/arrow-fn-no-pre-existing-arguments-bindings-are-present-arrow-func-declare-arguments-assign-incl-def-param-arrow-arguments.js
-  - [ ] test/language/eval-code/direct/arrow-fn-no-pre-existing-arguments-bindings-are-present-arrow-func-declare-arguments-assign.js
+  - [x] test/language/eval-code/direct/arrow-fn-a-following-parameter-is-named-arguments-arrow-func-declare-arguments-assign-incl-def-param-arrow-arguments.js
+  - [x] test/language/eval-code/direct/arrow-fn-a-following-parameter-is-named-arguments-arrow-func-declare-arguments-assign.js
+  - [x] test/language/eval-code/direct/arrow-fn-a-preceding-parameter-is-named-arguments-arrow-func-declare-arguments-assign-incl-def-param-arrow-arguments.js
+  - [x] test/language/eval-code/direct/arrow-fn-a-preceding-parameter-is-named-arguments-arrow-func-declare-arguments-assign.js
+  - [x] test/language/eval-code/direct/arrow-fn-body-cntns-arguments-func-decl-arrow-func-declare-arguments-assign-incl-def-param-arrow-arguments.js
+  - [x] test/language/eval-code/direct/arrow-fn-body-cntns-arguments-func-decl-arrow-func-declare-arguments-assign.js
+  - [x] test/language/eval-code/direct/arrow-fn-body-cntns-arguments-lex-bind-arrow-func-declare-arguments-assign-incl-def-param-arrow-arguments.js
+  - [x] test/language/eval-code/direct/arrow-fn-body-cntns-arguments-lex-bind-arrow-func-declare-arguments-assign.js
+  - [x] test/language/eval-code/direct/arrow-fn-body-cntns-arguments-var-bind-arrow-func-declare-arguments-assign-incl-def-param-arrow-arguments.js
+  - [x] test/language/eval-code/direct/arrow-fn-body-cntns-arguments-var-bind-arrow-func-declare-arguments-assign.js
+  - [x] test/language/eval-code/direct/arrow-fn-no-pre-existing-arguments-bindings-are-present-arrow-func-declare-arguments-assign-incl-def-param-arrow-arguments.js
+  - [x] test/language/eval-code/direct/arrow-fn-no-pre-existing-arguments-bindings-are-present-arrow-func-declare-arguments-assign.js
   - [ ] test/language/eval-code/direct/async-func-decl-a-following-parameter-is-named-arguments-declare-arguments-and-assign.js
   - [ ] test/language/eval-code/direct/async-func-decl-a-following-parameter-is-named-arguments-declare-arguments.js
   - [ ] test/language/eval-code/direct/async-func-decl-a-preceding-parameter-is-named-arguments-declare-arguments-and-assign.js
@@ -22698,54 +22698,54 @@ Sub-category progress
   - [ ] test/language/eval-code/direct/async-func-expr-nameless-fn-body-cntns-arguments-var-bind-declare-arguments.js
   - [ ] test/language/eval-code/direct/async-func-expr-nameless-no-pre-existing-arguments-bindings-are-present-declare-arguments-and-assign.js
   - [ ] test/language/eval-code/direct/async-func-expr-nameless-no-pre-existing-arguments-bindings-are-present-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-gen-func-decl-a-following-parameter-is-named-arguments-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-gen-func-decl-a-following-parameter-is-named-arguments-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-gen-func-decl-a-preceding-parameter-is-named-arguments-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-gen-func-decl-a-preceding-parameter-is-named-arguments-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-gen-func-decl-fn-body-cntns-arguments-func-decl-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-gen-func-decl-fn-body-cntns-arguments-func-decl-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-gen-func-decl-fn-body-cntns-arguments-lex-bind-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-gen-func-decl-fn-body-cntns-arguments-lex-bind-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-gen-func-decl-fn-body-cntns-arguments-var-bind-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-gen-func-decl-fn-body-cntns-arguments-var-bind-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-gen-func-decl-no-pre-existing-arguments-bindings-are-present-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-gen-func-decl-no-pre-existing-arguments-bindings-are-present-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-gen-func-expr-a-following-parameter-is-named-arguments-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-gen-func-expr-a-following-parameter-is-named-arguments-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-gen-func-expr-a-preceding-parameter-is-named-arguments-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-gen-func-expr-a-preceding-parameter-is-named-arguments-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-gen-func-expr-fn-body-cntns-arguments-func-decl-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-gen-func-expr-fn-body-cntns-arguments-func-decl-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-gen-func-expr-fn-body-cntns-arguments-lex-bind-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-gen-func-expr-fn-body-cntns-arguments-lex-bind-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-gen-func-expr-fn-body-cntns-arguments-var-bind-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-gen-func-expr-fn-body-cntns-arguments-var-bind-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-gen-func-expr-no-pre-existing-arguments-bindings-are-present-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-gen-func-expr-no-pre-existing-arguments-bindings-are-present-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-gen-meth-a-following-parameter-is-named-arguments-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-gen-meth-a-following-parameter-is-named-arguments-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-gen-meth-a-preceding-parameter-is-named-arguments-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-gen-meth-a-preceding-parameter-is-named-arguments-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-gen-meth-fn-body-cntns-arguments-func-decl-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-gen-meth-fn-body-cntns-arguments-func-decl-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-gen-meth-fn-body-cntns-arguments-lex-bind-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-gen-meth-fn-body-cntns-arguments-lex-bind-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-gen-meth-fn-body-cntns-arguments-var-bind-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-gen-meth-fn-body-cntns-arguments-var-bind-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-gen-meth-no-pre-existing-arguments-bindings-are-present-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-gen-meth-no-pre-existing-arguments-bindings-are-present-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-gen-named-func-expr-a-following-parameter-is-named-arguments-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-gen-named-func-expr-a-following-parameter-is-named-arguments-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-gen-named-func-expr-a-preceding-parameter-is-named-arguments-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-gen-named-func-expr-a-preceding-parameter-is-named-arguments-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-gen-named-func-expr-fn-body-cntns-arguments-func-decl-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-gen-named-func-expr-fn-body-cntns-arguments-func-decl-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-gen-named-func-expr-fn-body-cntns-arguments-lex-bind-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-gen-named-func-expr-fn-body-cntns-arguments-lex-bind-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-gen-named-func-expr-fn-body-cntns-arguments-var-bind-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-gen-named-func-expr-fn-body-cntns-arguments-var-bind-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-gen-named-func-expr-no-pre-existing-arguments-bindings-are-present-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-gen-named-func-expr-no-pre-existing-arguments-bindings-are-present-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-gen-func-decl-a-following-parameter-is-named-arguments-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-gen-func-decl-a-following-parameter-is-named-arguments-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-gen-func-decl-a-preceding-parameter-is-named-arguments-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-gen-func-decl-a-preceding-parameter-is-named-arguments-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-gen-func-decl-fn-body-cntns-arguments-func-decl-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-gen-func-decl-fn-body-cntns-arguments-func-decl-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-gen-func-decl-fn-body-cntns-arguments-lex-bind-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-gen-func-decl-fn-body-cntns-arguments-lex-bind-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-gen-func-decl-fn-body-cntns-arguments-var-bind-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-gen-func-decl-fn-body-cntns-arguments-var-bind-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-gen-func-decl-no-pre-existing-arguments-bindings-are-present-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-gen-func-decl-no-pre-existing-arguments-bindings-are-present-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-gen-func-expr-a-following-parameter-is-named-arguments-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-gen-func-expr-a-following-parameter-is-named-arguments-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-gen-func-expr-a-preceding-parameter-is-named-arguments-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-gen-func-expr-a-preceding-parameter-is-named-arguments-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-gen-func-expr-fn-body-cntns-arguments-func-decl-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-gen-func-expr-fn-body-cntns-arguments-func-decl-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-gen-func-expr-fn-body-cntns-arguments-lex-bind-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-gen-func-expr-fn-body-cntns-arguments-lex-bind-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-gen-func-expr-fn-body-cntns-arguments-var-bind-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-gen-func-expr-fn-body-cntns-arguments-var-bind-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-gen-func-expr-no-pre-existing-arguments-bindings-are-present-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-gen-func-expr-no-pre-existing-arguments-bindings-are-present-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-gen-meth-a-following-parameter-is-named-arguments-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-gen-meth-a-following-parameter-is-named-arguments-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-gen-meth-a-preceding-parameter-is-named-arguments-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-gen-meth-a-preceding-parameter-is-named-arguments-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-gen-meth-fn-body-cntns-arguments-func-decl-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-gen-meth-fn-body-cntns-arguments-func-decl-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-gen-meth-fn-body-cntns-arguments-lex-bind-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-gen-meth-fn-body-cntns-arguments-lex-bind-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-gen-meth-fn-body-cntns-arguments-var-bind-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-gen-meth-fn-body-cntns-arguments-var-bind-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-gen-meth-no-pre-existing-arguments-bindings-are-present-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-gen-meth-no-pre-existing-arguments-bindings-are-present-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-gen-named-func-expr-a-following-parameter-is-named-arguments-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-gen-named-func-expr-a-following-parameter-is-named-arguments-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-gen-named-func-expr-a-preceding-parameter-is-named-arguments-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-gen-named-func-expr-a-preceding-parameter-is-named-arguments-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-gen-named-func-expr-fn-body-cntns-arguments-func-decl-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-gen-named-func-expr-fn-body-cntns-arguments-func-decl-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-gen-named-func-expr-fn-body-cntns-arguments-lex-bind-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-gen-named-func-expr-fn-body-cntns-arguments-lex-bind-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-gen-named-func-expr-fn-body-cntns-arguments-var-bind-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-gen-named-func-expr-fn-body-cntns-arguments-var-bind-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-gen-named-func-expr-no-pre-existing-arguments-bindings-are-present-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-gen-named-func-expr-no-pre-existing-arguments-bindings-are-present-declare-arguments.js
   - [ ] test/language/eval-code/direct/async-meth-a-following-parameter-is-named-arguments-declare-arguments-and-assign.js
   - [ ] test/language/eval-code/direct/async-meth-a-following-parameter-is-named-arguments-declare-arguments.js
   - [ ] test/language/eval-code/direct/async-meth-a-preceding-parameter-is-named-arguments-declare-arguments-and-assign.js
@@ -22758,245 +22758,245 @@ Sub-category progress
   - [ ] test/language/eval-code/direct/async-meth-fn-body-cntns-arguments-var-bind-declare-arguments.js
   - [ ] test/language/eval-code/direct/async-meth-no-pre-existing-arguments-bindings-are-present-declare-arguments-and-assign.js
   - [ ] test/language/eval-code/direct/async-meth-no-pre-existing-arguments-bindings-are-present-declare-arguments.js
-  - [ ] test/language/eval-code/direct/block-decl-eval-source-is-strict-nostrict.js
-  - [ ] test/language/eval-code/direct/block-decl-eval-source-is-strict-onlystrict.js
-  - [ ] test/language/eval-code/direct/block-decl-onlystrict.js
-  - [ ] test/language/eval-code/direct/cptn-nrml-empty-block.js
-  - [ ] test/language/eval-code/direct/cptn-nrml-empty-do-while.js
-  - [ ] test/language/eval-code/direct/cptn-nrml-empty-empty.js
-  - [ ] test/language/eval-code/direct/cptn-nrml-empty-for.js
-  - [ ] test/language/eval-code/direct/cptn-nrml-empty-if.js
-  - [ ] test/language/eval-code/direct/cptn-nrml-empty-switch.js
-  - [ ] test/language/eval-code/direct/cptn-nrml-empty-var.js
-  - [ ] test/language/eval-code/direct/cptn-nrml-empty-while.js
-  - [ ] test/language/eval-code/direct/cptn-nrml-expr-obj.js
-  - [ ] test/language/eval-code/direct/cptn-nrml-expr-prim.js
-  - [ ] test/language/eval-code/direct/cptn-thrw-prim.js
-  - [ ] test/language/eval-code/direct/export.js
-  - [ ] test/language/eval-code/direct/func-decl-a-following-parameter-is-named-arguments-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/func-decl-a-following-parameter-is-named-arguments-declare-arguments.js
-  - [ ] test/language/eval-code/direct/func-decl-a-preceding-parameter-is-named-arguments-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/func-decl-a-preceding-parameter-is-named-arguments-declare-arguments.js
-  - [ ] test/language/eval-code/direct/func-decl-fn-body-cntns-arguments-func-decl-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/func-decl-fn-body-cntns-arguments-func-decl-declare-arguments.js
-  - [ ] test/language/eval-code/direct/func-decl-fn-body-cntns-arguments-lex-bind-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/func-decl-fn-body-cntns-arguments-lex-bind-declare-arguments.js
-  - [ ] test/language/eval-code/direct/func-decl-fn-body-cntns-arguments-var-bind-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/func-decl-fn-body-cntns-arguments-var-bind-declare-arguments.js
-  - [ ] test/language/eval-code/direct/func-decl-no-pre-existing-arguments-bindings-are-present-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/func-decl-no-pre-existing-arguments-bindings-are-present-declare-arguments.js
-  - [ ] test/language/eval-code/direct/func-expr-a-following-parameter-is-named-arguments-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/func-expr-a-following-parameter-is-named-arguments-declare-arguments.js
-  - [ ] test/language/eval-code/direct/func-expr-a-preceding-parameter-is-named-arguments-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/func-expr-a-preceding-parameter-is-named-arguments-declare-arguments.js
-  - [ ] test/language/eval-code/direct/func-expr-fn-body-cntns-arguments-func-decl-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/func-expr-fn-body-cntns-arguments-func-decl-declare-arguments.js
-  - [ ] test/language/eval-code/direct/func-expr-fn-body-cntns-arguments-lex-bind-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/func-expr-fn-body-cntns-arguments-lex-bind-declare-arguments.js
-  - [ ] test/language/eval-code/direct/func-expr-fn-body-cntns-arguments-var-bind-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/func-expr-fn-body-cntns-arguments-var-bind-declare-arguments.js
-  - [ ] test/language/eval-code/direct/func-expr-no-pre-existing-arguments-bindings-are-present-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/func-expr-no-pre-existing-arguments-bindings-are-present-declare-arguments.js
-  - [ ] test/language/eval-code/direct/gen-func-decl-a-following-parameter-is-named-arguments-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/gen-func-decl-a-following-parameter-is-named-arguments-declare-arguments.js
-  - [ ] test/language/eval-code/direct/gen-func-decl-a-preceding-parameter-is-named-arguments-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/gen-func-decl-a-preceding-parameter-is-named-arguments-declare-arguments.js
-  - [ ] test/language/eval-code/direct/gen-func-decl-fn-body-cntns-arguments-func-decl-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/gen-func-decl-fn-body-cntns-arguments-func-decl-declare-arguments.js
-  - [ ] test/language/eval-code/direct/gen-func-decl-fn-body-cntns-arguments-lex-bind-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/gen-func-decl-fn-body-cntns-arguments-lex-bind-declare-arguments.js
-  - [ ] test/language/eval-code/direct/gen-func-decl-fn-body-cntns-arguments-var-bind-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/gen-func-decl-fn-body-cntns-arguments-var-bind-declare-arguments.js
-  - [ ] test/language/eval-code/direct/gen-func-decl-no-pre-existing-arguments-bindings-are-present-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/gen-func-decl-no-pre-existing-arguments-bindings-are-present-declare-arguments.js
-  - [ ] test/language/eval-code/direct/gen-func-expr-named-a-following-parameter-is-named-arguments-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/gen-func-expr-named-a-following-parameter-is-named-arguments-declare-arguments.js
-  - [ ] test/language/eval-code/direct/gen-func-expr-named-a-preceding-parameter-is-named-arguments-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/gen-func-expr-named-a-preceding-parameter-is-named-arguments-declare-arguments.js
-  - [ ] test/language/eval-code/direct/gen-func-expr-named-fn-body-cntns-arguments-func-decl-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/gen-func-expr-named-fn-body-cntns-arguments-func-decl-declare-arguments.js
-  - [ ] test/language/eval-code/direct/gen-func-expr-named-fn-body-cntns-arguments-lex-bind-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/gen-func-expr-named-fn-body-cntns-arguments-lex-bind-declare-arguments.js
-  - [ ] test/language/eval-code/direct/gen-func-expr-named-fn-body-cntns-arguments-var-bind-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/gen-func-expr-named-fn-body-cntns-arguments-var-bind-declare-arguments.js
-  - [ ] test/language/eval-code/direct/gen-func-expr-named-no-pre-existing-arguments-bindings-are-present-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/gen-func-expr-named-no-pre-existing-arguments-bindings-are-present-declare-arguments.js
-  - [ ] test/language/eval-code/direct/gen-func-expr-nameless-a-following-parameter-is-named-arguments-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/gen-func-expr-nameless-a-following-parameter-is-named-arguments-declare-arguments.js
-  - [ ] test/language/eval-code/direct/gen-func-expr-nameless-a-preceding-parameter-is-named-arguments-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/gen-func-expr-nameless-a-preceding-parameter-is-named-arguments-declare-arguments.js
-  - [ ] test/language/eval-code/direct/gen-func-expr-nameless-fn-body-cntns-arguments-func-decl-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/gen-func-expr-nameless-fn-body-cntns-arguments-func-decl-declare-arguments.js
-  - [ ] test/language/eval-code/direct/gen-func-expr-nameless-fn-body-cntns-arguments-lex-bind-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/gen-func-expr-nameless-fn-body-cntns-arguments-lex-bind-declare-arguments.js
-  - [ ] test/language/eval-code/direct/gen-func-expr-nameless-fn-body-cntns-arguments-var-bind-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/gen-func-expr-nameless-fn-body-cntns-arguments-var-bind-declare-arguments.js
-  - [ ] test/language/eval-code/direct/gen-func-expr-nameless-no-pre-existing-arguments-bindings-are-present-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/gen-func-expr-nameless-no-pre-existing-arguments-bindings-are-present-declare-arguments.js
-  - [ ] test/language/eval-code/direct/gen-meth-a-following-parameter-is-named-arguments-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/gen-meth-a-following-parameter-is-named-arguments-declare-arguments.js
-  - [ ] test/language/eval-code/direct/gen-meth-a-preceding-parameter-is-named-arguments-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/gen-meth-a-preceding-parameter-is-named-arguments-declare-arguments.js
-  - [ ] test/language/eval-code/direct/gen-meth-fn-body-cntns-arguments-func-decl-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/gen-meth-fn-body-cntns-arguments-func-decl-declare-arguments.js
-  - [ ] test/language/eval-code/direct/gen-meth-fn-body-cntns-arguments-lex-bind-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/gen-meth-fn-body-cntns-arguments-lex-bind-declare-arguments.js
-  - [ ] test/language/eval-code/direct/gen-meth-fn-body-cntns-arguments-var-bind-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/gen-meth-fn-body-cntns-arguments-var-bind-declare-arguments.js
-  - [ ] test/language/eval-code/direct/gen-meth-no-pre-existing-arguments-bindings-are-present-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/gen-meth-no-pre-existing-arguments-bindings-are-present-declare-arguments.js
-  - [ ] test/language/eval-code/direct/global-env-rec-catch.js
-  - [ ] test/language/eval-code/direct/global-env-rec-eval.js
-  - [ ] test/language/eval-code/direct/global-env-rec-fun.js
-  - [ ] test/language/eval-code/direct/global-env-rec-with.js
-  - [ ] test/language/eval-code/direct/global-env-rec.js
-  - [ ] test/language/eval-code/direct/import.js
-  - [ ] test/language/eval-code/direct/lex-env-distinct-cls.js
-  - [ ] test/language/eval-code/direct/lex-env-distinct-const.js
-  - [ ] test/language/eval-code/direct/lex-env-distinct-let.js
-  - [ ] test/language/eval-code/direct/lex-env-heritage.js
-  - [ ] test/language/eval-code/direct/lex-env-no-init-cls.js
-  - [ ] test/language/eval-code/direct/lex-env-no-init-const.js
-  - [ ] test/language/eval-code/direct/lex-env-no-init-let.js
-  - [ ] test/language/eval-code/direct/meth-a-following-parameter-is-named-arguments-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/meth-a-following-parameter-is-named-arguments-declare-arguments.js
-  - [ ] test/language/eval-code/direct/meth-a-preceding-parameter-is-named-arguments-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/meth-a-preceding-parameter-is-named-arguments-declare-arguments.js
-  - [ ] test/language/eval-code/direct/meth-fn-body-cntns-arguments-func-decl-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/meth-fn-body-cntns-arguments-func-decl-declare-arguments.js
-  - [ ] test/language/eval-code/direct/meth-fn-body-cntns-arguments-lex-bind-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/meth-fn-body-cntns-arguments-lex-bind-declare-arguments.js
-  - [ ] test/language/eval-code/direct/meth-fn-body-cntns-arguments-var-bind-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/meth-fn-body-cntns-arguments-var-bind-declare-arguments.js
-  - [ ] test/language/eval-code/direct/meth-no-pre-existing-arguments-bindings-are-present-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/meth-no-pre-existing-arguments-bindings-are-present-declare-arguments.js
-  - [ ] test/language/eval-code/direct/new.target-arrow.js
-  - [ ] test/language/eval-code/direct/new.target-fn.js
-  - [ ] test/language/eval-code/direct/new.target.js
-  - [ ] test/language/eval-code/direct/non-definable-function-with-function.js
-  - [ ] test/language/eval-code/direct/non-definable-function-with-variable.js
-  - [ ] test/language/eval-code/direct/non-definable-global-function.js
-  - [ ] test/language/eval-code/direct/non-definable-global-generator.js
-  - [ ] test/language/eval-code/direct/non-definable-global-var.js
-  - [ ] test/language/eval-code/direct/non-string-object.js
-  - [ ] test/language/eval-code/direct/non-string-primitive.js
-  - [ ] test/language/eval-code/direct/parse-failure-1.js
-  - [ ] test/language/eval-code/direct/parse-failure-2.js
-  - [ ] test/language/eval-code/direct/parse-failure-3.js
-  - [ ] test/language/eval-code/direct/parse-failure-4.js
-  - [ ] test/language/eval-code/direct/parse-failure-5.js
-  - [ ] test/language/eval-code/direct/parse-failure-6.js
-  - [ ] test/language/eval-code/direct/strict-caller-function-context.js
-  - [ ] test/language/eval-code/direct/strict-caller-global.js
-  - [ ] test/language/eval-code/direct/strictness-override.js
-  - [ ] test/language/eval-code/direct/super-call-arrow.js
-  - [ ] test/language/eval-code/direct/super-call-fn.js
-  - [ ] test/language/eval-code/direct/super-call-method.js
-  - [ ] test/language/eval-code/direct/super-call.js
-  - [ ] test/language/eval-code/direct/super-prop-arrow.js
-  - [ ] test/language/eval-code/direct/super-prop-dot-no-home.js
-  - [ ] test/language/eval-code/direct/super-prop-expr-no-home-no-eval.js
-  - [ ] test/language/eval-code/direct/super-prop-expr-no-home.js
+  - [x] test/language/eval-code/direct/block-decl-eval-source-is-strict-nostrict.js
+  - [x] test/language/eval-code/direct/block-decl-eval-source-is-strict-onlystrict.js
+  - [x] test/language/eval-code/direct/block-decl-onlystrict.js
+  - [x] test/language/eval-code/direct/cptn-nrml-empty-block.js
+  - [x] test/language/eval-code/direct/cptn-nrml-empty-do-while.js
+  - [x] test/language/eval-code/direct/cptn-nrml-empty-empty.js
+  - [x] test/language/eval-code/direct/cptn-nrml-empty-for.js
+  - [x] test/language/eval-code/direct/cptn-nrml-empty-if.js
+  - [x] test/language/eval-code/direct/cptn-nrml-empty-switch.js
+  - [x] test/language/eval-code/direct/cptn-nrml-empty-var.js
+  - [x] test/language/eval-code/direct/cptn-nrml-empty-while.js
+  - [x] test/language/eval-code/direct/cptn-nrml-expr-obj.js
+  - [x] test/language/eval-code/direct/cptn-nrml-expr-prim.js
+  - [x] test/language/eval-code/direct/cptn-thrw-prim.js
+  - [x] test/language/eval-code/direct/export.js
+  - [x] test/language/eval-code/direct/func-decl-a-following-parameter-is-named-arguments-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/func-decl-a-following-parameter-is-named-arguments-declare-arguments.js
+  - [x] test/language/eval-code/direct/func-decl-a-preceding-parameter-is-named-arguments-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/func-decl-a-preceding-parameter-is-named-arguments-declare-arguments.js
+  - [x] test/language/eval-code/direct/func-decl-fn-body-cntns-arguments-func-decl-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/func-decl-fn-body-cntns-arguments-func-decl-declare-arguments.js
+  - [x] test/language/eval-code/direct/func-decl-fn-body-cntns-arguments-lex-bind-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/func-decl-fn-body-cntns-arguments-lex-bind-declare-arguments.js
+  - [x] test/language/eval-code/direct/func-decl-fn-body-cntns-arguments-var-bind-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/func-decl-fn-body-cntns-arguments-var-bind-declare-arguments.js
+  - [x] test/language/eval-code/direct/func-decl-no-pre-existing-arguments-bindings-are-present-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/func-decl-no-pre-existing-arguments-bindings-are-present-declare-arguments.js
+  - [x] test/language/eval-code/direct/func-expr-a-following-parameter-is-named-arguments-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/func-expr-a-following-parameter-is-named-arguments-declare-arguments.js
+  - [x] test/language/eval-code/direct/func-expr-a-preceding-parameter-is-named-arguments-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/func-expr-a-preceding-parameter-is-named-arguments-declare-arguments.js
+  - [x] test/language/eval-code/direct/func-expr-fn-body-cntns-arguments-func-decl-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/func-expr-fn-body-cntns-arguments-func-decl-declare-arguments.js
+  - [x] test/language/eval-code/direct/func-expr-fn-body-cntns-arguments-lex-bind-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/func-expr-fn-body-cntns-arguments-lex-bind-declare-arguments.js
+  - [x] test/language/eval-code/direct/func-expr-fn-body-cntns-arguments-var-bind-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/func-expr-fn-body-cntns-arguments-var-bind-declare-arguments.js
+  - [x] test/language/eval-code/direct/func-expr-no-pre-existing-arguments-bindings-are-present-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/func-expr-no-pre-existing-arguments-bindings-are-present-declare-arguments.js
+  - [x] test/language/eval-code/direct/gen-func-decl-a-following-parameter-is-named-arguments-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/gen-func-decl-a-following-parameter-is-named-arguments-declare-arguments.js
+  - [x] test/language/eval-code/direct/gen-func-decl-a-preceding-parameter-is-named-arguments-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/gen-func-decl-a-preceding-parameter-is-named-arguments-declare-arguments.js
+  - [x] test/language/eval-code/direct/gen-func-decl-fn-body-cntns-arguments-func-decl-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/gen-func-decl-fn-body-cntns-arguments-func-decl-declare-arguments.js
+  - [x] test/language/eval-code/direct/gen-func-decl-fn-body-cntns-arguments-lex-bind-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/gen-func-decl-fn-body-cntns-arguments-lex-bind-declare-arguments.js
+  - [x] test/language/eval-code/direct/gen-func-decl-fn-body-cntns-arguments-var-bind-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/gen-func-decl-fn-body-cntns-arguments-var-bind-declare-arguments.js
+  - [x] test/language/eval-code/direct/gen-func-decl-no-pre-existing-arguments-bindings-are-present-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/gen-func-decl-no-pre-existing-arguments-bindings-are-present-declare-arguments.js
+  - [x] test/language/eval-code/direct/gen-func-expr-named-a-following-parameter-is-named-arguments-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/gen-func-expr-named-a-following-parameter-is-named-arguments-declare-arguments.js
+  - [x] test/language/eval-code/direct/gen-func-expr-named-a-preceding-parameter-is-named-arguments-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/gen-func-expr-named-a-preceding-parameter-is-named-arguments-declare-arguments.js
+  - [x] test/language/eval-code/direct/gen-func-expr-named-fn-body-cntns-arguments-func-decl-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/gen-func-expr-named-fn-body-cntns-arguments-func-decl-declare-arguments.js
+  - [x] test/language/eval-code/direct/gen-func-expr-named-fn-body-cntns-arguments-lex-bind-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/gen-func-expr-named-fn-body-cntns-arguments-lex-bind-declare-arguments.js
+  - [x] test/language/eval-code/direct/gen-func-expr-named-fn-body-cntns-arguments-var-bind-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/gen-func-expr-named-fn-body-cntns-arguments-var-bind-declare-arguments.js
+  - [x] test/language/eval-code/direct/gen-func-expr-named-no-pre-existing-arguments-bindings-are-present-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/gen-func-expr-named-no-pre-existing-arguments-bindings-are-present-declare-arguments.js
+  - [x] test/language/eval-code/direct/gen-func-expr-nameless-a-following-parameter-is-named-arguments-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/gen-func-expr-nameless-a-following-parameter-is-named-arguments-declare-arguments.js
+  - [x] test/language/eval-code/direct/gen-func-expr-nameless-a-preceding-parameter-is-named-arguments-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/gen-func-expr-nameless-a-preceding-parameter-is-named-arguments-declare-arguments.js
+  - [x] test/language/eval-code/direct/gen-func-expr-nameless-fn-body-cntns-arguments-func-decl-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/gen-func-expr-nameless-fn-body-cntns-arguments-func-decl-declare-arguments.js
+  - [x] test/language/eval-code/direct/gen-func-expr-nameless-fn-body-cntns-arguments-lex-bind-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/gen-func-expr-nameless-fn-body-cntns-arguments-lex-bind-declare-arguments.js
+  - [x] test/language/eval-code/direct/gen-func-expr-nameless-fn-body-cntns-arguments-var-bind-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/gen-func-expr-nameless-fn-body-cntns-arguments-var-bind-declare-arguments.js
+  - [x] test/language/eval-code/direct/gen-func-expr-nameless-no-pre-existing-arguments-bindings-are-present-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/gen-func-expr-nameless-no-pre-existing-arguments-bindings-are-present-declare-arguments.js
+  - [x] test/language/eval-code/direct/gen-meth-a-following-parameter-is-named-arguments-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/gen-meth-a-following-parameter-is-named-arguments-declare-arguments.js
+  - [x] test/language/eval-code/direct/gen-meth-a-preceding-parameter-is-named-arguments-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/gen-meth-a-preceding-parameter-is-named-arguments-declare-arguments.js
+  - [x] test/language/eval-code/direct/gen-meth-fn-body-cntns-arguments-func-decl-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/gen-meth-fn-body-cntns-arguments-func-decl-declare-arguments.js
+  - [x] test/language/eval-code/direct/gen-meth-fn-body-cntns-arguments-lex-bind-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/gen-meth-fn-body-cntns-arguments-lex-bind-declare-arguments.js
+  - [x] test/language/eval-code/direct/gen-meth-fn-body-cntns-arguments-var-bind-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/gen-meth-fn-body-cntns-arguments-var-bind-declare-arguments.js
+  - [x] test/language/eval-code/direct/gen-meth-no-pre-existing-arguments-bindings-are-present-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/gen-meth-no-pre-existing-arguments-bindings-are-present-declare-arguments.js
+  - [x] test/language/eval-code/direct/global-env-rec-catch.js
+  - [x] test/language/eval-code/direct/global-env-rec-eval.js
+  - [x] test/language/eval-code/direct/global-env-rec-fun.js
+  - [x] test/language/eval-code/direct/global-env-rec-with.js
+  - [x] test/language/eval-code/direct/global-env-rec.js
+  - [x] test/language/eval-code/direct/import.js
+  - [x] test/language/eval-code/direct/lex-env-distinct-cls.js
+  - [x] test/language/eval-code/direct/lex-env-distinct-const.js
+  - [x] test/language/eval-code/direct/lex-env-distinct-let.js
+  - [x] test/language/eval-code/direct/lex-env-heritage.js
+  - [x] test/language/eval-code/direct/lex-env-no-init-cls.js
+  - [x] test/language/eval-code/direct/lex-env-no-init-const.js
+  - [x] test/language/eval-code/direct/lex-env-no-init-let.js
+  - [x] test/language/eval-code/direct/meth-a-following-parameter-is-named-arguments-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/meth-a-following-parameter-is-named-arguments-declare-arguments.js
+  - [x] test/language/eval-code/direct/meth-a-preceding-parameter-is-named-arguments-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/meth-a-preceding-parameter-is-named-arguments-declare-arguments.js
+  - [x] test/language/eval-code/direct/meth-fn-body-cntns-arguments-func-decl-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/meth-fn-body-cntns-arguments-func-decl-declare-arguments.js
+  - [x] test/language/eval-code/direct/meth-fn-body-cntns-arguments-lex-bind-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/meth-fn-body-cntns-arguments-lex-bind-declare-arguments.js
+  - [x] test/language/eval-code/direct/meth-fn-body-cntns-arguments-var-bind-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/meth-fn-body-cntns-arguments-var-bind-declare-arguments.js
+  - [x] test/language/eval-code/direct/meth-no-pre-existing-arguments-bindings-are-present-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/meth-no-pre-existing-arguments-bindings-are-present-declare-arguments.js
+  - [x] test/language/eval-code/direct/new.target-arrow.js
+  - [x] test/language/eval-code/direct/new.target-fn.js
+  - [x] test/language/eval-code/direct/new.target.js
+  - [x] test/language/eval-code/direct/non-definable-function-with-function.js
+  - [x] test/language/eval-code/direct/non-definable-function-with-variable.js
+  - [x] test/language/eval-code/direct/non-definable-global-function.js
+  - [x] test/language/eval-code/direct/non-definable-global-generator.js
+  - [x] test/language/eval-code/direct/non-definable-global-var.js
+  - [x] test/language/eval-code/direct/non-string-object.js
+  - [x] test/language/eval-code/direct/non-string-primitive.js
+  - [x] test/language/eval-code/direct/parse-failure-1.js
+  - [x] test/language/eval-code/direct/parse-failure-2.js
+  - [x] test/language/eval-code/direct/parse-failure-3.js
+  - [x] test/language/eval-code/direct/parse-failure-4.js
+  - [x] test/language/eval-code/direct/parse-failure-5.js
+  - [x] test/language/eval-code/direct/parse-failure-6.js
+  - [x] test/language/eval-code/direct/strict-caller-function-context.js
+  - [x] test/language/eval-code/direct/strict-caller-global.js
+  - [x] test/language/eval-code/direct/strictness-override.js
+  - [x] test/language/eval-code/direct/super-call-arrow.js
+  - [x] test/language/eval-code/direct/super-call-fn.js
+  - [x] test/language/eval-code/direct/super-call-method.js
+  - [x] test/language/eval-code/direct/super-call.js
+  - [x] test/language/eval-code/direct/super-prop-arrow.js
+  - [x] test/language/eval-code/direct/super-prop-dot-no-home.js
+  - [x] test/language/eval-code/direct/super-prop-expr-no-home-no-eval.js
+  - [x] test/language/eval-code/direct/super-prop-expr-no-home.js
   - [ ] test/language/eval-code/direct/super-prop-method.js
-  - [ ] test/language/eval-code/direct/super-prop.js
-  - [ ] test/language/eval-code/direct/switch-case-decl-eval-source-is-strict-nostrict.js
-  - [ ] test/language/eval-code/direct/switch-case-decl-eval-source-is-strict-onlystrict.js
-  - [ ] test/language/eval-code/direct/switch-case-decl-onlystrict.js
-  - [ ] test/language/eval-code/direct/switch-dflt-decl-eval-source-is-strict-nostrict.js
-  - [ ] test/language/eval-code/direct/switch-dflt-decl-eval-source-is-strict-onlystrict.js
-  - [ ] test/language/eval-code/direct/switch-dflt-decl-onlystrict.js
-  - [ ] test/language/eval-code/direct/this-value-func-non-strict.js
-  - [ ] test/language/eval-code/direct/this-value-func-strict-caller.js
-  - [ ] test/language/eval-code/direct/this-value-func-strict-source.js
-  - [ ] test/language/eval-code/direct/this-value-global.js
-  - [ ] test/language/eval-code/direct/var-env-func-init-global-new.js
-  - [ ] test/language/eval-code/direct/var-env-func-init-global-update-configurable.js
-  - [ ] test/language/eval-code/direct/var-env-func-init-global-update-non-configurable.js
+  - [x] test/language/eval-code/direct/super-prop.js
+  - [x] test/language/eval-code/direct/switch-case-decl-eval-source-is-strict-nostrict.js
+  - [x] test/language/eval-code/direct/switch-case-decl-eval-source-is-strict-onlystrict.js
+  - [x] test/language/eval-code/direct/switch-case-decl-onlystrict.js
+  - [x] test/language/eval-code/direct/switch-dflt-decl-eval-source-is-strict-nostrict.js
+  - [x] test/language/eval-code/direct/switch-dflt-decl-eval-source-is-strict-onlystrict.js
+  - [x] test/language/eval-code/direct/switch-dflt-decl-onlystrict.js
+  - [x] test/language/eval-code/direct/this-value-func-non-strict.js
+  - [x] test/language/eval-code/direct/this-value-func-strict-caller.js
+  - [x] test/language/eval-code/direct/this-value-func-strict-source.js
+  - [x] test/language/eval-code/direct/this-value-global.js
+  - [x] test/language/eval-code/direct/var-env-func-init-global-new.js
+  - [x] test/language/eval-code/direct/var-env-func-init-global-update-configurable.js
+  - [x] test/language/eval-code/direct/var-env-func-init-global-update-non-configurable.js
   - [ ] test/language/eval-code/direct/var-env-func-init-local-new-delete.js
   - [ ] test/language/eval-code/direct/var-env-func-init-local-new.js
-  - [ ] test/language/eval-code/direct/var-env-func-init-local-update.js
-  - [ ] test/language/eval-code/direct/var-env-func-init-multi.js
+  - [x] test/language/eval-code/direct/var-env-func-init-local-update.js
+  - [x] test/language/eval-code/direct/var-env-func-init-multi.js
   - [ ] test/language/eval-code/direct/var-env-func-non-strict.js
-  - [ ] test/language/eval-code/direct/var-env-func-strict-caller-2.js
-  - [ ] test/language/eval-code/direct/var-env-func-strict-caller.js
-  - [ ] test/language/eval-code/direct/var-env-func-strict-source.js
-  - [ ] test/language/eval-code/direct/var-env-gloabl-lex-strict-caller.js
-  - [ ] test/language/eval-code/direct/var-env-global-lex-non-strict.js
-  - [ ] test/language/eval-code/direct/var-env-global-lex-strict-source.js
-  - [ ] test/language/eval-code/direct/var-env-lower-lex-non-strict.js
-  - [ ] test/language/eval-code/direct/var-env-lower-lex-strict-caller.js
-  - [ ] test/language/eval-code/direct/var-env-lower-lex-strict-source.js
-  - [ ] test/language/eval-code/direct/var-env-var-init-global-exstng.js
-  - [ ] test/language/eval-code/direct/var-env-var-init-global-new.js
-  - [ ] test/language/eval-code/direct/var-env-var-init-local-exstng.js
-  - [ ] test/language/eval-code/direct/var-env-var-init-local-new-delete.js
-  - [ ] test/language/eval-code/direct/var-env-var-init-local-new.js
-  - [ ] test/language/eval-code/direct/var-env-var-non-strict.js
-  - [ ] test/language/eval-code/direct/var-env-var-strict-caller-2.js
-  - [ ] test/language/eval-code/direct/var-env-var-strict-caller-3.js
-  - [ ] test/language/eval-code/direct/var-env-var-strict-caller.js
-  - [ ] test/language/eval-code/direct/var-env-var-strict-source.js
-  - [ ] test/language/eval-code/indirect/always-non-strict.js
-  - [ ] test/language/eval-code/indirect/block-decl-strict.js
-  - [ ] test/language/eval-code/indirect/cptn-nrml-empty-block.js
-  - [ ] test/language/eval-code/indirect/cptn-nrml-empty-do-while.js
-  - [ ] test/language/eval-code/indirect/cptn-nrml-empty-empty.js
-  - [ ] test/language/eval-code/indirect/cptn-nrml-empty-for.js
-  - [ ] test/language/eval-code/indirect/cptn-nrml-empty-if.js
-  - [ ] test/language/eval-code/indirect/cptn-nrml-empty-switch.js
-  - [ ] test/language/eval-code/indirect/cptn-nrml-empty-var.js
-  - [ ] test/language/eval-code/indirect/cptn-nrml-empty-while.js
-  - [ ] test/language/eval-code/indirect/cptn-nrml-expr-obj.js
-  - [ ] test/language/eval-code/indirect/cptn-nrml-expr-prim.js
-  - [ ] test/language/eval-code/indirect/export.js
-  - [ ] test/language/eval-code/indirect/global-env-rec-catch.js
-  - [ ] test/language/eval-code/indirect/global-env-rec-eval.js
-  - [ ] test/language/eval-code/indirect/global-env-rec-fun.js
-  - [ ] test/language/eval-code/indirect/global-env-rec-with.js
-  - [ ] test/language/eval-code/indirect/global-env-rec.js
-  - [ ] test/language/eval-code/indirect/import.js
-  - [ ] test/language/eval-code/indirect/lex-env-distinct-cls.js
-  - [ ] test/language/eval-code/indirect/lex-env-distinct-const.js
-  - [ ] test/language/eval-code/indirect/lex-env-distinct-let.js
-  - [ ] test/language/eval-code/indirect/lex-env-heritage.js
-  - [ ] test/language/eval-code/indirect/lex-env-no-init-cls.js
-  - [ ] test/language/eval-code/indirect/lex-env-no-init-const.js
-  - [ ] test/language/eval-code/indirect/lex-env-no-init-let.js
-  - [ ] test/language/eval-code/indirect/new.target.js
-  - [ ] test/language/eval-code/indirect/non-definable-function-with-function.js
-  - [ ] test/language/eval-code/indirect/non-definable-function-with-variable.js
-  - [ ] test/language/eval-code/indirect/non-definable-global-function.js
-  - [ ] test/language/eval-code/indirect/non-definable-global-generator.js
-  - [ ] test/language/eval-code/indirect/non-definable-global-var.js
-  - [ ] test/language/eval-code/indirect/non-string-object.js
-  - [ ] test/language/eval-code/indirect/non-string-primitive.js
-  - [ ] test/language/eval-code/indirect/parse-failure-1.js
-  - [ ] test/language/eval-code/indirect/parse-failure-2.js
-  - [ ] test/language/eval-code/indirect/parse-failure-3.js
-  - [ ] test/language/eval-code/indirect/parse-failure-4.js
-  - [ ] test/language/eval-code/indirect/parse-failure-5.js
-  - [ ] test/language/eval-code/indirect/parse-failure-6.js
-  - [ ] test/language/eval-code/indirect/realm.js
-  - [ ] test/language/eval-code/indirect/super-call.js
-  - [ ] test/language/eval-code/indirect/super-prop.js
-  - [ ] test/language/eval-code/indirect/switch-case-decl-strict.js
-  - [ ] test/language/eval-code/indirect/switch-dflt-decl-strict.js
-  - [ ] test/language/eval-code/indirect/this-value-func.js
-  - [ ] test/language/eval-code/indirect/this-value-global.js
-  - [ ] test/language/eval-code/indirect/var-env-func-init-global-new.js
-  - [ ] test/language/eval-code/indirect/var-env-func-init-global-update-configurable.js
-  - [ ] test/language/eval-code/indirect/var-env-func-init-global-update-non-configurable.js
-  - [ ] test/language/eval-code/indirect/var-env-func-init-multi.js
-  - [ ] test/language/eval-code/indirect/var-env-func-non-strict.js
-  - [ ] test/language/eval-code/indirect/var-env-func-strict.js
-  - [ ] test/language/eval-code/indirect/var-env-global-lex-non-strict.js
-  - [ ] test/language/eval-code/indirect/var-env-global-lex-strict.js
-  - [ ] test/language/eval-code/indirect/var-env-lower-lex-non-strict.js
-  - [ ] test/language/eval-code/indirect/var-env-lower-lex-strict.js
-  - [ ] test/language/eval-code/indirect/var-env-var-init-global-exstng.js
-  - [ ] test/language/eval-code/indirect/var-env-var-init-global-new.js
-  - [ ] test/language/eval-code/indirect/var-env-var-non-strict.js
-  - [ ] test/language/eval-code/indirect/var-env-var-strict.js
+  - [x] test/language/eval-code/direct/var-env-func-strict-caller-2.js
+  - [x] test/language/eval-code/direct/var-env-func-strict-caller.js
+  - [x] test/language/eval-code/direct/var-env-func-strict-source.js
+  - [x] test/language/eval-code/direct/var-env-gloabl-lex-strict-caller.js
+  - [x] test/language/eval-code/direct/var-env-global-lex-non-strict.js
+  - [x] test/language/eval-code/direct/var-env-global-lex-strict-source.js
+  - [x] test/language/eval-code/direct/var-env-lower-lex-non-strict.js
+  - [x] test/language/eval-code/direct/var-env-lower-lex-strict-caller.js
+  - [x] test/language/eval-code/direct/var-env-lower-lex-strict-source.js
+  - [x] test/language/eval-code/direct/var-env-var-init-global-exstng.js
+  - [x] test/language/eval-code/direct/var-env-var-init-global-new.js
+  - [x] test/language/eval-code/direct/var-env-var-init-local-exstng.js
+  - [x] test/language/eval-code/direct/var-env-var-init-local-new-delete.js
+  - [x] test/language/eval-code/direct/var-env-var-init-local-new.js
+  - [x] test/language/eval-code/direct/var-env-var-non-strict.js
+  - [x] test/language/eval-code/direct/var-env-var-strict-caller-2.js
+  - [x] test/language/eval-code/direct/var-env-var-strict-caller-3.js
+  - [x] test/language/eval-code/direct/var-env-var-strict-caller.js
+  - [x] test/language/eval-code/direct/var-env-var-strict-source.js
+  - [x] test/language/eval-code/indirect/always-non-strict.js
+  - [x] test/language/eval-code/indirect/block-decl-strict.js
+  - [x] test/language/eval-code/indirect/cptn-nrml-empty-block.js
+  - [x] test/language/eval-code/indirect/cptn-nrml-empty-do-while.js
+  - [x] test/language/eval-code/indirect/cptn-nrml-empty-empty.js
+  - [x] test/language/eval-code/indirect/cptn-nrml-empty-for.js
+  - [x] test/language/eval-code/indirect/cptn-nrml-empty-if.js
+  - [x] test/language/eval-code/indirect/cptn-nrml-empty-switch.js
+  - [x] test/language/eval-code/indirect/cptn-nrml-empty-var.js
+  - [x] test/language/eval-code/indirect/cptn-nrml-empty-while.js
+  - [x] test/language/eval-code/indirect/cptn-nrml-expr-obj.js
+  - [x] test/language/eval-code/indirect/cptn-nrml-expr-prim.js
+  - [x] test/language/eval-code/indirect/export.js
+  - [x] test/language/eval-code/indirect/global-env-rec-catch.js
+  - [x] test/language/eval-code/indirect/global-env-rec-eval.js
+  - [x] test/language/eval-code/indirect/global-env-rec-fun.js
+  - [x] test/language/eval-code/indirect/global-env-rec-with.js
+  - [x] test/language/eval-code/indirect/global-env-rec.js
+  - [x] test/language/eval-code/indirect/import.js
+  - [x] test/language/eval-code/indirect/lex-env-distinct-cls.js
+  - [x] test/language/eval-code/indirect/lex-env-distinct-const.js
+  - [x] test/language/eval-code/indirect/lex-env-distinct-let.js
+  - [x] test/language/eval-code/indirect/lex-env-heritage.js
+  - [x] test/language/eval-code/indirect/lex-env-no-init-cls.js
+  - [x] test/language/eval-code/indirect/lex-env-no-init-const.js
+  - [x] test/language/eval-code/indirect/lex-env-no-init-let.js
+  - [x] test/language/eval-code/indirect/new.target.js
+  - [x] test/language/eval-code/indirect/non-definable-function-with-function.js
+  - [x] test/language/eval-code/indirect/non-definable-function-with-variable.js
+  - [x] test/language/eval-code/indirect/non-definable-global-function.js
+  - [x] test/language/eval-code/indirect/non-definable-global-generator.js
+  - [x] test/language/eval-code/indirect/non-definable-global-var.js
+  - [x] test/language/eval-code/indirect/non-string-object.js
+  - [x] test/language/eval-code/indirect/non-string-primitive.js
+  - [x] test/language/eval-code/indirect/parse-failure-1.js
+  - [x] test/language/eval-code/indirect/parse-failure-2.js
+  - [x] test/language/eval-code/indirect/parse-failure-3.js
+  - [x] test/language/eval-code/indirect/parse-failure-4.js
+  - [x] test/language/eval-code/indirect/parse-failure-5.js
+  - [x] test/language/eval-code/indirect/parse-failure-6.js
+  - [x] test/language/eval-code/indirect/realm.js
+  - [x] test/language/eval-code/indirect/super-call.js
+  - [x] test/language/eval-code/indirect/super-prop.js
+  - [x] test/language/eval-code/indirect/switch-case-decl-strict.js
+  - [x] test/language/eval-code/indirect/switch-dflt-decl-strict.js
+  - [x] test/language/eval-code/indirect/this-value-func.js
+  - [x] test/language/eval-code/indirect/this-value-global.js
+  - [x] test/language/eval-code/indirect/var-env-func-init-global-new.js
+  - [x] test/language/eval-code/indirect/var-env-func-init-global-update-configurable.js
+  - [x] test/language/eval-code/indirect/var-env-func-init-global-update-non-configurable.js
+  - [x] test/language/eval-code/indirect/var-env-func-init-multi.js
+  - [x] test/language/eval-code/indirect/var-env-func-non-strict.js
+  - [x] test/language/eval-code/indirect/var-env-func-strict.js
+  - [x] test/language/eval-code/indirect/var-env-global-lex-non-strict.js
+  - [x] test/language/eval-code/indirect/var-env-global-lex-strict.js
+  - [x] test/language/eval-code/indirect/var-env-lower-lex-non-strict.js
+  - [x] test/language/eval-code/indirect/var-env-lower-lex-strict.js
+  - [x] test/language/eval-code/indirect/var-env-var-init-global-exstng.js
+  - [x] test/language/eval-code/indirect/var-env-var-init-global-new.js
+  - [x] test/language/eval-code/indirect/var-env-var-non-strict.js
+  - [x] test/language/eval-code/indirect/var-env-var-strict.js
 - [ ] import
   - [ ] test/language/import/dup-bound-names.js
   - [ ] test/language/import/escaped-as-import-specifier.js
@@ -23125,10 +23125,10 @@ Sub-category progress
   - [ ] test/language/import/import-defer/syntax/invalid-export-defer-namespace.js
   - [ ] test/language/import/import-defer/syntax/valid-default-binding-named-defer.js
   - [ ] test/language/import/import-defer/syntax/valid-defer-namespace.js
-- [ ] export
-  - [ ] test/language/export/escaped-as-export-specifier.js
-  - [ ] test/language/export/escaped-default.js
-  - [ ] test/language/export/escaped-from.js
+- [x] export
+  - [x] test/language/export/escaped-as-export-specifier.js
+  - [x] test/language/export/escaped-default.js
+  - [x] test/language/export/escaped-from.js
 - [ ] module-code
   - [ ] test/language/module-code/ambiguous-export-bindings/error-export-from-named-as.js
   - [ ] test/language/module-code/ambiguous-export-bindings/error-export-from-named.js
