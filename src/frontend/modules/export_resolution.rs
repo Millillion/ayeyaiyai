@@ -366,8 +366,15 @@ impl ModuleLinker {
         }
     }
 
-    pub(super) fn validate_loaded_module_export_resolutions(&self) -> Result<()> {
+    pub(super) fn validate_loaded_module_export_resolutions(
+        &self,
+        entry_index: usize,
+    ) -> Result<()> {
+        let required = self.statically_required_module_indices(Some(entry_index));
         for (module_index, module) in self.modules.iter().enumerate() {
+            if !required.contains(&module_index) {
+                continue;
+            }
             if module.state == ModuleState::Failed {
                 bail!(
                     "{}",
@@ -398,6 +405,80 @@ impl ModuleLinker {
                         )
                     })?;
             }
+        }
+
+        Ok(())
+    }
+
+    fn statically_required_module_indices(&self, entry_index: Option<usize>) -> HashSet<usize> {
+        let mut required = HashSet::new();
+        let mut stack: Vec<usize> = entry_index.into_iter().collect();
+        while let Some(module_index) = stack.pop() {
+            if !required.insert(module_index) {
+                continue;
+            }
+            let module = &self.modules[module_index];
+            for dependency in &module.dependency_params {
+                stack.push(dependency.module_index);
+            }
+            for dependency_index in &module.star_export_module_indices {
+                stack.push(*dependency_index);
+            }
+            for (dependency_index, _) in &module.pending_import_resolutions {
+                stack.push(*dependency_index);
+            }
+        }
+        required
+    }
+
+    pub(super) fn demote_invalid_dynamic_only_modules(
+        &mut self,
+        entry_index: Option<usize>,
+    ) -> Result<()> {
+        let required = self.statically_required_module_indices(entry_index);
+        let mut demotions = Vec::new();
+
+        for (module_index, module) in self.modules.iter().enumerate() {
+            if required.contains(&module_index) || module.state == ModuleState::Failed {
+                continue;
+            }
+
+            let mut failure = None;
+            for export_name in module.export_resolutions.keys() {
+                if self
+                    .require_export_resolution_for_dependency(module_index, export_name)
+                    .is_err()
+                {
+                    failure = Some(format!(
+                        "failed to resolve export `{export_name}` in `{}`",
+                        module.path.display()
+                    ));
+                    break;
+                }
+            }
+            if failure.is_none() {
+                for (dependency_index, export_name) in &module.pending_import_resolutions {
+                    if self
+                        .require_export_resolution_for_dependency(*dependency_index, export_name)
+                        .is_err()
+                    {
+                        failure = Some(format!(
+                            "failed to resolve import `{export_name}` from `{}` in `{}`",
+                            self.modules[*dependency_index].path.display(),
+                            module.path.display()
+                        ));
+                        break;
+                    }
+                }
+            }
+
+            if let Some(message) = failure {
+                demotions.push((module_index, message));
+            }
+        }
+
+        for (module_index, message) in demotions {
+            self.lower_failed_module_with_error(module_index, "SyntaxError", message);
         }
 
         Ok(())

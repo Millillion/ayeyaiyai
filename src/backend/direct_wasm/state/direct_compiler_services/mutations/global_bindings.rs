@@ -16,7 +16,14 @@ impl DirectWasmCompiler {
         name: &str,
     ) -> ImplicitGlobalBinding {
         crate::backend::direct_wasm::memo::bump_static_state_generation();
-        self.state.global_semantics.ensure_implicit_binding(name)
+        let binding = self.state.global_semantics.ensure_implicit_binding(name);
+        if crate::ayy_env_flag!("AYY_TRACE_IMPLICIT_STORE") {
+            eprintln!(
+                "implicit_global_binding name={name} value_index={} present_index={}",
+                binding.value_index, binding.present_index
+            );
+        }
+        binding
     }
 
     pub(in crate::backend::direct_wasm) fn set_global_binding_kind(

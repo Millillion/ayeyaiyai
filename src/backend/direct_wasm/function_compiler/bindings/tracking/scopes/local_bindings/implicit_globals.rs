@@ -105,12 +105,22 @@ impl<'a> FunctionCompiler<'a> {
         Ok(true)
     }
 
+    #[track_caller]
     pub(in crate::backend::direct_wasm) fn emit_store_implicit_global_from_local(
         &mut self,
         binding: ImplicitGlobalBinding,
         value_local: u32,
     ) -> DirectResult<()> {
         if self.state.speculation.execution_context.strict_mode {
+            if crate::ayy_env_flag!("AYY_TRACE_IMPLICIT_STORE") {
+                eprintln!(
+                    "implicit_global_strict_store fn={:?} value_index={} present_index={} caller={}",
+                    self.current_function_name(),
+                    binding.value_index,
+                    binding.present_index,
+                    std::panic::Location::caller()
+                );
+            }
             self.push_global_get(binding.present_index);
             self.state.emission.output.instructions.push(0x04);
             self.state
