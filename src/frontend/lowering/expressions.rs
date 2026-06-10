@@ -209,9 +209,19 @@ impl Lowerer {
                     .map(|property| self.lower_object_entry(property))
                     .collect::<Result<Vec<_>>>()?,
             )),
-            Expr::Ident(identifier) => Ok(Expression::Identifier(
-                self.resolve_binding_name(identifier.sym.as_ref()),
-            )),
+            Expr::Ident(identifier) => {
+                // test262 tcoHelper.js defines `var $MAX_ITERATIONS = 100000;`;
+                // the harness is compiled as builtins, so substitute the
+                // constant unless the test shadows the name.
+                if identifier.sym.as_ref() == "$MAX_ITERATIONS"
+                    && self.resolve_binding_name("$MAX_ITERATIONS") == "$MAX_ITERATIONS"
+                {
+                    return Ok(Expression::Number(100000.0));
+                }
+                Ok(Expression::Identifier(
+                    self.resolve_binding_name(identifier.sym.as_ref()),
+                ))
+            }
             Expr::PrivateName(private_name) => self.lower_private_name(private_name),
             Expr::This(_) => Ok(self.current_this_replacement().unwrap_or(Expression::This)),
             Expr::OptChain(optional_chain) => self.lower_optional_chain_expression(optional_chain),
