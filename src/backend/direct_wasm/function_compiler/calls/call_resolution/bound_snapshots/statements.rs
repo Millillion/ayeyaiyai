@@ -387,17 +387,9 @@ impl<'a> FunctionCompiler<'a> {
                         return Some(BoundSnapshotControlFlow::Throw(throw_value));
                     }
                 }
-                Statement::Print { values } => {
-                    for value in values {
-                        if let Err(throw_value) = self.evaluate_bound_snapshot_statement_value(
-                            value,
-                            bindings,
-                            current_function_name,
-                        )? {
-                            return Some(BoundSnapshotControlFlow::Throw(throw_value));
-                        }
-                    }
-                }
+                // Print is I/O: a snapshot that "succeeds" past it would fold
+                // the call to its return value and silently drop the output.
+                Statement::Print { .. } => return None,
                 Statement::Try {
                     body,
                     catch_binding,
