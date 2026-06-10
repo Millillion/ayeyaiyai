@@ -1024,8 +1024,83 @@ impl<'a> FunctionCompiler<'a> {
             &mut entries,
             &mut known_private_properties,
         );
+        self.seed_static_private_brand_marker_fallbacks(source_owner, &mut entries);
 
         entries
+    }
+
+    /// When copying shadows from a class binding (the class object itself),
+    /// give `__ayy$private_brand$` marker entries without a runtime source a
+    /// fallback that evaluates to the class's private brand. Static private
+    /// methods and accessors are defined on the class object via property
+    /// descriptors, so nothing ever stamps their brand marker shadow at class
+    /// definition time the way instance constructors do.
+    fn seed_static_private_brand_marker_fallbacks(
+        &self,
+        source_owner: &str,
+        entries: &mut Vec<(Expression, Option<Expression>)>,
+    ) {
+        if source_owner == "this" {
+            return;
+        }
+        let source_expression = Expression::Identifier(source_owner.to_string());
+        let Some(LocalFunctionBinding::User(constructor_name)) =
+            self.resolve_function_binding_from_expression(&source_expression)
+        else {
+            return;
+        };
+        let Some(brand_binding) = self
+            .user_function(&constructor_name)
+            .and_then(|function| function.private_brand_binding.clone())
+        else {
+            return;
+        };
+        let source_has_private_member = |compiler: &Self, private_property: &Expression| {
+            compiler
+                .resolve_member_getter_binding(&source_expression, private_property)
+                .is_some()
+                || compiler
+                    .resolve_member_setter_binding(&source_expression, private_property)
+                    .is_some()
+                || compiler
+                    .resolve_member_function_binding(&source_expression, private_property)
+                    .is_some()
+        };
+        let mut known_marker_names = HashSet::new();
+        let mut missing_marker_entries = Vec::new();
+        for (property, fallback_value) in entries.iter_mut() {
+            let Expression::String(property_name) = property else {
+                continue;
+            };
+            if let Some(private_property_name) = property_name.strip_prefix("__ayy$private_brand$")
+            {
+                known_marker_names.insert(property_name.clone());
+                if fallback_value.is_some() {
+                    continue;
+                }
+                let private_property = Expression::String(private_property_name.to_string());
+                if !source_has_private_member(self, &private_property) {
+                    continue;
+                }
+                *fallback_value = Some(Expression::Identifier(brand_binding.clone()));
+            } else if property_name.starts_with("__ayy$private$")
+                && source_has_private_member(self, property)
+                && let Some(marker_property) = private_brand_marker_property_expression(property)
+            {
+                missing_marker_entries.push(marker_property);
+            }
+        }
+        for marker_property in missing_marker_entries {
+            let Expression::String(marker_name) = &marker_property else {
+                continue;
+            };
+            if known_marker_names.insert(marker_name.clone()) {
+                entries.push((
+                    marker_property,
+                    Some(Expression::Identifier(brand_binding.clone())),
+                ));
+            }
+        }
     }
 
     fn append_target_private_runtime_shadow_copy_entries(
@@ -1083,6 +1158,7 @@ impl<'a> FunctionCompiler<'a> {
                 entries.push((Expression::String(property_name), None));
             }
         }
+        self.seed_static_private_brand_marker_fallbacks(source_owner, entries);
     }
 
     fn should_suppress_private_runtime_shadow_fallbacks(&self, source_owner: &str) -> bool {
@@ -2745,6 +2821,14 @@ impl<'a> FunctionCompiler<'a> {
         }
         if !inline_summary_side_effect_free_expression(fallback_value) {
             self.push_i32_const(self.runtime_shadow_fallback_type_tag(fallback_value));
+            return Ok(());
+        }
+        if let Expression::Identifier(name) = fallback_value
+            && name.starts_with("__ayy_class_brand_")
+        {
+            if !self.emit_private_brand_runtime_value_for_binding_name(name)? {
+                self.emit_private_brand_direct_or_synthetic_runtime_value_for_binding_name(name)?;
+            }
             return Ok(());
         }
         if let Expression::Identifier(name) = fallback_value

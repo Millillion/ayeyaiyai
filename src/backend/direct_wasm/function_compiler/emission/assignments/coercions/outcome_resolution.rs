@@ -315,7 +315,8 @@ impl<'a> FunctionCompiler<'a> {
             )?;
             if let LocalFunctionBinding::User(function_name) = &binding
                 && let Some(user_function) = self.user_function(function_name)
-                && (self.user_function_mentions_direct_eval(user_function)
+                && (self.user_function_mentions_private_member_access(user_function)
+                    || self.user_function_mentions_direct_eval(user_function)
                     || user_function.has_parameter_defaults()
                     || user_function.has_lowered_pattern_parameters()
                     || !self

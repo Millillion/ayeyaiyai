@@ -1,6 +1,60 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn user_function_private_member_reads_resolve_to_data_values(
+        &self,
+        user_function: &UserFunction,
+        this_binding: &Expression,
+        this_object_binding: &ObjectValueBinding,
+    ) -> bool {
+        struct PrivatePropertyCollector {
+            names: Vec<String>,
+        }
+        impl crate::ir::visit::Visitor for PrivatePropertyCollector {
+            fn visit_expression(&mut self, expression: &Expression) {
+                match expression {
+                    Expression::Member { property, .. }
+                    | Expression::AssignMember { property, .. } => {
+                        if let Expression::String(name) = property.as_ref()
+                            && name.starts_with("__ayy$private$")
+                        {
+                            self.names.push(name.clone());
+                        }
+                    }
+                    _ => {}
+                }
+                crate::ir::visit::walk_expression(self, expression);
+            }
+            fn visit_statement(&mut self, statement: &Statement) {
+                if let Statement::AssignMember { property, .. } = statement
+                    && let Expression::String(name) = property
+                    && name.starts_with("__ayy$private$")
+                {
+                    self.names.push(name.clone());
+                }
+                crate::ir::visit::walk_statement(self, statement);
+            }
+        }
+        let Some(function) = self.resolve_registered_function_declaration(&user_function.name)
+        else {
+            return false;
+        };
+        let mut collector = PrivatePropertyCollector { names: Vec::new() };
+        for statement in &function.body {
+            crate::ir::visit::Visitor::visit_statement(&mut collector, statement);
+        }
+        collector.names.iter().all(|name| {
+            let property = Expression::String(name.clone());
+            object_binding_lookup_value(this_object_binding, &property).is_some()
+                && self
+                    .resolve_member_getter_binding(this_binding, &property)
+                    .is_none()
+                && self
+                    .resolve_member_setter_binding(this_binding, &property)
+                    .is_none()
+        })
+    }
+
     pub(in crate::backend::direct_wasm) fn resolve_static_function_outcome_from_binding_with_call_frame_and_context(
         &self,
         binding: &LocalFunctionBinding,
@@ -16,12 +70,24 @@ impl<'a> FunctionCompiler<'a> {
             );
         };
         let user_function = self.user_function(function_name)?;
-        if self.user_function_mentions_private_member_access(user_function)
-            && self
-                .resolve_object_binding_from_expression(this_binding)
-                .is_none()
-        {
-            return None;
+        if self.user_function_mentions_private_member_access(user_function) {
+            let Some(this_object_binding) =
+                self.resolve_object_binding_from_expression(this_binding)
+            else {
+                return None;
+            };
+            // Folding is only sound when every private member the body reads
+            // resolves to a plain data value on the receiver (instance
+            // fields). Private accessors and methods are modeled as member
+            // bindings/descriptors, so substituting the raw property value
+            // would surface the accessor function instead of dispatching it.
+            if !self.user_function_private_member_reads_resolve_to_data_values(
+                user_function,
+                this_binding,
+                &this_object_binding,
+            ) {
+                return None;
+            }
         }
         let function = self.resolve_registered_function_declaration(function_name)?;
         if self.user_function_mentions_direct_eval(user_function) {

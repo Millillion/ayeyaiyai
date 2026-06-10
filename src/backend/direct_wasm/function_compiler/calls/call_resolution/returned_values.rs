@@ -881,6 +881,32 @@ impl<'a> FunctionCompiler<'a> {
         markers_by_constructor
     }
 
+    fn static_return_value_references_private_member(expression: &Expression) -> bool {
+        struct PrivateMemberDetector {
+            found: bool,
+        }
+        impl crate::ir::visit::Visitor for PrivateMemberDetector {
+            fn visit_expression(&mut self, expression: &Expression) {
+                if self.found {
+                    return;
+                }
+                if let Expression::Member { property, .. } = expression
+                    && matches!(
+                        property.as_ref(),
+                        Expression::String(name) if name.starts_with("__ayy$private$")
+                    )
+                {
+                    self.found = true;
+                    return;
+                }
+                crate::ir::visit::walk_expression(self, expression);
+            }
+        }
+        let mut detector = PrivateMemberDetector { found: false };
+        crate::ir::visit::Visitor::visit_expression(&mut detector, expression);
+        detector.found
+    }
+
     pub(in crate::backend::direct_wasm) fn resolve_static_return_expression_from_user_function_call(
         &self,
         function_name: &str,
@@ -926,7 +952,7 @@ impl<'a> FunctionCompiler<'a> {
                 &return_value,
                 function_name,
             );
-            return Some(self.normalize_static_class_constructor_alias_expression(
+            let resolved = self.normalize_static_class_constructor_alias_expression(
                 &self.normalize_static_local_alias_expression(
                     &self.materialize_static_return_object_binding_expression_with_state(
                         &return_value,
@@ -934,7 +960,15 @@ impl<'a> FunctionCompiler<'a> {
                     ),
                     &local_aliases,
                 ),
-            ));
+            );
+            // A surviving private member access means the static execution
+            // could not resolve the private read (for example a static
+            // accessor reached through `this`); folding it would surface the
+            // raw shadow value instead of dispatching the accessor.
+            if Self::static_return_value_references_private_member(&resolved) {
+                return None;
+            }
+            return Some(resolved);
         }
         let returned_expression = match function.body.last()? {
             Statement::Return(expression) => expression.clone(),
@@ -944,7 +978,7 @@ impl<'a> FunctionCompiler<'a> {
             &returned_expression,
             function_name,
         );
-        Some(self.normalize_static_class_constructor_alias_expression(
+        let resolved = self.normalize_static_class_constructor_alias_expression(
             &self.normalize_static_local_alias_expression(
                 &self.materialize_static_return_object_binding_expression_with_state(
                     &returned_expression,
@@ -952,7 +986,11 @@ impl<'a> FunctionCompiler<'a> {
                 ),
                 &local_aliases,
             ),
-        ))
+        );
+        if Self::static_return_value_references_private_member(&resolved) {
+            return None;
+        }
+        Some(resolved)
     }
 
     fn merge_static_local_private_constructor_markers(
