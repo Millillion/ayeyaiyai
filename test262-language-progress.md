@@ -1,4 +1,4 @@
-20690/23668 (87.42%)
+20703/23668 (87.47%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,8 +14,8 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 8003/9337 (85.71%)
-- expressions: 9617/11061 (86.95%)
+- statements: 8006/9337 (85.74%)
+- expressions: 9627/11061 (87.04%)
 - types: 103/113 (91.15%)
 - function-code: 204/217 (94.01%)
 - global-code: 41/42 (97.62%)
@@ -2367,7 +2367,7 @@ Sub-category progress
   - [x] test/language/statements/class/definition/getters-restricted-ids.js
   - [x] test/language/statements/class/definition/implicit-constructor.js
   - [ ] test/language/statements/class/definition/invalid-extends.js
-  - [ ] test/language/statements/class/definition/methods-async-super-call-body.js
+  - [x] test/language/statements/class/definition/methods-async-super-call-body.js
   - [ ] test/language/statements/class/definition/methods-async-super-call-param.js
   - [x] test/language/statements/class/definition/methods-gen-no-yield.js
   - [x] test/language/statements/class/definition/methods-gen-return.js
@@ -5212,8 +5212,8 @@ Sub-category progress
   - [x] test/language/statements/class/elements/private-method-shadowed-on-nested-class.js
   - [x] test/language/statements/class/elements/private-method-visible-to-direct-eval-on-initializer.js
   - [ ] test/language/statements/class/elements/private-method-visible-to-direct-eval.js
-  - [ ] test/language/statements/class/elements/private-methods/prod-private-async-generator.js
-  - [ ] test/language/statements/class/elements/private-methods/prod-private-async-method.js
+  - [x] test/language/statements/class/elements/private-methods/prod-private-async-generator.js
+  - [x] test/language/statements/class/elements/private-methods/prod-private-async-method.js
   - [x] test/language/statements/class/elements/private-methods/prod-private-generator.js
   - [x] test/language/statements/class/elements/private-methods/prod-private-method-initialize-order.js
   - [x] test/language/statements/class/elements/private-methods/prod-private-method.js
@@ -13207,14 +13207,14 @@ Sub-category progress
   - [x] test/language/expressions/class/async-method/await-as-label-identifier-escaped.js
   - [x] test/language/expressions/class/async-method/await-as-label-identifier.js
   - [x] test/language/expressions/class/async-method/dflt-params-abrupt.js
-  - [ ] test/language/expressions/class/async-method/dflt-params-arg-val-not-undefined.js
-  - [ ] test/language/expressions/class/async-method/dflt-params-arg-val-undefined.js
+  - [x] test/language/expressions/class/async-method/dflt-params-arg-val-not-undefined.js
+  - [x] test/language/expressions/class/async-method/dflt-params-arg-val-undefined.js
   - [x] test/language/expressions/class/async-method/dflt-params-duplicates.js
   - [x] test/language/expressions/class/async-method/dflt-params-ref-later.js
-  - [ ] test/language/expressions/class/async-method/dflt-params-ref-prior.js
+  - [x] test/language/expressions/class/async-method/dflt-params-ref-prior.js
   - [x] test/language/expressions/class/async-method/dflt-params-ref-self.js
   - [x] test/language/expressions/class/async-method/dflt-params-rest.js
-  - [ ] test/language/expressions/class/async-method/dflt-params-trailing-comma.js
+  - [x] test/language/expressions/class/async-method/dflt-params-trailing-comma.js
   - [x] test/language/expressions/class/async-method/forbidden-ext/b1/cls-expr-async-meth-forbidden-ext-direct-access-prop-arguments.js
   - [x] test/language/expressions/class/async-method/forbidden-ext/b1/cls-expr-async-meth-forbidden-ext-direct-access-prop-caller.js
   - [x] test/language/expressions/class/async-method/forbidden-ext/b2/cls-expr-async-meth-forbidden-ext-indirect-access-own-prop-caller-get.js
@@ -13239,14 +13239,14 @@ Sub-category progress
   - [x] test/language/expressions/class/async-method-static/await-as-label-identifier-escaped.js
   - [x] test/language/expressions/class/async-method-static/await-as-label-identifier.js
   - [x] test/language/expressions/class/async-method-static/dflt-params-abrupt.js
-  - [ ] test/language/expressions/class/async-method-static/dflt-params-arg-val-not-undefined.js
-  - [ ] test/language/expressions/class/async-method-static/dflt-params-arg-val-undefined.js
+  - [x] test/language/expressions/class/async-method-static/dflt-params-arg-val-not-undefined.js
+  - [x] test/language/expressions/class/async-method-static/dflt-params-arg-val-undefined.js
   - [x] test/language/expressions/class/async-method-static/dflt-params-duplicates.js
   - [x] test/language/expressions/class/async-method-static/dflt-params-ref-later.js
-  - [ ] test/language/expressions/class/async-method-static/dflt-params-ref-prior.js
+  - [x] test/language/expressions/class/async-method-static/dflt-params-ref-prior.js
   - [x] test/language/expressions/class/async-method-static/dflt-params-ref-self.js
   - [x] test/language/expressions/class/async-method-static/dflt-params-rest.js
-  - [ ] test/language/expressions/class/async-method-static/dflt-params-trailing-comma.js
+  - [x] test/language/expressions/class/async-method-static/dflt-params-trailing-comma.js
   - [x] test/language/expressions/class/async-method-static/forbidden-ext/b1/cls-expr-async-meth-static-forbidden-ext-direct-access-prop-arguments.js
   - [x] test/language/expressions/class/async-method-static/forbidden-ext/b1/cls-expr-async-meth-static-forbidden-ext-direct-access-prop-caller.js
   - [x] test/language/expressions/class/async-method-static/forbidden-ext/b2/cls-expr-async-meth-static-forbidden-ext-indirect-access-own-prop-caller-get.js
@@ -16184,8 +16184,8 @@ Sub-category progress
   - [ ] test/language/expressions/class/elements/private-method-shadowed-by-getter-on-nested-class.js
   - [ ] test/language/expressions/class/elements/private-method-shadowed-by-setter-on-nested-class.js
   - [x] test/language/expressions/class/elements/private-method-shadowed-on-nested-class.js
-  - [ ] test/language/expressions/class/elements/private-methods/prod-private-async-generator.js
-  - [ ] test/language/expressions/class/elements/private-methods/prod-private-async-method.js
+  - [x] test/language/expressions/class/elements/private-methods/prod-private-async-generator.js
+  - [x] test/language/expressions/class/elements/private-methods/prod-private-async-method.js
   - [x] test/language/expressions/class/elements/private-methods/prod-private-generator.js
   - [ ] test/language/expressions/class/elements/private-methods/prod-private-method-initialize-order.js
   - [x] test/language/expressions/class/elements/private-methods/prod-private-method.js
