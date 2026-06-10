@@ -3051,6 +3051,11 @@ impl<'a> FunctionCompiler<'a> {
             {
                 Ok(())
             }
+            BinaryOp::Equal | BinaryOp::NotEqual
+                if self.emit_static_fresh_object_identity_comparison(&op, left, right)? =>
+            {
+                Ok(())
+            }
             BinaryOp::LooseEqual | BinaryOp::LooseNotEqual
                 if self.emit_static_string_equality_comparison(left, right, op)? =>
             {

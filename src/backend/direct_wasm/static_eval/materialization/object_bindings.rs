@@ -42,6 +42,7 @@ pub(in crate::backend::direct_wasm) fn resolve_copy_data_properties_binding<Cont
     mut resolve_member_getter_value: impl FnMut(
         &Expression,
         &Expression,
+        Option<&Expression>,
         &mut Context,
     ) -> Option<Expression>,
 ) -> Option<ObjectValueBinding> {
@@ -55,12 +56,23 @@ pub(in crate::backend::direct_wasm) fn resolve_copy_data_properties_binding<Cont
                 || descriptor.has_set
                 || descriptor.getter.is_some()
                 || descriptor.setter.is_some();
+            if crate::ayy_env_flag!("AYY_TRACE_COPY_DATA") {
+                eprintln!(
+                    "copy_data:descriptor expression={expression:?} property={property:?} has_get={} getter={:?} has_set={} value={:?}",
+                    descriptor.has_get, descriptor.getter, descriptor.has_set, descriptor.value
+                );
+            }
             if is_accessor {
                 if descriptor.getter.is_none() {
                     return Some(Expression::Undefined);
                 }
-                return resolve_member_getter_value(expression, property, context)
-                    .or(Some(Expression::Undefined));
+                return resolve_member_getter_value(
+                    expression,
+                    property,
+                    descriptor.getter.as_ref(),
+                    context,
+                )
+                .or(Some(Expression::Undefined));
             }
         }
         object_binding_lookup_value(&source_binding, property).cloned()
@@ -311,7 +323,7 @@ where
                 spread_expression,
                 environment,
                 |expression, environment| resolve_object_binding(expression, environment),
-                |object, property, environment| {
+                |object, property, _descriptor_getter, environment| {
                     resolve_member_getter_value(object, property, environment)
                 },
             )

@@ -7,8 +7,12 @@ impl<'a> ProgramCompilationSession<'a> {
     ) -> DirectResult<PreparedBackendProgram> {
         self.run_function_discovery_phase(program)?;
         self.run_global_binding_phase(program);
-        self.run_parameter_analysis_phase(program);
+        // Runtime reservation re-registers class member bindings (it can
+        // resolve class-expression aliases such as `var C = class { ... }`
+        // once constructor metadata exists), so parameter analysis runs after
+        // it to see prototype method bindings for those classes.
         self.run_runtime_reservation_phase(program)?;
+        self.run_parameter_analysis_phase(program);
         let global_binding_environment = self.compiler.snapshot_global_binding_environment();
         let global_static_semantics = self.compiler.snapshot_global_static_semantics();
 

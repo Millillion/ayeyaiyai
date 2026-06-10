@@ -934,11 +934,16 @@ impl<'a> FunctionCompiler<'a> {
                                     environment,
                                 )
                             },
-                            |object, property, environment| {
+                            |object, property, descriptor_getter, environment| {
                                 let trace_copy_data =
                                     crate::ayy_env_flag!("AYY_TRACE_COPY_DATA");
-                                let binding =
-                                    self.resolve_member_getter_binding(object, property)?;
+                                let binding = self
+                                    .resolve_member_getter_binding(object, property)
+                                    .or_else(|| {
+                                        descriptor_getter.and_then(|getter| {
+                                            self.resolve_function_binding_from_expression(getter)
+                                        })
+                                    })?;
                                 if trace_copy_data {
                                     eprintln!(
                                         "copy_data:getter object={object:?} property={property:?} binding={binding:?}"
@@ -1007,11 +1012,25 @@ impl<'a> FunctionCompiler<'a> {
                 let materialized_spread_expression = self
                     .materialize_static_expression_with_state(spread_expression, environment)
                     .unwrap_or_else(|| self.materialize_static_expression(spread_expression));
+                if crate::ayy_env_flag!("AYY_TRACE_COPY_DATA") {
+                    eprintln!(
+                        "copy_data:spread_materialized spread={spread_expression:?} materialized={materialized_spread_expression:?}"
+                    );
+                }
                 resolve_copy_data_properties(&materialized_spread_expression, environment)
                     .or_else(|| resolve_copy_data_properties(spread_expression, environment))
             },
         )
-        .map(|binding| self.canonicalize_contextual_object_binding_property_keys(binding))
+        .map(|binding| {
+            let binding = self.canonicalize_contextual_object_binding_property_keys(binding);
+            if crate::ayy_env_flag!("AYY_TRACE_COPY_DATA") {
+                eprintln!(
+                    "copy_data:entries_with_state_result {:?}",
+                    object_binding_to_expression(&binding)
+                );
+            }
+            binding
+        })
     }
 
     fn resolve_raw_member_value_with_state(

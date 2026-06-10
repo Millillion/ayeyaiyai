@@ -612,6 +612,61 @@ impl<'a> FunctionCompiler<'a> {
         None
     }
 
+    /// Resolves a stable identity expression for bindings that track a rest
+    /// array temporary (`__ayy_array_rest_*`). Rest arrays are always fresh
+    /// allocations minted by destructuring lowering, so the temporary name is
+    /// a sound identity key even when prototype resolution cannot classify
+    /// the binding (for example through method parameters).
+    pub(in crate::backend::direct_wasm) fn tracked_rest_array_identity_expression(
+        &self,
+        expression: &Expression,
+    ) -> Option<Expression> {
+        fn name_is_rest_array_temp(name: &str) -> bool {
+            name.contains("__ayy_array_rest_")
+        }
+        let Expression::Identifier(initial_name) = expression else {
+            return None;
+        };
+        let trace_object_identity = crate::ayy_env_flag!("AYY_TRACE_OBJECT_IDENTITY");
+        let mut name = initial_name.clone();
+        let mut visited = HashSet::new();
+        loop {
+            if name_is_rest_array_temp(&name) {
+                return Some(Expression::Identifier(name));
+            }
+            if !visited.insert(name.clone()) {
+                return None;
+            }
+            let resolved_name = self
+                .resolve_current_local_binding(&name)
+                .map(|(resolved_name, _)| resolved_name)
+                .unwrap_or_else(|| name.clone());
+            if name_is_rest_array_temp(&resolved_name) {
+                return Some(Expression::Identifier(resolved_name));
+            }
+            let value = self
+                .state
+                .speculation
+                .static_semantics
+                .local_value_binding(&resolved_name)
+                .or_else(|| {
+                    self.state
+                        .speculation
+                        .static_semantics
+                        .local_value_binding(&name)
+                });
+            if trace_object_identity {
+                eprintln!(
+                    "object_identity:rest_walk name={name} resolved={resolved_name} value={value:?}"
+                );
+            }
+            let Some(Expression::Identifier(next_name)) = value else {
+                return None;
+            };
+            name = next_name.clone();
+        }
+    }
+
     pub(in crate::backend::direct_wasm) fn resolve_static_object_identity_expression(
         &self,
         expression: &Expression,

@@ -55,9 +55,14 @@ impl DirectWasmCompiler {
                     (called_function_name, call_arguments)
                 }
                 _ => {
-                    let Some(LocalFunctionBinding::User(called_function_name)) =
-                        self.resolve_function_binding_from_expression_with_aliases(callee, aliases)
-                    else {
+                    let resolved =
+                        self.resolve_function_binding_from_expression_with_aliases(callee, aliases);
+                    if crate::ayy_env_flag!("AYY_TRACE_PARAM_ANALYSIS") {
+                        eprintln!(
+                            "param_analysis:call callee={callee:?} resolved={resolved:?}"
+                        );
+                    }
+                    let Some(LocalFunctionBinding::User(called_function_name)) = resolved else {
                         return;
                     };
                     (

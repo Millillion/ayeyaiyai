@@ -1330,7 +1330,7 @@ impl<'a> FunctionCompiler<'a> {
             .static_semantics
             .local_object_binding(&state.resolved_name)
             .cloned()
-            .filter(|_| source_owner.is_none())
+            .filter(|_| source_owner.is_none() || source_owner_is_data_copy)
             .or_else(|| source_shadow_object_binding.clone())
             .or_else(|| {
                 self.resolve_object_binding_from_expression(&state.object_binding_expression)

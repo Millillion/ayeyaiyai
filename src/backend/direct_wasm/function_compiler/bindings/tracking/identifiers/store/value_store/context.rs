@@ -2123,6 +2123,12 @@ impl<'a> FunctionCompiler<'a> {
                 "identifier_store:{name}:object_binding expr={object_binding_expression:?} prepared_binding={}",
                 object_binding.is_some()
             );
+            if let Some(binding) = object_binding.as_ref() {
+                eprintln!(
+                    "identifier_store:{name}:object_binding_contents {:?}",
+                    object_binding_to_expression(binding)
+                );
+            }
         }
         let metadata_value_expression = call_result_snapshot_expression
             .as_ref()

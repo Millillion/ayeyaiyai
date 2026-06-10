@@ -135,6 +135,43 @@ impl<'a> FunctionCompiler<'a> {
         symbol_vs_other.then_some(is_not_equal)
     }
 
+    /// Late identity comparison for strict (in)equality between bindings that
+    /// are provably fresh allocations (destructuring rest-array temporaries or
+    /// identities resolving to fresh allocation expressions). This runs after
+    /// the general static-equality gates (which bail on runtime nonlocal
+    /// reads), so it only answers when one side's allocation provenance is
+    /// certain.
+    pub(in crate::backend::direct_wasm) fn emit_static_fresh_object_identity_comparison(
+        &mut self,
+        op: &BinaryOp,
+        left: &Expression,
+        right: &Expression,
+    ) -> DirectResult<bool> {
+        if !matches!(op, BinaryOp::Equal | BinaryOp::NotEqual) {
+            return Ok(false);
+        }
+        if !matches!(left, Expression::Identifier(_)) || !matches!(right, Expression::Identifier(_))
+        {
+            return Ok(false);
+        }
+        let side_is_provably_fresh = |compiler: &Self, expression: &Expression| {
+            compiler
+                .tracked_rest_array_identity_expression(expression)
+                .is_some()
+                || compiler
+                    .resolve_static_object_identity_expression(expression)
+                    .is_some_and(|identity| expression_is_fresh_object_allocation(&identity))
+        };
+        if !side_is_provably_fresh(self, left) && !side_is_provably_fresh(self, right) {
+            return Ok(false);
+        }
+        let Some(value) = self.resolve_static_object_identity_boolean(op, left, right) else {
+            return Ok(false);
+        };
+        self.emit_literal_expression(&Expression::Bool(value))?;
+        Ok(true)
+    }
+
     fn resolve_static_object_identity_boolean(
         &self,
         op: &BinaryOp,
@@ -147,6 +184,15 @@ impl<'a> FunctionCompiler<'a> {
         let is_not_equal = matches!(op, BinaryOp::NotEqual);
         let left_reference_key = self.resolve_static_reference_identity_key(left);
         let right_reference_key = self.resolve_static_reference_identity_key(right);
+        if crate::ayy_env_flag!("AYY_TRACE_OBJECT_IDENTITY") {
+            eprintln!(
+                "object_identity:compare left={left:?} right={right:?} left_key={left_reference_key:?} right_key={right_reference_key:?} left_identity={:?} right_identity={:?} left_rest={:?} right_rest={:?}",
+                self.resolve_static_object_identity_expression(left),
+                self.resolve_static_object_identity_expression(right),
+                self.tracked_rest_array_identity_expression(left),
+                self.tracked_rest_array_identity_expression(right),
+            );
+        }
         if self.current_function_name().is_none()
             && ((left_reference_key
                 .as_deref()
@@ -204,8 +250,10 @@ impl<'a> FunctionCompiler<'a> {
             return Some((left_key == right_key) ^ is_not_equal);
         }
         if let (Some(left_identity), Some(right_identity)) = (
-            self.resolve_static_object_identity_expression(left),
-            self.resolve_static_object_identity_expression(right),
+            self.resolve_static_object_identity_expression(left)
+                .or_else(|| self.tracked_rest_array_identity_expression(left)),
+            self.resolve_static_object_identity_expression(right)
+                .or_else(|| self.tracked_rest_array_identity_expression(right)),
         ) {
             let involves_uncertain_capture_identity = |expression: &Expression| {
                 matches!(

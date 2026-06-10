@@ -18,7 +18,7 @@ impl DirectWasmCompiler {
                         object_bindings,
                     )
                 },
-                |object, property, (value_bindings, object_bindings)| {
+                |object, property, _descriptor_getter, (value_bindings, object_bindings)| {
                     self.infer_global_member_getter_return_value_with_state(
                         object,
                         property,
