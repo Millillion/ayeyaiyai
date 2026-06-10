@@ -825,12 +825,13 @@ impl<'a> FunctionCompiler<'a> {
                 discriminant,
                 cases,
                 ..
-            } => self.expression_references_only_direct_async_safe_captured_user_function_calls(
-                discriminant,
-                captured_user_function_names,
-                current_function_name,
-            ) && cases.iter().all(|case| {
-                case.test.as_ref().is_none_or(|test| {
+            } => {
+                self.expression_references_only_direct_async_safe_captured_user_function_calls(
+                    discriminant,
+                    captured_user_function_names,
+                    current_function_name,
+                ) && cases.iter().all(|case| {
+                    case.test.as_ref().is_none_or(|test| {
                     self.expression_references_only_direct_async_safe_captured_user_function_calls(
                         test,
                         captured_user_function_names,
@@ -843,7 +844,8 @@ impl<'a> FunctionCompiler<'a> {
                         current_function_name,
                     )
                 })
-            }),
+                })
+            }
             Statement::For {
                 init,
                 condition,

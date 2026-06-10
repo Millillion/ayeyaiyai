@@ -1341,18 +1341,17 @@ impl<'a> FunctionCompiler<'a> {
                         | StaticValueKind::Symbol
                 )
             );
-        let stores_runtime_array_alias =
-            !value_cannot_have_runtime_array_state
-                && matches!(state.tracked_value_expression, Expression::Identifier(_))
-                && (self
-                    .runtime_array_binding_name_for_expression(&state.tracked_value_expression)
-                    .is_some()
-                    || self
-                        .resolve_array_binding_from_expression(&state.tracked_value_expression)
-                        .is_some())
-                && (self.is_named_global_array_binding(name)
-                    || self.backend.global_binding_index(name).is_some()
-                    || self.backend.global_has_implicit_binding(name));
+        let stores_runtime_array_alias = !value_cannot_have_runtime_array_state
+            && matches!(state.tracked_value_expression, Expression::Identifier(_))
+            && (self
+                .runtime_array_binding_name_for_expression(&state.tracked_value_expression)
+                .is_some()
+                || self
+                    .resolve_array_binding_from_expression(&state.tracked_value_expression)
+                    .is_some())
+            && (self.is_named_global_array_binding(name)
+                || self.backend.global_binding_index(name).is_some()
+                || self.backend.global_has_implicit_binding(name));
         trace_step("object_binding:start");
         let object_binding = if stores_bind_call || stores_unresolved_constructor_instance {
             None

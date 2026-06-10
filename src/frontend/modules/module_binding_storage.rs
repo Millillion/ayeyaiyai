@@ -179,9 +179,7 @@ impl<'a> ModuleBindingStorageRewriter<'a> {
             | Statement::Labeled { body, .. } => self.rewrite_statement_list(body),
             Statement::Var { name, value } | Statement::Let { name, value, .. } => {
                 self.rewrite_expression(value)?;
-                if module_root
-                    && let Some(storage_name) = self.storage_binding_for(name)
-                {
+                if module_root && let Some(storage_name) = self.storage_binding_for(name) {
                     *statement = Statement::Assign {
                         name: storage_name,
                         value: value.clone(),

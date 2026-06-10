@@ -10,12 +10,7 @@ impl ModuleLinker {
         names
             .into_iter()
             .enumerate()
-            .map(|(index, name)| {
-                (
-                    name,
-                    format!("__ayy_module_binding_{module_index}_{index}"),
-                )
-            })
+            .map(|(index, name)| (name, format!("__ayy_module_binding_{module_index}_{index}")))
             .collect()
     }
 

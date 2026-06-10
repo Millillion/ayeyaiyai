@@ -93,10 +93,11 @@ impl<'a> FunctionCompiler<'a> {
         right: &Expression,
         op: BinaryOp,
     ) -> DirectResult<bool> {
-        let Some((code_argument, other)) =
-            Self::string_from_char_code_argument(left).map(|argument| (argument, right)).or_else(
-                || Self::string_from_char_code_argument(right).map(|argument| (argument, left)),
-            )
+        let Some((code_argument, other)) = Self::string_from_char_code_argument(left)
+            .map(|argument| (argument, right))
+            .or_else(|| {
+                Self::string_from_char_code_argument(right).map(|argument| (argument, left))
+            })
         else {
             return Ok(false);
         };
