@@ -631,6 +631,10 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         body: &[Statement],
     ) -> Option<Expression> {
+        if let Some(value) = self.resolve_using_scope_terminal_throw_value(body) {
+            return Some(value);
+        }
+
         let mut environment = self.snapshot_static_resolution_environment();
         for statement in body {
             match self
@@ -678,6 +682,19 @@ impl<'a> FunctionCompiler<'a> {
                     return StaticCatchScanOutcome::Unsupported;
                 }
                 let value = self.resolve_static_expression_value_with_state(value, environment);
+                // A self-referencing assignment like `completion = { suppressed:
+                // completion }` must capture the binding's current value, not a
+                // reference that would later resolve to the post-assignment value.
+                let mut referenced_names = HashSet::new();
+                collect_referenced_binding_names_from_expression(&value, &mut referenced_names);
+                let value = if referenced_names.contains(name) {
+                    let Some(previous) = environment.binding(name).cloned() else {
+                        return StaticCatchScanOutcome::Unsupported;
+                    };
+                    Self::substitute_expression_identifier(&value, name, &previous)
+                } else {
+                    value
+                };
                 environment.assign_binding_value(name.clone(), value.clone());
                 let object_binding =
                     self.resolve_object_binding_from_expression_with_state(&value, environment);
@@ -721,6 +738,42 @@ impl<'a> FunctionCompiler<'a> {
                     ),
                 _ => StaticCatchScanOutcome::Unsupported,
             },
+            Statement::Try {
+                body,
+                catch_binding,
+                catch_setup,
+                catch_body,
+            } => {
+                match self.resolve_static_catch_value_from_statements_with_state(body, environment)
+                {
+                    StaticCatchScanOutcome::Continue => StaticCatchScanOutcome::Continue,
+                    StaticCatchScanOutcome::Unsupported => StaticCatchScanOutcome::Unsupported,
+                    StaticCatchScanOutcome::CatchValue(value) => {
+                        if let Some(binding) = catch_binding {
+                            let object_binding = self
+                                .resolve_object_binding_from_expression_with_state(
+                                    &value,
+                                    environment,
+                                );
+                            environment.assign_binding_value(binding.clone(), value);
+                            environment.sync_object_binding(binding, object_binding);
+                        }
+                        let setup_outcome = self
+                            .resolve_static_catch_value_from_statements_with_state(
+                                catch_setup,
+                                environment,
+                            );
+                        match setup_outcome {
+                            StaticCatchScanOutcome::Continue => self
+                                .resolve_static_catch_value_from_statements_with_state(
+                                    catch_body,
+                                    environment,
+                                ),
+                            outcome => outcome,
+                        }
+                    }
+                }
+            }
             _ => StaticCatchScanOutcome::Unsupported,
         }
     }

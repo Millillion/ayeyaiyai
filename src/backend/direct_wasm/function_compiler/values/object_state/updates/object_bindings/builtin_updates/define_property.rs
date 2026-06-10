@@ -611,6 +611,16 @@ impl<'a> FunctionCompiler<'a> {
             has_get,
             has_set,
         };
+        if std::env::var_os("AYY_TRACE_DEFINE_PROPERTY_UPDATE").is_some() {
+            eprintln!(
+                "define_property_merge target={name} property={property:?} existing_descriptor={} is_accessor={} result_has_get={} result_has_set={} result_value={:?}",
+                existing_descriptor.is_some(),
+                descriptor.is_accessor(),
+                descriptor_binding.has_get,
+                descriptor_binding.has_set,
+                descriptor_binding.value,
+            );
+        }
         let updated_existing_local_binding = if let Some(object_binding) = self
             .state
             .speculation

@@ -1739,6 +1739,18 @@ impl<'a> FunctionCompiler<'a> {
                 {
                     effects.push(statement.clone());
                 }
+                // A class declaration with `yield` in a computed key lowers to
+                // a Declaration wrapper whose body holds the Yield statements;
+                // recurse like a Block so the generator can still be modeled.
+                Statement::Declaration { body } => {
+                    self.analyze_simple_generator_statements_with_close_effects(
+                        body,
+                        async_generator,
+                        steps,
+                        effects,
+                        active_close_effects,
+                    )?;
+                }
                 _ => {
                     if trace_analyze {
                         eprintln!("simple_generator_analyze:reject statement={statement:?}");

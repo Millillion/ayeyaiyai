@@ -3133,12 +3133,19 @@ impl<'a> FunctionCompiler<'a> {
             } else {
                 else_expression
             };
-            let selected_value = self
-                .resolve_static_primitive_expression_with_context(
+            // Folding an effectful branch (e.g. the `x = v` arm of a lowered
+            // `x ??= v`) to its value would drop the assignment, so emit the
+            // branch expression itself in that case.
+            let selected_value = if inline_summary_side_effect_free_expression(selected_expression)
+            {
+                self.resolve_static_primitive_expression_with_context(
                     selected_expression,
                     self.current_function_name(),
                 )
-                .unwrap_or_else(|| selected_expression.clone());
+                .unwrap_or_else(|| selected_expression.clone())
+            } else {
+                selected_expression.clone()
+            };
             return self.emit_numeric_expression(&selected_value);
         }
         if trace_conditional {

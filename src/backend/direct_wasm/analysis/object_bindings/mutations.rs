@@ -220,8 +220,42 @@ pub(in crate::backend::direct_wasm) fn object_binding_define_property(
 pub(in crate::backend::direct_wasm) fn object_binding_define_property_descriptor(
     object_binding: &mut ObjectValueBinding,
     property: Expression,
-    descriptor: PropertyDescriptorBinding,
+    mut descriptor: PropertyDescriptorBinding,
 ) {
+    let canonical_property = static_property_name_from_expression(&property)
+        .map(Expression::String)
+        .unwrap_or_else(|| property.clone());
+    // Per ValidateAndApplyPropertyDescriptor, fields absent from the incoming
+    // descriptor retain the current attribute values: a `{set}` redefinition
+    // keeps an existing getter, while a data redefinition drops accessors.
+    if let Some((_, existing)) = object_binding
+        .property_descriptors
+        .iter()
+        .find(|(existing_property, _)| *existing_property == canonical_property)
+    {
+        let introduces_accessor = descriptor.has_get
+            || descriptor.has_set
+            || descriptor.getter.is_some()
+            || descriptor.setter.is_some();
+        let introduces_data = descriptor.value.is_some() || descriptor.writable.is_some();
+        if introduces_accessor && !introduces_data {
+            if !descriptor.has_get && descriptor.getter.is_none() {
+                descriptor.getter = existing.getter.clone();
+                descriptor.has_get = existing.has_get;
+            }
+            if !descriptor.has_set && descriptor.setter.is_none() {
+                descriptor.setter = existing.setter.clone();
+                descriptor.has_set = existing.has_set;
+            }
+        } else if !introduces_accessor && !introduces_data {
+            descriptor.value = existing.value.clone();
+            descriptor.writable = existing.writable;
+            descriptor.getter = existing.getter.clone();
+            descriptor.setter = existing.setter.clone();
+            descriptor.has_get = existing.has_get;
+            descriptor.has_set = existing.has_set;
+        }
+    }
     let value = descriptor.value.clone().unwrap_or(Expression::Undefined);
     object_binding_define_property(
         object_binding,
@@ -229,9 +263,6 @@ pub(in crate::backend::direct_wasm) fn object_binding_define_property_descriptor
         value,
         descriptor.enumerable,
     );
-    let canonical_property = static_property_name_from_expression(&property)
-        .map(Expression::String)
-        .unwrap_or(property);
     if let Some((_, existing_descriptor)) = object_binding
         .property_descriptors
         .iter_mut()
