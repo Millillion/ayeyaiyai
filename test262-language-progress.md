@@ -1,4 +1,4 @@
-1760/23668 (7.44%)
+1794/23668 (7.58%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,7 +14,7 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 435/9337 (4.66%)
+- statements: 469/9337 (5.02%)
 - expressions: 0/11061 (0.00%)
 - types: 0/113 (0.00%)
 - function-code: 0/217 (0.00%)
@@ -1804,39 +1804,39 @@ Sub-category progress
   - [x] test/language/statements/await-using/syntax/await-using-invalid-for-in.js
   - [x] test/language/statements/await-using/syntax/await-using-invalid-objectbindingpattern-after-bindingidentifier.js
   - [x] test/language/statements/await-using/syntax/await-using-invalid-objectbindingpattern.js
-  - [ ] test/language/statements/await-using/syntax/await-using-invalid-switchstatement-caseclause.js
-  - [ ] test/language/statements/await-using/syntax/await-using-invalid-switchstatement-defaultclause.js
-  - [ ] test/language/statements/await-using/syntax/await-using-not-allowed-at-top-level-of-eval.js
-  - [ ] test/language/statements/await-using/syntax/await-using-not-allowed-at-top-level-of-script.js
-  - [ ] test/language/statements/await-using/syntax/await-using-outer-inner-using-bindings.js
-  - [ ] test/language/statements/await-using/syntax/await-using-valid-for-await-using-of-of.js
-  - [ ] test/language/statements/await-using/syntax/await-using.js
-  - [ ] test/language/statements/await-using/syntax/block-scope-syntax-await-using-declarations-mixed-with-without-initializer.js
-  - [ ] test/language/statements/await-using/syntax/block-scope-syntax-await-using-declarations-mixed-without-with-initializer.js
-  - [ ] test/language/statements/await-using/syntax/block-scope-syntax-await-using-declarations-without-initializer.js
-  - [ ] test/language/statements/await-using/syntax/with-initializer-case-expression-statement-list.js
-  - [ ] test/language/statements/await-using/syntax/with-initializer-default-statement-list.js
-  - [ ] test/language/statements/await-using/syntax/with-initializer-do-statement-while-expression.js
-  - [ ] test/language/statements/await-using/syntax/with-initializer-for-statement.js
-  - [ ] test/language/statements/await-using/syntax/with-initializer-if-expression-statement-else-statement.js
-  - [ ] test/language/statements/await-using/syntax/with-initializer-if-expression-statement.js
-  - [ ] test/language/statements/await-using/syntax/with-initializer-label-statement.js
-  - [ ] test/language/statements/await-using/syntax/with-initializer-while-expression-statement.js
-  - [ ] test/language/statements/await-using/syntax/without-initializer-do-statement-while-expression.js
-  - [ ] test/language/statements/await-using/syntax/without-initializer-for-statement.js
-  - [ ] test/language/statements/await-using/syntax/without-initializer-if-expression-statement-else-statement.js
-  - [ ] test/language/statements/await-using/syntax/without-initializer-if-expression-statement.js
-  - [ ] test/language/statements/await-using/syntax/without-initializer-label-statement.js
-  - [ ] test/language/statements/await-using/syntax/without-initializer-while-expression-statement.js
-  - [ ] test/language/statements/await-using/throws-error-as-is-if-only-one-error-during-disposal.js
-  - [ ] test/language/statements/await-using/throws-if-initializer-Symbol.asyncDispose-property-is-null.js
-  - [ ] test/language/statements/await-using/throws-if-initializer-Symbol.asyncDispose-property-is-undefined.js
-  - [ ] test/language/statements/await-using/throws-if-initializer-Symbol.asyncDispose-property-not-callable.js
-  - [ ] test/language/statements/await-using/throws-if-initializer-Symbol.dispose-property-is-null.js
-  - [ ] test/language/statements/await-using/throws-if-initializer-Symbol.dispose-property-is-undefined.js
-  - [ ] test/language/statements/await-using/throws-if-initializer-Symbol.dispose-property-not-callable.js
-  - [ ] test/language/statements/await-using/throws-if-initializer-missing-both-Symbol.asyncDispose-and-Symbol.dispose.js
-  - [ ] test/language/statements/await-using/throws-if-initializer-not-object.js
+  - [x] test/language/statements/await-using/syntax/await-using-invalid-switchstatement-caseclause.js
+  - [x] test/language/statements/await-using/syntax/await-using-invalid-switchstatement-defaultclause.js
+  - [x] test/language/statements/await-using/syntax/await-using-not-allowed-at-top-level-of-eval.js
+  - [x] test/language/statements/await-using/syntax/await-using-not-allowed-at-top-level-of-script.js
+  - [x] test/language/statements/await-using/syntax/await-using-outer-inner-using-bindings.js
+  - [x] test/language/statements/await-using/syntax/await-using-valid-for-await-using-of-of.js
+  - [x] test/language/statements/await-using/syntax/await-using.js
+  - [x] test/language/statements/await-using/syntax/block-scope-syntax-await-using-declarations-mixed-with-without-initializer.js
+  - [x] test/language/statements/await-using/syntax/block-scope-syntax-await-using-declarations-mixed-without-with-initializer.js
+  - [x] test/language/statements/await-using/syntax/block-scope-syntax-await-using-declarations-without-initializer.js
+  - [x] test/language/statements/await-using/syntax/with-initializer-case-expression-statement-list.js
+  - [x] test/language/statements/await-using/syntax/with-initializer-default-statement-list.js
+  - [x] test/language/statements/await-using/syntax/with-initializer-do-statement-while-expression.js
+  - [x] test/language/statements/await-using/syntax/with-initializer-for-statement.js
+  - [x] test/language/statements/await-using/syntax/with-initializer-if-expression-statement-else-statement.js
+  - [x] test/language/statements/await-using/syntax/with-initializer-if-expression-statement.js
+  - [x] test/language/statements/await-using/syntax/with-initializer-label-statement.js
+  - [x] test/language/statements/await-using/syntax/with-initializer-while-expression-statement.js
+  - [x] test/language/statements/await-using/syntax/without-initializer-do-statement-while-expression.js
+  - [x] test/language/statements/await-using/syntax/without-initializer-for-statement.js
+  - [x] test/language/statements/await-using/syntax/without-initializer-if-expression-statement-else-statement.js
+  - [x] test/language/statements/await-using/syntax/without-initializer-if-expression-statement.js
+  - [x] test/language/statements/await-using/syntax/without-initializer-label-statement.js
+  - [x] test/language/statements/await-using/syntax/without-initializer-while-expression-statement.js
+  - [x] test/language/statements/await-using/throws-error-as-is-if-only-one-error-during-disposal.js
+  - [x] test/language/statements/await-using/throws-if-initializer-Symbol.asyncDispose-property-is-null.js
+  - [x] test/language/statements/await-using/throws-if-initializer-Symbol.asyncDispose-property-is-undefined.js
+  - [x] test/language/statements/await-using/throws-if-initializer-Symbol.asyncDispose-property-not-callable.js
+  - [x] test/language/statements/await-using/throws-if-initializer-Symbol.dispose-property-is-null.js
+  - [x] test/language/statements/await-using/throws-if-initializer-Symbol.dispose-property-is-undefined.js
+  - [x] test/language/statements/await-using/throws-if-initializer-Symbol.dispose-property-not-callable.js
+  - [x] test/language/statements/await-using/throws-if-initializer-missing-both-Symbol.asyncDispose-and-Symbol.dispose.js
+  - [x] test/language/statements/await-using/throws-if-initializer-not-object.js
   - [ ] test/language/statements/await-using/throws-suppressederror-if-multiple-errors-during-disposal.js
   - [ ] test/language/statements/block/12.1-1.js
   - [ ] test/language/statements/block/12.1-2.js
@@ -10271,7 +10271,7 @@ Sub-category progress
   - [ ] test/language/statements/using/syntax/using-allows-multiple-bindings.js
   - [ ] test/language/statements/using/syntax/using-declaring-let-split-across-two-lines.js
   - [ ] test/language/statements/using/syntax/using-for-statement.js
-  - [ ] test/language/statements/using/syntax/using-for-using-of-of.js
+  - [x] test/language/statements/using/syntax/using-for-using-of-of.js
   - [ ] test/language/statements/using/syntax/using-invalid-arraybindingpattern-after-bindingidentifier.js
   - [ ] test/language/statements/using/syntax/using-invalid-arraybindingpattern-does-not-break-element-access.js
   - [ ] test/language/statements/using/syntax/using-invalid-arraybindingpattern.js

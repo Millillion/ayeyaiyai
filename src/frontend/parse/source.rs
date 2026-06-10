@@ -40,12 +40,32 @@ pub(super) fn validate_script_source_with_strict(source: &str, force_strict: boo
 
 pub(super) fn script_source_has_direct_using_declaration(source: &str) -> bool {
     let file = source_file(FileName::Custom("eval.js".into()), source);
-    parse_script_unvalidated(&file).is_ok_and(|script| {
-        script
+    match parse_script_unvalidated(&file) {
+        Ok(script) => script
             .body
             .iter()
-            .any(|statement| matches!(statement, Stmt::Decl(Decl::Using(_))))
-    })
+            .any(|statement| matches!(statement, Stmt::Decl(Decl::Using(_)))),
+        // `await using x = ...;` fails to parse with the script goal, so probe
+        // for it inside an async wrapper where `await using` is parseable.
+        Err(_) => script_source_has_direct_await_using_declaration(source),
+    }
+}
+
+fn script_source_has_direct_await_using_declaration(source: &str) -> bool {
+    let wrapped = format!("async function __ayy_await_using_probe__() {{\n{source}\n}}");
+    let file = source_file(FileName::Custom("eval.js".into()), &wrapped);
+    let Ok(script) = parse_script_unvalidated(&file) else {
+        return false;
+    };
+    let [Stmt::Decl(Decl::Fn(function))] = script.body.as_slice() else {
+        return false;
+    };
+    let Some(body) = &function.function.body else {
+        return false;
+    };
+    body.stmts
+        .iter()
+        .any(|statement| matches!(statement, Stmt::Decl(Decl::Using(_))))
 }
 
 pub(crate) fn parse_module_file(path: &Path) -> Result<(Module, String)> {
@@ -917,6 +937,44 @@ fn normalize_for_statement_using_declarations(source: Cow<'_, str>) -> Cow<'_, s
                     index += 1;
                     continue;
                 };
+                // `for (await using of of EXPR) BODY`: swc rejects a `using`
+                // binding named `of`, so canonicalize to a per-iteration
+                // block-scoped declaration with an equivalent disposal point.
+                if head_using_start != head_start
+                    && let Some(binding_start) =
+                        skip_whitespace_and_comments(bytes, head_using_start + "using".len())
+                    && identifier_at(&source, binding_start, "of")
+                    && let Some(of_keyword_start) =
+                        skip_whitespace_and_comments(bytes, binding_start + "of".len())
+                    && identifier_at(&source, of_keyword_start, "of")
+                    && let Some(iterable_start) =
+                        skip_whitespace_and_comments(bytes, of_keyword_start + "of".len())
+                    && iterable_start < close_paren
+                {
+                    let Some(body_start) = skip_whitespace_and_comments(bytes, close_paren + 1)
+                    else {
+                        index = close_paren + 1;
+                        continue;
+                    };
+                    let Some(body_end) = (if bytes.get(body_start) == Some(&b'{') {
+                        find_matching_delimiter(bytes, body_start, b'{', b'}').map(|end| end + 1)
+                    } else {
+                        find_single_statement_end(bytes, body_start)
+                    }) else {
+                        index = close_paren + 1;
+                        continue;
+                    };
+
+                    output.push_str(&source[last_copied..index]);
+                    output.push_str("for (const __ayy_for_await_using_of of ");
+                    output.push_str(&source[iterable_start..close_paren]);
+                    output.push_str(") { await using of = __ayy_for_await_using_of;");
+                    output.push_str(&source[close_paren + 1..body_end]);
+                    output.push_str(" }");
+                    last_copied = body_end;
+                    index = body_end;
+                    continue;
+                }
                 let Some(first_semicolon) =
                     find_top_level_semicolon(bytes, head_using_start, close_paren)
                 else {
