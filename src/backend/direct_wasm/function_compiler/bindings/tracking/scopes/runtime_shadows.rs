@@ -2919,9 +2919,9 @@ impl<'a> FunctionCompiler<'a> {
                 Self::runtime_object_property_shadow_key(&property)
             );
             self.ensure_implicit_global_binding(&shadow_binding_name);
-            self.ensure_implicit_global_binding(
-                &Self::runtime_object_property_deleted_shadow_name(target_owner, &property),
-            );
+            // The deleted marker is created on demand by delete emission;
+            // ensuring it here made every synced property look deletable,
+            // poisoning static descriptor and kind resolution.
             let materialized_value =
                 self.reference_preserving_static_value_expression(&fallback_value);
             if std::env::var_os("AYY_TRACE_RUNTIME_SHADOWS").is_some() {

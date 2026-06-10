@@ -53,12 +53,26 @@ impl<'a> FunctionCompiler<'a> {
                     });
                 }
             }
+            // Every constructible function (and generator) has an own
+            // `prototype`, even when no prototype object binding was tracked;
+            // class constructors have a non-writable one.
+            let is_class_constructor = matches!(
+                &binding,
+                LocalFunctionBinding::User(function_name)
+                    if function_name.starts_with("__ayy_class_ctor_")
+            );
             let has_prototype = match &binding {
                 LocalFunctionBinding::User(function_name)
                 | LocalFunctionBinding::Builtin(function_name) => self
                     .resolve_function_prototype_object_binding(function_name)
                     .is_some(),
-            };
+            } || matches!(
+                &binding,
+                LocalFunctionBinding::User(function_name)
+                    if self.user_function(function_name).is_some_and(|user_function| {
+                        user_function.is_constructible() || user_function.is_generator()
+                    })
+            );
             if has_prototype {
                 return Some(PropertyDescriptorBinding {
                     value: Some(Expression::Member {
@@ -67,7 +81,7 @@ impl<'a> FunctionCompiler<'a> {
                     }),
                     configurable: false,
                     enumerable: false,
-                    writable: Some(true),
+                    writable: Some(!is_class_constructor),
                     getter: None,
                     setter: None,
                     has_get: false,
