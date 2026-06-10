@@ -1,4 +1,4 @@
-4219/23668 (17.83%)
+4286/23668 (18.11%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,7 +14,7 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 2880/9337 (30.85%)
+- statements: 2947/9337 (31.56%)
 - expressions: 14/11061 (0.13%)
 - types: 0/113 (0.00%)
 - function-code: 0/217 (0.00%)
@@ -4439,19 +4439,19 @@ Sub-category progress
   - [ ] test/language/statements/class/elements/after-same-line-static-async-gen-rs-static-privatename-identifier-initializer-alt.js
   - [ ] test/language/statements/class/elements/after-same-line-static-async-gen-rs-static-privatename-identifier-initializer.js
   - [ ] test/language/statements/class/elements/after-same-line-static-async-gen-rs-static-privatename-identifier.js
-  - [ ] test/language/statements/class/elements/after-same-line-static-async-gen-static-private-fields.js
-  - [ ] test/language/statements/class/elements/after-same-line-static-async-gen-static-private-methods-with-fields.js
-  - [ ] test/language/statements/class/elements/after-same-line-static-async-gen-static-private-methods.js
-  - [ ] test/language/statements/class/elements/after-same-line-static-async-gen-string-literal-names.js
-  - [ ] test/language/statements/class/elements/after-same-line-static-async-method-computed-names.js
-  - [ ] test/language/statements/class/elements/after-same-line-static-async-method-computed-symbol-names.js
-  - [ ] test/language/statements/class/elements/after-same-line-static-async-method-grammar-privatename-identifier-semantics-stringvalue.js
-  - [ ] test/language/statements/class/elements/after-same-line-static-async-method-literal-names-asi.js
-  - [ ] test/language/statements/class/elements/after-same-line-static-async-method-literal-names.js
-  - [ ] test/language/statements/class/elements/after-same-line-static-async-method-private-field-usage.js
-  - [ ] test/language/statements/class/elements/after-same-line-static-async-method-private-method-getter-usage.js
-  - [ ] test/language/statements/class/elements/after-same-line-static-async-method-private-method-usage.js
-  - [ ] test/language/statements/class/elements/after-same-line-static-async-method-private-names.js
+  - [x] test/language/statements/class/elements/after-same-line-static-async-gen-static-private-fields.js
+  - [x] test/language/statements/class/elements/after-same-line-static-async-gen-static-private-methods-with-fields.js
+  - [x] test/language/statements/class/elements/after-same-line-static-async-gen-static-private-methods.js
+  - [x] test/language/statements/class/elements/after-same-line-static-async-gen-string-literal-names.js
+  - [x] test/language/statements/class/elements/after-same-line-static-async-method-computed-names.js
+  - [x] test/language/statements/class/elements/after-same-line-static-async-method-computed-symbol-names.js
+  - [x] test/language/statements/class/elements/after-same-line-static-async-method-grammar-privatename-identifier-semantics-stringvalue.js
+  - [x] test/language/statements/class/elements/after-same-line-static-async-method-literal-names-asi.js
+  - [x] test/language/statements/class/elements/after-same-line-static-async-method-literal-names.js
+  - [x] test/language/statements/class/elements/after-same-line-static-async-method-private-field-usage.js
+  - [x] test/language/statements/class/elements/after-same-line-static-async-method-private-method-getter-usage.js
+  - [x] test/language/statements/class/elements/after-same-line-static-async-method-private-method-usage.js
+  - [x] test/language/statements/class/elements/after-same-line-static-async-method-private-names.js
   - [ ] test/language/statements/class/elements/after-same-line-static-async-method-rs-field-identifier-initializer.js
   - [ ] test/language/statements/class/elements/after-same-line-static-async-method-rs-field-identifier.js
   - [ ] test/language/statements/class/elements/after-same-line-static-async-method-rs-private-getter-alt.js
@@ -4479,19 +4479,19 @@ Sub-category progress
   - [ ] test/language/statements/class/elements/after-same-line-static-async-method-rs-static-privatename-identifier-initializer-alt.js
   - [ ] test/language/statements/class/elements/after-same-line-static-async-method-rs-static-privatename-identifier-initializer.js
   - [ ] test/language/statements/class/elements/after-same-line-static-async-method-rs-static-privatename-identifier.js
-  - [ ] test/language/statements/class/elements/after-same-line-static-async-method-static-private-fields.js
-  - [ ] test/language/statements/class/elements/after-same-line-static-async-method-static-private-methods-with-fields.js
-  - [ ] test/language/statements/class/elements/after-same-line-static-async-method-static-private-methods.js
-  - [ ] test/language/statements/class/elements/after-same-line-static-async-method-string-literal-names.js
-  - [ ] test/language/statements/class/elements/after-same-line-static-gen-computed-names.js
-  - [ ] test/language/statements/class/elements/after-same-line-static-gen-computed-symbol-names.js
-  - [ ] test/language/statements/class/elements/after-same-line-static-gen-grammar-privatename-identifier-semantics-stringvalue.js
-  - [ ] test/language/statements/class/elements/after-same-line-static-gen-literal-names-asi.js
-  - [ ] test/language/statements/class/elements/after-same-line-static-gen-literal-names.js
-  - [ ] test/language/statements/class/elements/after-same-line-static-gen-private-field-usage.js
-  - [ ] test/language/statements/class/elements/after-same-line-static-gen-private-method-getter-usage.js
-  - [ ] test/language/statements/class/elements/after-same-line-static-gen-private-method-usage.js
-  - [ ] test/language/statements/class/elements/after-same-line-static-gen-private-names.js
+  - [x] test/language/statements/class/elements/after-same-line-static-async-method-static-private-fields.js
+  - [x] test/language/statements/class/elements/after-same-line-static-async-method-static-private-methods-with-fields.js
+  - [x] test/language/statements/class/elements/after-same-line-static-async-method-static-private-methods.js
+  - [x] test/language/statements/class/elements/after-same-line-static-async-method-string-literal-names.js
+  - [x] test/language/statements/class/elements/after-same-line-static-gen-computed-names.js
+  - [x] test/language/statements/class/elements/after-same-line-static-gen-computed-symbol-names.js
+  - [x] test/language/statements/class/elements/after-same-line-static-gen-grammar-privatename-identifier-semantics-stringvalue.js
+  - [x] test/language/statements/class/elements/after-same-line-static-gen-literal-names-asi.js
+  - [x] test/language/statements/class/elements/after-same-line-static-gen-literal-names.js
+  - [x] test/language/statements/class/elements/after-same-line-static-gen-private-field-usage.js
+  - [x] test/language/statements/class/elements/after-same-line-static-gen-private-method-getter-usage.js
+  - [x] test/language/statements/class/elements/after-same-line-static-gen-private-method-usage.js
+  - [x] test/language/statements/class/elements/after-same-line-static-gen-private-names.js
   - [ ] test/language/statements/class/elements/after-same-line-static-gen-rs-field-identifier-initializer.js
   - [ ] test/language/statements/class/elements/after-same-line-static-gen-rs-field-identifier.js
   - [ ] test/language/statements/class/elements/after-same-line-static-gen-rs-private-getter-alt.js
@@ -4519,19 +4519,19 @@ Sub-category progress
   - [ ] test/language/statements/class/elements/after-same-line-static-gen-rs-static-privatename-identifier-initializer-alt.js
   - [ ] test/language/statements/class/elements/after-same-line-static-gen-rs-static-privatename-identifier-initializer.js
   - [ ] test/language/statements/class/elements/after-same-line-static-gen-rs-static-privatename-identifier.js
-  - [ ] test/language/statements/class/elements/after-same-line-static-gen-static-private-fields.js
-  - [ ] test/language/statements/class/elements/after-same-line-static-gen-static-private-methods-with-fields.js
-  - [ ] test/language/statements/class/elements/after-same-line-static-gen-static-private-methods.js
-  - [ ] test/language/statements/class/elements/after-same-line-static-gen-string-literal-names.js
-  - [ ] test/language/statements/class/elements/after-same-line-static-method-computed-names.js
-  - [ ] test/language/statements/class/elements/after-same-line-static-method-computed-symbol-names.js
-  - [ ] test/language/statements/class/elements/after-same-line-static-method-grammar-privatename-identifier-semantics-stringvalue.js
-  - [ ] test/language/statements/class/elements/after-same-line-static-method-literal-names-asi.js
-  - [ ] test/language/statements/class/elements/after-same-line-static-method-literal-names.js
-  - [ ] test/language/statements/class/elements/after-same-line-static-method-private-field-usage.js
-  - [ ] test/language/statements/class/elements/after-same-line-static-method-private-method-getter-usage.js
-  - [ ] test/language/statements/class/elements/after-same-line-static-method-private-method-usage.js
-  - [ ] test/language/statements/class/elements/after-same-line-static-method-private-names.js
+  - [x] test/language/statements/class/elements/after-same-line-static-gen-static-private-fields.js
+  - [x] test/language/statements/class/elements/after-same-line-static-gen-static-private-methods-with-fields.js
+  - [x] test/language/statements/class/elements/after-same-line-static-gen-static-private-methods.js
+  - [x] test/language/statements/class/elements/after-same-line-static-gen-string-literal-names.js
+  - [x] test/language/statements/class/elements/after-same-line-static-method-computed-names.js
+  - [x] test/language/statements/class/elements/after-same-line-static-method-computed-symbol-names.js
+  - [x] test/language/statements/class/elements/after-same-line-static-method-grammar-privatename-identifier-semantics-stringvalue.js
+  - [x] test/language/statements/class/elements/after-same-line-static-method-literal-names-asi.js
+  - [x] test/language/statements/class/elements/after-same-line-static-method-literal-names.js
+  - [x] test/language/statements/class/elements/after-same-line-static-method-private-field-usage.js
+  - [x] test/language/statements/class/elements/after-same-line-static-method-private-method-getter-usage.js
+  - [x] test/language/statements/class/elements/after-same-line-static-method-private-method-usage.js
+  - [x] test/language/statements/class/elements/after-same-line-static-method-private-names.js
   - [ ] test/language/statements/class/elements/after-same-line-static-method-rs-field-identifier-initializer.js
   - [ ] test/language/statements/class/elements/after-same-line-static-method-rs-field-identifier.js
   - [ ] test/language/statements/class/elements/after-same-line-static-method-rs-private-getter-alt.js
@@ -4559,38 +4559,38 @@ Sub-category progress
   - [ ] test/language/statements/class/elements/after-same-line-static-method-rs-static-privatename-identifier-initializer-alt.js
   - [ ] test/language/statements/class/elements/after-same-line-static-method-rs-static-privatename-identifier-initializer.js
   - [ ] test/language/statements/class/elements/after-same-line-static-method-rs-static-privatename-identifier.js
-  - [ ] test/language/statements/class/elements/after-same-line-static-method-static-private-fields.js
-  - [ ] test/language/statements/class/elements/after-same-line-static-method-static-private-methods-with-fields.js
-  - [ ] test/language/statements/class/elements/after-same-line-static-method-static-private-methods.js
-  - [ ] test/language/statements/class/elements/after-same-line-static-method-string-literal-names.js
+  - [x] test/language/statements/class/elements/after-same-line-static-method-static-private-fields.js
+  - [x] test/language/statements/class/elements/after-same-line-static-method-static-private-methods-with-fields.js
+  - [x] test/language/statements/class/elements/after-same-line-static-method-static-private-methods.js
+  - [x] test/language/statements/class/elements/after-same-line-static-method-string-literal-names.js
   - [ ] test/language/statements/class/elements/arrow-body-derived-cls-direct-eval-contains-superproperty-1.js
   - [ ] test/language/statements/class/elements/arrow-body-derived-cls-direct-eval-contains-superproperty-2.js
-  - [ ] test/language/statements/class/elements/arrow-body-derived-cls-direct-eval-err-contains-supercall-1.js
-  - [ ] test/language/statements/class/elements/arrow-body-derived-cls-direct-eval-err-contains-supercall-2.js
-  - [ ] test/language/statements/class/elements/arrow-body-derived-cls-direct-eval-err-contains-supercall.js
-  - [ ] test/language/statements/class/elements/arrow-body-derived-cls-indirect-eval-contains-superproperty-1.js
-  - [ ] test/language/statements/class/elements/arrow-body-derived-cls-indirect-eval-contains-superproperty-2.js
-  - [ ] test/language/statements/class/elements/arrow-body-derived-cls-indirect-eval-err-contains-supercall-1.js
-  - [ ] test/language/statements/class/elements/arrow-body-derived-cls-indirect-eval-err-contains-supercall-2.js
-  - [ ] test/language/statements/class/elements/arrow-body-derived-cls-indirect-eval-err-contains-supercall.js
-  - [ ] test/language/statements/class/elements/arrow-body-direct-eval-err-contains-arguments.js
-  - [ ] test/language/statements/class/elements/arrow-body-direct-eval-err-contains-newtarget.js
-  - [ ] test/language/statements/class/elements/arrow-body-indirect-eval-err-contains-newtarget.js
+  - [x] test/language/statements/class/elements/arrow-body-derived-cls-direct-eval-err-contains-supercall-1.js
+  - [x] test/language/statements/class/elements/arrow-body-derived-cls-direct-eval-err-contains-supercall-2.js
+  - [x] test/language/statements/class/elements/arrow-body-derived-cls-direct-eval-err-contains-supercall.js
+  - [x] test/language/statements/class/elements/arrow-body-derived-cls-indirect-eval-contains-superproperty-1.js
+  - [x] test/language/statements/class/elements/arrow-body-derived-cls-indirect-eval-contains-superproperty-2.js
+  - [x] test/language/statements/class/elements/arrow-body-derived-cls-indirect-eval-err-contains-supercall-1.js
+  - [x] test/language/statements/class/elements/arrow-body-derived-cls-indirect-eval-err-contains-supercall-2.js
+  - [x] test/language/statements/class/elements/arrow-body-derived-cls-indirect-eval-err-contains-supercall.js
+  - [x] test/language/statements/class/elements/arrow-body-direct-eval-err-contains-arguments.js
+  - [x] test/language/statements/class/elements/arrow-body-direct-eval-err-contains-newtarget.js
+  - [x] test/language/statements/class/elements/arrow-body-indirect-eval-err-contains-newtarget.js
   - [ ] test/language/statements/class/elements/arrow-body-private-derived-cls-direct-eval-contains-superproperty-1.js
   - [ ] test/language/statements/class/elements/arrow-body-private-derived-cls-direct-eval-contains-superproperty-2.js
-  - [ ] test/language/statements/class/elements/arrow-body-private-derived-cls-direct-eval-err-contains-supercall-1.js
-  - [ ] test/language/statements/class/elements/arrow-body-private-derived-cls-direct-eval-err-contains-supercall-2.js
-  - [ ] test/language/statements/class/elements/arrow-body-private-derived-cls-direct-eval-err-contains-supercall.js
-  - [ ] test/language/statements/class/elements/arrow-body-private-derived-cls-indirect-eval-contains-superproperty-1.js
-  - [ ] test/language/statements/class/elements/arrow-body-private-derived-cls-indirect-eval-contains-superproperty-2.js
-  - [ ] test/language/statements/class/elements/arrow-body-private-derived-cls-indirect-eval-err-contains-supercall-1.js
-  - [ ] test/language/statements/class/elements/arrow-body-private-derived-cls-indirect-eval-err-contains-supercall-2.js
-  - [ ] test/language/statements/class/elements/arrow-body-private-derived-cls-indirect-eval-err-contains-supercall.js
-  - [ ] test/language/statements/class/elements/arrow-body-private-direct-eval-err-contains-arguments.js
-  - [ ] test/language/statements/class/elements/arrow-body-private-direct-eval-err-contains-newtarget.js
-  - [ ] test/language/statements/class/elements/arrow-body-private-indirect-eval-err-contains-newtarget.js
-  - [ ] test/language/statements/class/elements/arrow-fnc-init-err-contains-arguments.js
-  - [ ] test/language/statements/class/elements/arrow-fnc-init-err-contains-super.js
+  - [x] test/language/statements/class/elements/arrow-body-private-derived-cls-direct-eval-err-contains-supercall-1.js
+  - [x] test/language/statements/class/elements/arrow-body-private-derived-cls-direct-eval-err-contains-supercall-2.js
+  - [x] test/language/statements/class/elements/arrow-body-private-derived-cls-direct-eval-err-contains-supercall.js
+  - [x] test/language/statements/class/elements/arrow-body-private-derived-cls-indirect-eval-contains-superproperty-1.js
+  - [x] test/language/statements/class/elements/arrow-body-private-derived-cls-indirect-eval-contains-superproperty-2.js
+  - [x] test/language/statements/class/elements/arrow-body-private-derived-cls-indirect-eval-err-contains-supercall-1.js
+  - [x] test/language/statements/class/elements/arrow-body-private-derived-cls-indirect-eval-err-contains-supercall-2.js
+  - [x] test/language/statements/class/elements/arrow-body-private-derived-cls-indirect-eval-err-contains-supercall.js
+  - [x] test/language/statements/class/elements/arrow-body-private-direct-eval-err-contains-arguments.js
+  - [x] test/language/statements/class/elements/arrow-body-private-direct-eval-err-contains-newtarget.js
+  - [x] test/language/statements/class/elements/arrow-body-private-indirect-eval-err-contains-newtarget.js
+  - [x] test/language/statements/class/elements/arrow-fnc-init-err-contains-arguments.js
+  - [x] test/language/statements/class/elements/arrow-fnc-init-err-contains-super.js
   - [ ] test/language/statements/class/elements/async-gen-private-method/await-as-binding-identifier-escaped.js
   - [ ] test/language/statements/class/elements/async-gen-private-method/await-as-binding-identifier.js
   - [ ] test/language/statements/class/elements/async-gen-private-method/await-as-identifier-reference-escaped.js
