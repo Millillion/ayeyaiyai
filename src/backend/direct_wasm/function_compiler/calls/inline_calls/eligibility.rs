@@ -1066,6 +1066,15 @@ impl<'a> FunctionCompiler<'a> {
                 {
                     return false;
                 }
+                // Object.prototype.hasOwnProperty cannot reach private state;
+                // an unresolvable receiver only matters if the program defines
+                // its own hasOwnProperty function the call could land on.
+                if matches!(property.as_ref(), Expression::String(name) if name == "hasOwnProperty")
+                    && shallow_binding.is_none()
+                    && !self.program_defines_user_has_own_property()
+                {
+                    return false;
+                }
                 shallow_binding.or_else(|| {
                     self.resolve_syntactic_builtin_member_function_binding(object, property)
                 })
@@ -1081,6 +1090,14 @@ impl<'a> FunctionCompiler<'a> {
             Some(LocalFunctionBinding::Builtin(_)) => false,
             None => matches!(callee, Expression::Member { .. }),
         }
+    }
+
+    fn program_defines_user_has_own_property(&self) -> bool {
+        self.user_functions().into_iter().any(|function| {
+            self.resolve_user_function_display_name(&function.name)
+                .as_deref()
+                == Some("hasOwnProperty")
+        })
     }
 
     fn private_access_binding_matches_identifier(binding: &str, identifier: &str) -> bool {
