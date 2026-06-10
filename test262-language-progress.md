@@ -1,4 +1,4 @@
-20518/23668 (86.69%)
+20690/23668 (87.42%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,8 +14,8 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 7985/9337 (85.52%)
-- expressions: 9463/11061 (85.55%)
+- statements: 8003/9337 (85.71%)
+- expressions: 9617/11061 (86.95%)
 - types: 103/113 (91.15%)
 - function-code: 204/217 (94.01%)
 - global-code: 41/42 (97.62%)
@@ -3414,10 +3414,10 @@ Sub-category progress
   - [x] test/language/statements/class/dstr/gen-meth-static-obj-ptrn-rest-getter.js
   - [x] test/language/statements/class/dstr/gen-meth-static-obj-ptrn-rest-skip-non-enumerable.js
   - [x] test/language/statements/class/dstr/gen-meth-static-obj-ptrn-rest-val-obj.js
-  - [ ] test/language/statements/class/dstr/meth-ary-init-iter-close.js
+  - [x] test/language/statements/class/dstr/meth-ary-init-iter-close.js
   - [x] test/language/statements/class/dstr/meth-ary-init-iter-get-err-array-prototype.js
   - [x] test/language/statements/class/dstr/meth-ary-init-iter-get-err.js
-  - [ ] test/language/statements/class/dstr/meth-ary-init-iter-no-close.js
+  - [x] test/language/statements/class/dstr/meth-ary-init-iter-no-close.js
   - [x] test/language/statements/class/dstr/meth-ary-name-iter-val.js
   - [x] test/language/statements/class/dstr/meth-ary-ptrn-elem-ary-elem-init.js
   - [x] test/language/statements/class/dstr/meth-ary-ptrn-elem-ary-elem-iter.js
@@ -3474,7 +3474,7 @@ Sub-category progress
   - [x] test/language/statements/class/dstr/meth-ary-ptrn-rest-not-final-obj.js
   - [x] test/language/statements/class/dstr/meth-ary-ptrn-rest-obj-id.js
   - [x] test/language/statements/class/dstr/meth-ary-ptrn-rest-obj-prop-id.js
-  - [ ] test/language/statements/class/dstr/meth-dflt-ary-init-iter-close.js
+  - [x] test/language/statements/class/dstr/meth-dflt-ary-init-iter-close.js
   - [ ] test/language/statements/class/dstr/meth-dflt-ary-init-iter-get-err-array-prototype.js
   - [x] test/language/statements/class/dstr/meth-dflt-ary-init-iter-get-err.js
   - [x] test/language/statements/class/dstr/meth-dflt-ary-init-iter-no-close.js
@@ -3524,7 +3524,7 @@ Sub-category progress
   - [ ] test/language/statements/class/dstr/meth-dflt-ary-ptrn-rest-id-elision.js
   - [x] test/language/statements/class/dstr/meth-dflt-ary-ptrn-rest-id-exhausted.js
   - [x] test/language/statements/class/dstr/meth-dflt-ary-ptrn-rest-id-iter-step-err.js
-  - [ ] test/language/statements/class/dstr/meth-dflt-ary-ptrn-rest-id-iter-val-err.js
+  - [x] test/language/statements/class/dstr/meth-dflt-ary-ptrn-rest-id-iter-val-err.js
   - [x] test/language/statements/class/dstr/meth-dflt-ary-ptrn-rest-id.js
   - [x] test/language/statements/class/dstr/meth-dflt-ary-ptrn-rest-init-ary.js
   - [x] test/language/statements/class/dstr/meth-dflt-ary-ptrn-rest-init-id.js
@@ -3597,13 +3597,13 @@ Sub-category progress
   - [x] test/language/statements/class/dstr/meth-obj-ptrn-prop-obj-value-null.js
   - [x] test/language/statements/class/dstr/meth-obj-ptrn-prop-obj-value-undef.js
   - [x] test/language/statements/class/dstr/meth-obj-ptrn-prop-obj.js
-  - [ ] test/language/statements/class/dstr/meth-obj-ptrn-rest-getter.js
+  - [x] test/language/statements/class/dstr/meth-obj-ptrn-rest-getter.js
   - [x] test/language/statements/class/dstr/meth-obj-ptrn-rest-skip-non-enumerable.js
   - [x] test/language/statements/class/dstr/meth-obj-ptrn-rest-val-obj.js
-  - [ ] test/language/statements/class/dstr/meth-static-ary-init-iter-close.js
+  - [x] test/language/statements/class/dstr/meth-static-ary-init-iter-close.js
   - [x] test/language/statements/class/dstr/meth-static-ary-init-iter-get-err-array-prototype.js
   - [x] test/language/statements/class/dstr/meth-static-ary-init-iter-get-err.js
-  - [ ] test/language/statements/class/dstr/meth-static-ary-init-iter-no-close.js
+  - [x] test/language/statements/class/dstr/meth-static-ary-init-iter-no-close.js
   - [x] test/language/statements/class/dstr/meth-static-ary-name-iter-val.js
   - [x] test/language/statements/class/dstr/meth-static-ary-ptrn-elem-ary-elem-init.js
   - [x] test/language/statements/class/dstr/meth-static-ary-ptrn-elem-ary-elem-iter.js
@@ -3660,7 +3660,7 @@ Sub-category progress
   - [x] test/language/statements/class/dstr/meth-static-ary-ptrn-rest-not-final-obj.js
   - [x] test/language/statements/class/dstr/meth-static-ary-ptrn-rest-obj-id.js
   - [x] test/language/statements/class/dstr/meth-static-ary-ptrn-rest-obj-prop-id.js
-  - [ ] test/language/statements/class/dstr/meth-static-dflt-ary-init-iter-close.js
+  - [x] test/language/statements/class/dstr/meth-static-dflt-ary-init-iter-close.js
   - [ ] test/language/statements/class/dstr/meth-static-dflt-ary-init-iter-get-err-array-prototype.js
   - [x] test/language/statements/class/dstr/meth-static-dflt-ary-init-iter-get-err.js
   - [x] test/language/statements/class/dstr/meth-static-dflt-ary-init-iter-no-close.js
@@ -3710,7 +3710,7 @@ Sub-category progress
   - [ ] test/language/statements/class/dstr/meth-static-dflt-ary-ptrn-rest-id-elision.js
   - [x] test/language/statements/class/dstr/meth-static-dflt-ary-ptrn-rest-id-exhausted.js
   - [x] test/language/statements/class/dstr/meth-static-dflt-ary-ptrn-rest-id-iter-step-err.js
-  - [ ] test/language/statements/class/dstr/meth-static-dflt-ary-ptrn-rest-id-iter-val-err.js
+  - [x] test/language/statements/class/dstr/meth-static-dflt-ary-ptrn-rest-id-iter-val-err.js
   - [x] test/language/statements/class/dstr/meth-static-dflt-ary-ptrn-rest-id.js
   - [x] test/language/statements/class/dstr/meth-static-dflt-ary-ptrn-rest-init-ary.js
   - [x] test/language/statements/class/dstr/meth-static-dflt-ary-ptrn-rest-init-id.js
@@ -3783,7 +3783,7 @@ Sub-category progress
   - [x] test/language/statements/class/dstr/meth-static-obj-ptrn-prop-obj-value-null.js
   - [x] test/language/statements/class/dstr/meth-static-obj-ptrn-prop-obj-value-undef.js
   - [x] test/language/statements/class/dstr/meth-static-obj-ptrn-prop-obj.js
-  - [ ] test/language/statements/class/dstr/meth-static-obj-ptrn-rest-getter.js
+  - [x] test/language/statements/class/dstr/meth-static-obj-ptrn-rest-getter.js
   - [x] test/language/statements/class/dstr/meth-static-obj-ptrn-rest-skip-non-enumerable.js
   - [x] test/language/statements/class/dstr/meth-static-obj-ptrn-rest-val-obj.js
   - [x] test/language/statements/class/dstr/private-gen-meth-ary-init-iter-close.js
@@ -4054,8 +4054,8 @@ Sub-category progress
   - [x] test/language/statements/class/dstr/private-gen-meth-static-obj-ptrn-rest-getter.js
   - [x] test/language/statements/class/dstr/private-gen-meth-static-obj-ptrn-rest-skip-non-enumerable.js
   - [x] test/language/statements/class/dstr/private-gen-meth-static-obj-ptrn-rest-val-obj.js
-  - [ ] test/language/statements/class/dstr/private-meth-ary-init-iter-close.js
-  - [ ] test/language/statements/class/dstr/private-meth-ary-init-iter-no-close.js
+  - [x] test/language/statements/class/dstr/private-meth-ary-init-iter-close.js
+  - [x] test/language/statements/class/dstr/private-meth-ary-init-iter-no-close.js
   - [x] test/language/statements/class/dstr/private-meth-ary-name-iter-val.js
   - [x] test/language/statements/class/dstr/private-meth-ary-ptrn-elem-ary-elem-init.js
   - [x] test/language/statements/class/dstr/private-meth-ary-ptrn-elem-ary-elem-iter.js
@@ -4101,7 +4101,7 @@ Sub-category progress
   - [x] test/language/statements/class/dstr/private-meth-ary-ptrn-rest-not-final-obj.js
   - [x] test/language/statements/class/dstr/private-meth-ary-ptrn-rest-obj-id.js
   - [x] test/language/statements/class/dstr/private-meth-ary-ptrn-rest-obj-prop-id.js
-  - [ ] test/language/statements/class/dstr/private-meth-dflt-ary-init-iter-close.js
+  - [x] test/language/statements/class/dstr/private-meth-dflt-ary-init-iter-close.js
   - [x] test/language/statements/class/dstr/private-meth-dflt-ary-init-iter-no-close.js
   - [x] test/language/statements/class/dstr/private-meth-dflt-ary-name-iter-val.js
   - [x] test/language/statements/class/dstr/private-meth-dflt-ary-ptrn-elem-ary-elem-init.js
@@ -4185,11 +4185,11 @@ Sub-category progress
   - [x] test/language/statements/class/dstr/private-meth-obj-ptrn-prop-id.js
   - [x] test/language/statements/class/dstr/private-meth-obj-ptrn-prop-obj-init.js
   - [x] test/language/statements/class/dstr/private-meth-obj-ptrn-prop-obj.js
-  - [ ] test/language/statements/class/dstr/private-meth-obj-ptrn-rest-getter.js
+  - [x] test/language/statements/class/dstr/private-meth-obj-ptrn-rest-getter.js
   - [x] test/language/statements/class/dstr/private-meth-obj-ptrn-rest-skip-non-enumerable.js
   - [x] test/language/statements/class/dstr/private-meth-obj-ptrn-rest-val-obj.js
-  - [ ] test/language/statements/class/dstr/private-meth-static-ary-init-iter-close.js
-  - [ ] test/language/statements/class/dstr/private-meth-static-ary-init-iter-no-close.js
+  - [x] test/language/statements/class/dstr/private-meth-static-ary-init-iter-close.js
+  - [x] test/language/statements/class/dstr/private-meth-static-ary-init-iter-no-close.js
   - [x] test/language/statements/class/dstr/private-meth-static-ary-name-iter-val.js
   - [x] test/language/statements/class/dstr/private-meth-static-ary-ptrn-elem-ary-elem-init.js
   - [x] test/language/statements/class/dstr/private-meth-static-ary-ptrn-elem-ary-elem-iter.js
@@ -4235,7 +4235,7 @@ Sub-category progress
   - [x] test/language/statements/class/dstr/private-meth-static-ary-ptrn-rest-not-final-obj.js
   - [x] test/language/statements/class/dstr/private-meth-static-ary-ptrn-rest-obj-id.js
   - [x] test/language/statements/class/dstr/private-meth-static-ary-ptrn-rest-obj-prop-id.js
-  - [ ] test/language/statements/class/dstr/private-meth-static-dflt-ary-init-iter-close.js
+  - [x] test/language/statements/class/dstr/private-meth-static-dflt-ary-init-iter-close.js
   - [x] test/language/statements/class/dstr/private-meth-static-dflt-ary-init-iter-no-close.js
   - [x] test/language/statements/class/dstr/private-meth-static-dflt-ary-name-iter-val.js
   - [x] test/language/statements/class/dstr/private-meth-static-dflt-ary-ptrn-elem-ary-elem-init.js
@@ -4319,7 +4319,7 @@ Sub-category progress
   - [x] test/language/statements/class/dstr/private-meth-static-obj-ptrn-prop-id.js
   - [x] test/language/statements/class/dstr/private-meth-static-obj-ptrn-prop-obj-init.js
   - [x] test/language/statements/class/dstr/private-meth-static-obj-ptrn-prop-obj.js
-  - [ ] test/language/statements/class/dstr/private-meth-static-obj-ptrn-rest-getter.js
+  - [x] test/language/statements/class/dstr/private-meth-static-obj-ptrn-rest-getter.js
   - [x] test/language/statements/class/dstr/private-meth-static-obj-ptrn-rest-skip-non-enumerable.js
   - [x] test/language/statements/class/dstr/private-meth-static-obj-ptrn-rest-val-obj.js
   - [x] test/language/statements/class/elements/abrupt-completition-on-field-initializer.js
@@ -14418,67 +14418,67 @@ Sub-category progress
   - [x] test/language/expressions/class/dstr/gen-meth-static-obj-ptrn-rest-getter.js
   - [x] test/language/expressions/class/dstr/gen-meth-static-obj-ptrn-rest-skip-non-enumerable.js
   - [x] test/language/expressions/class/dstr/gen-meth-static-obj-ptrn-rest-val-obj.js
-  - [ ] test/language/expressions/class/dstr/meth-ary-init-iter-close.js
+  - [x] test/language/expressions/class/dstr/meth-ary-init-iter-close.js
   - [x] test/language/expressions/class/dstr/meth-ary-init-iter-get-err-array-prototype.js
   - [x] test/language/expressions/class/dstr/meth-ary-init-iter-get-err.js
-  - [ ] test/language/expressions/class/dstr/meth-ary-init-iter-no-close.js
-  - [ ] test/language/expressions/class/dstr/meth-ary-name-iter-val.js
-  - [ ] test/language/expressions/class/dstr/meth-ary-ptrn-elem-ary-elem-init.js
-  - [ ] test/language/expressions/class/dstr/meth-ary-ptrn-elem-ary-elem-iter.js
-  - [ ] test/language/expressions/class/dstr/meth-ary-ptrn-elem-ary-elision-init.js
-  - [ ] test/language/expressions/class/dstr/meth-ary-ptrn-elem-ary-elision-iter.js
-  - [ ] test/language/expressions/class/dstr/meth-ary-ptrn-elem-ary-empty-init.js
-  - [ ] test/language/expressions/class/dstr/meth-ary-ptrn-elem-ary-empty-iter.js
-  - [ ] test/language/expressions/class/dstr/meth-ary-ptrn-elem-ary-rest-init.js
-  - [ ] test/language/expressions/class/dstr/meth-ary-ptrn-elem-ary-rest-iter.js
+  - [x] test/language/expressions/class/dstr/meth-ary-init-iter-no-close.js
+  - [x] test/language/expressions/class/dstr/meth-ary-name-iter-val.js
+  - [x] test/language/expressions/class/dstr/meth-ary-ptrn-elem-ary-elem-init.js
+  - [x] test/language/expressions/class/dstr/meth-ary-ptrn-elem-ary-elem-iter.js
+  - [x] test/language/expressions/class/dstr/meth-ary-ptrn-elem-ary-elision-init.js
+  - [x] test/language/expressions/class/dstr/meth-ary-ptrn-elem-ary-elision-iter.js
+  - [x] test/language/expressions/class/dstr/meth-ary-ptrn-elem-ary-empty-init.js
+  - [x] test/language/expressions/class/dstr/meth-ary-ptrn-elem-ary-empty-iter.js
+  - [x] test/language/expressions/class/dstr/meth-ary-ptrn-elem-ary-rest-init.js
+  - [x] test/language/expressions/class/dstr/meth-ary-ptrn-elem-ary-rest-iter.js
   - [x] test/language/expressions/class/dstr/meth-ary-ptrn-elem-ary-val-null.js
-  - [ ] test/language/expressions/class/dstr/meth-ary-ptrn-elem-id-init-exhausted.js
-  - [ ] test/language/expressions/class/dstr/meth-ary-ptrn-elem-id-init-fn-name-arrow.js
-  - [ ] test/language/expressions/class/dstr/meth-ary-ptrn-elem-id-init-fn-name-class.js
-  - [ ] test/language/expressions/class/dstr/meth-ary-ptrn-elem-id-init-fn-name-cover.js
-  - [ ] test/language/expressions/class/dstr/meth-ary-ptrn-elem-id-init-fn-name-fn.js
-  - [ ] test/language/expressions/class/dstr/meth-ary-ptrn-elem-id-init-fn-name-gen.js
-  - [ ] test/language/expressions/class/dstr/meth-ary-ptrn-elem-id-init-hole.js
-  - [ ] test/language/expressions/class/dstr/meth-ary-ptrn-elem-id-init-skipped.js
+  - [x] test/language/expressions/class/dstr/meth-ary-ptrn-elem-id-init-exhausted.js
+  - [x] test/language/expressions/class/dstr/meth-ary-ptrn-elem-id-init-fn-name-arrow.js
+  - [x] test/language/expressions/class/dstr/meth-ary-ptrn-elem-id-init-fn-name-class.js
+  - [x] test/language/expressions/class/dstr/meth-ary-ptrn-elem-id-init-fn-name-cover.js
+  - [x] test/language/expressions/class/dstr/meth-ary-ptrn-elem-id-init-fn-name-fn.js
+  - [x] test/language/expressions/class/dstr/meth-ary-ptrn-elem-id-init-fn-name-gen.js
+  - [x] test/language/expressions/class/dstr/meth-ary-ptrn-elem-id-init-hole.js
+  - [x] test/language/expressions/class/dstr/meth-ary-ptrn-elem-id-init-skipped.js
   - [x] test/language/expressions/class/dstr/meth-ary-ptrn-elem-id-init-throws.js
-  - [ ] test/language/expressions/class/dstr/meth-ary-ptrn-elem-id-init-undef.js
+  - [x] test/language/expressions/class/dstr/meth-ary-ptrn-elem-id-init-undef.js
   - [x] test/language/expressions/class/dstr/meth-ary-ptrn-elem-id-init-unresolvable.js
-  - [ ] test/language/expressions/class/dstr/meth-ary-ptrn-elem-id-iter-complete.js
-  - [ ] test/language/expressions/class/dstr/meth-ary-ptrn-elem-id-iter-done.js
+  - [x] test/language/expressions/class/dstr/meth-ary-ptrn-elem-id-iter-complete.js
+  - [x] test/language/expressions/class/dstr/meth-ary-ptrn-elem-id-iter-done.js
   - [x] test/language/expressions/class/dstr/meth-ary-ptrn-elem-id-iter-step-err.js
-  - [ ] test/language/expressions/class/dstr/meth-ary-ptrn-elem-id-iter-val-array-prototype.js
+  - [x] test/language/expressions/class/dstr/meth-ary-ptrn-elem-id-iter-val-array-prototype.js
   - [x] test/language/expressions/class/dstr/meth-ary-ptrn-elem-id-iter-val-err.js
-  - [ ] test/language/expressions/class/dstr/meth-ary-ptrn-elem-id-iter-val.js
-  - [ ] test/language/expressions/class/dstr/meth-ary-ptrn-elem-obj-id-init.js
-  - [ ] test/language/expressions/class/dstr/meth-ary-ptrn-elem-obj-id.js
-  - [ ] test/language/expressions/class/dstr/meth-ary-ptrn-elem-obj-prop-id-init.js
-  - [ ] test/language/expressions/class/dstr/meth-ary-ptrn-elem-obj-prop-id.js
+  - [x] test/language/expressions/class/dstr/meth-ary-ptrn-elem-id-iter-val.js
+  - [x] test/language/expressions/class/dstr/meth-ary-ptrn-elem-obj-id-init.js
+  - [x] test/language/expressions/class/dstr/meth-ary-ptrn-elem-obj-id.js
+  - [x] test/language/expressions/class/dstr/meth-ary-ptrn-elem-obj-prop-id-init.js
+  - [x] test/language/expressions/class/dstr/meth-ary-ptrn-elem-obj-prop-id.js
   - [x] test/language/expressions/class/dstr/meth-ary-ptrn-elem-obj-val-null.js
   - [x] test/language/expressions/class/dstr/meth-ary-ptrn-elem-obj-val-undef.js
   - [x] test/language/expressions/class/dstr/meth-ary-ptrn-elision-exhausted.js
   - [x] test/language/expressions/class/dstr/meth-ary-ptrn-elision-step-err.js
   - [ ] test/language/expressions/class/dstr/meth-ary-ptrn-elision.js
   - [x] test/language/expressions/class/dstr/meth-ary-ptrn-empty.js
-  - [ ] test/language/expressions/class/dstr/meth-ary-ptrn-rest-ary-elem.js
+  - [x] test/language/expressions/class/dstr/meth-ary-ptrn-rest-ary-elem.js
   - [ ] test/language/expressions/class/dstr/meth-ary-ptrn-rest-ary-elision.js
   - [ ] test/language/expressions/class/dstr/meth-ary-ptrn-rest-ary-empty.js
-  - [ ] test/language/expressions/class/dstr/meth-ary-ptrn-rest-ary-rest.js
-  - [ ] test/language/expressions/class/dstr/meth-ary-ptrn-rest-id-direct.js
+  - [x] test/language/expressions/class/dstr/meth-ary-ptrn-rest-ary-rest.js
+  - [x] test/language/expressions/class/dstr/meth-ary-ptrn-rest-id-direct.js
   - [x] test/language/expressions/class/dstr/meth-ary-ptrn-rest-id-elision-next-err.js
-  - [ ] test/language/expressions/class/dstr/meth-ary-ptrn-rest-id-elision.js
-  - [ ] test/language/expressions/class/dstr/meth-ary-ptrn-rest-id-exhausted.js
+  - [x] test/language/expressions/class/dstr/meth-ary-ptrn-rest-id-elision.js
+  - [x] test/language/expressions/class/dstr/meth-ary-ptrn-rest-id-exhausted.js
   - [x] test/language/expressions/class/dstr/meth-ary-ptrn-rest-id-iter-step-err.js
   - [x] test/language/expressions/class/dstr/meth-ary-ptrn-rest-id-iter-val-err.js
-  - [ ] test/language/expressions/class/dstr/meth-ary-ptrn-rest-id.js
+  - [x] test/language/expressions/class/dstr/meth-ary-ptrn-rest-id.js
   - [x] test/language/expressions/class/dstr/meth-ary-ptrn-rest-init-ary.js
   - [x] test/language/expressions/class/dstr/meth-ary-ptrn-rest-init-id.js
   - [x] test/language/expressions/class/dstr/meth-ary-ptrn-rest-init-obj.js
   - [x] test/language/expressions/class/dstr/meth-ary-ptrn-rest-not-final-ary.js
   - [x] test/language/expressions/class/dstr/meth-ary-ptrn-rest-not-final-id.js
   - [x] test/language/expressions/class/dstr/meth-ary-ptrn-rest-not-final-obj.js
-  - [ ] test/language/expressions/class/dstr/meth-ary-ptrn-rest-obj-id.js
-  - [ ] test/language/expressions/class/dstr/meth-ary-ptrn-rest-obj-prop-id.js
-  - [ ] test/language/expressions/class/dstr/meth-dflt-ary-init-iter-close.js
+  - [x] test/language/expressions/class/dstr/meth-ary-ptrn-rest-obj-id.js
+  - [x] test/language/expressions/class/dstr/meth-ary-ptrn-rest-obj-prop-id.js
+  - [x] test/language/expressions/class/dstr/meth-dflt-ary-init-iter-close.js
   - [ ] test/language/expressions/class/dstr/meth-dflt-ary-init-iter-get-err-array-prototype.js
   - [x] test/language/expressions/class/dstr/meth-dflt-ary-init-iter-get-err.js
   - [x] test/language/expressions/class/dstr/meth-dflt-ary-init-iter-no-close.js
@@ -14528,7 +14528,7 @@ Sub-category progress
   - [ ] test/language/expressions/class/dstr/meth-dflt-ary-ptrn-rest-id-elision.js
   - [x] test/language/expressions/class/dstr/meth-dflt-ary-ptrn-rest-id-exhausted.js
   - [x] test/language/expressions/class/dstr/meth-dflt-ary-ptrn-rest-id-iter-step-err.js
-  - [ ] test/language/expressions/class/dstr/meth-dflt-ary-ptrn-rest-id-iter-val-err.js
+  - [x] test/language/expressions/class/dstr/meth-dflt-ary-ptrn-rest-id-iter-val-err.js
   - [x] test/language/expressions/class/dstr/meth-dflt-ary-ptrn-rest-id.js
   - [x] test/language/expressions/class/dstr/meth-dflt-ary-ptrn-rest-init-ary.js
   - [x] test/language/expressions/class/dstr/meth-dflt-ary-ptrn-rest-init-id.js
@@ -14601,70 +14601,70 @@ Sub-category progress
   - [x] test/language/expressions/class/dstr/meth-obj-ptrn-prop-obj-value-null.js
   - [x] test/language/expressions/class/dstr/meth-obj-ptrn-prop-obj-value-undef.js
   - [x] test/language/expressions/class/dstr/meth-obj-ptrn-prop-obj.js
-  - [ ] test/language/expressions/class/dstr/meth-obj-ptrn-rest-getter.js
+  - [x] test/language/expressions/class/dstr/meth-obj-ptrn-rest-getter.js
   - [x] test/language/expressions/class/dstr/meth-obj-ptrn-rest-skip-non-enumerable.js
   - [x] test/language/expressions/class/dstr/meth-obj-ptrn-rest-val-obj.js
-  - [ ] test/language/expressions/class/dstr/meth-static-ary-init-iter-close.js
+  - [x] test/language/expressions/class/dstr/meth-static-ary-init-iter-close.js
   - [x] test/language/expressions/class/dstr/meth-static-ary-init-iter-get-err-array-prototype.js
   - [x] test/language/expressions/class/dstr/meth-static-ary-init-iter-get-err.js
-  - [ ] test/language/expressions/class/dstr/meth-static-ary-init-iter-no-close.js
-  - [ ] test/language/expressions/class/dstr/meth-static-ary-name-iter-val.js
-  - [ ] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-ary-elem-init.js
-  - [ ] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-ary-elem-iter.js
-  - [ ] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-ary-elision-init.js
-  - [ ] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-ary-elision-iter.js
-  - [ ] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-ary-empty-init.js
-  - [ ] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-ary-empty-iter.js
-  - [ ] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-ary-rest-init.js
-  - [ ] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-ary-rest-iter.js
+  - [x] test/language/expressions/class/dstr/meth-static-ary-init-iter-no-close.js
+  - [x] test/language/expressions/class/dstr/meth-static-ary-name-iter-val.js
+  - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-ary-elem-init.js
+  - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-ary-elem-iter.js
+  - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-ary-elision-init.js
+  - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-ary-elision-iter.js
+  - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-ary-empty-init.js
+  - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-ary-empty-iter.js
+  - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-ary-rest-init.js
+  - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-ary-rest-iter.js
   - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-ary-val-null.js
-  - [ ] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-id-init-exhausted.js
-  - [ ] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-id-init-fn-name-arrow.js
-  - [ ] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-id-init-fn-name-class.js
-  - [ ] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-id-init-fn-name-cover.js
-  - [ ] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-id-init-fn-name-fn.js
-  - [ ] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-id-init-fn-name-gen.js
-  - [ ] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-id-init-hole.js
-  - [ ] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-id-init-skipped.js
+  - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-id-init-exhausted.js
+  - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-id-init-fn-name-arrow.js
+  - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-id-init-fn-name-class.js
+  - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-id-init-fn-name-cover.js
+  - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-id-init-fn-name-fn.js
+  - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-id-init-fn-name-gen.js
+  - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-id-init-hole.js
+  - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-id-init-skipped.js
   - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-id-init-throws.js
-  - [ ] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-id-init-undef.js
+  - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-id-init-undef.js
   - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-id-init-unresolvable.js
-  - [ ] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-id-iter-complete.js
-  - [ ] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-id-iter-done.js
+  - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-id-iter-complete.js
+  - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-id-iter-done.js
   - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-id-iter-step-err.js
-  - [ ] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-id-iter-val-array-prototype.js
+  - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-id-iter-val-array-prototype.js
   - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-id-iter-val-err.js
-  - [ ] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-id-iter-val.js
-  - [ ] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-obj-id-init.js
-  - [ ] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-obj-id.js
-  - [ ] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-obj-prop-id-init.js
-  - [ ] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-obj-prop-id.js
+  - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-id-iter-val.js
+  - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-obj-id-init.js
+  - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-obj-id.js
+  - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-obj-prop-id-init.js
+  - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-obj-prop-id.js
   - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-obj-val-null.js
   - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-obj-val-undef.js
   - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-elision-exhausted.js
   - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-elision-step-err.js
   - [ ] test/language/expressions/class/dstr/meth-static-ary-ptrn-elision.js
   - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-empty.js
-  - [ ] test/language/expressions/class/dstr/meth-static-ary-ptrn-rest-ary-elem.js
+  - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-rest-ary-elem.js
   - [ ] test/language/expressions/class/dstr/meth-static-ary-ptrn-rest-ary-elision.js
   - [ ] test/language/expressions/class/dstr/meth-static-ary-ptrn-rest-ary-empty.js
-  - [ ] test/language/expressions/class/dstr/meth-static-ary-ptrn-rest-ary-rest.js
-  - [ ] test/language/expressions/class/dstr/meth-static-ary-ptrn-rest-id-direct.js
+  - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-rest-ary-rest.js
+  - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-rest-id-direct.js
   - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-rest-id-elision-next-err.js
-  - [ ] test/language/expressions/class/dstr/meth-static-ary-ptrn-rest-id-elision.js
-  - [ ] test/language/expressions/class/dstr/meth-static-ary-ptrn-rest-id-exhausted.js
+  - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-rest-id-elision.js
+  - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-rest-id-exhausted.js
   - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-rest-id-iter-step-err.js
   - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-rest-id-iter-val-err.js
-  - [ ] test/language/expressions/class/dstr/meth-static-ary-ptrn-rest-id.js
+  - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-rest-id.js
   - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-rest-init-ary.js
   - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-rest-init-id.js
   - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-rest-init-obj.js
   - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-rest-not-final-ary.js
   - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-rest-not-final-id.js
   - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-rest-not-final-obj.js
-  - [ ] test/language/expressions/class/dstr/meth-static-ary-ptrn-rest-obj-id.js
-  - [ ] test/language/expressions/class/dstr/meth-static-ary-ptrn-rest-obj-prop-id.js
-  - [ ] test/language/expressions/class/dstr/meth-static-dflt-ary-init-iter-close.js
+  - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-rest-obj-id.js
+  - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-rest-obj-prop-id.js
+  - [x] test/language/expressions/class/dstr/meth-static-dflt-ary-init-iter-close.js
   - [ ] test/language/expressions/class/dstr/meth-static-dflt-ary-init-iter-get-err-array-prototype.js
   - [x] test/language/expressions/class/dstr/meth-static-dflt-ary-init-iter-get-err.js
   - [x] test/language/expressions/class/dstr/meth-static-dflt-ary-init-iter-no-close.js
@@ -14714,7 +14714,7 @@ Sub-category progress
   - [ ] test/language/expressions/class/dstr/meth-static-dflt-ary-ptrn-rest-id-elision.js
   - [x] test/language/expressions/class/dstr/meth-static-dflt-ary-ptrn-rest-id-exhausted.js
   - [x] test/language/expressions/class/dstr/meth-static-dflt-ary-ptrn-rest-id-iter-step-err.js
-  - [ ] test/language/expressions/class/dstr/meth-static-dflt-ary-ptrn-rest-id-iter-val-err.js
+  - [x] test/language/expressions/class/dstr/meth-static-dflt-ary-ptrn-rest-id-iter-val-err.js
   - [x] test/language/expressions/class/dstr/meth-static-dflt-ary-ptrn-rest-id.js
   - [x] test/language/expressions/class/dstr/meth-static-dflt-ary-ptrn-rest-init-ary.js
   - [x] test/language/expressions/class/dstr/meth-static-dflt-ary-ptrn-rest-init-id.js
@@ -14787,7 +14787,7 @@ Sub-category progress
   - [x] test/language/expressions/class/dstr/meth-static-obj-ptrn-prop-obj-value-null.js
   - [x] test/language/expressions/class/dstr/meth-static-obj-ptrn-prop-obj-value-undef.js
   - [x] test/language/expressions/class/dstr/meth-static-obj-ptrn-prop-obj.js
-  - [ ] test/language/expressions/class/dstr/meth-static-obj-ptrn-rest-getter.js
+  - [x] test/language/expressions/class/dstr/meth-static-obj-ptrn-rest-getter.js
   - [x] test/language/expressions/class/dstr/meth-static-obj-ptrn-rest-skip-non-enumerable.js
   - [x] test/language/expressions/class/dstr/meth-static-obj-ptrn-rest-val-obj.js
   - [x] test/language/expressions/class/dstr/private-gen-meth-ary-init-iter-close.js
@@ -15058,54 +15058,54 @@ Sub-category progress
   - [x] test/language/expressions/class/dstr/private-gen-meth-static-obj-ptrn-rest-getter.js
   - [x] test/language/expressions/class/dstr/private-gen-meth-static-obj-ptrn-rest-skip-non-enumerable.js
   - [x] test/language/expressions/class/dstr/private-gen-meth-static-obj-ptrn-rest-val-obj.js
-  - [ ] test/language/expressions/class/dstr/private-meth-ary-init-iter-close.js
-  - [ ] test/language/expressions/class/dstr/private-meth-ary-init-iter-no-close.js
-  - [ ] test/language/expressions/class/dstr/private-meth-ary-name-iter-val.js
-  - [ ] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-ary-elem-init.js
-  - [ ] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-ary-elem-iter.js
-  - [ ] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-ary-elision-init.js
-  - [ ] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-ary-elision-iter.js
-  - [ ] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-ary-empty-init.js
-  - [ ] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-ary-empty-iter.js
-  - [ ] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-ary-rest-init.js
-  - [ ] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-ary-rest-iter.js
-  - [ ] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-id-init-exhausted.js
-  - [ ] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-id-init-fn-name-arrow.js
-  - [ ] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-id-init-fn-name-class.js
-  - [ ] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-id-init-fn-name-cover.js
-  - [ ] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-id-init-fn-name-fn.js
-  - [ ] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-id-init-fn-name-gen.js
-  - [ ] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-id-init-hole.js
-  - [ ] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-id-init-skipped.js
-  - [ ] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-id-init-undef.js
-  - [ ] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-id-iter-complete.js
-  - [ ] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-id-iter-done.js
-  - [ ] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-id-iter-val-array-prototype.js
-  - [ ] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-id-iter-val.js
-  - [ ] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-obj-id-init.js
-  - [ ] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-obj-id.js
-  - [ ] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-obj-prop-id-init.js
-  - [ ] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-obj-prop-id.js
+  - [x] test/language/expressions/class/dstr/private-meth-ary-init-iter-close.js
+  - [x] test/language/expressions/class/dstr/private-meth-ary-init-iter-no-close.js
+  - [x] test/language/expressions/class/dstr/private-meth-ary-name-iter-val.js
+  - [x] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-ary-elem-init.js
+  - [x] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-ary-elem-iter.js
+  - [x] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-ary-elision-init.js
+  - [x] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-ary-elision-iter.js
+  - [x] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-ary-empty-init.js
+  - [x] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-ary-empty-iter.js
+  - [x] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-ary-rest-init.js
+  - [x] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-ary-rest-iter.js
+  - [x] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-id-init-exhausted.js
+  - [x] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-id-init-fn-name-arrow.js
+  - [x] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-id-init-fn-name-class.js
+  - [x] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-id-init-fn-name-cover.js
+  - [x] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-id-init-fn-name-fn.js
+  - [x] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-id-init-fn-name-gen.js
+  - [x] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-id-init-hole.js
+  - [x] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-id-init-skipped.js
+  - [x] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-id-init-undef.js
+  - [x] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-id-iter-complete.js
+  - [x] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-id-iter-done.js
+  - [x] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-id-iter-val-array-prototype.js
+  - [x] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-id-iter-val.js
+  - [x] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-obj-id-init.js
+  - [x] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-obj-id.js
+  - [x] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-obj-prop-id-init.js
+  - [x] test/language/expressions/class/dstr/private-meth-ary-ptrn-elem-obj-prop-id.js
   - [x] test/language/expressions/class/dstr/private-meth-ary-ptrn-elision-exhausted.js
   - [ ] test/language/expressions/class/dstr/private-meth-ary-ptrn-elision.js
   - [x] test/language/expressions/class/dstr/private-meth-ary-ptrn-empty.js
-  - [ ] test/language/expressions/class/dstr/private-meth-ary-ptrn-rest-ary-elem.js
+  - [x] test/language/expressions/class/dstr/private-meth-ary-ptrn-rest-ary-elem.js
   - [ ] test/language/expressions/class/dstr/private-meth-ary-ptrn-rest-ary-elision.js
   - [ ] test/language/expressions/class/dstr/private-meth-ary-ptrn-rest-ary-empty.js
-  - [ ] test/language/expressions/class/dstr/private-meth-ary-ptrn-rest-ary-rest.js
-  - [ ] test/language/expressions/class/dstr/private-meth-ary-ptrn-rest-id-direct.js
-  - [ ] test/language/expressions/class/dstr/private-meth-ary-ptrn-rest-id-elision.js
-  - [ ] test/language/expressions/class/dstr/private-meth-ary-ptrn-rest-id-exhausted.js
-  - [ ] test/language/expressions/class/dstr/private-meth-ary-ptrn-rest-id.js
+  - [x] test/language/expressions/class/dstr/private-meth-ary-ptrn-rest-ary-rest.js
+  - [x] test/language/expressions/class/dstr/private-meth-ary-ptrn-rest-id-direct.js
+  - [x] test/language/expressions/class/dstr/private-meth-ary-ptrn-rest-id-elision.js
+  - [x] test/language/expressions/class/dstr/private-meth-ary-ptrn-rest-id-exhausted.js
+  - [x] test/language/expressions/class/dstr/private-meth-ary-ptrn-rest-id.js
   - [x] test/language/expressions/class/dstr/private-meth-ary-ptrn-rest-init-ary.js
   - [x] test/language/expressions/class/dstr/private-meth-ary-ptrn-rest-init-id.js
   - [x] test/language/expressions/class/dstr/private-meth-ary-ptrn-rest-init-obj.js
   - [x] test/language/expressions/class/dstr/private-meth-ary-ptrn-rest-not-final-ary.js
   - [x] test/language/expressions/class/dstr/private-meth-ary-ptrn-rest-not-final-id.js
   - [x] test/language/expressions/class/dstr/private-meth-ary-ptrn-rest-not-final-obj.js
-  - [ ] test/language/expressions/class/dstr/private-meth-ary-ptrn-rest-obj-id.js
-  - [ ] test/language/expressions/class/dstr/private-meth-ary-ptrn-rest-obj-prop-id.js
-  - [ ] test/language/expressions/class/dstr/private-meth-dflt-ary-init-iter-close.js
+  - [x] test/language/expressions/class/dstr/private-meth-ary-ptrn-rest-obj-id.js
+  - [x] test/language/expressions/class/dstr/private-meth-ary-ptrn-rest-obj-prop-id.js
+  - [x] test/language/expressions/class/dstr/private-meth-dflt-ary-init-iter-close.js
   - [x] test/language/expressions/class/dstr/private-meth-dflt-ary-init-iter-no-close.js
   - [x] test/language/expressions/class/dstr/private-meth-dflt-ary-name-iter-val.js
   - [x] test/language/expressions/class/dstr/private-meth-dflt-ary-ptrn-elem-ary-elem-init.js
@@ -15189,57 +15189,57 @@ Sub-category progress
   - [x] test/language/expressions/class/dstr/private-meth-obj-ptrn-prop-id.js
   - [x] test/language/expressions/class/dstr/private-meth-obj-ptrn-prop-obj-init.js
   - [x] test/language/expressions/class/dstr/private-meth-obj-ptrn-prop-obj.js
-  - [ ] test/language/expressions/class/dstr/private-meth-obj-ptrn-rest-getter.js
+  - [x] test/language/expressions/class/dstr/private-meth-obj-ptrn-rest-getter.js
   - [x] test/language/expressions/class/dstr/private-meth-obj-ptrn-rest-skip-non-enumerable.js
   - [x] test/language/expressions/class/dstr/private-meth-obj-ptrn-rest-val-obj.js
-  - [ ] test/language/expressions/class/dstr/private-meth-static-ary-init-iter-close.js
-  - [ ] test/language/expressions/class/dstr/private-meth-static-ary-init-iter-no-close.js
-  - [ ] test/language/expressions/class/dstr/private-meth-static-ary-name-iter-val.js
-  - [ ] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-ary-elem-init.js
-  - [ ] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-ary-elem-iter.js
-  - [ ] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-ary-elision-init.js
-  - [ ] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-ary-elision-iter.js
-  - [ ] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-ary-empty-init.js
-  - [ ] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-ary-empty-iter.js
-  - [ ] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-ary-rest-init.js
-  - [ ] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-ary-rest-iter.js
-  - [ ] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-id-init-exhausted.js
-  - [ ] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-id-init-fn-name-arrow.js
-  - [ ] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-id-init-fn-name-class.js
-  - [ ] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-id-init-fn-name-cover.js
-  - [ ] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-id-init-fn-name-fn.js
-  - [ ] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-id-init-fn-name-gen.js
-  - [ ] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-id-init-hole.js
-  - [ ] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-id-init-skipped.js
-  - [ ] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-id-init-undef.js
-  - [ ] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-id-iter-complete.js
-  - [ ] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-id-iter-done.js
-  - [ ] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-id-iter-val-array-prototype.js
-  - [ ] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-id-iter-val.js
-  - [ ] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-obj-id-init.js
-  - [ ] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-obj-id.js
-  - [ ] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-obj-prop-id-init.js
-  - [ ] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-obj-prop-id.js
+  - [x] test/language/expressions/class/dstr/private-meth-static-ary-init-iter-close.js
+  - [x] test/language/expressions/class/dstr/private-meth-static-ary-init-iter-no-close.js
+  - [x] test/language/expressions/class/dstr/private-meth-static-ary-name-iter-val.js
+  - [x] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-ary-elem-init.js
+  - [x] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-ary-elem-iter.js
+  - [x] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-ary-elision-init.js
+  - [x] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-ary-elision-iter.js
+  - [x] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-ary-empty-init.js
+  - [x] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-ary-empty-iter.js
+  - [x] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-ary-rest-init.js
+  - [x] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-ary-rest-iter.js
+  - [x] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-id-init-exhausted.js
+  - [x] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-id-init-fn-name-arrow.js
+  - [x] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-id-init-fn-name-class.js
+  - [x] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-id-init-fn-name-cover.js
+  - [x] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-id-init-fn-name-fn.js
+  - [x] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-id-init-fn-name-gen.js
+  - [x] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-id-init-hole.js
+  - [x] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-id-init-skipped.js
+  - [x] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-id-init-undef.js
+  - [x] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-id-iter-complete.js
+  - [x] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-id-iter-done.js
+  - [x] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-id-iter-val-array-prototype.js
+  - [x] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-id-iter-val.js
+  - [x] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-obj-id-init.js
+  - [x] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-obj-id.js
+  - [x] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-obj-prop-id-init.js
+  - [x] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-obj-prop-id.js
   - [x] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elision-exhausted.js
   - [ ] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elision.js
   - [x] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-empty.js
-  - [ ] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-rest-ary-elem.js
+  - [x] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-rest-ary-elem.js
   - [ ] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-rest-ary-elision.js
   - [ ] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-rest-ary-empty.js
-  - [ ] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-rest-ary-rest.js
-  - [ ] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-rest-id-direct.js
-  - [ ] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-rest-id-elision.js
-  - [ ] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-rest-id-exhausted.js
-  - [ ] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-rest-id.js
+  - [x] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-rest-ary-rest.js
+  - [x] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-rest-id-direct.js
+  - [x] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-rest-id-elision.js
+  - [x] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-rest-id-exhausted.js
+  - [x] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-rest-id.js
   - [x] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-rest-init-ary.js
   - [x] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-rest-init-id.js
   - [x] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-rest-init-obj.js
   - [x] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-rest-not-final-ary.js
   - [x] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-rest-not-final-id.js
   - [x] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-rest-not-final-obj.js
-  - [ ] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-rest-obj-id.js
-  - [ ] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-rest-obj-prop-id.js
-  - [ ] test/language/expressions/class/dstr/private-meth-static-dflt-ary-init-iter-close.js
+  - [x] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-rest-obj-id.js
+  - [x] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-rest-obj-prop-id.js
+  - [x] test/language/expressions/class/dstr/private-meth-static-dflt-ary-init-iter-close.js
   - [x] test/language/expressions/class/dstr/private-meth-static-dflt-ary-init-iter-no-close.js
   - [x] test/language/expressions/class/dstr/private-meth-static-dflt-ary-name-iter-val.js
   - [x] test/language/expressions/class/dstr/private-meth-static-dflt-ary-ptrn-elem-ary-elem-init.js
@@ -15323,7 +15323,7 @@ Sub-category progress
   - [x] test/language/expressions/class/dstr/private-meth-static-obj-ptrn-prop-id.js
   - [x] test/language/expressions/class/dstr/private-meth-static-obj-ptrn-prop-obj-init.js
   - [x] test/language/expressions/class/dstr/private-meth-static-obj-ptrn-prop-obj.js
-  - [ ] test/language/expressions/class/dstr/private-meth-static-obj-ptrn-rest-getter.js
+  - [x] test/language/expressions/class/dstr/private-meth-static-obj-ptrn-rest-getter.js
   - [x] test/language/expressions/class/dstr/private-meth-static-obj-ptrn-rest-skip-non-enumerable.js
   - [x] test/language/expressions/class/dstr/private-meth-static-obj-ptrn-rest-val-obj.js
   - [x] test/language/expressions/class/elements/after-same-line-gen-computed-names.js
