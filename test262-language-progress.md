@@ -1,4 +1,4 @@
-20376/23668 (86.09%)
+20518/23668 (86.69%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -15,7 +15,7 @@ Sub-category progress
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
 - statements: 7985/9337 (85.52%)
-- expressions: 9321/11061 (84.27%)
+- expressions: 9463/11061 (85.55%)
 - types: 103/113 (91.15%)
 - function-code: 204/217 (94.01%)
 - global-code: 41/42 (97.62%)
@@ -17705,7 +17705,7 @@ Sub-category progress
   - [ ] test/language/expressions/dynamic-import/assignment-expression/cover-call-expr.js
   - [ ] test/language/expressions/dynamic-import/assignment-expression/cover-parenthesized-expr.js
   - [ ] test/language/expressions/dynamic-import/assignment-expression/identifier.js
-  - [ ] test/language/expressions/dynamic-import/assignment-expression/import-meta.js
+  - [x] test/language/expressions/dynamic-import/assignment-expression/import-meta.js
   - [ ] test/language/expressions/dynamic-import/assignment-expression/lhs-assign-operator-assign-expr.js
   - [ ] test/language/expressions/dynamic-import/assignment-expression/lhs-eq-assign-expr-nostrict.js
   - [ ] test/language/expressions/dynamic-import/assignment-expression/lhs-eq-assign-expr.js
@@ -17725,193 +17725,193 @@ Sub-category progress
   - [ ] test/language/expressions/dynamic-import/await-import-evaluation.js
   - [x] test/language/expressions/dynamic-import/catch/nested-arrow-import-catch-eval-rqstd-abrupt-typeerror.js
   - [x] test/language/expressions/dynamic-import/catch/nested-arrow-import-catch-eval-rqstd-abrupt-urierror.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-arrow-import-catch-eval-script-code-target.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-arrow-import-catch-file-does-not-exist.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-arrow-import-catch-import-defer-specifier-tostring-abrupt-rejects.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-arrow-import-catch-import-source-source-text-module.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-arrow-import-catch-import-source-specifier-tostring-abrupt-rejects.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-arrow-import-catch-import-source-specifier-tostring.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-arrow-import-catch-instn-iee-err-ambiguous-import.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-arrow-import-catch-instn-iee-err-circular.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-arrow-import-catch-specifier-tostring-abrupt-rejects.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-arrow-import-catch-eval-script-code-target.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-arrow-import-catch-file-does-not-exist.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-arrow-import-catch-import-defer-specifier-tostring-abrupt-rejects.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-arrow-import-catch-import-source-source-text-module.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-arrow-import-catch-import-source-specifier-tostring-abrupt-rejects.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-arrow-import-catch-import-source-specifier-tostring.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-arrow-import-catch-instn-iee-err-ambiguous-import.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-arrow-import-catch-instn-iee-err-circular.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-arrow-import-catch-specifier-tostring-abrupt-rejects.js
   - [x] test/language/expressions/dynamic-import/catch/nested-async-arrow-function-await-eval-rqstd-abrupt-typeerror.js
   - [x] test/language/expressions/dynamic-import/catch/nested-async-arrow-function-await-eval-rqstd-abrupt-urierror.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-arrow-function-await-eval-script-code-target.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-arrow-function-await-file-does-not-exist.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-arrow-function-await-import-defer-specifier-tostring-abrupt-rejects.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-arrow-function-await-eval-script-code-target.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-arrow-function-await-file-does-not-exist.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-arrow-function-await-import-defer-specifier-tostring-abrupt-rejects.js
   - [x] test/language/expressions/dynamic-import/catch/nested-async-arrow-function-await-import-source-source-text-module.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-arrow-function-await-import-source-specifier-tostring-abrupt-rejects.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-arrow-function-await-import-source-specifier-tostring.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-arrow-function-await-import-source-specifier-tostring-abrupt-rejects.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-arrow-function-await-import-source-specifier-tostring.js
   - [x] test/language/expressions/dynamic-import/catch/nested-async-arrow-function-await-instn-iee-err-ambiguous-import.js
   - [x] test/language/expressions/dynamic-import/catch/nested-async-arrow-function-await-instn-iee-err-circular.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-arrow-function-await-specifier-tostring-abrupt-rejects.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-arrow-function-await-specifier-tostring-abrupt-rejects.js
   - [x] test/language/expressions/dynamic-import/catch/nested-async-arrow-function-return-await-eval-rqstd-abrupt-typeerror.js
   - [x] test/language/expressions/dynamic-import/catch/nested-async-arrow-function-return-await-eval-rqstd-abrupt-urierror.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-arrow-function-return-await-eval-script-code-target.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-arrow-function-return-await-eval-script-code-target.js
   - [x] test/language/expressions/dynamic-import/catch/nested-async-arrow-function-return-await-file-does-not-exist.js
   - [x] test/language/expressions/dynamic-import/catch/nested-async-arrow-function-return-await-import-defer-specifier-tostring-abrupt-rejects.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-arrow-function-return-await-import-source-source-text-module.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-arrow-function-return-await-import-source-source-text-module.js
   - [x] test/language/expressions/dynamic-import/catch/nested-async-arrow-function-return-await-import-source-specifier-tostring-abrupt-rejects.js
   - [x] test/language/expressions/dynamic-import/catch/nested-async-arrow-function-return-await-import-source-specifier-tostring.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-arrow-function-return-await-instn-iee-err-ambiguous-import.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-arrow-function-return-await-instn-iee-err-circular.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-arrow-function-return-await-instn-iee-err-ambiguous-import.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-arrow-function-return-await-instn-iee-err-circular.js
   - [x] test/language/expressions/dynamic-import/catch/nested-async-arrow-function-return-await-specifier-tostring-abrupt-rejects.js
   - [x] test/language/expressions/dynamic-import/catch/nested-async-function-await-eval-rqstd-abrupt-typeerror.js
   - [x] test/language/expressions/dynamic-import/catch/nested-async-function-await-eval-rqstd-abrupt-urierror.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-function-await-eval-script-code-target.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-function-await-file-does-not-exist.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-function-await-import-defer-specifier-tostring-abrupt-rejects.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-function-await-import-source-source-text-module.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-function-await-import-source-specifier-tostring-abrupt-rejects.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-function-await-import-source-specifier-tostring.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-function-await-instn-iee-err-ambiguous-import.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-function-await-instn-iee-err-circular.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-function-await-specifier-tostring-abrupt-rejects.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-function-await-eval-script-code-target.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-function-await-file-does-not-exist.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-function-await-import-defer-specifier-tostring-abrupt-rejects.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-function-await-import-source-source-text-module.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-function-await-import-source-specifier-tostring-abrupt-rejects.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-function-await-import-source-specifier-tostring.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-function-await-instn-iee-err-ambiguous-import.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-function-await-instn-iee-err-circular.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-function-await-specifier-tostring-abrupt-rejects.js
   - [x] test/language/expressions/dynamic-import/catch/nested-async-function-eval-rqstd-abrupt-typeerror.js
   - [x] test/language/expressions/dynamic-import/catch/nested-async-function-eval-rqstd-abrupt-urierror.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-function-eval-script-code-target.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-function-file-does-not-exist.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-function-import-defer-specifier-tostring-abrupt-rejects.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-function-import-source-source-text-module.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-function-import-source-specifier-tostring-abrupt-rejects.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-function-import-source-specifier-tostring.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-function-instn-iee-err-ambiguous-import.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-function-instn-iee-err-circular.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-function-eval-script-code-target.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-function-file-does-not-exist.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-function-import-defer-specifier-tostring-abrupt-rejects.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-function-import-source-source-text-module.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-function-import-source-specifier-tostring-abrupt-rejects.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-function-import-source-specifier-tostring.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-function-instn-iee-err-ambiguous-import.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-function-instn-iee-err-circular.js
   - [x] test/language/expressions/dynamic-import/catch/nested-async-function-return-await-eval-rqstd-abrupt-typeerror.js
   - [x] test/language/expressions/dynamic-import/catch/nested-async-function-return-await-eval-rqstd-abrupt-urierror.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-function-return-await-eval-script-code-target.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-function-return-await-file-does-not-exist.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-function-return-await-import-defer-specifier-tostring-abrupt-rejects.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-function-return-await-import-source-source-text-module.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-function-return-await-import-source-specifier-tostring-abrupt-rejects.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-function-return-await-import-source-specifier-tostring.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-function-return-await-instn-iee-err-ambiguous-import.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-function-return-await-instn-iee-err-circular.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-function-return-await-specifier-tostring-abrupt-rejects.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-function-specifier-tostring-abrupt-rejects.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-function-return-await-eval-script-code-target.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-function-return-await-file-does-not-exist.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-function-return-await-import-defer-specifier-tostring-abrupt-rejects.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-function-return-await-import-source-source-text-module.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-function-return-await-import-source-specifier-tostring-abrupt-rejects.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-function-return-await-import-source-specifier-tostring.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-function-return-await-instn-iee-err-ambiguous-import.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-function-return-await-instn-iee-err-circular.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-function-return-await-specifier-tostring-abrupt-rejects.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-function-specifier-tostring-abrupt-rejects.js
   - [x] test/language/expressions/dynamic-import/catch/nested-async-gen-await-eval-rqstd-abrupt-typeerror.js
   - [x] test/language/expressions/dynamic-import/catch/nested-async-gen-await-eval-rqstd-abrupt-urierror.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-gen-await-eval-script-code-target.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-gen-await-eval-script-code-target.js
   - [x] test/language/expressions/dynamic-import/catch/nested-async-gen-await-file-does-not-exist.js
   - [x] test/language/expressions/dynamic-import/catch/nested-async-gen-await-import-defer-specifier-tostring-abrupt-rejects.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-gen-await-import-source-source-text-module.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-gen-await-import-source-source-text-module.js
   - [x] test/language/expressions/dynamic-import/catch/nested-async-gen-await-import-source-specifier-tostring-abrupt-rejects.js
   - [x] test/language/expressions/dynamic-import/catch/nested-async-gen-await-import-source-specifier-tostring.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-gen-await-instn-iee-err-ambiguous-import.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-gen-await-instn-iee-err-circular.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-gen-await-instn-iee-err-ambiguous-import.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-gen-await-instn-iee-err-circular.js
   - [x] test/language/expressions/dynamic-import/catch/nested-async-gen-await-specifier-tostring-abrupt-rejects.js
   - [x] test/language/expressions/dynamic-import/catch/nested-async-gen-return-await-eval-rqstd-abrupt-typeerror.js
   - [x] test/language/expressions/dynamic-import/catch/nested-async-gen-return-await-eval-rqstd-abrupt-urierror.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-gen-return-await-eval-script-code-target.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-gen-return-await-eval-script-code-target.js
   - [x] test/language/expressions/dynamic-import/catch/nested-async-gen-return-await-file-does-not-exist.js
   - [x] test/language/expressions/dynamic-import/catch/nested-async-gen-return-await-import-defer-specifier-tostring-abrupt-rejects.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-gen-return-await-import-source-source-text-module.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-gen-return-await-import-source-source-text-module.js
   - [x] test/language/expressions/dynamic-import/catch/nested-async-gen-return-await-import-source-specifier-tostring-abrupt-rejects.js
   - [x] test/language/expressions/dynamic-import/catch/nested-async-gen-return-await-import-source-specifier-tostring.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-gen-return-await-instn-iee-err-ambiguous-import.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-async-gen-return-await-instn-iee-err-circular.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-gen-return-await-instn-iee-err-ambiguous-import.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-async-gen-return-await-instn-iee-err-circular.js
   - [x] test/language/expressions/dynamic-import/catch/nested-async-gen-return-await-specifier-tostring-abrupt-rejects.js
   - [x] test/language/expressions/dynamic-import/catch/nested-block-import-catch-eval-rqstd-abrupt-typeerror.js
   - [x] test/language/expressions/dynamic-import/catch/nested-block-import-catch-eval-rqstd-abrupt-urierror.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-block-import-catch-eval-script-code-target.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-block-import-catch-file-does-not-exist.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-block-import-catch-import-defer-specifier-tostring-abrupt-rejects.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-block-import-catch-import-source-source-text-module.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-block-import-catch-import-source-specifier-tostring-abrupt-rejects.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-block-import-catch-import-source-specifier-tostring.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-block-import-catch-instn-iee-err-ambiguous-import.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-block-import-catch-instn-iee-err-circular.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-block-import-catch-specifier-tostring-abrupt-rejects.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-block-import-catch-eval-script-code-target.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-block-import-catch-file-does-not-exist.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-block-import-catch-import-defer-specifier-tostring-abrupt-rejects.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-block-import-catch-import-source-source-text-module.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-block-import-catch-import-source-specifier-tostring-abrupt-rejects.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-block-import-catch-import-source-specifier-tostring.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-block-import-catch-instn-iee-err-ambiguous-import.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-block-import-catch-instn-iee-err-circular.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-block-import-catch-specifier-tostring-abrupt-rejects.js
   - [x] test/language/expressions/dynamic-import/catch/nested-block-labeled-eval-rqstd-abrupt-typeerror.js
   - [x] test/language/expressions/dynamic-import/catch/nested-block-labeled-eval-rqstd-abrupt-urierror.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-block-labeled-eval-script-code-target.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-block-labeled-file-does-not-exist.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-block-labeled-import-defer-specifier-tostring-abrupt-rejects.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-block-labeled-import-source-source-text-module.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-block-labeled-import-source-specifier-tostring-abrupt-rejects.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-block-labeled-import-source-specifier-tostring.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-block-labeled-instn-iee-err-ambiguous-import.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-block-labeled-instn-iee-err-circular.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-block-labeled-specifier-tostring-abrupt-rejects.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-block-labeled-eval-script-code-target.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-block-labeled-file-does-not-exist.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-block-labeled-import-defer-specifier-tostring-abrupt-rejects.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-block-labeled-import-source-source-text-module.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-block-labeled-import-source-specifier-tostring-abrupt-rejects.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-block-labeled-import-source-specifier-tostring.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-block-labeled-instn-iee-err-ambiguous-import.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-block-labeled-instn-iee-err-circular.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-block-labeled-specifier-tostring-abrupt-rejects.js
   - [x] test/language/expressions/dynamic-import/catch/nested-do-while-eval-rqstd-abrupt-typeerror.js
   - [x] test/language/expressions/dynamic-import/catch/nested-do-while-eval-rqstd-abrupt-urierror.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-do-while-eval-script-code-target.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-do-while-file-does-not-exist.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-do-while-import-defer-specifier-tostring-abrupt-rejects.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-do-while-import-source-source-text-module.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-do-while-import-source-specifier-tostring-abrupt-rejects.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-do-while-import-source-specifier-tostring.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-do-while-instn-iee-err-ambiguous-import.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-do-while-instn-iee-err-circular.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-do-while-specifier-tostring-abrupt-rejects.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-do-while-eval-script-code-target.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-do-while-file-does-not-exist.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-do-while-import-defer-specifier-tostring-abrupt-rejects.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-do-while-import-source-source-text-module.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-do-while-import-source-specifier-tostring-abrupt-rejects.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-do-while-import-source-specifier-tostring.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-do-while-instn-iee-err-ambiguous-import.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-do-while-instn-iee-err-circular.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-do-while-specifier-tostring-abrupt-rejects.js
   - [x] test/language/expressions/dynamic-import/catch/nested-else-import-catch-eval-rqstd-abrupt-typeerror.js
   - [x] test/language/expressions/dynamic-import/catch/nested-else-import-catch-eval-rqstd-abrupt-urierror.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-else-import-catch-eval-script-code-target.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-else-import-catch-file-does-not-exist.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-else-import-catch-import-defer-specifier-tostring-abrupt-rejects.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-else-import-catch-import-source-source-text-module.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-else-import-catch-import-source-specifier-tostring-abrupt-rejects.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-else-import-catch-import-source-specifier-tostring.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-else-import-catch-instn-iee-err-ambiguous-import.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-else-import-catch-instn-iee-err-circular.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-else-import-catch-specifier-tostring-abrupt-rejects.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-else-import-catch-eval-script-code-target.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-else-import-catch-file-does-not-exist.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-else-import-catch-import-defer-specifier-tostring-abrupt-rejects.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-else-import-catch-import-source-source-text-module.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-else-import-catch-import-source-specifier-tostring-abrupt-rejects.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-else-import-catch-import-source-specifier-tostring.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-else-import-catch-instn-iee-err-ambiguous-import.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-else-import-catch-instn-iee-err-circular.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-else-import-catch-specifier-tostring-abrupt-rejects.js
   - [x] test/language/expressions/dynamic-import/catch/nested-function-import-catch-eval-rqstd-abrupt-typeerror.js
   - [x] test/language/expressions/dynamic-import/catch/nested-function-import-catch-eval-rqstd-abrupt-urierror.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-function-import-catch-eval-script-code-target.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-function-import-catch-file-does-not-exist.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-function-import-catch-import-defer-specifier-tostring-abrupt-rejects.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-function-import-catch-import-source-source-text-module.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-function-import-catch-import-source-specifier-tostring-abrupt-rejects.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-function-import-catch-import-source-specifier-tostring.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-function-import-catch-instn-iee-err-ambiguous-import.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-function-import-catch-instn-iee-err-circular.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-function-import-catch-specifier-tostring-abrupt-rejects.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-function-import-catch-eval-script-code-target.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-function-import-catch-file-does-not-exist.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-function-import-catch-import-defer-specifier-tostring-abrupt-rejects.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-function-import-catch-import-source-source-text-module.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-function-import-catch-import-source-specifier-tostring-abrupt-rejects.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-function-import-catch-import-source-specifier-tostring.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-function-import-catch-instn-iee-err-ambiguous-import.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-function-import-catch-instn-iee-err-circular.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-function-import-catch-specifier-tostring-abrupt-rejects.js
   - [x] test/language/expressions/dynamic-import/catch/nested-if-import-catch-eval-rqstd-abrupt-typeerror.js
   - [x] test/language/expressions/dynamic-import/catch/nested-if-import-catch-eval-rqstd-abrupt-urierror.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-if-import-catch-eval-script-code-target.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-if-import-catch-file-does-not-exist.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-if-import-catch-import-defer-specifier-tostring-abrupt-rejects.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-if-import-catch-import-source-source-text-module.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-if-import-catch-import-source-specifier-tostring-abrupt-rejects.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-if-import-catch-import-source-specifier-tostring.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-if-import-catch-instn-iee-err-ambiguous-import.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-if-import-catch-instn-iee-err-circular.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-if-import-catch-specifier-tostring-abrupt-rejects.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-if-import-catch-eval-script-code-target.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-if-import-catch-file-does-not-exist.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-if-import-catch-import-defer-specifier-tostring-abrupt-rejects.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-if-import-catch-import-source-source-text-module.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-if-import-catch-import-source-specifier-tostring-abrupt-rejects.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-if-import-catch-import-source-specifier-tostring.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-if-import-catch-instn-iee-err-ambiguous-import.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-if-import-catch-instn-iee-err-circular.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-if-import-catch-specifier-tostring-abrupt-rejects.js
   - [x] test/language/expressions/dynamic-import/catch/nested-while-import-catch-eval-rqstd-abrupt-typeerror.js
   - [x] test/language/expressions/dynamic-import/catch/nested-while-import-catch-eval-rqstd-abrupt-urierror.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-while-import-catch-eval-script-code-target.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-while-import-catch-file-does-not-exist.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-while-import-catch-import-defer-specifier-tostring-abrupt-rejects.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-while-import-catch-import-source-source-text-module.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-while-import-catch-import-source-specifier-tostring-abrupt-rejects.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-while-import-catch-import-source-specifier-tostring.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-while-import-catch-instn-iee-err-ambiguous-import.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-while-import-catch-instn-iee-err-circular.js
-  - [ ] test/language/expressions/dynamic-import/catch/nested-while-import-catch-specifier-tostring-abrupt-rejects.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-while-import-catch-eval-script-code-target.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-while-import-catch-file-does-not-exist.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-while-import-catch-import-defer-specifier-tostring-abrupt-rejects.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-while-import-catch-import-source-source-text-module.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-while-import-catch-import-source-specifier-tostring-abrupt-rejects.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-while-import-catch-import-source-specifier-tostring.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-while-import-catch-instn-iee-err-ambiguous-import.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-while-import-catch-instn-iee-err-circular.js
+  - [x] test/language/expressions/dynamic-import/catch/nested-while-import-catch-specifier-tostring-abrupt-rejects.js
   - [x] test/language/expressions/dynamic-import/catch/top-level-import-catch-eval-rqstd-abrupt-typeerror.js
   - [x] test/language/expressions/dynamic-import/catch/top-level-import-catch-eval-rqstd-abrupt-urierror.js
-  - [ ] test/language/expressions/dynamic-import/catch/top-level-import-catch-eval-script-code-target.js
-  - [ ] test/language/expressions/dynamic-import/catch/top-level-import-catch-file-does-not-exist.js
-  - [ ] test/language/expressions/dynamic-import/catch/top-level-import-catch-import-defer-specifier-tostring-abrupt-rejects.js
-  - [ ] test/language/expressions/dynamic-import/catch/top-level-import-catch-import-source-source-text-module.js
-  - [ ] test/language/expressions/dynamic-import/catch/top-level-import-catch-import-source-specifier-tostring-abrupt-rejects.js
-  - [ ] test/language/expressions/dynamic-import/catch/top-level-import-catch-import-source-specifier-tostring.js
-  - [ ] test/language/expressions/dynamic-import/catch/top-level-import-catch-instn-iee-err-ambiguous-import.js
-  - [ ] test/language/expressions/dynamic-import/catch/top-level-import-catch-instn-iee-err-circular.js
-  - [ ] test/language/expressions/dynamic-import/catch/top-level-import-catch-specifier-tostring-abrupt-rejects.js
+  - [x] test/language/expressions/dynamic-import/catch/top-level-import-catch-eval-script-code-target.js
+  - [x] test/language/expressions/dynamic-import/catch/top-level-import-catch-file-does-not-exist.js
+  - [x] test/language/expressions/dynamic-import/catch/top-level-import-catch-import-defer-specifier-tostring-abrupt-rejects.js
+  - [x] test/language/expressions/dynamic-import/catch/top-level-import-catch-import-source-source-text-module.js
+  - [x] test/language/expressions/dynamic-import/catch/top-level-import-catch-import-source-specifier-tostring-abrupt-rejects.js
+  - [x] test/language/expressions/dynamic-import/catch/top-level-import-catch-import-source-specifier-tostring.js
+  - [x] test/language/expressions/dynamic-import/catch/top-level-import-catch-instn-iee-err-ambiguous-import.js
+  - [x] test/language/expressions/dynamic-import/catch/top-level-import-catch-instn-iee-err-circular.js
+  - [x] test/language/expressions/dynamic-import/catch/top-level-import-catch-specifier-tostring-abrupt-rejects.js
   - [ ] test/language/expressions/dynamic-import/custom-primitive.js
   - [x] test/language/expressions/dynamic-import/escape-sequence-import.js
-  - [ ] test/language/expressions/dynamic-import/eval-export-dflt-cls-anon.js
-  - [ ] test/language/expressions/dynamic-import/eval-export-dflt-cls-name-meth.js
-  - [ ] test/language/expressions/dynamic-import/eval-export-dflt-cls-named.js
-  - [ ] test/language/expressions/dynamic-import/eval-export-dflt-expr-cls-anon.js
-  - [ ] test/language/expressions/dynamic-import/eval-export-dflt-expr-cls-name-meth.js
-  - [ ] test/language/expressions/dynamic-import/eval-export-dflt-expr-cls-named.js
-  - [ ] test/language/expressions/dynamic-import/eval-export-dflt-expr-fn-anon.js
-  - [ ] test/language/expressions/dynamic-import/eval-export-dflt-expr-fn-named.js
-  - [ ] test/language/expressions/dynamic-import/eval-export-dflt-expr-gen-anon.js
-  - [ ] test/language/expressions/dynamic-import/eval-export-dflt-expr-gen-named.js
-  - [ ] test/language/expressions/dynamic-import/eval-export-dflt-expr-in.js
+  - [x] test/language/expressions/dynamic-import/eval-export-dflt-cls-anon.js
+  - [x] test/language/expressions/dynamic-import/eval-export-dflt-cls-name-meth.js
+  - [x] test/language/expressions/dynamic-import/eval-export-dflt-cls-named.js
+  - [x] test/language/expressions/dynamic-import/eval-export-dflt-expr-cls-anon.js
+  - [x] test/language/expressions/dynamic-import/eval-export-dflt-expr-cls-name-meth.js
+  - [x] test/language/expressions/dynamic-import/eval-export-dflt-expr-cls-named.js
+  - [x] test/language/expressions/dynamic-import/eval-export-dflt-expr-fn-anon.js
+  - [x] test/language/expressions/dynamic-import/eval-export-dflt-expr-fn-named.js
+  - [x] test/language/expressions/dynamic-import/eval-export-dflt-expr-gen-anon.js
+  - [x] test/language/expressions/dynamic-import/eval-export-dflt-expr-gen-named.js
+  - [x] test/language/expressions/dynamic-import/eval-export-dflt-expr-in.js
   - [ ] test/language/expressions/dynamic-import/eval-rqstd-once.js
   - [ ] test/language/expressions/dynamic-import/eval-self-once-module.js
   - [ ] test/language/expressions/dynamic-import/eval-self-once-script.js
@@ -17944,7 +17944,7 @@ Sub-category progress
   - [ ] test/language/expressions/dynamic-import/import-defer/import-defer-async-module/main.js
   - [ ] test/language/expressions/dynamic-import/import-defer/import-defer-transitive-async-module/main.js
   - [ ] test/language/expressions/dynamic-import/import-defer/import-defer-transitive-async-module/promise-prototype-then-not-called.js
-  - [ ] test/language/expressions/dynamic-import/import-defer/sync/main.js
+  - [x] test/language/expressions/dynamic-import/import-defer/sync/main.js
   - [ ] test/language/expressions/dynamic-import/import-defer/sync-dependency-of-deferred-async-module/main.js
   - [ ] test/language/expressions/dynamic-import/import-errored-module.js
   - [x] test/language/expressions/dynamic-import/imported-self-update.js
@@ -17972,12 +17972,12 @@ Sub-category progress
   - [ ] test/language/expressions/dynamic-import/namespace/await-ns-has-property-sym-not-found.js
   - [ ] test/language/expressions/dynamic-import/namespace/await-ns-no-iterator.js
   - [ ] test/language/expressions/dynamic-import/namespace/await-ns-own-property-keys-sort.js
-  - [ ] test/language/expressions/dynamic-import/namespace/await-ns-prevent-extensions-object.js
-  - [ ] test/language/expressions/dynamic-import/namespace/await-ns-prevent-extensions-reflect.js
+  - [x] test/language/expressions/dynamic-import/namespace/await-ns-prevent-extensions-object.js
+  - [x] test/language/expressions/dynamic-import/namespace/await-ns-prevent-extensions-reflect.js
   - [ ] test/language/expressions/dynamic-import/namespace/await-ns-prop-descs.js
   - [ ] test/language/expressions/dynamic-import/namespace/await-ns-prototype.js
   - [ ] test/language/expressions/dynamic-import/namespace/await-ns-set-no-strict.js
-  - [ ] test/language/expressions/dynamic-import/namespace/await-ns-set-prototype-of-null.js
+  - [x] test/language/expressions/dynamic-import/namespace/await-ns-set-prototype-of-null.js
   - [ ] test/language/expressions/dynamic-import/namespace/await-ns-set-prototype-of.js
   - [ ] test/language/expressions/dynamic-import/namespace/await-ns-set-same-values-no-strict.js
   - [ ] test/language/expressions/dynamic-import/namespace/await-ns-set-same-values-strict.js
