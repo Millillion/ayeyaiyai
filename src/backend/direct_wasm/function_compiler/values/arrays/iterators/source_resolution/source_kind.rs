@@ -638,6 +638,18 @@ impl<'a> FunctionCompiler<'a> {
                 completion_value,
             });
         }
+        trace_probe!("static-iterable-iterator-object:start");
+        if let Some((steps, completion_effects, completion_value)) =
+            self.resolve_static_iterable_iterator_object_simple_generator_source(expression)
+        {
+            trace_source!("static-iterable-iterator-object");
+            return Some(IteratorSourceKind::SimpleGenerator {
+                is_async: false,
+                steps,
+                completion_effects,
+                completion_value,
+            });
+        }
         trace_probe!("static-iterable-binding:start");
         let binding = self.resolve_static_iterable_binding_from_expression(expression)?;
         trace_source!("static-iterable-binding");

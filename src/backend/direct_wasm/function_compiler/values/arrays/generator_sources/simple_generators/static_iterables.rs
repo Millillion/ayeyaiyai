@@ -980,6 +980,95 @@ impl<'a> FunctionCompiler<'a> {
         None
     }
 
+    /// Bridges a `Symbol.iterator` iterable to the iterator-object simple
+    /// generator classifier: statically executes the (effect-free) iterator
+    /// method and classifies the returned iterator object, which supports
+    /// observable `return()` close effects and infinite step prefixes that
+    /// `resolve_static_iterable_simple_generator_source` rejects.
+    pub(in crate::backend::direct_wasm) fn resolve_static_iterable_iterator_object_simple_generator_source(
+        &self,
+        expression: &Expression,
+    ) -> Option<(Vec<SimpleGeneratorStep>, Vec<Statement>, Expression)> {
+        let trace = crate::ayy_env_flag!("AYY_TRACE_STATIC_ITERATOR_OBJECT");
+        let object_binding = self.resolve_object_binding_from_expression(expression)?;
+        let symbol_iterator = self.materialize_static_expression(&Expression::Member {
+            object: Box::new(Expression::Identifier("Symbol".to_string())),
+            property: Box::new(Expression::String("iterator".to_string())),
+        });
+        let Some(iterator_method) =
+            object_binding_lookup_value(&object_binding, &symbol_iterator).cloned()
+        else {
+            if trace {
+                eprintln!("static_iterable_iterator_object:reject symbol_iterator_lookup");
+            }
+            return None;
+        };
+        let Some(LocalFunctionBinding::User(iterator_function_name)) =
+            self.resolve_function_binding_from_expression(&iterator_method)
+        else {
+            if trace {
+                eprintln!("static_iterable_iterator_object:reject iterator_function_binding");
+            }
+            return None;
+        };
+        // The iterator method body itself must be effect-free (per its inline
+        // summary, which covers direct effects only), but effects of the
+        // methods on the iterator object it returns (such as an observable
+        // `return()`) are classified downstream as close effects.
+        let iterator_user_function = self.user_function(&iterator_function_name)?;
+        // Nested closures on the returned iterator object may capture
+        // nonlocals (an observable `return()` for example); those are modeled
+        // downstream by the iterator-object classifier, so captured-function
+        // references alone do not disqualify the iterator method here.
+        if self.user_function_mentions_direct_eval(iterator_user_function)
+            || iterator_user_function.has_lowered_pattern_parameters()
+            || !self
+                .user_function_parameter_iterator_consumption_indices(iterator_user_function)
+                .is_empty()
+            || !iterator_user_function
+                .inline_summary
+                .as_ref()
+                .is_some_and(|summary| summary.effects.is_empty())
+        {
+            if trace {
+                eprintln!(
+                    "static_iterable_iterator_object:reject iterator_function_effects function={iterator_function_name} direct_eval={} captured_fn={} patterns={} iter_consumption={} summary_present={} effects_len={:?}",
+                    self.user_function_mentions_direct_eval(iterator_user_function),
+                    self.user_function_references_captured_user_function(iterator_user_function),
+                    iterator_user_function.has_lowered_pattern_parameters(),
+                    !self
+                        .user_function_parameter_iterator_consumption_indices(
+                            iterator_user_function
+                        )
+                        .is_empty(),
+                    iterator_user_function.inline_summary.is_some(),
+                    iterator_user_function
+                        .inline_summary
+                        .as_ref()
+                        .map(|summary| summary.effects.len())
+                );
+            }
+            return None;
+        }
+        let Some((iterator_result, _iterator_bindings)) = self
+            .execute_simple_static_user_function_with_bindings(
+                &iterator_function_name,
+                &HashMap::new(),
+            )
+        else {
+            if trace {
+                eprintln!(
+                    "static_iterable_iterator_object:reject iterator_execution function={iterator_function_name}"
+                );
+            }
+            return None;
+        };
+        if trace {
+            eprintln!("static_iterable_iterator_object:result {iterator_result:?}");
+        }
+        self.resolve_static_iterator_object_simple_generator_source(&iterator_result)
+    }
+
     pub(in crate::backend::direct_wasm) fn resolve_static_iterable_binding_from_expression(
         &self,
         expression: &Expression,
