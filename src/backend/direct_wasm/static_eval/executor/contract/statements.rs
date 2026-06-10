@@ -10,13 +10,13 @@ pub(in crate::backend::direct_wasm) trait StaticStatementExecutionExecutor:
 {
     fn execute_print(
         &self,
-        values: &[Expression],
-        environment: &mut Self::Environment,
+        _values: &[Expression],
+        _environment: &mut Self::Environment,
     ) -> Option<()> {
-        for value in values {
-            self.evaluate_expression(value, environment)?;
-        }
-        Some(())
+        // Static execution cannot perform I/O: succeeding here would let a
+        // call whose body prints be folded to its return value, silently
+        // dropping the output. Bail so the call is emitted at runtime.
+        None
     }
 
     fn execute_throw(

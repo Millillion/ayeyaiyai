@@ -388,6 +388,7 @@ impl<'a> FunctionCompiler<'a> {
         user_function.has_parameter_defaults()
             || self.user_function_mentions_direct_eval(user_function)
             || self.user_function_mentions_private_member_access(user_function)
+            || self.user_function_contains_print(user_function)
             || user_function
                 .inline_summary
                 .as_ref()
@@ -398,6 +399,39 @@ impl<'a> FunctionCompiler<'a> {
             || !self
                 .collect_user_function_call_effect_nonlocal_bindings(user_function)
                 .is_empty()
+    }
+
+    // Print is I/O: folding a call whose body prints to its static return
+    // value would silently drop the output.
+    fn user_function_contains_print(&self, user_function: &UserFunction) -> bool {
+        struct PrintFinder {
+            found: bool,
+        }
+        impl crate::ir::visit::Visitor for PrintFinder {
+            fn visit_statement(&mut self, statement: &Statement) {
+                if self.found {
+                    return;
+                }
+                if matches!(statement, Statement::Print { .. }) {
+                    self.found = true;
+                    return;
+                }
+                crate::ir::visit::walk_statement(self, statement);
+            }
+        }
+
+        let Some(function) = self.resolve_registered_function_declaration(&user_function.name)
+        else {
+            return false;
+        };
+        let mut finder = PrintFinder { found: false };
+        for statement in &function.body {
+            crate::ir::visit::Visitor::visit_statement(&mut finder, statement);
+            if finder.found {
+                return true;
+            }
+        }
+        false
     }
 
     fn call_expression_static_number_shortcut_value(&self, expression: &Expression) -> Option<f64> {
