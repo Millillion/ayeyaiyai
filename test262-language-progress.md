@@ -1,4 +1,4 @@
-20703/23668 (87.47%)
+20765/23668 (87.73%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,8 +14,8 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 8006/9337 (85.74%)
-- expressions: 9627/11061 (87.04%)
+- statements: 8037/9337 (86.08%)
+- expressions: 9658/11061 (87.32%)
 - types: 103/113 (91.15%)
 - function-code: 204/217 (94.01%)
 - global-code: 41/42 (97.62%)
@@ -5803,11 +5803,11 @@ Sub-category progress
   - [x] test/language/statements/class/elements/syntax/valid/grammar-special-prototype-async-meth-valid.js
   - [x] test/language/statements/class/elements/syntax/valid/grammar-special-prototype-gen-meth-valid.js
   - [x] test/language/statements/class/elements/syntax/valid/grammar-special-prototype-meth-valid.js
-  - [ ] test/language/statements/class/elements/syntax/valid/grammar-static-ctor-accessor-meth-valid.js
-  - [ ] test/language/statements/class/elements/syntax/valid/grammar-static-ctor-async-gen-meth-valid.js
-  - [ ] test/language/statements/class/elements/syntax/valid/grammar-static-ctor-async-meth-valid.js
-  - [ ] test/language/statements/class/elements/syntax/valid/grammar-static-ctor-gen-meth-valid.js
-  - [ ] test/language/statements/class/elements/syntax/valid/grammar-static-ctor-meth-valid.js
+  - [x] test/language/statements/class/elements/syntax/valid/grammar-static-ctor-accessor-meth-valid.js
+  - [x] test/language/statements/class/elements/syntax/valid/grammar-static-ctor-async-gen-meth-valid.js
+  - [x] test/language/statements/class/elements/syntax/valid/grammar-static-ctor-async-meth-valid.js
+  - [x] test/language/statements/class/elements/syntax/valid/grammar-static-ctor-gen-meth-valid.js
+  - [x] test/language/statements/class/elements/syntax/valid/grammar-static-ctor-meth-valid.js
   - [x] test/language/statements/class/elements/syntax/valid/grammar-static-private-async-gen-meth-prototype.js
   - [x] test/language/statements/class/elements/syntax/valid/grammar-static-private-async-meth-prototype.js
   - [x] test/language/statements/class/elements/syntax/valid/grammar-static-private-gen-meth-prototype.js
@@ -5921,15 +5921,15 @@ Sub-category progress
   - [x] test/language/statements/class/gen-method-static/yield-spread-arr-single.js
   - [x] test/language/statements/class/gen-method-static/yield-spread-obj.js
   - [x] test/language/statements/class/getter-param-dflt.js
-  - [ ] test/language/statements/class/ident-name-method-def-break-escaped.js
-  - [ ] test/language/statements/class/ident-name-method-def-case-escaped.js
-  - [ ] test/language/statements/class/ident-name-method-def-catch-escaped.js
-  - [ ] test/language/statements/class/ident-name-method-def-class-escaped.js
+  - [x] test/language/statements/class/ident-name-method-def-break-escaped.js
+  - [x] test/language/statements/class/ident-name-method-def-case-escaped.js
+  - [x] test/language/statements/class/ident-name-method-def-catch-escaped.js
+  - [x] test/language/statements/class/ident-name-method-def-class-escaped.js
   - [x] test/language/statements/class/ident-name-method-def-const-escaped.js
   - [x] test/language/statements/class/ident-name-method-def-continue-escaped.js
   - [x] test/language/statements/class/ident-name-method-def-debugger-escaped.js
-  - [ ] test/language/statements/class/ident-name-method-def-default-escaped-ext.js
-  - [ ] test/language/statements/class/ident-name-method-def-default-escaped.js
+  - [x] test/language/statements/class/ident-name-method-def-default-escaped-ext.js
+  - [x] test/language/statements/class/ident-name-method-def-default-escaped.js
   - [x] test/language/statements/class/ident-name-method-def-default.js
   - [x] test/language/statements/class/ident-name-method-def-delete-escaped.js
   - [x] test/language/statements/class/ident-name-method-def-do-escaped.js
@@ -5942,30 +5942,30 @@ Sub-category progress
   - [x] test/language/statements/class/ident-name-method-def-finally-escaped.js
   - [x] test/language/statements/class/ident-name-method-def-for-escaped.js
   - [x] test/language/statements/class/ident-name-method-def-function-escaped.js
-  - [ ] test/language/statements/class/ident-name-method-def-if-escaped.js
+  - [x] test/language/statements/class/ident-name-method-def-if-escaped.js
   - [x] test/language/statements/class/ident-name-method-def-implements-escaped.js
   - [x] test/language/statements/class/ident-name-method-def-import-escaped.js
   - [x] test/language/statements/class/ident-name-method-def-in-escaped.js
   - [x] test/language/statements/class/ident-name-method-def-instanceof-escaped.js
-  - [ ] test/language/statements/class/ident-name-method-def-interface-escaped.js
-  - [ ] test/language/statements/class/ident-name-method-def-let-escaped.js
-  - [ ] test/language/statements/class/ident-name-method-def-new-escaped.js
-  - [ ] test/language/statements/class/ident-name-method-def-package-escaped.js
-  - [ ] test/language/statements/class/ident-name-method-def-private-escaped.js
-  - [ ] test/language/statements/class/ident-name-method-def-protected-escaped.js
-  - [ ] test/language/statements/class/ident-name-method-def-public-escaped.js
-  - [ ] test/language/statements/class/ident-name-method-def-return-escaped.js
-  - [ ] test/language/statements/class/ident-name-method-def-static-escaped.js
-  - [ ] test/language/statements/class/ident-name-method-def-super-escaped.js
-  - [ ] test/language/statements/class/ident-name-method-def-switch-escaped.js
-  - [ ] test/language/statements/class/ident-name-method-def-this-escaped.js
-  - [ ] test/language/statements/class/ident-name-method-def-throw-escaped.js
-  - [ ] test/language/statements/class/ident-name-method-def-try-escaped.js
-  - [ ] test/language/statements/class/ident-name-method-def-typeof-escaped.js
-  - [ ] test/language/statements/class/ident-name-method-def-var-escaped.js
-  - [ ] test/language/statements/class/ident-name-method-def-void-escaped.js
-  - [ ] test/language/statements/class/ident-name-method-def-while-escaped.js
-  - [ ] test/language/statements/class/ident-name-method-def-with-escaped.js
+  - [x] test/language/statements/class/ident-name-method-def-interface-escaped.js
+  - [x] test/language/statements/class/ident-name-method-def-let-escaped.js
+  - [x] test/language/statements/class/ident-name-method-def-new-escaped.js
+  - [x] test/language/statements/class/ident-name-method-def-package-escaped.js
+  - [x] test/language/statements/class/ident-name-method-def-private-escaped.js
+  - [x] test/language/statements/class/ident-name-method-def-protected-escaped.js
+  - [x] test/language/statements/class/ident-name-method-def-public-escaped.js
+  - [x] test/language/statements/class/ident-name-method-def-return-escaped.js
+  - [x] test/language/statements/class/ident-name-method-def-static-escaped.js
+  - [x] test/language/statements/class/ident-name-method-def-super-escaped.js
+  - [x] test/language/statements/class/ident-name-method-def-switch-escaped.js
+  - [x] test/language/statements/class/ident-name-method-def-this-escaped.js
+  - [x] test/language/statements/class/ident-name-method-def-throw-escaped.js
+  - [x] test/language/statements/class/ident-name-method-def-try-escaped.js
+  - [x] test/language/statements/class/ident-name-method-def-typeof-escaped.js
+  - [x] test/language/statements/class/ident-name-method-def-var-escaped.js
+  - [x] test/language/statements/class/ident-name-method-def-void-escaped.js
+  - [x] test/language/statements/class/ident-name-method-def-while-escaped.js
+  - [x] test/language/statements/class/ident-name-method-def-with-escaped.js
   - [x] test/language/statements/class/method/array-destructuring-param-strict-body.js
   - [x] test/language/statements/class/method/dflt-params-abrupt.js
   - [x] test/language/statements/class/method/dflt-params-arg-val-not-undefined.js
@@ -16701,11 +16701,11 @@ Sub-category progress
   - [x] test/language/expressions/class/elements/syntax/valid/grammar-special-prototype-async-meth-valid.js
   - [x] test/language/expressions/class/elements/syntax/valid/grammar-special-prototype-gen-meth-valid.js
   - [x] test/language/expressions/class/elements/syntax/valid/grammar-special-prototype-meth-valid.js
-  - [ ] test/language/expressions/class/elements/syntax/valid/grammar-static-ctor-accessor-meth-valid.js
-  - [ ] test/language/expressions/class/elements/syntax/valid/grammar-static-ctor-async-gen-meth-valid.js
-  - [ ] test/language/expressions/class/elements/syntax/valid/grammar-static-ctor-async-meth-valid.js
-  - [ ] test/language/expressions/class/elements/syntax/valid/grammar-static-ctor-gen-meth-valid.js
-  - [ ] test/language/expressions/class/elements/syntax/valid/grammar-static-ctor-meth-valid.js
+  - [x] test/language/expressions/class/elements/syntax/valid/grammar-static-ctor-accessor-meth-valid.js
+  - [x] test/language/expressions/class/elements/syntax/valid/grammar-static-ctor-async-gen-meth-valid.js
+  - [x] test/language/expressions/class/elements/syntax/valid/grammar-static-ctor-async-meth-valid.js
+  - [x] test/language/expressions/class/elements/syntax/valid/grammar-static-ctor-gen-meth-valid.js
+  - [x] test/language/expressions/class/elements/syntax/valid/grammar-static-ctor-meth-valid.js
   - [x] test/language/expressions/class/elements/syntax/valid/grammar-static-private-async-gen-meth-prototype.js
   - [x] test/language/expressions/class/elements/syntax/valid/grammar-static-private-async-meth-prototype.js
   - [x] test/language/expressions/class/elements/syntax/valid/grammar-static-private-gen-meth-prototype.js
@@ -16821,15 +16821,15 @@ Sub-category progress
   - [x] test/language/expressions/class/getter-param-dflt.js
   - [ ] test/language/expressions/class/heritage-arrow-function.js
   - [ ] test/language/expressions/class/heritage-async-arrow-function.js
-  - [ ] test/language/expressions/class/ident-name-method-def-break-escaped.js
-  - [ ] test/language/expressions/class/ident-name-method-def-case-escaped.js
-  - [ ] test/language/expressions/class/ident-name-method-def-catch-escaped.js
-  - [ ] test/language/expressions/class/ident-name-method-def-class-escaped.js
+  - [x] test/language/expressions/class/ident-name-method-def-break-escaped.js
+  - [x] test/language/expressions/class/ident-name-method-def-case-escaped.js
+  - [x] test/language/expressions/class/ident-name-method-def-catch-escaped.js
+  - [x] test/language/expressions/class/ident-name-method-def-class-escaped.js
   - [x] test/language/expressions/class/ident-name-method-def-const-escaped.js
   - [x] test/language/expressions/class/ident-name-method-def-continue-escaped.js
   - [x] test/language/expressions/class/ident-name-method-def-debugger-escaped.js
-  - [ ] test/language/expressions/class/ident-name-method-def-default-escaped-ext.js
-  - [ ] test/language/expressions/class/ident-name-method-def-default-escaped.js
+  - [x] test/language/expressions/class/ident-name-method-def-default-escaped-ext.js
+  - [x] test/language/expressions/class/ident-name-method-def-default-escaped.js
   - [x] test/language/expressions/class/ident-name-method-def-default.js
   - [x] test/language/expressions/class/ident-name-method-def-delete-escaped.js
   - [x] test/language/expressions/class/ident-name-method-def-do-escaped.js
@@ -16842,30 +16842,30 @@ Sub-category progress
   - [x] test/language/expressions/class/ident-name-method-def-finally-escaped.js
   - [x] test/language/expressions/class/ident-name-method-def-for-escaped.js
   - [x] test/language/expressions/class/ident-name-method-def-function-escaped.js
-  - [ ] test/language/expressions/class/ident-name-method-def-if-escaped.js
+  - [x] test/language/expressions/class/ident-name-method-def-if-escaped.js
   - [x] test/language/expressions/class/ident-name-method-def-implements-escaped.js
   - [x] test/language/expressions/class/ident-name-method-def-import-escaped.js
   - [x] test/language/expressions/class/ident-name-method-def-in-escaped.js
   - [x] test/language/expressions/class/ident-name-method-def-instanceof-escaped.js
-  - [ ] test/language/expressions/class/ident-name-method-def-interface-escaped.js
-  - [ ] test/language/expressions/class/ident-name-method-def-let-escaped.js
-  - [ ] test/language/expressions/class/ident-name-method-def-new-escaped.js
-  - [ ] test/language/expressions/class/ident-name-method-def-package-escaped.js
-  - [ ] test/language/expressions/class/ident-name-method-def-private-escaped.js
-  - [ ] test/language/expressions/class/ident-name-method-def-protected-escaped.js
-  - [ ] test/language/expressions/class/ident-name-method-def-public-escaped.js
-  - [ ] test/language/expressions/class/ident-name-method-def-return-escaped.js
-  - [ ] test/language/expressions/class/ident-name-method-def-static-escaped.js
-  - [ ] test/language/expressions/class/ident-name-method-def-super-escaped.js
-  - [ ] test/language/expressions/class/ident-name-method-def-switch-escaped.js
-  - [ ] test/language/expressions/class/ident-name-method-def-this-escaped.js
-  - [ ] test/language/expressions/class/ident-name-method-def-throw-escaped.js
-  - [ ] test/language/expressions/class/ident-name-method-def-try-escaped.js
-  - [ ] test/language/expressions/class/ident-name-method-def-typeof-escaped.js
-  - [ ] test/language/expressions/class/ident-name-method-def-var-escaped.js
-  - [ ] test/language/expressions/class/ident-name-method-def-void-escaped.js
-  - [ ] test/language/expressions/class/ident-name-method-def-while-escaped.js
-  - [ ] test/language/expressions/class/ident-name-method-def-with-escaped.js
+  - [x] test/language/expressions/class/ident-name-method-def-interface-escaped.js
+  - [x] test/language/expressions/class/ident-name-method-def-let-escaped.js
+  - [x] test/language/expressions/class/ident-name-method-def-new-escaped.js
+  - [x] test/language/expressions/class/ident-name-method-def-package-escaped.js
+  - [x] test/language/expressions/class/ident-name-method-def-private-escaped.js
+  - [x] test/language/expressions/class/ident-name-method-def-protected-escaped.js
+  - [x] test/language/expressions/class/ident-name-method-def-public-escaped.js
+  - [x] test/language/expressions/class/ident-name-method-def-return-escaped.js
+  - [x] test/language/expressions/class/ident-name-method-def-static-escaped.js
+  - [x] test/language/expressions/class/ident-name-method-def-super-escaped.js
+  - [x] test/language/expressions/class/ident-name-method-def-switch-escaped.js
+  - [x] test/language/expressions/class/ident-name-method-def-this-escaped.js
+  - [x] test/language/expressions/class/ident-name-method-def-throw-escaped.js
+  - [x] test/language/expressions/class/ident-name-method-def-try-escaped.js
+  - [x] test/language/expressions/class/ident-name-method-def-typeof-escaped.js
+  - [x] test/language/expressions/class/ident-name-method-def-var-escaped.js
+  - [x] test/language/expressions/class/ident-name-method-def-void-escaped.js
+  - [x] test/language/expressions/class/ident-name-method-def-while-escaped.js
+  - [x] test/language/expressions/class/ident-name-method-def-with-escaped.js
   - [x] test/language/expressions/class/method/array-destructuring-param-strict-body.js
   - [x] test/language/expressions/class/method/dflt-params-abrupt.js
   - [x] test/language/expressions/class/method/dflt-params-arg-val-not-undefined.js
