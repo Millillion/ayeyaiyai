@@ -1331,8 +1331,17 @@ impl<'a> FunctionCompiler<'a> {
         }
         let stores_bind_call = state_stores_function_prototype_bind_call(state)
             || state_stores_function_constructor_alias(state);
+        // Statically constructed boxed primitives (`new Boolean/Number/String`
+        // with a static argument) keep their value metadata so later reads,
+        // updates, and compound assignments can resolve the boxed value
+        // through `resolve_static_boxed_primitive_value`.
         let stores_unresolved_constructor_instance =
-            state_stores_unresolved_constructor_instance(state);
+            state_stores_unresolved_constructor_instance(state)
+                && self
+                    .resolve_static_constructed_boxed_primitive_value(
+                        &state.canonical_value_expression,
+                    )
+                    .is_none();
         let value_cannot_have_runtime_array_state = state.array_binding.is_none()
             && matches!(
                 state.kind,

@@ -143,4 +143,118 @@ impl<'a> FunctionCompiler<'a> {
         })
         .unwrap_or_else(|| expression.clone())
     }
+
+    /// Snapshots an effectful initializer/assignment value expression for
+    /// static tracking. Compound assignments and updates mutate binding state
+    /// while the surrounding expression is emitted, so the raw expression must
+    /// not be stored for later re-resolution: re-evaluating it against the
+    /// mutated state double-applies the operation (for example
+    /// `var z = (x *= -1)` would re-read the updated `x`). This resolves
+    /// identifier reads against the current (pre-emission) static state so the
+    /// stored value matches evaluation order.
+    pub(in crate::backend::direct_wasm) fn snapshot_effectful_expression_for_static_store(
+        &self,
+        expression: &Expression,
+    ) -> Option<Expression> {
+        if !Self::expression_contains_assignment_or_update(expression) {
+            return None;
+        }
+        if self.expression_depends_on_active_loop_assignment(expression) {
+            return None;
+        }
+        self.snapshot_expression_value_against_current_state(expression)
+    }
+
+    /// Same as [`Self::snapshot_effectful_expression_for_static_store`], but
+    /// also snapshots pure right-hand sides that read the assignment target
+    /// itself (the desugared form of `x op= y` is `x = x op y`); storing the
+    /// raw self-referential expression would resolve against the already
+    /// updated target.
+    pub(in crate::backend::direct_wasm) fn snapshot_assignment_value_for_static_store(
+        &self,
+        name: &str,
+        value: &Expression,
+    ) -> Option<Expression> {
+        let references_target = {
+            let mut referenced_names = HashSet::new();
+            collect_referenced_binding_names_from_expression(value, &mut referenced_names);
+            referenced_names.contains(name)
+        };
+        if !references_target && !Self::expression_contains_assignment_or_update(value) {
+            return None;
+        }
+        if self.expression_depends_on_active_loop_assignment(value) {
+            return None;
+        }
+        self.snapshot_expression_value_against_current_state(value)
+    }
+
+    fn snapshot_expression_value_against_current_state(
+        &self,
+        expression: &Expression,
+    ) -> Option<Expression> {
+        match expression {
+            Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined => Some(expression.clone()),
+            Expression::Identifier(_) => {
+                let materialized = self.materialize_static_expression(expression);
+                if static_expression_matches(&materialized, expression)
+                    || Self::expression_contains_assignment_or_update(&materialized)
+                {
+                    None
+                } else {
+                    Some(materialized)
+                }
+            }
+            Expression::Update { name, op, prefix } => {
+                let previous =
+                    self.resolve_static_number_value(&Expression::Identifier(name.clone()))?;
+                let next = match op {
+                    UpdateOp::Increment => previous + 1.0,
+                    UpdateOp::Decrement => previous - 1.0,
+                };
+                Some(Expression::Number(if *prefix { next } else { previous }))
+            }
+            Expression::Assign { name, value } => Some(Expression::Assign {
+                name: name.clone(),
+                value: Box::new(self.snapshot_expression_value_against_current_state(value)?),
+            }),
+            Expression::Unary { op, expression } => {
+                if matches!(op, UnaryOp::Delete | UnaryOp::TypeOf) {
+                    return None;
+                }
+                Some(Expression::Unary {
+                    op: *op,
+                    expression: Box::new(
+                        self.snapshot_expression_value_against_current_state(expression)?,
+                    ),
+                })
+            }
+            Expression::Binary { op, left, right } => Some(Expression::Binary {
+                op: *op,
+                left: Box::new(self.snapshot_expression_value_against_current_state(left)?),
+                right: Box::new(self.snapshot_expression_value_against_current_state(right)?),
+            }),
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => Some(Expression::Conditional {
+                condition: Box::new(
+                    self.snapshot_expression_value_against_current_state(condition)?,
+                ),
+                then_expression: Box::new(
+                    self.snapshot_expression_value_against_current_state(then_expression)?,
+                ),
+                else_expression: Box::new(
+                    self.snapshot_expression_value_against_current_state(else_expression)?,
+                ),
+            }),
+            _ => None,
+        }
+    }
 }

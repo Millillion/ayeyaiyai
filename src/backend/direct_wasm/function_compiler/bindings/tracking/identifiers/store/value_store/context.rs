@@ -1132,6 +1132,78 @@ impl<'a> FunctionCompiler<'a> {
         expression_is_statically_non_thenable(&static_value).then(|| inner.as_ref().clone())
     }
 
+    /// Detects stores whose value still reads the binding being assigned (the
+    /// desugared compound-assignment forms `x = x + 1` and
+    /// `z = (x = x + 1)`) when that binding has no resolvable static value.
+    /// Tracking such expressions is useless (re-resolving them against the
+    /// post-assignment state double-applies the operation) and exploring them
+    /// through the static resolvers can explode combinatorially, so the store
+    /// is treated as a runtime-opaque value instead.
+    fn identifier_store_is_unresolvable_self_reference(
+        &self,
+        name: &str,
+        canonical_value_expression: &Expression,
+    ) -> bool {
+        fn expression_is_arithmetic_shape(expression: &Expression) -> bool {
+            match expression {
+                Expression::Binary { left, right, .. } => {
+                    expression_is_arithmetic_shape(left) && expression_is_arithmetic_shape(right)
+                }
+                Expression::Unary { expression, .. } => expression_is_arithmetic_shape(expression),
+                Expression::Identifier(_)
+                | Expression::Number(_)
+                | Expression::BigInt(_)
+                | Expression::String(_)
+                | Expression::Bool(_)
+                | Expression::Null
+                | Expression::Undefined => true,
+                _ => false,
+            }
+        }
+
+        let (self_name, referenced_scope) = match canonical_value_expression {
+            Expression::Assign {
+                name: assign_name,
+                value,
+            } if expression_is_arithmetic_shape(value) => (assign_name.as_str(), value.as_ref()),
+            expression if expression_is_arithmetic_shape(expression) => {
+                (name, canonical_value_expression)
+            }
+            _ => return false,
+        };
+        if self_name.starts_with("__ayy_") {
+            return false;
+        }
+        // Restricted to undeclared (implicit global) bindings: that is where
+        // the pathological resolution blowups occur, while declared bindings
+        // and inlined function bodies rely on richer store metadata (for
+        // example parameter destructuring analysis).
+        if self.resolve_current_local_binding(self_name).is_some()
+            || self.backend.global_binding_index(self_name).is_some()
+        {
+            return false;
+        }
+        let mut referenced_names = HashSet::new();
+        collect_referenced_binding_names_from_expression(referenced_scope, &mut referenced_names);
+        if !referenced_names.contains(self_name) {
+            return false;
+        }
+        if self.expression_depends_on_active_loop_assignment(canonical_value_expression) {
+            return false;
+        }
+        let identifier = Expression::Identifier(self_name.to_string());
+        let materialized = self.materialize_static_expression(&identifier);
+        if static_expression_matches(&materialized, &identifier) {
+            return true;
+        }
+        let mut materialized_referenced_names = HashSet::new();
+        collect_referenced_binding_names_from_expression(
+            &materialized,
+            &mut materialized_referenced_names,
+        );
+        materialized_referenced_names.contains(self_name)
+    }
+
     pub(super) fn prepare_identifier_value_store(
         &mut self,
         name: &str,
@@ -1276,6 +1348,32 @@ impl<'a> FunctionCompiler<'a> {
                 returned_descriptor_binding: None,
                 runtime_value_override: None,
                 opaque_runtime_value: false,
+            };
+        }
+        if self.identifier_store_is_unresolvable_self_reference(name, &canonical_value_expression) {
+            if trace_identifier_store {
+                eprintln!("identifier_store:{name}:unresolvable_self_reference_fast_path");
+            }
+            return PreparedIdentifierValueStore {
+                canonical_value_expression: canonical_value_expression.clone(),
+                tracked_value_expression: canonical_value_expression.clone(),
+                descriptor_binding_expression: Expression::Undefined,
+                tracked_object_expression: Expression::Undefined,
+                call_source_snapshot_expression: None,
+                prototype_source_snapshot_expression: None,
+                function_binding_expression: Expression::Undefined,
+                function_binding: None,
+                object_binding_expression: Expression::Undefined,
+                object_binding: None,
+                kind: Some(StaticValueKind::Unknown),
+                static_string_value: None,
+                exact_static_number: None,
+                array_binding: None,
+                module_assignment_expression: canonical_value_expression,
+                resolved_local_binding,
+                returned_descriptor_binding: None,
+                runtime_value_override: None,
+                opaque_runtime_value: true,
             };
         }
         if expression_is_nested_assert_helper_runtime_value(&canonical_value_expression) {

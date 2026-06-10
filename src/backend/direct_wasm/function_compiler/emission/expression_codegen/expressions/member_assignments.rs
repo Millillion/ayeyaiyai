@@ -5,6 +5,59 @@ mod named_objects;
 mod setter_calls;
 mod super_members;
 
+fn expression_contains_member_access(
+    expression: &Expression,
+    object: &Expression,
+    property: &Expression,
+) -> bool {
+    if let Expression::Member {
+        object: nested_object,
+        property: nested_property,
+    } = expression
+        && static_expression_matches(nested_object, object)
+        && static_expression_matches(nested_property, property)
+    {
+        return true;
+    }
+    let found = std::cell::Cell::new(false);
+    let _ = materialize_recursive_expression(expression, true, true, &|nested| {
+        if expression_contains_member_access(nested, object, property) {
+            found.set(true);
+        }
+        Some(nested.clone())
+    });
+    found.get()
+}
+
+fn substitute_member_property_key(
+    expression: &Expression,
+    object: &Expression,
+    property: &Expression,
+    resolved_key: &Expression,
+) -> Expression {
+    if let Expression::Member {
+        object: nested_object,
+        property: nested_property,
+    } = expression
+        && static_expression_matches(nested_object, object)
+        && static_expression_matches(nested_property, property)
+    {
+        return Expression::Member {
+            object: nested_object.clone(),
+            property: Box::new(resolved_key.clone()),
+        };
+    }
+    materialize_recursive_expression(expression, true, true, &|nested| {
+        Some(substitute_member_property_key(
+            nested,
+            object,
+            property,
+            resolved_key,
+        ))
+    })
+    .unwrap_or_else(|| expression.clone())
+}
+
 fn assign_member_expression_references_internal_iterator_step(expression: &Expression) -> bool {
     match expression {
         Expression::Identifier(name) => {
@@ -613,6 +666,23 @@ impl<'a> FunctionCompiler<'a> {
         property: &Expression,
         value: &Expression,
     ) -> DirectResult<()> {
+        // Compound member assignments (`base[prop] *= rhs`) reuse the same
+        // property reference for the read and the write, so a coercing
+        // property key (an object with `toString`/`valueOf`) must be coerced
+        // exactly once. Emit the coercion effects up front and continue with
+        // the resolved key substituted into both positions.
+        if expression_contains_member_access(value, object, property)
+            && self
+                .resolve_property_key_expression_with_coercion(property)
+                .and_then(|resolved| resolved.coercion)
+                .is_some()
+            && let Some(resolved_key) = self.emit_property_key_expression_effects(property)?
+            && !static_expression_matches(&resolved_key, property)
+        {
+            let substituted_value =
+                substitute_member_property_key(value, object, property, &resolved_key);
+            return self.emit_assign_member_expression(object, &resolved_key, &substituted_value);
+        }
         let trace_member_assignment = crate::ayy_env_flag!("AYY_TRACE_MEMBER_ASSIGNMENT");
         if trace_member_assignment {
             eprintln!(

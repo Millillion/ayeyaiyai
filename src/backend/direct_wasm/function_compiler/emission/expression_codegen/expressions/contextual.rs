@@ -1006,6 +1006,24 @@ impl<'a> FunctionCompiler<'a> {
         name: &str,
         value: &Expression,
     ) -> DirectResult<()> {
+        // Cached property-key temps from compound member assignments
+        // (`base[prop] *= value`) must coerce the key exactly once; emit the
+        // ToPropertyKey side effects here and track the resolved key so the
+        // later read and write of the member reuse it.
+        if name.starts_with("__ayy_target_property_")
+            && self
+                .resolve_property_key_expression_with_coercion(value)
+                .and_then(|resolved| resolved.coercion)
+                .is_some()
+            && let Some(resolved_key) = self.emit_property_key_expression_effects(value)?
+        {
+            let value_local = self.allocate_temp_local();
+            self.emit_numeric_expression(&resolved_key)?;
+            self.push_local_set(value_local);
+            self.emit_store_identifier_value_local(name, &resolved_key, value_local)?;
+            self.push_local_get(value_local);
+            return Ok(());
+        }
         let scoped_target = self.resolve_with_scope_binding(name)?;
         let resolved_reference_local = scoped_target
             .is_none()
@@ -1048,6 +1066,7 @@ impl<'a> FunctionCompiler<'a> {
             && reference_global_index.is_none()
             && !reference_targets_eval_local
             && reference_implicit_global.is_none();
+        let snapshot_store_value = self.snapshot_assignment_value_for_static_store(name, value);
         self.emit_numeric_expression(value)?;
         if let Some(scope_object) = scoped_target {
             let value_local = self.allocate_temp_local();
@@ -1058,7 +1077,7 @@ impl<'a> FunctionCompiler<'a> {
             self.push_local_set(value_local);
             self.emit_store_identifier_value_local_with_reference_target(
                 name,
-                value,
+                snapshot_store_value.as_ref().unwrap_or(value),
                 value_local,
                 resolved_reference_local,
                 reference_targets_capture,

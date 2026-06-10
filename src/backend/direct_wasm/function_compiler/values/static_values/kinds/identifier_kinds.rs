@@ -1,5 +1,35 @@
 use super::*;
 
+thread_local! {
+    static ACTIVE_IDENTIFIER_KIND_LOOKUPS: RefCell<HashSet<String>> = RefCell::new(HashSet::new());
+}
+
+/// Re-entrancy guard for identifier kind lookups. Self-referential tracked
+/// values (for example `x` tracked as `x + 1` after `x += 1` on a binding
+/// without static metadata) would otherwise cycle through kind inference ->
+/// addition outcome resolution -> accessor binding resolution -> kind lookup
+/// for the same identifier, exploring an enormous resolution tree.
+struct IdentifierKindLookupGuard {
+    key: String,
+}
+
+impl IdentifierKindLookupGuard {
+    fn enter(name: &str) -> Option<Self> {
+        let key = name.to_string();
+        let inserted =
+            ACTIVE_IDENTIFIER_KIND_LOOKUPS.with(|active| active.borrow_mut().insert(key.clone()));
+        inserted.then_some(Self { key })
+    }
+}
+
+impl Drop for IdentifierKindLookupGuard {
+    fn drop(&mut self) {
+        ACTIVE_IDENTIFIER_KIND_LOOKUPS.with(|active| {
+            active.borrow_mut().remove(&self.key);
+        });
+    }
+}
+
 impl<'a> FunctionCompiler<'a> {
     fn dynamic_property_descriptor_source_from_expression(
         &self,
@@ -474,6 +504,10 @@ impl<'a> FunctionCompiler<'a> {
         {
             return Some(StaticValueKind::Object);
         }
+        if std::env::var_os("AYY_TRACE_KIND_LOOKUPS").is_some() {
+            eprintln!("kind_lookup:{name}");
+        }
+        let _lookup_guard = IdentifierKindLookupGuard::enter(name)?;
         let identifier = Expression::Identifier(name.to_string());
         if let Some(resolved) = self.resolve_bound_alias_expression(&identifier)
             && !static_expression_matches(&resolved, &identifier)

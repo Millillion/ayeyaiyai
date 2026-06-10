@@ -80,6 +80,23 @@ impl<'a> FunctionCompiler<'a> {
             .set_local_kind(name, StaticValueKind::Object);
     }
 
+    /// Self-referential descriptor values (for example `x + 1` for `x` after
+    /// an unresolvable `x += 1`) are replaced with a plain self-identifier so
+    /// later kind/value resolution treats the binding as runtime-valued
+    /// instead of recursively re-expanding the expression.
+    fn neutralize_self_referential_descriptor_value(
+        name: &str,
+        materialized: Expression,
+    ) -> Expression {
+        let mut referenced_names = HashSet::new();
+        collect_referenced_binding_names_from_expression(&materialized, &mut referenced_names);
+        if referenced_names.contains(name) {
+            Expression::Identifier(name.to_string())
+        } else {
+            materialized
+        }
+    }
+
     pub(in crate::backend::direct_wasm) fn update_global_property_descriptor_value(
         &mut self,
         name: &str,
@@ -90,6 +107,7 @@ impl<'a> FunctionCompiler<'a> {
             .global_value_binding(name)
             .cloned()
             .unwrap_or_else(|| self.materialize_static_expression(value_expression));
+        let materialized = Self::neutralize_self_referential_descriptor_value(name, materialized);
         if let Some(mut state) = self.backend.global_property_descriptor(name).cloned() {
             state.value = materialized;
             self.backend
@@ -108,6 +126,7 @@ impl<'a> FunctionCompiler<'a> {
             .global_value_binding(name)
             .cloned()
             .unwrap_or_else(|| self.materialize_static_expression(value_expression));
+        let materialized = Self::neutralize_self_referential_descriptor_value(name, materialized);
         let next_state = self
             .backend
             .global_property_descriptor(name)
