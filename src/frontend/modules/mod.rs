@@ -85,6 +85,7 @@ struct ModuleLinker {
     module_indices: HashMap<PathBuf, usize>,
     text_module_indices: HashMap<PathBuf, usize>,
     bytes_module_indices: HashMap<PathBuf, usize>,
+    unresolved_dynamic_import_indices: HashMap<(PathBuf, String), usize>,
     load_order: Vec<usize>,
     deferred_async_modules: HashSet<usize>,
 }

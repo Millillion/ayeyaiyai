@@ -4,6 +4,7 @@ const MODULE_NAMESPACE_DESCRIPTOR_MODULE_INDEX: &str = "__ayy$module$namespace$m
 const MODULE_REEXPORT_DESCRIPTOR_MODULE_INDEX: &str = "__ayy$module$reexport$moduleIndex";
 const MODULE_REEXPORT_DESCRIPTOR_NAME: &str = "__ayy$module$reexport$name";
 const DYNAMIC_IMPORT_DEFER_PHASE: &str = "__ayy$importPhase$defer";
+const DYNAMIC_IMPORT_SOURCE_PHASE: &str = "__ayy$importPhase$source";
 
 thread_local! {
     static STATIC_DYNAMIC_IMPORT_MODULE_THROW_CACHE: RefCell<HashMap<String, Option<Expression>>> =
@@ -489,6 +490,10 @@ impl<'a> FunctionCompiler<'a> {
         if !matches!(callee, Expression::Identifier(name) if name == "__ayyDynamicImport") {
             return None;
         }
+        if let Some(throw_value) = self.static_dynamic_import_specifier_tostring_rejection(arguments)
+        {
+            return Some(StaticEvalOutcome::Throw(throw_value));
+        }
         if let Some(outcome) = self.static_dynamic_import_options_rejection(arguments) {
             return Some(outcome);
         }
@@ -498,6 +503,11 @@ impl<'a> FunctionCompiler<'a> {
         if let Some(throw_value) = self.static_dynamic_import_module_throw_value(init_function) {
             return Some(StaticEvalOutcome::Throw(StaticThrowValue::Value(
                 throw_value,
+            )));
+        }
+        if Self::static_dynamic_import_is_source_phase(arguments) {
+            return Some(StaticEvalOutcome::Throw(StaticThrowValue::NamedError(
+                "SyntaxError",
             )));
         }
         let import_type = self.static_dynamic_import_attribute_type(arguments);
@@ -536,6 +546,74 @@ impl<'a> FunctionCompiler<'a> {
             arguments.get(3),
             Some(CallArgument::Expression(Expression::String(phase))) if phase == DYNAMIC_IMPORT_DEFER_PHASE
         )
+    }
+
+    fn static_dynamic_import_is_source_phase(arguments: &[CallArgument]) -> bool {
+        matches!(
+            arguments.get(3),
+            Some(CallArgument::Expression(Expression::String(phase))) if phase == DYNAMIC_IMPORT_SOURCE_PHASE
+        )
+    }
+
+    fn static_dynamic_import_specifier_tostring_rejection(
+        &self,
+        arguments: &[CallArgument],
+    ) -> Option<StaticThrowValue> {
+        let argument_expression = match arguments.first()? {
+            CallArgument::Expression(expression) => expression,
+            CallArgument::Spread(_) => return None,
+        };
+        let current_function_name = self.current_function_name();
+        if self
+            .resolve_static_primitive_expression_with_context(
+                argument_expression,
+                current_function_name,
+            )
+            .is_some()
+        {
+            return None;
+        }
+        let materialized = self.materialize_static_expression(argument_expression);
+        if self
+            .resolve_static_primitive_expression_with_context(&materialized, current_function_name)
+            .is_some()
+        {
+            return None;
+        }
+        if !self.static_expression_is_object_like(&materialized) {
+            return None;
+        }
+
+        let resolved = self
+            .resolve_bound_alias_expression(argument_expression)
+            .unwrap_or_else(|| materialized.clone());
+        let coercion_target = if matches!(argument_expression, Expression::Identifier(_)) {
+            argument_expression
+        } else {
+            &resolved
+        };
+        for method_name in ["toString", "valueOf"] {
+            match self.resolve_static_member_call_outcome_with_context(
+                coercion_target,
+                method_name,
+                current_function_name,
+            ) {
+                Some(StaticEvalOutcome::Throw(throw_value)) => return Some(throw_value),
+                Some(StaticEvalOutcome::Value(value)) => {
+                    if self
+                        .resolve_static_primitive_expression_with_context(
+                            &value,
+                            current_function_name,
+                        )
+                        .is_some()
+                    {
+                        return None;
+                    }
+                }
+                None => {}
+            }
+        }
+        None
     }
 
     fn static_dynamic_import_numeric_module_index(argument: &Expression) -> Option<usize> {
@@ -626,6 +704,9 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         arguments: &[CallArgument],
     ) -> DirectResult<()> {
+        if Self::static_dynamic_import_is_source_phase(arguments) {
+            return Ok(());
+        }
         let Some(module_index) = self.dynamic_import_literal_module_index(arguments) else {
             return Ok(());
         };

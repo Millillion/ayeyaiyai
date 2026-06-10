@@ -183,6 +183,12 @@ impl GlobalNameService {
             value_index: next_global_index,
             present_index: next_global_index + 1,
         };
+        if crate::ayy_env_flag!("AYY_TRACE_IMPLICIT_STORE") {
+            eprintln!(
+                "implicit_binding_created name={name} value_index={} present_index={}",
+                binding.value_index, binding.present_index
+            );
+        }
         self.implicit_bindings.insert(name.to_string(), binding);
         binding
     }

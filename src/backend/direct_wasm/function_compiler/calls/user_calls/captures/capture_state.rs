@@ -922,6 +922,14 @@ impl<'a> FunctionCompiler<'a> {
             if binding.source_name == "new.target" {
                 continue;
             }
+            if matches!(binding.source_name.as_str(), "assert" | "$DONE")
+                && self
+                    .resolve_current_local_binding(&binding.source_name)
+                    .is_none()
+                && self.backend.global_binding_index(&binding.source_name).is_none()
+            {
+                continue;
+            }
             if binding.source_name.starts_with("__ayy_class_brand_")
                 || binding.source_name.starts_with("__ayy_class_super_")
             {

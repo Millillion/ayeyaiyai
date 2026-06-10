@@ -454,13 +454,17 @@ impl Lowerer {
 
         let argument = &call.args[0];
         let lowered_argument = if let Expr::Lit(Lit::Str(specifier)) = &*argument.expr {
+            let specifier_text = specifier.value.to_string_lossy().to_string();
             let module_index = self
                 .current_module_path
                 .as_ref()
-                .and_then(|module_path| {
-                    resolve_module_specifier(module_path, &specifier.value.to_string_lossy()).ok()
-                })
+                .and_then(|module_path| resolve_module_specifier(module_path, &specifier_text).ok())
                 .and_then(|resolved| self.module_index_lookup.get(&resolved).copied())
+                .or_else(|| {
+                    self.dynamic_import_specifier_lookup
+                        .get(&specifier_text)
+                        .copied()
+                })
                 .map(|module_index| module_index as f64)
                 .unwrap_or(-1.0);
             Expression::Number(module_index)
@@ -486,12 +490,17 @@ impl Lowerer {
                     .collect(),
             )));
         }
-        if phase == swc_ecma_ast::ImportPhase::Defer {
+        let phase_marker = match phase {
+            swc_ecma_ast::ImportPhase::Defer => Some("__ayy$importPhase$defer"),
+            swc_ecma_ast::ImportPhase::Source => Some("__ayy$importPhase$source"),
+            swc_ecma_ast::ImportPhase::Evaluation => None,
+        };
+        if let Some(phase_marker) = phase_marker {
             while arguments.len() < 3 {
                 arguments.push(CallArgument::Expression(Expression::Undefined));
             }
             arguments.push(CallArgument::Expression(Expression::String(
-                "__ayy$importPhase$defer".to_string(),
+                phase_marker.to_string(),
             )));
         }
 

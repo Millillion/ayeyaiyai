@@ -997,9 +997,7 @@ impl ModuleLinker {
         let dynamic_import_sources =
             self.dynamic_import_specifier_sources_for_module(module, &source_text);
         for source in &dynamic_import_sources {
-            if let Ok(dependency_path) = resolve_module_specifier(&module_path, source) {
-                self.load_dynamic_module_with_type(&dependency_path, None)?;
-            }
+            self.register_dynamic_import_target(&module_path, source)?;
         }
 
         for item in &module.body {

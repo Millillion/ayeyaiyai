@@ -138,10 +138,70 @@ impl ModuleLinker {
         Ok(module_index)
     }
 
+    pub(crate) fn register_dynamic_import_target(
+        &mut self,
+        module_path: &Path,
+        source: &str,
+    ) -> Result<()> {
+        match resolve_module_specifier(module_path, source) {
+            Ok(dependency_path) => {
+                self.load_dynamic_module_with_type(&dependency_path, None)?;
+            }
+            Err(error) => {
+                self.ensure_unresolved_dynamic_module_slot(module_path, source, error);
+            }
+        }
+        Ok(())
+    }
+
+    fn ensure_unresolved_dynamic_module_slot(
+        &mut self,
+        module_path: &Path,
+        source: &str,
+        error: anyhow::Error,
+    ) -> usize {
+        let key = (module_path.to_path_buf(), source.to_string());
+        if let Some(module_index) = self.unresolved_dynamic_import_indices.get(&key) {
+            return *module_index;
+        }
+        let placeholder_path = module_path
+            .parent()
+            .unwrap_or_else(|| Path::new("."))
+            .join(source);
+        let module_index = self.reserve_module_slot(placeholder_path);
+        self.lower_failed_module_with_error(module_index, "TypeError", format!("{error:#}"));
+        self.unresolved_dynamic_import_indices.insert(key, module_index);
+        module_index
+    }
+
+    pub(crate) fn unresolved_dynamic_import_index(
+        &self,
+        module_path: &Path,
+        source: &str,
+    ) -> Option<usize> {
+        self.unresolved_dynamic_import_indices
+            .get(&(module_path.to_path_buf(), source.to_string()))
+            .copied()
+    }
+
     fn lower_failed_module(&mut self, module_index: usize, message: String) {
+        self.lower_failed_module_with_error(module_index, "SyntaxError", message);
+    }
+
+    pub(crate) fn lower_failed_module_with_error(
+        &mut self,
+        module_index: usize,
+        error_name: &str,
+        message: String,
+    ) {
         if self.modules[module_index].state == ModuleState::Failed {
             return;
         }
+
+        let init_name = self.modules[module_index].init_name.clone();
+        self.lowerer
+            .functions
+            .retain(|function| function.name != init_name);
 
         let exports_param = "exports".to_string();
         self.lowerer.functions.push(FunctionDeclaration {
@@ -153,7 +213,7 @@ impl ModuleLinker {
                 rest: false,
             }],
             body: vec![Statement::Throw(Expression::New {
-                callee: Box::new(Expression::Identifier("TypeError".to_string())),
+                callee: Box::new(Expression::Identifier(error_name.to_string())),
                 arguments: vec![CallArgument::Expression(Expression::String(
                     message.clone(),
                 ))],

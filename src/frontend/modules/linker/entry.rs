@@ -37,8 +37,10 @@ impl ModuleLinker {
         sources
             .iter()
             .filter_map(|source| {
-                let resolved = resolve_module_specifier(module_path, source).ok()?;
-                let module_index = self.module_indices.get(&resolved).copied()?;
+                let module_index = resolve_module_specifier(module_path, source)
+                    .ok()
+                    .and_then(|resolved| self.module_indices.get(&resolved).copied())
+                    .or_else(|| self.unresolved_dynamic_import_index(module_path, source))?;
                 Some((source.clone(), module_index))
             })
             .collect()
@@ -46,10 +48,11 @@ impl ModuleLinker {
 
     pub(crate) fn bundle_entry(&mut self, path: &Path) -> Result<Program> {
         let entry_index = self.load_module(path)?;
+        self.demote_invalid_dynamic_only_modules(Some(entry_index))?;
         let (load_order, deferred_async_modules) = self.compute_static_load_order(entry_index);
         self.load_order = load_order;
         self.deferred_async_modules = deferred_async_modules;
-        self.validate_loaded_module_export_resolutions()?;
+        self.validate_loaded_module_export_resolutions(entry_index)?;
         let statements = self.bundle_statements(entry_index)?;
         Ok(self.lowerer.finish_program(statements, true))
     }
@@ -67,10 +70,9 @@ impl ModuleLinker {
         let dynamic_import_sources =
             self.dynamic_import_specifier_sources_for_script(&script, &lowered_source);
         for source in &dynamic_import_sources {
-            if let Ok(dependency_path) = resolve_module_specifier(path, source) {
-                self.load_dynamic_module_with_type(&dependency_path, None)?;
-            }
+            self.register_dynamic_import_target(path, source)?;
         }
+        self.demote_invalid_dynamic_only_modules(None)?;
 
         self.lowerer.source_text = Some(lowered_source);
         self.lowerer.current_module_path = Some(normalize_module_path(path)?);
