@@ -378,14 +378,31 @@ impl<'a> FunctionCompiler<'a> {
                         }
                         continue;
                     }
-                    match self.evaluate_for_await_protocol_expression(value, context)? {
-                        Ok(value) => {
-                            context.bindings.insert(name.clone(), value);
-                        }
+                    let value = match self.evaluate_for_await_protocol_expression(value, context)?
+                    {
+                        Ok(value) => value,
                         Err(throw_value) => {
                             return Some(ForAwaitProtocolFlow::Throw(throw_value));
                         }
+                    };
+                    // An assignment to a name with no local declaration in
+                    // the replay targets a nonlocal (assignment-pattern
+                    // stores like `for await ([x] of ...)`): it must be
+                    // re-emitted at the fold site to stay observable.
+                    if matches!(statement, Statement::Assign { .. })
+                        && !name.starts_with("__ayy_")
+                        && !context.bindings.contains_key(name)
+                    {
+                        if !self.static_iterator_throw_expression_is_portable(&value) {
+                            return None;
+                        }
+                        context.effects.push(Statement::Assign {
+                            name: name.clone(),
+                            value: value.clone(),
+                        });
+                        context.effect_names.insert(name.clone());
                     }
+                    context.bindings.insert(name.clone(), value);
                 }
                 Statement::If {
                     condition,
@@ -856,17 +873,29 @@ impl<'a> FunctionCompiler<'a> {
             ForAwaitProtocolIterator::StaticArray { .. } => Some(Ok(Expression::Undefined)),
             // Step sources are only admitted when their steps carry no close
             // effects, so closing is unobservable beyond completing the
-            // underlying generator. Tracked bindings convey the close as a
-            // re-emittable statement.
+            // underlying generator. A close of a tracked binding is conveyed
+            // as draining synthetic `next()` statements: re-emitting them
+            // advances the binding to its completed state through the
+            // standard step machinery (the remaining steps are effect-free).
             ForAwaitProtocolIterator::Steps {
+                steps,
+                index,
                 closed,
                 binding_name,
                 ..
             } => {
                 if !*closed && let Some(binding_name) = binding_name {
-                    context_effects.push(Statement::Expression(Expression::IteratorClose(
-                        Box::new(Expression::Identifier(binding_name.clone())),
-                    )));
+                    let drained = steps.len().saturating_add(1);
+                    for _ in *index..drained {
+                        context_effects.push(Statement::Expression(Expression::Call {
+                            callee: Box::new(Expression::Member {
+                                object: Box::new(Expression::Identifier(binding_name.clone())),
+                                property: Box::new(Expression::String("next".to_string())),
+                            }),
+                            arguments: Vec::new(),
+                        }));
+                    }
+                    *index = drained;
                 }
                 *closed = true;
                 Some(Ok(Expression::Undefined))
@@ -893,6 +922,14 @@ impl<'a> FunctionCompiler<'a> {
                 // A read of a name an earlier recorded effect mutated would
                 // observe a stale static value.
                 if context.effect_names.contains(name) {
+                    return None;
+                }
+                // Free identifiers must resolve at the consumption site; an
+                // unresolvable reference (which would throw at runtime) bails
+                // the fold instead of folding to a benign global read. An
+                // implicit-global slot is not enough: it may be uninitialized
+                // at runtime.
+                if !self.for_await_protocol_identifier_resolves(name) {
                     return None;
                 }
                 Some(Ok(expression.clone()))
@@ -1244,6 +1281,46 @@ impl<'a> FunctionCompiler<'a> {
                     .unwrap_or(Expression::Undefined)))
             }
         }
+    }
+
+    fn for_await_protocol_identifier_resolves(&self, name: &str) -> bool {
+        if crate::ayy_env_flag!("AYY_TRACE_FOR_AWAIT_PROTOCOL") {
+            eprintln!(
+                "for_await_protocol:identifier_resolves name={name} local={} global={} lexical={} fn={} user={} by_binding={} builtin={}",
+                self.resolve_current_local_binding(name).is_some(),
+                self.backend.global_has_binding(name),
+                self.backend.global_has_lexical_binding(name),
+                self.backend.global_function_binding(name).is_some(),
+                self.contains_user_function(name),
+                self.resolve_user_function_by_binding_name(name).is_some(),
+                self.is_unshadowed_builtin_identifier(name),
+            );
+        }
+        if self.resolve_current_local_binding(name).is_some() {
+            return false;
+        }
+        self.backend.global_has_binding(name)
+            || self.backend.global_has_lexical_binding(name)
+            || self.backend.global_function_binding(name).is_some()
+            || self.contains_user_function(name)
+            || self.resolve_user_function_by_binding_name(name).is_some()
+            || (self.is_unshadowed_builtin_identifier(name)
+                && (native_error_runtime_value(name).is_some()
+                    || builtin_function_runtime_value(name).is_some()
+                    || matches!(
+                        name,
+                        "undefined"
+                            | "NaN"
+                            | "Infinity"
+                            | "Symbol"
+                            | "Object"
+                            | "Array"
+                            | "Promise"
+                            | "Math"
+                            | "JSON"
+                            | "Reflect"
+                            | "Test262Error"
+                    )))
     }
 
     fn for_await_protocol_to_boolean(value: &Expression) -> Option<bool> {

@@ -942,15 +942,6 @@ impl<'a> FunctionCompiler<'a> {
                         return Ok(());
                     }
                     let closed_state = (steps.len() + 1) as i32;
-                    // Keep the static view consistent with the runtime state
-                    // the close just committed: later `next()` folds must see
-                    // the generator as complete.
-                    if iterator_binding.static_index.is_some() {
-                        self.set_static_iterator_index_for_index_local(
-                            state_local,
-                            closed_state as usize,
-                        );
-                    }
                     self.push_i32_const(closed_state);
                     self.push_local_set(state_local);
                     // Closing a provably unconsumed iterator (no `next()`
