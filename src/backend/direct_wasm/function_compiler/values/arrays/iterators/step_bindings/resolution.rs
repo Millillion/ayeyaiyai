@@ -171,6 +171,46 @@ impl<'a> FunctionCompiler<'a> {
                         property: property.clone(),
                     }))
                 }),
+            // `for await` lowers the loop value to `Await(step.value)`. When
+            // every static candidate for the step value is non-thenable, the
+            // await resolves to the step value itself, so the canonical
+            // binding can flow through the iterator machinery exactly like
+            // the synchronous lowering (otherwise downstream destructuring
+            // loses the chain and silently drops iterator protocol effects).
+            Expression::Await(inner) => {
+                if !self.await_of_iterator_step_value_is_non_thenable(inner) {
+                    return None;
+                }
+                if let Some(value) = self.resolve_static_iterator_step_assignment_value(inner) {
+                    return Some(value);
+                }
+                // The async step registration often carries the possible step
+                // values only as candidates; a unique candidate is the value
+                // every iteration observes, so it can stand in statically.
+                let Expression::Member { object, property } = inner.as_ref() else {
+                    return None;
+                };
+                if !matches!(
+                    property.as_ref(),
+                    Expression::String(name) if name == "value"
+                ) {
+                    return None;
+                }
+                let IteratorStepBinding::Runtime {
+                    static_value,
+                    value_candidates,
+                    ..
+                } = self.resolve_iterator_step_binding_from_expression(object)?;
+                let mut candidates = static_value
+                    .into_iter()
+                    .chain(value_candidates)
+                    .collect::<Vec<_>>();
+                candidates.dedup_by(|left, right| static_expression_matches(left, right));
+                let [candidate] = candidates.as_slice() else {
+                    return None;
+                };
+                Some(self.materialize_static_expression(candidate))
+            }
             Expression::Conditional {
                 condition,
                 then_expression,

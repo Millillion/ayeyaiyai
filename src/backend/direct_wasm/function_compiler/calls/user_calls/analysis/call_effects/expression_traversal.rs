@@ -274,18 +274,39 @@ impl<'a> FunctionCompiler<'a> {
                     }
                     return;
                 }
-                if let Some(LocalFunctionBinding::User(function_name)) = self
+                let resolved_callee_binding = self
                     .resolve_function_binding_from_expression_with_context(
                         callee,
                         current_function_name,
-                    )
-                {
+                    );
+                if let Some(LocalFunctionBinding::User(function_name)) = &resolved_callee_binding {
                     names.extend(
                         self.collect_user_function_call_effect_nonlocal_bindings_for_name(
-                            &function_name,
+                            function_name,
                             visited,
                         ),
                     );
+                } else if resolved_callee_binding.is_none()
+                    && let Expression::Member { object, property } = callee.as_ref()
+                    && let Expression::String(property_name) = property.as_ref()
+                    && matches!(property_name.as_str(), "next" | "return" | "throw")
+                    && let Expression::Identifier(iterator_name) = object.as_ref()
+                {
+                    for binding in self.resolve_iterator_protocol_method_bindings_in_function(
+                        iterator_name,
+                        property_name,
+                        current_function_name,
+                    ) {
+                        let LocalFunctionBinding::User(function_name) = binding else {
+                            continue;
+                        };
+                        names.extend(
+                            self.collect_user_function_call_effect_nonlocal_bindings_for_name(
+                                &function_name,
+                                visited,
+                            ),
+                        );
+                    }
                 }
                 self.collect_expression_call_effect_nonlocal_bindings(
                     callee,
@@ -421,18 +442,23 @@ impl<'a> FunctionCompiler<'a> {
             }
             Expression::IteratorClose(value) => {
                 let return_property = Expression::String("return".to_string());
-                if let Some(LocalFunctionBinding::User(function_name)) = self
+                let mut return_bindings = self
                     .resolve_member_function_binding(value, &return_property)
-                    .or_else(|| {
-                        let Expression::Identifier(iterator_name) = value.as_ref() else {
-                            return None;
-                        };
-                        self.resolve_iterator_close_return_binding_in_function(
-                            iterator_name,
-                            current_function_name,
-                        )
-                    })
+                    .map(|binding| vec![binding])
+                    .unwrap_or_default();
+                if return_bindings.is_empty()
+                    && let Expression::Identifier(iterator_name) = value.as_ref()
                 {
+                    return_bindings = self.resolve_iterator_protocol_method_bindings_in_function(
+                        iterator_name,
+                        "return",
+                        current_function_name,
+                    );
+                }
+                for binding in return_bindings {
+                    let LocalFunctionBinding::User(function_name) = binding else {
+                        continue;
+                    };
                     names.extend(
                         self.collect_user_function_call_effect_nonlocal_bindings_for_name(
                             &function_name,

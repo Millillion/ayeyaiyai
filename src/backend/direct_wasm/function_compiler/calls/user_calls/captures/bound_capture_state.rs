@@ -1532,6 +1532,16 @@ impl<'a> FunctionCompiler<'a> {
     ) -> DirectResult<()> {
         let assigned_nonlocal_bindings =
             self.collect_user_function_assigned_nonlocal_bindings(user_function);
+        // Parameter destructuring (lowered patterns / iterator-consuming
+        // parameters) can invoke arbitrary user code through the iterator
+        // protocol of the bound arguments. Those protocol calls may mutate any
+        // captured binding without appearing as a direct assignment in the
+        // function body, so every capture writeback must be treated as
+        // potentially updating its source binding.
+        let parameter_protocol_may_run_user_code = user_function.has_lowered_pattern_parameters()
+            || !self
+                .user_function_parameter_iterator_consumption_indices(user_function)
+                .is_empty();
         for binding in prepared {
             let shadow_writeback_name =
                 binding.source_binding_name.as_ref().cloned().or_else(|| {
@@ -1574,6 +1584,7 @@ impl<'a> FunctionCompiler<'a> {
             let capture_writeback_is_dynamic = updated_capture_binding.is_none()
                 && self.user_function_mentions_direct_eval(user_function);
             let capture_writeback_may_update_source = capture_writeback_is_dynamic
+                || parameter_protocol_may_run_user_code
                 || assigned_nonlocal_bindings.contains(&binding.capture_name)
                 || binding
                     .source_binding_name

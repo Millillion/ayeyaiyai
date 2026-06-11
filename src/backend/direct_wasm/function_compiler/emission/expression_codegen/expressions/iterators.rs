@@ -262,6 +262,27 @@ impl<'a> FunctionCompiler<'a> {
         {
             return true;
         }
+        // Hidden iterator temporaries (e.g. destructuring closes inside async
+        // lowerings) often lose their static object binding, which would
+        // silently skip an observable user `return()`. Follow the lowered
+        // data-flow chain through the enclosing function body before giving
+        // up.
+        if !known_nullish_value
+            && matches!(
+                return_property,
+                Expression::String(name) if name == "return"
+            )
+            && let Expression::Identifier(iterator_name) = expression
+            && self
+                .resolve_unique_iterator_protocol_user_method_in_function(
+                    iterator_name,
+                    "return",
+                    self.current_function_name(),
+                )
+                .is_some()
+        {
+            return true;
+        }
         !known_nullish_value
             && self
                 .resolve_member_getter_binding(expression, return_property)
@@ -965,7 +986,17 @@ impl<'a> FunctionCompiler<'a> {
                 .unwrap_or_else(|| expression.clone());
             let return_binding = self
                 .resolve_member_function_binding(expression, &return_property)
-                .or_else(|| self.resolve_member_function_binding(&call_target, &return_property));
+                .or_else(|| self.resolve_member_function_binding(&call_target, &return_property))
+                .or_else(|| {
+                    let Expression::Identifier(iterator_name) = expression else {
+                        return None;
+                    };
+                    self.resolve_unique_iterator_protocol_user_method_in_function(
+                        iterator_name,
+                        "return",
+                        self.current_function_name(),
+                    )
+                });
             let getter_binding =
                 self.iterator_close_source_return_getter_binding(expression, &return_property);
             let getter_outcome = getter_binding.as_ref().and_then(|binding| {
@@ -1241,7 +1272,10 @@ impl<'a> FunctionCompiler<'a> {
         Ok(())
     }
 
-    fn await_of_iterator_step_value_is_non_thenable(&self, expression: &Expression) -> bool {
+    pub(in crate::backend::direct_wasm) fn await_of_iterator_step_value_is_non_thenable(
+        &self,
+        expression: &Expression,
+    ) -> bool {
         let Expression::Member { object, property } = expression else {
             return false;
         };

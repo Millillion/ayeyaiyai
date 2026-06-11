@@ -333,32 +333,38 @@ impl<'a> FunctionCompiler<'a> {
             else {
                 continue;
             };
-            let iterated = self.substitute_user_function_argument_bindings(
+            for candidate in Self::iterator_iterated_value_candidates_in_statements(
+                &function.body,
                 &iterated,
-                user_function,
-                &call_arguments,
-            );
-            let iterator_call = Expression::Call {
-                callee: Box::new(Expression::Member {
-                    object: Box::new(iterated),
-                    property: Box::new(symbol_iterator_expression()),
-                }),
-                arguments: Vec::new(),
-            };
-            let Some(LocalFunctionBinding::User(function_name)) = self
-                .inherited_member_function_bindings(&iterator_call)
-                .into_iter()
-                .find(|binding| binding.property == "return")
-                .map(|binding| binding.binding)
-            else {
-                continue;
-            };
-            names.extend(
-                self.collect_user_function_call_effect_nonlocal_bindings_for_name(
-                    &function_name,
-                    &mut visited,
-                ),
-            );
+                0,
+            ) {
+                let candidate = self.substitute_user_function_argument_bindings(
+                    &candidate,
+                    user_function,
+                    &call_arguments,
+                );
+                let iterator_call = Expression::Call {
+                    callee: Box::new(Expression::Member {
+                        object: Box::new(candidate),
+                        property: Box::new(symbol_iterator_expression()),
+                    }),
+                    arguments: Vec::new(),
+                };
+                let Some(LocalFunctionBinding::User(function_name)) = self
+                    .inherited_member_function_bindings(&iterator_call)
+                    .into_iter()
+                    .find(|binding| binding.property == "return")
+                    .map(|binding| binding.binding)
+                else {
+                    continue;
+                };
+                names.extend(
+                    self.collect_user_function_call_effect_nonlocal_bindings_for_name(
+                        &function_name,
+                        &mut visited,
+                    ),
+                );
+            }
         }
         names
     }

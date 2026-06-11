@@ -716,6 +716,31 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    /// Inlining a callback re-emits its lowered hidden temporaries in the
+    /// caller's scope where they degrade to implicit globals, so iterator
+    /// close resolution (`iterator_close_should_call_return`) loses the data
+    /// flow and silently skips user `return()` calls. When the callback's
+    /// lowered iterator closes resolve to user-defined `return()` functions,
+    /// the close has observable effects that only the real call emits
+    /// faithfully, so the inline must bail to the dynamic fallback.
+    fn assert_throws_inline_body_drops_observable_iterator_close(
+        &self,
+        function_name: &str,
+        body: &[Statement],
+    ) -> bool {
+        let mut iterator_names = Vec::new();
+        Self::collect_iterator_close_binding_names_from_statements(body, &mut iterator_names);
+        iterator_names.into_iter().any(|iterator_name| {
+            self.resolve_iterator_protocol_method_bindings_in_function(
+                &iterator_name,
+                "return",
+                Some(function_name),
+            )
+            .iter()
+            .any(|binding| matches!(binding, LocalFunctionBinding::User(_)))
+        })
+    }
+
     fn assert_throws_inline_callback_body(
         &self,
         callback: &Expression,
@@ -726,6 +751,12 @@ impl<'a> FunctionCompiler<'a> {
             return None;
         };
         let declaration = self.prepared_function_declaration(&function_name)?;
+        if self.assert_throws_inline_body_drops_observable_iterator_close(
+            &function_name,
+            &declaration.body,
+        ) {
+            return None;
+        }
         if declaration.lexical_this
             && self
                 .resolve_function_expression_capture_slots(callback)
