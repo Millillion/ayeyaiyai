@@ -1,4 +1,4 @@
-21210/23668 (89.61%)
+21310/23668 (90.04%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,8 +14,8 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 8091/9337 (86.66%)
-- expressions: 10049/11061 (90.85%)
+- statements: 8099/9337 (86.74%)
+- expressions: 10141/11061 (91.68%)
 - types: 103/113 (91.15%)
 - function-code: 204/217 (94.01%)
 - global-code: 41/42 (97.62%)
@@ -8389,7 +8389,7 @@ Sub-category progress
   - [x] test/language/statements/for-of/dstr/array-rest-yield-expr.js
   - [x] test/language/statements/for-of/dstr/array-rest-yield-ident-invalid.js
   - [x] test/language/statements/for-of/dstr/array-rest-yield-ident-valid.js
-  - [ ] test/language/statements/for-of/dstr/const-ary-init-iter-close.js
+  - [x] test/language/statements/for-of/dstr/const-ary-init-iter-close.js
   - [x] test/language/statements/for-of/dstr/const-ary-init-iter-get-err-array-prototype.js
   - [x] test/language/statements/for-of/dstr/const-ary-init-iter-get-err.js
   - [x] test/language/statements/for-of/dstr/const-ary-init-iter-no-close.js
@@ -8483,10 +8483,10 @@ Sub-category progress
   - [x] test/language/statements/for-of/dstr/const-obj-ptrn-prop-obj-value-null.js
   - [x] test/language/statements/for-of/dstr/const-obj-ptrn-prop-obj-value-undef.js
   - [x] test/language/statements/for-of/dstr/const-obj-ptrn-prop-obj.js
-  - [ ] test/language/statements/for-of/dstr/const-obj-ptrn-rest-getter.js
+  - [x] test/language/statements/for-of/dstr/const-obj-ptrn-rest-getter.js
   - [x] test/language/statements/for-of/dstr/const-obj-ptrn-rest-skip-non-enumerable.js
   - [x] test/language/statements/for-of/dstr/const-obj-ptrn-rest-val-obj.js
-  - [ ] test/language/statements/for-of/dstr/let-ary-init-iter-close.js
+  - [x] test/language/statements/for-of/dstr/let-ary-init-iter-close.js
   - [x] test/language/statements/for-of/dstr/let-ary-init-iter-get-err-array-prototype.js
   - [x] test/language/statements/for-of/dstr/let-ary-init-iter-get-err.js
   - [x] test/language/statements/for-of/dstr/let-ary-init-iter-no-close.js
@@ -8580,7 +8580,7 @@ Sub-category progress
   - [x] test/language/statements/for-of/dstr/let-obj-ptrn-prop-obj-value-null.js
   - [x] test/language/statements/for-of/dstr/let-obj-ptrn-prop-obj-value-undef.js
   - [x] test/language/statements/for-of/dstr/let-obj-ptrn-prop-obj.js
-  - [ ] test/language/statements/for-of/dstr/let-obj-ptrn-rest-getter.js
+  - [x] test/language/statements/for-of/dstr/let-obj-ptrn-rest-getter.js
   - [x] test/language/statements/for-of/dstr/let-obj-ptrn-rest-skip-non-enumerable.js
   - [x] test/language/statements/for-of/dstr/let-obj-ptrn-rest-val-obj.js
   - [x] test/language/statements/for-of/dstr/obj-empty-bool.js
@@ -8681,7 +8681,7 @@ Sub-category progress
   - [x] test/language/statements/for-of/dstr/obj-rest-descriptors.js
   - [x] test/language/statements/for-of/dstr/obj-rest-empty-obj.js
   - [x] test/language/statements/for-of/dstr/obj-rest-getter-abrupt-get-error.js
-  - [ ] test/language/statements/for-of/dstr/obj-rest-getter.js
+  - [x] test/language/statements/for-of/dstr/obj-rest-getter.js
   - [x] test/language/statements/for-of/dstr/obj-rest-non-string-computed-property-1.js
   - [x] test/language/statements/for-of/dstr/obj-rest-non-string-computed-property-1dot.js
   - [x] test/language/statements/for-of/dstr/obj-rest-non-string-computed-property-1dot0.js
@@ -8702,7 +8702,7 @@ Sub-category progress
   - [x] test/language/statements/for-of/dstr/obj-rest-val-null.js
   - [x] test/language/statements/for-of/dstr/obj-rest-val-undefined.js
   - [x] test/language/statements/for-of/dstr/obj-rest-valid-object.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-init-iter-close.js
+  - [x] test/language/statements/for-of/dstr/var-ary-init-iter-close.js
   - [x] test/language/statements/for-of/dstr/var-ary-init-iter-get-err-array-prototype.js
   - [x] test/language/statements/for-of/dstr/var-ary-init-iter-get-err.js
   - [x] test/language/statements/for-of/dstr/var-ary-init-iter-no-close.js
@@ -8796,7 +8796,7 @@ Sub-category progress
   - [x] test/language/statements/for-of/dstr/var-obj-ptrn-prop-obj-value-null.js
   - [x] test/language/statements/for-of/dstr/var-obj-ptrn-prop-obj-value-undef.js
   - [x] test/language/statements/for-of/dstr/var-obj-ptrn-prop-obj.js
-  - [ ] test/language/statements/for-of/dstr/var-obj-ptrn-rest-getter.js
+  - [x] test/language/statements/for-of/dstr/var-obj-ptrn-rest-getter.js
   - [x] test/language/statements/for-of/dstr/var-obj-ptrn-rest-skip-non-enumerable.js
   - [x] test/language/statements/for-of/dstr/var-obj-ptrn-rest-val-obj.js
   - [x] test/language/statements/for-of/escaped-of.js
@@ -8810,7 +8810,7 @@ Sub-category progress
   - [x] test/language/statements/for-of/generator-close-via-throw.js
   - [x] test/language/statements/for-of/generator-next-error.js
   - [x] test/language/statements/for-of/generator.js
-  - [ ] test/language/statements/for-of/generic-iterable.js
+  - [x] test/language/statements/for-of/generic-iterable.js
   - [x] test/language/statements/for-of/head-await-using-bound-names-fordecl-tdz.js
   - [x] test/language/statements/for-of/head-await-using-bound-names-in-stmt.js
   - [x] test/language/statements/for-of/head-await-using-bound-names-let.js
@@ -19936,7 +19936,7 @@ Sub-category progress
   - [x] test/language/expressions/object/S11.1.5_A4.3.js
   - [x] test/language/expressions/object/__proto__-duplicate-computed.js
   - [x] test/language/expressions/object/__proto__-duplicate.js
-  - [ ] test/language/expressions/object/__proto__-fn-name.js
+  - [x] test/language/expressions/object/__proto__-fn-name.js
   - [x] test/language/expressions/object/__proto__-permitted-dup-shorthand.js
   - [x] test/language/expressions/object/__proto__-permitted-dup.js
   - [x] test/language/expressions/object/__proto__-poisoned-object-prototype.js
@@ -19972,15 +19972,15 @@ Sub-category progress
   - [x] test/language/expressions/object/computed-property-name-topropertykey-before-value-evaluation.js
   - [x] test/language/expressions/object/concise-generator.js
   - [x] test/language/expressions/object/cover-initialized-name.js
-  - [ ] test/language/expressions/object/covered-ident-name-prop-name-literal-break-escaped.js
-  - [ ] test/language/expressions/object/covered-ident-name-prop-name-literal-case-escaped.js
-  - [ ] test/language/expressions/object/covered-ident-name-prop-name-literal-catch-escaped.js
-  - [ ] test/language/expressions/object/covered-ident-name-prop-name-literal-class-escaped.js
+  - [x] test/language/expressions/object/covered-ident-name-prop-name-literal-break-escaped.js
+  - [x] test/language/expressions/object/covered-ident-name-prop-name-literal-case-escaped.js
+  - [x] test/language/expressions/object/covered-ident-name-prop-name-literal-catch-escaped.js
+  - [x] test/language/expressions/object/covered-ident-name-prop-name-literal-class-escaped.js
   - [x] test/language/expressions/object/covered-ident-name-prop-name-literal-const-escaped.js
   - [x] test/language/expressions/object/covered-ident-name-prop-name-literal-continue-escaped.js
   - [x] test/language/expressions/object/covered-ident-name-prop-name-literal-debugger-escaped.js
-  - [ ] test/language/expressions/object/covered-ident-name-prop-name-literal-default-escaped-ext.js
-  - [ ] test/language/expressions/object/covered-ident-name-prop-name-literal-default-escaped.js
+  - [x] test/language/expressions/object/covered-ident-name-prop-name-literal-default-escaped-ext.js
+  - [x] test/language/expressions/object/covered-ident-name-prop-name-literal-default-escaped.js
   - [x] test/language/expressions/object/covered-ident-name-prop-name-literal-default.js
   - [x] test/language/expressions/object/covered-ident-name-prop-name-literal-delete-escaped.js
   - [x] test/language/expressions/object/covered-ident-name-prop-name-literal-do-escaped.js
@@ -19993,30 +19993,30 @@ Sub-category progress
   - [x] test/language/expressions/object/covered-ident-name-prop-name-literal-finally-escaped.js
   - [x] test/language/expressions/object/covered-ident-name-prop-name-literal-for-escaped.js
   - [x] test/language/expressions/object/covered-ident-name-prop-name-literal-function-escaped.js
-  - [ ] test/language/expressions/object/covered-ident-name-prop-name-literal-if-escaped.js
+  - [x] test/language/expressions/object/covered-ident-name-prop-name-literal-if-escaped.js
   - [x] test/language/expressions/object/covered-ident-name-prop-name-literal-implements-escaped.js
   - [x] test/language/expressions/object/covered-ident-name-prop-name-literal-import-escaped.js
   - [x] test/language/expressions/object/covered-ident-name-prop-name-literal-in-escaped.js
   - [x] test/language/expressions/object/covered-ident-name-prop-name-literal-instanceof-escaped.js
-  - [ ] test/language/expressions/object/covered-ident-name-prop-name-literal-interface-escaped.js
-  - [ ] test/language/expressions/object/covered-ident-name-prop-name-literal-let-escaped.js
-  - [ ] test/language/expressions/object/covered-ident-name-prop-name-literal-new-escaped.js
-  - [ ] test/language/expressions/object/covered-ident-name-prop-name-literal-package-escaped.js
-  - [ ] test/language/expressions/object/covered-ident-name-prop-name-literal-private-escaped.js
-  - [ ] test/language/expressions/object/covered-ident-name-prop-name-literal-protected-escaped.js
-  - [ ] test/language/expressions/object/covered-ident-name-prop-name-literal-public-escaped.js
-  - [ ] test/language/expressions/object/covered-ident-name-prop-name-literal-return-escaped.js
-  - [ ] test/language/expressions/object/covered-ident-name-prop-name-literal-static-escaped.js
-  - [ ] test/language/expressions/object/covered-ident-name-prop-name-literal-super-escaped.js
-  - [ ] test/language/expressions/object/covered-ident-name-prop-name-literal-switch-escaped.js
-  - [ ] test/language/expressions/object/covered-ident-name-prop-name-literal-this-escaped.js
-  - [ ] test/language/expressions/object/covered-ident-name-prop-name-literal-throw-escaped.js
-  - [ ] test/language/expressions/object/covered-ident-name-prop-name-literal-try-escaped.js
-  - [ ] test/language/expressions/object/covered-ident-name-prop-name-literal-typeof-escaped.js
-  - [ ] test/language/expressions/object/covered-ident-name-prop-name-literal-var-escaped.js
-  - [ ] test/language/expressions/object/covered-ident-name-prop-name-literal-void-escaped.js
-  - [ ] test/language/expressions/object/covered-ident-name-prop-name-literal-while-escaped.js
-  - [ ] test/language/expressions/object/covered-ident-name-prop-name-literal-with-escaped.js
+  - [x] test/language/expressions/object/covered-ident-name-prop-name-literal-interface-escaped.js
+  - [x] test/language/expressions/object/covered-ident-name-prop-name-literal-let-escaped.js
+  - [x] test/language/expressions/object/covered-ident-name-prop-name-literal-new-escaped.js
+  - [x] test/language/expressions/object/covered-ident-name-prop-name-literal-package-escaped.js
+  - [x] test/language/expressions/object/covered-ident-name-prop-name-literal-private-escaped.js
+  - [x] test/language/expressions/object/covered-ident-name-prop-name-literal-protected-escaped.js
+  - [x] test/language/expressions/object/covered-ident-name-prop-name-literal-public-escaped.js
+  - [x] test/language/expressions/object/covered-ident-name-prop-name-literal-return-escaped.js
+  - [x] test/language/expressions/object/covered-ident-name-prop-name-literal-static-escaped.js
+  - [x] test/language/expressions/object/covered-ident-name-prop-name-literal-super-escaped.js
+  - [x] test/language/expressions/object/covered-ident-name-prop-name-literal-switch-escaped.js
+  - [x] test/language/expressions/object/covered-ident-name-prop-name-literal-this-escaped.js
+  - [x] test/language/expressions/object/covered-ident-name-prop-name-literal-throw-escaped.js
+  - [x] test/language/expressions/object/covered-ident-name-prop-name-literal-try-escaped.js
+  - [x] test/language/expressions/object/covered-ident-name-prop-name-literal-typeof-escaped.js
+  - [x] test/language/expressions/object/covered-ident-name-prop-name-literal-var-escaped.js
+  - [x] test/language/expressions/object/covered-ident-name-prop-name-literal-void-escaped.js
+  - [x] test/language/expressions/object/covered-ident-name-prop-name-literal-while-escaped.js
+  - [x] test/language/expressions/object/covered-ident-name-prop-name-literal-with-escaped.js
   - [x] test/language/expressions/object/cpn-obj-lit-computed-property-name-from-additive-expression-add.js
   - [x] test/language/expressions/object/cpn-obj-lit-computed-property-name-from-additive-expression-subtract.js
   - [x] test/language/expressions/object/cpn-obj-lit-computed-property-name-from-arrow-function-expression.js
@@ -20420,10 +20420,10 @@ Sub-category progress
   - [x] test/language/expressions/object/dstr/gen-meth-obj-ptrn-rest-getter.js
   - [x] test/language/expressions/object/dstr/gen-meth-obj-ptrn-rest-skip-non-enumerable.js
   - [x] test/language/expressions/object/dstr/gen-meth-obj-ptrn-rest-val-obj.js
-  - [ ] test/language/expressions/object/dstr/meth-ary-init-iter-close.js
+  - [x] test/language/expressions/object/dstr/meth-ary-init-iter-close.js
   - [x] test/language/expressions/object/dstr/meth-ary-init-iter-get-err-array-prototype.js
   - [x] test/language/expressions/object/dstr/meth-ary-init-iter-get-err.js
-  - [ ] test/language/expressions/object/dstr/meth-ary-init-iter-no-close.js
+  - [x] test/language/expressions/object/dstr/meth-ary-init-iter-no-close.js
   - [x] test/language/expressions/object/dstr/meth-ary-name-iter-val.js
   - [x] test/language/expressions/object/dstr/meth-ary-ptrn-elem-ary-elem-init.js
   - [x] test/language/expressions/object/dstr/meth-ary-ptrn-elem-ary-elem-iter.js
@@ -20480,7 +20480,7 @@ Sub-category progress
   - [x] test/language/expressions/object/dstr/meth-ary-ptrn-rest-not-final-obj.js
   - [x] test/language/expressions/object/dstr/meth-ary-ptrn-rest-obj-id.js
   - [x] test/language/expressions/object/dstr/meth-ary-ptrn-rest-obj-prop-id.js
-  - [ ] test/language/expressions/object/dstr/meth-dflt-ary-init-iter-close.js
+  - [x] test/language/expressions/object/dstr/meth-dflt-ary-init-iter-close.js
   - [ ] test/language/expressions/object/dstr/meth-dflt-ary-init-iter-get-err-array-prototype.js
   - [x] test/language/expressions/object/dstr/meth-dflt-ary-init-iter-get-err.js
   - [x] test/language/expressions/object/dstr/meth-dflt-ary-init-iter-no-close.js
@@ -20530,7 +20530,7 @@ Sub-category progress
   - [ ] test/language/expressions/object/dstr/meth-dflt-ary-ptrn-rest-id-elision.js
   - [x] test/language/expressions/object/dstr/meth-dflt-ary-ptrn-rest-id-exhausted.js
   - [x] test/language/expressions/object/dstr/meth-dflt-ary-ptrn-rest-id-iter-step-err.js
-  - [ ] test/language/expressions/object/dstr/meth-dflt-ary-ptrn-rest-id-iter-val-err.js
+  - [x] test/language/expressions/object/dstr/meth-dflt-ary-ptrn-rest-id-iter-val-err.js
   - [x] test/language/expressions/object/dstr/meth-dflt-ary-ptrn-rest-id.js
   - [x] test/language/expressions/object/dstr/meth-dflt-ary-ptrn-rest-init-ary.js
   - [x] test/language/expressions/object/dstr/meth-dflt-ary-ptrn-rest-init-id.js
@@ -20603,7 +20603,7 @@ Sub-category progress
   - [x] test/language/expressions/object/dstr/meth-obj-ptrn-prop-obj-value-null.js
   - [x] test/language/expressions/object/dstr/meth-obj-ptrn-prop-obj-value-undef.js
   - [x] test/language/expressions/object/dstr/meth-obj-ptrn-prop-obj.js
-  - [ ] test/language/expressions/object/dstr/meth-obj-ptrn-rest-getter.js
+  - [x] test/language/expressions/object/dstr/meth-obj-ptrn-rest-getter.js
   - [x] test/language/expressions/object/dstr/meth-obj-ptrn-rest-skip-non-enumerable.js
   - [x] test/language/expressions/object/dstr/meth-obj-ptrn-rest-val-obj.js
   - [ ] test/language/expressions/object/dstr/object-rest-proxy-get-not-called-on-dontenum-keys.js
@@ -20611,25 +20611,25 @@ Sub-category progress
   - [ ] test/language/expressions/object/dstr/object-rest-proxy-ownkeys-returned-keys-order.js
   - [x] test/language/expressions/object/fn-name-accessor-get.js
   - [x] test/language/expressions/object/fn-name-accessor-set.js
-  - [ ] test/language/expressions/object/fn-name-arrow.js
+  - [x] test/language/expressions/object/fn-name-arrow.js
   - [x] test/language/expressions/object/fn-name-class.js
-  - [ ] test/language/expressions/object/fn-name-cover.js
-  - [ ] test/language/expressions/object/fn-name-fn.js
-  - [ ] test/language/expressions/object/fn-name-gen.js
+  - [x] test/language/expressions/object/fn-name-cover.js
+  - [x] test/language/expressions/object/fn-name-fn.js
+  - [x] test/language/expressions/object/fn-name-gen.js
   - [x] test/language/expressions/object/getter-body-strict-inside.js
   - [x] test/language/expressions/object/getter-body-strict-outside.js
   - [x] test/language/expressions/object/getter-param-dflt.js
   - [x] test/language/expressions/object/getter-prop-desc.js
   - [x] test/language/expressions/object/getter-super-prop.js
-  - [ ] test/language/expressions/object/ident-name-method-def-break-escaped.js
-  - [ ] test/language/expressions/object/ident-name-method-def-case-escaped.js
-  - [ ] test/language/expressions/object/ident-name-method-def-catch-escaped.js
-  - [ ] test/language/expressions/object/ident-name-method-def-class-escaped.js
+  - [x] test/language/expressions/object/ident-name-method-def-break-escaped.js
+  - [x] test/language/expressions/object/ident-name-method-def-case-escaped.js
+  - [x] test/language/expressions/object/ident-name-method-def-catch-escaped.js
+  - [x] test/language/expressions/object/ident-name-method-def-class-escaped.js
   - [x] test/language/expressions/object/ident-name-method-def-const-escaped.js
   - [x] test/language/expressions/object/ident-name-method-def-continue-escaped.js
   - [x] test/language/expressions/object/ident-name-method-def-debugger-escaped.js
-  - [ ] test/language/expressions/object/ident-name-method-def-default-escaped-ext.js
-  - [ ] test/language/expressions/object/ident-name-method-def-default-escaped.js
+  - [x] test/language/expressions/object/ident-name-method-def-default-escaped-ext.js
+  - [x] test/language/expressions/object/ident-name-method-def-default-escaped.js
   - [x] test/language/expressions/object/ident-name-method-def-default.js
   - [x] test/language/expressions/object/ident-name-method-def-delete-escaped.js
   - [x] test/language/expressions/object/ident-name-method-def-do-escaped.js
@@ -20642,40 +20642,40 @@ Sub-category progress
   - [x] test/language/expressions/object/ident-name-method-def-finally-escaped.js
   - [x] test/language/expressions/object/ident-name-method-def-for-escaped.js
   - [x] test/language/expressions/object/ident-name-method-def-function-escaped.js
-  - [ ] test/language/expressions/object/ident-name-method-def-if-escaped.js
+  - [x] test/language/expressions/object/ident-name-method-def-if-escaped.js
   - [x] test/language/expressions/object/ident-name-method-def-implements-escaped.js
   - [x] test/language/expressions/object/ident-name-method-def-import-escaped.js
   - [x] test/language/expressions/object/ident-name-method-def-in-escaped.js
   - [x] test/language/expressions/object/ident-name-method-def-instanceof-escaped.js
-  - [ ] test/language/expressions/object/ident-name-method-def-interface-escaped.js
-  - [ ] test/language/expressions/object/ident-name-method-def-let-escaped.js
-  - [ ] test/language/expressions/object/ident-name-method-def-new-escaped.js
-  - [ ] test/language/expressions/object/ident-name-method-def-package-escaped.js
-  - [ ] test/language/expressions/object/ident-name-method-def-private-escaped.js
-  - [ ] test/language/expressions/object/ident-name-method-def-protected-escaped.js
-  - [ ] test/language/expressions/object/ident-name-method-def-public-escaped.js
-  - [ ] test/language/expressions/object/ident-name-method-def-return-escaped.js
-  - [ ] test/language/expressions/object/ident-name-method-def-static-escaped.js
-  - [ ] test/language/expressions/object/ident-name-method-def-super-escaped.js
-  - [ ] test/language/expressions/object/ident-name-method-def-switch-escaped.js
-  - [ ] test/language/expressions/object/ident-name-method-def-this-escaped.js
-  - [ ] test/language/expressions/object/ident-name-method-def-throw-escaped.js
-  - [ ] test/language/expressions/object/ident-name-method-def-try-escaped.js
-  - [ ] test/language/expressions/object/ident-name-method-def-typeof-escaped.js
-  - [ ] test/language/expressions/object/ident-name-method-def-var-escaped.js
-  - [ ] test/language/expressions/object/ident-name-method-def-void-escaped.js
-  - [ ] test/language/expressions/object/ident-name-method-def-while-escaped.js
-  - [ ] test/language/expressions/object/ident-name-method-def-with-escaped.js
+  - [x] test/language/expressions/object/ident-name-method-def-interface-escaped.js
+  - [x] test/language/expressions/object/ident-name-method-def-let-escaped.js
+  - [x] test/language/expressions/object/ident-name-method-def-new-escaped.js
+  - [x] test/language/expressions/object/ident-name-method-def-package-escaped.js
+  - [x] test/language/expressions/object/ident-name-method-def-private-escaped.js
+  - [x] test/language/expressions/object/ident-name-method-def-protected-escaped.js
+  - [x] test/language/expressions/object/ident-name-method-def-public-escaped.js
+  - [x] test/language/expressions/object/ident-name-method-def-return-escaped.js
+  - [x] test/language/expressions/object/ident-name-method-def-static-escaped.js
+  - [x] test/language/expressions/object/ident-name-method-def-super-escaped.js
+  - [x] test/language/expressions/object/ident-name-method-def-switch-escaped.js
+  - [x] test/language/expressions/object/ident-name-method-def-this-escaped.js
+  - [x] test/language/expressions/object/ident-name-method-def-throw-escaped.js
+  - [x] test/language/expressions/object/ident-name-method-def-try-escaped.js
+  - [x] test/language/expressions/object/ident-name-method-def-typeof-escaped.js
+  - [x] test/language/expressions/object/ident-name-method-def-var-escaped.js
+  - [x] test/language/expressions/object/ident-name-method-def-void-escaped.js
+  - [x] test/language/expressions/object/ident-name-method-def-while-escaped.js
+  - [x] test/language/expressions/object/ident-name-method-def-with-escaped.js
   - [x] test/language/expressions/object/ident-name-prop-name-literal-await-static-init.js
-  - [ ] test/language/expressions/object/ident-name-prop-name-literal-break-escaped.js
-  - [ ] test/language/expressions/object/ident-name-prop-name-literal-case-escaped.js
-  - [ ] test/language/expressions/object/ident-name-prop-name-literal-catch-escaped.js
-  - [ ] test/language/expressions/object/ident-name-prop-name-literal-class-escaped.js
+  - [x] test/language/expressions/object/ident-name-prop-name-literal-break-escaped.js
+  - [x] test/language/expressions/object/ident-name-prop-name-literal-case-escaped.js
+  - [x] test/language/expressions/object/ident-name-prop-name-literal-catch-escaped.js
+  - [x] test/language/expressions/object/ident-name-prop-name-literal-class-escaped.js
   - [x] test/language/expressions/object/ident-name-prop-name-literal-const-escaped.js
   - [x] test/language/expressions/object/ident-name-prop-name-literal-continue-escaped.js
   - [x] test/language/expressions/object/ident-name-prop-name-literal-debugger-escaped.js
-  - [ ] test/language/expressions/object/ident-name-prop-name-literal-default-escaped-ext.js
-  - [ ] test/language/expressions/object/ident-name-prop-name-literal-default-escaped.js
+  - [x] test/language/expressions/object/ident-name-prop-name-literal-default-escaped-ext.js
+  - [x] test/language/expressions/object/ident-name-prop-name-literal-default-escaped.js
   - [x] test/language/expressions/object/ident-name-prop-name-literal-default.js
   - [x] test/language/expressions/object/ident-name-prop-name-literal-delete-escaped.js
   - [x] test/language/expressions/object/ident-name-prop-name-literal-do-escaped.js
@@ -20688,30 +20688,30 @@ Sub-category progress
   - [x] test/language/expressions/object/ident-name-prop-name-literal-finally-escaped.js
   - [x] test/language/expressions/object/ident-name-prop-name-literal-for-escaped.js
   - [x] test/language/expressions/object/ident-name-prop-name-literal-function-escaped.js
-  - [ ] test/language/expressions/object/ident-name-prop-name-literal-if-escaped.js
+  - [x] test/language/expressions/object/ident-name-prop-name-literal-if-escaped.js
   - [x] test/language/expressions/object/ident-name-prop-name-literal-implements-escaped.js
   - [x] test/language/expressions/object/ident-name-prop-name-literal-import-escaped.js
   - [x] test/language/expressions/object/ident-name-prop-name-literal-in-escaped.js
   - [x] test/language/expressions/object/ident-name-prop-name-literal-instanceof-escaped.js
-  - [ ] test/language/expressions/object/ident-name-prop-name-literal-interface-escaped.js
-  - [ ] test/language/expressions/object/ident-name-prop-name-literal-let-escaped.js
-  - [ ] test/language/expressions/object/ident-name-prop-name-literal-new-escaped.js
-  - [ ] test/language/expressions/object/ident-name-prop-name-literal-package-escaped.js
-  - [ ] test/language/expressions/object/ident-name-prop-name-literal-private-escaped.js
-  - [ ] test/language/expressions/object/ident-name-prop-name-literal-protected-escaped.js
-  - [ ] test/language/expressions/object/ident-name-prop-name-literal-public-escaped.js
-  - [ ] test/language/expressions/object/ident-name-prop-name-literal-return-escaped.js
-  - [ ] test/language/expressions/object/ident-name-prop-name-literal-static-escaped.js
-  - [ ] test/language/expressions/object/ident-name-prop-name-literal-super-escaped.js
-  - [ ] test/language/expressions/object/ident-name-prop-name-literal-switch-escaped.js
-  - [ ] test/language/expressions/object/ident-name-prop-name-literal-this-escaped.js
-  - [ ] test/language/expressions/object/ident-name-prop-name-literal-throw-escaped.js
-  - [ ] test/language/expressions/object/ident-name-prop-name-literal-try-escaped.js
-  - [ ] test/language/expressions/object/ident-name-prop-name-literal-typeof-escaped.js
-  - [ ] test/language/expressions/object/ident-name-prop-name-literal-var-escaped.js
-  - [ ] test/language/expressions/object/ident-name-prop-name-literal-void-escaped.js
-  - [ ] test/language/expressions/object/ident-name-prop-name-literal-while-escaped.js
-  - [ ] test/language/expressions/object/ident-name-prop-name-literal-with-escaped.js
+  - [x] test/language/expressions/object/ident-name-prop-name-literal-interface-escaped.js
+  - [x] test/language/expressions/object/ident-name-prop-name-literal-let-escaped.js
+  - [x] test/language/expressions/object/ident-name-prop-name-literal-new-escaped.js
+  - [x] test/language/expressions/object/ident-name-prop-name-literal-package-escaped.js
+  - [x] test/language/expressions/object/ident-name-prop-name-literal-private-escaped.js
+  - [x] test/language/expressions/object/ident-name-prop-name-literal-protected-escaped.js
+  - [x] test/language/expressions/object/ident-name-prop-name-literal-public-escaped.js
+  - [x] test/language/expressions/object/ident-name-prop-name-literal-return-escaped.js
+  - [x] test/language/expressions/object/ident-name-prop-name-literal-static-escaped.js
+  - [x] test/language/expressions/object/ident-name-prop-name-literal-super-escaped.js
+  - [x] test/language/expressions/object/ident-name-prop-name-literal-switch-escaped.js
+  - [x] test/language/expressions/object/ident-name-prop-name-literal-this-escaped.js
+  - [x] test/language/expressions/object/ident-name-prop-name-literal-throw-escaped.js
+  - [x] test/language/expressions/object/ident-name-prop-name-literal-try-escaped.js
+  - [x] test/language/expressions/object/ident-name-prop-name-literal-typeof-escaped.js
+  - [x] test/language/expressions/object/ident-name-prop-name-literal-var-escaped.js
+  - [x] test/language/expressions/object/ident-name-prop-name-literal-void-escaped.js
+  - [x] test/language/expressions/object/ident-name-prop-name-literal-while-escaped.js
+  - [x] test/language/expressions/object/ident-name-prop-name-literal-with-escaped.js
   - [x] test/language/expressions/object/identifier-shorthand-await-strict-mode.js
   - [x] test/language/expressions/object/identifier-shorthand-implements-invalid-strict-mode.js
   - [x] test/language/expressions/object/identifier-shorthand-interface-invalid-strict-mode.js
@@ -20856,8 +20856,8 @@ Sub-category progress
   - [x] test/language/expressions/object/method-definition/async-returns-async-function-returns-arguments-from-own-function.js
   - [x] test/language/expressions/object/method-definition/async-returns-async-function-returns-newtarget.js
   - [x] test/language/expressions/object/method-definition/async-returns-async-function.js
-  - [ ] test/language/expressions/object/method-definition/async-super-call-body.js
-  - [ ] test/language/expressions/object/method-definition/async-super-call-param.js
+  - [x] test/language/expressions/object/method-definition/async-super-call-body.js
+  - [x] test/language/expressions/object/method-definition/async-super-call-param.js
   - [x] test/language/expressions/object/method-definition/computed-property-name-yield-expression.js
   - [x] test/language/expressions/object/method-definition/early-errors-object-async-method-duplicate-parameters.js
   - [x] test/language/expressions/object/method-definition/early-errors-object-method-NSPL-with-USD.js
@@ -20878,8 +20878,8 @@ Sub-category progress
   - [x] test/language/expressions/object/method-definition/escaped-set-s.js
   - [x] test/language/expressions/object/method-definition/escaped-set-t.js
   - [x] test/language/expressions/object/method-definition/escaped-set.js
-  - [ ] test/language/expressions/object/method-definition/fn-name-fn.js
-  - [ ] test/language/expressions/object/method-definition/fn-name-gen.js
+  - [x] test/language/expressions/object/method-definition/fn-name-fn.js
+  - [x] test/language/expressions/object/method-definition/fn-name-gen.js
   - [x] test/language/expressions/object/method-definition/forbidden-ext/b1/async-gen-meth-forbidden-ext-direct-access-prop-arguments.js
   - [x] test/language/expressions/object/method-definition/forbidden-ext/b1/async-gen-meth-forbidden-ext-direct-access-prop-caller.js
   - [x] test/language/expressions/object/method-definition/forbidden-ext/b1/async-meth-forbidden-ext-direct-access-prop-arguments.js
