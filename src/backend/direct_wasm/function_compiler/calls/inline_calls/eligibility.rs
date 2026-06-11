@@ -2059,11 +2059,20 @@ impl<'a> FunctionCompiler<'a> {
                 .is_some()
     }
 
+    pub(in crate::backend::direct_wasm) fn user_function_is_module_init_like(
+        user_function: &UserFunction,
+    ) -> bool {
+        user_function.name.starts_with("__ayy_module_init_")
+    }
+
     pub(in crate::backend::direct_wasm) fn can_inline_user_function_call(
         &self,
         user_function: &UserFunction,
         arguments: &[Expression],
     ) -> bool {
+        if Self::user_function_is_module_init_like(user_function) {
+            return false;
+        }
         if !user_function.lexical_this
             && self
                 .resolve_registered_function_declaration(&user_function.name)
@@ -2123,7 +2132,8 @@ impl<'a> FunctionCompiler<'a> {
         arguments: &[Expression],
         this_expression: &Expression,
     ) -> bool {
-        self.state.emission.control_flow.try_stack.is_empty()
+        !Self::user_function_is_module_init_like(user_function)
+            && self.state.emission.control_flow.try_stack.is_empty()
             && !self.current_function_contains_try_statement()
             && (user_function.lexical_this || !matches!(this_expression, Expression::This))
             && !self.expression_reads_local_descriptor_binding_member(this_expression)
@@ -2171,7 +2181,8 @@ impl<'a> FunctionCompiler<'a> {
         arguments: &[Expression],
         this_expression: &Expression,
     ) -> bool {
-        !self.expression_reads_local_descriptor_binding_member(this_expression)
+        !Self::user_function_is_module_init_like(user_function)
+            && !self.expression_reads_local_descriptor_binding_member(this_expression)
             && (user_function.lexical_this || !matches!(this_expression, Expression::This))
             && self.inline_safe_argument_expression(this_expression)
             && !self.inline_argument_mentions_shadowed_implicit_global(this_expression)

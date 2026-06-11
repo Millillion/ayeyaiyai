@@ -1212,6 +1212,7 @@ impl<'a> FunctionCompiler<'a> {
             }
         }
         if let Some(outcome) = self.resolve_static_await_resolution_outcome(expression) {
+            self.emit_static_await_resolution_effects(expression)?;
             match outcome {
                 StaticEvalOutcome::Value(awaited_value) => {
                     if crate::ayy_env_flag!("AYY_TRACE_AWAIT") {

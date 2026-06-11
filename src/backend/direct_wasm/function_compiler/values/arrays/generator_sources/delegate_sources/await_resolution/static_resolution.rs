@@ -718,9 +718,6 @@ impl<'a> FunctionCompiler<'a> {
         else {
             return Ok(());
         };
-        if init_declaration.params.len() != 1 {
-            return Ok(());
-        }
         if self
             .static_dynamic_import_module_throw_value(init_declaration)
             .is_some()
@@ -729,6 +726,12 @@ impl<'a> FunctionCompiler<'a> {
         }
         let live_initializers =
             self.static_dynamic_import_live_binding_initializers(init_declaration);
+        if self
+            .user_function(&init_name)
+            .is_some_and(|init_function| !init_function.kind.is_async())
+        {
+            self.emit_sync_module_init_if_needed(module_index, &mut HashSet::new())?;
+        }
         for (hidden_name, initial_value) in live_initializers {
             let binding = self.ensure_implicit_global_binding(&hidden_name);
             self.push_global_get(binding.present_index);
@@ -749,14 +752,6 @@ impl<'a> FunctionCompiler<'a> {
             self.update_static_global_assignment_metadata(&hidden_name, &initial_value);
             self.update_global_specialized_function_value(&hidden_name, &initial_value)?;
         }
-        let Some(init_function) = self.user_function(&init_name).cloned() else {
-            return Ok(());
-        };
-        let arguments = vec![CallArgument::Expression(Expression::Identifier(format!(
-            "__ayy_module_namespace_{module_index}"
-        )))];
-        self.emit_user_function_call(&init_function, &arguments)?;
-        self.state.emission.output.instructions.push(0x1a);
         Ok(())
     }
 
@@ -1774,7 +1769,19 @@ impl<'a> FunctionCompiler<'a> {
             Statement::Var { name, value }
             | Statement::Let { name, value, .. }
             | Statement::Assign { name, value } => {
-                bindings.insert(name.clone(), self.materialize_static_expression(value));
+                // Keep module hidden binding aliases unmaterialized so alias
+                // chasing resolves them through the init body's own (post-init)
+                // assignments instead of folding to stale pre-init global
+                // values.
+                let value = match value {
+                    Expression::Identifier(alias)
+                        if alias.starts_with("__ayy_module_binding_") =>
+                    {
+                        value.clone()
+                    }
+                    _ => self.materialize_static_expression(value),
+                };
+                bindings.insert(name.clone(), value);
             }
             Statement::Declaration { body }
             | Statement::Block { body }
@@ -2196,6 +2203,67 @@ impl<'a> FunctionCompiler<'a> {
             }
         }
         None
+    }
+
+    fn module_hidden_binding_name_module_index(name: &str) -> Option<usize> {
+        let suffix = name
+            .strip_prefix("__ayy_module_binding_")
+            .or_else(|| {
+                name.strip_prefix("__ayy_capture_binding__")
+                    .and_then(|rest| {
+                        rest.split_once("__ayy_module_export_getter_")
+                            .map(|(_, suffix)| suffix)
+                            .or_else(|| rest.strip_prefix("__ayy_module_export_getter_"))
+                    })
+            })?;
+        let digit_count = suffix
+            .bytes()
+            .take_while(|byte| byte.is_ascii_digit())
+            .count();
+        if digit_count == 0 {
+            return None;
+        }
+        suffix[..digit_count].parse::<usize>().ok()
+    }
+
+    /// Resolves a module hidden live-binding global (`__ayy_module_binding_*`
+    /// or a module export getter `__ayy_capture_binding__*`) to its value
+    /// after the module init function has completed. This is only valid for
+    /// static (bound-snapshot) evaluation contexts where the dynamic import
+    /// has already been resolved; emitted runtime reads must keep using the
+    /// live-binding global itself.
+    pub(in crate::backend::direct_wasm) fn static_module_hidden_binding_post_init_value(
+        &self,
+        name: &str,
+    ) -> Option<Expression> {
+        let module_index = Self::module_hidden_binding_name_module_index(name)?;
+        let init_function = self.resolve_registered_function_declaration(&format!(
+            "__ayy_module_init_{module_index}"
+        ))?;
+        let local_bindings = self.static_dynamic_import_module_local_bindings_with_continuations(
+            module_index,
+            init_function,
+        );
+        let value = if name.starts_with("__ayy_module_binding_") {
+            Self::static_dynamic_import_local_binding_value(name, &local_bindings)?
+        } else {
+            let getter_prefix = format!("__ayy_module_export_getter_{module_index}_");
+            let source_name = self.user_functions().into_iter().find_map(|function| {
+                if !function.name.starts_with(&getter_prefix) {
+                    return None;
+                }
+                self.user_function_capture_bindings(&function.name)?
+                    .iter()
+                    .find_map(|(source_name, hidden_name)| {
+                        (hidden_name == name).then(|| source_name.clone())
+                    })
+            })?;
+            Self::static_dynamic_import_local_binding_value(&source_name, &local_bindings)?
+        };
+        if expression_references_module_dependency_param(&value) {
+            return None;
+        }
+        Some(value)
     }
 
     fn static_dynamic_import_live_binding_value(
