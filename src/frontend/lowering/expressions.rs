@@ -757,7 +757,19 @@ impl Lowerer {
                     self.lower_object_setter_entry_with_key(setter, key)
                 }
                 Prop::KeyValue(property) => {
-                    let name_hint = self.object_prop_name_hint(&property.key);
+                    // A literal `__proto__:` data key is the prototype-setting
+                    // special form: SetFunctionName is never applied, so the
+                    // value keeps its own (possibly empty) name.
+                    let is_literal_proto_key = matches!(
+                        &property.key,
+                        PropName::Ident(identifier) if identifier.sym == *"__proto__"
+                    ) || matches!(
+                        &property.key,
+                        PropName::Str(string) if string.value.to_string_lossy() == "__proto__"
+                    );
+                    let name_hint = (!is_literal_proto_key)
+                        .then(|| self.object_prop_name_hint(&property.key))
+                        .flatten();
                     Ok(ObjectEntry::Data {
                         key: self.lower_prop_name(&property.key)?,
                         value: self.lower_expression_with_name_hint(

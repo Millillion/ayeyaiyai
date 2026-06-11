@@ -225,6 +225,52 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    /// Evaluates `new <ErrorCtor>(args)` throw values whose constructor is an
+    /// unshadowed global error constructor and whose arguments all evaluate
+    /// under the snapshot bindings; the rebuilt construction references no
+    /// callee locals, so it is safe to replay outside the callee scope.
+    fn bound_snapshot_scope_independent_error_construction(
+        &self,
+        expression: &Expression,
+        bindings: &mut HashMap<String, Expression>,
+        current_function_name: Option<&str>,
+    ) -> Option<Expression> {
+        let Expression::New { callee, arguments } = expression else {
+            return None;
+        };
+        let Expression::Identifier(constructor_name) = callee.as_ref() else {
+            return None;
+        };
+        if !matches!(
+            constructor_name.as_str(),
+            "Error"
+                | "TypeError"
+                | "RangeError"
+                | "ReferenceError"
+                | "SyntaxError"
+                | "EvalError"
+                | "URIError"
+                | "AggregateError"
+                | "Test262Error"
+        ) || !self.is_unshadowed_builtin_identifier(constructor_name)
+        {
+            return None;
+        }
+        let evaluated_arguments = arguments
+            .iter()
+            .map(|argument| match argument {
+                CallArgument::Expression(expression) => self
+                    .evaluate_bound_snapshot_expression(expression, bindings, current_function_name)
+                    .map(CallArgument::Expression),
+                CallArgument::Spread(_) => None,
+            })
+            .collect::<Option<Vec<_>>>()?;
+        Some(Expression::New {
+            callee: callee.clone(),
+            arguments: evaluated_arguments,
+        })
+    }
+
     pub(in crate::backend::direct_wasm) fn execute_bound_snapshot_statements(
         &self,
         statements: &[Statement],
@@ -305,8 +351,18 @@ impl<'a> FunctionCompiler<'a> {
                             self.resolve_bound_snapshot_binding_name(name, bindings)
                                 .to_string(),
                         )
+                    } else if let Some(evaluated) = self.evaluate_bound_snapshot_expression(
+                        value,
+                        bindings,
+                        current_function_name,
+                    ) {
+                        evaluated
                     } else {
-                        self.evaluate_bound_snapshot_expression(
+                        // `throw new <ErrorCtor>(...)` with scope-independent
+                        // arguments is a common iterator-protocol shape; keep
+                        // the construction so effects before the throw are
+                        // not discarded with the whole snapshot.
+                        self.bound_snapshot_scope_independent_error_construction(
                             value,
                             bindings,
                             current_function_name,

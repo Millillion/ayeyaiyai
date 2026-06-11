@@ -64,6 +64,9 @@ impl<'a> FunctionCompiler<'a> {
                 if self.member_function_binding_value_is_sequence_wrapped(&key, &binding) {
                     return None;
                 }
+                if self.member_function_binding_is_literal_proto_data_entry(&key, &binding) {
+                    return None;
+                }
                 matches!(&binding, LocalFunctionBinding::User(name) if name == function_name)
                     .then(|| self.member_function_property_display_name(&key.property, None))
                     .flatten()
@@ -73,6 +76,45 @@ impl<'a> FunctionCompiler<'a> {
         }
 
         None
+    }
+
+    /// True when the binding was provided by a literal `__proto__:` data key
+    /// in the target's object literal — the prototype-setting special form,
+    /// which never applies SetFunctionName to its value.
+    fn member_function_binding_is_literal_proto_data_entry(
+        &self,
+        key: &MemberFunctionBindingKey,
+        binding: &LocalFunctionBinding,
+    ) -> bool {
+        if !matches!(
+            &key.property,
+            MemberFunctionBindingProperty::String(name) if name == "__proto__"
+        ) {
+            return false;
+        }
+        let MemberFunctionBindingTarget::Identifier(target_name) = &key.target else {
+            return false;
+        };
+        self.state
+            .speculation
+            .static_semantics
+            .local_value_binding(target_name)
+            .or_else(|| self.global_value_binding(target_name))
+            .is_some_and(|expression| {
+                let Expression::Object(entries) = expression else {
+                    return false;
+                };
+                entries.iter().any(|entry| {
+                    let crate::ir::hir::ObjectEntry::Data { key, value } = entry else {
+                        return false;
+                    };
+                    matches!(key, Expression::String(name) if name == "__proto__")
+                        && self
+                            .resolve_function_binding_from_expression(value)
+                            .as_ref()
+                            .is_some_and(|resolved| resolved == binding)
+                })
+            })
     }
 
     fn object_literal_member_function_value_is_sequence_wrapped(
@@ -171,6 +213,14 @@ impl<'a> FunctionCompiler<'a> {
         for entry in entries {
             let (key, binding, entry_slot) = match entry {
                 crate::ir::hir::ObjectEntry::Data { key, value } => {
+                    // A literal `__proto__:` data key is the prototype-setting
+                    // special form, not a PropertyDefinition: SetFunctionName
+                    // is never applied to its value. (Computed and shorthand
+                    // keys lower to `Expression::Sequence`, so they still
+                    // name normally.)
+                    if matches!(key, Expression::String(name) if name == "__proto__") {
+                        continue;
+                    }
                     (key, self.resolve_function_binding_from_expression(value), 0)
                 }
                 crate::ir::hir::ObjectEntry::Getter { key, getter } => (

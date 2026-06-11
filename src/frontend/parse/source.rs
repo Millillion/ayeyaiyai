@@ -136,7 +136,11 @@ fn unmodified_source_file(file_name: FileName, source: &str) -> Lrc<swc_common::
 fn normalize_unmodified_parser_source(source: &str) -> Cow<'_, str> {
     // Method-name-position-only canonicalizations for shapes the vendored swc
     // parser rejects; escaped-keyword identifier negatives still error.
+    // Object property names are always-valid IdentifierName positions, so the
+    // escaped-property rewrite (which only fires before `:`/`(` inside an
+    // object literal context) preserves identifier-position negatives.
     let normalized = normalize_escaped_class_method_names(Cow::Borrowed(source));
+    let normalized = normalize_escaped_object_property_names(normalized);
     let normalized = normalize_static_constructor_methods(normalized);
     normalize_for_statement_using_declarations(normalized)
 }

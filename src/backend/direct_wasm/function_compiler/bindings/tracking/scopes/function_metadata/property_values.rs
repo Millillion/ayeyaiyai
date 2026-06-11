@@ -269,13 +269,14 @@ impl<'a> FunctionCompiler<'a> {
                 }
                 match function_binding {
                     LocalFunctionBinding::User(function_name) => {
-                        let display_name = self
-                            .resolve_user_function_display_name(&function_name)
-                            .unwrap_or_default();
-                        if display_name.is_empty() {
-                            continue;
+                        // `Some("")` is a definite empty name (e.g. a method
+                        // keyed by a description-less Symbol, whose
+                        // SetFunctionName result is ""); only `None` means
+                        // the name could not be resolved statically.
+                        match self.resolve_user_function_display_name(&function_name) {
+                            Some(display_name) => return Some(display_name),
+                            None => continue,
                         }
-                        return Some(display_name);
                     }
                     LocalFunctionBinding::Builtin(function_name) => {
                         let display_name =

@@ -753,6 +753,20 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         expression: &Expression,
     ) -> Option<(Vec<SimpleGeneratorStep>, Vec<Statement>, Expression)> {
+        self.resolve_static_iterator_object_simple_generator_source_with_seed(expression, None)
+    }
+
+    /// `seed_bindings` carries the closure state produced by statically
+    /// executing an iterator-producing method (its locals after execution),
+    /// so `next()` closures over that state can be stepped statically.
+    /// Seeded names with no binding at the consumption site are internal to
+    /// the closure: they are threaded through the steps but never emitted as
+    /// observable step effects.
+    pub(in crate::backend::direct_wasm) fn resolve_static_iterator_object_simple_generator_source_with_seed(
+        &self,
+        expression: &Expression,
+        seed_bindings: Option<&HashMap<String, Expression>>,
+    ) -> Option<(Vec<SimpleGeneratorStep>, Vec<Statement>, Expression)> {
         let trace = crate::ayy_env_flag!("AYY_TRACE_STATIC_ITERATOR_OBJECT");
         macro_rules! trace {
             ($($arg:tt)*) => {
@@ -824,7 +838,24 @@ impl<'a> FunctionCompiler<'a> {
                 step_bindings.insert(name.clone(), value.clone());
             }
         }
-        trace!("initial_bindings={step_bindings:?}");
+        // Closure-internal state from the seeding iterator method: fill any
+        // names the consumption site cannot resolve, and exclude them from
+        // observable step effects (they are invisible outside the closure).
+        let mut internal_seed_names = HashSet::new();
+        if let Some(seed_bindings) = seed_bindings {
+            for (name, value) in seed_bindings {
+                if !step_bindings.contains_key(name) {
+                    step_bindings.insert(name.clone(), value.clone());
+                    internal_seed_names.insert(name.clone());
+                }
+            }
+        }
+        let external_effect_names = effect_names
+            .iter()
+            .filter(|name| !internal_seed_names.contains(*name))
+            .cloned()
+            .collect::<HashSet<_>>();
+        trace!("initial_bindings={step_bindings:?} internal={internal_seed_names:?}");
 
         let next_function_binding = LocalFunctionBinding::User(next_function_name.clone());
         let mut steps = Vec::new();
@@ -835,13 +866,22 @@ impl<'a> FunctionCompiler<'a> {
                 Expression::Sent
             };
             let next_call_arguments = [CallArgument::Expression(next_argument.clone())];
-            let (step_result, updated_bindings) = if let Some(outcome) = self
-                .resolve_static_function_outcome_from_binding_with_call_frame_and_context(
-                    &next_function_binding,
-                    &next_call_arguments,
-                    expression,
-                    Some(&next_function_name),
-                ) {
+            // A `next` that assigns nonlocal state must be stepped through the
+            // binding-threading executor: the call-frame resolver below knows
+            // nothing of `step_bindings`, so it would fold each step against
+            // stale (or missing) closure state.
+            let call_frame_outcome = effect_names
+                .is_empty()
+                .then(|| {
+                    self.resolve_static_function_outcome_from_binding_with_call_frame_and_context(
+                        &next_function_binding,
+                        &next_call_arguments,
+                        expression,
+                        Some(&next_function_name),
+                    )
+                })
+                .flatten();
+            let (step_result, updated_bindings) = if let Some(outcome) = call_frame_outcome {
                 match outcome {
                     StaticEvalOutcome::Value(value) => {
                         let value = self.evaluate_static_iterator_step_field(
@@ -886,7 +926,7 @@ impl<'a> FunctionCompiler<'a> {
             let step_effects = self.static_iterator_object_step_effects(
                 &step_bindings,
                 &updated_bindings,
-                &effect_names,
+                &external_effect_names,
             );
             step_bindings =
                 Self::merge_static_iterator_object_bindings(&step_bindings, &updated_bindings);
@@ -1050,7 +1090,7 @@ impl<'a> FunctionCompiler<'a> {
             }
             return None;
         }
-        let Some((iterator_result, _iterator_bindings)) = self
+        let Some((iterator_result, iterator_bindings)) = self
             .execute_simple_static_user_function_with_bindings(
                 &iterator_function_name,
                 &HashMap::new(),
@@ -1066,7 +1106,10 @@ impl<'a> FunctionCompiler<'a> {
         if trace {
             eprintln!("static_iterable_iterator_object:result {iterator_result:?}");
         }
-        self.resolve_static_iterator_object_simple_generator_source(&iterator_result)
+        self.resolve_static_iterator_object_simple_generator_source_with_seed(
+            &iterator_result,
+            Some(&iterator_bindings),
+        )
     }
 
     pub(in crate::backend::direct_wasm) fn resolve_static_iterable_binding_from_expression(

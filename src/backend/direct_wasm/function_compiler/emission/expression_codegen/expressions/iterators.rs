@@ -449,20 +449,25 @@ impl<'a> FunctionCompiler<'a> {
                 })
                 .unwrap_or_default(),
         );
-        let result = self.resolve_bound_snapshot_function_result_with_arguments_and_this(
-            &binding,
-            &snapshot_bindings,
-            &[],
-            &this_expression,
-        );
+        // A throwing `return()` still performed its nonlocal assignments
+        // before unwinding, so accept Throw outcomes and keep their partial
+        // updates (the throw itself propagates through the emitted call).
+        let result = self
+            .resolve_bound_snapshot_function_outcome_with_arguments_and_this(
+                &binding,
+                &snapshot_bindings,
+                &[],
+                &this_expression,
+            )
+            .map(|(_, updated_bindings)| updated_bindings);
         if trace_iterator_close {
             eprintln!(
                 "iterator_close:snapshot_result result_present={} updated={:?}",
                 result.is_some(),
-                result.as_ref().map(|(_, updated)| updated)
+                result.as_ref()
             );
         }
-        result.map(|(_, mut updated_bindings)| {
+        result.map(|mut updated_bindings| {
             updated_bindings.retain(|name, _| {
                 !Self::iterator_close_updated_binding_is_callee_local(name, &callee_local_sources)
             });
@@ -918,8 +923,20 @@ impl<'a> FunctionCompiler<'a> {
                     let closed_state = (steps.len() + 1) as i32;
                     self.push_i32_const(closed_state);
                     self.push_local_set(state_local);
-                    self.push_i32_const(JS_UNDEFINED_TAG);
-                    return Ok(());
+                    // Closing a provably unconsumed iterator (no `next()`
+                    // observed yet) with an observable `return` must still
+                    // call it: the step machinery above only covers closes
+                    // at suspension points after the first `next()`.
+                    if iterator_binding.static_index == Some(0) && should_call_return {
+                        if trace_iterator_close {
+                            eprintln!(
+                                "iterator_close:path simple_generator_unconsumed_return name={name}"
+                            );
+                        }
+                    } else {
+                        self.push_i32_const(JS_UNDEFINED_TAG);
+                        return Ok(());
+                    }
                 }
                 IteratorSourceKind::StaticArray { .. }
                 | IteratorSourceKind::StaticArrayEntries { .. }
@@ -1090,11 +1107,30 @@ impl<'a> FunctionCompiler<'a> {
             } else {
                 self.emit_numeric_expression(&return_call)?;
             }
+            let static_update_missing = static_updated_bindings.is_none();
             self.sync_iterator_close_call_snapshot_bindings(static_updated_bindings, &return_call)?;
             if let (Some(user_function), Some(body)) =
                 (user_return_function.as_ref(), user_return_body.as_deref())
             {
                 self.sync_static_iterator_close_arguments_assignments(user_function, &[], body);
+            }
+            // The `return()` body executed at runtime but its nonlocal
+            // assignments could not be replayed statically (e.g. it throws):
+            // demote those bindings to runtime reads so later folds do not
+            // observe stale pre-close values.
+            if static_update_missing
+                && let Some(user_function) = user_return_function.as_ref()
+            {
+                let assigned_nonlocals =
+                    self.collect_user_function_assigned_nonlocal_bindings(user_function);
+                if !assigned_nonlocals.is_empty() {
+                    crate::backend::direct_wasm::memo::bump_static_state_generation();
+                    self.state
+                        .runtime
+                        .locals
+                        .runtime_dynamic_bindings
+                        .extend(assigned_nonlocals);
+                }
             }
             self.state.emission.output.instructions.push(0x1a);
             if !capture_source_bindings.is_empty() {
