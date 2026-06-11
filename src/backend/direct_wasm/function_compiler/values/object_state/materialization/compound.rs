@@ -165,6 +165,31 @@ impl<'a> FunctionCompiler<'a> {
         self.snapshot_expression_value_against_current_state(expression)
     }
 
+    /// Snapshots a member read that goes through a getter with runtime
+    /// effects (for example `delete this.x; return 2;`). The getter call is
+    /// emitted at the read site, so its effects mutate static binding state
+    /// while the surrounding statement is emitted; storing the raw member
+    /// expression would re-resolve it against the mutated state (after a
+    /// `delete this.x` the member resolves to undefined instead of the
+    /// getter's return value). Resolves the getter's constant return value
+    /// against the pre-emission state so the stored value matches the value
+    /// the emitted call produces.
+    pub(in crate::backend::direct_wasm) fn snapshot_effectful_getter_member_read_for_static_store(
+        &self,
+        expression: &Expression,
+    ) -> Option<Expression> {
+        let Expression::Member { object, property } = expression else {
+            return None;
+        };
+        if !self.member_getter_value_requires_runtime_read_effects(object, property) {
+            return None;
+        }
+        let getter_binding = self
+            .resolve_member_getter_binding(object, property)
+            .or_else(|| self.resolve_member_getter_binding_shallow(object, property))?;
+        self.resolve_effectful_getter_constant_return_value(&getter_binding)
+    }
+
     /// Same as [`Self::snapshot_effectful_expression_for_static_store`], but
     /// also snapshots pure right-hand sides that read the assignment target
     /// itself (the desugared form of `x op= y` is `x = x op y`); storing the

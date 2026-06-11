@@ -241,12 +241,14 @@ impl<'a> FunctionCompiler<'a> {
         }
 
         if let Some(binding) = getter_binding {
+            self.record_receiver_delete_shadows_from_accessor_binding(target, &binding);
             self.set_member_getter_binding_entry(&key, binding);
         } else if has_get_field {
             self.clear_member_getter_binding_entry(&key);
         }
 
         if let Some(binding) = setter_binding {
+            self.record_receiver_delete_shadows_from_accessor_binding(target, &binding);
             self.set_member_setter_binding_entry(&key, binding);
         } else if has_set_field {
             self.clear_member_setter_binding_entry(&key);
@@ -254,6 +256,139 @@ impl<'a> FunctionCompiler<'a> {
         if trace_iterator_close_updates && matches!(expression, Expression::IteratorClose(_)) {
             eprintln!("iterator_close_updates:member:done expr={expression:?}");
         }
+    }
+
+    /// Records prospective delete shadows for properties that an accessor
+    /// deletes from its receiver (`get x() { delete this.x; ... }`). The
+    /// accessor body may be compiled after statements that statically fold
+    /// property presence, so the emitted-delete registry must learn about the
+    /// deletion when the accessor is bound, not when its body is compiled.
+    pub(in crate::backend::direct_wasm) fn record_receiver_delete_shadows_from_accessor_binding(
+        &mut self,
+        target: &Expression,
+        binding: &LocalFunctionBinding,
+    ) {
+        let LocalFunctionBinding::User(function_name) = binding else {
+            return;
+        };
+        let Some(summary) = self
+            .user_function(function_name)
+            .and_then(|user_function| user_function.inline_summary.clone())
+        else {
+            return;
+        };
+        let owner_name = match target {
+            Expression::Identifier(name) => {
+                self.runtime_object_property_shadow_owner_name_for_identifier(name)
+            }
+            Expression::This => self.runtime_object_property_shadow_owner_name_for_identifier("this"),
+            _ => None,
+        };
+        let Some(owner_name) = owner_name else {
+            return;
+        };
+        for effect in &summary.effects {
+            let InlineFunctionEffect::Expression(Expression::Unary {
+                op: UnaryOp::Delete,
+                expression,
+            }) = effect
+            else {
+                continue;
+            };
+            let Expression::Member { object, property } = expression.as_ref() else {
+                continue;
+            };
+            if !matches!(object.as_ref(), Expression::This) {
+                continue;
+            }
+            let Some(property_name) = static_property_name_from_expression(property) else {
+                continue;
+            };
+            if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
+                eprintln!(
+                    "record_accessor_delete_shadow owner={owner_name} property={property_name} accessor={function_name}"
+                );
+            }
+            self.record_emitted_delete_shadow_for(
+                &owner_name,
+                &Expression::String(property_name),
+            );
+        }
+    }
+
+    /// Applies the receiver-delete effects of a global accessor when an
+    /// unresolvable identifier reference to it is evaluated (for example a
+    /// strict closure performing `x++` against `Object.defineProperty(this,
+    /// "x", { get() { delete this.x; ... } })`). The spec evaluates GetValue
+    /// (running the getter and its deletes) before PutValue throws, so the
+    /// deletion must be reflected in the runtime shadow state and static
+    /// metadata even though the reference itself is compiled to a throw.
+    pub(in crate::backend::direct_wasm) fn emit_unresolvable_global_accessor_reference_read_effects(
+        &mut self,
+        name: &str,
+    ) -> DirectResult<()> {
+        let Some(getter) = self
+            .backend
+            .global_property_descriptor(name)
+            .and_then(|descriptor| descriptor.getter.clone())
+        else {
+            return Ok(());
+        };
+        let Some(LocalFunctionBinding::User(function_name)) =
+            self.resolve_function_binding_from_expression(&getter)
+        else {
+            return Ok(());
+        };
+        let Some(summary) = self
+            .user_function(&function_name)
+            .and_then(|user_function| user_function.inline_summary.clone())
+        else {
+            return Ok(());
+        };
+        for effect in &summary.effects {
+            let InlineFunctionEffect::Expression(Expression::Unary {
+                op: UnaryOp::Delete,
+                expression,
+            }) = effect
+            else {
+                continue;
+            };
+            let Expression::Member { object, property } = expression.as_ref() else {
+                continue;
+            };
+            if !matches!(object.as_ref(), Expression::This) {
+                continue;
+            }
+            let Some(property_name) = static_property_name_from_expression(property) else {
+                continue;
+            };
+            let property_expression = Expression::String(property_name);
+            self.mark_runtime_object_property_shadow_deleted_binding(
+                &Expression::This,
+                &property_expression,
+            );
+            self.clear_member_function_bindings_for_deleted_property(
+                &Expression::This,
+                &property_expression,
+            );
+        }
+        Ok(())
+    }
+
+    /// Clears the tracked data/getter/setter function bindings for a member
+    /// that has been deleted at runtime (`delete obj.x`), so stale accessor
+    /// metadata cannot resurface after the deletion.
+    pub(in crate::backend::direct_wasm) fn clear_member_function_bindings_for_deleted_property(
+        &mut self,
+        object: &Expression,
+        property: &Expression,
+    ) {
+        let Some(key) = self.member_function_binding_key(object, property) else {
+            return;
+        };
+        self.clear_member_function_binding_entry(&key);
+        self.clear_member_getter_binding_entry(&key);
+        self.clear_member_setter_binding_entry(&key);
     }
 
     pub(in crate::backend::direct_wasm) fn update_member_function_assignment_binding(

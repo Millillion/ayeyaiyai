@@ -85,6 +85,52 @@ impl<'a> FunctionCompiler<'a> {
         false
     }
 
+    fn effectful_getter_prefix_statement_is_straight_line(statement: &Statement) -> bool {
+        match statement {
+            Statement::Block { body } | Statement::Declaration { body } => body
+                .iter()
+                .all(Self::effectful_getter_prefix_statement_is_straight_line),
+            Statement::Expression(_) => true,
+            _ => false,
+        }
+    }
+
+    /// Resolves the return value of a getter whose body has side effects but
+    /// terminates in a constant return (for example `delete this.x; return
+    /// 2;`). PutValue write-through semantics require the value produced by
+    /// the getter call itself, so callers that emit the getter call (applying
+    /// its effects at the call site) may still track this constant statically:
+    /// the prefix effects cannot change a literal return value.
+    pub(in crate::backend::direct_wasm) fn resolve_effectful_getter_constant_return_value(
+        &self,
+        binding: &LocalFunctionBinding,
+    ) -> Option<Expression> {
+        let LocalFunctionBinding::User(function_name) = binding else {
+            return None;
+        };
+        let function = self.resolve_registered_function_declaration(function_name)?;
+        let (terminal_statement, prefix_statements) = function.body.split_last()?;
+        if !prefix_statements
+            .iter()
+            .all(Self::effectful_getter_prefix_statement_is_straight_line)
+        {
+            return None;
+        }
+        let Statement::Return(return_value) = terminal_statement else {
+            return None;
+        };
+        matches!(
+            return_value,
+            Expression::Number(_)
+                | Expression::BigInt(_)
+                | Expression::String(_)
+                | Expression::Bool(_)
+                | Expression::Null
+                | Expression::Undefined
+        )
+        .then(|| return_value.clone())
+    }
+
     pub(in crate::backend::direct_wasm) fn resolve_static_getter_value_from_binding_with_context(
         &self,
         binding: &LocalFunctionBinding,

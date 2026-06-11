@@ -143,6 +143,92 @@ impl<'a> FunctionCompiler<'a> {
             || object_binding_lookup_descriptor(object_binding, property).is_some()
     }
 
+    /// Removes a deleted property from object-literal value bindings tracked
+    /// for `name`. Object bindings are re-derived from the literal value
+    /// binding on demand, so leaving the entry in place would resurrect the
+    /// deleted property (most notably stale getter/setter entries) on every
+    /// subsequent static resolution.
+    pub(in crate::backend::direct_wasm) fn scrub_deleted_property_from_literal_value_bindings(
+        &mut self,
+        name: &str,
+        property: &Expression,
+    ) {
+        let Some(property_name) = static_property_name_from_expression(property) else {
+            return;
+        };
+        let filter_literal = |expression: &Expression| -> Option<Expression> {
+            let Expression::Object(entries) = expression else {
+                return None;
+            };
+            let filtered: Vec<ObjectEntry> = entries
+                .iter()
+                .filter(|entry| {
+                    let key = match entry {
+                        ObjectEntry::Data { key, .. }
+                        | ObjectEntry::Getter { key, .. }
+                        | ObjectEntry::Setter { key, .. } => Some(key),
+                        ObjectEntry::Spread(_) => None,
+                    };
+                    !matches!(
+                        key,
+                        Some(Expression::String(entry_name)) if *entry_name == property_name
+                    )
+                })
+                .cloned()
+                .collect();
+            (filtered.len() != entries.len()).then_some(Expression::Object(filtered))
+        };
+
+        let mut local_names = vec![name.to_string()];
+        if let Some((resolved_name, _)) = self.resolve_current_local_binding(name)
+            && resolved_name != name
+        {
+            local_names.push(resolved_name);
+        }
+        for local_name in local_names {
+            if let Some(filtered) = self
+                .state
+                .speculation
+                .static_semantics
+                .local_value_binding(&local_name)
+                .and_then(&filter_literal)
+            {
+                self.state
+                    .speculation
+                    .static_semantics
+                    .set_local_value_binding(&local_name, filtered);
+            }
+        }
+        if let Some(filtered) = self
+            .backend
+            .global_semantics
+            .values
+            .value_bindings
+            .get(name)
+            .and_then(&filter_literal)
+        {
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
+            self.backend
+                .global_semantics
+                .values
+                .set_value_binding(name.to_string(), filtered);
+        }
+        if let Some(filtered) = self
+            .backend
+            .shared_global_semantics
+            .values
+            .value_bindings
+            .get(name)
+            .and_then(&filter_literal)
+        {
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
+            self.backend
+                .shared_global_semantics
+                .values
+                .set_value_binding(name.to_string(), filtered);
+        }
+    }
+
     fn runtime_shadow_binding_exists_for_static_member_delete(
         &self,
         object: &Expression,
@@ -890,6 +976,10 @@ impl<'a> FunctionCompiler<'a> {
                         object,
                         &materialized_property,
                     );
+                    self.clear_member_function_bindings_for_deleted_property(
+                        object,
+                        &materialized_property,
+                    );
                     self.push_i32_const(1);
                     return Ok(());
                 }
@@ -1000,6 +1090,14 @@ impl<'a> FunctionCompiler<'a> {
                         object,
                         &materialized_property,
                     );
+                    self.clear_member_function_bindings_for_deleted_property(
+                        object,
+                        &materialized_property,
+                    );
+                    self.scrub_deleted_property_from_literal_value_bindings(
+                        name,
+                        &materialized_property,
+                    );
                     if let Some(object_binding) = self
                         .state
                         .speculation
@@ -1015,11 +1113,25 @@ impl<'a> FunctionCompiler<'a> {
                             object_binding
                                 .non_enumerable_string_properties
                                 .retain(|hidden_name| hidden_name != &property_name);
+                            object_binding
+                                .property_descriptors
+                                .retain(|(existing_property, _)| {
+                                    !matches!(
+                                        existing_property,
+                                        Expression::String(existing_name)
+                                            if *existing_name == property_name
+                                    )
+                                });
                         } else {
                             object_binding
                                 .symbol_properties
                                 .retain(|(existing_key, _)| {
                                     !symbol_keys.iter().any(|key| key == existing_key)
+                                });
+                            object_binding
+                                .property_descriptors
+                                .retain(|(existing_property, _)| {
+                                    !symbol_keys.iter().any(|key| key == existing_property)
                                 });
                         }
                         self.push_i32_const(1);
@@ -1042,11 +1154,25 @@ impl<'a> FunctionCompiler<'a> {
                             object_binding
                                 .non_enumerable_string_properties
                                 .retain(|hidden_name| hidden_name != &property_name);
+                            object_binding
+                                .property_descriptors
+                                .retain(|(existing_property, _)| {
+                                    !matches!(
+                                        existing_property,
+                                        Expression::String(existing_name)
+                                            if *existing_name == property_name
+                                    )
+                                });
                         } else {
                             object_binding
                                 .symbol_properties
                                 .retain(|(existing_key, _)| {
                                     !symbol_keys.iter().any(|key| key == existing_key)
+                                });
+                            object_binding
+                                .property_descriptors
+                                .retain(|(existing_property, _)| {
+                                    !symbol_keys.iter().any(|key| key == existing_property)
                                 });
                         }
                         self.push_i32_const(1);

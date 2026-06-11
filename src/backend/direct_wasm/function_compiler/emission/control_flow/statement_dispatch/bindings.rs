@@ -859,14 +859,23 @@ impl<'a> FunctionCompiler<'a> {
         scope_object: &Expression,
         property: &Expression,
     ) -> Option<Expression> {
-        if let Some(getter_binding) = self.resolve_member_getter_binding(scope_object, property)
-            && let Some(value) = self.resolve_static_getter_value_from_binding_with_context(
+        if let Some(getter_binding) = self.resolve_member_getter_binding(scope_object, property) {
+            if let Some(value) = self.resolve_static_getter_value_from_binding_with_context(
                 &getter_binding,
                 scope_object,
                 self.current_function_name(),
-            )
-        {
-            return Some(value);
+            ) {
+                return Some(value);
+            }
+            // Effectful getters (for example `delete this.x; return 2;`)
+            // cannot be resolved through the gated static path, but PutValue
+            // semantics require the compound store value to be computed from
+            // the getter's return value as read before its effects apply.
+            if let Some(value) =
+                self.resolve_effectful_getter_constant_return_value(&getter_binding)
+            {
+                return Some(value);
+            }
         }
 
         if let Some(object_binding) = self.resolve_object_binding_from_expression(scope_object)
@@ -1079,7 +1088,8 @@ impl<'a> FunctionCompiler<'a> {
                     .or_else(|| {
                         self.static_test262_assert_deep_equal_helper_initializer_result(value)
                     })
-                    .or_else(|| self.snapshot_effectful_expression_for_static_store(value));
+                    .or_else(|| self.snapshot_effectful_expression_for_static_store(value))
+                    .or_else(|| self.snapshot_effectful_getter_member_read_for_static_store(value));
                 let store_value = resolved_store_value.as_ref().unwrap_or(value);
                 let scoped_target = self.resolve_with_scope_binding(name)?;
                 if trace {
@@ -1135,7 +1145,8 @@ impl<'a> FunctionCompiler<'a> {
                     .static_for_await_iterator_initializer_result(name, value)
                     .or_else(|| self.static_class_constructor_call_initializer_result(value))
                     .or_else(|| self.static_using_dispose_method_initializer_result(name, value))
-                    .or_else(|| self.snapshot_effectful_expression_for_static_store(value));
+                    .or_else(|| self.snapshot_effectful_expression_for_static_store(value))
+                    .or_else(|| self.snapshot_effectful_getter_member_read_for_static_store(value));
                 if trace {
                     eprintln!("binding_statement:let:after_resolve_store name={name}");
                 }
@@ -1287,8 +1298,11 @@ impl<'a> FunctionCompiler<'a> {
                         reference_is_unresolvable,
                     )?;
                     if compound_store_value.is_none() {
-                        compound_store_value =
-                            self.snapshot_assignment_value_for_static_store(name, value);
+                        compound_store_value = self
+                            .snapshot_assignment_value_for_static_store(name, value)
+                            .or_else(|| {
+                                self.snapshot_effectful_getter_member_read_for_static_store(value)
+                            });
                         self.emit_binding_initializer_value(name, value)?;
                     }
                     if trace {
