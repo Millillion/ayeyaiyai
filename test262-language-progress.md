@@ -1,4 +1,4 @@
-20765/23668 (87.73%)
+20920/23668 (88.39%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,8 +14,8 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 8037/9337 (86.08%)
-- expressions: 9658/11061 (87.32%)
+- statements: 8087/9337 (86.61%)
+- expressions: 9763/11061 (88.27%)
 - types: 103/113 (91.15%)
 - function-code: 204/217 (94.01%)
 - global-code: 41/42 (97.62%)
@@ -4576,8 +4576,8 @@ Sub-category progress
   - [x] test/language/statements/class/elements/arrow-body-direct-eval-err-contains-arguments.js
   - [x] test/language/statements/class/elements/arrow-body-direct-eval-err-contains-newtarget.js
   - [x] test/language/statements/class/elements/arrow-body-indirect-eval-err-contains-newtarget.js
-  - [ ] test/language/statements/class/elements/arrow-body-private-derived-cls-direct-eval-contains-superproperty-1.js
-  - [ ] test/language/statements/class/elements/arrow-body-private-derived-cls-direct-eval-contains-superproperty-2.js
+  - [x] test/language/statements/class/elements/arrow-body-private-derived-cls-direct-eval-contains-superproperty-1.js
+  - [x] test/language/statements/class/elements/arrow-body-private-derived-cls-direct-eval-contains-superproperty-2.js
   - [x] test/language/statements/class/elements/arrow-body-private-derived-cls-direct-eval-err-contains-supercall-1.js
   - [x] test/language/statements/class/elements/arrow-body-private-derived-cls-direct-eval-err-contains-supercall-2.js
   - [x] test/language/statements/class/elements/arrow-body-private-derived-cls-direct-eval-err-contains-supercall.js
@@ -4975,7 +4975,7 @@ Sub-category progress
   - [x] test/language/statements/class/elements/nested-private-derived-cls-indirect-eval-err-contains-supercall.js
   - [x] test/language/statements/class/elements/nested-private-direct-eval-err-contains-arguments.js
   - [x] test/language/statements/class/elements/nested-private-direct-eval-err-contains-newtarget.js
-  - [ ] test/language/statements/class/elements/nested-private-indirect-eval-contains-arguments.js
+  - [x] test/language/statements/class/elements/nested-private-indirect-eval-contains-arguments.js
   - [x] test/language/statements/class/elements/nested-private-indirect-eval-err-contains-newtarget.js
   - [x] test/language/statements/class/elements/nested-private-literal-name-init-err-contains-arguments.js
   - [x] test/language/statements/class/elements/nested-private-literal-name-init-err-contains-super.js
@@ -5183,7 +5183,7 @@ Sub-category progress
   - [ ] test/language/statements/class/elements/private-getter-shadowed-by-setter-on-nested-class.js
   - [ ] test/language/statements/class/elements/private-getter-visible-to-direct-eval-on-initializer.js
   - [ ] test/language/statements/class/elements/private-getter-visible-to-direct-eval.js
-  - [ ] test/language/statements/class/elements/private-indirect-eval-contains-arguments.js
+  - [x] test/language/statements/class/elements/private-indirect-eval-contains-arguments.js
   - [x] test/language/statements/class/elements/private-indirect-eval-err-contains-newtarget.js
   - [x] test/language/statements/class/elements/private-literal-name-init-err-contains-arguments.js
   - [x] test/language/statements/class/elements/private-literal-name-init-err-contains-super.js
@@ -5228,7 +5228,7 @@ Sub-category progress
   - [ ] test/language/statements/class/elements/private-setter-shadowed-by-field-on-nested-class.js
   - [x] test/language/statements/class/elements/private-setter-shadowed-by-getter-on-nested-class.js
   - [x] test/language/statements/class/elements/private-setter-shadowed-by-method-on-nested-class.js
-  - [ ] test/language/statements/class/elements/private-setter-shadowed-by-setter-on-nested-class.js
+  - [x] test/language/statements/class/elements/private-setter-shadowed-by-setter-on-nested-class.js
   - [ ] test/language/statements/class/elements/private-setter-visible-to-direct-eval-on-initializer.js
   - [x] test/language/statements/class/elements/private-setter-visible-to-direct-eval.js
   - [x] test/language/statements/class/elements/private-static-async-generator-method-name.js
@@ -5236,7 +5236,7 @@ Sub-category progress
   - [ ] test/language/statements/class/elements/private-static-field-shadowed-by-field-on-nested-class.js
   - [ ] test/language/statements/class/elements/private-static-field-shadowed-by-getter-on-nested-class.js
   - [ ] test/language/statements/class/elements/private-static-field-shadowed-by-method-on-nested-class.js
-  - [ ] test/language/statements/class/elements/private-static-field-shadowed-by-setter-on-nested-class.js
+  - [x] test/language/statements/class/elements/private-static-field-shadowed-by-setter-on-nested-class.js
   - [x] test/language/statements/class/elements/private-static-field-usage-inside-nested-class.js
   - [x] test/language/statements/class/elements/private-static-field-visible-to-direct-eval.js
   - [x] test/language/statements/class/elements/private-static-generator-method-name.js
@@ -5248,7 +5248,7 @@ Sub-category progress
   - [ ] test/language/statements/class/elements/private-static-method-shadowed-by-field-on-nested-class.js
   - [ ] test/language/statements/class/elements/private-static-method-shadowed-by-getter-on-nested-class.js
   - [ ] test/language/statements/class/elements/private-static-method-shadowed-by-method-on-nested-class.js
-  - [ ] test/language/statements/class/elements/private-static-method-shadowed-by-setter-on-nested-class.js
+  - [x] test/language/statements/class/elements/private-static-method-shadowed-by-setter-on-nested-class.js
   - [ ] test/language/statements/class/elements/private-static-method-usage-inside-nested-class.js
   - [ ] test/language/statements/class/elements/private-static-method-visible-to-direct-eval.js
   - [x] test/language/statements/class/elements/private-static-setter-abrupt-completition.js
@@ -6086,7 +6086,7 @@ Sub-category progress
   - [x] test/language/statements/class/subclass/builtin-objects/Array/length.js
   - [x] test/language/statements/class/subclass/builtin-objects/Array/regular-subclassing.js
   - [x] test/language/statements/class/subclass/builtin-objects/Array/super-must-be-called.js
-  - [ ] test/language/statements/class/subclass/builtin-objects/ArrayBuffer/regular-subclassing.js
+  - [x] test/language/statements/class/subclass/builtin-objects/ArrayBuffer/regular-subclassing.js
   - [x] test/language/statements/class/subclass/builtin-objects/ArrayBuffer/super-must-be-called.js
   - [x] test/language/statements/class/subclass/builtin-objects/Boolean/regular-subclassing.js
   - [x] test/language/statements/class/subclass/builtin-objects/Boolean/super-must-be-called.js
@@ -6094,7 +6094,7 @@ Sub-category progress
   - [x] test/language/statements/class/subclass/builtin-objects/DataView/super-must-be-called.js
   - [ ] test/language/statements/class/subclass/builtin-objects/Date/regular-subclassing.js
   - [x] test/language/statements/class/subclass/builtin-objects/Date/super-must-be-called.js
-  - [ ] test/language/statements/class/subclass/builtin-objects/Error/message-property-assignment.js
+  - [x] test/language/statements/class/subclass/builtin-objects/Error/message-property-assignment.js
   - [x] test/language/statements/class/subclass/builtin-objects/Error/regular-subclassing.js
   - [x] test/language/statements/class/subclass/builtin-objects/Error/super-must-be-called.js
   - [ ] test/language/statements/class/subclass/builtin-objects/Function/instance-length.js
@@ -6108,22 +6108,22 @@ Sub-category progress
   - [x] test/language/statements/class/subclass/builtin-objects/GeneratorFunction/super-must-be-called.js
   - [ ] test/language/statements/class/subclass/builtin-objects/Map/regular-subclassing.js
   - [x] test/language/statements/class/subclass/builtin-objects/Map/super-must-be-called.js
-  - [ ] test/language/statements/class/subclass/builtin-objects/NativeError/EvalError-message.js
+  - [x] test/language/statements/class/subclass/builtin-objects/NativeError/EvalError-message.js
   - [x] test/language/statements/class/subclass/builtin-objects/NativeError/EvalError-name.js
   - [x] test/language/statements/class/subclass/builtin-objects/NativeError/EvalError-super.js
-  - [ ] test/language/statements/class/subclass/builtin-objects/NativeError/RangeError-message.js
+  - [x] test/language/statements/class/subclass/builtin-objects/NativeError/RangeError-message.js
   - [x] test/language/statements/class/subclass/builtin-objects/NativeError/RangeError-name.js
   - [x] test/language/statements/class/subclass/builtin-objects/NativeError/RangeError-super.js
-  - [ ] test/language/statements/class/subclass/builtin-objects/NativeError/ReferenceError-message.js
+  - [x] test/language/statements/class/subclass/builtin-objects/NativeError/ReferenceError-message.js
   - [x] test/language/statements/class/subclass/builtin-objects/NativeError/ReferenceError-name.js
   - [x] test/language/statements/class/subclass/builtin-objects/NativeError/ReferenceError-super.js
-  - [ ] test/language/statements/class/subclass/builtin-objects/NativeError/SyntaxError-message.js
+  - [x] test/language/statements/class/subclass/builtin-objects/NativeError/SyntaxError-message.js
   - [x] test/language/statements/class/subclass/builtin-objects/NativeError/SyntaxError-name.js
   - [x] test/language/statements/class/subclass/builtin-objects/NativeError/SyntaxError-super.js
-  - [ ] test/language/statements/class/subclass/builtin-objects/NativeError/TypeError-message.js
+  - [x] test/language/statements/class/subclass/builtin-objects/NativeError/TypeError-message.js
   - [x] test/language/statements/class/subclass/builtin-objects/NativeError/TypeError-name.js
   - [x] test/language/statements/class/subclass/builtin-objects/NativeError/TypeError-super.js
-  - [ ] test/language/statements/class/subclass/builtin-objects/NativeError/URIError-message.js
+  - [x] test/language/statements/class/subclass/builtin-objects/NativeError/URIError-message.js
   - [x] test/language/statements/class/subclass/builtin-objects/NativeError/URIError-name.js
   - [x] test/language/statements/class/subclass/builtin-objects/NativeError/URIError-super.js
   - [x] test/language/statements/class/subclass/builtin-objects/Number/regular-subclassing.js
@@ -6189,42 +6189,42 @@ Sub-category progress
   - [x] test/language/statements/class/subclass/superclass-prototype-setter-constructor.js
   - [x] test/language/statements/class/subclass/superclass-prototype-setter-method-override.js
   - [x] test/language/statements/class/subclass/superclass-static-method-override.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-AggregateError.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-Array.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-ArrayBuffer.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-BigInt64Array.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-BigUint64Array.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-Boolean.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-DataView.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-Date.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-Error.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-EvalError.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-Float32Array.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-Float64Array.js
+  - [x] test/language/statements/class/subclass-builtins/subclass-AggregateError.js
+  - [x] test/language/statements/class/subclass-builtins/subclass-Array.js
+  - [x] test/language/statements/class/subclass-builtins/subclass-ArrayBuffer.js
+  - [x] test/language/statements/class/subclass-builtins/subclass-BigInt64Array.js
+  - [x] test/language/statements/class/subclass-builtins/subclass-BigUint64Array.js
+  - [x] test/language/statements/class/subclass-builtins/subclass-Boolean.js
+  - [x] test/language/statements/class/subclass-builtins/subclass-DataView.js
+  - [x] test/language/statements/class/subclass-builtins/subclass-Date.js
+  - [x] test/language/statements/class/subclass-builtins/subclass-Error.js
+  - [x] test/language/statements/class/subclass-builtins/subclass-EvalError.js
+  - [x] test/language/statements/class/subclass-builtins/subclass-Float32Array.js
+  - [x] test/language/statements/class/subclass-builtins/subclass-Float64Array.js
   - [x] test/language/statements/class/subclass-builtins/subclass-Function.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-Int16Array.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-Int32Array.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-Int8Array.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-Map.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-Number.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-Object.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-Promise.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-RangeError.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-ReferenceError.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-RegExp.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-Set.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-SharedArrayBuffer.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-String.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-SyntaxError.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-TypeError.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-URIError.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-Uint16Array.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-Uint32Array.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-Uint8Array.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-Uint8ClampedArray.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-WeakMap.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-WeakRef.js
-  - [ ] test/language/statements/class/subclass-builtins/subclass-WeakSet.js
+  - [x] test/language/statements/class/subclass-builtins/subclass-Int16Array.js
+  - [x] test/language/statements/class/subclass-builtins/subclass-Int32Array.js
+  - [x] test/language/statements/class/subclass-builtins/subclass-Int8Array.js
+  - [x] test/language/statements/class/subclass-builtins/subclass-Map.js
+  - [x] test/language/statements/class/subclass-builtins/subclass-Number.js
+  - [x] test/language/statements/class/subclass-builtins/subclass-Object.js
+  - [x] test/language/statements/class/subclass-builtins/subclass-Promise.js
+  - [x] test/language/statements/class/subclass-builtins/subclass-RangeError.js
+  - [x] test/language/statements/class/subclass-builtins/subclass-ReferenceError.js
+  - [x] test/language/statements/class/subclass-builtins/subclass-RegExp.js
+  - [x] test/language/statements/class/subclass-builtins/subclass-Set.js
+  - [x] test/language/statements/class/subclass-builtins/subclass-SharedArrayBuffer.js
+  - [x] test/language/statements/class/subclass-builtins/subclass-String.js
+  - [x] test/language/statements/class/subclass-builtins/subclass-SyntaxError.js
+  - [x] test/language/statements/class/subclass-builtins/subclass-TypeError.js
+  - [x] test/language/statements/class/subclass-builtins/subclass-URIError.js
+  - [x] test/language/statements/class/subclass-builtins/subclass-Uint16Array.js
+  - [x] test/language/statements/class/subclass-builtins/subclass-Uint32Array.js
+  - [x] test/language/statements/class/subclass-builtins/subclass-Uint8Array.js
+  - [x] test/language/statements/class/subclass-builtins/subclass-Uint8ClampedArray.js
+  - [x] test/language/statements/class/subclass-builtins/subclass-WeakMap.js
+  - [x] test/language/statements/class/subclass-builtins/subclass-WeakRef.js
+  - [x] test/language/statements/class/subclass-builtins/subclass-WeakSet.js
   - [x] test/language/statements/class/super/in-constructor-superproperty-evaluation.js
   - [x] test/language/statements/class/super/in-constructor.js
   - [x] test/language/statements/class/super/in-getter.js
@@ -16124,16 +16124,16 @@ Sub-category progress
   - [x] test/language/expressions/class/elements/private-accessor-name/inst-private-name-dollar.js
   - [x] test/language/expressions/class/elements/private-accessor-name/inst-private-name-u2118.js
   - [x] test/language/expressions/class/elements/private-accessor-name/inst-private-name-underscore.js
-  - [ ] test/language/expressions/class/elements/private-accessor-name/static-private-escape-sequence-ZWJ.js
-  - [ ] test/language/expressions/class/elements/private-accessor-name/static-private-escape-sequence-ZWNJ.js
+  - [x] test/language/expressions/class/elements/private-accessor-name/static-private-escape-sequence-ZWJ.js
+  - [x] test/language/expressions/class/elements/private-accessor-name/static-private-escape-sequence-ZWNJ.js
   - [ ] test/language/expressions/class/elements/private-accessor-name/static-private-escape-sequence-u2118.js
   - [ ] test/language/expressions/class/elements/private-accessor-name/static-private-escape-sequence-u6F.js
-  - [ ] test/language/expressions/class/elements/private-accessor-name/static-private-name-ZWJ.js
-  - [ ] test/language/expressions/class/elements/private-accessor-name/static-private-name-ZWNJ.js
-  - [ ] test/language/expressions/class/elements/private-accessor-name/static-private-name-common.js
-  - [ ] test/language/expressions/class/elements/private-accessor-name/static-private-name-dollar.js
-  - [ ] test/language/expressions/class/elements/private-accessor-name/static-private-name-u2118.js
-  - [ ] test/language/expressions/class/elements/private-accessor-name/static-private-name-underscore.js
+  - [x] test/language/expressions/class/elements/private-accessor-name/static-private-name-ZWJ.js
+  - [x] test/language/expressions/class/elements/private-accessor-name/static-private-name-ZWNJ.js
+  - [x] test/language/expressions/class/elements/private-accessor-name/static-private-name-common.js
+  - [x] test/language/expressions/class/elements/private-accessor-name/static-private-name-dollar.js
+  - [x] test/language/expressions/class/elements/private-accessor-name/static-private-name-u2118.js
+  - [x] test/language/expressions/class/elements/private-accessor-name/static-private-name-underscore.js
   - [x] test/language/expressions/class/elements/private-arrow-fnc-init-err-contains-arguments.js
   - [x] test/language/expressions/class/elements/private-arrow-fnc-init-err-contains-super.js
   - [x] test/language/expressions/class/elements/private-async-generator-method-name.js
@@ -16150,25 +16150,25 @@ Sub-category progress
   - [x] test/language/expressions/class/elements/private-derived-cls-indirect-eval-err-contains-supercall.js
   - [x] test/language/expressions/class/elements/private-direct-eval-err-contains-arguments.js
   - [x] test/language/expressions/class/elements/private-direct-eval-err-contains-newtarget.js
-  - [ ] test/language/expressions/class/elements/private-field-access-on-inner-arrow-function.js
-  - [ ] test/language/expressions/class/elements/private-field-access-on-inner-function.js
+  - [x] test/language/expressions/class/elements/private-field-access-on-inner-arrow-function.js
+  - [x] test/language/expressions/class/elements/private-field-access-on-inner-function.js
   - [ ] test/language/expressions/class/elements/private-field-after-optional-chain.js
   - [x] test/language/expressions/class/elements/private-field-as-arrow-function.js
   - [x] test/language/expressions/class/elements/private-field-as-async-arrow-function.js
   - [x] test/language/expressions/class/elements/private-field-as-async-function.js
   - [x] test/language/expressions/class/elements/private-field-as-function.js
-  - [ ] test/language/expressions/class/elements/private-field-on-nested-class.js
+  - [x] test/language/expressions/class/elements/private-field-on-nested-class.js
   - [x] test/language/expressions/class/elements/private-fields-proxy-default-handler-throws.js
   - [x] test/language/expressions/class/elements/private-generator-method-name.js
   - [ ] test/language/expressions/class/elements/private-getter-access-on-inner-arrow-function.js
   - [ ] test/language/expressions/class/elements/private-getter-access-on-inner-function.js
   - [x] test/language/expressions/class/elements/private-getter-is-not-a-own-property.js
-  - [ ] test/language/expressions/class/elements/private-getter-on-nested-class.js
+  - [x] test/language/expressions/class/elements/private-getter-on-nested-class.js
   - [ ] test/language/expressions/class/elements/private-getter-shadowed-by-field-on-nested-class.js
   - [ ] test/language/expressions/class/elements/private-getter-shadowed-by-getter-on-nested-class.js
   - [ ] test/language/expressions/class/elements/private-getter-shadowed-by-method-on-nested-class.js
   - [ ] test/language/expressions/class/elements/private-getter-shadowed-by-setter-on-nested-class.js
-  - [ ] test/language/expressions/class/elements/private-indirect-eval-contains-arguments.js
+  - [x] test/language/expressions/class/elements/private-indirect-eval-contains-arguments.js
   - [x] test/language/expressions/class/elements/private-indirect-eval-err-contains-newtarget.js
   - [x] test/language/expressions/class/elements/private-literal-name-init-err-contains-arguments.js
   - [x] test/language/expressions/class/elements/private-literal-name-init-err-contains-super.js
@@ -16187,12 +16187,12 @@ Sub-category progress
   - [x] test/language/expressions/class/elements/private-methods/prod-private-async-generator.js
   - [x] test/language/expressions/class/elements/private-methods/prod-private-async-method.js
   - [x] test/language/expressions/class/elements/private-methods/prod-private-generator.js
-  - [ ] test/language/expressions/class/elements/private-methods/prod-private-method-initialize-order.js
+  - [x] test/language/expressions/class/elements/private-methods/prod-private-method-initialize-order.js
   - [x] test/language/expressions/class/elements/private-methods/prod-private-method.js
   - [ ] test/language/expressions/class/elements/private-setter-access-on-inner-arrow-function.js
   - [ ] test/language/expressions/class/elements/private-setter-access-on-inner-function.js
   - [x] test/language/expressions/class/elements/private-setter-is-not-a-own-property.js
-  - [ ] test/language/expressions/class/elements/private-setter-on-nested-class.js
+  - [x] test/language/expressions/class/elements/private-setter-on-nested-class.js
   - [ ] test/language/expressions/class/elements/private-setter-shadowed-by-field-on-nested-class.js
   - [ ] test/language/expressions/class/elements/private-setter-shadowed-by-getter-on-nested-class.js
   - [ ] test/language/expressions/class/elements/private-setter-shadowed-by-method-on-nested-class.js
@@ -16202,15 +16202,15 @@ Sub-category progress
   - [ ] test/language/expressions/class/elements/private-static-field-shadowed-by-field-on-nested-class.js
   - [ ] test/language/expressions/class/elements/private-static-field-shadowed-by-getter-on-nested-class.js
   - [ ] test/language/expressions/class/elements/private-static-field-shadowed-by-method-on-nested-class.js
-  - [ ] test/language/expressions/class/elements/private-static-field-shadowed-by-setter-on-nested-class.js
-  - [ ] test/language/expressions/class/elements/private-static-field-usage-inside-nested-class.js
+  - [x] test/language/expressions/class/elements/private-static-field-shadowed-by-setter-on-nested-class.js
+  - [x] test/language/expressions/class/elements/private-static-field-usage-inside-nested-class.js
   - [x] test/language/expressions/class/elements/private-static-generator-method-name.js
   - [x] test/language/expressions/class/elements/private-static-method-length.js
   - [x] test/language/expressions/class/elements/private-static-method-name.js
   - [ ] test/language/expressions/class/elements/private-static-method-shadowed-by-field-on-nested-class.js
   - [ ] test/language/expressions/class/elements/private-static-method-shadowed-by-getter-on-nested-class.js
   - [ ] test/language/expressions/class/elements/private-static-method-shadowed-by-method-on-nested-class.js
-  - [ ] test/language/expressions/class/elements/private-static-method-shadowed-by-setter-on-nested-class.js
+  - [x] test/language/expressions/class/elements/private-static-method-shadowed-by-setter-on-nested-class.js
   - [ ] test/language/expressions/class/elements/private-static-method-usage-inside-nested-class.js
   - [x] test/language/expressions/class/elements/private-ternary-init-err-contains-arguments.js
   - [x] test/language/expressions/class/elements/private-ternary-init-err-contains-super.js
@@ -16235,10 +16235,10 @@ Sub-category progress
   - [x] test/language/expressions/class/elements/regular-definitions-private-names.js
   - [x] test/language/expressions/class/elements/regular-definitions-rs-field-identifier-initializer.js
   - [x] test/language/expressions/class/elements/regular-definitions-rs-field-identifier.js
-  - [ ] test/language/expressions/class/elements/regular-definitions-rs-private-getter-alt.js
-  - [ ] test/language/expressions/class/elements/regular-definitions-rs-private-getter.js
-  - [ ] test/language/expressions/class/elements/regular-definitions-rs-private-method-alt.js
-  - [ ] test/language/expressions/class/elements/regular-definitions-rs-private-method.js
+  - [x] test/language/expressions/class/elements/regular-definitions-rs-private-getter-alt.js
+  - [x] test/language/expressions/class/elements/regular-definitions-rs-private-getter.js
+  - [x] test/language/expressions/class/elements/regular-definitions-rs-private-method-alt.js
+  - [x] test/language/expressions/class/elements/regular-definitions-rs-private-method.js
   - [x] test/language/expressions/class/elements/regular-definitions-rs-private-setter-alt.js
   - [x] test/language/expressions/class/elements/regular-definitions-rs-private-setter.js
   - [x] test/language/expressions/class/elements/regular-definitions-rs-privatename-identifier-alt.js
@@ -16254,14 +16254,14 @@ Sub-category progress
   - [x] test/language/expressions/class/elements/regular-definitions-rs-static-method-privatename-identifier-alt.js
   - [x] test/language/expressions/class/elements/regular-definitions-rs-static-method-privatename-identifier.js
   - [ ] test/language/expressions/class/elements/regular-definitions-rs-static-privatename-identifier-alt-by-classname.js
-  - [ ] test/language/expressions/class/elements/regular-definitions-rs-static-privatename-identifier-alt.js
+  - [x] test/language/expressions/class/elements/regular-definitions-rs-static-privatename-identifier-alt.js
   - [ ] test/language/expressions/class/elements/regular-definitions-rs-static-privatename-identifier-by-classname.js
   - [ ] test/language/expressions/class/elements/regular-definitions-rs-static-privatename-identifier-initializer-alt-by-classname.js
-  - [ ] test/language/expressions/class/elements/regular-definitions-rs-static-privatename-identifier-initializer-alt.js
-  - [ ] test/language/expressions/class/elements/regular-definitions-rs-static-privatename-identifier-initializer.js
-  - [ ] test/language/expressions/class/elements/regular-definitions-rs-static-privatename-identifier.js
-  - [ ] test/language/expressions/class/elements/regular-definitions-static-private-fields.js
-  - [ ] test/language/expressions/class/elements/regular-definitions-static-private-methods-with-fields.js
+  - [x] test/language/expressions/class/elements/regular-definitions-rs-static-privatename-identifier-initializer-alt.js
+  - [x] test/language/expressions/class/elements/regular-definitions-rs-static-privatename-identifier-initializer.js
+  - [x] test/language/expressions/class/elements/regular-definitions-rs-static-privatename-identifier.js
+  - [x] test/language/expressions/class/elements/regular-definitions-static-private-fields.js
+  - [x] test/language/expressions/class/elements/regular-definitions-static-private-methods-with-fields.js
   - [x] test/language/expressions/class/elements/regular-definitions-static-private-methods.js
   - [x] test/language/expressions/class/elements/regular-definitions-string-literal-names.js
   - [x] test/language/expressions/class/elements/same-line-async-gen-computed-names.js
@@ -16275,10 +16275,10 @@ Sub-category progress
   - [x] test/language/expressions/class/elements/same-line-async-gen-private-names.js
   - [x] test/language/expressions/class/elements/same-line-async-gen-rs-field-identifier-initializer.js
   - [x] test/language/expressions/class/elements/same-line-async-gen-rs-field-identifier.js
-  - [ ] test/language/expressions/class/elements/same-line-async-gen-rs-private-getter-alt.js
-  - [ ] test/language/expressions/class/elements/same-line-async-gen-rs-private-getter.js
-  - [ ] test/language/expressions/class/elements/same-line-async-gen-rs-private-method-alt.js
-  - [ ] test/language/expressions/class/elements/same-line-async-gen-rs-private-method.js
+  - [x] test/language/expressions/class/elements/same-line-async-gen-rs-private-getter-alt.js
+  - [x] test/language/expressions/class/elements/same-line-async-gen-rs-private-getter.js
+  - [x] test/language/expressions/class/elements/same-line-async-gen-rs-private-method-alt.js
+  - [x] test/language/expressions/class/elements/same-line-async-gen-rs-private-method.js
   - [x] test/language/expressions/class/elements/same-line-async-gen-rs-private-setter-alt.js
   - [x] test/language/expressions/class/elements/same-line-async-gen-rs-private-setter.js
   - [x] test/language/expressions/class/elements/same-line-async-gen-rs-privatename-identifier-alt.js
@@ -16297,11 +16297,11 @@ Sub-category progress
   - [x] test/language/expressions/class/elements/same-line-async-gen-rs-static-privatename-identifier-alt.js
   - [x] test/language/expressions/class/elements/same-line-async-gen-rs-static-privatename-identifier-by-classname.js
   - [ ] test/language/expressions/class/elements/same-line-async-gen-rs-static-privatename-identifier-initializer-alt-by-classname.js
-  - [ ] test/language/expressions/class/elements/same-line-async-gen-rs-static-privatename-identifier-initializer-alt.js
-  - [ ] test/language/expressions/class/elements/same-line-async-gen-rs-static-privatename-identifier-initializer.js
+  - [x] test/language/expressions/class/elements/same-line-async-gen-rs-static-privatename-identifier-initializer-alt.js
+  - [x] test/language/expressions/class/elements/same-line-async-gen-rs-static-privatename-identifier-initializer.js
   - [x] test/language/expressions/class/elements/same-line-async-gen-rs-static-privatename-identifier.js
   - [x] test/language/expressions/class/elements/same-line-async-gen-static-private-fields.js
-  - [ ] test/language/expressions/class/elements/same-line-async-gen-static-private-methods-with-fields.js
+  - [x] test/language/expressions/class/elements/same-line-async-gen-static-private-methods-with-fields.js
   - [x] test/language/expressions/class/elements/same-line-async-gen-static-private-methods.js
   - [x] test/language/expressions/class/elements/same-line-async-gen-string-literal-names.js
   - [x] test/language/expressions/class/elements/same-line-async-method-computed-names.js
@@ -16315,10 +16315,10 @@ Sub-category progress
   - [x] test/language/expressions/class/elements/same-line-async-method-private-names.js
   - [x] test/language/expressions/class/elements/same-line-async-method-rs-field-identifier-initializer.js
   - [x] test/language/expressions/class/elements/same-line-async-method-rs-field-identifier.js
-  - [ ] test/language/expressions/class/elements/same-line-async-method-rs-private-getter-alt.js
-  - [ ] test/language/expressions/class/elements/same-line-async-method-rs-private-getter.js
-  - [ ] test/language/expressions/class/elements/same-line-async-method-rs-private-method-alt.js
-  - [ ] test/language/expressions/class/elements/same-line-async-method-rs-private-method.js
+  - [x] test/language/expressions/class/elements/same-line-async-method-rs-private-getter-alt.js
+  - [x] test/language/expressions/class/elements/same-line-async-method-rs-private-getter.js
+  - [x] test/language/expressions/class/elements/same-line-async-method-rs-private-method-alt.js
+  - [x] test/language/expressions/class/elements/same-line-async-method-rs-private-method.js
   - [x] test/language/expressions/class/elements/same-line-async-method-rs-private-setter-alt.js
   - [x] test/language/expressions/class/elements/same-line-async-method-rs-private-setter.js
   - [x] test/language/expressions/class/elements/same-line-async-method-rs-privatename-identifier-alt.js
@@ -16337,11 +16337,11 @@ Sub-category progress
   - [x] test/language/expressions/class/elements/same-line-async-method-rs-static-privatename-identifier-alt.js
   - [x] test/language/expressions/class/elements/same-line-async-method-rs-static-privatename-identifier-by-classname.js
   - [ ] test/language/expressions/class/elements/same-line-async-method-rs-static-privatename-identifier-initializer-alt-by-classname.js
-  - [ ] test/language/expressions/class/elements/same-line-async-method-rs-static-privatename-identifier-initializer-alt.js
-  - [ ] test/language/expressions/class/elements/same-line-async-method-rs-static-privatename-identifier-initializer.js
+  - [x] test/language/expressions/class/elements/same-line-async-method-rs-static-privatename-identifier-initializer-alt.js
+  - [x] test/language/expressions/class/elements/same-line-async-method-rs-static-privatename-identifier-initializer.js
   - [x] test/language/expressions/class/elements/same-line-async-method-rs-static-privatename-identifier.js
   - [x] test/language/expressions/class/elements/same-line-async-method-static-private-fields.js
-  - [ ] test/language/expressions/class/elements/same-line-async-method-static-private-methods-with-fields.js
+  - [x] test/language/expressions/class/elements/same-line-async-method-static-private-methods-with-fields.js
   - [x] test/language/expressions/class/elements/same-line-async-method-static-private-methods.js
   - [x] test/language/expressions/class/elements/same-line-async-method-string-literal-names.js
   - [x] test/language/expressions/class/elements/same-line-gen-computed-names.js
@@ -16355,10 +16355,10 @@ Sub-category progress
   - [x] test/language/expressions/class/elements/same-line-gen-private-names.js
   - [x] test/language/expressions/class/elements/same-line-gen-rs-field-identifier-initializer.js
   - [x] test/language/expressions/class/elements/same-line-gen-rs-field-identifier.js
-  - [ ] test/language/expressions/class/elements/same-line-gen-rs-private-getter-alt.js
-  - [ ] test/language/expressions/class/elements/same-line-gen-rs-private-getter.js
-  - [ ] test/language/expressions/class/elements/same-line-gen-rs-private-method-alt.js
-  - [ ] test/language/expressions/class/elements/same-line-gen-rs-private-method.js
+  - [x] test/language/expressions/class/elements/same-line-gen-rs-private-getter-alt.js
+  - [x] test/language/expressions/class/elements/same-line-gen-rs-private-getter.js
+  - [x] test/language/expressions/class/elements/same-line-gen-rs-private-method-alt.js
+  - [x] test/language/expressions/class/elements/same-line-gen-rs-private-method.js
   - [x] test/language/expressions/class/elements/same-line-gen-rs-private-setter-alt.js
   - [x] test/language/expressions/class/elements/same-line-gen-rs-private-setter.js
   - [x] test/language/expressions/class/elements/same-line-gen-rs-privatename-identifier-alt.js
@@ -16377,11 +16377,11 @@ Sub-category progress
   - [x] test/language/expressions/class/elements/same-line-gen-rs-static-privatename-identifier-alt.js
   - [ ] test/language/expressions/class/elements/same-line-gen-rs-static-privatename-identifier-by-classname.js
   - [ ] test/language/expressions/class/elements/same-line-gen-rs-static-privatename-identifier-initializer-alt-by-classname.js
-  - [ ] test/language/expressions/class/elements/same-line-gen-rs-static-privatename-identifier-initializer-alt.js
-  - [ ] test/language/expressions/class/elements/same-line-gen-rs-static-privatename-identifier-initializer.js
+  - [x] test/language/expressions/class/elements/same-line-gen-rs-static-privatename-identifier-initializer-alt.js
+  - [x] test/language/expressions/class/elements/same-line-gen-rs-static-privatename-identifier-initializer.js
   - [x] test/language/expressions/class/elements/same-line-gen-rs-static-privatename-identifier.js
   - [x] test/language/expressions/class/elements/same-line-gen-static-private-fields.js
-  - [ ] test/language/expressions/class/elements/same-line-gen-static-private-methods-with-fields.js
+  - [x] test/language/expressions/class/elements/same-line-gen-static-private-methods-with-fields.js
   - [x] test/language/expressions/class/elements/same-line-gen-static-private-methods.js
   - [x] test/language/expressions/class/elements/same-line-gen-string-literal-names.js
   - [x] test/language/expressions/class/elements/same-line-method-computed-names.js
@@ -16395,10 +16395,10 @@ Sub-category progress
   - [x] test/language/expressions/class/elements/same-line-method-private-names.js
   - [x] test/language/expressions/class/elements/same-line-method-rs-field-identifier-initializer.js
   - [x] test/language/expressions/class/elements/same-line-method-rs-field-identifier.js
-  - [ ] test/language/expressions/class/elements/same-line-method-rs-private-getter-alt.js
-  - [ ] test/language/expressions/class/elements/same-line-method-rs-private-getter.js
-  - [ ] test/language/expressions/class/elements/same-line-method-rs-private-method-alt.js
-  - [ ] test/language/expressions/class/elements/same-line-method-rs-private-method.js
+  - [x] test/language/expressions/class/elements/same-line-method-rs-private-getter-alt.js
+  - [x] test/language/expressions/class/elements/same-line-method-rs-private-getter.js
+  - [x] test/language/expressions/class/elements/same-line-method-rs-private-method-alt.js
+  - [x] test/language/expressions/class/elements/same-line-method-rs-private-method.js
   - [x] test/language/expressions/class/elements/same-line-method-rs-private-setter-alt.js
   - [x] test/language/expressions/class/elements/same-line-method-rs-private-setter.js
   - [x] test/language/expressions/class/elements/same-line-method-rs-privatename-identifier-alt.js
@@ -16417,11 +16417,11 @@ Sub-category progress
   - [x] test/language/expressions/class/elements/same-line-method-rs-static-privatename-identifier-alt.js
   - [ ] test/language/expressions/class/elements/same-line-method-rs-static-privatename-identifier-by-classname.js
   - [ ] test/language/expressions/class/elements/same-line-method-rs-static-privatename-identifier-initializer-alt-by-classname.js
-  - [ ] test/language/expressions/class/elements/same-line-method-rs-static-privatename-identifier-initializer-alt.js
-  - [ ] test/language/expressions/class/elements/same-line-method-rs-static-privatename-identifier-initializer.js
+  - [x] test/language/expressions/class/elements/same-line-method-rs-static-privatename-identifier-initializer-alt.js
+  - [x] test/language/expressions/class/elements/same-line-method-rs-static-privatename-identifier-initializer.js
   - [x] test/language/expressions/class/elements/same-line-method-rs-static-privatename-identifier.js
   - [x] test/language/expressions/class/elements/same-line-method-static-private-fields.js
-  - [ ] test/language/expressions/class/elements/same-line-method-static-private-methods-with-fields.js
+  - [x] test/language/expressions/class/elements/same-line-method-static-private-methods-with-fields.js
   - [x] test/language/expressions/class/elements/same-line-method-static-private-methods.js
   - [x] test/language/expressions/class/elements/same-line-method-string-literal-names.js
   - [x] test/language/expressions/class/elements/static-as-valid-instance-field-assigned.js
@@ -16430,7 +16430,7 @@ Sub-category progress
   - [x] test/language/expressions/class/elements/static-as-valid-static-field.js
   - [x] test/language/expressions/class/elements/static-comp-name-init-err-contains-arguments.js
   - [x] test/language/expressions/class/elements/static-comp-name-init-err-contains-super.js
-  - [ ] test/language/expressions/class/elements/static-field-anonymous-function-length.js
+  - [x] test/language/expressions/class/elements/static-field-anonymous-function-length.js
   - [x] test/language/expressions/class/elements/static-field-anonymous-function-name.js
   - [ ] test/language/expressions/class/elements/static-field-declaration.js
   - [x] test/language/expressions/class/elements/static-field-init-this-inside-arrow-function.js
@@ -16438,7 +16438,7 @@ Sub-category progress
   - [ ] test/language/expressions/class/elements/static-field-redeclaration.js
   - [x] test/language/expressions/class/elements/static-literal-init-err-contains-arguments.js
   - [x] test/language/expressions/class/elements/static-literal-init-err-contains-super.js
-  - [ ] test/language/expressions/class/elements/static-private-fields-proxy-default-handler-throws.js
+  - [x] test/language/expressions/class/elements/static-private-fields-proxy-default-handler-throws.js
   - [ ] test/language/expressions/class/elements/static-private-getter-access-on-inner-arrow-function.js
   - [ ] test/language/expressions/class/elements/static-private-getter-access-on-inner-class.js
   - [ ] test/language/expressions/class/elements/static-private-getter-access-on-inner-function.js
@@ -16725,10 +16725,10 @@ Sub-category progress
   - [x] test/language/expressions/class/elements/wrapped-in-sc-private-names.js
   - [x] test/language/expressions/class/elements/wrapped-in-sc-rs-field-identifier-initializer.js
   - [x] test/language/expressions/class/elements/wrapped-in-sc-rs-field-identifier.js
-  - [ ] test/language/expressions/class/elements/wrapped-in-sc-rs-private-getter-alt.js
-  - [ ] test/language/expressions/class/elements/wrapped-in-sc-rs-private-getter.js
-  - [ ] test/language/expressions/class/elements/wrapped-in-sc-rs-private-method-alt.js
-  - [ ] test/language/expressions/class/elements/wrapped-in-sc-rs-private-method.js
+  - [x] test/language/expressions/class/elements/wrapped-in-sc-rs-private-getter-alt.js
+  - [x] test/language/expressions/class/elements/wrapped-in-sc-rs-private-getter.js
+  - [x] test/language/expressions/class/elements/wrapped-in-sc-rs-private-method-alt.js
+  - [x] test/language/expressions/class/elements/wrapped-in-sc-rs-private-method.js
   - [x] test/language/expressions/class/elements/wrapped-in-sc-rs-private-setter-alt.js
   - [x] test/language/expressions/class/elements/wrapped-in-sc-rs-private-setter.js
   - [x] test/language/expressions/class/elements/wrapped-in-sc-rs-privatename-identifier-alt.js
@@ -16744,14 +16744,14 @@ Sub-category progress
   - [x] test/language/expressions/class/elements/wrapped-in-sc-rs-static-method-privatename-identifier-alt.js
   - [x] test/language/expressions/class/elements/wrapped-in-sc-rs-static-method-privatename-identifier.js
   - [ ] test/language/expressions/class/elements/wrapped-in-sc-rs-static-privatename-identifier-alt-by-classname.js
-  - [ ] test/language/expressions/class/elements/wrapped-in-sc-rs-static-privatename-identifier-alt.js
+  - [x] test/language/expressions/class/elements/wrapped-in-sc-rs-static-privatename-identifier-alt.js
   - [ ] test/language/expressions/class/elements/wrapped-in-sc-rs-static-privatename-identifier-by-classname.js
   - [ ] test/language/expressions/class/elements/wrapped-in-sc-rs-static-privatename-identifier-initializer-alt-by-classname.js
-  - [ ] test/language/expressions/class/elements/wrapped-in-sc-rs-static-privatename-identifier-initializer-alt.js
-  - [ ] test/language/expressions/class/elements/wrapped-in-sc-rs-static-privatename-identifier-initializer.js
-  - [ ] test/language/expressions/class/elements/wrapped-in-sc-rs-static-privatename-identifier.js
-  - [ ] test/language/expressions/class/elements/wrapped-in-sc-static-private-fields.js
-  - [ ] test/language/expressions/class/elements/wrapped-in-sc-static-private-methods-with-fields.js
+  - [x] test/language/expressions/class/elements/wrapped-in-sc-rs-static-privatename-identifier-initializer-alt.js
+  - [x] test/language/expressions/class/elements/wrapped-in-sc-rs-static-privatename-identifier-initializer.js
+  - [x] test/language/expressions/class/elements/wrapped-in-sc-rs-static-privatename-identifier.js
+  - [x] test/language/expressions/class/elements/wrapped-in-sc-static-private-fields.js
+  - [x] test/language/expressions/class/elements/wrapped-in-sc-static-private-methods-with-fields.js
   - [x] test/language/expressions/class/elements/wrapped-in-sc-static-private-methods.js
   - [x] test/language/expressions/class/elements/wrapped-in-sc-string-literal-names.js
   - [x] test/language/expressions/class/gen-method/array-destructuring-param-strict-body.js
@@ -16933,7 +16933,7 @@ Sub-category progress
   - [ ] test/language/expressions/class/private-setter-brand-check-multiple-evaluations-of-class-eval-indirect.js
   - [x] test/language/expressions/class/private-setter-brand-check-multiple-evaluations-of-class-eval.js
   - [x] test/language/expressions/class/private-setter-brand-check-multiple-evaluations-of-class-factory.js
-  - [ ] test/language/expressions/class/private-setter-brand-check-multiple-evaluations-of-class-function-ctor.js
+  - [x] test/language/expressions/class/private-setter-brand-check-multiple-evaluations-of-class-function-ctor.js
   - [ ] test/language/expressions/class/private-setter-brand-check-multiple-evaluations-of-class-realm-function-ctor.js
   - [ ] test/language/expressions/class/private-setter-brand-check-multiple-evaluations-of-class-realm.js
   - [ ] test/language/expressions/class/private-static-field-multiple-evaluations-of-class-direct-eval.js
@@ -16978,42 +16978,42 @@ Sub-category progress
   - [x] test/language/expressions/class/static-init-await-reference.js
   - [x] test/language/expressions/class/static-method-length-dflt.js
   - [x] test/language/expressions/class/static-method-param-dflt-yield.js
-  - [ ] test/language/expressions/class/subclass-builtins/subclass-AggregateError.js
-  - [ ] test/language/expressions/class/subclass-builtins/subclass-Array.js
-  - [ ] test/language/expressions/class/subclass-builtins/subclass-ArrayBuffer.js
-  - [ ] test/language/expressions/class/subclass-builtins/subclass-BigInt64Array.js
-  - [ ] test/language/expressions/class/subclass-builtins/subclass-BigUint64Array.js
-  - [ ] test/language/expressions/class/subclass-builtins/subclass-Boolean.js
-  - [ ] test/language/expressions/class/subclass-builtins/subclass-DataView.js
-  - [ ] test/language/expressions/class/subclass-builtins/subclass-Date.js
-  - [ ] test/language/expressions/class/subclass-builtins/subclass-Error.js
-  - [ ] test/language/expressions/class/subclass-builtins/subclass-EvalError.js
-  - [ ] test/language/expressions/class/subclass-builtins/subclass-Float32Array.js
-  - [ ] test/language/expressions/class/subclass-builtins/subclass-Float64Array.js
-  - [ ] test/language/expressions/class/subclass-builtins/subclass-Function.js
-  - [ ] test/language/expressions/class/subclass-builtins/subclass-Int16Array.js
-  - [ ] test/language/expressions/class/subclass-builtins/subclass-Int32Array.js
-  - [ ] test/language/expressions/class/subclass-builtins/subclass-Int8Array.js
-  - [ ] test/language/expressions/class/subclass-builtins/subclass-Map.js
-  - [ ] test/language/expressions/class/subclass-builtins/subclass-Number.js
-  - [ ] test/language/expressions/class/subclass-builtins/subclass-Object.js
-  - [ ] test/language/expressions/class/subclass-builtins/subclass-Promise.js
-  - [ ] test/language/expressions/class/subclass-builtins/subclass-RangeError.js
-  - [ ] test/language/expressions/class/subclass-builtins/subclass-ReferenceError.js
-  - [ ] test/language/expressions/class/subclass-builtins/subclass-RegExp.js
-  - [ ] test/language/expressions/class/subclass-builtins/subclass-Set.js
-  - [ ] test/language/expressions/class/subclass-builtins/subclass-SharedArrayBuffer.js
-  - [ ] test/language/expressions/class/subclass-builtins/subclass-String.js
-  - [ ] test/language/expressions/class/subclass-builtins/subclass-SyntaxError.js
-  - [ ] test/language/expressions/class/subclass-builtins/subclass-TypeError.js
-  - [ ] test/language/expressions/class/subclass-builtins/subclass-URIError.js
-  - [ ] test/language/expressions/class/subclass-builtins/subclass-Uint16Array.js
-  - [ ] test/language/expressions/class/subclass-builtins/subclass-Uint32Array.js
-  - [ ] test/language/expressions/class/subclass-builtins/subclass-Uint8Array.js
-  - [ ] test/language/expressions/class/subclass-builtins/subclass-Uint8ClampedArray.js
-  - [ ] test/language/expressions/class/subclass-builtins/subclass-WeakMap.js
-  - [ ] test/language/expressions/class/subclass-builtins/subclass-WeakRef.js
-  - [ ] test/language/expressions/class/subclass-builtins/subclass-WeakSet.js
+  - [x] test/language/expressions/class/subclass-builtins/subclass-AggregateError.js
+  - [x] test/language/expressions/class/subclass-builtins/subclass-Array.js
+  - [x] test/language/expressions/class/subclass-builtins/subclass-ArrayBuffer.js
+  - [x] test/language/expressions/class/subclass-builtins/subclass-BigInt64Array.js
+  - [x] test/language/expressions/class/subclass-builtins/subclass-BigUint64Array.js
+  - [x] test/language/expressions/class/subclass-builtins/subclass-Boolean.js
+  - [x] test/language/expressions/class/subclass-builtins/subclass-DataView.js
+  - [x] test/language/expressions/class/subclass-builtins/subclass-Date.js
+  - [x] test/language/expressions/class/subclass-builtins/subclass-Error.js
+  - [x] test/language/expressions/class/subclass-builtins/subclass-EvalError.js
+  - [x] test/language/expressions/class/subclass-builtins/subclass-Float32Array.js
+  - [x] test/language/expressions/class/subclass-builtins/subclass-Float64Array.js
+  - [x] test/language/expressions/class/subclass-builtins/subclass-Function.js
+  - [x] test/language/expressions/class/subclass-builtins/subclass-Int16Array.js
+  - [x] test/language/expressions/class/subclass-builtins/subclass-Int32Array.js
+  - [x] test/language/expressions/class/subclass-builtins/subclass-Int8Array.js
+  - [x] test/language/expressions/class/subclass-builtins/subclass-Map.js
+  - [x] test/language/expressions/class/subclass-builtins/subclass-Number.js
+  - [x] test/language/expressions/class/subclass-builtins/subclass-Object.js
+  - [x] test/language/expressions/class/subclass-builtins/subclass-Promise.js
+  - [x] test/language/expressions/class/subclass-builtins/subclass-RangeError.js
+  - [x] test/language/expressions/class/subclass-builtins/subclass-ReferenceError.js
+  - [x] test/language/expressions/class/subclass-builtins/subclass-RegExp.js
+  - [x] test/language/expressions/class/subclass-builtins/subclass-Set.js
+  - [x] test/language/expressions/class/subclass-builtins/subclass-SharedArrayBuffer.js
+  - [x] test/language/expressions/class/subclass-builtins/subclass-String.js
+  - [x] test/language/expressions/class/subclass-builtins/subclass-SyntaxError.js
+  - [x] test/language/expressions/class/subclass-builtins/subclass-TypeError.js
+  - [x] test/language/expressions/class/subclass-builtins/subclass-URIError.js
+  - [x] test/language/expressions/class/subclass-builtins/subclass-Uint16Array.js
+  - [x] test/language/expressions/class/subclass-builtins/subclass-Uint32Array.js
+  - [x] test/language/expressions/class/subclass-builtins/subclass-Uint8Array.js
+  - [x] test/language/expressions/class/subclass-builtins/subclass-Uint8ClampedArray.js
+  - [x] test/language/expressions/class/subclass-builtins/subclass-WeakMap.js
+  - [x] test/language/expressions/class/subclass-builtins/subclass-WeakRef.js
+  - [x] test/language/expressions/class/subclass-builtins/subclass-WeakSet.js
   - [x] test/language/expressions/coalesce/abrupt-is-a-short-circuit.js
   - [x] test/language/expressions/coalesce/cannot-chain-head-with-logical-and.js
   - [x] test/language/expressions/coalesce/cannot-chain-head-with-logical-or.js
