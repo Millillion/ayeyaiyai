@@ -1,4 +1,4 @@
-21744/23668 (91.87%)
+21885/23668 (92.47%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -15,7 +15,7 @@ Sub-category progress
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
 - statements: 8352/9337 (89.45%)
-- expressions: 10269/11061 (92.84%)
+- expressions: 10410/11061 (94.11%)
 - types: 103/113 (91.15%)
 - function-code: 206/217 (94.93%)
 - global-code: 41/42 (97.62%)
@@ -17694,33 +17694,33 @@ Sub-category progress
   - [x] test/language/expressions/does-not-equals/bigint-and-string.js
   - [x] test/language/expressions/dynamic-import/always-create-new-promise.js
   - [x] test/language/expressions/dynamic-import/assign-expr-get-value-abrupt-throws.js
-  - [ ] test/language/expressions/dynamic-import/assignment-expression/additive-expr.js
+  - [x] test/language/expressions/dynamic-import/assignment-expression/additive-expr.js
   - [ ] test/language/expressions/dynamic-import/assignment-expression/array-literal.js
-  - [ ] test/language/expressions/dynamic-import/assignment-expression/arrow-function.js
-  - [ ] test/language/expressions/dynamic-import/assignment-expression/await-expr.js
-  - [ ] test/language/expressions/dynamic-import/assignment-expression/await-identifier.js
-  - [ ] test/language/expressions/dynamic-import/assignment-expression/call-expr-arguments.js
-  - [ ] test/language/expressions/dynamic-import/assignment-expression/call-expr-expr.js
-  - [ ] test/language/expressions/dynamic-import/assignment-expression/call-expr-identifier.js
-  - [ ] test/language/expressions/dynamic-import/assignment-expression/cover-call-expr.js
-  - [ ] test/language/expressions/dynamic-import/assignment-expression/cover-parenthesized-expr.js
-  - [ ] test/language/expressions/dynamic-import/assignment-expression/identifier.js
+  - [x] test/language/expressions/dynamic-import/assignment-expression/arrow-function.js
+  - [x] test/language/expressions/dynamic-import/assignment-expression/await-expr.js
+  - [x] test/language/expressions/dynamic-import/assignment-expression/await-identifier.js
+  - [x] test/language/expressions/dynamic-import/assignment-expression/call-expr-arguments.js
+  - [x] test/language/expressions/dynamic-import/assignment-expression/call-expr-expr.js
+  - [x] test/language/expressions/dynamic-import/assignment-expression/call-expr-identifier.js
+  - [x] test/language/expressions/dynamic-import/assignment-expression/cover-call-expr.js
+  - [x] test/language/expressions/dynamic-import/assignment-expression/cover-parenthesized-expr.js
+  - [x] test/language/expressions/dynamic-import/assignment-expression/identifier.js
   - [x] test/language/expressions/dynamic-import/assignment-expression/import-meta.js
-  - [ ] test/language/expressions/dynamic-import/assignment-expression/lhs-assign-operator-assign-expr.js
-  - [ ] test/language/expressions/dynamic-import/assignment-expression/lhs-eq-assign-expr-nostrict.js
-  - [ ] test/language/expressions/dynamic-import/assignment-expression/lhs-eq-assign-expr.js
-  - [ ] test/language/expressions/dynamic-import/assignment-expression/logical-and-expr.js
-  - [ ] test/language/expressions/dynamic-import/assignment-expression/logical-or-expr.js
-  - [ ] test/language/expressions/dynamic-import/assignment-expression/member-expr.js
+  - [x] test/language/expressions/dynamic-import/assignment-expression/lhs-assign-operator-assign-expr.js
+  - [x] test/language/expressions/dynamic-import/assignment-expression/lhs-eq-assign-expr-nostrict.js
+  - [x] test/language/expressions/dynamic-import/assignment-expression/lhs-eq-assign-expr.js
+  - [x] test/language/expressions/dynamic-import/assignment-expression/logical-and-expr.js
+  - [x] test/language/expressions/dynamic-import/assignment-expression/logical-or-expr.js
+  - [x] test/language/expressions/dynamic-import/assignment-expression/member-expr.js
   - [ ] test/language/expressions/dynamic-import/assignment-expression/new-target.js
   - [ ] test/language/expressions/dynamic-import/assignment-expression/object-literal.js
-  - [ ] test/language/expressions/dynamic-import/assignment-expression/tagged-function-call.js
-  - [ ] test/language/expressions/dynamic-import/assignment-expression/ternary.js
+  - [x] test/language/expressions/dynamic-import/assignment-expression/tagged-function-call.js
+  - [x] test/language/expressions/dynamic-import/assignment-expression/ternary.js
   - [ ] test/language/expressions/dynamic-import/assignment-expression/this.js
   - [x] test/language/expressions/dynamic-import/assignment-expression/unary-expr.js
   - [ ] test/language/expressions/dynamic-import/assignment-expression/yield-assign-expr.js
   - [ ] test/language/expressions/dynamic-import/assignment-expression/yield-expr.js
-  - [ ] test/language/expressions/dynamic-import/assignment-expression/yield-identifier.js
+  - [x] test/language/expressions/dynamic-import/assignment-expression/yield-identifier.js
   - [x] test/language/expressions/dynamic-import/assignment-expression/yield-star.js
   - [ ] test/language/expressions/dynamic-import/await-import-evaluation.js
   - [x] test/language/expressions/dynamic-import/catch/nested-arrow-import-catch-eval-rqstd-abrupt-typeerror.js
@@ -17949,73 +17949,73 @@ Sub-category progress
   - [ ] test/language/expressions/dynamic-import/import-errored-module.js
   - [x] test/language/expressions/dynamic-import/imported-self-update.js
   - [x] test/language/expressions/dynamic-import/indirect-resolution.js
-  - [ ] test/language/expressions/dynamic-import/namespace/await-ns-Symbol-toStringTag.js
-  - [ ] test/language/expressions/dynamic-import/namespace/await-ns-define-own-property.js
+  - [x] test/language/expressions/dynamic-import/namespace/await-ns-Symbol-toStringTag.js
+  - [x] test/language/expressions/dynamic-import/namespace/await-ns-define-own-property.js
   - [ ] test/language/expressions/dynamic-import/namespace/await-ns-delete-exported-init-no-strict.js
-  - [ ] test/language/expressions/dynamic-import/namespace/await-ns-delete-exported-init-strict.js
+  - [x] test/language/expressions/dynamic-import/namespace/await-ns-delete-exported-init-strict.js
   - [ ] test/language/expressions/dynamic-import/namespace/await-ns-delete-non-exported-no-strict.js
-  - [ ] test/language/expressions/dynamic-import/namespace/await-ns-delete-non-exported-strict.js
-  - [ ] test/language/expressions/dynamic-import/namespace/await-ns-extensible.js
-  - [ ] test/language/expressions/dynamic-import/namespace/await-ns-get-nested-namespace-dflt-direct.js
-  - [ ] test/language/expressions/dynamic-import/namespace/await-ns-get-nested-namespace-dflt-indirect.js
-  - [ ] test/language/expressions/dynamic-import/namespace/await-ns-get-nested-namespace-props-nrml.js
-  - [ ] test/language/expressions/dynamic-import/namespace/await-ns-get-own-property-str-found-init.js
-  - [ ] test/language/expressions/dynamic-import/namespace/await-ns-get-own-property-str-not-found.js
-  - [ ] test/language/expressions/dynamic-import/namespace/await-ns-get-own-property-sym.js
-  - [ ] test/language/expressions/dynamic-import/namespace/await-ns-get-str-found.js
+  - [x] test/language/expressions/dynamic-import/namespace/await-ns-delete-non-exported-strict.js
+  - [x] test/language/expressions/dynamic-import/namespace/await-ns-extensible.js
+  - [x] test/language/expressions/dynamic-import/namespace/await-ns-get-nested-namespace-dflt-direct.js
+  - [x] test/language/expressions/dynamic-import/namespace/await-ns-get-nested-namespace-dflt-indirect.js
+  - [x] test/language/expressions/dynamic-import/namespace/await-ns-get-nested-namespace-props-nrml.js
+  - [x] test/language/expressions/dynamic-import/namespace/await-ns-get-own-property-str-found-init.js
+  - [x] test/language/expressions/dynamic-import/namespace/await-ns-get-own-property-str-not-found.js
+  - [x] test/language/expressions/dynamic-import/namespace/await-ns-get-own-property-sym.js
+  - [x] test/language/expressions/dynamic-import/namespace/await-ns-get-str-found.js
   - [x] test/language/expressions/dynamic-import/namespace/await-ns-get-str-not-found.js
-  - [ ] test/language/expressions/dynamic-import/namespace/await-ns-get-sym-found.js
-  - [ ] test/language/expressions/dynamic-import/namespace/await-ns-get-sym-not-found.js
-  - [ ] test/language/expressions/dynamic-import/namespace/await-ns-has-property-str-found-init.js
-  - [ ] test/language/expressions/dynamic-import/namespace/await-ns-has-property-str-not-found.js
-  - [ ] test/language/expressions/dynamic-import/namespace/await-ns-has-property-sym-found.js
-  - [ ] test/language/expressions/dynamic-import/namespace/await-ns-has-property-sym-not-found.js
-  - [ ] test/language/expressions/dynamic-import/namespace/await-ns-no-iterator.js
-  - [ ] test/language/expressions/dynamic-import/namespace/await-ns-own-property-keys-sort.js
+  - [x] test/language/expressions/dynamic-import/namespace/await-ns-get-sym-found.js
+  - [x] test/language/expressions/dynamic-import/namespace/await-ns-get-sym-not-found.js
+  - [x] test/language/expressions/dynamic-import/namespace/await-ns-has-property-str-found-init.js
+  - [x] test/language/expressions/dynamic-import/namespace/await-ns-has-property-str-not-found.js
+  - [x] test/language/expressions/dynamic-import/namespace/await-ns-has-property-sym-found.js
+  - [x] test/language/expressions/dynamic-import/namespace/await-ns-has-property-sym-not-found.js
+  - [x] test/language/expressions/dynamic-import/namespace/await-ns-no-iterator.js
+  - [x] test/language/expressions/dynamic-import/namespace/await-ns-own-property-keys-sort.js
   - [x] test/language/expressions/dynamic-import/namespace/await-ns-prevent-extensions-object.js
   - [x] test/language/expressions/dynamic-import/namespace/await-ns-prevent-extensions-reflect.js
-  - [ ] test/language/expressions/dynamic-import/namespace/await-ns-prop-descs.js
-  - [ ] test/language/expressions/dynamic-import/namespace/await-ns-prototype.js
-  - [ ] test/language/expressions/dynamic-import/namespace/await-ns-set-no-strict.js
+  - [x] test/language/expressions/dynamic-import/namespace/await-ns-prop-descs.js
+  - [x] test/language/expressions/dynamic-import/namespace/await-ns-prototype.js
+  - [x] test/language/expressions/dynamic-import/namespace/await-ns-set-no-strict.js
   - [x] test/language/expressions/dynamic-import/namespace/await-ns-set-prototype-of-null.js
-  - [ ] test/language/expressions/dynamic-import/namespace/await-ns-set-prototype-of.js
-  - [ ] test/language/expressions/dynamic-import/namespace/await-ns-set-same-values-no-strict.js
-  - [ ] test/language/expressions/dynamic-import/namespace/await-ns-set-same-values-strict.js
-  - [ ] test/language/expressions/dynamic-import/namespace/await-ns-set-strict.js
-  - [ ] test/language/expressions/dynamic-import/namespace/default-property-not-set-own.js
-  - [ ] test/language/expressions/dynamic-import/namespace/promise-then-ns-Symbol-toStringTag.js
+  - [x] test/language/expressions/dynamic-import/namespace/await-ns-set-prototype-of.js
+  - [x] test/language/expressions/dynamic-import/namespace/await-ns-set-same-values-no-strict.js
+  - [x] test/language/expressions/dynamic-import/namespace/await-ns-set-same-values-strict.js
+  - [x] test/language/expressions/dynamic-import/namespace/await-ns-set-strict.js
+  - [x] test/language/expressions/dynamic-import/namespace/default-property-not-set-own.js
+  - [x] test/language/expressions/dynamic-import/namespace/promise-then-ns-Symbol-toStringTag.js
   - [x] test/language/expressions/dynamic-import/namespace/promise-then-ns-define-own-property.js
   - [ ] test/language/expressions/dynamic-import/namespace/promise-then-ns-delete-exported-init-no-strict.js
-  - [ ] test/language/expressions/dynamic-import/namespace/promise-then-ns-delete-exported-init-strict.js
+  - [x] test/language/expressions/dynamic-import/namespace/promise-then-ns-delete-exported-init-strict.js
   - [ ] test/language/expressions/dynamic-import/namespace/promise-then-ns-delete-non-exported-no-strict.js
-  - [ ] test/language/expressions/dynamic-import/namespace/promise-then-ns-delete-non-exported-strict.js
-  - [ ] test/language/expressions/dynamic-import/namespace/promise-then-ns-extensible.js
-  - [ ] test/language/expressions/dynamic-import/namespace/promise-then-ns-get-nested-namespace-dflt-direct.js
-  - [ ] test/language/expressions/dynamic-import/namespace/promise-then-ns-get-nested-namespace-dflt-indirect.js
+  - [x] test/language/expressions/dynamic-import/namespace/promise-then-ns-delete-non-exported-strict.js
+  - [x] test/language/expressions/dynamic-import/namespace/promise-then-ns-extensible.js
+  - [x] test/language/expressions/dynamic-import/namespace/promise-then-ns-get-nested-namespace-dflt-direct.js
+  - [x] test/language/expressions/dynamic-import/namespace/promise-then-ns-get-nested-namespace-dflt-indirect.js
   - [x] test/language/expressions/dynamic-import/namespace/promise-then-ns-get-nested-namespace-props-nrml.js
-  - [ ] test/language/expressions/dynamic-import/namespace/promise-then-ns-get-own-property-str-found-init.js
-  - [ ] test/language/expressions/dynamic-import/namespace/promise-then-ns-get-own-property-str-not-found.js
-  - [ ] test/language/expressions/dynamic-import/namespace/promise-then-ns-get-own-property-sym.js
-  - [ ] test/language/expressions/dynamic-import/namespace/promise-then-ns-get-str-found.js
-  - [ ] test/language/expressions/dynamic-import/namespace/promise-then-ns-get-str-not-found.js
-  - [ ] test/language/expressions/dynamic-import/namespace/promise-then-ns-get-sym-found.js
-  - [ ] test/language/expressions/dynamic-import/namespace/promise-then-ns-get-sym-not-found.js
-  - [ ] test/language/expressions/dynamic-import/namespace/promise-then-ns-has-property-str-found-init.js
-  - [ ] test/language/expressions/dynamic-import/namespace/promise-then-ns-has-property-str-not-found.js
-  - [ ] test/language/expressions/dynamic-import/namespace/promise-then-ns-has-property-sym-found.js
-  - [ ] test/language/expressions/dynamic-import/namespace/promise-then-ns-has-property-sym-not-found.js
-  - [ ] test/language/expressions/dynamic-import/namespace/promise-then-ns-no-iterator.js
+  - [x] test/language/expressions/dynamic-import/namespace/promise-then-ns-get-own-property-str-found-init.js
+  - [x] test/language/expressions/dynamic-import/namespace/promise-then-ns-get-own-property-str-not-found.js
+  - [x] test/language/expressions/dynamic-import/namespace/promise-then-ns-get-own-property-sym.js
+  - [x] test/language/expressions/dynamic-import/namespace/promise-then-ns-get-str-found.js
+  - [x] test/language/expressions/dynamic-import/namespace/promise-then-ns-get-str-not-found.js
+  - [x] test/language/expressions/dynamic-import/namespace/promise-then-ns-get-sym-found.js
+  - [x] test/language/expressions/dynamic-import/namespace/promise-then-ns-get-sym-not-found.js
+  - [x] test/language/expressions/dynamic-import/namespace/promise-then-ns-has-property-str-found-init.js
+  - [x] test/language/expressions/dynamic-import/namespace/promise-then-ns-has-property-str-not-found.js
+  - [x] test/language/expressions/dynamic-import/namespace/promise-then-ns-has-property-sym-found.js
+  - [x] test/language/expressions/dynamic-import/namespace/promise-then-ns-has-property-sym-not-found.js
+  - [x] test/language/expressions/dynamic-import/namespace/promise-then-ns-no-iterator.js
   - [x] test/language/expressions/dynamic-import/namespace/promise-then-ns-own-property-keys-sort.js
-  - [ ] test/language/expressions/dynamic-import/namespace/promise-then-ns-prevent-extensions-object.js
-  - [ ] test/language/expressions/dynamic-import/namespace/promise-then-ns-prevent-extensions-reflect.js
-  - [ ] test/language/expressions/dynamic-import/namespace/promise-then-ns-prop-descs.js
-  - [ ] test/language/expressions/dynamic-import/namespace/promise-then-ns-prototype.js
-  - [ ] test/language/expressions/dynamic-import/namespace/promise-then-ns-set-no-strict.js
-  - [ ] test/language/expressions/dynamic-import/namespace/promise-then-ns-set-prototype-of-null.js
-  - [ ] test/language/expressions/dynamic-import/namespace/promise-then-ns-set-prototype-of.js
-  - [ ] test/language/expressions/dynamic-import/namespace/promise-then-ns-set-same-values-no-strict.js
-  - [ ] test/language/expressions/dynamic-import/namespace/promise-then-ns-set-same-values-strict.js
-  - [ ] test/language/expressions/dynamic-import/namespace/promise-then-ns-set-strict.js
+  - [x] test/language/expressions/dynamic-import/namespace/promise-then-ns-prevent-extensions-object.js
+  - [x] test/language/expressions/dynamic-import/namespace/promise-then-ns-prevent-extensions-reflect.js
+  - [x] test/language/expressions/dynamic-import/namespace/promise-then-ns-prop-descs.js
+  - [x] test/language/expressions/dynamic-import/namespace/promise-then-ns-prototype.js
+  - [x] test/language/expressions/dynamic-import/namespace/promise-then-ns-set-no-strict.js
+  - [x] test/language/expressions/dynamic-import/namespace/promise-then-ns-set-prototype-of-null.js
+  - [x] test/language/expressions/dynamic-import/namespace/promise-then-ns-set-prototype-of.js
+  - [x] test/language/expressions/dynamic-import/namespace/promise-then-ns-set-same-values-no-strict.js
+  - [x] test/language/expressions/dynamic-import/namespace/promise-then-ns-set-same-values-strict.js
+  - [x] test/language/expressions/dynamic-import/namespace/promise-then-ns-set-strict.js
   - [ ] test/language/expressions/dynamic-import/returns-promise.js
   - [ ] test/language/expressions/dynamic-import/reuse-namespace-object-from-import.js
   - [ ] test/language/expressions/dynamic-import/reuse-namespace-object-from-script.js
@@ -18526,46 +18526,46 @@ Sub-category progress
   - [ ] test/language/expressions/dynamic-import/update-to-dynamic-import.js
   - [ ] test/language/expressions/dynamic-import/usage/nested-arrow-assignment-expression-eval-gtbndng-indirect-update-dflt.js
   - [ ] test/language/expressions/dynamic-import/usage/nested-arrow-assignment-expression-eval-gtbndng-indirect-update.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-arrow-assignment-expression-eval-script-code-host-resolves-module-code.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-arrow-assignment-expression-is-call-expression-square-brackets.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-arrow-assignment-expression-returns-thenable.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-arrow-assignment-expression-specifier-tostring.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-arrow-assignment-expression-eval-script-code-host-resolves-module-code.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-arrow-assignment-expression-is-call-expression-square-brackets.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-arrow-assignment-expression-returns-thenable.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-arrow-assignment-expression-specifier-tostring.js
   - [ ] test/language/expressions/dynamic-import/usage/nested-arrow-import-then-eval-gtbndng-indirect-update-dflt.js
   - [ ] test/language/expressions/dynamic-import/usage/nested-arrow-import-then-eval-gtbndng-indirect-update.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-arrow-import-then-eval-script-code-host-resolves-module-code.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-arrow-import-then-eval-script-code-host-resolves-module-code.js
   - [ ] test/language/expressions/dynamic-import/usage/nested-arrow-import-then-is-call-expression-square-brackets.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-arrow-import-then-returns-thenable.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-arrow-import-then-specifier-tostring.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-arrow-import-then-returns-thenable.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-arrow-import-then-specifier-tostring.js
   - [ ] test/language/expressions/dynamic-import/usage/nested-async-arrow-function-await-eval-gtbndng-indirect-update-dflt.js
   - [ ] test/language/expressions/dynamic-import/usage/nested-async-arrow-function-await-eval-gtbndng-indirect-update.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-async-arrow-function-await-eval-script-code-host-resolves-module-code.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-async-arrow-function-await-is-call-expression-square-brackets.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-async-arrow-function-await-returns-thenable.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-async-arrow-function-await-specifier-tostring.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-async-arrow-function-await-eval-script-code-host-resolves-module-code.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-async-arrow-function-await-is-call-expression-square-brackets.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-async-arrow-function-await-returns-thenable.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-async-arrow-function-await-specifier-tostring.js
   - [ ] test/language/expressions/dynamic-import/usage/nested-async-arrow-function-return-await-eval-gtbndng-indirect-update-dflt.js
   - [ ] test/language/expressions/dynamic-import/usage/nested-async-arrow-function-return-await-eval-gtbndng-indirect-update.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-async-arrow-function-return-await-eval-script-code-host-resolves-module-code.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-async-arrow-function-return-await-is-call-expression-square-brackets.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-async-arrow-function-return-await-returns-thenable.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-async-arrow-function-return-await-specifier-tostring.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-async-arrow-function-return-await-eval-script-code-host-resolves-module-code.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-async-arrow-function-return-await-is-call-expression-square-brackets.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-async-arrow-function-return-await-returns-thenable.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-async-arrow-function-return-await-specifier-tostring.js
   - [ ] test/language/expressions/dynamic-import/usage/nested-async-function-await-eval-gtbndng-indirect-update-dflt.js
   - [ ] test/language/expressions/dynamic-import/usage/nested-async-function-await-eval-gtbndng-indirect-update.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-async-function-await-eval-script-code-host-resolves-module-code.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-async-function-await-is-call-expression-square-brackets.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-async-function-await-returns-thenable.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-async-function-await-specifier-tostring.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-async-function-await-eval-script-code-host-resolves-module-code.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-async-function-await-is-call-expression-square-brackets.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-async-function-await-returns-thenable.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-async-function-await-specifier-tostring.js
   - [ ] test/language/expressions/dynamic-import/usage/nested-async-function-eval-gtbndng-indirect-update-dflt.js
   - [ ] test/language/expressions/dynamic-import/usage/nested-async-function-eval-gtbndng-indirect-update.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-async-function-eval-script-code-host-resolves-module-code.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-async-function-is-call-expression-square-brackets.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-async-function-eval-script-code-host-resolves-module-code.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-async-function-is-call-expression-square-brackets.js
   - [ ] test/language/expressions/dynamic-import/usage/nested-async-function-return-await-eval-gtbndng-indirect-update-dflt.js
   - [ ] test/language/expressions/dynamic-import/usage/nested-async-function-return-await-eval-gtbndng-indirect-update.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-async-function-return-await-eval-script-code-host-resolves-module-code.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-async-function-return-await-is-call-expression-square-brackets.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-async-function-return-await-returns-thenable.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-async-function-return-await-specifier-tostring.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-async-function-returns-thenable.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-async-function-specifier-tostring.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-async-function-return-await-eval-script-code-host-resolves-module-code.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-async-function-return-await-is-call-expression-square-brackets.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-async-function-return-await-returns-thenable.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-async-function-return-await-specifier-tostring.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-async-function-returns-thenable.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-async-function-specifier-tostring.js
   - [ ] test/language/expressions/dynamic-import/usage/nested-async-gen-await-eval-gtbndng-indirect-update-dflt.js
   - [ ] test/language/expressions/dynamic-import/usage/nested-async-gen-await-eval-gtbndng-indirect-update.js
   - [ ] test/language/expressions/dynamic-import/usage/nested-async-gen-await-eval-script-code-host-resolves-module-code.js
@@ -18574,64 +18574,64 @@ Sub-category progress
   - [ ] test/language/expressions/dynamic-import/usage/nested-async-gen-await-specifier-tostring.js
   - [ ] test/language/expressions/dynamic-import/usage/nested-async-gen-return-await-eval-gtbndng-indirect-update-dflt.js
   - [ ] test/language/expressions/dynamic-import/usage/nested-async-gen-return-await-eval-gtbndng-indirect-update.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-async-gen-return-await-eval-script-code-host-resolves-module-code.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-async-gen-return-await-eval-script-code-host-resolves-module-code.js
   - [ ] test/language/expressions/dynamic-import/usage/nested-async-gen-return-await-is-call-expression-square-brackets.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-async-gen-return-await-returns-thenable.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-async-gen-return-await-specifier-tostring.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-async-gen-return-await-returns-thenable.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-async-gen-return-await-specifier-tostring.js
   - [ ] test/language/expressions/dynamic-import/usage/nested-block-import-then-eval-gtbndng-indirect-update-dflt.js
   - [ ] test/language/expressions/dynamic-import/usage/nested-block-import-then-eval-gtbndng-indirect-update.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-block-import-then-eval-script-code-host-resolves-module-code.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-block-import-then-is-call-expression-square-brackets.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-block-import-then-returns-thenable.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-block-import-then-specifier-tostring.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-block-import-then-eval-script-code-host-resolves-module-code.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-block-import-then-is-call-expression-square-brackets.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-block-import-then-returns-thenable.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-block-import-then-specifier-tostring.js
   - [ ] test/language/expressions/dynamic-import/usage/nested-do-while-eval-gtbndng-indirect-update-dflt.js
   - [ ] test/language/expressions/dynamic-import/usage/nested-do-while-eval-gtbndng-indirect-update.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-do-while-eval-script-code-host-resolves-module-code.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-do-while-is-call-expression-square-brackets.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-do-while-returns-thenable.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-do-while-specifier-tostring.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-do-while-eval-script-code-host-resolves-module-code.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-do-while-is-call-expression-square-brackets.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-do-while-returns-thenable.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-do-while-specifier-tostring.js
   - [ ] test/language/expressions/dynamic-import/usage/nested-else-import-then-eval-gtbndng-indirect-update-dflt.js
   - [ ] test/language/expressions/dynamic-import/usage/nested-else-import-then-eval-gtbndng-indirect-update.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-else-import-then-eval-script-code-host-resolves-module-code.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-else-import-then-is-call-expression-square-brackets.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-else-import-then-returns-thenable.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-else-import-then-specifier-tostring.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-else-import-then-eval-script-code-host-resolves-module-code.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-else-import-then-is-call-expression-square-brackets.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-else-import-then-returns-thenable.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-else-import-then-specifier-tostring.js
   - [ ] test/language/expressions/dynamic-import/usage/nested-function-import-then-eval-gtbndng-indirect-update-dflt.js
   - [ ] test/language/expressions/dynamic-import/usage/nested-function-import-then-eval-gtbndng-indirect-update.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-function-import-then-eval-script-code-host-resolves-module-code.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-function-import-then-is-call-expression-square-brackets.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-function-import-then-returns-thenable.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-function-import-then-specifier-tostring.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-function-import-then-eval-script-code-host-resolves-module-code.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-function-import-then-is-call-expression-square-brackets.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-function-import-then-returns-thenable.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-function-import-then-specifier-tostring.js
   - [ ] test/language/expressions/dynamic-import/usage/nested-if-braceless-eval-gtbndng-indirect-update-dflt.js
   - [ ] test/language/expressions/dynamic-import/usage/nested-if-braceless-eval-gtbndng-indirect-update.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-if-braceless-eval-script-code-host-resolves-module-code.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-if-braceless-is-call-expression-square-brackets.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-if-braceless-returns-thenable.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-if-braceless-specifier-tostring.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-if-braceless-eval-script-code-host-resolves-module-code.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-if-braceless-is-call-expression-square-brackets.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-if-braceless-returns-thenable.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-if-braceless-specifier-tostring.js
   - [ ] test/language/expressions/dynamic-import/usage/nested-if-import-then-eval-gtbndng-indirect-update-dflt.js
   - [ ] test/language/expressions/dynamic-import/usage/nested-if-import-then-eval-gtbndng-indirect-update.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-if-import-then-eval-script-code-host-resolves-module-code.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-if-import-then-is-call-expression-square-brackets.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-if-import-then-returns-thenable.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-if-import-then-specifier-tostring.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-if-import-then-eval-script-code-host-resolves-module-code.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-if-import-then-is-call-expression-square-brackets.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-if-import-then-returns-thenable.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-if-import-then-specifier-tostring.js
   - [ ] test/language/expressions/dynamic-import/usage/nested-while-import-then-eval-gtbndng-indirect-update-dflt.js
   - [ ] test/language/expressions/dynamic-import/usage/nested-while-import-then-eval-gtbndng-indirect-update.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-while-import-then-eval-script-code-host-resolves-module-code.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-while-import-then-is-call-expression-square-brackets.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-while-import-then-returns-thenable.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-while-import-then-specifier-tostring.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-while-import-then-eval-script-code-host-resolves-module-code.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-while-import-then-is-call-expression-square-brackets.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-while-import-then-returns-thenable.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-while-import-then-specifier-tostring.js
   - [ ] test/language/expressions/dynamic-import/usage/syntax-nested-block-labeled-eval-gtbndng-indirect-update-dflt.js
   - [ ] test/language/expressions/dynamic-import/usage/syntax-nested-block-labeled-eval-gtbndng-indirect-update.js
-  - [ ] test/language/expressions/dynamic-import/usage/syntax-nested-block-labeled-eval-script-code-host-resolves-module-code.js
-  - [ ] test/language/expressions/dynamic-import/usage/syntax-nested-block-labeled-is-call-expression-square-brackets.js
-  - [ ] test/language/expressions/dynamic-import/usage/syntax-nested-block-labeled-returns-thenable.js
-  - [ ] test/language/expressions/dynamic-import/usage/syntax-nested-block-labeled-specifier-tostring.js
+  - [x] test/language/expressions/dynamic-import/usage/syntax-nested-block-labeled-eval-script-code-host-resolves-module-code.js
+  - [x] test/language/expressions/dynamic-import/usage/syntax-nested-block-labeled-is-call-expression-square-brackets.js
+  - [x] test/language/expressions/dynamic-import/usage/syntax-nested-block-labeled-returns-thenable.js
+  - [x] test/language/expressions/dynamic-import/usage/syntax-nested-block-labeled-specifier-tostring.js
   - [ ] test/language/expressions/dynamic-import/usage/top-level-import-then-eval-gtbndng-indirect-update-dflt.js
   - [ ] test/language/expressions/dynamic-import/usage/top-level-import-then-eval-gtbndng-indirect-update.js
-  - [ ] test/language/expressions/dynamic-import/usage/top-level-import-then-eval-script-code-host-resolves-module-code.js
-  - [ ] test/language/expressions/dynamic-import/usage/top-level-import-then-is-call-expression-square-brackets.js
-  - [ ] test/language/expressions/dynamic-import/usage/top-level-import-then-returns-thenable.js
-  - [ ] test/language/expressions/dynamic-import/usage/top-level-import-then-specifier-tostring.js
+  - [x] test/language/expressions/dynamic-import/usage/top-level-import-then-eval-script-code-host-resolves-module-code.js
+  - [x] test/language/expressions/dynamic-import/usage/top-level-import-then-is-call-expression-square-brackets.js
+  - [x] test/language/expressions/dynamic-import/usage/top-level-import-then-returns-thenable.js
+  - [x] test/language/expressions/dynamic-import/usage/top-level-import-then-specifier-tostring.js
   - [ ] test/language/expressions/dynamic-import/usage-from-eval.js
   - [x] test/language/expressions/equals/S11.9.1_A1.js
   - [x] test/language/expressions/equals/S11.9.1_A2.1_T1.js
