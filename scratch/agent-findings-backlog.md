@@ -51,3 +51,8 @@ Each item: tests flipped, root cause location, fix sketch, risk. Full reports in
 
 ## Session notes (2026-06-10, post-restore)
 - compound-assignment agent branch worktree-agent-ab89dcaa51b3c9b68 (commits f7309ba, 7277108) delivered 198/277 cluster flips BUT was based on stale pre-memoization commit 22e3918; cherry-pick onto main conflicts in 5 files (capture_state.rs, immediate_promises.rs, async_next.rs, static_resolution.rs, call_registration.rs region). Needs a rebase-and-regate round (incl. AYY_MEMO_VERIFY since its snapshot-store paths predate the generation counter). Remaining 79 cluster failures: getter-with-delete-this.x PutValue write-through family (~75, see its report: scoped_properties.rs + getter_calls.rs read/write-back ordering) + 4 bigint.
+
+## Round status (2026-06-11, ~91.4%)
+- [x] yield-star compile pathology #1 SHIPPED (emit_prepare capture re-entrancy guard + literal early-outs + name-only scans): specimens 150s-SO → <9s; 19 yield-star tests now compile (runtime-fail, awaiting async-gen runtime fixes). Pathology #2 residual: ~17 timeouts in private-method-STATIC/-async-next family — blunt serial-0 note_resolution_guard_block() sites (~20) poison memo windows; convert to serial-aware conflict notes (architectural follow-up).
+- for-of dstr: 8 verified flips marked; agent-measured extras didn't reproduce on merged main — re-attack alongside async-step round.
+- IN FLIGHT: async-step fidelity resume agent (worktree agent-a5ac87953fa632c7b, inherited +99/-6 diff).
