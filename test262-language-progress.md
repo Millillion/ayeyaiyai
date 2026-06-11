@@ -1,4 +1,4 @@
-21355/23668 (90.23%)
+21445/23668 (90.61%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,13 +14,13 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 8099/9337 (86.74%)
-- expressions: 10186/11061 (92.09%)
+- statements: 8113/9337 (86.89%)
+- expressions: 10258/11061 (92.74%)
 - types: 103/113 (91.15%)
-- function-code: 204/217 (94.01%)
+- function-code: 206/217 (94.93%)
 - global-code: 41/42 (97.62%)
-- arguments-object: 262/263 (99.62%)
-- rest-parameters: 9/11 (81.82%)
+- arguments-object: 263/263 (100.00%)
+- rest-parameters: 10/11 (90.91%)
 - block-scope: 145/145 (100.00%)
 - identifier-resolution: 13/14 (92.86%)
 - computed-property-names: 47/48 (97.92%)
@@ -7473,26 +7473,26 @@ Sub-category progress
   - [ ] test/language/statements/for-await-of/async-gen-decl-dstr-array-elem-target-yield-expr.js
   - [ ] test/language/statements/for-await-of/async-gen-decl-dstr-array-elem-trlg-iter-elision-iter-nrml-close-err.js
   - [ ] test/language/statements/for-await-of/async-gen-decl-dstr-array-elem-trlg-iter-elision-iter-nrml-close-null.js
-  - [ ] test/language/statements/for-await-of/async-gen-decl-dstr-array-elem-trlg-iter-elision-iter-nrml-close-skip.js
-  - [ ] test/language/statements/for-await-of/async-gen-decl-dstr-array-elem-trlg-iter-elision-iter-nrml-close.js
+  - [x] test/language/statements/for-await-of/async-gen-decl-dstr-array-elem-trlg-iter-elision-iter-nrml-close-skip.js
+  - [x] test/language/statements/for-await-of/async-gen-decl-dstr-array-elem-trlg-iter-elision-iter-nrml-close.js
   - [ ] test/language/statements/for-await-of/async-gen-decl-dstr-array-elem-trlg-iter-list-nrml-close-err.js
-  - [ ] test/language/statements/for-await-of/async-gen-decl-dstr-array-elem-trlg-iter-list-nrml-close-skip.js
-  - [ ] test/language/statements/for-await-of/async-gen-decl-dstr-array-elem-trlg-iter-list-nrml-close.js
+  - [x] test/language/statements/for-await-of/async-gen-decl-dstr-array-elem-trlg-iter-list-nrml-close-skip.js
+  - [x] test/language/statements/for-await-of/async-gen-decl-dstr-array-elem-trlg-iter-list-nrml-close.js
   - [ ] test/language/statements/for-await-of/async-gen-decl-dstr-array-elem-trlg-iter-list-thrw-close-skip.js
-  - [ ] test/language/statements/for-await-of/async-gen-decl-dstr-array-elem-trlg-iter-rest-nrml-close-skip.js
-  - [ ] test/language/statements/for-await-of/async-gen-decl-dstr-array-elision-iter-nrml-close-skip.js
-  - [ ] test/language/statements/for-await-of/async-gen-decl-dstr-array-elision-iter-nrml-close.js
+  - [x] test/language/statements/for-await-of/async-gen-decl-dstr-array-elem-trlg-iter-rest-nrml-close-skip.js
+  - [x] test/language/statements/for-await-of/async-gen-decl-dstr-array-elision-iter-nrml-close-skip.js
+  - [x] test/language/statements/for-await-of/async-gen-decl-dstr-array-elision-iter-nrml-close.js
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-array-elision-val-array.js
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-array-elision-val-string.js
-  - [ ] test/language/statements/for-await-of/async-gen-decl-dstr-array-empty-iter-close.js
+  - [x] test/language/statements/for-await-of/async-gen-decl-dstr-array-empty-iter-close.js
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-array-empty-val-array.js
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-array-empty-val-string.js
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-array-rest-after-element.js
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-array-rest-after-elision.js
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-array-rest-elision.js
-  - [ ] test/language/statements/for-await-of/async-gen-decl-dstr-array-rest-iter-nrml-close-skip.js
+  - [x] test/language/statements/for-await-of/async-gen-decl-dstr-array-rest-iter-nrml-close-skip.js
   - [ ] test/language/statements/for-await-of/async-gen-decl-dstr-array-rest-iteration.js
-  - [ ] test/language/statements/for-await-of/async-gen-decl-dstr-array-rest-lref.js
+  - [x] test/language/statements/for-await-of/async-gen-decl-dstr-array-rest-lref.js
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-array-rest-nested-array-null.js
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-array-rest-nested-array-undefined-hole.js
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-array-rest-nested-array-undefined-own.js
@@ -7562,18 +7562,18 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-obj-prop-put-prop-ref-no-get.js
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-obj-prop-put-prop-ref.js
   - [ ] test/language/statements/for-await-of/async-gen-decl-dstr-obj-prop-put-unresolvable-no-strict.js
-  - [ ] test/language/statements/for-await-of/async-gen-decl-dstr-obj-rest-descriptors.js
+  - [x] test/language/statements/for-await-of/async-gen-decl-dstr-obj-rest-descriptors.js
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-obj-rest-empty-obj.js
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-obj-rest-getter.js
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-obj-rest-number.js
-  - [ ] test/language/statements/for-await-of/async-gen-decl-dstr-obj-rest-same-name.js
+  - [x] test/language/statements/for-await-of/async-gen-decl-dstr-obj-rest-same-name.js
   - [ ] test/language/statements/for-await-of/async-gen-decl-dstr-obj-rest-skip-non-enumerable.js
-  - [ ] test/language/statements/for-await-of/async-gen-decl-dstr-obj-rest-str-val.js
+  - [x] test/language/statements/for-await-of/async-gen-decl-dstr-obj-rest-str-val.js
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-obj-rest-symbol-val.js
   - [ ] test/language/statements/for-await-of/async-gen-decl-dstr-obj-rest-to-property-with-setter.js
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-obj-rest-to-property.js
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-obj-rest-valid-object.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-ary-init-iter-close.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-ary-init-iter-close.js
   - [ ] test/language/statements/for-await-of/async-gen-dstr-const-ary-init-iter-get-err.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-ary-init-iter-no-close.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-ary-name-iter-val.js
@@ -11172,9 +11172,9 @@ Sub-category progress
   - [x] test/language/expressions/assignment/S11.13.1_A3.2.js
   - [x] test/language/expressions/assignment/S11.13.1_A4_T1.js
   - [x] test/language/expressions/assignment/S11.13.1_A4_T2.js
-  - [ ] test/language/expressions/assignment/S11.13.1_A5_T1.js
-  - [ ] test/language/expressions/assignment/S11.13.1_A5_T2.js
-  - [ ] test/language/expressions/assignment/S11.13.1_A5_T3.js
+  - [x] test/language/expressions/assignment/S11.13.1_A5_T1.js
+  - [x] test/language/expressions/assignment/S11.13.1_A5_T2.js
+  - [x] test/language/expressions/assignment/S11.13.1_A5_T3.js
   - [x] test/language/expressions/assignment/S11.13.1_A6_T1.js
   - [x] test/language/expressions/assignment/S11.13.1_A6_T2.js
   - [x] test/language/expressions/assignment/S11.13.1_A6_T3.js
@@ -11269,7 +11269,7 @@ Sub-category progress
   - [x] test/language/expressions/assignment/dstr/array-elem-trlg-iter-list-thrw-close-err.js
   - [x] test/language/expressions/assignment/dstr/array-elem-trlg-iter-list-thrw-close-skip.js
   - [x] test/language/expressions/assignment/dstr/array-elem-trlg-iter-list-thrw-close.js
-  - [ ] test/language/expressions/assignment/dstr/array-elem-trlg-iter-rest-nrml-close-skip.js
+  - [x] test/language/expressions/assignment/dstr/array-elem-trlg-iter-rest-nrml-close-skip.js
   - [x] test/language/expressions/assignment/dstr/array-elem-trlg-iter-rest-rtrn-close-err.js
   - [x] test/language/expressions/assignment/dstr/array-elem-trlg-iter-rest-rtrn-close-null.js
   - [x] test/language/expressions/assignment/dstr/array-elem-trlg-iter-rest-rtrn-close.js
@@ -11290,7 +11290,7 @@ Sub-category progress
   - [x] test/language/expressions/assignment/dstr/array-elision-val-symbol.js
   - [x] test/language/expressions/assignment/dstr/array-elision-val-undef.js
   - [x] test/language/expressions/assignment/dstr/array-empty-iter-close-err.js
-  - [ ] test/language/expressions/assignment/dstr/array-empty-iter-close-null.js
+  - [x] test/language/expressions/assignment/dstr/array-empty-iter-close-null.js
   - [x] test/language/expressions/assignment/dstr/array-empty-iter-close.js
   - [x] test/language/expressions/assignment/dstr/array-empty-iter-get-err.js
   - [x] test/language/expressions/assignment/dstr/array-empty-val-array.js
@@ -11351,15 +11351,15 @@ Sub-category progress
   - [x] test/language/expressions/assignment/dstr/array-rest-yield-expr.js
   - [x] test/language/expressions/assignment/dstr/array-rest-yield-ident-invalid.js
   - [x] test/language/expressions/assignment/dstr/array-rest-yield-ident-valid.js
-  - [ ] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-break-escaped.js
-  - [ ] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-case-escaped.js
-  - [ ] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-catch-escaped.js
-  - [ ] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-class-escaped.js
+  - [x] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-break-escaped.js
+  - [x] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-case-escaped.js
+  - [x] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-catch-escaped.js
+  - [x] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-class-escaped.js
   - [x] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-const-escaped.js
   - [x] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-continue-escaped.js
   - [x] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-debugger-escaped.js
-  - [ ] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-default-escaped-ext.js
-  - [ ] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-default-escaped.js
+  - [x] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-default-escaped-ext.js
+  - [x] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-default-escaped.js
   - [x] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-default.js
   - [x] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-delete-escaped.js
   - [x] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-do-escaped.js
@@ -11372,30 +11372,30 @@ Sub-category progress
   - [x] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-finally-escaped.js
   - [x] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-for-escaped.js
   - [x] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-function-escaped.js
-  - [ ] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-if-escaped.js
+  - [x] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-if-escaped.js
   - [x] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-implements-escaped.js
   - [x] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-import-escaped.js
   - [x] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-in-escaped.js
   - [x] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-instanceof-escaped.js
-  - [ ] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-interface-escaped.js
-  - [ ] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-let-escaped.js
-  - [ ] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-new-escaped.js
-  - [ ] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-package-escaped.js
-  - [ ] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-private-escaped.js
-  - [ ] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-protected-escaped.js
-  - [ ] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-public-escaped.js
-  - [ ] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-return-escaped.js
-  - [ ] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-static-escaped.js
-  - [ ] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-super-escaped.js
-  - [ ] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-switch-escaped.js
-  - [ ] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-this-escaped.js
-  - [ ] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-throw-escaped.js
-  - [ ] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-try-escaped.js
-  - [ ] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-typeof-escaped.js
-  - [ ] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-var-escaped.js
-  - [ ] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-void-escaped.js
-  - [ ] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-while-escaped.js
-  - [ ] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-with-escaped.js
+  - [x] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-interface-escaped.js
+  - [x] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-let-escaped.js
+  - [x] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-new-escaped.js
+  - [x] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-package-escaped.js
+  - [x] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-private-escaped.js
+  - [x] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-protected-escaped.js
+  - [x] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-public-escaped.js
+  - [x] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-return-escaped.js
+  - [x] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-static-escaped.js
+  - [x] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-super-escaped.js
+  - [x] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-switch-escaped.js
+  - [x] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-this-escaped.js
+  - [x] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-throw-escaped.js
+  - [x] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-try-escaped.js
+  - [x] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-typeof-escaped.js
+  - [x] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-var-escaped.js
+  - [x] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-void-escaped.js
+  - [x] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-while-escaped.js
+  - [x] test/language/expressions/assignment/dstr/ident-name-prop-name-literal-with-escaped.js
   - [x] test/language/expressions/assignment/dstr/obj-empty-bool.js
   - [x] test/language/expressions/assignment/dstr/obj-empty-null.js
   - [x] test/language/expressions/assignment/dstr/obj-empty-num.js
@@ -11494,7 +11494,7 @@ Sub-category progress
   - [x] test/language/expressions/assignment/dstr/obj-rest-descriptors.js
   - [x] test/language/expressions/assignment/dstr/obj-rest-empty-obj.js
   - [x] test/language/expressions/assignment/dstr/obj-rest-getter-abrupt-get-error.js
-  - [ ] test/language/expressions/assignment/dstr/obj-rest-getter.js
+  - [x] test/language/expressions/assignment/dstr/obj-rest-getter.js
   - [x] test/language/expressions/assignment/dstr/obj-rest-non-string-computed-property-1.js
   - [x] test/language/expressions/assignment/dstr/obj-rest-non-string-computed-property-1dot.js
   - [x] test/language/expressions/assignment/dstr/obj-rest-non-string-computed-property-1dot0.js
@@ -11565,8 +11565,8 @@ Sub-category progress
   - [x] test/language/expressions/assignment/fn-name-cover.js
   - [x] test/language/expressions/assignment/fn-name-fn.js
   - [x] test/language/expressions/assignment/fn-name-gen.js
-  - [ ] test/language/expressions/assignment/fn-name-lhs-cover.js
-  - [ ] test/language/expressions/assignment/fn-name-lhs-member.js
+  - [x] test/language/expressions/assignment/fn-name-lhs-cover.js
+  - [x] test/language/expressions/assignment/fn-name-lhs-member.js
   - [ ] test/language/expressions/assignment/id-arguments-strict.js
   - [ ] test/language/expressions/assignment/id-eval-strict.js
   - [x] test/language/expressions/assignment/line-terminator.js
@@ -17504,7 +17504,7 @@ Sub-category progress
   - [x] test/language/expressions/concatenation/S9.8_A4_T2.js
   - [x] test/language/expressions/concatenation/S9.8_A5_T2.js
   - [x] test/language/expressions/conditional/S11.12_A1.js
-  - [ ] test/language/expressions/conditional/S11.12_A2.1_T1.js
+  - [x] test/language/expressions/conditional/S11.12_A2.1_T1.js
   - [x] test/language/expressions/conditional/S11.12_A2.1_T2.js
   - [x] test/language/expressions/conditional/S11.12_A2.1_T3.js
   - [x] test/language/expressions/conditional/S11.12_A2.1_T4.js
@@ -17514,9 +17514,9 @@ Sub-category progress
   - [x] test/language/expressions/conditional/S11.12_A3_T2.js
   - [x] test/language/expressions/conditional/S11.12_A3_T3.js
   - [x] test/language/expressions/conditional/S11.12_A3_T4.js
-  - [ ] test/language/expressions/conditional/S11.12_A4_T1.js
-  - [ ] test/language/expressions/conditional/S11.12_A4_T2.js
-  - [ ] test/language/expressions/conditional/S11.12_A4_T3.js
+  - [x] test/language/expressions/conditional/S11.12_A4_T1.js
+  - [x] test/language/expressions/conditional/S11.12_A4_T2.js
+  - [x] test/language/expressions/conditional/S11.12_A4_T3.js
   - [x] test/language/expressions/conditional/S11.12_A4_T4.js
   - [x] test/language/expressions/conditional/ayy-temp-coalesce-case10.js
   - [x] test/language/expressions/conditional/ayy-temp-coalesce-case11.js
@@ -17544,9 +17544,9 @@ Sub-category progress
   - [x] test/language/expressions/delete/11.4.1-3-3.js
   - [x] test/language/expressions/delete/11.4.1-4-a-1-s.js
   - [x] test/language/expressions/delete/11.4.1-4-a-2-s.js
-  - [ ] test/language/expressions/delete/11.4.1-4-a-3-s.js
-  - [ ] test/language/expressions/delete/11.4.1-4-a-4-s.js
-  - [ ] test/language/expressions/delete/11.4.1-4.a-1.js
+  - [x] test/language/expressions/delete/11.4.1-4-a-3-s.js
+  - [x] test/language/expressions/delete/11.4.1-4-a-4-s.js
+  - [x] test/language/expressions/delete/11.4.1-4.a-1.js
   - [x] test/language/expressions/delete/11.4.1-4.a-10.js
   - [x] test/language/expressions/delete/11.4.1-4.a-11.js
   - [x] test/language/expressions/delete/11.4.1-4.a-12.js
@@ -17555,7 +17555,7 @@ Sub-category progress
   - [x] test/language/expressions/delete/11.4.1-4.a-15.js
   - [x] test/language/expressions/delete/11.4.1-4.a-16.js
   - [x] test/language/expressions/delete/11.4.1-4.a-17.js
-  - [ ] test/language/expressions/delete/11.4.1-4.a-2.js
+  - [x] test/language/expressions/delete/11.4.1-4.a-2.js
   - [x] test/language/expressions/delete/11.4.1-4.a-3-s.js
   - [x] test/language/expressions/delete/11.4.1-4.a-3.js
   - [x] test/language/expressions/delete/11.4.1-4.a-4.js
@@ -18737,10 +18737,10 @@ Sub-category progress
   - [x] test/language/expressions/function/dflt-params-ref-self.js
   - [x] test/language/expressions/function/dflt-params-rest.js
   - [x] test/language/expressions/function/dflt-params-trailing-comma.js
-  - [ ] test/language/expressions/function/dstr/ary-init-iter-close.js
+  - [x] test/language/expressions/function/dstr/ary-init-iter-close.js
   - [x] test/language/expressions/function/dstr/ary-init-iter-get-err-array-prototype.js
   - [x] test/language/expressions/function/dstr/ary-init-iter-get-err.js
-  - [ ] test/language/expressions/function/dstr/ary-init-iter-no-close.js
+  - [x] test/language/expressions/function/dstr/ary-init-iter-no-close.js
   - [x] test/language/expressions/function/dstr/ary-name-iter-val.js
   - [x] test/language/expressions/function/dstr/ary-ptrn-elem-ary-elem-init.js
   - [x] test/language/expressions/function/dstr/ary-ptrn-elem-ary-elem-iter.js
@@ -18797,7 +18797,7 @@ Sub-category progress
   - [x] test/language/expressions/function/dstr/ary-ptrn-rest-not-final-obj.js
   - [x] test/language/expressions/function/dstr/ary-ptrn-rest-obj-id.js
   - [x] test/language/expressions/function/dstr/ary-ptrn-rest-obj-prop-id.js
-  - [ ] test/language/expressions/function/dstr/dflt-ary-init-iter-close.js
+  - [x] test/language/expressions/function/dstr/dflt-ary-init-iter-close.js
   - [ ] test/language/expressions/function/dstr/dflt-ary-init-iter-get-err-array-prototype.js
   - [x] test/language/expressions/function/dstr/dflt-ary-init-iter-get-err.js
   - [x] test/language/expressions/function/dstr/dflt-ary-init-iter-no-close.js
@@ -18847,7 +18847,7 @@ Sub-category progress
   - [ ] test/language/expressions/function/dstr/dflt-ary-ptrn-rest-id-elision.js
   - [x] test/language/expressions/function/dstr/dflt-ary-ptrn-rest-id-exhausted.js
   - [x] test/language/expressions/function/dstr/dflt-ary-ptrn-rest-id-iter-step-err.js
-  - [ ] test/language/expressions/function/dstr/dflt-ary-ptrn-rest-id-iter-val-err.js
+  - [x] test/language/expressions/function/dstr/dflt-ary-ptrn-rest-id-iter-val-err.js
   - [x] test/language/expressions/function/dstr/dflt-ary-ptrn-rest-id.js
   - [x] test/language/expressions/function/dstr/dflt-ary-ptrn-rest-init-ary.js
   - [x] test/language/expressions/function/dstr/dflt-ary-ptrn-rest-init-id.js
@@ -18920,7 +18920,7 @@ Sub-category progress
   - [x] test/language/expressions/function/dstr/obj-ptrn-prop-obj-value-null.js
   - [x] test/language/expressions/function/dstr/obj-ptrn-prop-obj-value-undef.js
   - [x] test/language/expressions/function/dstr/obj-ptrn-prop-obj.js
-  - [ ] test/language/expressions/function/dstr/obj-ptrn-rest-getter.js
+  - [x] test/language/expressions/function/dstr/obj-ptrn-rest-getter.js
   - [x] test/language/expressions/function/dstr/obj-ptrn-rest-skip-non-enumerable.js
   - [x] test/language/expressions/function/dstr/obj-ptrn-rest-val-obj.js
   - [x] test/language/expressions/function/early-body-super-call.js
@@ -19741,7 +19741,7 @@ Sub-category progress
   - [x] test/language/expressions/logical-not/bigint.js
   - [x] test/language/expressions/logical-not/symbol-logical-not-evaluation.js
   - [x] test/language/expressions/logical-or/S11.11.2_A1.js
-  - [ ] test/language/expressions/logical-or/S11.11.2_A2.1_T1.js
+  - [x] test/language/expressions/logical-or/S11.11.2_A2.1_T1.js
   - [x] test/language/expressions/logical-or/S11.11.2_A2.1_T2.js
   - [x] test/language/expressions/logical-or/S11.11.2_A2.1_T3.js
   - [x] test/language/expressions/logical-or/S11.11.2_A2.1_T4.js
@@ -19754,7 +19754,7 @@ Sub-category progress
   - [x] test/language/expressions/logical-or/S11.11.2_A3_T4.js
   - [x] test/language/expressions/logical-or/S11.11.2_A4_T1.js
   - [x] test/language/expressions/logical-or/S11.11.2_A4_T2.js
-  - [ ] test/language/expressions/logical-or/S11.11.2_A4_T3.js
+  - [x] test/language/expressions/logical-or/S11.11.2_A4_T3.js
   - [x] test/language/expressions/logical-or/S11.11.2_A4_T4.js
   - [x] test/language/expressions/logical-or/symbol-logical-or-evaluation.js
   - [x] test/language/expressions/logical-or/tco-right.js
@@ -21443,31 +21443,31 @@ Sub-category progress
   - [x] test/language/expressions/super/call-spread-err-sngl-err-itr-value.js
   - [x] test/language/expressions/super/call-spread-err-sngl-err-obj-unresolvable.js
   - [x] test/language/expressions/super/call-spread-err-sngl-err-unresolvable.js
-  - [ ] test/language/expressions/super/call-spread-mult-empty.js
-  - [ ] test/language/expressions/super/call-spread-mult-expr.js
-  - [ ] test/language/expressions/super/call-spread-mult-iter.js
-  - [ ] test/language/expressions/super/call-spread-mult-literal.js
-  - [ ] test/language/expressions/super/call-spread-mult-obj-ident.js
-  - [ ] test/language/expressions/super/call-spread-mult-obj-null.js
-  - [ ] test/language/expressions/super/call-spread-mult-obj-undefined.js
-  - [ ] test/language/expressions/super/call-spread-obj-getter-descriptor.js
-  - [ ] test/language/expressions/super/call-spread-obj-getter-init.js
+  - [x] test/language/expressions/super/call-spread-mult-empty.js
+  - [x] test/language/expressions/super/call-spread-mult-expr.js
+  - [x] test/language/expressions/super/call-spread-mult-iter.js
+  - [x] test/language/expressions/super/call-spread-mult-literal.js
+  - [x] test/language/expressions/super/call-spread-mult-obj-ident.js
+  - [x] test/language/expressions/super/call-spread-mult-obj-null.js
+  - [x] test/language/expressions/super/call-spread-mult-obj-undefined.js
+  - [x] test/language/expressions/super/call-spread-obj-getter-descriptor.js
+  - [x] test/language/expressions/super/call-spread-obj-getter-init.js
   - [ ] test/language/expressions/super/call-spread-obj-manipulate-outter-obj-in-getter.js
-  - [ ] test/language/expressions/super/call-spread-obj-mult-spread-getter.js
-  - [ ] test/language/expressions/super/call-spread-obj-mult-spread.js
-  - [ ] test/language/expressions/super/call-spread-obj-null.js
-  - [ ] test/language/expressions/super/call-spread-obj-override-immutable.js
-  - [ ] test/language/expressions/super/call-spread-obj-overrides-prev-properties.js
-  - [ ] test/language/expressions/super/call-spread-obj-skip-non-enumerable.js
+  - [x] test/language/expressions/super/call-spread-obj-mult-spread-getter.js
+  - [x] test/language/expressions/super/call-spread-obj-mult-spread.js
+  - [x] test/language/expressions/super/call-spread-obj-null.js
+  - [x] test/language/expressions/super/call-spread-obj-override-immutable.js
+  - [x] test/language/expressions/super/call-spread-obj-overrides-prev-properties.js
+  - [x] test/language/expressions/super/call-spread-obj-skip-non-enumerable.js
   - [ ] test/language/expressions/super/call-spread-obj-spread-order.js
-  - [ ] test/language/expressions/super/call-spread-obj-symbol-property.js
-  - [ ] test/language/expressions/super/call-spread-obj-undefined.js
-  - [ ] test/language/expressions/super/call-spread-obj-with-overrides.js
-  - [ ] test/language/expressions/super/call-spread-sngl-empty.js
-  - [ ] test/language/expressions/super/call-spread-sngl-expr.js
-  - [ ] test/language/expressions/super/call-spread-sngl-iter.js
-  - [ ] test/language/expressions/super/call-spread-sngl-literal.js
-  - [ ] test/language/expressions/super/call-spread-sngl-obj-ident.js
+  - [x] test/language/expressions/super/call-spread-obj-symbol-property.js
+  - [x] test/language/expressions/super/call-spread-obj-undefined.js
+  - [x] test/language/expressions/super/call-spread-obj-with-overrides.js
+  - [x] test/language/expressions/super/call-spread-sngl-empty.js
+  - [x] test/language/expressions/super/call-spread-sngl-expr.js
+  - [x] test/language/expressions/super/call-spread-sngl-iter.js
+  - [x] test/language/expressions/super/call-spread-sngl-literal.js
+  - [x] test/language/expressions/super/call-spread-sngl-obj-ident.js
   - [x] test/language/expressions/super/prop-dot-cls-null-proto.js
   - [x] test/language/expressions/super/prop-dot-cls-ref-strict.js
   - [x] test/language/expressions/super/prop-dot-cls-ref-this.js
@@ -21908,10 +21908,10 @@ Sub-category progress
   - [x] test/language/function-code/10.4.3-1-15gs.js
   - [x] test/language/function-code/10.4.3-1-16-s.js
   - [x] test/language/function-code/10.4.3-1-16gs.js
-  - [ ] test/language/function-code/10.4.3-1-17-s.js
+  - [x] test/language/function-code/10.4.3-1-17-s.js
   - [x] test/language/function-code/10.4.3-1-17gs.js
   - [x] test/language/function-code/10.4.3-1-18gs.js
-  - [ ] test/language/function-code/10.4.3-1-19-s.js
+  - [x] test/language/function-code/10.4.3-1-19-s.js
   - [x] test/language/function-code/10.4.3-1-19gs.js
   - [x] test/language/function-code/10.4.3-1-2-s.js
   - [x] test/language/function-code/10.4.3-1-20-s.js
@@ -22143,7 +22143,7 @@ Sub-category progress
   - [x] test/language/global-code/unscopables-ignored.js
   - [x] test/language/global-code/yield-non-strict.js
   - [x] test/language/global-code/yield-strict.js
-- [ ] arguments-object
+- [x] arguments-object
   - [x] test/language/arguments-object/10.5-1-s.js
   - [x] test/language/arguments-object/10.5-1gs.js
   - [x] test/language/arguments-object/10.5-7-b-1-s.js
@@ -22161,7 +22161,7 @@ Sub-category progress
   - [x] test/language/arguments-object/10.6-13-a-3.js
   - [x] test/language/arguments-object/10.6-13-c-1-s.js
   - [x] test/language/arguments-object/10.6-13-c-2-s.js
-  - [ ] test/language/arguments-object/10.6-13-c-3-s.js
+  - [x] test/language/arguments-object/10.6-13-c-3-s.js
   - [x] test/language/arguments-object/10.6-14-c-1-s.js
   - [x] test/language/arguments-object/10.6-14-c-4-s.js
   - [x] test/language/arguments-object/10.6-2gs.js
@@ -22418,7 +22418,7 @@ Sub-category progress
   - [x] test/language/rest-parameters/rest-parameters-apply.js
   - [x] test/language/rest-parameters/rest-parameters-call.js
   - [x] test/language/rest-parameters/rest-parameters-produce-an-array.js
-  - [ ] test/language/rest-parameters/with-new-target.js
+  - [x] test/language/rest-parameters/with-new-target.js
 - [x] block-scope
   - [x] test/language/block-scope/leave/finally-block-let-declaration-only-shadows-outer-parameter-value-1.js
   - [x] test/language/block-scope/leave/finally-block-let-declaration-only-shadows-outer-parameter-value-2.js
