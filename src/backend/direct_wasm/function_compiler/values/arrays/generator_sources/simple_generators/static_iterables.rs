@@ -250,14 +250,14 @@ impl<'a> FunctionCompiler<'a> {
         Some(user_function)
     }
 
-    fn execute_static_iterator_object_next_function(
+    fn execute_static_iterator_object_next_function_outcome(
         &self,
         function_name: &str,
         bindings: &HashMap<String, Expression>,
         this_binding: &Expression,
         arguments: &[Expression],
         dynamic_capture_names: &[String],
-    ) -> Option<(Expression, HashMap<String, Expression>)> {
+    ) -> Option<(StaticEvalOutcome, HashMap<String, Expression>)> {
         let user_function = self.user_function(function_name)?;
         let mut call_bindings = bindings.clone();
         for capture_name in dynamic_capture_names {
@@ -273,7 +273,7 @@ impl<'a> FunctionCompiler<'a> {
             );
         }
         let snapshot_result = if dynamic_capture_names.is_empty() {
-            self.resolve_bound_snapshot_user_function_result_with_arguments_and_this(
+            self.resolve_bound_snapshot_user_function_outcome_with_arguments_and_this(
                 function_name,
                 &call_bindings,
                 arguments,
@@ -284,7 +284,148 @@ impl<'a> FunctionCompiler<'a> {
         };
         snapshot_result.or_else(|| {
             self.execute_simple_static_user_function_with_bindings(function_name, &call_bindings)
+                .map(|(value, updated_bindings)| {
+                    (StaticEvalOutcome::Value(value), updated_bindings)
+                })
         })
+    }
+
+    /// Evaluates step expressions exactly where possible and falls back to a
+    /// symbolic residual for pure arithmetic over nonlocals whose values are
+    /// unknown at the consumption site (`nextCount + 1` stays `nextCount + 1`
+    /// and is replayed against the live binding when the step is consumed).
+    fn evaluate_symbolic_step_expression(
+        &self,
+        expression: &Expression,
+        bindings: &HashMap<String, Expression>,
+    ) -> Option<Expression> {
+        if let Some(value) = self.evaluate_simple_static_expression_with_bindings(expression, bindings)
+        {
+            return Some(value);
+        }
+        match expression {
+            Expression::Binary { op, left, right }
+                if matches!(
+                    op,
+                    BinaryOp::Add
+                        | BinaryOp::Subtract
+                        | BinaryOp::Multiply
+                        | BinaryOp::Divide
+                        | BinaryOp::Modulo
+                ) =>
+            {
+                let left = self.evaluate_symbolic_step_expression(left, bindings)?;
+                let right = self.evaluate_symbolic_step_expression(right, bindings)?;
+                Some(Expression::Binary {
+                    op: *op,
+                    left: Box::new(left),
+                    right: Box::new(right),
+                })
+            }
+            _ => None,
+        }
+    }
+
+    /// A throw expression replayed at the consumption site must only mention
+    /// bindings that resolve there (globals, user functions, builtins) — any
+    /// residual reference to the next-function's own locals would rebind.
+    fn static_iterator_throw_expression_is_portable(&self, expression: &Expression) -> bool {
+        match expression {
+            Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined => true,
+            Expression::Identifier(name) => {
+                self.resolve_current_local_binding(name).is_none()
+                    && (self.backend.global_has_binding(name)
+                        || self.backend.global_has_lexical_binding(name)
+                        || self.backend.global_has_implicit_binding(name)
+                        || self.backend.global_function_binding(name).is_some()
+                        || self.contains_user_function(name)
+                        || self.resolve_user_function_by_binding_name(name).is_some()
+                        || self.is_unshadowed_builtin_identifier(name))
+            }
+            Expression::New { callee, arguments } | Expression::Call { callee, arguments } => {
+                self.static_iterator_throw_expression_is_portable(callee)
+                    && arguments.iter().all(|argument| match argument {
+                        CallArgument::Expression(expression) => {
+                            self.static_iterator_throw_expression_is_portable(expression)
+                        }
+                        CallArgument::Spread(_) => false,
+                    })
+            }
+            Expression::Binary { left, right, .. } => {
+                self.static_iterator_throw_expression_is_portable(left)
+                    && self.static_iterator_throw_expression_is_portable(right)
+            }
+            Expression::Unary { expression, .. } => {
+                self.static_iterator_throw_expression_is_portable(expression)
+            }
+            _ => false,
+        }
+    }
+
+    /// Steps a throwing `next()` whose pre-throw nonlocal assignments must be
+    /// preserved as step effects. Unknown nonlocal initial values are seeded
+    /// symbolically so `nextCount += 1; throw ...` yields the relative effect
+    /// `nextCount = nextCount + 1` followed by the throw.
+    fn execute_static_iterator_object_next_function_throw(
+        &self,
+        function_name: &str,
+        bindings: &HashMap<String, Expression>,
+        arguments: &[Expression],
+        dynamic_capture_names: &[String],
+        symbolic_effect_names: &HashSet<String>,
+    ) -> Option<(Expression, HashMap<String, Expression>)> {
+        let function = self.resolve_registered_function_declaration(function_name)?;
+        let user_function = self.user_function(function_name)?;
+        let mut local_bindings = bindings.clone();
+        for capture_name in dynamic_capture_names {
+            local_bindings.remove(capture_name);
+        }
+        for name in symbolic_effect_names {
+            local_bindings
+                .entry(name.clone())
+                .or_insert_with(|| Expression::Identifier(name.clone()));
+        }
+        for (index, parameter_name) in user_function.params.iter().enumerate() {
+            local_bindings.insert(
+                parameter_name.clone(),
+                arguments
+                    .get(index)
+                    .cloned()
+                    .unwrap_or(Expression::Undefined),
+            );
+        }
+        for statement in &function.body {
+            match statement {
+                Statement::Var { name, value } | Statement::Let { name, value, .. } => {
+                    let value = self.evaluate_symbolic_step_expression(value, &local_bindings)?;
+                    local_bindings.insert(name.clone(), value);
+                }
+                Statement::Assign { name, value } => {
+                    let value = self.evaluate_symbolic_step_expression(value, &local_bindings)?;
+                    local_bindings.insert(name.clone(), value);
+                }
+                Statement::Throw(value) => {
+                    let throw_value = self
+                        .evaluate_symbolic_step_expression(value, &local_bindings)
+                        .unwrap_or_else(|| value.clone());
+                    if !self.static_iterator_throw_expression_is_portable(&throw_value) {
+                        return None;
+                    }
+                    return Some((throw_value, local_bindings));
+                }
+                Statement::Expression(expression) => {
+                    self.evaluate_symbolic_step_expression(expression, &local_bindings)?;
+                }
+                Statement::Block { body } if body.is_empty() => {}
+                _ => return None,
+            }
+        }
+        None
     }
 
     fn merge_static_iterator_object_bindings(
@@ -908,19 +1049,87 @@ impl<'a> FunctionCompiler<'a> {
                     }
                 }
             } else {
-                let Some((step_result, updated_bindings)) = self
-                    .execute_static_iterator_object_next_function(
-                        &next_function_name,
-                        &step_bindings,
-                        expression,
-                        std::slice::from_ref(&next_argument),
-                        &dynamic_capture_names,
-                    )
-                else {
-                    trace!("reject next_execution step={step_index} bindings={step_bindings:?}");
-                    return None;
+                let executed = self.execute_static_iterator_object_next_function_outcome(
+                    &next_function_name,
+                    &step_bindings,
+                    expression,
+                    std::slice::from_ref(&next_argument),
+                    &dynamic_capture_names,
+                );
+                let value_result = match executed {
+                    Some((StaticEvalOutcome::Value(value), updated_bindings)) => {
+                        Some((value, updated_bindings))
+                    }
+                    Some((StaticEvalOutcome::Throw(throw_value), updated_bindings)) => {
+                        // A throwing next() must surface as a Throw step that
+                        // still carries its pre-throw nonlocal assignments.
+                        if let Some(throw_expression) =
+                            self.static_throw_value_expression(&throw_value)
+                            && self.static_iterator_throw_expression_is_portable(&throw_expression)
+                        {
+                            let step_effects = self.static_iterator_object_step_effects(
+                                &step_bindings,
+                                &updated_bindings,
+                                &external_effect_names,
+                            );
+                            steps.push(SimpleGeneratorStep {
+                                effects: step_effects,
+                                close_effects: Vec::new(),
+                                outcome: SimpleGeneratorStepOutcome::Throw(throw_expression),
+                            });
+                            trace!("next_throw_with_effects step={step_index}");
+                            return Some((steps, Vec::new(), Expression::Undefined));
+                        }
+                        None
+                    }
+                    None => None,
                 };
-                (step_result, updated_bindings)
+                match value_result {
+                    Some(result) => result,
+                    None => {
+                        // Bindings may be unknown at this site (invalidated by
+                        // the surrounding call boundary); replay the throwing
+                        // next() symbolically so `nextCount += 1; throw ...`
+                        // still registers its pre-throw effects.
+                        let symbolic_effect_names = external_effect_names
+                            .iter()
+                            .filter(|name| !step_bindings.contains_key(*name))
+                            .cloned()
+                            .collect::<HashSet<_>>();
+                        let Some((throw_expression, updated_bindings)) = self
+                            .execute_static_iterator_object_next_function_throw(
+                                &next_function_name,
+                                &step_bindings,
+                                std::slice::from_ref(&next_argument),
+                                &dynamic_capture_names,
+                                &symbolic_effect_names,
+                            )
+                        else {
+                            trace!(
+                                "reject next_execution step={step_index} bindings={step_bindings:?}"
+                            );
+                            return None;
+                        };
+                        let mut throw_step_bindings = step_bindings.clone();
+                        for name in &symbolic_effect_names {
+                            throw_step_bindings
+                                .entry(name.clone())
+                                .or_insert_with(|| Expression::Identifier(name.clone()));
+                        }
+                        let step_effects = self.static_iterator_object_step_effects(
+                            &throw_step_bindings,
+                            &updated_bindings,
+                            &external_effect_names,
+                        );
+                        steps.push(SimpleGeneratorStep {
+                            effects: step_effects,
+                            close_effects: Vec::new(),
+                            outcome: SimpleGeneratorStepOutcome::Throw(throw_expression),
+                        });
+                        trace!("next_throw_symbolic step={step_index}");
+                        return Some((steps, Vec::new(), Expression::Undefined));
+                    }
+                }
             };
             trace!("step={step_index} result={step_result:?} updated={updated_bindings:?}");
             let step_effects = self.static_iterator_object_step_effects(

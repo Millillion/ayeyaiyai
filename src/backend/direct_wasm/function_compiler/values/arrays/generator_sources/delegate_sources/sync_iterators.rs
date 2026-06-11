@@ -61,7 +61,17 @@ impl<'a> FunctionCompiler<'a> {
 
         let materialized = self.materialize_static_expression(expression);
         if !static_expression_matches(&materialized, expression) {
-            return self.resolve_simple_yield_delegate_source(&materialized, async_generator);
+            // Materializing an identifier chain to a bare object/array literal
+            // loses object identity: the literal's binding misses members that
+            // were assigned later (`iterable[Symbol.iterator] = ...`), so the
+            // recursion below would unsoundly conclude "no Symbol.iterator →
+            // TypeError". Keep resolving through the original expression in
+            // that case.
+            let materialized_loses_object_identity = matches!(materialized, Expression::Object(_))
+                && !matches!(expression, Expression::Object(_));
+            if !materialized_loses_object_identity {
+                return self.resolve_simple_yield_delegate_source(&materialized, async_generator);
+            }
         }
 
         let iterator_property = self.materialize_static_expression(&symbol_iterator_expression());
@@ -94,6 +104,18 @@ impl<'a> FunctionCompiler<'a> {
             let Some(method_value) =
                 object_binding_lookup_value(&object_binding, &iterator_property)
             else {
+                // A lookup miss is only authoritative for true object
+                // literals: an identifier's binding chain may bottom out in a
+                // stale literal recorded before the object gained
+                // Symbol.iterator (`iterable[Symbol.iterator] = ...`).
+                if !matches!(expression, Expression::Object(_)) {
+                    return None;
+                }
+                if crate::ayy_env_flag!("AYY_TRACE_SIMPLE_GENERATORS") {
+                    eprintln!(
+                        "sync_iterator_delegate:lookup_miss_type_error expression={expression:?}"
+                    );
+                }
                 return Some((
                     vec![SimpleGeneratorStep {
                         effects: Vec::new(),
@@ -202,6 +224,11 @@ impl<'a> FunctionCompiler<'a> {
         if let Some(primitive) = self
             .resolve_static_primitive_expression_with_context(method_value, current_function_name)
         {
+            if crate::ayy_env_flag!("AYY_TRACE_SIMPLE_GENERATORS") {
+                eprintln!(
+                    "sync_iterator_method_outcome:primitive_type_error method={method_value:?} primitive={primitive:?}"
+                );
+            }
             return match primitive {
                 Expression::Undefined | Expression::Null => Some(StaticEvalOutcome::Throw(
                     StaticThrowValue::NamedError("TypeError"),
@@ -216,6 +243,11 @@ impl<'a> FunctionCompiler<'a> {
             method_value,
             current_function_name,
         ) else {
+            if crate::ayy_env_flag!("AYY_TRACE_SIMPLE_GENERATORS") {
+                eprintln!(
+                    "sync_iterator_method_outcome:unresolved_binding_type_error method={method_value:?}"
+                );
+            }
             return Some(StaticEvalOutcome::Throw(StaticThrowValue::NamedError(
                 "TypeError",
             )));

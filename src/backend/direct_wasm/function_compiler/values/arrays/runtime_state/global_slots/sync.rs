@@ -86,11 +86,66 @@ impl<'a> FunctionCompiler<'a> {
         Ok(true)
     }
 
+    /// Stores of the direct `arguments` object into a global binding lose all
+    /// runtime property fidelity: the stored value has no shadow owner, so
+    /// later reads such as `args.length` resolve to undefined. Materialize the
+    /// arguments object's own properties (length and indexed slots) into the
+    /// target's global runtime array state at the store, mirroring how rest
+    /// arrays are forced into global slots.
+    pub(in crate::backend::direct_wasm) fn emit_sync_global_runtime_array_state_from_direct_arguments(
+        &mut self,
+        name: &str,
+        source: &Expression,
+    ) -> DirectResult<bool> {
+        if !self.is_direct_arguments_object(source) || !self.has_arguments_object() {
+            return Ok(false);
+        }
+        let target_is_declared_or_tracked_global = self.is_named_global_array_binding(name)
+            || self.backend.global_binding_index(name).is_some()
+            || self.backend.global_has_implicit_binding(name);
+        if !target_is_declared_or_tracked_global {
+            return Ok(false);
+        }
+        if crate::ayy_env_flag!("AYY_TRACE_IDENTIFIER_STORE") {
+            eprintln!("identifier_store:{name}:global_array_from_direct_arguments");
+        }
+
+        self.backend.mark_global_array_with_runtime_state(name);
+        self.backend
+            .shared_global_semantics
+            .values
+            .mark_array_with_runtime_state(name);
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
+
+        let length_binding = self.global_runtime_array_length_binding(name);
+        self.emit_direct_arguments_length()?;
+        self.push_global_set(length_binding.value_index);
+        self.push_i32_const(1);
+        self.push_global_set(length_binding.present_index);
+
+        for index in 0..TRACKED_ARRAY_SLOT_LIMIT {
+            let slot_binding = self.global_runtime_array_slot_binding(name, index);
+            self.emit_arguments_slot_read(index)?;
+            self.push_global_set(slot_binding.value_index);
+            if let Some(slot) = self.state.parameters.arguments_slots.get(&index) {
+                self.push_local_get(slot.present_local);
+            } else {
+                self.push_i32_const(0);
+            }
+            self.push_global_set(slot_binding.present_index);
+        }
+
+        Ok(true)
+    }
+
     pub(in crate::backend::direct_wasm) fn emit_sync_global_runtime_array_state_from_runtime_source(
         &mut self,
         name: &str,
         source: &Expression,
     ) -> DirectResult<bool> {
+        if self.emit_sync_global_runtime_array_state_from_direct_arguments(name, source)? {
+            return Ok(true);
+        }
         let Expression::Identifier(source_name) = source else {
             return Ok(false);
         };

@@ -143,6 +143,84 @@ impl<'a> FunctionCompiler<'a> {
         Ok(false)
     }
 
+    /// `args = arguments;` inside a function stores the live arguments object
+    /// into a global; the paired store path materializes length and indexed
+    /// slots into the target's global runtime array state channel. Serve
+    /// later reads of those own properties from that channel. The channel
+    /// globals are keyed by name, so this stays correct regardless of the
+    /// order the store and read sites are compiled in.
+    pub(super) fn emit_stored_arguments_global_member_read(
+        &mut self,
+        object: &Expression,
+        property: &Expression,
+    ) -> DirectResult<bool> {
+        let Expression::Identifier(name) = object else {
+            return Ok(false);
+        };
+        let is_length = matches!(property, Expression::String(text) if text == "length");
+        let index = argument_index_from_expression(property);
+        if !is_length && index.is_none() {
+            return Ok(false);
+        }
+        if !self.global_binding_may_hold_stored_arguments_object(name) {
+            return Ok(false);
+        }
+        if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS")
+            || crate::ayy_env_flag!("AYY_TRACE_MEMBER_READS")
+        {
+            eprintln!(
+                "runtime_shadow_member_branch stored_arguments object={object:?} property={property:?}"
+            );
+        }
+        let binding = if is_length {
+            self.global_runtime_array_length_binding(name)
+        } else {
+            self.global_runtime_array_slot_binding(name, index.unwrap_or(0))
+        };
+        self.push_global_get(binding.present_index);
+        self.state.emission.output.instructions.push(0x04);
+        self.state.emission.output.instructions.push(I32_TYPE);
+        self.push_control_frame();
+        self.push_global_get(binding.value_index);
+        self.state.emission.output.instructions.push(0x05);
+        self.push_i32_const(JS_UNDEFINED_TAG);
+        self.state.emission.output.instructions.push(0x0b);
+        self.pop_control_frame();
+        Ok(true)
+    }
+
+    fn global_binding_may_hold_stored_arguments_object(&self, name: &str) -> bool {
+        if self.resolve_current_local_binding(name).is_some() {
+            return false;
+        }
+        if self.backend.global_binding_index(name).is_none()
+            && !self.backend.global_has_lexical_binding(name)
+            && !self.backend.global_has_implicit_binding(name)
+        {
+            return false;
+        }
+        self.backend
+            .function_registry
+            .user_functions()
+            .iter()
+            .any(|user_function| {
+                if user_function.params.iter().any(|param| {
+                    param == "arguments"
+                        || scoped_binding_source_name(param)
+                            .is_some_and(|source| source == "arguments")
+                }) || user_function.body_declares_arguments_binding
+                {
+                    return false;
+                }
+                self.backend
+                    .function_registry
+                    .registered_function(&user_function.name)
+                    .is_some_and(|declaration| {
+                        statements_assign_arguments_to_binding(&declaration.body, name)
+                    })
+            })
+    }
+
     pub(super) fn emit_runtime_returned_or_function_member_read(
         &mut self,
         object: &Expression,
@@ -181,4 +259,52 @@ impl<'a> FunctionCompiler<'a> {
         }
         Ok(false)
     }
+}
+
+fn statements_assign_arguments_to_binding(statements: &[Statement], name: &str) -> bool {
+    struct ArgumentsStoreScan<'a> {
+        name: &'a str,
+        found: bool,
+    }
+
+    impl<'a> crate::ir::visit::Visitor for ArgumentsStoreScan<'a> {
+        fn visit_statement(&mut self, statement: &Statement) {
+            if self.found {
+                return;
+            }
+            if let Statement::Assign { name, value } = statement
+                && (name == self.name
+                    || scoped_binding_source_name(name).is_some_and(|source| source == self.name))
+                && matches!(value, Expression::Identifier(source) if source == "arguments")
+            {
+                self.found = true;
+                return;
+            }
+            crate::ir::visit::walk_statement(self, statement);
+        }
+
+        fn visit_expression(&mut self, expression: &Expression) {
+            if self.found {
+                return;
+            }
+            if let Expression::Assign { name, value } = expression
+                && (name == self.name
+                    || scoped_binding_source_name(name).is_some_and(|source| source == self.name))
+                && matches!(value.as_ref(), Expression::Identifier(source) if source == "arguments")
+            {
+                self.found = true;
+                return;
+            }
+            crate::ir::visit::walk_expression(self, expression);
+        }
+    }
+
+    let mut scan = ArgumentsStoreScan { name, found: false };
+    for statement in statements {
+        crate::ir::visit::Visitor::visit_statement(&mut scan, statement);
+        if scan.found {
+            return true;
+        }
+    }
+    false
 }

@@ -64,6 +64,21 @@ impl<'a> FunctionCompiler<'a> {
                 .iter()
                 .all(|step| matches!(step.outcome, SimpleGeneratorStepOutcome::Throw(_)))
         {
+            if crate::ayy_env_flag!("AYY_TRACE_SIMPLE_GENERATORS") {
+                let outcomes = steps
+                    .iter()
+                    .map(|step| match &step.outcome {
+                        SimpleGeneratorStepOutcome::Throw(value) => format!("Throw({value:?})"),
+                        SimpleGeneratorStepOutcome::Yield(value) => format!("Yield({value:?})"),
+                        SimpleGeneratorStepOutcome::YieldResult(value) => {
+                            format!("YieldResult({value:?})")
+                        }
+                    })
+                    .collect::<Vec<_>>();
+                eprintln!(
+                    "local_array_iterator_source:yield_delegate_all_throw iterated={iterated:?} outcomes={outcomes:?}"
+                );
+            }
             return Some(IteratorSourceKind::SimpleGenerator {
                 is_async: current_function_is_async_generator,
                 steps,

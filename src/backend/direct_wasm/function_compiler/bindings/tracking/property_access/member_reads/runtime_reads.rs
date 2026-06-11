@@ -1230,6 +1230,12 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(true);
         }
         if trace_member_reads {
+            eprintln!("runtime_or_object_read:before_stored_arguments");
+        }
+        if self.emit_stored_arguments_global_member_read(object, static_array_property)? {
+            return Ok(true);
+        }
+        if trace_member_reads {
             eprintln!("runtime_or_object_read:before_native_error");
         }
         if self.emit_runtime_native_error_member_read(object, property)? {
