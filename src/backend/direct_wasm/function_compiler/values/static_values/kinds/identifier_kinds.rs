@@ -1,7 +1,8 @@
 use super::*;
 
 thread_local! {
-    static ACTIVE_IDENTIFIER_KIND_LOOKUPS: RefCell<HashSet<String>> = RefCell::new(HashSet::new());
+    static ACTIVE_IDENTIFIER_KIND_LOOKUPS: RefCell<HashMap<String, u64>> =
+        RefCell::new(HashMap::new());
 }
 
 /// Re-entrancy guard for identifier kind lookups. Self-referential tracked
@@ -11,14 +12,33 @@ thread_local! {
 /// for the same identifier, exploring an enormous resolution tree.
 struct IdentifierKindLookupGuard {
     key: String,
+    _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope,
 }
 
 impl IdentifierKindLookupGuard {
     fn enter(name: &str) -> Option<Self> {
         let key = name.to_string();
-        let inserted =
-            ACTIVE_IDENTIFIER_KIND_LOOKUPS.with(|active| active.borrow_mut().insert(key.clone()));
-        inserted.then_some(Self { key })
+        let conflict = ACTIVE_IDENTIFIER_KIND_LOOKUPS.with(|active| {
+            let mut active = active.borrow_mut();
+            match active.get(&key) {
+                Some(serial) => Some(*serial),
+                None => {
+                    active.insert(
+                        key.clone(),
+                        crate::backend::direct_wasm::memo::next_guard_serial(),
+                    );
+                    None
+                }
+            }
+        });
+        if let Some(serial) = conflict {
+            crate::backend::direct_wasm::memo::note_resolution_guard_block_conflict(serial);
+            return None;
+        }
+        Some(Self {
+            key,
+            _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope::enter_class(24),
+        })
     }
 }
 
@@ -504,7 +524,7 @@ impl<'a> FunctionCompiler<'a> {
         {
             return Some(StaticValueKind::Object);
         }
-        if std::env::var_os("AYY_TRACE_KIND_LOOKUPS").is_some() {
+        if crate::ayy_env_flag!("AYY_TRACE_KIND_LOOKUPS") {
             eprintln!("kind_lookup:{name}");
         }
         let _lookup_guard = IdentifierKindLookupGuard::enter(name)?;

@@ -160,10 +160,14 @@ impl<'a> FunctionCompiler<'a> {
             expression,
             Expression::Call { .. } | Expression::New { .. } | Expression::Member { .. }
         ) && memo::memo_context_is_cacheable();
-        if !cacheable {
+        let key = if cacheable {
+            memo::object_binding_cache_key(expression, self.current_function_name())
+        } else {
+            None
+        };
+        let Some(key) = key else {
             return self.resolve_object_binding_from_expression_uncached(expression);
-        }
-        let key = memo::object_binding_cache_key(expression, self.current_function_name());
+        };
         if let Some(cached) = memo::lookup_object_binding(key) {
             if memo::memo_verify_enabled() {
                 let verify_token = memo::MemoStoreToken::capture();

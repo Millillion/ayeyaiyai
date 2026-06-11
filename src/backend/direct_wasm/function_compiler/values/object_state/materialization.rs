@@ -298,14 +298,16 @@ impl<'a> FunctionCompiler<'a> {
         }
         {
             use crate::backend::direct_wasm::memo;
-            if memo::memo_context_is_cacheable() {
-                let key = memo::materialize_cache_key(expression, self.current_function_name());
+            if memo::memo_context_is_cacheable()
+                && let Some(key) =
+                    memo::materialize_cache_key(expression, self.current_function_name())
+            {
                 if let Some(cached) = memo::lookup_materialized_expression(key) {
                     if memo::memo_verify_enabled() {
                         let verify_token = memo::MemoStoreToken::capture();
                         let fresh = self.materialize_static_expression_uncached(expression);
                         assert!(
-                            !verify_token.is_clean()
+                            !verify_token.is_clean_strict()
                                 || memo::verify_expressions_match(&fresh, &cached),
                             "AYY_MEMO_VERIFY divergence: materialize for {expression:?} (function {:?}): cached={cached:?} fresh={fresh:?}",
                             self.current_function_name()
@@ -315,7 +317,7 @@ impl<'a> FunctionCompiler<'a> {
                 }
                 let token = memo::MemoStoreToken::capture();
                 let result = self.materialize_static_expression_uncached(expression);
-                if token.is_clean() {
+                if token.is_clean_strict() {
                     memo::store_materialized_expression(key, result.clone());
                 }
                 return result;

@@ -2,8 +2,8 @@ use super::*;
 use crate::ir::hir::js_string_utf16_code_units;
 
 thread_local! {
-    static ACTIVE_TO_PRIMITIVE_OUTCOME_SHAPES: RefCell<HashSet<String>> =
-        RefCell::new(HashSet::new());
+    static ACTIVE_TO_PRIMITIVE_OUTCOME_SHAPES: RefCell<HashMap<String, u64>> =
+        RefCell::new(HashMap::new());
     static TO_PRIMITIVE_OUTCOME_DEPTH: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
 }
 
@@ -15,17 +15,22 @@ thread_local! {
         const { std::cell::Cell::new(0) };
 }
 
-struct StaticAdditionOutcomeDepthGuard;
+struct StaticAdditionOutcomeDepthGuard {
+    _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope,
+}
 
 impl StaticAdditionOutcomeDepthGuard {
     fn enter() -> Option<Self> {
         STATIC_ADDITION_OUTCOME_DEPTH.with(|depth| {
             let current = depth.get();
             if current >= STATIC_ADDITION_OUTCOME_RECURSION_LIMIT {
+                crate::backend::direct_wasm::memo::note_resolution_guard_block();
                 return None;
             }
             depth.set(current + 1);
-            Some(Self)
+            Some(Self {
+                _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope::enter_class(23),
+            })
         })
     }
 }
@@ -36,17 +41,22 @@ impl Drop for StaticAdditionOutcomeDepthGuard {
     }
 }
 
-struct ToPrimitiveOutcomeDepthGuard;
+struct ToPrimitiveOutcomeDepthGuard {
+    _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope,
+}
 
 impl ToPrimitiveOutcomeDepthGuard {
     fn enter() -> Option<Self> {
         TO_PRIMITIVE_OUTCOME_DEPTH.with(|depth| {
             let current = depth.get();
             if current >= TO_PRIMITIVE_OUTCOME_RECURSION_LIMIT {
+                crate::backend::direct_wasm::memo::note_resolution_guard_block();
                 return None;
             }
             depth.set(current + 1);
-            Some(Self)
+            Some(Self {
+                _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope::enter_class(22),
+            })
         })
     }
 }
@@ -65,6 +75,7 @@ impl Drop for ToPrimitiveOutcomeDepthGuard {
 /// progress.
 struct ToPrimitiveOutcomeShapeGuard {
     key: String,
+    _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope,
 }
 
 impl ToPrimitiveOutcomeShapeGuard {
@@ -74,9 +85,27 @@ impl ToPrimitiveOutcomeShapeGuard {
         current_function_name: Option<&str>,
     ) -> Option<Self> {
         let key = format!("{current_function_name:?}:{hint:?}:{expression:?}");
-        let inserted =
-            ACTIVE_TO_PRIMITIVE_OUTCOME_SHAPES.with(|active| active.borrow_mut().insert(key.clone()));
-        inserted.then_some(Self { key })
+        let conflict = ACTIVE_TO_PRIMITIVE_OUTCOME_SHAPES.with(|active| {
+            let mut active = active.borrow_mut();
+            match active.get(&key) {
+                Some(serial) => Some(*serial),
+                None => {
+                    active.insert(
+                        key.clone(),
+                        crate::backend::direct_wasm::memo::next_guard_serial(),
+                    );
+                    None
+                }
+            }
+        });
+        if let Some(serial) = conflict {
+            crate::backend::direct_wasm::memo::note_resolution_guard_block_conflict(serial);
+            return None;
+        }
+        Some(Self {
+            key,
+            _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope::enter_class(22),
+        })
     }
 }
 

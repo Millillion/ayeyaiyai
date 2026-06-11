@@ -17,6 +17,11 @@
 //!   guard stack conservatively returns `None`); restricting the cache to
 //!   guard-free entry points makes the cached value a deterministic function
 //!   of (expression, context, generation) alone.
+//! - The materialize cache additionally refuses results whose computation hit
+//!   ANY recursion-guard block, including self-cycles (`is_clean_strict`):
+//!   materialized expressions feed back into resolution state, and a cached
+//!   cycle-cut expansion re-expands by one level per round-trip on
+//!   self-referential tracked values, growing them without bound.
 //! - Every mutation of state the resolvers consult must bump the generation
 //!   (see the funnel audit in the optimization notes). A bump invalidates the
 //!   whole cache.
@@ -244,6 +249,20 @@ impl MemoStoreToken {
         static_state_generation() == self.generation
             && GUARD_BLOCK_TAINT.with(|taint| taint.get()) > self.start_serial
     }
+
+    /// Stricter cleanliness for caches whose values are *expressions* that
+    /// feed back into resolution state (the materialize cache): no
+    /// recursion-guard block of any kind, including self-cycles. A cycle-cut
+    /// expansion depends on where the cycle was entered; caching it lets
+    /// self-referential tracked values (for example `this.#field` tracked as
+    /// `this.#field - 2`) grow by one level per cache round-trip, amplifying
+    /// without bound at a fixed generation (compile live-locks and
+    /// `AYY_MEMO_VERIFY` divergences).
+    #[inline]
+    pub(in crate::backend::direct_wasm) fn is_clean_strict(&self) -> bool {
+        static_state_generation() == self.generation
+            && GUARD_BLOCK_TAINT.with(|taint| taint.get()) == u64::MAX
+    }
 }
 
 impl Drop for MemoStoreToken {
@@ -261,9 +280,19 @@ impl Drop for MemoStoreToken {
 // Structural expression hashing (128-bit, no allocation).
 // ---------------------------------------------------------------------------
 
+/// Maximum number of expression nodes hashed for a cache key. Pathological
+/// inputs (for example self-referential tracked values that grow by one
+/// level per re-materialization) produce expressions with enormous node
+/// counts; hashing them on every lookup turns each resolver call into an
+/// O(size) walk and live-locks compilation. Oversized expressions are simply
+/// not cached.
+const MEMO_KEY_NODE_BUDGET: usize = 4096;
+
 pub(in crate::backend::direct_wasm) struct ExpressionHasher {
     a: u64,
     b: u64,
+    budget: usize,
+    overflowed: bool,
 }
 
 impl ExpressionHasher {
@@ -272,7 +301,16 @@ impl ExpressionHasher {
         Self {
             a: 0x243f_6a88_85a3_08d3 ^ seed,
             b: 0x1319_8a2e_0370_7344 ^ seed.rotate_left(32),
+            budget: usize::MAX,
+            overflowed: false,
         }
+    }
+
+    #[inline]
+    fn with_node_budget(seed: u64, budget: usize) -> Self {
+        let mut hasher = Self::new(seed);
+        hasher.budget = budget;
+        hasher
     }
 
     #[inline]
@@ -313,6 +351,11 @@ impl ExpressionHasher {
     }
 
     pub(in crate::backend::direct_wasm) fn write_expression(&mut self, expression: &Expression) {
+        if self.budget == 0 {
+            self.overflowed = true;
+            return;
+        }
+        self.budget -= 1;
         match expression {
             Expression::Number(value) => {
                 self.write_tag(1);
@@ -612,19 +655,22 @@ pub(in crate::backend::direct_wasm) fn verify_static_call_results_match(
     fingerprint(left) == fingerprint(right)
 }
 
+/// Returns `None` when the expression exceeds the node budget; such
+/// expressions are not worth caching (hashing them per lookup is itself the
+/// pathology the cache exists to avoid).
 fn expression_context_key(
     seed: u64,
     expression: &Expression,
     arguments: Option<&[CallArgument]>,
     current_function_name: Option<&str>,
-) -> u128 {
-    let mut hasher = ExpressionHasher::new(seed);
+) -> Option<u128> {
+    let mut hasher = ExpressionHasher::with_node_budget(seed, MEMO_KEY_NODE_BUDGET);
     hasher.write_optional_str(current_function_name);
     hasher.write_expression(expression);
     if let Some(arguments) = arguments {
         hasher.write_call_arguments(arguments);
     }
-    hasher.finish()
+    (!hasher.overflowed).then(|| hasher.finish())
 }
 
 // ---------------------------------------------------------------------------
@@ -634,7 +680,7 @@ fn expression_context_key(
 pub(in crate::backend::direct_wasm) fn object_binding_cache_key(
     expression: &Expression,
     current_function_name: Option<&str>,
-) -> u128 {
+) -> Option<u128> {
     expression_context_key(0x0b1ec7, expression, None, current_function_name)
 }
 
@@ -666,7 +712,7 @@ pub(in crate::backend::direct_wasm) fn store_object_binding(
 pub(in crate::backend::direct_wasm) fn function_binding_cache_key(
     expression: &Expression,
     current_function_name: Option<&str>,
-) -> u128 {
+) -> Option<u128> {
     expression_context_key(0xf41c, expression, None, current_function_name)
 }
 
@@ -699,7 +745,7 @@ pub(in crate::backend::direct_wasm) fn static_call_result_cache_key(
     callee: &Expression,
     arguments: &[CallArgument],
     current_function_name: Option<&str>,
-) -> u128 {
+) -> Option<u128> {
     expression_context_key(0xca11, callee, Some(arguments), current_function_name)
 }
 
@@ -731,7 +777,7 @@ pub(in crate::backend::direct_wasm) fn store_static_call_result(
 pub(in crate::backend::direct_wasm) fn materialize_cache_key(
     expression: &Expression,
     current_function_name: Option<&str>,
-) -> u128 {
+) -> Option<u128> {
     expression_context_key(0x3a7e, expression, None, current_function_name)
 }
 

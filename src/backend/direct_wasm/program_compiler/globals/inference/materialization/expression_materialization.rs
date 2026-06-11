@@ -1,25 +1,30 @@
 use super::*;
 
 thread_local! {
-    static ACTIVE_GLOBAL_IDENTIFIER_MATERIALIZATIONS: RefCell<HashSet<String>> =
-        RefCell::new(HashSet::new());
+    static ACTIVE_GLOBAL_IDENTIFIER_MATERIALIZATIONS: RefCell<HashMap<String, u64>> =
+        RefCell::new(HashMap::new());
     static GLOBAL_EXPRESSION_MATERIALIZATION_DEPTH: std::cell::Cell<usize> =
         const { std::cell::Cell::new(0) };
 }
 
 const GLOBAL_EXPRESSION_MATERIALIZATION_DEPTH_LIMIT: usize = 256;
 
-struct GlobalExpressionMaterializationDepthGuard;
+struct GlobalExpressionMaterializationDepthGuard {
+    _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope,
+}
 
 impl GlobalExpressionMaterializationDepthGuard {
     fn enter() -> Option<Self> {
         GLOBAL_EXPRESSION_MATERIALIZATION_DEPTH.with(|depth| {
             let current = depth.get();
             if current >= GLOBAL_EXPRESSION_MATERIALIZATION_DEPTH_LIMIT {
+                crate::backend::direct_wasm::memo::note_resolution_guard_block();
                 return None;
             }
             depth.set(current + 1);
-            Some(Self)
+            Some(Self {
+                _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope::enter_class(25),
+            })
         })
     }
 }
@@ -36,14 +41,33 @@ impl Drop for GlobalExpressionMaterializationDepthGuard {
 /// callback parameter analysis) would otherwise recurse without bound.
 struct GlobalIdentifierMaterializationGuard {
     key: String,
+    _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope,
 }
 
 impl GlobalIdentifierMaterializationGuard {
     fn enter(name: &str) -> Option<Self> {
         let key = name.to_string();
-        let inserted = ACTIVE_GLOBAL_IDENTIFIER_MATERIALIZATIONS
-            .with(|active| active.borrow_mut().insert(key.clone()));
-        inserted.then_some(Self { key })
+        let conflict = ACTIVE_GLOBAL_IDENTIFIER_MATERIALIZATIONS.with(|active| {
+            let mut active = active.borrow_mut();
+            match active.get(&key) {
+                Some(serial) => Some(*serial),
+                None => {
+                    active.insert(
+                        key.clone(),
+                        crate::backend::direct_wasm::memo::next_guard_serial(),
+                    );
+                    None
+                }
+            }
+        });
+        if let Some(serial) = conflict {
+            crate::backend::direct_wasm::memo::note_resolution_guard_block_conflict(serial);
+            return None;
+        }
+        Some(Self {
+            key,
+            _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope::enter_class(25),
+        })
     }
 }
 

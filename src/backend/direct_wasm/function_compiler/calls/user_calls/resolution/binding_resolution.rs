@@ -371,13 +371,17 @@ impl<'a> FunctionCompiler<'a> {
         current_function_name: Option<&str>,
     ) -> Option<LocalFunctionBinding> {
         use crate::backend::direct_wasm::memo;
-        if !memo::memo_context_is_cacheable() {
+        let key = if memo::memo_context_is_cacheable() {
+            memo::function_binding_cache_key(expression, current_function_name)
+        } else {
+            None
+        };
+        let Some(key) = key else {
             return self.resolve_function_binding_from_expression_with_context_uncached(
                 expression,
                 current_function_name,
             );
-        }
-        let key = memo::function_binding_cache_key(expression, current_function_name);
+        };
         if let Some(cached) = memo::lookup_function_binding(key) {
             if memo::memo_verify_enabled() {
                 let verify_token = memo::MemoStoreToken::capture();
