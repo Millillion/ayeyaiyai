@@ -280,12 +280,17 @@ impl<'a> FunctionCompiler<'a> {
         for statement in statements {
             match statement {
                 Statement::Block { body } => {
-                    if let Some(result) = self.execute_bound_snapshot_statements(
+                    // A `None` from the nested execution means the snapshot
+                    // could not resolve the block, not that it completed
+                    // normally; swallowing it would let execution continue
+                    // past statements (such as conditional returns) that may
+                    // run at runtime.
+                    let result = self.execute_bound_snapshot_statements(
                         body,
                         bindings,
                         current_function_name,
-                    ) && !matches!(result, BoundSnapshotControlFlow::None)
-                    {
+                    )?;
+                    if !matches!(result, BoundSnapshotControlFlow::None) {
                         return Some(result);
                     }
                 }
@@ -306,12 +311,12 @@ impl<'a> FunctionCompiler<'a> {
                     } else {
                         return None;
                     };
-                    if let Some(result) = self.execute_bound_snapshot_statements(
+                    let result = self.execute_bound_snapshot_statements(
                         branch,
                         bindings,
                         current_function_name,
-                    ) && !matches!(result, BoundSnapshotControlFlow::None)
-                    {
+                    )?;
+                    if !matches!(result, BoundSnapshotControlFlow::None) {
                         return Some(result);
                     }
                 }

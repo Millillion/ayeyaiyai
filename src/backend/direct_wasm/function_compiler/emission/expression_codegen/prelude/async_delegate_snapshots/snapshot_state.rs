@@ -216,6 +216,25 @@ impl VisibleRuntimeBindingSnapshot {
             {
                 continue;
             }
+            // Immutable lexical bindings (`const`) cannot change after their
+            // declaration materialized them, so their runtime slot is already
+            // current. Re-storing through the user-assignment path would emit
+            // the immutability check and throw a TypeError at runtime.
+            let immutable_lexical_binding =
+                if let Some((resolved_name, _)) = compiler.resolve_current_local_binding(&name) {
+                    compiler
+                        .local_lexical_initialized_local(&resolved_name)
+                        .is_some()
+                        && compiler.local_binding_is_immutable(&resolved_name)
+                } else {
+                    compiler
+                        .backend
+                        .lexical_global_binding(&name)
+                        .is_some_and(|binding| !binding.mutable)
+                };
+            if immutable_lexical_binding {
+                continue;
+            }
             let synced_value = if Self::expression_is_direct_reference_identifier(compiler, &value)
             {
                 value.clone()

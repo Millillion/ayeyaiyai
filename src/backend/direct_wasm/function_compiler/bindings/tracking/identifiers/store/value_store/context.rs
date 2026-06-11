@@ -1212,6 +1212,12 @@ impl<'a> FunctionCompiler<'a> {
         let trace_identifier_store = crate::ayy_env_flag!("AYY_TRACE_IDENTIFIER_STORE");
         if trace_identifier_store {
             eprintln!("identifier_store:{name}:prepare:start");
+            if std::env::var_os("AYY_TRACE_IDENTIFIER_STORE_BACKTRACE").is_some() {
+                eprintln!(
+                    "identifier_store:{name}:prepare:backtrace\n{}",
+                    std::backtrace::Backtrace::force_capture()
+                );
+            }
         }
         let is_for_in_keys_temp = name.starts_with("__ayy_for_in_keys_");
         let private_brand_initializer =

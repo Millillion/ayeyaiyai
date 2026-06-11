@@ -956,7 +956,11 @@ impl<'a> FunctionCompiler<'a> {
         object: &Expression,
         name: &str,
     ) {
+        let trace = crate::ayy_env_flag!("AYY_TRACE_WITH_SCOPE");
         if !self.scope_object_has_binding_property(object, name) {
+            if trace {
+                eprintln!("with_scope shadow_dynamic skip-no-binding object={object:?} name={name}");
+            }
             return;
         }
         let property = Expression::String(name.to_string());
@@ -964,11 +968,25 @@ impl<'a> FunctionCompiler<'a> {
         let Some(shadow_binding_name) =
             self.runtime_object_property_shadow_binding_name_for_expression(object, &property)
         else {
+            if trace {
+                eprintln!("with_scope shadow_dynamic skip-no-shadow object={object:?} name={name}");
+            }
             return;
         };
+        if trace {
+            eprintln!(
+                "with_scope shadow_dynamic mark object={object:?} name={name} shadow={shadow_binding_name} global_object_binding={}",
+                self.backend
+                    .global_object_binding(match object {
+                        Expression::Identifier(object_name) => object_name,
+                        _ => "",
+                    })
+                    .is_some()
+            );
+        }
         let dynamic_value = Expression::Member {
             object: Box::new(object.clone()),
-            property: Box::new(property),
+            property: Box::new(property.clone()),
         };
         self.backend
             .global_semantics
@@ -977,7 +995,43 @@ impl<'a> FunctionCompiler<'a> {
         self.backend
             .shared_global_semantics
             .values
-            .set_value_binding(shadow_binding_name, dynamic_value);
+            .set_value_binding(shadow_binding_name, dynamic_value.clone());
+        // The scope object's static metadata still records the pre-loop
+        // property value; replace it with the self-referential member
+        // expression so post-loop static folds (such as `obj.prop === ...`
+        // equality) treat the property as runtime-only instead of folding
+        // against the stale value.
+        if let Expression::Identifier(object_name) = object {
+            if let Some(mut object_binding) = self
+                .state
+                .speculation
+                .static_semantics
+                .local_object_binding(object_name)
+                .cloned()
+            {
+                object_binding_set_property(
+                    &mut object_binding,
+                    property.clone(),
+                    dynamic_value.clone(),
+                );
+                self.state
+                    .speculation
+                    .static_semantics
+                    .set_local_object_binding(object_name, object_binding);
+            }
+            if let Some(mut object_binding) =
+                self.backend.global_object_binding(object_name).cloned()
+            {
+                object_binding_set_property(
+                    &mut object_binding,
+                    property.clone(),
+                    dynamic_value.clone(),
+                );
+                self.backend
+                    .sync_global_object_binding(object_name, Some(object_binding));
+            }
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
+        }
     }
 
     pub(in crate::backend::direct_wasm) fn mark_loop_with_scope_shadow_dynamics_from_expression(

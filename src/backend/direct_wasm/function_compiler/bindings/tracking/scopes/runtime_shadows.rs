@@ -33,6 +33,44 @@ impl Drop for RuntimeShadowFallbackGuard {
     }
 }
 
+const RUNTIME_SHADOW_OWNER_EXPRESSION_RECURSION_LIMIT: usize = 64;
+
+thread_local! {
+    static RUNTIME_SHADOW_OWNER_EXPRESSION_DEPTH: std::cell::Cell<usize> =
+        const { std::cell::Cell::new(0) };
+}
+
+struct RuntimeShadowOwnerExpressionGuard {
+    _memo: Option<crate::backend::direct_wasm::memo::ResolutionGuardScope>,
+}
+
+impl RuntimeShadowOwnerExpressionGuard {
+    fn enter() -> Option<Self> {
+        RUNTIME_SHADOW_OWNER_EXPRESSION_DEPTH.with(|depth| {
+            let current = depth.get();
+            if current >= RUNTIME_SHADOW_OWNER_EXPRESSION_RECURSION_LIMIT {
+                crate::backend::direct_wasm::memo::note_resolution_guard_block();
+                return None;
+            }
+            depth.set(current + 1);
+            // Only mark the resolution context as non-canonical once the
+            // recursion is deep enough to suggest cyclic value chasing;
+            // shallow nesting is the common, fully deterministic case.
+            let memo = (current >= 8).then(|| {
+                crate::backend::direct_wasm::memo::ResolutionGuardScope::enter_class(26)
+            });
+            Some(Self { _memo: memo })
+        })
+    }
+}
+
+impl Drop for RuntimeShadowOwnerExpressionGuard {
+    fn drop(&mut self) {
+        RUNTIME_SHADOW_OWNER_EXPRESSION_DEPTH
+            .with(|depth| depth.set(depth.get().saturating_sub(1)));
+    }
+}
+
 fn expression_may_evaluate_to_runtime_shadow_owner(expression: &Expression) -> bool {
     match expression {
         Expression::Array(_)
@@ -1873,6 +1911,10 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         name: &str,
     ) -> Option<String> {
+        // Value bindings can alias each other in cycles (`a` recorded as `b`
+        // while `b` is recorded as `a`, for example through with-scope shadow
+        // copies), so bound the recursion depth.
+        let _guard = RuntimeShadowOwnerExpressionGuard::enter()?;
         let identifier_expression = Expression::Identifier(name.to_string());
         let trace_runtime_shadows = crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS");
         if name.starts_with("__ayy_target_object_")
@@ -2151,6 +2193,11 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         expression: &Expression,
     ) -> Option<String> {
+        // Property values resolved from object/shadow bindings can reference
+        // expressions that resolve back through this same lookup (for example
+        // with-scope shadows whose recorded value is the member expression
+        // itself), so guard against unbounded self-recursion.
+        let _guard = RuntimeShadowOwnerExpressionGuard::enter()?;
         match expression {
             Expression::Identifier(name) => {
                 self.runtime_object_property_shadow_owner_name_for_identifier(name)

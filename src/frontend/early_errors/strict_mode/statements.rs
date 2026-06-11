@@ -154,6 +154,7 @@ fn validate_strict_mode_early_errors_in_statement(statement: &Stmt, strict: bool
             }
         }
         Stmt::With(statement) => {
+            ensure!(!strict, "`with` statements are not allowed in strict mode");
             validate_strict_mode_early_errors_in_expression(&statement.obj, strict)?;
             validate_strict_mode_early_errors_in_statement(&statement.body, strict)?;
         }

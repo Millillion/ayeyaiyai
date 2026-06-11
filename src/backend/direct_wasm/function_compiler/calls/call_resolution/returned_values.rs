@@ -970,6 +970,20 @@ impl<'a> FunctionCompiler<'a> {
             }
             return Some(resolved);
         }
+        // Static execution could not produce a return value. Falling back to
+        // the function's terminal return is only sound when no earlier
+        // statement can return conditionally: otherwise a runtime call may
+        // take that earlier return while the fold reports the tail value
+        // (for example `if (flag) { return v instanceof E; } return false;`
+        // folding to `false`).
+        if function
+            .body
+            .iter()
+            .take(function.body.len().saturating_sub(1))
+            .any(eval_statement_contains_return)
+        {
+            return None;
+        }
         let returned_expression = match function.body.last()? {
             Statement::Return(expression) => expression.clone(),
             _ => collect_returned_identifier_source_expression(&function.body)?,

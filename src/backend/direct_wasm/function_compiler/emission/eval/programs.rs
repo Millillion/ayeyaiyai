@@ -2501,7 +2501,9 @@ pub(in crate::backend::direct_wasm) fn eval_program_contains_top_level_return(
         .any(eval_statement_contains_return)
 }
 
-fn eval_statement_contains_return(statement: &Statement) -> bool {
+pub(in crate::backend::direct_wasm) fn eval_statement_contains_return(
+    statement: &Statement,
+) -> bool {
     match statement {
         Statement::Return(_) => true,
         Statement::Declaration { body }

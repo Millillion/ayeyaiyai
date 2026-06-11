@@ -343,6 +343,31 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    /// A statically modeled native error instance carries `constructor` and
+    /// `name` markers in its object binding (see
+    /// `resolve_static_constructed_native_error_object_binding`); recognize
+    /// those when the raw expression shape (`new E(...)` / `E(...)`) has been
+    /// replaced by binding metadata, e.g. for promise rejection values.
+    fn static_native_error_constructor_marker(&self, expression: &Expression) -> Option<String> {
+        let object_binding = self.resolve_object_binding_from_expression(expression)?;
+        let constructor = match object_binding_lookup_value(
+            &object_binding,
+            &Expression::String("constructor".to_string()),
+        )? {
+            Expression::Identifier(name) if native_error_runtime_value(name).is_some() => {
+                name.clone()
+            }
+            _ => return None,
+        };
+        match object_binding_lookup_value(
+            &object_binding,
+            &Expression::String("name".to_string()),
+        )? {
+            Expression::String(name) if *name == constructor => Some(constructor),
+            _ => None,
+        }
+    }
+
     pub(in crate::backend::direct_wasm) fn expression_is_known_native_error_instance_for_instanceof(
         &self,
         expression: &Expression,
@@ -351,9 +376,14 @@ impl<'a> FunctionCompiler<'a> {
         if constructor_name == "Error" {
             return NATIVE_ERROR_NAMES.iter().any(|candidate| {
                 self.expression_is_known_constructor_instance_for_instanceof(expression, candidate)
-            });
+            }) || self.static_native_error_constructor_marker(expression).is_some();
         }
-        self.expression_is_known_constructor_instance_for_instanceof(expression, constructor_name)
+        if self.expression_is_known_constructor_instance_for_instanceof(expression, constructor_name)
+        {
+            return true;
+        }
+        self.static_native_error_constructor_marker(expression)
+            .is_some_and(|marker| marker == constructor_name)
     }
 
     pub(in crate::backend::direct_wasm) fn expression_is_known_object_like_value_for_instanceof(

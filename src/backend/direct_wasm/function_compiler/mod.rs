@@ -9,6 +9,7 @@ mod specialization;
 mod support;
 mod values;
 
+pub(in crate::backend::direct_wasm) use self::emission::eval_statement_contains_return;
 pub(in crate::backend::direct_wasm) use self::support::*;
 
 pub(in crate::backend::direct_wasm) fn reset_function_compiler_thread_locals() {

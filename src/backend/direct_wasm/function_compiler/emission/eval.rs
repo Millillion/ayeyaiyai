@@ -9,6 +9,7 @@ mod scoped_rewrite;
 mod source_patterns;
 
 use programs::eval_program_contains_top_level_return;
+pub(in crate::backend::direct_wasm) use programs::eval_statement_contains_return;
 
 fn lower_eval_static_function_constructors(program: Program) -> Program {
     let original = program.clone();

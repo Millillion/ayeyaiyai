@@ -482,6 +482,13 @@ impl<'a> FunctionCompiler<'a> {
         statement: &Statement,
         environment: StaticResolutionEnvironment,
     ) -> bool {
+        // The static statement executor resolves identifiers lexically and
+        // does not consult active `with` scope objects, so eliding a loop (or
+        // syncing its effects) inside a with-scope would read and write the
+        // outer bindings instead of the scope object's properties.
+        if !self.state.emission.lexical_scopes.with_scopes.is_empty() {
+            return false;
+        }
         if let Some(environment) =
             self.fast_static_counted_loop_tracking_environment(statement, &environment)
         {

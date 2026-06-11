@@ -52,6 +52,23 @@ impl<'a> FunctionCompiler<'a> {
                 }
             }
         }
+        // A runtime property shadow with static-resolution deferral means the
+        // property's value is only known at runtime (for example with-scope
+        // stores inside loops); a definitive kind would mis-fold strict
+        // comparisons and `typeof`.
+        if self
+            .runtime_object_property_shadow_binding_name_for_expression(
+                object,
+                &materialized_property,
+            )
+            .is_some_and(|shadow_binding_name| {
+                self.runtime_object_property_shadow_binding_should_defer_static_resolution(
+                    &shadow_binding_name,
+                )
+            })
+        {
+            return Some(StaticValueKind::Unknown);
+        }
         if let Some(object_binding) = self.resolve_object_binding_from_expression(object) {
             return object_binding_lookup_value(&object_binding, &materialized_property)
                 .and_then(|value| self.infer_value_kind(value))

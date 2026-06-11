@@ -178,7 +178,7 @@ impl<'a> FunctionCompiler<'a> {
         };
         if trace_user_calls {
             eprintln!(
-                "prepared_user_call:after_static_result target={} has_static={}",
+                "prepared_user_call:after_static_result target={} has_static={} static_result={static_result:?}",
                 user_function.name,
                 static_result.is_some()
             );
