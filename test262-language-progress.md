@@ -1,4 +1,4 @@
-21310/23668 (90.04%)
+21355/23668 (90.23%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -15,7 +15,7 @@ Sub-category progress
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
 - statements: 8099/9337 (86.74%)
-- expressions: 10141/11061 (91.68%)
+- expressions: 10186/11061 (92.09%)
 - types: 103/113 (91.15%)
 - function-code: 204/217 (94.01%)
 - global-code: 41/42 (97.62%)
@@ -17296,39 +17296,39 @@ Sub-category progress
   - [x] test/language/expressions/compound-assignment/S11.13.2_A4.9_T2.7.js
   - [x] test/language/expressions/compound-assignment/S11.13.2_A4.9_T2.8.js
   - [x] test/language/expressions/compound-assignment/S11.13.2_A4.9_T2.9.js
-  - [ ] test/language/expressions/compound-assignment/S11.13.2_A5.10_T1.js
-  - [ ] test/language/expressions/compound-assignment/S11.13.2_A5.10_T2.js
-  - [ ] test/language/expressions/compound-assignment/S11.13.2_A5.10_T3.js
-  - [ ] test/language/expressions/compound-assignment/S11.13.2_A5.11_T1.js
-  - [ ] test/language/expressions/compound-assignment/S11.13.2_A5.11_T2.js
-  - [ ] test/language/expressions/compound-assignment/S11.13.2_A5.11_T3.js
-  - [ ] test/language/expressions/compound-assignment/S11.13.2_A5.1_T1.js
-  - [ ] test/language/expressions/compound-assignment/S11.13.2_A5.1_T2.js
-  - [ ] test/language/expressions/compound-assignment/S11.13.2_A5.1_T3.js
-  - [ ] test/language/expressions/compound-assignment/S11.13.2_A5.2_T1.js
-  - [ ] test/language/expressions/compound-assignment/S11.13.2_A5.2_T2.js
-  - [ ] test/language/expressions/compound-assignment/S11.13.2_A5.2_T3.js
-  - [ ] test/language/expressions/compound-assignment/S11.13.2_A5.3_T1.js
-  - [ ] test/language/expressions/compound-assignment/S11.13.2_A5.3_T2.js
-  - [ ] test/language/expressions/compound-assignment/S11.13.2_A5.3_T3.js
-  - [ ] test/language/expressions/compound-assignment/S11.13.2_A5.4_T1.js
-  - [ ] test/language/expressions/compound-assignment/S11.13.2_A5.4_T2.js
-  - [ ] test/language/expressions/compound-assignment/S11.13.2_A5.4_T3.js
-  - [ ] test/language/expressions/compound-assignment/S11.13.2_A5.5_T1.js
-  - [ ] test/language/expressions/compound-assignment/S11.13.2_A5.5_T2.js
-  - [ ] test/language/expressions/compound-assignment/S11.13.2_A5.5_T3.js
-  - [ ] test/language/expressions/compound-assignment/S11.13.2_A5.6_T1.js
-  - [ ] test/language/expressions/compound-assignment/S11.13.2_A5.6_T2.js
-  - [ ] test/language/expressions/compound-assignment/S11.13.2_A5.6_T3.js
-  - [ ] test/language/expressions/compound-assignment/S11.13.2_A5.7_T1.js
-  - [ ] test/language/expressions/compound-assignment/S11.13.2_A5.7_T2.js
-  - [ ] test/language/expressions/compound-assignment/S11.13.2_A5.7_T3.js
-  - [ ] test/language/expressions/compound-assignment/S11.13.2_A5.8_T1.js
-  - [ ] test/language/expressions/compound-assignment/S11.13.2_A5.8_T2.js
-  - [ ] test/language/expressions/compound-assignment/S11.13.2_A5.8_T3.js
-  - [ ] test/language/expressions/compound-assignment/S11.13.2_A5.9_T1.js
-  - [ ] test/language/expressions/compound-assignment/S11.13.2_A5.9_T2.js
-  - [ ] test/language/expressions/compound-assignment/S11.13.2_A5.9_T3.js
+  - [x] test/language/expressions/compound-assignment/S11.13.2_A5.10_T1.js
+  - [x] test/language/expressions/compound-assignment/S11.13.2_A5.10_T2.js
+  - [x] test/language/expressions/compound-assignment/S11.13.2_A5.10_T3.js
+  - [x] test/language/expressions/compound-assignment/S11.13.2_A5.11_T1.js
+  - [x] test/language/expressions/compound-assignment/S11.13.2_A5.11_T2.js
+  - [x] test/language/expressions/compound-assignment/S11.13.2_A5.11_T3.js
+  - [x] test/language/expressions/compound-assignment/S11.13.2_A5.1_T1.js
+  - [x] test/language/expressions/compound-assignment/S11.13.2_A5.1_T2.js
+  - [x] test/language/expressions/compound-assignment/S11.13.2_A5.1_T3.js
+  - [x] test/language/expressions/compound-assignment/S11.13.2_A5.2_T1.js
+  - [x] test/language/expressions/compound-assignment/S11.13.2_A5.2_T2.js
+  - [x] test/language/expressions/compound-assignment/S11.13.2_A5.2_T3.js
+  - [x] test/language/expressions/compound-assignment/S11.13.2_A5.3_T1.js
+  - [x] test/language/expressions/compound-assignment/S11.13.2_A5.3_T2.js
+  - [x] test/language/expressions/compound-assignment/S11.13.2_A5.3_T3.js
+  - [x] test/language/expressions/compound-assignment/S11.13.2_A5.4_T1.js
+  - [x] test/language/expressions/compound-assignment/S11.13.2_A5.4_T2.js
+  - [x] test/language/expressions/compound-assignment/S11.13.2_A5.4_T3.js
+  - [x] test/language/expressions/compound-assignment/S11.13.2_A5.5_T1.js
+  - [x] test/language/expressions/compound-assignment/S11.13.2_A5.5_T2.js
+  - [x] test/language/expressions/compound-assignment/S11.13.2_A5.5_T3.js
+  - [x] test/language/expressions/compound-assignment/S11.13.2_A5.6_T1.js
+  - [x] test/language/expressions/compound-assignment/S11.13.2_A5.6_T2.js
+  - [x] test/language/expressions/compound-assignment/S11.13.2_A5.6_T3.js
+  - [x] test/language/expressions/compound-assignment/S11.13.2_A5.7_T1.js
+  - [x] test/language/expressions/compound-assignment/S11.13.2_A5.7_T2.js
+  - [x] test/language/expressions/compound-assignment/S11.13.2_A5.7_T3.js
+  - [x] test/language/expressions/compound-assignment/S11.13.2_A5.8_T1.js
+  - [x] test/language/expressions/compound-assignment/S11.13.2_A5.8_T2.js
+  - [x] test/language/expressions/compound-assignment/S11.13.2_A5.8_T3.js
+  - [x] test/language/expressions/compound-assignment/S11.13.2_A5.9_T1.js
+  - [x] test/language/expressions/compound-assignment/S11.13.2_A5.9_T2.js
+  - [x] test/language/expressions/compound-assignment/S11.13.2_A5.9_T3.js
   - [x] test/language/expressions/compound-assignment/S11.13.2_A6.10_T1.js
   - [x] test/language/expressions/compound-assignment/S11.13.2_A6.11_T1.js
   - [x] test/language/expressions/compound-assignment/S11.13.2_A6.1_T1.js
@@ -21134,9 +21134,9 @@ Sub-category progress
   - [x] test/language/expressions/postfix-decrement/S11.3.2_A4_T3.js
   - [x] test/language/expressions/postfix-decrement/S11.3.2_A4_T4.js
   - [x] test/language/expressions/postfix-decrement/S11.3.2_A4_T5.js
-  - [ ] test/language/expressions/postfix-decrement/S11.3.2_A5_T1.js
-  - [ ] test/language/expressions/postfix-decrement/S11.3.2_A5_T2.js
-  - [ ] test/language/expressions/postfix-decrement/S11.3.2_A5_T3.js
+  - [x] test/language/expressions/postfix-decrement/S11.3.2_A5_T1.js
+  - [x] test/language/expressions/postfix-decrement/S11.3.2_A5_T2.js
+  - [x] test/language/expressions/postfix-decrement/S11.3.2_A5_T3.js
   - [x] test/language/expressions/postfix-decrement/S11.3.2_A6_T1.js
   - [x] test/language/expressions/postfix-decrement/S11.3.2_A6_T2.js
   - [x] test/language/expressions/postfix-decrement/S11.3.2_A6_T3.js
@@ -21172,9 +21172,9 @@ Sub-category progress
   - [x] test/language/expressions/postfix-increment/S11.3.1_A4_T3.js
   - [x] test/language/expressions/postfix-increment/S11.3.1_A4_T4.js
   - [x] test/language/expressions/postfix-increment/S11.3.1_A4_T5.js
-  - [ ] test/language/expressions/postfix-increment/S11.3.1_A5_T1.js
-  - [ ] test/language/expressions/postfix-increment/S11.3.1_A5_T2.js
-  - [ ] test/language/expressions/postfix-increment/S11.3.1_A5_T3.js
+  - [x] test/language/expressions/postfix-increment/S11.3.1_A5_T1.js
+  - [x] test/language/expressions/postfix-increment/S11.3.1_A5_T2.js
+  - [x] test/language/expressions/postfix-increment/S11.3.1_A5_T3.js
   - [x] test/language/expressions/postfix-increment/S11.3.1_A6_T1.js
   - [x] test/language/expressions/postfix-increment/S11.3.1_A6_T2.js
   - [x] test/language/expressions/postfix-increment/S11.3.1_A6_T3.js
@@ -21210,9 +21210,9 @@ Sub-category progress
   - [x] test/language/expressions/prefix-decrement/S11.4.5_A4_T3.js
   - [x] test/language/expressions/prefix-decrement/S11.4.5_A4_T4.js
   - [x] test/language/expressions/prefix-decrement/S11.4.5_A4_T5.js
-  - [ ] test/language/expressions/prefix-decrement/S11.4.5_A5_T1.js
-  - [ ] test/language/expressions/prefix-decrement/S11.4.5_A5_T2.js
-  - [ ] test/language/expressions/prefix-decrement/S11.4.5_A5_T3.js
+  - [x] test/language/expressions/prefix-decrement/S11.4.5_A5_T1.js
+  - [x] test/language/expressions/prefix-decrement/S11.4.5_A5_T2.js
+  - [x] test/language/expressions/prefix-decrement/S11.4.5_A5_T3.js
   - [x] test/language/expressions/prefix-decrement/S11.4.5_A6_T1.js
   - [x] test/language/expressions/prefix-decrement/S11.4.5_A6_T2.js
   - [x] test/language/expressions/prefix-decrement/S11.4.5_A6_T3.js
@@ -21243,9 +21243,9 @@ Sub-category progress
   - [x] test/language/expressions/prefix-increment/S11.4.4_A4_T3.js
   - [x] test/language/expressions/prefix-increment/S11.4.4_A4_T4.js
   - [x] test/language/expressions/prefix-increment/S11.4.4_A4_T5.js
-  - [ ] test/language/expressions/prefix-increment/S11.4.4_A5_T1.js
-  - [ ] test/language/expressions/prefix-increment/S11.4.4_A5_T2.js
-  - [ ] test/language/expressions/prefix-increment/S11.4.4_A5_T3.js
+  - [x] test/language/expressions/prefix-increment/S11.4.4_A5_T1.js
+  - [x] test/language/expressions/prefix-increment/S11.4.4_A5_T2.js
+  - [x] test/language/expressions/prefix-increment/S11.4.4_A5_T3.js
   - [x] test/language/expressions/prefix-increment/S11.4.4_A6_T1.js
   - [x] test/language/expressions/prefix-increment/S11.4.4_A6_T2.js
   - [x] test/language/expressions/prefix-increment/S11.4.4_A6_T3.js
