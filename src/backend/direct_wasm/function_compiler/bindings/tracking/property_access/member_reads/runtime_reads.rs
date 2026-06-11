@@ -542,7 +542,26 @@ impl<'a> FunctionCompiler<'a> {
                 .instructions
                 .push(EMPTY_BLOCK_TYPE);
             self.push_control_frame();
-            self.emit_named_error_throw("TypeError")?;
+            if let Some(field_presence_fallback) = field_presence_fallback {
+                // A present field shadow means PrivateFieldFind succeeds on
+                // this receiver; the brand marker comparison is only a proxy
+                // for that and may diverge when the brand flowed through a
+                // different capture channel.
+                self.push_global_get(field_presence_fallback.present_index);
+                self.state.emission.output.instructions.push(0x04);
+                self.state
+                    .emission
+                    .output
+                    .instructions
+                    .push(EMPTY_BLOCK_TYPE);
+                self.push_control_frame();
+                self.state.emission.output.instructions.push(0x05);
+                self.emit_named_error_throw("TypeError")?;
+                self.state.emission.output.instructions.push(0x0b);
+                self.pop_control_frame();
+            } else {
+                self.emit_named_error_throw("TypeError")?;
+            }
             self.state.emission.output.instructions.push(0x0b);
             self.pop_control_frame();
             return Ok(());

@@ -599,6 +599,16 @@ impl<'a> FunctionCompiler<'a> {
             return Vec::new();
         }
 
+        // A class constructor binding name embeds the class binding it was
+        // lowered for (`__ayy_class_ctor_<id>__name_<class binding>`); class
+        // init bodies assign static private members through the class binding
+        // identifier, so match either spelling of the owner.
+        let class_binding_alias = source_owner
+            .starts_with("__ayy_class_ctor_")
+            .then(|| source_owner.rsplit_once("__name_").map(|(_, name)| name))
+            .flatten()
+            .filter(|name| name.starts_with("__ayy_class_expr_") || name.starts_with("__ayy_"));
+
         let mut entries = Vec::new();
         let mut seen = HashSet::new();
         for function in &self
@@ -607,18 +617,26 @@ impl<'a> FunctionCompiler<'a> {
             .catalog
             .registered_function_declarations
         {
-            if !function.name.starts_with("__ayy_class_init_")
-                || !function.body.iter().any(|statement| {
-                    matches!(
-                        statement,
-                        Statement::Return(Expression::Identifier(name)) if name == source_owner
-                    )
+            let returned_owner = function
+                .name
+                .starts_with("__ayy_class_init_")
+                .then(|| {
+                    function.body.iter().find_map(|statement| match statement {
+                        Statement::Return(Expression::Identifier(name))
+                            if name == source_owner
+                                || class_binding_alias.is_some_and(|alias| alias == name) =>
+                        {
+                            Some(name.as_str())
+                        }
+                        _ => None,
+                    })
                 })
-            {
+                .flatten();
+            let Some(returned_owner) = returned_owner else {
                 continue;
-            }
+            };
             Self::collect_class_init_private_runtime_shadow_entries(
-                source_owner,
+                returned_owner,
                 &function.body,
                 &mut seen,
                 &mut entries,

@@ -298,6 +298,65 @@ impl<'a> FunctionCompiler<'a> {
         Ok(())
     }
 
+    /// Prefer the live private brand value already propagated into a class
+    /// member's hidden capture global over minting a fresh brand. The class
+    /// body initializer generates the brand value once per class evaluation;
+    /// minting another fresh value here would diverge from the brand the
+    /// method and accessor bodies compare against.
+    fn emit_private_brand_capture_slot_value_from_hidden_or_fresh(
+        &mut self,
+        hidden_source_name: Option<String>,
+    ) -> DirectResult<()> {
+        let Some(hidden_source_name) = hidden_source_name else {
+            return self.emit_fresh_private_brand_capture_slot_value();
+        };
+        let hidden_binding = self
+            .implicit_global_binding(&hidden_source_name)
+            .unwrap_or_else(|| self.ensure_implicit_global_binding(&hidden_source_name));
+        self.push_global_get(hidden_binding.present_index);
+        self.state.emission.output.instructions.push(0x04);
+        self.state.emission.output.instructions.push(I32_TYPE);
+        self.push_control_frame();
+        self.push_global_get(hidden_binding.value_index);
+        self.state.emission.output.instructions.push(0x05);
+        self.emit_fresh_private_brand_capture_slot_value()?;
+        self.state.emission.output.instructions.push(0x0b);
+        self.pop_control_frame();
+        Ok(())
+    }
+
+    fn returned_member_private_brand_hidden_sources(
+        &self,
+        bindings: &[ReturnedMemberFunctionBinding],
+    ) -> HashMap<String, String> {
+        let mut sources = HashMap::new();
+        for binding in bindings {
+            let LocalFunctionBinding::User(member_function_name) = &binding.binding else {
+                continue;
+            };
+            if member_function_name.starts_with("__ayy_class_ctor_") {
+                continue;
+            }
+            let Some(brand_binding) = self
+                .user_function(member_function_name)
+                .and_then(|function| function.private_brand_binding.clone())
+            else {
+                continue;
+            };
+            if sources.contains_key(&brand_binding) {
+                continue;
+            }
+            let Some(hidden_name) = self
+                .user_function_capture_bindings(member_function_name)
+                .and_then(|captures| captures.get(&brand_binding).cloned())
+            else {
+                continue;
+            };
+            sources.insert(brand_binding, hidden_name);
+        }
+        sources
+    }
+
     fn should_emit_fresh_private_brand_capture_slot_value(
         member_private_brand_binding: Option<&String>,
         capture_name: &str,
@@ -755,6 +814,8 @@ impl<'a> FunctionCompiler<'a> {
         let returned_call_receiver = Self::returned_member_call_receiver_expression(value);
         let value_creates_fresh_returned_member =
             matches!(value, Expression::Call { .. } | Expression::New { .. });
+        let private_brand_hidden_sources =
+            self.returned_member_private_brand_hidden_sources(bindings);
 
         for binding in bindings {
             let LocalFunctionBinding::User(member_function_name) = &binding.binding else {
@@ -968,7 +1029,9 @@ impl<'a> FunctionCompiler<'a> {
                             capture_name,
                             &source_expression,
                         ) {
-                            self.emit_fresh_private_brand_capture_slot_value()?;
+                            self.emit_private_brand_capture_slot_value_from_hidden_or_fresh(
+                                private_brand_hidden_sources.get(capture_name).cloned(),
+                            )?;
                         } else if source_identifier_not_materialized {
                             self.push_i32_const(JS_UNDEFINED_TAG);
                         } else {
@@ -1007,7 +1070,9 @@ impl<'a> FunctionCompiler<'a> {
                             capture_name,
                             &source_expression,
                         ) {
-                            self.emit_fresh_private_brand_capture_slot_value()?;
+                            self.emit_private_brand_capture_slot_value_from_hidden_or_fresh(
+                                private_brand_hidden_sources.get(capture_name).cloned(),
+                            )?;
                         } else if source_identifier_not_materialized {
                             self.push_i32_const(JS_UNDEFINED_TAG);
                         } else {
