@@ -1434,6 +1434,12 @@ impl<'a> FunctionCompiler<'a> {
     ) -> DirectResult<()> {
         match throw_value {
             StaticThrowValue::Value(expression) => {
+                // Statically replayed throw values can mention harness error
+                // constructors (`new Test262Error()`) that only resolve through
+                // the dedicated runtime value, not a plain identifier read.
+                if self.emit_direct_test262_error_throw(expression)? {
+                    return Ok(());
+                }
                 self.emit_numeric_expression(expression)?;
                 self.push_local_set(self.state.runtime.throws.throw_value_local);
                 self.push_i32_const(1);

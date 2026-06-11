@@ -793,6 +793,13 @@ impl<'a> FunctionCompiler<'a> {
         }
         self.lowered_for_await_throw_completion_outcome(&function.body)
             .or_else(|| self.lowered_for_await_break_close_outcome(&function.body))
+            .or_else(|| {
+                // The protocol replay treats free identifiers as globals, so
+                // it is only sound when no parameters shadow them.
+                (arguments.is_empty() && function.params.is_empty())
+                    .then(|| self.lowered_for_await_protocol_completion_outcome(&function.body))
+                    .flatten()
+            })
             .or_else(|| self.direct_async_function_terminal_body_outcome(function, arguments))
     }
 
@@ -1211,6 +1218,14 @@ impl<'a> FunctionCompiler<'a> {
         let body = function.body.clone();
         if self.lowered_for_await_break_close_outcome(&body).is_some() {
             return self.emit_lowered_for_await_break_side_effects(&body);
+        }
+        // A folded for-await protocol loop's observable side effects
+        // (pre-throw increments, consumed tracked iterators) must still apply
+        // at the call site.
+        if self.lowered_for_await_throw_completion_outcome(&body).is_none()
+            && self.lowered_for_await_protocol_apply_call_effects(&body)?
+        {
+            return Ok(());
         }
         let Some((terminal_statement, prefix_statements)) = body.split_last() else {
             return Ok(());

@@ -815,11 +815,47 @@ impl<'a> FunctionCompiler<'a> {
                                     Self::substitute_sent_expression(value, &sent_value),
                                     current_index.saturating_add(1),
                                 ),
-                                SimpleGeneratorStepOutcome::YieldResult(result) => (
-                                    false,
-                                    self.simple_generator_yield_result_value(result, &sent_value),
-                                    current_index.saturating_add(1),
-                                ),
+                                SimpleGeneratorStepOutcome::YieldResult(result) => {
+                                    // IteratorValue must run an accessor on the
+                                    // step result: a poisoned `value` getter
+                                    // throws instead of folding to undefined.
+                                    match self.simple_generator_yield_result_value_outcome(
+                                        result,
+                                        &sent_value,
+                                    ) {
+                                        Some(StaticEvalOutcome::Throw(throw_value)) => {
+                                            let next_index = steps.len().saturating_add(1);
+                                            self.set_static_iterator_index_for_index_local(
+                                                iterator_binding.index_local,
+                                                next_index,
+                                            );
+                                            self.push_i32_const(next_index as i32);
+                                            self.push_local_set(iterator_binding.index_local);
+                                            self.emit_static_throw_value(&throw_value)?;
+                                            return Ok(Some(Expression::Object(vec![
+                                                ObjectEntry::Data {
+                                                    key: Expression::String("done".to_string()),
+                                                    value: Expression::Bool(true),
+                                                },
+                                                ObjectEntry::Data {
+                                                    key: Expression::String("value".to_string()),
+                                                    value: Expression::Undefined,
+                                                },
+                                            ])));
+                                        }
+                                        Some(StaticEvalOutcome::Value(value)) => {
+                                            (false, value, current_index.saturating_add(1))
+                                        }
+                                        None => (
+                                            false,
+                                            self.simple_generator_yield_result_value(
+                                                result,
+                                                &sent_value,
+                                            ),
+                                            current_index.saturating_add(1),
+                                        ),
+                                    }
+                                }
                                 SimpleGeneratorStepOutcome::Throw(value) => {
                                     let next_index = steps.len().saturating_add(1);
                                     self.set_static_iterator_index_for_index_local(

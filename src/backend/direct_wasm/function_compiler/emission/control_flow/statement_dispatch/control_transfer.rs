@@ -139,7 +139,10 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
-    fn emit_direct_test262_error_throw(&mut self, expression: &Expression) -> DirectResult<bool> {
+    pub(in crate::backend::direct_wasm) fn emit_direct_test262_error_throw(
+        &mut self,
+        expression: &Expression,
+    ) -> DirectResult<bool> {
         let Expression::New { callee, arguments } = expression else {
             return Ok(false);
         };

@@ -17,6 +17,27 @@ impl<'a> FunctionCompiler<'a> {
         self.materialize_static_expression(&value)
     }
 
+    /// Resolves the `value` member of a `YieldResult` step result through an
+    /// accessor when one is present: IteratorValue must invoke the getter, so
+    /// a poisoned `value` getter yields a Throw outcome instead of silently
+    /// folding to undefined. Returns None when `value` is a plain data
+    /// property (callers keep the data-property lookup).
+    pub(in crate::backend::direct_wasm) fn simple_generator_yield_result_value_outcome(
+        &self,
+        result: &Expression,
+        sent_value: &Expression,
+    ) -> Option<StaticEvalOutcome> {
+        let result = Self::substitute_sent_expression(result, sent_value);
+        let value_property = Expression::String("value".to_string());
+        let getter_binding = self.resolve_member_getter_binding(&result, &value_property)?;
+        self.resolve_static_function_outcome_from_binding_with_call_frame_and_context(
+            &getter_binding,
+            &[],
+            &result,
+            self.current_function_name(),
+        )
+    }
+
     pub(in crate::backend::direct_wasm) fn simple_generator_step_yield_value(
         &self,
         outcome: &SimpleGeneratorStepOutcome,
@@ -1726,6 +1747,44 @@ impl<'a> FunctionCompiler<'a> {
                         effects,
                         active_close_effects,
                     )?;
+                }
+                // A lowered for-await loop whose destructuring iterator
+                // protocol statically throws ends the generator with a
+                // throwing step instead of an opaque runtime effect. Pre-throw
+                // protocol effects ride on the step so they stay observable.
+                Statement::For { .. }
+                    if async_generator
+                        && !Self::statement_contains_generator_yield(statement)
+                        && self.lowered_for_await_protocol_throw_step(statement).is_some() =>
+                {
+                    let (throw_value, protocol_effects) = self
+                        .lowered_for_await_protocol_throw_step(statement)
+                        .expect("guard checked the protocol throw resolves");
+                    let mut step_effects = std::mem::take(effects);
+                    step_effects.extend(protocol_effects);
+                    steps.push(SimpleGeneratorStep {
+                        effects: step_effects,
+                        close_effects: Vec::new(),
+                        outcome: SimpleGeneratorStepOutcome::Throw(throw_value),
+                    });
+                    return Some(());
+                }
+                // A lowered for-await loop that returns out of the generator
+                // completes it: the replay's effects (including closes of
+                // consumed tracked iterators) become the completion's
+                // effects, and analysis ends with no further steps.
+                Statement::For { .. }
+                    if async_generator
+                        && !Self::statement_contains_generator_yield(statement)
+                        && self
+                            .lowered_for_await_protocol_return_effects(statement)
+                            .is_some() =>
+                {
+                    let protocol_effects = self
+                        .lowered_for_await_protocol_return_effects(statement)
+                        .expect("guard checked the protocol return resolves");
+                    effects.extend(protocol_effects);
+                    return Some(());
                 }
                 Statement::Declaration { .. }
                 | Statement::Labeled { .. }

@@ -1,6 +1,7 @@
 use super::*;
 
 mod call_frame_substitution;
+mod for_await_protocol;
 mod source_resolution;
 mod static_iterables;
 

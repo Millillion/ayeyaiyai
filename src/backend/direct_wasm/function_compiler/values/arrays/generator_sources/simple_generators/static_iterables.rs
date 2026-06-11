@@ -329,7 +329,10 @@ impl<'a> FunctionCompiler<'a> {
     /// A throw expression replayed at the consumption site must only mention
     /// bindings that resolve there (globals, user functions, builtins) — any
     /// residual reference to the next-function's own locals would rebind.
-    fn static_iterator_throw_expression_is_portable(&self, expression: &Expression) -> bool {
+    pub(in crate::backend::direct_wasm) fn static_iterator_throw_expression_is_portable(
+        &self,
+        expression: &Expression,
+    ) -> bool {
         match expression {
             Expression::Number(_)
             | Expression::BigInt(_)
