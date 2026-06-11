@@ -43,6 +43,13 @@ impl PreparedSharedProgramContext {
             .collect()
     }
 
+    /// Registration-ordered function names without cloning the function
+    /// bodies (`ordered_user_functions` deep-clones every `UserFunction`;
+    /// name-only scans on hot resolution paths must not pay that).
+    pub(in crate::backend::direct_wasm) fn ordered_user_function_names(&self) -> &[String] {
+        &self.user_function_order
+    }
+
     pub(in crate::backend::direct_wasm) fn contains_user_function(&self, name: &str) -> bool {
         self.user_function_metadata.contains_key(name)
     }

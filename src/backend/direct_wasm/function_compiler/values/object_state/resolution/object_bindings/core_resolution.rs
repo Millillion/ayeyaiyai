@@ -156,6 +156,28 @@ impl<'a> FunctionCompiler<'a> {
         expression: &Expression,
     ) -> Option<ObjectValueBinding> {
         use crate::backend::direct_wasm::memo;
+        // Primitive and array literals can never carry an object binding:
+        // every sub-resolver in the uncached chain matches only on
+        // Identifier/This/Member/GetIterator/Call/New/Object expressions, and
+        // the alias/materialize fallbacks map these literals to literals of
+        // the same constructor (primitive literals to themselves, array
+        // literals to array literals), which re-enter this resolver and reach
+        // the same fallbacks. Skip the guard entry, clones, and resolver
+        // chain entirely; pathological inputs resolve millions of
+        // string/number property values and re-materialize large tracked
+        // array literals per compile.
+        if matches!(
+            expression,
+            Expression::Number(_)
+                | Expression::BigInt(_)
+                | Expression::String(_)
+                | Expression::Bool(_)
+                | Expression::Null
+                | Expression::Undefined
+                | Expression::Array(_)
+        ) {
+            return None;
+        }
         let cacheable = matches!(
             expression,
             Expression::Call { .. } | Expression::New { .. } | Expression::Member { .. }
