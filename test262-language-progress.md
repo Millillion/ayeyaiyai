@@ -1,4 +1,4 @@
-21528/23668 (90.96%)
+21622/23668 (91.36%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,7 +14,7 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 8184/9337 (87.65%)
+- statements: 8230/9337 (88.14%)
 - expressions: 10269/11061 (92.84%)
 - types: 103/113 (91.15%)
 - function-code: 206/217 (94.93%)
@@ -25,7 +25,7 @@ Sub-category progress
 - identifier-resolution: 13/14 (92.86%)
 - computed-property-names: 47/48 (97.92%)
 - destructuring: 17/19 (89.47%)
-- eval-code: 295/347 (85.01%)
+- eval-code: 343/347 (98.85%)
 - import: 91/127 (71.65%)
 - export: 3/3 (100.00%)
 - module-code: 516/596 (86.58%)
@@ -10529,7 +10529,7 @@ Sub-category progress
   - [x] test/language/statements/with/12.10-0-10.js
   - [x] test/language/statements/with/12.10-0-11.js
   - [x] test/language/statements/with/12.10-0-12.js
-  - [ ] test/language/statements/with/12.10-0-3.js
+  - [x] test/language/statements/with/12.10-0-3.js
   - [x] test/language/statements/with/12.10-0-7.js
   - [x] test/language/statements/with/12.10-0-8.js
   - [x] test/language/statements/with/12.10-0-9.js
@@ -10540,27 +10540,27 @@ Sub-category progress
   - [x] test/language/statements/with/12.10-2-5.js
   - [x] test/language/statements/with/12.10-7-1.js
   - [x] test/language/statements/with/12.10.1-10-s.js
-  - [ ] test/language/statements/with/12.10.1-11gs.js
+  - [x] test/language/statements/with/12.10.1-11gs.js
   - [x] test/language/statements/with/12.10.1-12-s.js
   - [x] test/language/statements/with/12.10.1-13-s.js
   - [x] test/language/statements/with/12.10.1-4-s.js
   - [x] test/language/statements/with/12.10.1-5-s.js
   - [x] test/language/statements/with/12.10.1-8-s.js
   - [ ] test/language/statements/with/S12.10_A1.10_T1.js
-  - [ ] test/language/statements/with/S12.10_A1.10_T2.js
-  - [ ] test/language/statements/with/S12.10_A1.10_T3.js
+  - [x] test/language/statements/with/S12.10_A1.10_T2.js
+  - [x] test/language/statements/with/S12.10_A1.10_T3.js
   - [ ] test/language/statements/with/S12.10_A1.10_T4.js
-  - [ ] test/language/statements/with/S12.10_A1.10_T5.js
+  - [x] test/language/statements/with/S12.10_A1.10_T5.js
   - [x] test/language/statements/with/S12.10_A1.11_T1.js
   - [x] test/language/statements/with/S12.10_A1.11_T2.js
   - [x] test/language/statements/with/S12.10_A1.11_T3.js
   - [x] test/language/statements/with/S12.10_A1.11_T4.js
   - [x] test/language/statements/with/S12.10_A1.11_T5.js
-  - [ ] test/language/statements/with/S12.10_A1.12_T1.js
-  - [ ] test/language/statements/with/S12.10_A1.12_T2.js
-  - [ ] test/language/statements/with/S12.10_A1.12_T3.js
-  - [ ] test/language/statements/with/S12.10_A1.12_T4.js
-  - [ ] test/language/statements/with/S12.10_A1.12_T5.js
+  - [x] test/language/statements/with/S12.10_A1.12_T1.js
+  - [x] test/language/statements/with/S12.10_A1.12_T2.js
+  - [x] test/language/statements/with/S12.10_A1.12_T3.js
+  - [x] test/language/statements/with/S12.10_A1.12_T4.js
+  - [x] test/language/statements/with/S12.10_A1.12_T5.js
   - [x] test/language/statements/with/S12.10_A1.1_T1.js
   - [x] test/language/statements/with/S12.10_A1.1_T2.js
   - [x] test/language/statements/with/S12.10_A1.1_T3.js
@@ -10575,46 +10575,46 @@ Sub-category progress
   - [ ] test/language/statements/with/S12.10_A1.3_T4.js
   - [x] test/language/statements/with/S12.10_A1.3_T5.js
   - [ ] test/language/statements/with/S12.10_A1.4_T1.js
-  - [ ] test/language/statements/with/S12.10_A1.4_T2.js
-  - [ ] test/language/statements/with/S12.10_A1.4_T3.js
+  - [x] test/language/statements/with/S12.10_A1.4_T2.js
+  - [x] test/language/statements/with/S12.10_A1.4_T3.js
   - [ ] test/language/statements/with/S12.10_A1.4_T4.js
-  - [ ] test/language/statements/with/S12.10_A1.4_T5.js
+  - [x] test/language/statements/with/S12.10_A1.4_T5.js
   - [ ] test/language/statements/with/S12.10_A1.5_T1.js
   - [ ] test/language/statements/with/S12.10_A1.5_T2.js
   - [ ] test/language/statements/with/S12.10_A1.5_T3.js
   - [ ] test/language/statements/with/S12.10_A1.5_T4.js
-  - [ ] test/language/statements/with/S12.10_A1.5_T5.js
+  - [x] test/language/statements/with/S12.10_A1.5_T5.js
   - [x] test/language/statements/with/S12.10_A1.6_T1.js
   - [x] test/language/statements/with/S12.10_A1.6_T2.js
   - [x] test/language/statements/with/S12.10_A1.6_T3.js
-  - [ ] test/language/statements/with/S12.10_A1.7_T1.js
-  - [ ] test/language/statements/with/S12.10_A1.7_T2.js
-  - [ ] test/language/statements/with/S12.10_A1.7_T3.js
-  - [ ] test/language/statements/with/S12.10_A1.7_T4.js
-  - [ ] test/language/statements/with/S12.10_A1.7_T5.js
+  - [x] test/language/statements/with/S12.10_A1.7_T1.js
+  - [x] test/language/statements/with/S12.10_A1.7_T2.js
+  - [x] test/language/statements/with/S12.10_A1.7_T3.js
+  - [x] test/language/statements/with/S12.10_A1.7_T4.js
+  - [x] test/language/statements/with/S12.10_A1.7_T5.js
   - [ ] test/language/statements/with/S12.10_A1.8_T1.js
   - [ ] test/language/statements/with/S12.10_A1.8_T2.js
-  - [ ] test/language/statements/with/S12.10_A1.8_T3.js
+  - [x] test/language/statements/with/S12.10_A1.8_T3.js
   - [ ] test/language/statements/with/S12.10_A1.8_T4.js
-  - [ ] test/language/statements/with/S12.10_A1.8_T5.js
+  - [x] test/language/statements/with/S12.10_A1.8_T5.js
   - [ ] test/language/statements/with/S12.10_A1.9_T1.js
   - [ ] test/language/statements/with/S12.10_A1.9_T2.js
-  - [ ] test/language/statements/with/S12.10_A1.9_T3.js
-  - [ ] test/language/statements/with/S12.10_A3.10_T1.js
-  - [ ] test/language/statements/with/S12.10_A3.10_T2.js
-  - [ ] test/language/statements/with/S12.10_A3.10_T3.js
+  - [x] test/language/statements/with/S12.10_A1.9_T3.js
+  - [x] test/language/statements/with/S12.10_A3.10_T1.js
+  - [x] test/language/statements/with/S12.10_A3.10_T2.js
+  - [x] test/language/statements/with/S12.10_A3.10_T3.js
   - [x] test/language/statements/with/S12.10_A3.10_T4.js
-  - [ ] test/language/statements/with/S12.10_A3.10_T5.js
+  - [x] test/language/statements/with/S12.10_A3.10_T5.js
   - [ ] test/language/statements/with/S12.10_A3.11_T1.js
   - [ ] test/language/statements/with/S12.10_A3.11_T2.js
   - [ ] test/language/statements/with/S12.10_A3.11_T3.js
   - [x] test/language/statements/with/S12.10_A3.11_T4.js
   - [x] test/language/statements/with/S12.10_A3.11_T5.js
   - [x] test/language/statements/with/S12.10_A3.12_T1.js
-  - [ ] test/language/statements/with/S12.10_A3.12_T2.js
-  - [ ] test/language/statements/with/S12.10_A3.12_T3.js
+  - [x] test/language/statements/with/S12.10_A3.12_T2.js
+  - [x] test/language/statements/with/S12.10_A3.12_T3.js
   - [ ] test/language/statements/with/S12.10_A3.12_T4.js
-  - [ ] test/language/statements/with/S12.10_A3.12_T5.js
+  - [x] test/language/statements/with/S12.10_A3.12_T5.js
   - [x] test/language/statements/with/S12.10_A3.1_T1.js
   - [x] test/language/statements/with/S12.10_A3.1_T2.js
   - [x] test/language/statements/with/S12.10_A3.1_T3.js
@@ -10628,31 +10628,31 @@ Sub-category progress
   - [x] test/language/statements/with/S12.10_A3.3_T3.js
   - [x] test/language/statements/with/S12.10_A3.3_T4.js
   - [x] test/language/statements/with/S12.10_A3.4_T1.js
-  - [ ] test/language/statements/with/S12.10_A3.4_T2.js
-  - [ ] test/language/statements/with/S12.10_A3.4_T3.js
-  - [ ] test/language/statements/with/S12.10_A3.4_T4.js
-  - [ ] test/language/statements/with/S12.10_A3.4_T5.js
+  - [x] test/language/statements/with/S12.10_A3.4_T2.js
+  - [x] test/language/statements/with/S12.10_A3.4_T3.js
+  - [x] test/language/statements/with/S12.10_A3.4_T4.js
+  - [x] test/language/statements/with/S12.10_A3.4_T5.js
   - [ ] test/language/statements/with/S12.10_A3.5_T1.js
   - [ ] test/language/statements/with/S12.10_A3.5_T2.js
   - [ ] test/language/statements/with/S12.10_A3.5_T3.js
   - [ ] test/language/statements/with/S12.10_A3.5_T4.js
-  - [ ] test/language/statements/with/S12.10_A3.5_T5.js
+  - [x] test/language/statements/with/S12.10_A3.5_T5.js
   - [x] test/language/statements/with/S12.10_A3.6_T1.js
   - [x] test/language/statements/with/S12.10_A3.6_T2.js
   - [x] test/language/statements/with/S12.10_A3.6_T3.js
   - [x] test/language/statements/with/S12.10_A3.7_T1.js
-  - [ ] test/language/statements/with/S12.10_A3.7_T2.js
-  - [ ] test/language/statements/with/S12.10_A3.7_T3.js
-  - [ ] test/language/statements/with/S12.10_A3.7_T4.js
-  - [ ] test/language/statements/with/S12.10_A3.7_T5.js
+  - [x] test/language/statements/with/S12.10_A3.7_T2.js
+  - [x] test/language/statements/with/S12.10_A3.7_T3.js
+  - [x] test/language/statements/with/S12.10_A3.7_T4.js
+  - [x] test/language/statements/with/S12.10_A3.7_T5.js
   - [ ] test/language/statements/with/S12.10_A3.8_T1.js
   - [ ] test/language/statements/with/S12.10_A3.8_T2.js
-  - [ ] test/language/statements/with/S12.10_A3.8_T3.js
+  - [x] test/language/statements/with/S12.10_A3.8_T3.js
   - [ ] test/language/statements/with/S12.10_A3.8_T4.js
-  - [ ] test/language/statements/with/S12.10_A3.8_T5.js
+  - [x] test/language/statements/with/S12.10_A3.8_T5.js
   - [ ] test/language/statements/with/S12.10_A3.9_T1.js
   - [ ] test/language/statements/with/S12.10_A3.9_T2.js
-  - [ ] test/language/statements/with/S12.10_A3.9_T3.js
+  - [x] test/language/statements/with/S12.10_A3.9_T3.js
   - [x] test/language/statements/with/S12.10_A4_T1.js
   - [x] test/language/statements/with/S12.10_A4_T2.js
   - [x] test/language/statements/with/S12.10_A4_T3.js
@@ -10664,7 +10664,7 @@ Sub-category progress
   - [x] test/language/statements/with/S12.10_A5_T3.js
   - [x] test/language/statements/with/S12.10_A5_T4.js
   - [x] test/language/statements/with/S12.10_A5_T5.js
-  - [ ] test/language/statements/with/S12.10_A5_T6.js
+  - [x] test/language/statements/with/S12.10_A5_T6.js
   - [x] test/language/statements/with/binding-blocked-by-unscopables.js
   - [x] test/language/statements/with/binding-not-blocked-by-unscopables-falsey-prop.js
   - [x] test/language/statements/with/binding-not-blocked-by-unscopables-non-obj.js
@@ -10689,7 +10689,7 @@ Sub-category progress
   - [x] test/language/statements/with/let-block-with-newline.js
   - [x] test/language/statements/with/let-identifier-with-newline.js
   - [x] test/language/statements/with/scope-var-close.js
-  - [ ] test/language/statements/with/scope-var-open.js
+  - [x] test/language/statements/with/scope-var-open.js
   - [ ] test/language/statements/with/set-mutable-binding-binding-deleted-in-get-unscopables-strict-mode.js
   - [ ] test/language/statements/with/set-mutable-binding-binding-deleted-in-get-unscopables.js
   - [x] test/language/statements/with/set-mutable-binding-binding-deleted-with-typed-array-in-proto-chain-strict-mode.js
@@ -10699,9 +10699,9 @@ Sub-category progress
   - [x] test/language/statements/with/strict-fn-decl-nested-1.js
   - [x] test/language/statements/with/strict-fn-decl-nested-2.js
   - [x] test/language/statements/with/strict-fn-decl.js
-  - [ ] test/language/statements/with/strict-fn-expr.js
-  - [ ] test/language/statements/with/strict-fn-method.js
-  - [ ] test/language/statements/with/strict-script.js
+  - [x] test/language/statements/with/strict-fn-expr.js
+  - [x] test/language/statements/with/strict-fn-method.js
+  - [x] test/language/statements/with/strict-script.js
   - [ ] test/language/statements/with/unscopables-get-err.js
   - [x] test/language/statements/with/unscopables-inc-dec.js
   - [x] test/language/statements/with/unscopables-not-referenced-for-undef.js
@@ -22662,42 +22662,42 @@ Sub-category progress
   - [x] test/language/eval-code/direct/arrow-fn-body-cntns-arguments-var-bind-arrow-func-declare-arguments-assign.js
   - [x] test/language/eval-code/direct/arrow-fn-no-pre-existing-arguments-bindings-are-present-arrow-func-declare-arguments-assign-incl-def-param-arrow-arguments.js
   - [x] test/language/eval-code/direct/arrow-fn-no-pre-existing-arguments-bindings-are-present-arrow-func-declare-arguments-assign.js
-  - [ ] test/language/eval-code/direct/async-func-decl-a-following-parameter-is-named-arguments-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-func-decl-a-following-parameter-is-named-arguments-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-func-decl-a-preceding-parameter-is-named-arguments-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-func-decl-a-preceding-parameter-is-named-arguments-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-func-decl-fn-body-cntns-arguments-func-decl-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-func-decl-fn-body-cntns-arguments-func-decl-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-func-decl-fn-body-cntns-arguments-lex-bind-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-func-decl-fn-body-cntns-arguments-lex-bind-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-func-decl-fn-body-cntns-arguments-var-bind-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-func-decl-fn-body-cntns-arguments-var-bind-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-func-decl-no-pre-existing-arguments-bindings-are-present-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-func-decl-no-pre-existing-arguments-bindings-are-present-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-func-expr-named-a-following-parameter-is-named-arguments-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-func-expr-named-a-following-parameter-is-named-arguments-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-func-expr-named-a-preceding-parameter-is-named-arguments-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-func-expr-named-a-preceding-parameter-is-named-arguments-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-func-expr-named-fn-body-cntns-arguments-func-decl-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-func-expr-named-fn-body-cntns-arguments-func-decl-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-func-expr-named-fn-body-cntns-arguments-lex-bind-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-func-expr-named-fn-body-cntns-arguments-lex-bind-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-func-expr-named-fn-body-cntns-arguments-var-bind-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-func-expr-named-fn-body-cntns-arguments-var-bind-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-func-expr-named-no-pre-existing-arguments-bindings-are-present-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-func-expr-named-no-pre-existing-arguments-bindings-are-present-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-func-expr-nameless-a-following-parameter-is-named-arguments-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-func-expr-nameless-a-following-parameter-is-named-arguments-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-func-expr-nameless-a-preceding-parameter-is-named-arguments-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-func-expr-nameless-a-preceding-parameter-is-named-arguments-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-func-expr-nameless-fn-body-cntns-arguments-func-decl-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-func-expr-nameless-fn-body-cntns-arguments-func-decl-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-func-expr-nameless-fn-body-cntns-arguments-lex-bind-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-func-expr-nameless-fn-body-cntns-arguments-lex-bind-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-func-expr-nameless-fn-body-cntns-arguments-var-bind-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-func-expr-nameless-fn-body-cntns-arguments-var-bind-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-func-expr-nameless-no-pre-existing-arguments-bindings-are-present-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-func-expr-nameless-no-pre-existing-arguments-bindings-are-present-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-func-decl-a-following-parameter-is-named-arguments-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-func-decl-a-following-parameter-is-named-arguments-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-func-decl-a-preceding-parameter-is-named-arguments-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-func-decl-a-preceding-parameter-is-named-arguments-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-func-decl-fn-body-cntns-arguments-func-decl-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-func-decl-fn-body-cntns-arguments-func-decl-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-func-decl-fn-body-cntns-arguments-lex-bind-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-func-decl-fn-body-cntns-arguments-lex-bind-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-func-decl-fn-body-cntns-arguments-var-bind-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-func-decl-fn-body-cntns-arguments-var-bind-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-func-decl-no-pre-existing-arguments-bindings-are-present-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-func-decl-no-pre-existing-arguments-bindings-are-present-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-func-expr-named-a-following-parameter-is-named-arguments-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-func-expr-named-a-following-parameter-is-named-arguments-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-func-expr-named-a-preceding-parameter-is-named-arguments-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-func-expr-named-a-preceding-parameter-is-named-arguments-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-func-expr-named-fn-body-cntns-arguments-func-decl-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-func-expr-named-fn-body-cntns-arguments-func-decl-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-func-expr-named-fn-body-cntns-arguments-lex-bind-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-func-expr-named-fn-body-cntns-arguments-lex-bind-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-func-expr-named-fn-body-cntns-arguments-var-bind-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-func-expr-named-fn-body-cntns-arguments-var-bind-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-func-expr-named-no-pre-existing-arguments-bindings-are-present-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-func-expr-named-no-pre-existing-arguments-bindings-are-present-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-func-expr-nameless-a-following-parameter-is-named-arguments-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-func-expr-nameless-a-following-parameter-is-named-arguments-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-func-expr-nameless-a-preceding-parameter-is-named-arguments-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-func-expr-nameless-a-preceding-parameter-is-named-arguments-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-func-expr-nameless-fn-body-cntns-arguments-func-decl-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-func-expr-nameless-fn-body-cntns-arguments-func-decl-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-func-expr-nameless-fn-body-cntns-arguments-lex-bind-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-func-expr-nameless-fn-body-cntns-arguments-lex-bind-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-func-expr-nameless-fn-body-cntns-arguments-var-bind-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-func-expr-nameless-fn-body-cntns-arguments-var-bind-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-func-expr-nameless-no-pre-existing-arguments-bindings-are-present-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-func-expr-nameless-no-pre-existing-arguments-bindings-are-present-declare-arguments.js
   - [x] test/language/eval-code/direct/async-gen-func-decl-a-following-parameter-is-named-arguments-declare-arguments-and-assign.js
   - [x] test/language/eval-code/direct/async-gen-func-decl-a-following-parameter-is-named-arguments-declare-arguments.js
   - [x] test/language/eval-code/direct/async-gen-func-decl-a-preceding-parameter-is-named-arguments-declare-arguments-and-assign.js
@@ -22746,18 +22746,18 @@ Sub-category progress
   - [x] test/language/eval-code/direct/async-gen-named-func-expr-fn-body-cntns-arguments-var-bind-declare-arguments.js
   - [x] test/language/eval-code/direct/async-gen-named-func-expr-no-pre-existing-arguments-bindings-are-present-declare-arguments-and-assign.js
   - [x] test/language/eval-code/direct/async-gen-named-func-expr-no-pre-existing-arguments-bindings-are-present-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-meth-a-following-parameter-is-named-arguments-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-meth-a-following-parameter-is-named-arguments-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-meth-a-preceding-parameter-is-named-arguments-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-meth-a-preceding-parameter-is-named-arguments-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-meth-fn-body-cntns-arguments-func-decl-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-meth-fn-body-cntns-arguments-func-decl-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-meth-fn-body-cntns-arguments-lex-bind-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-meth-fn-body-cntns-arguments-lex-bind-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-meth-fn-body-cntns-arguments-var-bind-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-meth-fn-body-cntns-arguments-var-bind-declare-arguments.js
-  - [ ] test/language/eval-code/direct/async-meth-no-pre-existing-arguments-bindings-are-present-declare-arguments-and-assign.js
-  - [ ] test/language/eval-code/direct/async-meth-no-pre-existing-arguments-bindings-are-present-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-meth-a-following-parameter-is-named-arguments-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-meth-a-following-parameter-is-named-arguments-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-meth-a-preceding-parameter-is-named-arguments-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-meth-a-preceding-parameter-is-named-arguments-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-meth-fn-body-cntns-arguments-func-decl-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-meth-fn-body-cntns-arguments-func-decl-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-meth-fn-body-cntns-arguments-lex-bind-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-meth-fn-body-cntns-arguments-lex-bind-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-meth-fn-body-cntns-arguments-var-bind-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-meth-fn-body-cntns-arguments-var-bind-declare-arguments.js
+  - [x] test/language/eval-code/direct/async-meth-no-pre-existing-arguments-bindings-are-present-declare-arguments-and-assign.js
+  - [x] test/language/eval-code/direct/async-meth-no-pre-existing-arguments-bindings-are-present-declare-arguments.js
   - [x] test/language/eval-code/direct/block-decl-eval-source-is-strict-nostrict.js
   - [x] test/language/eval-code/direct/block-decl-eval-source-is-strict-onlystrict.js
   - [x] test/language/eval-code/direct/block-decl-onlystrict.js
