@@ -668,6 +668,20 @@ impl<'a> FunctionCompiler<'a> {
         {
             return self.resolve_static_string_concat_value(&primitive, current_function_name);
         }
+        if let Expression::Member { object, property } = expression
+            && let Some(object_binding) = self.resolve_object_binding_from_expression(object)
+        {
+            let property = self
+                .resolve_property_key_expression(property)
+                .unwrap_or_else(|| self.materialize_static_expression(property));
+            if let Some(value) = object_binding_lookup_value(&object_binding, &property)
+                && let Some(primitive) = self
+                    .resolve_static_primitive_expression_with_context(value, current_function_name)
+            {
+                return self
+                    .resolve_static_string_concat_value(&primitive, current_function_name);
+            }
+        }
 
         let resolved = self
             .resolve_bound_alias_expression(expression)
