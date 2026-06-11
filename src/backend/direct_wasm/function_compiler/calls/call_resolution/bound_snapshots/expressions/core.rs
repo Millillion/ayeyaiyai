@@ -35,6 +35,11 @@ impl<'a> FunctionCompiler<'a> {
         current_function_name: Option<&str>,
     ) -> Option<Expression> {
         let resolved_name = self.resolve_bound_snapshot_binding_name(name, bindings);
+        if !bindings.contains_key(resolved_name)
+            && let Some(value) = self.static_module_hidden_binding_post_init_value(resolved_name)
+        {
+            return Some(value);
+        }
         if let Some(value) = bindings.get(resolved_name).cloned() {
             if !static_expression_matches(&value, expression) {
                 if let Expression::Identifier(value_name) = &value {

@@ -1785,6 +1785,33 @@ impl<'a> FunctionCompiler<'a> {
                 trace_step("await_iterator_step:done");
                 return Ok(());
             }
+            // An awaited dynamic-import namespace resolved statically must keep
+            // its namespace object binding so member reads route through the
+            // live-binding namespace machinery instead of degrading to
+            // uninitialized runtime shadow slots.
+            if let Some(object_binding) = state
+                .object_binding
+                .as_ref()
+                .filter(|binding| Self::object_binding_has_module_namespace_marker(binding))
+                && matches!(
+                    self.resolve_static_await_resolution_outcome(
+                        &state.canonical_value_expression
+                    ),
+                    Some(StaticEvalOutcome::Value(_))
+                )
+            {
+                trace_step("await_namespace:start");
+                self.state
+                    .speculation
+                    .static_semantics
+                    .set_local_object_binding(&state.resolved_name, object_binding.clone());
+                self.state
+                    .speculation
+                    .static_semantics
+                    .set_local_kind(&state.resolved_name, StaticValueKind::Object);
+                trace_step("await_namespace:done");
+                return Ok(());
+            }
             trace_step("await_runtime:start");
             self.state
                 .clear_local_static_binding_metadata(&state.resolved_name);
