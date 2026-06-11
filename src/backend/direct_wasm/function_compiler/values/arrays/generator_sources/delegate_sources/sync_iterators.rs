@@ -6,13 +6,7 @@ impl<'a> FunctionCompiler<'a> {
         expression: &Expression,
         async_generator: bool,
     ) -> Option<(Vec<SimpleGeneratorStep>, Vec<Statement>, Expression)> {
-        // Compiler-generated temps (lowered destructure/iterator locals) are
-        // never user-level unresolvable references: when their binding state
-        // is not visible here (an inlined callback body re-emitted in the
-        // caller's scope, for example), synthesizing a ReferenceError step
-        // would commit the fold to a throw the runtime never performs.
         if let Expression::Identifier(name) = expression
-            && !name.starts_with("__ayy_")
             && self.simple_generator_identifier_read_is_unresolvable(name)
         {
             return Some((
