@@ -366,6 +366,19 @@ impl<'a> FunctionCompiler<'a> {
             Expression::Unary { expression, .. } => {
                 self.static_iterator_throw_expression_is_portable(expression)
             }
+            Expression::Array(elements) => elements.iter().all(|element| match element {
+                ArrayElement::Expression(value) => {
+                    self.static_iterator_throw_expression_is_portable(value)
+                }
+                ArrayElement::Spread(_) => false,
+            }),
+            Expression::Object(entries) => entries.iter().all(|entry| match entry {
+                ObjectEntry::Data { key, value } => {
+                    matches!(key, Expression::String(_) | Expression::Number(_))
+                        && self.static_iterator_throw_expression_is_portable(value)
+                }
+                _ => false,
+            }),
             _ => false,
         }
     }

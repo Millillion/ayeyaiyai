@@ -12,6 +12,9 @@ enum ForAwaitProtocolIterator {
     Steps {
         steps: Vec<SimpleGeneratorStep>,
         completion_value: Expression,
+        /// Effects performed by the final (done) `next()` call, replayed when
+        /// the completion step is consumed.
+        completion_effects: Vec<Statement>,
         index: usize,
         /// The consumption-site iterator binding this state was seeded from
         /// (a generator object visible after the fold): its static index must
@@ -402,6 +405,7 @@ impl<'a> FunctionCompiler<'a> {
                 && let ForAwaitProtocolIterator::Steps {
                     steps,
                     completion_value,
+                    completion_effects,
                     index,
                     closed,
                     ..
@@ -410,6 +414,7 @@ impl<'a> FunctionCompiler<'a> {
                 return Some(ForAwaitProtocolIterator::Steps {
                     steps,
                     completion_value,
+                    completion_effects,
                     index,
                     binding_name: None,
                     closed,
@@ -428,7 +433,7 @@ impl<'a> FunctionCompiler<'a> {
                 } => Some((steps, completion_effects, completion_value)),
                 _ => None,
             })?;
-        if !completion_effects.is_empty()
+        if !self.for_await_protocol_effects_are_replayable(&completion_effects)
             || !self.for_await_protocol_steps_have_replayable_effects(&steps)
         {
             return None;
@@ -436,6 +441,7 @@ impl<'a> FunctionCompiler<'a> {
         Some(ForAwaitProtocolIterator::Steps {
             steps,
             completion_value,
+            completion_effects,
             index: 0,
             binding_name: None,
             closed: false,
@@ -703,7 +709,7 @@ impl<'a> FunctionCompiler<'a> {
             })
             .or_else(|| self.resolve_static_iterable_simple_generator_source(&source))
         {
-            if !completion_effects.is_empty() {
+            if !self.for_await_protocol_effects_are_replayable(&completion_effects) {
                 return None;
             }
             if !self.for_await_protocol_steps_have_replayable_effects_with_close(&steps, true) {
@@ -712,6 +718,7 @@ impl<'a> FunctionCompiler<'a> {
             return Some(Ok(ForAwaitProtocolIterator::Steps {
                 steps,
                 completion_value,
+                completion_effects,
                 index: 0,
                 binding_name: None,
                 closed: false,
@@ -737,7 +744,7 @@ impl<'a> FunctionCompiler<'a> {
                 Ok(iterator_value) => {
                     let (steps, completion_effects, completion_value) = self
                         .resolve_static_iterator_object_simple_generator_source(&iterator_value)?;
-                    if !completion_effects.is_empty()
+                    if !self.for_await_protocol_effects_are_replayable(&completion_effects)
                         || !self
                             .for_await_protocol_steps_have_replayable_effects_with_close(
                                 &steps, true,
@@ -748,6 +755,7 @@ impl<'a> FunctionCompiler<'a> {
                     return Some(Ok(ForAwaitProtocolIterator::Steps {
                         steps,
                         completion_value,
+                        completion_effects,
                         index: 0,
                         binding_name: None,
                         closed: false,
@@ -807,6 +815,7 @@ impl<'a> FunctionCompiler<'a> {
                 Some(ForAwaitProtocolIterator::Steps {
                     steps: steps.clone(),
                     completion_value: completion_value.clone(),
+                    completion_effects: Vec::new(),
                     index,
                     binding_name: Some(binding_name.clone()),
                     closed: false,
@@ -853,29 +862,46 @@ impl<'a> FunctionCompiler<'a> {
                         step.close_effects.as_slice(),
                         [Statement::Expression(Expression::IteratorClose(_))]
                     ));
-            close_ok
-                && step.effects.iter().all(|effect| match effect {
-                    Statement::Assign { name, value } => {
-                        !name.starts_with("__ayy_")
-                            && self.static_iterator_throw_expression_is_portable(value)
-                    }
-                    Statement::Expression(Expression::Update { name, .. }) => {
-                        !name.starts_with("__ayy_")
-                    }
-                    _ => false,
-                })
+            close_ok && self.for_await_protocol_effects_are_replayable(&step.effects)
+        })
+    }
+
+    fn for_await_protocol_effects_are_replayable(&self, effects: &[Statement]) -> bool {
+        effects.iter().all(|effect| match effect {
+            Statement::Assign { name, value } => {
+                !name.starts_with("__ayy_")
+                    && self.static_iterator_throw_expression_is_portable(value)
+            }
+            Statement::Expression(Expression::Update { name, .. }) => !name.starts_with("__ayy_"),
+            _ => false,
         })
     }
 
     fn for_await_protocol_record_step_effects(
+        &self,
         context: &mut ForAwaitProtocolContext,
         effects: &[Statement],
     ) {
         for effect in effects {
             match effect {
-                Statement::Assign { name, .. }
-                | Statement::Expression(Expression::Update { name, .. }) => {
+                Statement::Assign { name, value } => {
+                    // Track the post-assignment value symbolically so later
+                    // replay reads (in-loop assertions of step counters)
+                    // observe the live value instead of bailing. Evaluation
+                    // precedes the effect-name guard: the value's own reads
+                    // see the pre-assignment state.
+                    let evaluated =
+                        self.evaluate_for_await_protocol_nonlocal_assignment(value, context);
                     context.effect_names.insert(name.clone());
+                    if let Some(evaluated) = evaluated {
+                        context.bindings.insert(name.clone(), evaluated);
+                    } else {
+                        context.bindings.remove(name);
+                    }
+                }
+                Statement::Expression(Expression::Update { name, .. }) => {
+                    context.effect_names.insert(name.clone());
+                    context.bindings.remove(name);
                 }
                 _ => {}
             }
@@ -929,6 +955,7 @@ impl<'a> FunctionCompiler<'a> {
             ForAwaitProtocolIterator::Steps {
                 steps,
                 completion_value,
+                completion_effects,
                 index,
                 binding_name,
                 ..
@@ -956,7 +983,13 @@ impl<'a> FunctionCompiler<'a> {
                     }
                 };
                 let Some(step) = steps.get(current) else {
-                    synthetic_next(context);
+                    // The completion-consuming `next()`: its effects replay
+                    // exactly once (synthetic next statements re-emit them
+                    // through the standard machinery for tracked bindings).
+                    if !synthetic_next(context) && current == steps.len() {
+                        let completion_effects = completion_effects.clone();
+                        self.for_await_protocol_record_step_effects(context, &completion_effects);
+                    }
                     return Some(Ok(Self::for_await_protocol_step_object(
                         true,
                         completion_value.clone(),
@@ -979,7 +1012,7 @@ impl<'a> FunctionCompiler<'a> {
                         }
                     }
                 } else {
-                    Self::for_await_protocol_record_step_effects(context, &step.effects);
+                    self.for_await_protocol_record_step_effects(context, &step.effects);
                 }
                 match &step.outcome {
                     SimpleGeneratorStepOutcome::Yield(value) => Some(Ok(
@@ -1135,11 +1168,26 @@ impl<'a> FunctionCompiler<'a> {
         for statement in &function.body {
             match statement {
                 Statement::Assign { name, value } => {
-                    if name.starts_with("__ayy_")
-                        || !self.static_iterator_throw_expression_is_portable(value)
-                    {
+                    if name.starts_with("__ayy_") {
                         return None;
                     }
+                    // `this` inside the replayed `return()` is the close
+                    // target; a bare `arguments` reference is the call's
+                    // (empty) arguments object, observably an empty list.
+                    let value = &Self::substitute_this_in_expression(value, close_target);
+                    let value = &if matches!(value, Expression::Identifier(name) if name == "arguments")
+                    {
+                        Expression::Array(Vec::new())
+                    } else {
+                        value.clone()
+                    };
+                    if !self.static_iterator_throw_expression_is_portable(value) {
+                        return None;
+                    }
+                    let statement = &Statement::Assign {
+                        name: name.clone(),
+                        value: value.clone(),
+                    };
                     // Track the post-assignment value symbolically when it
                     // evaluates, so later replay reads (in-loop assertions of
                     // the close counter) observe the updated value instead of
@@ -1205,13 +1253,12 @@ impl<'a> FunctionCompiler<'a> {
                 | Expression::String(_)
                 | Expression::Bool(_)
                 | Expression::Null
-                | Expression::Undefined => Some(evaluated),
-                Expression::Identifier(ref name) => {
-                    let materialized = self.materialize_static_expression(&evaluated);
-                    (!matches!(&materialized, Expression::Identifier(materialized_name) if materialized_name == name))
-                        .then(|| self.evaluate_for_await_protocol_nonlocal_assignment(&materialized, context))
-                        .flatten()
-                }
+                | Expression::Undefined
+                // Identifiers stay symbolic (reference identity); literal
+                // object shapes keep their member reads replayable.
+                | Expression::Identifier(_)
+                | Expression::Object(_)
+                | Expression::Array(_) => Some(evaluated),
                 _ => None,
             },
             _ => None,
@@ -1270,6 +1317,46 @@ impl<'a> FunctionCompiler<'a> {
                 self.for_await_protocol_member_value(&object, &property_key)
             }
             Expression::Call { callee, arguments } => {
+                // The plain harness `assert(value[, message])` call: passes
+                // only for the literal boolean true.
+                if matches!(callee.as_ref(), Expression::Identifier(name) if name == "assert")
+                    && !context.bindings.contains_key("assert")
+                    && (1..=2).contains(&arguments.len())
+                    && self.for_await_protocol_identifier_resolves("Test262Error")
+                {
+                    let CallArgument::Expression(argument) = arguments.first()? else {
+                        return None;
+                    };
+                    let value = match self.evaluate_for_await_protocol_expression(argument, context)? {
+                        Ok(value) => value,
+                        Err(throw_value) => return Some(Err(throw_value)),
+                    };
+                    let passed = matches!(value, Expression::Bool(true));
+                    if !passed
+                        && !matches!(
+                            value,
+                            Expression::Bool(_)
+                                | Expression::Number(_)
+                                | Expression::String(_)
+                                | Expression::Null
+                                | Expression::Undefined
+                        )
+                    {
+                        // Non-boolean object-like values fail `=== true` too,
+                        // but only commit when the shape is unambiguous.
+                        if !matches!(value, Expression::Object(_) | Expression::Array(_)) {
+                            return None;
+                        }
+                    }
+                    return Some(if passed {
+                        Ok(Expression::Undefined)
+                    } else {
+                        Err(Expression::New {
+                            callee: Box::new(Expression::Identifier("Test262Error".to_string())),
+                            arguments: Vec::new(),
+                        })
+                    });
+                }
                 if let Expression::Member { object, property } = callee.as_ref()
                     && let Expression::Identifier(object_name) = object.as_ref()
                     && let Expression::String(method_name) = property.as_ref()
@@ -1297,17 +1384,32 @@ impl<'a> FunctionCompiler<'a> {
                         let [actual, expected] = evaluated.as_slice() else {
                             return None;
                         };
-                        let actual = self.for_await_protocol_comparable_value(actual.clone());
-                        let expected = self.for_await_protocol_comparable_value(expected.clone());
                         // Numbers compare with `Object.is` semantics: NaN is
-                        // self-equal and signed zeros are distinct.
+                        // self-equal and signed zeros are distinct. Matching
+                        // non-number value expressions (the same identifier
+                        // binding on both sides) are identity-equal.
                         let equal = if let (Expression::Number(actual), Expression::Number(expected)) =
-                            (&actual, &expected)
+                            (actual, expected)
                         {
                             (actual.is_nan() && expected.is_nan())
                                 || (actual == expected
                                     && actual.is_sign_positive() == expected.is_sign_positive())
+                        } else if static_expression_matches(actual, expected)
+                            && matches!(
+                                actual,
+                                Expression::Identifier(_)
+                                    | Expression::String(_)
+                                    | Expression::BigInt(_)
+                                    | Expression::Bool(_)
+                                    | Expression::Null
+                                    | Expression::Undefined
+                            )
+                        {
+                            true
                         } else {
+                            let actual = self.for_await_protocol_comparable_value(actual.clone());
+                            let expected =
+                                self.for_await_protocol_comparable_value(expected.clone());
                             Self::for_await_protocol_values_equal(&actual, &expected, false)?
                         };
                         let passed = if method_name == "sameValue" {
@@ -1463,9 +1565,7 @@ impl<'a> FunctionCompiler<'a> {
                     Ok(value) => value,
                     Err(throw_value) => return Some(Err(throw_value)),
                 };
-                let Expression::Bool(value) = value else {
-                    return None;
-                };
+                let value = Self::for_await_protocol_to_boolean(&value)?;
                 Some(Ok(Expression::Bool(!value)))
             }
             Expression::IteratorClose(target) => {

@@ -1507,7 +1507,7 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
-    fn substitute_this_in_expression(
+    pub(in crate::backend::direct_wasm) fn substitute_this_in_expression(
         expression: &Expression,
         this_expression: &Expression,
     ) -> Expression {
