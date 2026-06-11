@@ -1,4 +1,4 @@
-21622/23668 (91.36%)
+21630/23668 (91.39%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,7 +14,7 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 8230/9337 (88.14%)
+- statements: 8238/9337 (88.23%)
 - expressions: 10269/11061 (92.84%)
 - types: 103/113 (91.15%)
 - function-code: 206/217 (94.93%)
@@ -8253,8 +8253,8 @@ Sub-category progress
   - [x] test/language/statements/for-of/dstr/array-elem-iter-rtrn-close-null.js
   - [x] test/language/statements/for-of/dstr/array-elem-iter-rtrn-close.js
   - [x] test/language/statements/for-of/dstr/array-elem-iter-thrw-close-err.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-iter-thrw-close-skip.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-iter-thrw-close.js
+  - [x] test/language/statements/for-of/dstr/array-elem-iter-thrw-close-skip.js
+  - [x] test/language/statements/for-of/dstr/array-elem-iter-thrw-close.js
   - [x] test/language/statements/for-of/dstr/array-elem-nested-array-invalid.js
   - [x] test/language/statements/for-of/dstr/array-elem-nested-array-null.js
   - [x] test/language/statements/for-of/dstr/array-elem-nested-array-undefined-hole.js
@@ -8305,8 +8305,8 @@ Sub-category progress
   - [x] test/language/statements/for-of/dstr/array-elem-trlg-iter-list-rtrn-close-null.js
   - [x] test/language/statements/for-of/dstr/array-elem-trlg-iter-list-rtrn-close.js
   - [x] test/language/statements/for-of/dstr/array-elem-trlg-iter-list-thrw-close-err.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-trlg-iter-list-thrw-close-skip.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-trlg-iter-list-thrw-close.js
+  - [x] test/language/statements/for-of/dstr/array-elem-trlg-iter-list-thrw-close-skip.js
+  - [x] test/language/statements/for-of/dstr/array-elem-trlg-iter-list-thrw-close.js
   - [x] test/language/statements/for-of/dstr/array-elem-trlg-iter-rest-nrml-close-skip.js
   - [x] test/language/statements/for-of/dstr/array-elem-trlg-iter-rest-rtrn-close-err.js
   - [x] test/language/statements/for-of/dstr/array-elem-trlg-iter-rest-rtrn-close-null.js
@@ -8314,7 +8314,7 @@ Sub-category progress
   - [ ] test/language/statements/for-of/dstr/array-elem-trlg-iter-rest-thrw-close-err.js
   - [ ] test/language/statements/for-of/dstr/array-elem-trlg-iter-rest-thrw-close-skip.js
   - [ ] test/language/statements/for-of/dstr/array-elem-trlg-iter-rest-thrw-close.js
-  - [ ] test/language/statements/for-of/dstr/array-elision-iter-abpt.js
+  - [x] test/language/statements/for-of/dstr/array-elision-iter-abpt.js
   - [x] test/language/statements/for-of/dstr/array-elision-iter-get-err.js
   - [ ] test/language/statements/for-of/dstr/array-elision-iter-nrml-close-err.js
   - [x] test/language/statements/for-of/dstr/array-elision-iter-nrml-close-null.js
@@ -8345,7 +8345,7 @@ Sub-category progress
   - [x] test/language/statements/for-of/dstr/array-rest-before-elision.js
   - [x] test/language/statements/for-of/dstr/array-rest-before-rest.js
   - [x] test/language/statements/for-of/dstr/array-rest-elision-invalid.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-elision-iter-abpt.js
+  - [x] test/language/statements/for-of/dstr/array-rest-elision-iter-abpt.js
   - [x] test/language/statements/for-of/dstr/array-rest-elision.js
   - [x] test/language/statements/for-of/dstr/array-rest-init.js
   - [x] test/language/statements/for-of/dstr/array-rest-iter-get-err.js
@@ -8354,8 +8354,8 @@ Sub-category progress
   - [x] test/language/statements/for-of/dstr/array-rest-iter-rtrn-close-null.js
   - [x] test/language/statements/for-of/dstr/array-rest-iter-rtrn-close.js
   - [x] test/language/statements/for-of/dstr/array-rest-iter-thrw-close-err.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-iter-thrw-close-skip.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-iter-thrw-close.js
+  - [x] test/language/statements/for-of/dstr/array-rest-iter-thrw-close-skip.js
+  - [x] test/language/statements/for-of/dstr/array-rest-iter-thrw-close.js
   - [x] test/language/statements/for-of/dstr/array-rest-iteration.js
   - [x] test/language/statements/for-of/dstr/array-rest-lref-err.js
   - [x] test/language/statements/for-of/dstr/array-rest-lref.js
