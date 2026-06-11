@@ -1078,7 +1078,8 @@ impl<'a> FunctionCompiler<'a> {
                     .or_else(|| self.static_class_constructor_call_initializer_result(value))
                     .or_else(|| {
                         self.static_test262_assert_deep_equal_helper_initializer_result(value)
-                    });
+                    })
+                    .or_else(|| self.snapshot_effectful_expression_for_static_store(value));
                 let store_value = resolved_store_value.as_ref().unwrap_or(value);
                 let scoped_target = self.resolve_with_scope_binding(name)?;
                 if trace {
@@ -1133,7 +1134,8 @@ impl<'a> FunctionCompiler<'a> {
                 let resolved_store_value = self
                     .static_for_await_iterator_initializer_result(name, value)
                     .or_else(|| self.static_class_constructor_call_initializer_result(value))
-                    .or_else(|| self.static_using_dispose_method_initializer_result(name, value));
+                    .or_else(|| self.static_using_dispose_method_initializer_result(name, value))
+                    .or_else(|| self.snapshot_effectful_expression_for_static_store(value));
                 if trace {
                     eprintln!("binding_statement:let:after_resolve_store name={name}");
                 }
@@ -1274,7 +1276,7 @@ impl<'a> FunctionCompiler<'a> {
                     )?;
                     self.state.emission.output.instructions.push(0x1a);
                 } else {
-                    let compound_store_value = self.emit_identifier_compound_assignment_value(
+                    let mut compound_store_value = self.emit_identifier_compound_assignment_value(
                         name,
                         value,
                         resolved_reference_local.as_ref(),
@@ -1285,6 +1287,8 @@ impl<'a> FunctionCompiler<'a> {
                         reference_is_unresolvable,
                     )?;
                     if compound_store_value.is_none() {
+                        compound_store_value =
+                            self.snapshot_assignment_value_for_static_store(name, value);
                         self.emit_binding_initializer_value(name, value)?;
                     }
                     if trace {

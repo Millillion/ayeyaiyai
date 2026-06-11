@@ -113,14 +113,18 @@ impl<'a> FunctionCompiler<'a> {
         current_function_name: Option<&str>,
     ) -> Option<(Expression, Option<String>)> {
         use crate::backend::direct_wasm::memo;
-        if !memo::memo_context_is_cacheable() {
+        let key = if memo::memo_context_is_cacheable() {
+            memo::static_call_result_cache_key(callee, arguments, current_function_name)
+        } else {
+            None
+        };
+        let Some(key) = key else {
             return self.resolve_static_call_result_expression_with_context_uncached(
                 callee,
                 arguments,
                 current_function_name,
             );
-        }
-        let key = memo::static_call_result_cache_key(callee, arguments, current_function_name);
+        };
         if let Some(cached) = memo::lookup_static_call_result(key) {
             if memo::memo_verify_enabled() {
                 let verify_token = memo::MemoStoreToken::capture();

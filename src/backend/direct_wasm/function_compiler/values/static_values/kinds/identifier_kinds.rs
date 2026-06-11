@@ -1,5 +1,55 @@
 use super::*;
 
+thread_local! {
+    static ACTIVE_IDENTIFIER_KIND_LOOKUPS: RefCell<HashMap<String, u64>> =
+        RefCell::new(HashMap::new());
+}
+
+/// Re-entrancy guard for identifier kind lookups. Self-referential tracked
+/// values (for example `x` tracked as `x + 1` after `x += 1` on a binding
+/// without static metadata) would otherwise cycle through kind inference ->
+/// addition outcome resolution -> accessor binding resolution -> kind lookup
+/// for the same identifier, exploring an enormous resolution tree.
+struct IdentifierKindLookupGuard {
+    key: String,
+    _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope,
+}
+
+impl IdentifierKindLookupGuard {
+    fn enter(name: &str) -> Option<Self> {
+        let key = name.to_string();
+        let conflict = ACTIVE_IDENTIFIER_KIND_LOOKUPS.with(|active| {
+            let mut active = active.borrow_mut();
+            match active.get(&key) {
+                Some(serial) => Some(*serial),
+                None => {
+                    active.insert(
+                        key.clone(),
+                        crate::backend::direct_wasm::memo::next_guard_serial(),
+                    );
+                    None
+                }
+            }
+        });
+        if let Some(serial) = conflict {
+            crate::backend::direct_wasm::memo::note_resolution_guard_block_conflict(serial);
+            return None;
+        }
+        Some(Self {
+            key,
+            _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope::enter_class(24),
+        })
+    }
+}
+
+impl Drop for IdentifierKindLookupGuard {
+    fn drop(&mut self) {
+        ACTIVE_IDENTIFIER_KIND_LOOKUPS.with(|active| {
+            active.borrow_mut().remove(&self.key);
+        });
+    }
+}
+
 impl<'a> FunctionCompiler<'a> {
     fn dynamic_property_descriptor_source_from_expression(
         &self,
@@ -474,6 +524,10 @@ impl<'a> FunctionCompiler<'a> {
         {
             return Some(StaticValueKind::Object);
         }
+        if crate::ayy_env_flag!("AYY_TRACE_KIND_LOOKUPS") {
+            eprintln!("kind_lookup:{name}");
+        }
+        let _lookup_guard = IdentifierKindLookupGuard::enter(name)?;
         let identifier = Expression::Identifier(name.to_string());
         if let Some(resolved) = self.resolve_bound_alias_expression(&identifier)
             && !static_expression_matches(&resolved, &identifier)

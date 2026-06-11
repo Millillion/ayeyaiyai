@@ -1,5 +1,36 @@
 use super::*;
 
+thread_local! {
+    static ACTIVE_OBJECT_BINDING_MEMBER_READ_VALUES: RefCell<HashSet<String>> =
+        RefCell::new(HashSet::new());
+}
+
+/// Guards against emitting a tracked object-binding property value that
+/// (directly or transitively) reads the same member again. Self-referential
+/// member updates such as `--object.prop` can record a property value that
+/// still contains a read of `object.prop`, which would otherwise recurse
+/// forever during emission.
+struct ObjectBindingMemberReadValueGuard {
+    key: String,
+}
+
+impl ObjectBindingMemberReadValueGuard {
+    fn enter(object: &Expression, property: &Expression, value: &Expression) -> Option<Self> {
+        let key = format!("{object:?}:{property:?}:{value:?}");
+        let inserted = ACTIVE_OBJECT_BINDING_MEMBER_READ_VALUES
+            .with(|active| active.borrow_mut().insert(key.clone()));
+        inserted.then_some(Self { key })
+    }
+}
+
+impl Drop for ObjectBindingMemberReadValueGuard {
+    fn drop(&mut self) {
+        ACTIVE_OBJECT_BINDING_MEMBER_READ_VALUES.with(|active| {
+            active.borrow_mut().remove(&self.key);
+        });
+    }
+}
+
 impl<'a> FunctionCompiler<'a> {
     pub(in crate::backend::direct_wasm) fn emit_runtime_property_key_match_from_local(
         &mut self,
@@ -486,6 +517,11 @@ impl<'a> FunctionCompiler<'a> {
         }
 
         if let Some(value) = self.resolve_object_binding_property_value(&object_binding, property) {
+            let Some(_value_guard) =
+                ObjectBindingMemberReadValueGuard::enter(object, property, &value)
+            else {
+                return Ok(false);
+            };
             if is_private_property {
                 let value_local = self.allocate_temp_local();
                 if !self.emit_private_brand_marker_runtime_value(object, property, &value)? {

@@ -1,5 +1,84 @@
 use super::*;
 
+thread_local! {
+    static ACTIVE_GLOBAL_IDENTIFIER_MATERIALIZATIONS: RefCell<HashMap<String, u64>> =
+        RefCell::new(HashMap::new());
+    static GLOBAL_EXPRESSION_MATERIALIZATION_DEPTH: std::cell::Cell<usize> =
+        const { std::cell::Cell::new(0) };
+}
+
+const GLOBAL_EXPRESSION_MATERIALIZATION_DEPTH_LIMIT: usize = 256;
+
+struct GlobalExpressionMaterializationDepthGuard {
+    _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope,
+}
+
+impl GlobalExpressionMaterializationDepthGuard {
+    fn enter() -> Option<Self> {
+        GLOBAL_EXPRESSION_MATERIALIZATION_DEPTH.with(|depth| {
+            let current = depth.get();
+            if current >= GLOBAL_EXPRESSION_MATERIALIZATION_DEPTH_LIMIT {
+                crate::backend::direct_wasm::memo::note_resolution_guard_block();
+                return None;
+            }
+            depth.set(current + 1);
+            Some(Self {
+                _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope::enter_class(25),
+            })
+        })
+    }
+}
+
+impl Drop for GlobalExpressionMaterializationDepthGuard {
+    fn drop(&mut self) {
+        GLOBAL_EXPRESSION_MATERIALIZATION_DEPTH
+            .with(|depth| depth.set(depth.get().saturating_sub(1)));
+    }
+}
+
+/// Re-entrancy guard for global identifier materialization. Indirectly
+/// self-referential value bindings (for example `p` tracked as `!p` after a
+/// callback parameter analysis) would otherwise recurse without bound.
+struct GlobalIdentifierMaterializationGuard {
+    key: String,
+    _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope,
+}
+
+impl GlobalIdentifierMaterializationGuard {
+    fn enter(name: &str) -> Option<Self> {
+        let key = name.to_string();
+        let conflict = ACTIVE_GLOBAL_IDENTIFIER_MATERIALIZATIONS.with(|active| {
+            let mut active = active.borrow_mut();
+            match active.get(&key) {
+                Some(serial) => Some(*serial),
+                None => {
+                    active.insert(
+                        key.clone(),
+                        crate::backend::direct_wasm::memo::next_guard_serial(),
+                    );
+                    None
+                }
+            }
+        });
+        if let Some(serial) = conflict {
+            crate::backend::direct_wasm::memo::note_resolution_guard_block_conflict(serial);
+            return None;
+        }
+        Some(Self {
+            key,
+            _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope::enter_class(25),
+        })
+    }
+}
+
+impl Drop for GlobalIdentifierMaterializationGuard {
+    fn drop(&mut self) {
+        ACTIVE_GLOBAL_IDENTIFIER_MATERIALIZATIONS.with(|active| {
+            active.borrow_mut().remove(&self.key);
+        });
+    }
+}
+
 impl DirectWasmCompiler {
     fn preserves_global_symbol_call_binding(&self, value: &Expression) -> bool {
         matches!(
@@ -196,6 +275,9 @@ impl DirectWasmCompiler {
         &self,
         expression: &Expression,
     ) -> Expression {
+        let Some(_depth_guard) = GlobalExpressionMaterializationDepthGuard::enter() else {
+            return expression.clone();
+        };
         match expression {
             Expression::Identifier(name) => {
                 if name == "undefined"
@@ -220,6 +302,9 @@ impl DirectWasmCompiler {
                         return Expression::Identifier(name.clone());
                     }
                     if !matches!(value, Expression::Identifier(alias) if alias == name) {
+                        let Some(_guard) = GlobalIdentifierMaterializationGuard::enter(name) else {
+                            return expression.clone();
+                        };
                         return self.materialize_global_expression(value);
                     }
                 }

@@ -1,6 +1,122 @@
 use super::*;
 use crate::ir::hir::js_string_utf16_code_units;
 
+thread_local! {
+    static ACTIVE_TO_PRIMITIVE_OUTCOME_SHAPES: RefCell<HashMap<String, u64>> =
+        RefCell::new(HashMap::new());
+    static TO_PRIMITIVE_OUTCOME_DEPTH: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+const TO_PRIMITIVE_OUTCOME_RECURSION_LIMIT: usize = 64;
+const STATIC_ADDITION_OUTCOME_RECURSION_LIMIT: usize = 16;
+
+thread_local! {
+    static STATIC_ADDITION_OUTCOME_DEPTH: std::cell::Cell<usize> =
+        const { std::cell::Cell::new(0) };
+}
+
+struct StaticAdditionOutcomeDepthGuard {
+    _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope,
+}
+
+impl StaticAdditionOutcomeDepthGuard {
+    fn enter() -> Option<Self> {
+        STATIC_ADDITION_OUTCOME_DEPTH.with(|depth| {
+            let current = depth.get();
+            if current >= STATIC_ADDITION_OUTCOME_RECURSION_LIMIT {
+                crate::backend::direct_wasm::memo::note_resolution_guard_block();
+                return None;
+            }
+            depth.set(current + 1);
+            Some(Self {
+                _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope::enter_class(23),
+            })
+        })
+    }
+}
+
+impl Drop for StaticAdditionOutcomeDepthGuard {
+    fn drop(&mut self) {
+        STATIC_ADDITION_OUTCOME_DEPTH.with(|depth| depth.set(depth.get().saturating_sub(1)));
+    }
+}
+
+struct ToPrimitiveOutcomeDepthGuard {
+    _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope,
+}
+
+impl ToPrimitiveOutcomeDepthGuard {
+    fn enter() -> Option<Self> {
+        TO_PRIMITIVE_OUTCOME_DEPTH.with(|depth| {
+            let current = depth.get();
+            if current >= TO_PRIMITIVE_OUTCOME_RECURSION_LIMIT {
+                crate::backend::direct_wasm::memo::note_resolution_guard_block();
+                return None;
+            }
+            depth.set(current + 1);
+            Some(Self {
+                _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope::enter_class(22),
+            })
+        })
+    }
+}
+
+impl Drop for ToPrimitiveOutcomeDepthGuard {
+    fn drop(&mut self) {
+        TO_PRIMITIVE_OUTCOME_DEPTH.with(|depth| depth.set(depth.get().saturating_sub(1)));
+    }
+}
+
+/// Re-entrancy guard for static ToPrimitive resolution. Boxed-primitive
+/// operands inside self-referential expressions (for example the tracked value
+/// of `x = x + true` where `x` is `new Boolean(true)`) can otherwise cycle
+/// through addition outcome resolution -> ToPrimitive -> accessor binding
+/// resolution -> kind inference -> addition outcome resolution without making
+/// progress.
+struct ToPrimitiveOutcomeShapeGuard {
+    key: String,
+    _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope,
+}
+
+impl ToPrimitiveOutcomeShapeGuard {
+    fn enter(
+        expression: &Expression,
+        hint: PrimitiveHint,
+        current_function_name: Option<&str>,
+    ) -> Option<Self> {
+        let key = format!("{current_function_name:?}:{hint:?}:{expression:?}");
+        let conflict = ACTIVE_TO_PRIMITIVE_OUTCOME_SHAPES.with(|active| {
+            let mut active = active.borrow_mut();
+            match active.get(&key) {
+                Some(serial) => Some(*serial),
+                None => {
+                    active.insert(
+                        key.clone(),
+                        crate::backend::direct_wasm::memo::next_guard_serial(),
+                    );
+                    None
+                }
+            }
+        });
+        if let Some(serial) = conflict {
+            crate::backend::direct_wasm::memo::note_resolution_guard_block_conflict(serial);
+            return None;
+        }
+        Some(Self {
+            key,
+            _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope::enter_class(22),
+        })
+    }
+}
+
+impl Drop for ToPrimitiveOutcomeShapeGuard {
+    fn drop(&mut self) {
+        ACTIVE_TO_PRIMITIVE_OUTCOME_SHAPES.with(|active| {
+            active.borrow_mut().remove(&self.key);
+        });
+    }
+}
+
 fn static_js_string_code_unit_ordering(left: &str, right: &str) -> std::cmp::Ordering {
     let left_units = js_string_utf16_code_units(left);
     let right_units = js_string_utf16_code_units(right);
@@ -504,6 +620,9 @@ impl<'a> FunctionCompiler<'a> {
         hint: PrimitiveHint,
         current_function_name: Option<&str>,
     ) -> Option<StaticEvalOutcome> {
+        let _depth_guard = ToPrimitiveOutcomeDepthGuard::enter()?;
+        let _shape_guard =
+            ToPrimitiveOutcomeShapeGuard::enter(expression, hint, current_function_name)?;
         let resolved = self
             .resolve_bound_alias_expression(expression)
             .unwrap_or_else(|| expression.clone());
@@ -661,6 +780,7 @@ impl<'a> FunctionCompiler<'a> {
         right: &Expression,
         current_function_name: Option<&str>,
     ) -> Option<StaticEvalOutcome> {
+        let _depth_guard = StaticAdditionOutcomeDepthGuard::enter()?;
         if self.expression_depends_on_active_loop_assignment(left)
             || self.expression_depends_on_active_loop_assignment(right)
         {

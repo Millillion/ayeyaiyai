@@ -1,6 +1,6 @@
 use super::super::*;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub(in crate::backend::direct_wasm) enum PrimitiveHint {
     Default,
     Number,

@@ -1237,6 +1237,27 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(());
         }
         let trace_identifier_store = crate::ayy_env_flag!("AYY_TRACE_IDENTIFIER_STORE");
+        {
+            // Self-referential stores (for example `x += 1` on a binding
+            // without static metadata keeps `x` inside its own stored value
+            // expression) cannot make progress through object-shadow
+            // resolution and can explode combinatorially; skip them.
+            let mut referenced_names = HashSet::new();
+            collect_referenced_binding_names_from_expression(
+                &state.canonical_value_expression,
+                &mut referenced_names,
+            );
+            if referenced_names.contains(target_name)
+                || referenced_names.contains(&state.resolved_name)
+            {
+                if trace_identifier_store {
+                    eprintln!(
+                        "identifier_store:{target_name}:runtime_shadows skipped_self_reference"
+                    );
+                }
+                return Ok(());
+            }
+        }
         if Self::expression_contains_await_for_user_call_runtime(&state.canonical_value_expression)
             || Self::expression_contains_await_for_user_call_runtime(
                 &state.tracked_value_expression,
