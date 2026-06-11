@@ -1,4 +1,4 @@
-21458/23668 (90.66%)
+21486/23668 (90.78%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,7 +14,7 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 8114/9337 (86.90%)
+- statements: 8142/9337 (87.20%)
 - expressions: 10269/11061 (92.84%)
 - types: 103/113 (91.15%)
 - function-code: 206/217 (94.93%)
@@ -2358,8 +2358,8 @@ Sub-category progress
   - [x] test/language/statements/class/definition/fn-length-static-precedence.js
   - [x] test/language/statements/class/definition/fn-name-accessor-get.js
   - [x] test/language/statements/class/definition/fn-name-accessor-set.js
-  - [ ] test/language/statements/class/definition/fn-name-gen-method.js
-  - [ ] test/language/statements/class/definition/fn-name-method.js
+  - [x] test/language/statements/class/definition/fn-name-gen-method.js
+  - [x] test/language/statements/class/definition/fn-name-method.js
   - [ ] test/language/statements/class/definition/fn-name-static-precedence-order.js
   - [ ] test/language/statements/class/definition/fn-name-static-precedence.js
   - [x] test/language/statements/class/definition/getters-non-configurable-err.js
@@ -6952,18 +6952,18 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-obj-prop-put-prop-ref-no-get.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-obj-prop-put-prop-ref.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-obj-prop-put-unresolvable-no-strict.js
-  - [ ] test/language/statements/for-await-of/async-func-decl-dstr-obj-rest-descriptors.js
+  - [x] test/language/statements/for-await-of/async-func-decl-dstr-obj-rest-descriptors.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-obj-rest-empty-obj.js
   - [ ] test/language/statements/for-await-of/async-func-decl-dstr-obj-rest-getter.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-obj-rest-number.js
-  - [ ] test/language/statements/for-await-of/async-func-decl-dstr-obj-rest-same-name.js
-  - [ ] test/language/statements/for-await-of/async-func-decl-dstr-obj-rest-skip-non-enumerable.js
-  - [ ] test/language/statements/for-await-of/async-func-decl-dstr-obj-rest-str-val.js
+  - [x] test/language/statements/for-await-of/async-func-decl-dstr-obj-rest-same-name.js
+  - [x] test/language/statements/for-await-of/async-func-decl-dstr-obj-rest-skip-non-enumerable.js
+  - [x] test/language/statements/for-await-of/async-func-decl-dstr-obj-rest-str-val.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-obj-rest-symbol-val.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-obj-rest-to-property-with-setter.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-obj-rest-to-property.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-obj-rest-valid-object.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-ary-init-iter-close.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-ary-init-iter-close.js
   - [ ] test/language/statements/for-await-of/async-func-dstr-const-ary-init-iter-get-err.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-ary-init-iter-no-close.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-ary-name-iter-val.js
@@ -7118,9 +7118,9 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-func-dstr-const-obj-ptrn-prop-obj-value-undef.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-obj-ptrn-prop-obj.js
   - [ ] test/language/statements/for-await-of/async-func-dstr-const-obj-ptrn-rest-getter.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-obj-ptrn-rest-skip-non-enumerable.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-obj-ptrn-rest-skip-non-enumerable.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-obj-ptrn-rest-val-obj.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-ary-init-iter-close.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-ary-init-iter-close.js
   - [ ] test/language/statements/for-await-of/async-func-dstr-let-ary-init-iter-get-err.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-ary-init-iter-no-close.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-ary-name-iter-val.js
@@ -7275,9 +7275,9 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-func-dstr-let-obj-ptrn-prop-obj-value-undef.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-obj-ptrn-prop-obj.js
   - [ ] test/language/statements/for-await-of/async-func-dstr-let-obj-ptrn-rest-getter.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-obj-ptrn-rest-skip-non-enumerable.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-obj-ptrn-rest-skip-non-enumerable.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-obj-ptrn-rest-val-obj.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-ary-init-iter-close.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-ary-init-iter-close.js
   - [ ] test/language/statements/for-await-of/async-func-dstr-var-ary-init-iter-get-err.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-ary-init-iter-no-close.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-ary-name-iter-val.js
@@ -7432,7 +7432,7 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-func-dstr-var-obj-ptrn-prop-obj-value-undef.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-obj-ptrn-prop-obj.js
   - [ ] test/language/statements/for-await-of/async-func-dstr-var-obj-ptrn-rest-getter.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-obj-ptrn-rest-skip-non-enumerable.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-obj-ptrn-rest-skip-non-enumerable.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-obj-ptrn-rest-val-obj.js
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-array-elem-init-assignment.js
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-array-elem-init-evaluation.js
@@ -7448,8 +7448,8 @@ Sub-category progress
   - [ ] test/language/statements/for-await-of/async-gen-decl-dstr-array-elem-iter-get-err.js
   - [ ] test/language/statements/for-await-of/async-gen-decl-dstr-array-elem-iter-nrml-close-err.js
   - [ ] test/language/statements/for-await-of/async-gen-decl-dstr-array-elem-iter-nrml-close-null.js
-  - [ ] test/language/statements/for-await-of/async-gen-decl-dstr-array-elem-iter-nrml-close-skip.js
-  - [ ] test/language/statements/for-await-of/async-gen-decl-dstr-array-elem-iter-nrml-close.js
+  - [x] test/language/statements/for-await-of/async-gen-decl-dstr-array-elem-iter-nrml-close-skip.js
+  - [x] test/language/statements/for-await-of/async-gen-decl-dstr-array-elem-iter-nrml-close.js
   - [ ] test/language/statements/for-await-of/async-gen-decl-dstr-array-elem-iter-rtrn-close-null.js
   - [ ] test/language/statements/for-await-of/async-gen-decl-dstr-array-elem-iter-thrw-close-skip.js
   - [ ] test/language/statements/for-await-of/async-gen-decl-dstr-array-elem-nested-array-null.js
@@ -7732,7 +7732,7 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-obj-ptrn-rest-getter.js
   - [ ] test/language/statements/for-await-of/async-gen-dstr-const-obj-ptrn-rest-skip-non-enumerable.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-obj-ptrn-rest-val-obj.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-ary-init-iter-close.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-ary-init-iter-close.js
   - [ ] test/language/statements/for-await-of/async-gen-dstr-let-ary-init-iter-get-err.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-ary-init-iter-no-close.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-ary-name-iter-val.js
@@ -7891,7 +7891,7 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-obj-ptrn-rest-getter.js
   - [ ] test/language/statements/for-await-of/async-gen-dstr-let-obj-ptrn-rest-skip-non-enumerable.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-obj-ptrn-rest-val-obj.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-ary-init-iter-close.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-ary-init-iter-close.js
   - [ ] test/language/statements/for-await-of/async-gen-dstr-var-ary-init-iter-get-err.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-ary-init-iter-no-close.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-ary-name-iter-val.js
@@ -9128,10 +9128,10 @@ Sub-category progress
   - [x] test/language/statements/function/dflt-params-ref-self.js
   - [x] test/language/statements/function/dflt-params-rest.js
   - [x] test/language/statements/function/dflt-params-trailing-comma.js
-  - [ ] test/language/statements/function/dstr/ary-init-iter-close.js
+  - [x] test/language/statements/function/dstr/ary-init-iter-close.js
   - [x] test/language/statements/function/dstr/ary-init-iter-get-err-array-prototype.js
   - [x] test/language/statements/function/dstr/ary-init-iter-get-err.js
-  - [ ] test/language/statements/function/dstr/ary-init-iter-no-close.js
+  - [x] test/language/statements/function/dstr/ary-init-iter-no-close.js
   - [x] test/language/statements/function/dstr/ary-name-iter-val.js
   - [x] test/language/statements/function/dstr/ary-ptrn-elem-ary-elem-init.js
   - [x] test/language/statements/function/dstr/ary-ptrn-elem-ary-elem-iter.js
@@ -9188,7 +9188,7 @@ Sub-category progress
   - [x] test/language/statements/function/dstr/ary-ptrn-rest-not-final-obj.js
   - [x] test/language/statements/function/dstr/ary-ptrn-rest-obj-id.js
   - [x] test/language/statements/function/dstr/ary-ptrn-rest-obj-prop-id.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-init-iter-close.js
+  - [x] test/language/statements/function/dstr/dflt-ary-init-iter-close.js
   - [ ] test/language/statements/function/dstr/dflt-ary-init-iter-get-err-array-prototype.js
   - [x] test/language/statements/function/dstr/dflt-ary-init-iter-get-err.js
   - [x] test/language/statements/function/dstr/dflt-ary-init-iter-no-close.js
@@ -9238,7 +9238,7 @@ Sub-category progress
   - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-rest-id-elision.js
   - [x] test/language/statements/function/dstr/dflt-ary-ptrn-rest-id-exhausted.js
   - [x] test/language/statements/function/dstr/dflt-ary-ptrn-rest-id-iter-step-err.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-rest-id-iter-val-err.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-rest-id-iter-val-err.js
   - [x] test/language/statements/function/dstr/dflt-ary-ptrn-rest-id.js
   - [x] test/language/statements/function/dstr/dflt-ary-ptrn-rest-init-ary.js
   - [x] test/language/statements/function/dstr/dflt-ary-ptrn-rest-init-id.js
@@ -9311,7 +9311,7 @@ Sub-category progress
   - [x] test/language/statements/function/dstr/obj-ptrn-prop-obj-value-null.js
   - [x] test/language/statements/function/dstr/obj-ptrn-prop-obj-value-undef.js
   - [x] test/language/statements/function/dstr/obj-ptrn-prop-obj.js
-  - [ ] test/language/statements/function/dstr/obj-ptrn-rest-getter.js
+  - [x] test/language/statements/function/dstr/obj-ptrn-rest-getter.js
   - [x] test/language/statements/function/dstr/obj-ptrn-rest-skip-non-enumerable.js
   - [x] test/language/statements/function/dstr/obj-ptrn-rest-val-obj.js
   - [x] test/language/statements/function/early-body-super-call.js
@@ -9746,7 +9746,7 @@ Sub-category progress
   - [ ] test/language/statements/labeled/value-yield-strict.js
   - [x] test/language/statements/let/block-local-closure-get-before-initialization.js
   - [x] test/language/statements/let/block-local-closure-set-before-initialization.js
-  - [ ] test/language/statements/let/block-local-use-before-initialization-in-declaration-statement.js
+  - [x] test/language/statements/let/block-local-use-before-initialization-in-declaration-statement.js
   - [x] test/language/statements/let/block-local-use-before-initialization-in-prior-statement.js
   - [x] test/language/statements/let/cptn-value.js
   - [x] test/language/statements/let/dstr/ary-init-iter-close.js
@@ -9799,7 +9799,7 @@ Sub-category progress
   - [x] test/language/statements/let/dstr/ary-ptrn-rest-id-elision.js
   - [x] test/language/statements/let/dstr/ary-ptrn-rest-id-exhausted.js
   - [x] test/language/statements/let/dstr/ary-ptrn-rest-id-iter-step-err.js
-  - [ ] test/language/statements/let/dstr/ary-ptrn-rest-id-iter-val-err.js
+  - [x] test/language/statements/let/dstr/ary-ptrn-rest-id-iter-val-err.js
   - [x] test/language/statements/let/dstr/ary-ptrn-rest-id.js
   - [x] test/language/statements/let/dstr/ary-ptrn-rest-init-ary.js
   - [x] test/language/statements/let/dstr/ary-ptrn-rest-init-id.js
@@ -9839,7 +9839,7 @@ Sub-category progress
   - [x] test/language/statements/let/dstr/obj-ptrn-prop-obj-value-null.js
   - [x] test/language/statements/let/dstr/obj-ptrn-prop-obj-value-undef.js
   - [x] test/language/statements/let/dstr/obj-ptrn-prop-obj.js
-  - [ ] test/language/statements/let/dstr/obj-ptrn-rest-getter.js
+  - [x] test/language/statements/let/dstr/obj-ptrn-rest-getter.js
   - [x] test/language/statements/let/dstr/obj-ptrn-rest-skip-non-enumerable.js
   - [x] test/language/statements/let/dstr/obj-ptrn-rest-val-obj.js
   - [x] test/language/statements/let/fn-name-arrow.js
@@ -10234,7 +10234,7 @@ Sub-category progress
   - [x] test/language/statements/using/Symbol.dispose-getter.js
   - [x] test/language/statements/using/Symbol.dispose-method-called-with-correct-this.js
   - [x] test/language/statements/using/block-local-closure-get-before-initialization.js
-  - [ ] test/language/statements/using/block-local-use-before-initialization-in-declaration-statement.js
+  - [x] test/language/statements/using/block-local-use-before-initialization-in-declaration-statement.js
   - [x] test/language/statements/using/block-local-use-before-initialization-in-prior-statement.js
   - [ ] test/language/statements/using/cptn-value.js
   - [x] test/language/statements/using/fn-name-arrow.js
@@ -10423,7 +10423,7 @@ Sub-category progress
   - [x] test/language/statements/variable/dstr/ary-ptrn-rest-id-elision.js
   - [x] test/language/statements/variable/dstr/ary-ptrn-rest-id-exhausted.js
   - [x] test/language/statements/variable/dstr/ary-ptrn-rest-id-iter-step-err.js
-  - [ ] test/language/statements/variable/dstr/ary-ptrn-rest-id-iter-val-err.js
+  - [x] test/language/statements/variable/dstr/ary-ptrn-rest-id-iter-val-err.js
   - [x] test/language/statements/variable/dstr/ary-ptrn-rest-id.js
   - [x] test/language/statements/variable/dstr/ary-ptrn-rest-init-ary.js
   - [x] test/language/statements/variable/dstr/ary-ptrn-rest-init-id.js
@@ -10465,7 +10465,7 @@ Sub-category progress
   - [x] test/language/statements/variable/dstr/obj-ptrn-prop-obj-value-null.js
   - [x] test/language/statements/variable/dstr/obj-ptrn-prop-obj-value-undef.js
   - [x] test/language/statements/variable/dstr/obj-ptrn-prop-obj.js
-  - [ ] test/language/statements/variable/dstr/obj-ptrn-rest-getter.js
+  - [x] test/language/statements/variable/dstr/obj-ptrn-rest-getter.js
   - [x] test/language/statements/variable/dstr/obj-ptrn-rest-skip-non-enumerable.js
   - [x] test/language/statements/variable/dstr/obj-ptrn-rest-val-obj.js
   - [x] test/language/statements/variable/eval-non-strict.js
@@ -10693,7 +10693,7 @@ Sub-category progress
   - [ ] test/language/statements/with/set-mutable-binding-binding-deleted-in-get-unscopables-strict-mode.js
   - [ ] test/language/statements/with/set-mutable-binding-binding-deleted-in-get-unscopables.js
   - [x] test/language/statements/with/set-mutable-binding-binding-deleted-with-typed-array-in-proto-chain-strict-mode.js
-  - [ ] test/language/statements/with/set-mutable-binding-binding-deleted-with-typed-array-in-proto-chain.js
+  - [x] test/language/statements/with/set-mutable-binding-binding-deleted-with-typed-array-in-proto-chain.js
   - [ ] test/language/statements/with/set-mutable-binding-idref-compound-assign-with-proxy-env.js
   - [ ] test/language/statements/with/set-mutable-binding-idref-with-proxy-env.js
   - [x] test/language/statements/with/strict-fn-decl-nested-1.js
