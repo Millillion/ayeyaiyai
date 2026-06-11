@@ -751,10 +751,12 @@ impl<'a> FunctionCompiler<'a> {
             return None;
         };
         let declaration = self.prepared_function_declaration(&function_name)?;
-        if self.assert_throws_inline_body_drops_observable_iterator_close(
-            &function_name,
-            &declaration.body,
-        ) {
+        if !crate::ayy_env_flag!("AYY_EXPERIMENT_INLINE_OBSERVABLE_CLOSE")
+            && self.assert_throws_inline_body_drops_observable_iterator_close(
+                &function_name,
+                &declaration.body,
+            )
+        {
             return None;
         }
         if declaration.lexical_this

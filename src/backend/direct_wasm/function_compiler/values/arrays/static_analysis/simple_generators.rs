@@ -1786,6 +1786,21 @@ impl<'a> FunctionCompiler<'a> {
                     effects.extend(protocol_effects);
                     return Some(());
                 }
+                // A lowered for-await loop that completes normally folds to
+                // its replay effects; analysis continues with the statements
+                // after the loop.
+                Statement::For { .. }
+                    if async_generator
+                        && !Self::statement_contains_generator_yield(statement)
+                        && self
+                            .lowered_for_await_protocol_completed_effects(statement)
+                            .is_some() =>
+                {
+                    let protocol_effects = self
+                        .lowered_for_await_protocol_completed_effects(statement)
+                        .expect("guard checked the protocol completion resolves");
+                    effects.extend(protocol_effects);
+                }
                 Statement::Declaration { .. }
                 | Statement::Labeled { .. }
                 | Statement::With { .. }

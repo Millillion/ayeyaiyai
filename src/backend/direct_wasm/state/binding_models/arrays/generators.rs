@@ -1,6 +1,6 @@
 use super::*;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(in crate::backend::direct_wasm) struct SimpleGeneratorStep {
     pub(in crate::backend::direct_wasm) effects: Vec<Statement>,
     pub(in crate::backend::direct_wasm) close_effects: Vec<Statement>,
@@ -18,7 +18,7 @@ pub(in crate::backend::direct_wasm) struct AsyncYieldDelegateGeneratorPlan {
     pub(in crate::backend::direct_wasm) scope_bindings: Vec<String>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(in crate::backend::direct_wasm) enum SimpleGeneratorStepOutcome {
     Yield(Expression),
     YieldResult(Expression),

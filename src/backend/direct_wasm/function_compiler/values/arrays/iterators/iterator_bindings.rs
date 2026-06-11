@@ -168,6 +168,20 @@ impl<'a> FunctionCompiler<'a> {
             eprintln!(
                 "iterator_binding_update name={name} source={source_kind} static_index={static_index:?}"
             );
+            if let Some(IteratorSourceKind::SimpleGenerator { steps, .. }) = self
+                .state
+                .speculation
+                .static_semantics
+                .local_array_iterator_binding(name)
+                .map(|binding| &binding.source)
+            {
+                eprintln!(
+                    "iterator_binding_update:steps name={name} steps={steps:?}"
+                );
+            }
+            if crate::ayy_env_flag!("AYY_TRACE_ITER_BINDING_BT") {
+                eprintln!("{}", std::backtrace::Backtrace::force_capture());
+            }
         }
         if shared_state.is_none() {
             self.push_i32_const(0);
