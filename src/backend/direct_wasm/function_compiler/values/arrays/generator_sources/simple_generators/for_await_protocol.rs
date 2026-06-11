@@ -778,9 +778,23 @@ impl<'a> FunctionCompiler<'a> {
                         completion_value.clone(),
                     )));
                 };
-                if !matches!(&step.outcome, SimpleGeneratorStepOutcome::Yield(_))
-                    || !synthetic_next(context)
+                if matches!(&step.outcome, SimpleGeneratorStepOutcome::Yield(_))
+                    && synthetic_next(context)
                 {
+                    // The synthetic statement re-emits the step's own effects;
+                    // only their names need registering so later replay reads
+                    // of those nonlocals bail instead of observing stale
+                    // static values.
+                    for effect in &step.effects {
+                        match effect {
+                            Statement::Assign { name, .. }
+                            | Statement::Expression(Expression::Update { name, .. }) => {
+                                context.effect_names.insert(name.clone());
+                            }
+                            _ => {}
+                        }
+                    }
+                } else {
                     Self::for_await_protocol_record_step_effects(context, &step.effects);
                 }
                 match &step.outcome {
