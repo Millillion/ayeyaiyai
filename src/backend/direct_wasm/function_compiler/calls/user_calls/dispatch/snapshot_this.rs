@@ -3781,8 +3781,16 @@ impl<'a> FunctionCompiler<'a> {
                 self.current_function_name(),
             );
         }
-        let receiver_already_materialized_in_this =
-            target_owner.is_none() && matches!(this_expression, Expression::New { .. });
+        // A `new` receiver only keeps its shadows in the `this` channel when
+        // we cannot model the constructed object statically; a resolvable
+        // constructor-result binding is seeded below instead, because the
+        // construct emission restores the caller's `this` shadows after the
+        // constructor returns.
+        let receiver_already_materialized_in_this = target_owner.is_none()
+            && matches!(this_expression, Expression::New { .. })
+            && self
+                .resolve_object_binding_from_expression(this_expression)
+                .is_none();
         let saved_shadow_owner = (target_owner.as_deref() != Some("this")
             && !receiver_already_materialized_in_this)
             .then(|| {
