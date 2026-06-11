@@ -1066,7 +1066,9 @@ impl<'a> FunctionCompiler<'a> {
             && reference_global_index.is_none()
             && !reference_targets_eval_local
             && reference_implicit_global.is_none();
-        let snapshot_store_value = self.snapshot_assignment_value_for_static_store(name, value);
+        let snapshot_store_value = self
+            .snapshot_assignment_value_for_static_store(name, value)
+            .or_else(|| self.snapshot_effectful_getter_member_read_for_static_store(value));
         self.emit_numeric_expression(value)?;
         if let Some(scope_object) = scoped_target {
             let value_local = self.allocate_temp_local();

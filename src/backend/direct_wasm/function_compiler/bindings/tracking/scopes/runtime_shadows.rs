@@ -1699,6 +1699,30 @@ impl<'a> FunctionCompiler<'a> {
         true
     }
 
+    /// Marks the deleted-shadow static metadata for a property as "not
+    /// deleted". Stores that re-establish a previously deleted property emit
+    /// a runtime clear of the deleted marker; the static metadata must follow
+    /// so `runtime_object_property_shadow_deletion_is_statically_present`
+    /// stops resolving the member to undefined.
+    fn clear_runtime_object_property_shadow_deleted_static_metadata(
+        &mut self,
+        object: &Expression,
+        property: &Expression,
+    ) {
+        let Some(owner_name) =
+            self.runtime_object_property_shadow_owner_name_for_expression(object)
+        else {
+            return;
+        };
+        let canonical_property = self.canonical_object_property_expression(property);
+        let deleted_shadow_name =
+            Self::runtime_object_property_deleted_shadow_name(&owner_name, &canonical_property);
+        self.update_static_global_assignment_metadata(
+            &deleted_shadow_name,
+            &Expression::Number(0.0),
+        );
+    }
+
     pub(in crate::backend::direct_wasm) fn clear_runtime_object_property_shadow_deleted_binding(
         &mut self,
         object: &Expression,
@@ -1713,6 +1737,7 @@ impl<'a> FunctionCompiler<'a> {
         self.push_global_set(binding.value_index);
         self.push_i32_const(0);
         self.push_global_set(binding.present_index);
+        self.clear_runtime_object_property_shadow_deleted_static_metadata(object, property);
         true
     }
 
@@ -1745,6 +1770,9 @@ impl<'a> FunctionCompiler<'a> {
         self.push_global_set(deleted_binding.value_index);
         self.push_i32_const(1);
         self.push_global_set(deleted_binding.present_index);
+        if let Some(deleted_shadow_name) = &deleted_shadow_name {
+            self.backend.record_emitted_delete_shadow(deleted_shadow_name);
+        }
         if let Expression::String(property_name) = &canonical_property
             && let Some(function_name) = self.current_function_name()
             && !self.assigned_user_function_capture_originates_in_enclosing_local(
@@ -2422,14 +2450,23 @@ impl<'a> FunctionCompiler<'a> {
         property: &Expression,
     ) -> bool {
         let property = self.canonical_object_property_expression(property);
+        let trace = crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS");
         let Some(owner_name) =
             self.runtime_object_property_shadow_owner_name_for_expression(object)
         else {
+            if trace {
+                eprintln!("shadow_may_hide object={object:?} property={property:?} owner=None");
+            }
             return false;
         };
         let deleted_shadow_name =
             Self::runtime_object_property_deleted_shadow_name(&owner_name, &property);
         if !self.backend.delete_shadow_was_emitted(&deleted_shadow_name) {
+            if trace {
+                eprintln!(
+                    "shadow_may_hide object={object:?} property={property:?} owner={owner_name} emitted=false name={deleted_shadow_name}"
+                );
+            }
             return false;
         }
         let object_binding = self
@@ -2440,9 +2477,26 @@ impl<'a> FunctionCompiler<'a> {
                 }
                 _ => None,
             });
-        !object_binding
+        let result = !object_binding
             .as_ref()
-            .is_some_and(|binding| object_binding_has_property(binding, &property))
+            .is_some_and(|binding| object_binding_has_property(binding, &property));
+        if trace {
+            eprintln!(
+                "shadow_may_hide object={object:?} property={property:?} owner={owner_name} emitted=true has_binding={} result={result} strings={:?} descriptors={:?}",
+                object_binding.is_some(),
+                object_binding.as_ref().map(|binding| binding
+                    .string_properties
+                    .iter()
+                    .map(|(name, _)| name.clone())
+                    .collect::<Vec<_>>()),
+                object_binding.as_ref().map(|binding| binding
+                    .property_descriptors
+                    .iter()
+                    .map(|(key, _)| key.clone())
+                    .collect::<Vec<_>>()),
+            );
+        }
+        result
     }
 
     pub(in crate::backend::direct_wasm) fn runtime_object_property_shadow_deletion_may_affect_property(
@@ -2454,11 +2508,20 @@ impl<'a> FunctionCompiler<'a> {
         let Some(owner_name) =
             self.runtime_object_property_shadow_owner_name_for_expression(object)
         else {
+            if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
+                eprintln!("shadow_may_affect object={object:?} property={property:?} owner=None");
+            }
             return false;
         };
         let deleted_shadow_name =
             Self::runtime_object_property_deleted_shadow_name(&owner_name, &property);
-        self.backend.delete_shadow_was_emitted(&deleted_shadow_name)
+        let result = self.backend.delete_shadow_was_emitted(&deleted_shadow_name);
+        if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
+            eprintln!(
+                "shadow_may_affect object={object:?} property={property:?} owner={owner_name} name={deleted_shadow_name} result={result}"
+            );
+        }
+        result
     }
 
     pub(in crate::backend::direct_wasm) fn runtime_object_property_shadow_deletion_is_statically_present(
@@ -2479,11 +2542,19 @@ impl<'a> FunctionCompiler<'a> {
             Some(Expression::Number(number)) => *number == JS_UNDEFINED_TAG as f64,
             _ => false,
         };
-        deleted_value_is_static
+        let result = deleted_value_is_static
             || matches!(
                 self.global_binding_kind(&deleted_shadow_name),
                 Some(StaticValueKind::Undefined)
-            )
+            );
+        if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
+            eprintln!(
+                "shadow_deletion_statically_present object={object:?} property={property:?} name={deleted_shadow_name} value={:?} kind={:?} result={result}",
+                self.global_value_binding(&deleted_shadow_name),
+                self.global_binding_kind(&deleted_shadow_name),
+            );
+        }
+        result
     }
 
     pub(in crate::backend::direct_wasm) fn resolve_runtime_object_property_shadow_binding(

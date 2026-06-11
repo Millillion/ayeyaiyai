@@ -47,18 +47,22 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         scope_object: &Expression,
         property: &Expression,
-    ) -> DirectResult<()> {
+    ) -> DirectResult<bool> {
         if !self.state.speculation.execution_context.strict_mode {
-            return Ok(());
+            return Ok(false);
         }
         if is_private_property_name_expression(property) {
-            return Ok(());
+            return Ok(false);
         }
         let Some(deleted_binding) =
             self.resolve_runtime_object_property_shadow_deleted_binding(scope_object, property)
         else {
-            return Ok(());
+            return Ok(false);
         };
+        if !self.runtime_object_property_shadow_deletion_may_affect_property(scope_object, property)
+        {
+            return Ok(false);
+        }
         self.push_global_get(deleted_binding.present_index);
         self.state.emission.output.instructions.push(0x04);
         self.state
@@ -70,7 +74,74 @@ impl<'a> FunctionCompiler<'a> {
         self.emit_named_error_throw("ReferenceError")?;
         self.state.emission.output.instructions.push(0x0b);
         self.pop_control_frame();
-        Ok(())
+        Ok(true)
+    }
+
+    /// Removes static claims that a scoped property exists after a store that
+    /// may throw at runtime (strict-mode PutValue against a binding deleted by
+    /// the preceding getter). The emitted store only executes when the
+    /// deleted marker is clear, so static resolution must defer to the
+    /// runtime shadow state instead of asserting the post-store value.
+    fn scrub_scoped_property_static_claims_after_may_throw_store(
+        &mut self,
+        scope_object: &Expression,
+        name: &str,
+    ) {
+        let property = Expression::String(name.to_string());
+        let mut scope_names: Vec<String> = Vec::new();
+        match scope_object {
+            Expression::Identifier(scope_name) => scope_names.push(scope_name.clone()),
+            Expression::This => scope_names.push("this".to_string()),
+            _ => {}
+        }
+        if let Expression::Identifier(scope_name) = scope_object {
+            if let Some((resolved_name, _)) = self.resolve_current_local_binding(scope_name)
+                && resolved_name != *scope_name
+            {
+                scope_names.push(resolved_name);
+            }
+            if let Some(source_name) = self.resolve_capture_slot_source_binding_name(scope_name) {
+                scope_names.push(source_name);
+            }
+            if let Some(owner_name) =
+                self.runtime_object_property_shadow_owner_name_for_identifier(scope_name)
+            {
+                scope_names.push(owner_name);
+            }
+        }
+        scope_names.sort();
+        scope_names.dedup();
+        for scope_name in &scope_names {
+            if let Some(object_binding) = self
+                .state
+                .speculation
+                .static_semantics
+                .local_object_binding_mut(scope_name)
+            {
+                object_binding_remove_property(object_binding, &property);
+            }
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
+            if let Some(object_binding) = self
+                .backend
+                .global_semantics
+                .values
+                .object_bindings
+                .get_mut(scope_name)
+            {
+                object_binding_remove_property(object_binding, &property);
+            }
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
+            if let Some(object_binding) = self
+                .backend
+                .shared_global_semantics
+                .values
+                .object_bindings
+                .get_mut(scope_name)
+            {
+                object_binding_remove_property(object_binding, &property);
+            }
+            self.scrub_deleted_property_from_literal_value_bindings(scope_name, &property);
+        }
     }
 
     fn scoped_store_is_rejected_by_typed_array_prototype(
@@ -250,9 +321,30 @@ impl<'a> FunctionCompiler<'a> {
         value_expression: &Expression,
     ) -> DirectResult<()> {
         let property = Expression::String(name.to_string());
+        let store_may_throw =
+            self.emit_strict_scoped_deleted_binding_store_check(scope_object, &property)?;
+        self.emit_scoped_property_store_from_local_unchecked(
+            scope_object,
+            name,
+            value_local,
+            value_expression,
+        )?;
+        if store_may_throw {
+            self.scrub_scoped_property_static_claims_after_may_throw_store(scope_object, name);
+        }
+        Ok(())
+    }
+
+    fn emit_scoped_property_store_from_local_unchecked(
+        &mut self,
+        scope_object: &Expression,
+        name: &str,
+        value_local: u32,
+        value_expression: &Expression,
+    ) -> DirectResult<()> {
+        let property = Expression::String(name.to_string());
         let materialized_value =
             self.reference_preserving_static_value_expression(value_expression);
-        self.emit_strict_scoped_deleted_binding_store_check(scope_object, &property)?;
         if self.scoped_store_is_rejected_by_typed_array_prototype(scope_object, &property) {
             self.push_local_get(value_local);
             return Ok(());
@@ -835,6 +927,14 @@ impl<'a> FunctionCompiler<'a> {
                                 &getter_binding,
                                 &[],
                             )
+                        })
+                        .or_else(|| {
+                            // Effectful getters (`delete this.x; return 2;`)
+                            // still produce their constant return value at the
+                            // emitted read; PutValue requires the update to be
+                            // computed from that value.
+                            compiler
+                                .resolve_effectful_getter_constant_return_value(&getter_binding)
                         }))
                 })?;
             if let Some(previous_number) = getter_value

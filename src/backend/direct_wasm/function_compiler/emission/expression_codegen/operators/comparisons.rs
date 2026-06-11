@@ -285,7 +285,41 @@ impl<'a> FunctionCompiler<'a> {
                     self.static_top_level_global_object_has_property_name(&property_name)
                 );
             }
+            let property_expression = Expression::String(property_name.clone());
             self.emit_static_in_operand_effects(property, object)?;
+            if self.runtime_object_property_shadow_deletion_is_statically_present(
+                object,
+                &property_expression,
+            ) {
+                // A statically known delete removed this global property and
+                // no store has re-established it; the static global table
+                // still lists the property, so answer absent directly.
+                self.push_i32_const(0);
+                return Ok(true);
+            }
+            if self.runtime_object_property_shadow_deletion_may_affect_property(
+                object,
+                &property_expression,
+            ) {
+                // An emitted runtime delete may have removed this global
+                // property; the presence answer must come from the runtime
+                // binding state rather than the static global table. Reads
+                // and writes of the global resolve through the implicit
+                // binding's present flag, so presence must use the same flag.
+                if self.backend.global_binding_index(&property_name).is_none()
+                    && let Some(binding) = self.backend.implicit_global_binding(&property_name)
+                {
+                    self.push_global_get(binding.present_index);
+                    self.push_i32_const(0);
+                    self.state.emission.output.instructions.push(0x47);
+                    return Ok(true);
+                }
+                if self
+                    .emit_runtime_known_object_has_property_check(object, &property_expression)?
+                {
+                    return Ok(true);
+                }
+            }
             self.push_i32_const(
                 if self.static_top_level_global_object_has_property_name(&property_name) {
                     1

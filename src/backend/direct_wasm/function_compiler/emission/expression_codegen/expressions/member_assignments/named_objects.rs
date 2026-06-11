@@ -1777,6 +1777,22 @@ impl<'a> FunctionCompiler<'a> {
         else {
             return Ok(false);
         };
+        if self.runtime_object_property_shadow_deletion_may_hide_static_property(
+            object,
+            &materialized_property,
+        ) {
+            // An emitted runtime delete removed this property after the
+            // descriptor metadata was recorded (for example a getter that
+            // performs `delete this.x`); the stale accessor descriptor must
+            // not swallow the assignment, which now creates a plain data
+            // property.
+            if crate::ayy_env_flag!("AYY_TRACE_MEMBER_ASSIGNMENT") {
+                eprintln!(
+                    "named_member_assignment:nonwritable:skip_deleted_shadow property={property_name}"
+                );
+            }
+            return Ok(false);
+        }
         if let Expression::Identifier(name) = object {
             let direct_binding = self
                 .state

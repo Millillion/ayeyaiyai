@@ -44,10 +44,15 @@ impl<'a> FunctionCompiler<'a> {
             return None;
         }
 
-        let left = self.static_condition_property_name(left)?;
-        let right = self.static_condition_property_name(right)?;
+        let left_name = self.static_condition_property_name(left)?;
+        let right_name = self.static_condition_property_name(right)?;
+        if crate::ayy_env_flag!("AYY_TRACE_STATIC_IF") {
+            eprintln!(
+                "static_if:property_key_condition left={left:?} right={right:?} left_name={left_name} right_name={right_name}"
+            );
+        }
         let not_equal = matches!(op, BinaryOp::NotEqual | BinaryOp::LooseNotEqual);
-        Some((left == right) ^ not_equal)
+        Some((left_name == right_name) ^ not_equal)
     }
 
     fn static_condition_property_name(&self, expression: &Expression) -> Option<String> {

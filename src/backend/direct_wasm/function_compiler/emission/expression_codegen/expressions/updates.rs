@@ -578,6 +578,7 @@ impl<'a> FunctionCompiler<'a> {
             }
             emitted_runtime_write = true;
         } else {
+            self.emit_unresolvable_global_accessor_reference_read_effects(name)?;
             self.emit_named_error_throw("ReferenceError")?;
         }
         if emitted_runtime_write {

@@ -247,6 +247,17 @@ impl<'a> FunctionCompiler<'a> {
                 has_set: descriptor.setter.is_some(),
             },
         );
+        for accessor in [descriptor.getter.as_ref(), descriptor.setter.as_ref()]
+            .into_iter()
+            .flatten()
+        {
+            if let Some(binding) = self.resolve_function_binding_from_expression(accessor) {
+                self.record_receiver_delete_shadows_from_accessor_binding(
+                    &Expression::This,
+                    &binding,
+                );
+            }
+        }
     }
 
     fn define_nested_object_property_from_descriptor(
