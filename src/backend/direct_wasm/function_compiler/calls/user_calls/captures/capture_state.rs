@@ -1,5 +1,46 @@
 use super::*;
 
+thread_local! {
+    /// Function names whose capture-global preparation is currently being
+    /// emitted on this thread. Preparing a function's capture globals can
+    /// recurse back into itself through self-referential captured values
+    /// (e.g. a captured array whose tracked slot values are object literals
+    /// containing closures over that same array): emitting the captured
+    /// array's runtime state re-emits the slot values, whose closure
+    /// creation re-prepares the same capture globals, without bound. A
+    /// re-entrant prepare for a function already being prepared is
+    /// redundant — the active outer prepare writes the same hidden capture
+    /// globals from the same runtime state at the same point in the
+    /// instruction stream — so it is skipped.
+    static ACTIVE_CAPTURE_GLOBAL_PREPS: RefCell<HashSet<String>> = RefCell::new(HashSet::new());
+}
+
+/// RAII membership in `ACTIVE_CAPTURE_GLOBAL_PREPS`.
+struct CaptureGlobalsPrepGuard {
+    function_name: String,
+}
+
+impl CaptureGlobalsPrepGuard {
+    fn enter(function_name: &str) -> Option<Self> {
+        ACTIVE_CAPTURE_GLOBAL_PREPS.with(|active| {
+            active
+                .borrow_mut()
+                .insert(function_name.to_string())
+                .then(|| Self {
+                    function_name: function_name.to_string(),
+                })
+        })
+    }
+}
+
+impl Drop for CaptureGlobalsPrepGuard {
+    fn drop(&mut self) {
+        ACTIVE_CAPTURE_GLOBAL_PREPS.with(|active| {
+            active.borrow_mut().remove(&self.function_name);
+        });
+    }
+}
+
 impl<'a> FunctionCompiler<'a> {
     fn user_function_capture_source_is_unshadowed_assert_harness_object(
         &self,
@@ -486,6 +527,9 @@ impl<'a> FunctionCompiler<'a> {
         function_name: &str,
         this_expression_override: Option<&Expression>,
     ) -> DirectResult<()> {
+        let Some(_prep_guard) = CaptureGlobalsPrepGuard::enter(function_name) else {
+            return Ok(());
+        };
         let Some(capture_bindings) = self.user_function_capture_bindings(function_name) else {
             return Ok(());
         };

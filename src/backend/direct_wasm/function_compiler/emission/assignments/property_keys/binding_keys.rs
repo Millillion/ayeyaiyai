@@ -342,15 +342,15 @@ impl<'a> FunctionCompiler<'a> {
                 }
             }
 
-            for function in self.user_functions() {
+            for function_name in self.user_function_names() {
                 let Some(declaration) = self
-                    .prepared_function_declaration(&function.name)
-                    .or_else(|| self.resolve_registered_function_declaration(&function.name))
+                    .prepared_function_declaration(function_name)
+                    .or_else(|| self.resolve_registered_function_declaration(function_name))
                 else {
                     continue;
                 };
                 let declaration_names = [
-                    Some(function.name.as_str()),
+                    Some(function_name.as_str()),
                     declaration.self_binding.as_deref(),
                     declaration.top_level_binding.as_deref(),
                 ];
@@ -363,7 +363,7 @@ impl<'a> FunctionCompiler<'a> {
                     continue;
                 }
                 changed |=
-                    Self::insert_member_function_binding_target_alias(&mut aliases, &function.name);
+                    Self::insert_member_function_binding_target_alias(&mut aliases, function_name);
                 if let Some(self_binding) = declaration.self_binding.as_deref() {
                     changed |= Self::insert_member_function_binding_target_alias(
                         &mut aliases,

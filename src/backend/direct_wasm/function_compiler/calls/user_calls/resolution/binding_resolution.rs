@@ -293,13 +293,13 @@ impl<'a> FunctionCompiler<'a> {
         name: &str,
     ) -> Option<LocalFunctionBinding> {
         let source_name = scoped_binding_source_name(name);
-        self.user_functions().into_iter().find_map(|function| {
-            if !function.name.starts_with("__ayy_class_ctor_") {
+        self.user_function_names().iter().find_map(|function_name| {
+            if !function_name.starts_with("__ayy_class_ctor_") {
                 return None;
             }
             let declaration = self
-                .prepared_function_declaration(&function.name)
-                .or_else(|| self.resolve_registered_function_declaration(&function.name))?;
+                .prepared_function_declaration(function_name)
+                .or_else(|| self.resolve_registered_function_declaration(function_name))?;
             declaration
                 .self_binding
                 .as_deref()
@@ -309,7 +309,7 @@ impl<'a> FunctionCompiler<'a> {
                         || self_binding_source_name.is_some_and(|source_name| source_name == name)
                         || source_name.is_some_and(|source_name| *self_binding == source_name)
                 })
-                .map(|_| LocalFunctionBinding::User(function.name))
+                .map(|_| LocalFunctionBinding::User(function_name.clone()))
         })
     }
 

@@ -1,8 +1,17 @@
 use super::*;
 
 thread_local! {
-    static RUNTIME_PUBLIC_THIS_RESOLUTION_QUERY_DEPTH: std::cell::Cell<usize> =
-        const { std::cell::Cell::new(0) };
+    /// (active query depth, guard serial of the outermost active query).
+    static RUNTIME_PUBLIC_THIS_RESOLUTION_QUERY: std::cell::Cell<(usize, u64)> =
+        const { std::cell::Cell::new((0, 0)) };
+    /// (static-state generation, function name -> requires-runtime-public-this).
+    /// `current_function_requires_runtime_public_this_resolution` runs a
+    /// transitive private-member reachability scan over the current
+    /// function's body and callees; member materialization consults it for
+    /// every member expression, so pathological inputs re-run the same scan
+    /// millions of times at an unchanged generation.
+    static RUNTIME_PUBLIC_THIS_RESOLUTION_CACHE: std::cell::RefCell<(u64, HashMap<String, bool>)> =
+        std::cell::RefCell::new((0, HashMap::new()));
 }
 
 impl<'a> FunctionCompiler<'a> {
@@ -19,6 +28,12 @@ impl<'a> FunctionCompiler<'a> {
 
     pub(in crate::backend::direct_wasm) fn user_functions(&self) -> Vec<UserFunction> {
         self.prepared_program.ordered_user_functions()
+    }
+
+    /// Registration-ordered function names; unlike `user_functions` this does
+    /// not deep-clone every function body, so name-only scans stay cheap.
+    pub(in crate::backend::direct_wasm) fn user_function_names(&self) -> &[String] {
+        self.prepared_program.ordered_user_function_names()
     }
 
     pub(in crate::backend::direct_wasm) fn resolve_user_function_by_binding_name(
@@ -171,23 +186,51 @@ impl<'a> FunctionCompiler<'a> {
     pub(in crate::backend::direct_wasm) fn current_function_requires_runtime_public_this_resolution(
         &self,
     ) -> bool {
-        let reentered = RUNTIME_PUBLIC_THIS_RESOLUTION_QUERY_DEPTH.with(|depth| {
-            let current = depth.get();
-            depth.set(current + 1);
-            current > 0
+        use crate::backend::direct_wasm::memo;
+        // Re-entry within an active query is a deterministic self-cycle of
+        // the outermost query's own guard: note the conflict against that
+        // guard's serial (not a blanket block) so memo windows opened by the
+        // outermost query itself remain storable.
+        let reentered_serial = RUNTIME_PUBLIC_THIS_RESOLUTION_QUERY.with(|query| {
+            let (depth, serial) = query.get();
+            (depth > 0).then_some(serial)
         });
-        if reentered {
-            crate::backend::direct_wasm::memo::note_resolution_guard_block();
-            RUNTIME_PUBLIC_THIS_RESOLUTION_QUERY_DEPTH
-                .with(|depth| depth.set(depth.get().saturating_sub(1)));
+        if let Some(serial) = reentered_serial {
+            memo::note_resolution_guard_block_conflict(serial);
             return false;
         }
-        let _memo_guard = crate::backend::direct_wasm::memo::ResolutionGuardScope::enter_class(21);
+        let generation = memo::static_state_generation();
+        let cached = self.current_function_name().and_then(|function_name| {
+            RUNTIME_PUBLIC_THIS_RESOLUTION_CACHE.with(|cache| {
+                let mut cache = cache.borrow_mut();
+                if cache.0 != generation {
+                    cache.0 = generation;
+                    cache.1.clear();
+                }
+                cache.1.get(function_name).copied()
+            })
+        });
+        if let Some(result) = cached {
+            return result;
+        }
+        let token = memo::MemoStoreToken::capture();
+        let serial = memo::next_guard_serial();
+        RUNTIME_PUBLIC_THIS_RESOLUTION_QUERY.with(|query| query.set((1, serial)));
+        let _memo_guard = memo::ResolutionGuardScope::enter_class(21);
         let result = self.current_user_function().is_some_and(|user_function| {
             self.user_function_mentions_private_member_access(user_function)
         });
-        RUNTIME_PUBLIC_THIS_RESOLUTION_QUERY_DEPTH
-            .with(|depth| depth.set(depth.get().saturating_sub(1)));
+        RUNTIME_PUBLIC_THIS_RESOLUTION_QUERY.with(|query| query.set((0, 0)));
+        if token.is_clean()
+            && let Some(function_name) = self.current_function_name()
+        {
+            RUNTIME_PUBLIC_THIS_RESOLUTION_CACHE.with(|cache| {
+                let mut cache = cache.borrow_mut();
+                if cache.0 == generation {
+                    cache.1.insert(function_name.to_string(), result);
+                }
+            });
+        }
         result
     }
 

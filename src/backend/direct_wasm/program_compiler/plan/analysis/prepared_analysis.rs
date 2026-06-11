@@ -64,6 +64,10 @@ impl PreparedProgramAnalysis {
         self.shared.ordered_user_functions()
     }
 
+    pub(in crate::backend::direct_wasm) fn ordered_user_function_names(&self) -> &[String] {
+        self.shared.ordered_user_function_names()
+    }
+
     pub(in crate::backend::direct_wasm) fn contains_user_function(&self, name: &str) -> bool {
         self.shared.contains_user_function(name)
     }
