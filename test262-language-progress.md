@@ -1,4 +1,4 @@
-21445/23668 (90.61%)
+21446/23668 (90.61%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -15,7 +15,7 @@ Sub-category progress
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
 - statements: 8113/9337 (86.89%)
-- expressions: 10258/11061 (92.74%)
+- expressions: 10259/11061 (92.75%)
 - types: 103/113 (91.15%)
 - function-code: 206/217 (94.93%)
 - global-code: 41/42 (97.62%)
@@ -16221,7 +16221,7 @@ Sub-category progress
   - [x] test/language/expressions/class/elements/prod-private-method-before-super-return-in-constructor.js
   - [ ] test/language/expressions/class/elements/prod-private-method-before-super-return-in-field-initializer.js
   - [x] test/language/expressions/class/elements/prod-private-setter-before-super-return-in-constructor.js
-  - [ ] test/language/expressions/class/elements/prod-private-setter-before-super-return-in-field-initializer.js
+  - [x] test/language/expressions/class/elements/prod-private-setter-before-super-return-in-field-initializer.js
   - [ ] test/language/expressions/class/elements/redeclaration-symbol.js
   - [ ] test/language/expressions/class/elements/redeclaration.js
   - [x] test/language/expressions/class/elements/regular-definitions-computed-names.js
