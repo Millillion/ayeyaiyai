@@ -29,6 +29,7 @@ test/language/expressions/assignment/destructuring/keyed-destructuring-property-
 test/language/expressions/assignment/destructuring/target-assign-throws-iterator-return-get-throws.js
 test/language/expressions/assignment/dstr/array-elem-nested-array-yield-ident-valid.js
 test/language/expressions/assignment/dstr/array-elem-target-yield-valid.js
+test/language/expressions/assignment/dstr/array-elem-trlg-iter-rest-rtrn-close-err.js
 test/language/expressions/assignment/dstr/array-rest-nested-array-yield-ident-valid.js
 test/language/expressions/assignment/dstr/obj-rest-order.js
 test/language/expressions/assignment/id-arguments-strict.js

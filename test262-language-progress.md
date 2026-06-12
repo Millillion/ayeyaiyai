@@ -1,4 +1,4 @@
-22663/23668 (95.75%)
+22681/23668 (95.83%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,8 +14,8 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 8930/9337 (95.64%)
-- expressions: 10605/11061 (95.88%)
+- statements: 8949/9337 (95.84%)
+- expressions: 10604/11061 (95.87%)
 - types: 106/113 (93.81%)
 - function-code: 208/217 (95.85%)
 - global-code: 41/42 (97.62%)
@@ -10546,10 +10546,10 @@ Sub-category progress
   - [x] test/language/statements/with/12.10.1-4-s.js
   - [x] test/language/statements/with/12.10.1-5-s.js
   - [x] test/language/statements/with/12.10.1-8-s.js
-  - [ ] test/language/statements/with/S12.10_A1.10_T1.js
+  - [x] test/language/statements/with/S12.10_A1.10_T1.js
   - [x] test/language/statements/with/S12.10_A1.10_T2.js
   - [x] test/language/statements/with/S12.10_A1.10_T3.js
-  - [ ] test/language/statements/with/S12.10_A1.10_T4.js
+  - [x] test/language/statements/with/S12.10_A1.10_T4.js
   - [x] test/language/statements/with/S12.10_A1.10_T5.js
   - [x] test/language/statements/with/S12.10_A1.11_T1.js
   - [x] test/language/statements/with/S12.10_A1.11_T2.js
@@ -10564,25 +10564,25 @@ Sub-category progress
   - [x] test/language/statements/with/S12.10_A1.1_T1.js
   - [x] test/language/statements/with/S12.10_A1.1_T2.js
   - [x] test/language/statements/with/S12.10_A1.1_T3.js
-  - [ ] test/language/statements/with/S12.10_A1.2_T1.js
-  - [ ] test/language/statements/with/S12.10_A1.2_T2.js
+  - [x] test/language/statements/with/S12.10_A1.2_T1.js
+  - [x] test/language/statements/with/S12.10_A1.2_T2.js
   - [x] test/language/statements/with/S12.10_A1.2_T3.js
-  - [ ] test/language/statements/with/S12.10_A1.2_T4.js
+  - [x] test/language/statements/with/S12.10_A1.2_T4.js
   - [x] test/language/statements/with/S12.10_A1.2_T5.js
-  - [ ] test/language/statements/with/S12.10_A1.3_T1.js
-  - [ ] test/language/statements/with/S12.10_A1.3_T2.js
+  - [x] test/language/statements/with/S12.10_A1.3_T1.js
+  - [x] test/language/statements/with/S12.10_A1.3_T2.js
   - [x] test/language/statements/with/S12.10_A1.3_T3.js
   - [ ] test/language/statements/with/S12.10_A1.3_T4.js
   - [x] test/language/statements/with/S12.10_A1.3_T5.js
-  - [ ] test/language/statements/with/S12.10_A1.4_T1.js
+  - [x] test/language/statements/with/S12.10_A1.4_T1.js
   - [x] test/language/statements/with/S12.10_A1.4_T2.js
   - [x] test/language/statements/with/S12.10_A1.4_T3.js
-  - [ ] test/language/statements/with/S12.10_A1.4_T4.js
+  - [x] test/language/statements/with/S12.10_A1.4_T4.js
   - [x] test/language/statements/with/S12.10_A1.4_T5.js
-  - [ ] test/language/statements/with/S12.10_A1.5_T1.js
+  - [x] test/language/statements/with/S12.10_A1.5_T1.js
   - [x] test/language/statements/with/S12.10_A1.5_T2.js
   - [x] test/language/statements/with/S12.10_A1.5_T3.js
-  - [ ] test/language/statements/with/S12.10_A1.5_T4.js
+  - [x] test/language/statements/with/S12.10_A1.5_T4.js
   - [x] test/language/statements/with/S12.10_A1.5_T5.js
   - [x] test/language/statements/with/S12.10_A1.6_T1.js
   - [x] test/language/statements/with/S12.10_A1.6_T2.js
@@ -10597,17 +10597,17 @@ Sub-category progress
   - [x] test/language/statements/with/S12.10_A1.8_T3.js
   - [ ] test/language/statements/with/S12.10_A1.8_T4.js
   - [x] test/language/statements/with/S12.10_A1.8_T5.js
-  - [ ] test/language/statements/with/S12.10_A1.9_T1.js
-  - [ ] test/language/statements/with/S12.10_A1.9_T2.js
+  - [x] test/language/statements/with/S12.10_A1.9_T1.js
+  - [x] test/language/statements/with/S12.10_A1.9_T2.js
   - [x] test/language/statements/with/S12.10_A1.9_T3.js
   - [x] test/language/statements/with/S12.10_A3.10_T1.js
   - [x] test/language/statements/with/S12.10_A3.10_T2.js
   - [x] test/language/statements/with/S12.10_A3.10_T3.js
   - [x] test/language/statements/with/S12.10_A3.10_T4.js
   - [x] test/language/statements/with/S12.10_A3.10_T5.js
-  - [ ] test/language/statements/with/S12.10_A3.11_T1.js
-  - [ ] test/language/statements/with/S12.10_A3.11_T2.js
-  - [ ] test/language/statements/with/S12.10_A3.11_T3.js
+  - [x] test/language/statements/with/S12.10_A3.11_T1.js
+  - [x] test/language/statements/with/S12.10_A3.11_T2.js
+  - [x] test/language/statements/with/S12.10_A3.11_T3.js
   - [x] test/language/statements/with/S12.10_A3.11_T4.js
   - [x] test/language/statements/with/S12.10_A3.11_T5.js
   - [x] test/language/statements/with/S12.10_A3.12_T1.js
@@ -10619,12 +10619,12 @@ Sub-category progress
   - [x] test/language/statements/with/S12.10_A3.1_T2.js
   - [x] test/language/statements/with/S12.10_A3.1_T3.js
   - [x] test/language/statements/with/S12.10_A3.2_T1.js
-  - [ ] test/language/statements/with/S12.10_A3.2_T2.js
+  - [x] test/language/statements/with/S12.10_A3.2_T2.js
   - [x] test/language/statements/with/S12.10_A3.2_T3.js
   - [x] test/language/statements/with/S12.10_A3.2_T4.js
   - [x] test/language/statements/with/S12.10_A3.2_T5.js
-  - [ ] test/language/statements/with/S12.10_A3.3_T1.js
-  - [ ] test/language/statements/with/S12.10_A3.3_T2.js
+  - [x] test/language/statements/with/S12.10_A3.3_T1.js
+  - [x] test/language/statements/with/S12.10_A3.3_T2.js
   - [x] test/language/statements/with/S12.10_A3.3_T3.js
   - [x] test/language/statements/with/S12.10_A3.3_T4.js
   - [x] test/language/statements/with/S12.10_A3.4_T1.js
@@ -11270,7 +11270,7 @@ Sub-category progress
   - [x] test/language/expressions/assignment/dstr/array-elem-trlg-iter-list-thrw-close-skip.js
   - [x] test/language/expressions/assignment/dstr/array-elem-trlg-iter-list-thrw-close.js
   - [x] test/language/expressions/assignment/dstr/array-elem-trlg-iter-rest-nrml-close-skip.js
-  - [x] test/language/expressions/assignment/dstr/array-elem-trlg-iter-rest-rtrn-close-err.js
+  - [ ] test/language/expressions/assignment/dstr/array-elem-trlg-iter-rest-rtrn-close-err.js
   - [x] test/language/expressions/assignment/dstr/array-elem-trlg-iter-rest-rtrn-close-null.js
   - [x] test/language/expressions/assignment/dstr/array-elem-trlg-iter-rest-rtrn-close.js
   - [x] test/language/expressions/assignment/dstr/array-elem-trlg-iter-rest-thrw-close-err.js
