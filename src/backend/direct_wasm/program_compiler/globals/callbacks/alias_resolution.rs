@@ -28,6 +28,26 @@ impl DirectWasmCompiler {
         matches.next().is_none().then_some(binding)
     }
 
+    /// Resolves a scope-renamed identifier's source name to the unique user
+    /// function carrying it as a self binding (the name a function
+    /// expression or statement binds for its own body, e.g. recursive
+    /// `function f(n) { ... f(n - 1) ... }` references).
+    fn resolve_unique_self_binding_function_for_alias_analysis(
+        &self,
+        source_name: &str,
+    ) -> Option<LocalFunctionBinding> {
+        let mut matches = self.state.user_functions().iter().filter_map(|function| {
+            let declaration = self.registered_function(&function.name)?;
+            declaration
+                .self_binding
+                .as_deref()
+                .filter(|self_binding| *self_binding == source_name)
+                .map(|_| LocalFunctionBinding::User(function.name.clone()))
+        });
+        let binding = matches.next()?;
+        matches.next().is_none().then_some(binding)
+    }
+
     pub(in crate::backend::direct_wasm) fn resolve_function_binding_from_expression_with_aliases(
         &self,
         expression: &Expression,
@@ -44,8 +64,25 @@ impl DirectWasmCompiler {
                     Some(function_binding.clone())
                 } else if name == "eval" || infer_call_result_kind(name).is_some() {
                     Some(LocalFunctionBinding::Builtin(name.clone()))
+                } else if let Some(source_name) = scoped_binding_source_name(name) {
+                    // Scope-renamed self-binding references (e.g. the
+                    // recursive `__ayy_scope$f$1(...)` call inside
+                    // `function f`) must resolve to the source function so
+                    // recursive call sites participate in parameter binding
+                    // analysis; otherwise the entry call's static argument
+                    // is treated as the only call-site value and gets baked
+                    // into the recursive callee.
+                    if let Some(function_binding) = aliases.get(source_name) {
+                        function_binding.clone()
+                    } else if let Some(function_binding) =
+                        self.global_function_binding(source_name)
+                    {
+                        Some(function_binding.clone())
+                    } else {
+                        self.resolve_unique_self_binding_function_for_alias_analysis(source_name)
+                    }
                 } else {
-                    None
+                    self.resolve_unique_self_binding_function_for_alias_analysis(name)
                 }
             }
             Expression::Member { object, property } => {
