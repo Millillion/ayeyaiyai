@@ -202,7 +202,6 @@ impl Lowerer {
         let target_name = self.fresh_temporary_name("for_in_target");
         let keys_name = self.fresh_temporary_name("for_in_keys");
         let index_name = self.fresh_temporary_name("for_in_index");
-        let target_value = self.lower_expression(&for_in_statement.right)?;
         let target_expression = Expression::Identifier(target_name.clone());
         let enumerated_keys = Expression::EnumerateKeys(Box::new(target_expression.clone()));
         let current_key = Expression::Member {
@@ -214,7 +213,10 @@ impl Lowerer {
             self.push_renaming_binding_scope(lexical_binding_names.clone());
         }
         let lowered_binding_and_body =
-            (|| -> Result<(ForOfBinding, Vec<Statement>, Vec<String>)> {
+            (|| -> Result<(Expression, ForOfBinding, Vec<Statement>, Vec<String>)> {
+                // The head's lexical bindings form a TDZ around the evaluation
+                // of the enumerated expression, so lower it inside the scope.
+                let target_value = self.lower_expression(&for_in_statement.right)?;
                 let binding =
                     self.lower_for_of_binding(&for_in_statement.left, current_key.clone())?;
                 let per_iteration_bindings = lexical_binding_names
@@ -223,12 +225,13 @@ impl Lowerer {
                     .collect();
                 let body =
                     self.lower_block_or_statement(&for_in_statement.body, allow_return, true)?;
-                Ok((binding, body, per_iteration_bindings))
+                Ok((target_value, binding, body, per_iteration_bindings))
             })();
         if !lexical_binding_names.is_empty() {
             self.pop_binding_scope();
         }
-        let (binding, lowered_loop_body, per_iteration_bindings) = lowered_binding_and_body?;
+        let (target_value, binding, lowered_loop_body, per_iteration_bindings) =
+            lowered_binding_and_body?;
 
         let mut init = binding.before_loop;
         init.push(Statement::Let {

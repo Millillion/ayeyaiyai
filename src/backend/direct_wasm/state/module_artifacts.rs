@@ -34,6 +34,20 @@ impl ModuleArtifactsState {
     pub(in crate::backend::direct_wasm) fn snapshot_data(&self) -> (Vec<(u32, Vec<u8>)>, u32) {
         (self.string_data.clone(), self.next_data_offset)
     }
+
+    /// Decoded view of the interned string table: each entry stored in
+    /// `string_data` is `(data_offset, [u32 length prefix][utf8 bytes])`, while
+    /// runtime string handles point at the utf8 bytes (offset + prefix size).
+    pub(in crate::backend::direct_wasm) fn interned_string_texts(&self) -> Vec<(u32, String)> {
+        self.string_data
+            .iter()
+            .filter_map(|(offset, data)| {
+                let content = data.get(STRING_LENGTH_PREFIX_SIZE as usize..)?;
+                let text = String::from_utf8(content.to_vec()).ok()?;
+                Some((offset + STRING_LENGTH_PREFIX_SIZE, text))
+            })
+            .collect()
+    }
 }
 
 impl CompilerState {

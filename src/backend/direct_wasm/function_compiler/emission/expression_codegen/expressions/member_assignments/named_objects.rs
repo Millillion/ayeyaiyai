@@ -712,6 +712,12 @@ impl<'a> FunctionCompiler<'a> {
             {
                 self.push_dynamic_for_in_key_property_candidates(value, candidates, depth + 1);
             }
+            if candidates.is_empty()
+                && let Some(alias) = self.active_loop_string_member_alias(name)
+                && !static_expression_matches(&alias, expression)
+            {
+                self.push_dynamic_for_in_key_property_candidates(&alias, candidates, depth + 1);
+            }
         }
 
         let materialized = self.materialize_static_expression(expression);

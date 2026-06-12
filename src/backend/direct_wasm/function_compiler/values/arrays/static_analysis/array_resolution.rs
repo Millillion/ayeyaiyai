@@ -57,6 +57,10 @@ impl<'a> FunctionCompiler<'a> {
                 .iter()
                 .any(|hidden_name| hidden_name == &name)
             {
+                // Per EnumerateObjectProperties, non-enumerable own properties
+                // are still marked as visited so they shadow enumerable
+                // prototype properties with the same name.
+                seen.insert(name);
                 continue;
             }
             Self::push_for_in_key_candidate(values, seen, &name);
@@ -121,6 +125,46 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    /// Resolves `expression` (or the identifier it aliases) to a member
+    /// expression whose property is the current key of an active for-in loop.
+    pub(in crate::backend::direct_wasm) fn for_in_keyed_member_expression(
+        &self,
+        expression: &Expression,
+    ) -> Option<Expression> {
+        self.for_in_keyed_member_expression_with_depth(expression, 0)
+    }
+
+    fn for_in_keyed_member_expression_with_depth(
+        &self,
+        expression: &Expression,
+        depth: usize,
+    ) -> Option<Expression> {
+        if depth > 8 {
+            return None;
+        }
+        match expression {
+            Expression::Member { property, .. } => self
+                .for_in_key_array_member_name(property)
+                .is_some()
+                .then(|| expression.clone()),
+            Expression::Identifier(name) => {
+                let value = self
+                    .state
+                    .speculation
+                    .static_semantics
+                    .local_value_binding(name)
+                    .cloned()
+                    .or_else(|| self.global_value_binding(name).cloned())
+                    .or_else(|| self.active_loop_string_member_alias(name))?;
+                if static_expression_matches(&value, expression) {
+                    return None;
+                }
+                self.for_in_keyed_member_expression_with_depth(&value, depth + 1)
+            }
+            _ => None,
+        }
+    }
+
     fn static_for_in_enumerated_keys_binding(
         &self,
         expression: &Expression,
@@ -145,7 +189,76 @@ impl<'a> FunctionCompiler<'a> {
                     array_binding.values
                 );
             }
-            return Some(enumerated_keys_from_array_binding(&array_binding));
+            let mut keys = enumerated_keys_from_array_binding(&array_binding);
+            // Arrays can carry enumerable non-index string properties; they
+            // enumerate after the index keys in creation order. The string
+            // properties live on the object/shadow channel rather than the
+            // array binding.
+            let array_object_binding = self
+                .resolve_object_binding_from_expression(expression)
+                .or_else(|| match expression {
+                    Expression::Identifier(name) => self
+                        .runtime_object_property_shadow_owner_name_for_identifier(name)
+                        .and_then(|owner| {
+                            self.resolve_runtime_shadow_object_binding(owner.as_str())
+                        }),
+                    _ => None,
+                });
+            if let Some(object_binding) = array_object_binding {
+                let mut seen = keys
+                    .values
+                    .iter()
+                    .filter_map(|value| match value {
+                        Some(Expression::String(name)) => Some(name.clone()),
+                        _ => None,
+                    })
+                    .collect::<std::collections::HashSet<_>>();
+                seen.insert("length".to_string());
+                for name in ordered_object_property_names(&object_binding) {
+                    if canonical_array_index_from_property_name(&name).is_some()
+                        || object_binding
+                            .non_enumerable_string_properties
+                            .iter()
+                            .any(|hidden_name| hidden_name == &name)
+                    {
+                        continue;
+                    }
+                    Self::push_for_in_key_candidate(&mut keys.values, &mut seen, &name);
+                }
+            }
+            return Some(keys);
+        }
+
+        // Enumerating an object selected by an outer for-in key
+        // (`for (k2 in outer[k1])`): the static key table is the union of all
+        // candidate value objects' keys; the per-iteration `key in target`
+        // guard filters to the actual object at runtime.
+        if let Some(keyed_member) = self.for_in_keyed_member_expression(expression)
+            && let Expression::Member { object, .. } = &keyed_member
+            && let Some(outer_binding) = self.resolve_object_binding_from_expression(object)
+        {
+            let mut values = Vec::new();
+            let mut seen = std::collections::HashSet::new();
+            for (_, candidate_value) in &outer_binding.string_properties {
+                let Some(candidate_binding) =
+                    self.resolve_object_binding_from_expression(candidate_value)
+                else {
+                    continue;
+                };
+                Self::append_for_in_keys_from_object_binding(
+                    &mut values,
+                    &mut seen,
+                    &candidate_binding,
+                );
+            }
+            if !values.is_empty() {
+                if trace_for_in_keys {
+                    eprintln!(
+                        "for_in_keys:keyed_member_union expression={expression:?} values={values:?}"
+                    );
+                }
+                return Some(ArrayValueBinding { values });
+            }
         }
 
         let mut values = Vec::new();
@@ -159,7 +272,37 @@ impl<'a> FunctionCompiler<'a> {
             }
         }
 
-        if let Some(object_binding) = self.resolve_object_binding_from_expression(expression) {
+        // Property writes routed through runtime shadow globals do not update
+        // the static object binding; merge the shadow channel so late-added
+        // and deleted properties enumerate correctly.
+        let shadow_aware_object_binding = match expression {
+            Expression::Identifier(name) => {
+                let owner = self.runtime_object_property_shadow_owner_name_for_identifier(name);
+                if trace_for_in_keys {
+                    eprintln!(
+                        "for_in_keys:shadow_owner name={name} owner={owner:?} has_bindings={:?}",
+                        owner
+                            .as_ref()
+                            .map(|owner| self
+                                .runtime_object_property_shadow_owner_has_bindings(owner))
+                    );
+                }
+                let resolved = owner
+                    .filter(|owner| self.runtime_object_property_shadow_owner_has_bindings(owner))
+                    .and_then(|owner| self.resolve_runtime_shadow_object_binding(owner.as_str()));
+                if trace_for_in_keys {
+                    eprintln!(
+                        "for_in_keys:shadow_binding name={name} props={:?}",
+                        resolved.as_ref().map(ordered_object_property_names)
+                    );
+                }
+                resolved
+            }
+            _ => None,
+        };
+        if let Some(object_binding) = shadow_aware_object_binding
+            .or_else(|| self.resolve_object_binding_from_expression(expression))
+        {
             if trace_for_in_keys {
                 eprintln!(
                     "for_in_keys:object expression={expression:?} props={:?} hidden={:?}",

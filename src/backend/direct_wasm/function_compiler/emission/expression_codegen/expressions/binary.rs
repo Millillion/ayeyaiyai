@@ -571,6 +571,48 @@ impl<'a> FunctionCompiler<'a> {
             && self.expression_depends_on_active_loop_assignment(property)
     }
 
+    /// `object[key]` where `key` aliases the current for-in key and `object`
+    /// has a static object binding: the property values enumerate statically.
+    fn expression_is_for_in_keyed_object_member(&self, expression: &Expression) -> bool {
+        let Expression::Member { object, property } = expression else {
+            return false;
+        };
+        self.for_in_key_array_member_name(property).is_some()
+            && self.resolve_object_binding_from_expression(object).is_some()
+    }
+
+    /// Like `expression_has_dynamic_member_property_access`, but dynamic
+    /// members whose values enumerate statically through active for-in keys
+    /// (or loop-indexed static arrays) do not block candidate generation.
+    fn runtime_string_candidates_blocked_by_dynamic_member(&self, expression: &Expression) -> bool {
+        if self.expression_is_active_loop_indexed_static_array_member(expression)
+            || self.expression_is_for_in_keyed_object_member(expression)
+        {
+            return false;
+        }
+        match expression {
+            Expression::Member { object, property } => {
+                (!matches!(
+                    property.as_ref(),
+                    Expression::String(_) | Expression::Number(_)
+                ) && self.for_in_key_array_member_name(property).is_none())
+                    || self.runtime_string_candidates_blocked_by_dynamic_member(object)
+                    || self.runtime_string_candidates_blocked_by_dynamic_member(property)
+            }
+            Expression::Binary { left, right, .. } => {
+                self.runtime_string_candidates_blocked_by_dynamic_member(left)
+                    || self.runtime_string_candidates_blocked_by_dynamic_member(right)
+            }
+            Expression::Identifier(_)
+            | Expression::String(_)
+            | Expression::Number(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined => false,
+            _ => self.expression_has_dynamic_member_property_access(expression),
+        }
+    }
+
     pub(in crate::backend::direct_wasm) fn expression_contains_assignment_or_update(
         expression: &Expression,
     ) -> bool {
@@ -1008,6 +1050,10 @@ impl<'a> FunctionCompiler<'a> {
                 .map(|value| value.to_string())
                 .or_else(|| self.resolve_static_string_value(expression))
                 .or_else(|| {
+                    let value = self.active_loop_string_member_alias(name)?;
+                    self.active_loop_stringified_expression_value(&value, environment)
+                })
+                .or_else(|| {
                     let value = self
                         .state
                         .speculation
@@ -1279,7 +1325,10 @@ impl<'a> FunctionCompiler<'a> {
         Ok(true)
     }
 
-    fn for_in_key_array_member_name(&self, expression: &Expression) -> Option<String> {
+    pub(in crate::backend::direct_wasm) fn for_in_key_array_member_name(
+        &self,
+        expression: &Expression,
+    ) -> Option<String> {
         if let Expression::Identifier(name) = expression
             && let Some(value) = self
                 .state
@@ -1293,6 +1342,11 @@ impl<'a> FunctionCompiler<'a> {
             && let Some(value) = self.global_value_binding(name)
         {
             return self.for_in_key_array_member_name(value);
+        }
+        if let Expression::Identifier(name) = expression
+            && let Some(value) = self.active_loop_string_member_alias(name)
+        {
+            return self.for_in_key_array_member_name(&value);
         }
         let Expression::Member { object, .. } = expression else {
             return None;
@@ -1418,9 +1472,7 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         expression: &Expression,
     ) -> Vec<(Expression, String)> {
-        if self.expression_has_dynamic_member_property_access(expression)
-            && !self.expression_is_active_loop_indexed_static_array_member(expression)
-        {
+        if self.runtime_string_candidates_blocked_by_dynamic_member(expression) {
             return Vec::new();
         }
         let mut candidates = Vec::new();
@@ -1436,6 +1488,46 @@ impl<'a> FunctionCompiler<'a> {
                 if candidates.len() >= RUNTIME_STRING_ADDITION_CANDIDATE_LIMIT {
                     return candidates;
                 }
+            }
+        }
+        if crate::ayy_env_flag!("AYY_TRACE_ADDITION") {
+            eprintln!(
+                "addition:right_candidates expression={expression:?} key_array={:?} value_binding={:?}",
+                self.for_in_key_array_member_name(expression),
+                match expression {
+                    Expression::Identifier(name) => self
+                        .state
+                        .speculation
+                        .static_semantics
+                        .local_value_binding(name)
+                        .cloned(),
+                    _ => None,
+                }
+            );
+        }
+        if let Some(key_array_name) = self.for_in_key_array_member_name(expression)
+            && let Some(key_array_binding) = self
+                .state
+                .speculation
+                .static_semantics
+                .local_array_binding(&key_array_name)
+                .cloned()
+        {
+            for key in key_array_binding.values.iter().flatten() {
+                let Expression::String(text) = key else {
+                    continue;
+                };
+                Self::push_unique_runtime_string_value_candidate(
+                    &mut candidates,
+                    Expression::String(text.clone()),
+                    text.clone(),
+                );
+                if candidates.len() >= RUNTIME_STRING_ADDITION_CANDIDATE_LIMIT {
+                    return candidates;
+                }
+            }
+            if !candidates.is_empty() {
+                return candidates;
             }
         }
         if inline_summary_side_effect_free_expression(expression)
@@ -1699,12 +1791,9 @@ impl<'a> FunctionCompiler<'a> {
             }
         }
         if left_is_definitely_string {
-            let string_data = self.backend.module_artifacts.string_data.clone();
+            let string_data = self.backend.module_artifacts.interned_string_texts();
             let mut fragments = Vec::new();
-            for (_, bytes) in string_data {
-                let Ok(text) = String::from_utf8(bytes) else {
-                    continue;
-                };
+            for (_, text) in string_data {
                 if text.len() == 1
                     && text
                         .as_bytes()
@@ -1731,12 +1820,59 @@ impl<'a> FunctionCompiler<'a> {
                 }
             }
         }
+        // Expand append products from a focused seed before topping the list
+        // up with the full intern table, so the bounded candidate budget is
+        // spent on the prefixes an append loop can actually produce. For a
+        // loop-accumulated string the reachable prefixes are exactly the
+        // concatenations of right-hand candidates starting from the binding's
+        // value at loop entry (usually the empty string).
+        let mut frontier = if self.expression_depends_on_active_loop_assignment(left)
+            && left_is_definitely_string
+        {
+            let mut seed = vec![String::new()];
+            if let Some(text) = self.resolve_static_string_value(left)
+                && !seed.iter().any(|existing| existing == &text)
+            {
+                seed.push(text);
+            }
+            seed
+        } else {
+            candidates
+                .iter()
+                .map(|(_, text)| text.clone())
+                .collect::<Vec<_>>()
+        };
+        let depth = right_candidates.len().clamp(1, 6);
+        let mut product_seen: HashSet<String> = frontier.iter().cloned().collect();
+        for _ in 0..depth {
+            if candidates.len() >= 256 || frontier.is_empty() {
+                break;
+            }
+            let mut next_frontier = Vec::new();
+            for prefix in frontier {
+                for (_, suffix) in right_candidates {
+                    let combined = format!("{prefix}{suffix}");
+                    Self::push_unique_runtime_string_value_candidate(
+                        &mut candidates,
+                        Expression::String(combined.clone()),
+                        combined.clone(),
+                    );
+                    if product_seen.insert(combined.clone()) {
+                        next_frontier.push(combined);
+                    }
+                    if candidates.len() >= 256 {
+                        break;
+                    }
+                }
+                if candidates.len() >= 256 {
+                    break;
+                }
+            }
+            frontier = next_frontier;
+        }
         if left_is_definitely_string {
-            let string_data = self.backend.module_artifacts.string_data.clone();
-            for (_, bytes) in string_data {
-                let Ok(text) = String::from_utf8(bytes) else {
-                    continue;
-                };
+            let string_data = self.backend.module_artifacts.interned_string_texts();
+            for (_, text) in string_data {
                 Self::push_unique_runtime_string_value_candidate(
                     &mut candidates,
                     Expression::String(text.clone()),
@@ -1746,36 +1882,6 @@ impl<'a> FunctionCompiler<'a> {
                     break;
                 }
             }
-        }
-        let mut frontier = candidates
-            .iter()
-            .map(|(_, text)| text.clone())
-            .collect::<Vec<_>>();
-        let depth = right_candidates.len().clamp(1, 6);
-        for _ in 0..depth {
-            if candidates.len() >= 256 || frontier.is_empty() {
-                break;
-            }
-            let mut next_frontier = Vec::new();
-            for prefix in frontier {
-                for (_, suffix) in right_candidates {
-                    let combined = format!("{prefix}{suffix}");
-                    if Self::push_unique_runtime_string_value_candidate(
-                        &mut candidates,
-                        Expression::String(combined.clone()),
-                        combined.clone(),
-                    ) {
-                        next_frontier.push(combined);
-                        if candidates.len() >= 256 {
-                            break;
-                        }
-                    }
-                }
-                if candidates.len() >= 256 {
-                    break;
-                }
-            }
-            frontier = next_frontier;
         }
 
         for (_, text) in &candidates {
@@ -1905,20 +2011,30 @@ impl<'a> FunctionCompiler<'a> {
         left: &Expression,
         right: &Expression,
     ) -> DirectResult<bool> {
-        if (self.expression_has_dynamic_member_property_access(left)
-            && !self.expression_is_active_loop_indexed_static_array_member(left))
-            || (self.expression_has_dynamic_member_property_access(right)
-                && !self.expression_is_active_loop_indexed_static_array_member(right))
+        if self.runtime_string_candidates_blocked_by_dynamic_member(left)
+            || self.runtime_string_candidates_blocked_by_dynamic_member(right)
         {
             return Ok(false);
         }
         if let Some(sequence) = self.active_loop_stringified_candidate_sequence(right)
             && self.emit_active_loop_string_append_sequence(left, right, &sequence)?
         {
+            if crate::ayy_env_flag!("AYY_TRACE_ADDITION") {
+                eprintln!("addition:append_sequence handled");
+            }
             return Ok(true);
         }
 
         let right_candidates = self.runtime_string_addition_right_candidates(right);
+        if crate::ayy_env_flag!("AYY_TRACE_ADDITION") {
+            eprintln!(
+                "addition:candidate_sets right={:?} ",
+                right_candidates
+                    .iter()
+                    .map(|(_, text)| text.as_str())
+                    .collect::<Vec<_>>()
+            );
+        }
         if right_candidates.is_empty() {
             return Ok(false);
         }
@@ -2969,6 +3085,12 @@ impl<'a> FunctionCompiler<'a> {
                     && !addition_contains_assignment_or_update
                     && !addition_calls_user_function
                     && addition_operands_side_effect_free;
+                let trace_addition = crate::ayy_env_flag!("AYY_TRACE_ADDITION");
+                if trace_addition {
+                    eprintln!(
+                        "addition:flags left={left:?} right={right:?} loop_dep={addition_depends_on_active_loop_assignment} assign={addition_contains_assignment_or_update} calls={addition_calls_user_function} sefree={addition_operands_side_effect_free} runtime={addition_requires_runtime_value} allow_static={allow_static_addition}"
+                    );
+                }
                 if allow_static_addition
                     && let Some(outcome) = self.resolve_static_addition_outcome_with_context(
                         left,
@@ -2976,6 +3098,9 @@ impl<'a> FunctionCompiler<'a> {
                         self.current_function_name(),
                     )
                 {
+                    if trace_addition {
+                        eprintln!("addition:static outcome resolved");
+                    }
                     return self.emit_static_eval_outcome(&outcome);
                 }
                 if !addition_depends_on_active_loop_assignment
@@ -3004,10 +3129,23 @@ impl<'a> FunctionCompiler<'a> {
                 let addition_operands_are_definitely_numeric = self.infer_value_kind(left)
                     == Some(StaticValueKind::Number)
                     && self.infer_value_kind(right) == Some(StaticValueKind::Number);
+                if trace_addition {
+                    eprintln!(
+                        "addition:fallthrough definitely_numeric={addition_operands_are_definitely_numeric} left_kind={:?} right_kind={:?}",
+                        self.infer_value_kind(left),
+                        self.infer_value_kind(right)
+                    );
+                }
                 if !addition_operands_are_definitely_numeric
                     && self.emit_runtime_string_addition_from_candidates(left, right)?
                 {
+                    if trace_addition {
+                        eprintln!("addition:runtime_string_candidates handled");
+                    }
                     return Ok(());
+                }
+                if trace_addition {
+                    eprintln!("addition:numeric_fallback");
                 }
                 self.emit_throw_aware_numeric_binary_op(op, left, right)
             }

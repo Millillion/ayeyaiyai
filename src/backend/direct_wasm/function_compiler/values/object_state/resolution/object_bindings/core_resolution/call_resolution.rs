@@ -198,7 +198,30 @@ impl<'a> FunctionCompiler<'a> {
                 if matches!(object.as_ref(), Expression::Identifier(name) if name == "Object")
                     && matches!(property.as_ref(), Expression::String(name) if name == "create")
         ) {
-            return Some(empty_object_value_binding());
+            let mut object_binding = empty_object_value_binding();
+            // Apply the optional properties argument (descriptor map) so own
+            // properties — including non-enumerable ones that shadow
+            // enumerable prototype properties — are statically visible.
+            if let Some(CallArgument::Expression(properties) | CallArgument::Spread(properties)) =
+                arguments.get(1)
+                && !matches!(properties, Expression::Undefined)
+                && let Some(properties_binding) =
+                    self.resolve_object_binding_from_expression(properties)
+            {
+                for (name, descriptor_value) in &properties_binding.string_properties {
+                    let Some(descriptor) =
+                        self.property_descriptor_binding_from_expression(descriptor_value)
+                    else {
+                        continue;
+                    };
+                    object_binding_define_property_descriptor(
+                        &mut object_binding,
+                        Expression::String(name.clone()),
+                        descriptor,
+                    );
+                }
+            }
+            return Some(object_binding);
         }
         if matches!(
             callee,

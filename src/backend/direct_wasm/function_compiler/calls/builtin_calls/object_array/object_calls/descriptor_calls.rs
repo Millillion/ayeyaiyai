@@ -2790,7 +2790,7 @@ impl<'a> FunctionCompiler<'a> {
         Ok(())
     }
 
-    fn property_descriptor_binding_from_expression(
+    pub(in crate::backend::direct_wasm) fn property_descriptor_binding_from_expression(
         &self,
         descriptor_expression: &Expression,
     ) -> Option<PropertyDescriptorBinding> {
@@ -2896,6 +2896,7 @@ impl<'a> FunctionCompiler<'a> {
             };
             descriptor
         };
+        let mut descriptor = descriptor;
         let materialized_property = self.canonical_object_property_expression(property);
         let mut object_binding = self
             .resolve_object_binding_from_expression(target)
@@ -2907,6 +2908,23 @@ impl<'a> FunctionCompiler<'a> {
                 _ => None,
             })
             .unwrap_or_else(empty_object_value_binding);
+        // Per ValidateAndApplyPropertyDescriptor, fields absent from the
+        // incoming descriptor keep the current attribute values; the parsed
+        // binding collapses an absent `enumerable` to false, so restore the
+        // existing property's enumerability.
+        if resolve_property_descriptor_definition(descriptor_expression)
+            .is_some_and(|definition| definition.enumerable.is_none())
+            && object_binding_has_property(&object_binding, &materialized_property)
+        {
+            descriptor.enumerable = !matches!(
+                &materialized_property,
+                Expression::String(name)
+                    if object_binding
+                        .non_enumerable_string_properties
+                        .iter()
+                        .any(|hidden_name| hidden_name == name)
+            );
+        }
         object_binding_define_property_descriptor(
             &mut object_binding,
             materialized_property,

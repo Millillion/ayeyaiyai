@@ -244,7 +244,10 @@ impl<'a> FunctionCompiler<'a> {
         format!("__ayy_object_dynamic_property_value__{owner_name}")
     }
 
-    fn runtime_object_property_shadow_owner_has_bindings(&self, owner_name: &str) -> bool {
+    pub(in crate::backend::direct_wasm) fn runtime_object_property_shadow_owner_has_bindings(
+        &self,
+        owner_name: &str,
+    ) -> bool {
         let property_prefix = format!("__ayy_object_property__{owner_name}__");
         let deleted_prefix = format!("__ayy_object_property_deleted__{owner_name}__");
         self.backend
@@ -3042,13 +3045,22 @@ impl<'a> FunctionCompiler<'a> {
             ) else {
                 continue;
             };
-            let deleted_is_static = self.global_value_binding(&name).is_some()
-                || self
-                    .backend
+            // A deletion marker is recorded as Undefined when the delete is
+            // live and reset to Number(0.0) when a later store clears it; a
+            // cleared marker must not hide the (re-added) property.
+            let deleted_value = self.global_value_binding(&name).cloned().or_else(|| {
+                self.backend
                     .shared_global_semantics
                     .values
                     .value_bindings
-                    .contains_key(&name);
+                    .get(&name)
+                    .cloned()
+            });
+            let deleted_is_static = match deleted_value {
+                Some(Expression::Undefined) => true,
+                Some(Expression::Number(number)) => number == JS_UNDEFINED_TAG as f64,
+                _ => false,
+            };
             if deleted_is_static {
                 object_binding_remove_property(
                     &mut object_binding,
