@@ -57,6 +57,43 @@ impl<'a> FunctionCompiler<'a> {
                 self_binding.to_string(),
             ));
         }
+        // Static class methods have no home-object value binding (the class
+        // object is not an object-literal global), but they are registered as
+        // member functions of the class binding; recover the class target from
+        // that registration so `this.<member>` resolves inside them.
+        if current_function_name.starts_with("__ayy_class_method_") {
+            let expected = LocalFunctionBinding::User(current_function_name.to_string());
+            let local_targets = self
+                .state
+                .speculation
+                .static_semantics
+                .objects
+                .member_function_bindings
+                .iter()
+                .filter(|(_, binding)| **binding == expected)
+                .map(|(key, _)| key.target.clone());
+            let global_targets = self
+                .backend
+                .global_member_function_binding_entries()
+                .into_iter()
+                .filter(|(_, binding)| *binding == expected)
+                .map(|(key, _)| key.target);
+            let mut identifier_target = None;
+            for target in local_targets.chain(global_targets) {
+                let MemberFunctionBindingTarget::Identifier(target_name) = &target else {
+                    continue;
+                };
+                if target_name.starts_with("__ayy_local$") {
+                    return Some(target);
+                }
+                if identifier_target.is_none() {
+                    identifier_target = Some(target);
+                }
+            }
+            if identifier_target.is_some() {
+                return identifier_target;
+            }
+        }
         None
     }
 

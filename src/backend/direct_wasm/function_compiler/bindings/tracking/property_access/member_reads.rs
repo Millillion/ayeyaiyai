@@ -177,6 +177,18 @@ impl<'a> FunctionCompiler<'a> {
         } else {
             property.clone()
         };
+        // Shared class-method bodies compile `this`-private accesses under
+        // the declaring-class receiver assumption; verify the live receiver
+        // brand so extracted methods (`fn.call({})`) reject foreign
+        // receivers.
+        if matches!(object, Expression::This)
+            && is_private_property_name_expression(&static_array_property)
+            && self
+                .current_function_name()
+                .is_some_and(|name| name.starts_with("__ayy_class_method_"))
+        {
+            self.emit_private_member_receiver_brand_presence_check(object, &static_array_property)?;
+        }
 
         if trace_member_reads {
             eprintln!(

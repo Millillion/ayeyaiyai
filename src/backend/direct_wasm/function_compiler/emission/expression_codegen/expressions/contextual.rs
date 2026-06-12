@@ -1575,6 +1575,16 @@ impl<'a> FunctionCompiler<'a> {
                         if trace_member_reads {
                             eprintln!("member_expr:user_function_value member={original_member:?}");
                         }
+                        if matches!(object, Expression::This)
+                            && is_private_property_name_expression(property)
+                            && self
+                                .current_function_name()
+                                .is_some_and(|name| name.starts_with("__ayy_class_method_"))
+                        {
+                            self.emit_private_member_receiver_brand_presence_check(
+                                object, property,
+                            )?;
+                        }
                         self.push_i32_const(runtime_value);
                         return Ok(());
                     }
