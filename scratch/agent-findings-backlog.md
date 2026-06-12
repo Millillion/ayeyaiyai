@@ -56,3 +56,10 @@ Each item: tests flipped, root cause location, fix sketch, risk. Full reports in
 - [x] yield-star compile pathology #1 SHIPPED (emit_prepare capture re-entrancy guard + literal early-outs + name-only scans): specimens 150s-SO → <9s; 19 yield-star tests now compile (runtime-fail, awaiting async-gen runtime fixes). Pathology #2 residual: ~17 timeouts in private-method-STATIC/-async-next family — blunt serial-0 note_resolution_guard_block() sites (~20) poison memo windows; convert to serial-aware conflict notes (architectural follow-up).
 - for-of dstr: 8 verified flips marked; agent-measured extras didn't reproduce on merged main — re-attack alongside async-step round.
 - IN FLIGHT: async-step fidelity resume agent (worktree agent-a5ac87953fa632c7b, inherited +99/-6 diff).
+
+## Residual map (2026-06-12, 93.48%, 1543 unchecked)
+- for-await-of (~270): stored-promise fold recording, in-pattern yields, remaining custom-iterable shapes.
+- class (~316): instance private brands with parameter receivers (parameter-channel brand seeding — naive version threw falsely, reverted), nested-class private shadowing (8), dstr private-meth fidelity (50), subclass/heritage A4 (22), cpn dynamic-key fields + String(fn) keys (51), fn-name precedence, B1 String sentinel, A3 prototype snapshots, multiple-evaluations-of-class (19, possibly AOT-hard — per-eval class identity), async-gen private yield-star COMPILE HANGS (investigate; exclude from sweeps or set AYY_COMPILE_TIMEOUT_SECONDS).
+- dynamic-import (79): eval-gtbndng live-binding mutation via globalThis closures (36, needs shared closure-slot writes), import-defer/attributes (13), exotic specifier coercions.
+- with (46): proxy environments, unscopables edge cases, function-body var-hoisting interactions.
+- assignment (44), for-in (41), function (33), compound-assignment (32, global-this accessor modeling), call (30).
