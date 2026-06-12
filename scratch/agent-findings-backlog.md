@@ -63,3 +63,6 @@ Each item: tests flipped, root cause location, fix sketch, risk. Full reports in
 - dynamic-import (79): eval-gtbndng live-binding mutation via globalThis closures (36, needs shared closure-slot writes), import-defer/attributes (13), exotic specifier coercions.
 - with (46): proxy environments, unscopables edge cases, function-body var-hoisting interactions.
 - assignment (44), for-in (41), function (33), compound-assignment (32, global-this accessor modeling), call (30).
+
+## Round status (2026-06-12, 95.75%)
+- Stale tracker entries confirmed failing on main and UNCHECKED (ary-init-iter-close family, wasm unreachable trap): for-of/dstr/array-elem-trlg-iter-elision-iter-nrml-close-null, expressions/class/dstr/{private-meth-static,meth-static-dflt,gen-meth}-ary-init-iter-close, expressions/class/elements/nested-derived-cls-direct-eval-err-contains-supercall (TypeError). Candidates for a dstr iter-close round together with putvalue-agent residual array-rest-put-prop-ref-user-err-iter-close-skip (loop-invalidated alias metadata) and assignment-operator-calls-putvalue-lref--rval--1 (delete-sync flag not registered for explicit deletes through this-alias).

@@ -1,4 +1,4 @@
-22641/23668 (95.66%)
+22663/23668 (95.75%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,9 +14,9 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 8929/9337 (95.63%)
-- expressions: 10587/11061 (95.71%)
-- types: 103/113 (91.15%)
+- statements: 8930/9337 (95.64%)
+- expressions: 10605/11061 (95.88%)
+- types: 106/113 (93.81%)
 - function-code: 208/217 (95.85%)
 - global-code: 41/42 (97.62%)
 - arguments-object: 263/263 (100.00%)
@@ -8282,7 +8282,7 @@ Sub-category progress
   - [x] test/language/statements/for-of/dstr/array-elem-put-obj-literal-prop-ref.js
   - [x] test/language/statements/for-of/dstr/array-elem-put-prop-ref-no-get.js
   - [x] test/language/statements/for-of/dstr/array-elem-put-prop-ref-user-err.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-put-prop-ref.js
+  - [x] test/language/statements/for-of/dstr/array-elem-put-prop-ref.js
   - [x] test/language/statements/for-of/dstr/array-elem-put-unresolvable-no-strict.js
   - [x] test/language/statements/for-of/dstr/array-elem-put-unresolvable-strict.js
   - [x] test/language/statements/for-of/dstr/array-elem-target-identifier.js
@@ -8293,7 +8293,7 @@ Sub-category progress
   - [ ] test/language/statements/for-of/dstr/array-elem-target-yield-valid.js
   - [ ] test/language/statements/for-of/dstr/array-elem-trlg-iter-elision-iter-abpt.js
   - [ ] test/language/statements/for-of/dstr/array-elem-trlg-iter-elision-iter-nrml-close-err.js
-  - [x] test/language/statements/for-of/dstr/array-elem-trlg-iter-elision-iter-nrml-close-null.js
+  - [ ] test/language/statements/for-of/dstr/array-elem-trlg-iter-elision-iter-nrml-close-null.js
   - [x] test/language/statements/for-of/dstr/array-elem-trlg-iter-elision-iter-nrml-close-skip.js
   - [x] test/language/statements/for-of/dstr/array-elem-trlg-iter-elision-iter-nrml-close.js
   - [x] test/language/statements/for-of/dstr/array-elem-trlg-iter-get-err.js
@@ -8380,7 +8380,7 @@ Sub-category progress
   - [x] test/language/statements/for-of/dstr/array-rest-nested-obj.js
   - [x] test/language/statements/for-of/dstr/array-rest-put-const.js
   - [x] test/language/statements/for-of/dstr/array-rest-put-let.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-put-prop-ref-no-get.js
+  - [x] test/language/statements/for-of/dstr/array-rest-put-prop-ref-no-get.js
   - [ ] test/language/statements/for-of/dstr/array-rest-put-prop-ref-user-err-iter-close-skip.js
   - [x] test/language/statements/for-of/dstr/array-rest-put-prop-ref-user-err.js
   - [x] test/language/statements/for-of/dstr/array-rest-put-prop-ref.js
@@ -11183,7 +11183,7 @@ Sub-category progress
   - [x] test/language/expressions/assignment/S8.12.5_A1.js
   - [x] test/language/expressions/assignment/S8.12.5_A2.js
   - [ ] test/language/expressions/assignment/assignment-operator-calls-putvalue-lref--rval--1.js
-  - [ ] test/language/expressions/assignment/assignment-operator-calls-putvalue-lref--rval-.js
+  - [x] test/language/expressions/assignment/assignment-operator-calls-putvalue-lref--rval-.js
   - [ ] test/language/expressions/assignment/destructuring/default-expr-throws-iterator-return-get-throws.js
   - [x] test/language/expressions/assignment/destructuring/default-expr-throws-iterator-return-is-not-callable.js
   - [ ] test/language/expressions/assignment/destructuring/iterator-destructuring-property-reference-target-evaluation-order.js
@@ -11244,7 +11244,7 @@ Sub-category progress
   - [x] test/language/expressions/assignment/dstr/array-elem-put-obj-literal-prop-ref.js
   - [x] test/language/expressions/assignment/dstr/array-elem-put-prop-ref-no-get.js
   - [x] test/language/expressions/assignment/dstr/array-elem-put-prop-ref-user-err.js
-  - [ ] test/language/expressions/assignment/dstr/array-elem-put-prop-ref.js
+  - [x] test/language/expressions/assignment/dstr/array-elem-put-prop-ref.js
   - [x] test/language/expressions/assignment/dstr/array-elem-put-unresolvable-no-strict.js
   - [x] test/language/expressions/assignment/dstr/array-elem-put-unresolvable-strict.js
   - [x] test/language/expressions/assignment/dstr/array-elem-target-identifier.js
@@ -11342,7 +11342,7 @@ Sub-category progress
   - [x] test/language/expressions/assignment/dstr/array-rest-nested-obj.js
   - [x] test/language/expressions/assignment/dstr/array-rest-put-const.js
   - [x] test/language/expressions/assignment/dstr/array-rest-put-let.js
-  - [ ] test/language/expressions/assignment/dstr/array-rest-put-prop-ref-no-get.js
+  - [x] test/language/expressions/assignment/dstr/array-rest-put-prop-ref-no-get.js
   - [x] test/language/expressions/assignment/dstr/array-rest-put-prop-ref-user-err-iter-close-skip.js
   - [x] test/language/expressions/assignment/dstr/array-rest-put-prop-ref-user-err.js
   - [x] test/language/expressions/assignment/dstr/array-rest-put-prop-ref.js
@@ -14046,7 +14046,7 @@ Sub-category progress
   - [x] test/language/expressions/class/dstr/async-private-gen-meth-static-obj-ptrn-rest-getter.js
   - [x] test/language/expressions/class/dstr/async-private-gen-meth-static-obj-ptrn-rest-skip-non-enumerable.js
   - [x] test/language/expressions/class/dstr/async-private-gen-meth-static-obj-ptrn-rest-val-obj.js
-  - [x] test/language/expressions/class/dstr/gen-meth-ary-init-iter-close.js
+  - [ ] test/language/expressions/class/dstr/gen-meth-ary-init-iter-close.js
   - [x] test/language/expressions/class/dstr/gen-meth-ary-init-iter-get-err-array-prototype.js
   - [x] test/language/expressions/class/dstr/gen-meth-ary-init-iter-get-err.js
   - [x] test/language/expressions/class/dstr/gen-meth-ary-init-iter-no-close.js
@@ -14664,7 +14664,7 @@ Sub-category progress
   - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-rest-not-final-obj.js
   - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-rest-obj-id.js
   - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-rest-obj-prop-id.js
-  - [x] test/language/expressions/class/dstr/meth-static-dflt-ary-init-iter-close.js
+  - [ ] test/language/expressions/class/dstr/meth-static-dflt-ary-init-iter-close.js
   - [x] test/language/expressions/class/dstr/meth-static-dflt-ary-init-iter-get-err-array-prototype.js
   - [x] test/language/expressions/class/dstr/meth-static-dflt-ary-init-iter-get-err.js
   - [x] test/language/expressions/class/dstr/meth-static-dflt-ary-init-iter-no-close.js
@@ -15192,7 +15192,7 @@ Sub-category progress
   - [x] test/language/expressions/class/dstr/private-meth-obj-ptrn-rest-getter.js
   - [x] test/language/expressions/class/dstr/private-meth-obj-ptrn-rest-skip-non-enumerable.js
   - [x] test/language/expressions/class/dstr/private-meth-obj-ptrn-rest-val-obj.js
-  - [x] test/language/expressions/class/dstr/private-meth-static-ary-init-iter-close.js
+  - [ ] test/language/expressions/class/dstr/private-meth-static-ary-init-iter-close.js
   - [x] test/language/expressions/class/dstr/private-meth-static-ary-init-iter-no-close.js
   - [x] test/language/expressions/class/dstr/private-meth-static-ary-name-iter-val.js
   - [x] test/language/expressions/class/dstr/private-meth-static-ary-ptrn-elem-ary-elem-init.js
@@ -15944,7 +15944,7 @@ Sub-category progress
   - [x] test/language/expressions/class/elements/nested-derived-cls-direct-eval-contains-superproperty-2.js
   - [x] test/language/expressions/class/elements/nested-derived-cls-direct-eval-err-contains-supercall-1.js
   - [x] test/language/expressions/class/elements/nested-derived-cls-direct-eval-err-contains-supercall-2.js
-  - [x] test/language/expressions/class/elements/nested-derived-cls-direct-eval-err-contains-supercall.js
+  - [ ] test/language/expressions/class/elements/nested-derived-cls-direct-eval-err-contains-supercall.js
   - [x] test/language/expressions/class/elements/nested-derived-cls-indirect-eval-contains-superproperty-1.js
   - [x] test/language/expressions/class/elements/nested-derived-cls-indirect-eval-contains-superproperty-2.js
   - [x] test/language/expressions/class/elements/nested-derived-cls-indirect-eval-err-contains-supercall-1.js
@@ -17395,27 +17395,27 @@ Sub-category progress
   - [x] test/language/expressions/compound-assignment/btws-or-non-simple.js
   - [x] test/language/expressions/compound-assignment/btws-xor-non-simple.js
   - [x] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--1.js
-  - [ ] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--10.js
+  - [x] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--10.js
   - [x] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--11.js
-  - [ ] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--12.js
+  - [x] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--12.js
   - [x] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--13.js
-  - [ ] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--14.js
+  - [x] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--14.js
   - [x] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--15.js
-  - [ ] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--16.js
+  - [x] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--16.js
   - [x] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--17.js
-  - [ ] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--18.js
+  - [x] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--18.js
   - [x] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--19.js
-  - [ ] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--2.js
-  - [ ] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--20.js
+  - [x] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--2.js
+  - [x] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--20.js
   - [x] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--21.js
   - [x] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--3.js
-  - [ ] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--4.js
+  - [x] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--4.js
   - [x] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--5.js
-  - [ ] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--6.js
+  - [x] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--6.js
   - [x] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--7.js
-  - [ ] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--8.js
+  - [x] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--8.js
   - [x] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--9.js
-  - [ ] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v-.js
+  - [x] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v-.js
   - [x] test/language/expressions/compound-assignment/div-arguments-strict.js
   - [x] test/language/expressions/compound-assignment/div-eval-strict.js
   - [x] test/language/expressions/compound-assignment/div-non-simple.js
@@ -21149,8 +21149,8 @@ Sub-category progress
   - [x] test/language/expressions/postfix-decrement/line-terminator-line-feed.js
   - [x] test/language/expressions/postfix-decrement/line-terminator-line-separator.js
   - [x] test/language/expressions/postfix-decrement/line-terminator-paragraph-separator.js
-  - [ ] test/language/expressions/postfix-decrement/operator-x-postfix-decrement-calls-putvalue-lhs-newvalue--1.js
-  - [ ] test/language/expressions/postfix-decrement/operator-x-postfix-decrement-calls-putvalue-lhs-newvalue-.js
+  - [x] test/language/expressions/postfix-decrement/operator-x-postfix-decrement-calls-putvalue-lhs-newvalue--1.js
+  - [x] test/language/expressions/postfix-decrement/operator-x-postfix-decrement-calls-putvalue-lhs-newvalue-.js
   - [x] test/language/expressions/postfix-decrement/target-cover-id.js
   - [x] test/language/expressions/postfix-decrement/target-cover-newtarget.js
   - [x] test/language/expressions/postfix-decrement/target-cover-yieldexpr.js
@@ -21187,8 +21187,8 @@ Sub-category progress
   - [x] test/language/expressions/postfix-increment/line-terminator-line-feed.js
   - [x] test/language/expressions/postfix-increment/line-terminator-line-separator.js
   - [x] test/language/expressions/postfix-increment/line-terminator-paragraph-separator.js
-  - [ ] test/language/expressions/postfix-increment/operator-x-postfix-increment-calls-putvalue-lhs-newvalue--1.js
-  - [ ] test/language/expressions/postfix-increment/operator-x-postfix-increment-calls-putvalue-lhs-newvalue-.js
+  - [x] test/language/expressions/postfix-increment/operator-x-postfix-increment-calls-putvalue-lhs-newvalue--1.js
+  - [x] test/language/expressions/postfix-increment/operator-x-postfix-increment-calls-putvalue-lhs-newvalue-.js
   - [x] test/language/expressions/postfix-increment/target-cover-id.js
   - [x] test/language/expressions/postfix-increment/target-cover-newtarget.js
   - [x] test/language/expressions/postfix-increment/target-cover-yieldexpr.js
@@ -21221,8 +21221,8 @@ Sub-category progress
   - [ ] test/language/expressions/prefix-decrement/bigint.js
   - [x] test/language/expressions/prefix-decrement/eval-nostrict.js
   - [x] test/language/expressions/prefix-decrement/eval.js
-  - [ ] test/language/expressions/prefix-decrement/operator-prefix-decrement-x-calls-putvalue-lhs-newvalue--1.js
-  - [ ] test/language/expressions/prefix-decrement/operator-prefix-decrement-x-calls-putvalue-lhs-newvalue-.js
+  - [x] test/language/expressions/prefix-decrement/operator-prefix-decrement-x-calls-putvalue-lhs-newvalue--1.js
+  - [x] test/language/expressions/prefix-decrement/operator-prefix-decrement-x-calls-putvalue-lhs-newvalue-.js
   - [x] test/language/expressions/prefix-decrement/target-cover-id.js
   - [x] test/language/expressions/prefix-decrement/target-cover-newtarget.js
   - [x] test/language/expressions/prefix-decrement/target-cover-yieldexpr.js
@@ -21254,8 +21254,8 @@ Sub-category progress
   - [ ] test/language/expressions/prefix-increment/bigint.js
   - [x] test/language/expressions/prefix-increment/eval-nostrict.js
   - [x] test/language/expressions/prefix-increment/eval.js
-  - [ ] test/language/expressions/prefix-increment/operator-prefix-increment-x-calls-putvalue-lhs-newvalue--1.js
-  - [ ] test/language/expressions/prefix-increment/operator-prefix-increment-x-calls-putvalue-lhs-newvalue-.js
+  - [x] test/language/expressions/prefix-increment/operator-prefix-increment-x-calls-putvalue-lhs-newvalue--1.js
+  - [x] test/language/expressions/prefix-increment/operator-prefix-increment-x-calls-putvalue-lhs-newvalue-.js
   - [x] test/language/expressions/prefix-increment/target-cover-id.js
   - [x] test/language/expressions/prefix-increment/target-cover-newtarget.js
   - [x] test/language/expressions/prefix-increment/target-cover-yieldexpr.js
@@ -21837,13 +21837,13 @@ Sub-category progress
   - [x] test/language/types/reference/S8.7.2_A1_T1.js
   - [x] test/language/types/reference/S8.7.2_A1_T2.js
   - [x] test/language/types/reference/S8.7.2_A2.js
-  - [ ] test/language/types/reference/S8.7.2_A3.js
+  - [x] test/language/types/reference/S8.7.2_A3.js
   - [x] test/language/types/reference/S8.7_A1.js
   - [x] test/language/types/reference/S8.7_A2.js
   - [x] test/language/types/reference/S8.7_A3.js
   - [x] test/language/types/reference/S8.7_A4.js
-  - [ ] test/language/types/reference/S8.7_A5_T1.js
-  - [ ] test/language/types/reference/S8.7_A5_T2.js
+  - [x] test/language/types/reference/S8.7_A5_T1.js
+  - [x] test/language/types/reference/S8.7_A5_T2.js
   - [x] test/language/types/reference/S8.7_A6.js
   - [x] test/language/types/reference/S8.7_A7.js
   - [x] test/language/types/reference/get-value-prop-base-primitive-realm.js
