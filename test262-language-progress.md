@@ -1,4 +1,4 @@
-22738/23668 (96.07%)
+22755/23668 (96.14%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,15 +14,15 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 8992/9337 (96.31%)
-- expressions: 10618/11061 (95.99%)
-- types: 106/113 (93.81%)
+- statements: 8998/9337 (96.37%)
+- expressions: 10627/11061 (96.08%)
+- types: 107/113 (94.69%)
 - function-code: 208/217 (95.85%)
 - global-code: 41/42 (97.62%)
 - arguments-object: 263/263 (100.00%)
 - rest-parameters: 10/11 (90.91%)
 - block-scope: 145/145 (100.00%)
-- identifier-resolution: 13/14 (92.86%)
+- identifier-resolution: 14/14 (100.00%)
 - computed-property-names: 47/48 (97.92%)
 - destructuring: 17/19 (89.47%)
 - eval-code: 343/347 (98.85%)
@@ -6422,7 +6422,7 @@ Sub-category progress
   - [x] test/language/statements/do-while/S12.6.1_A4_T3.js
   - [x] test/language/statements/do-while/S12.6.1_A4_T4.js
   - [x] test/language/statements/do-while/S12.6.1_A4_T5.js
-  - [ ] test/language/statements/do-while/S12.6.1_A5.js
+  - [x] test/language/statements/do-while/S12.6.1_A5.js
   - [x] test/language/statements/do-while/S12.6.1_A6_T1.js
   - [x] test/language/statements/do-while/S12.6.1_A6_T2.js
   - [x] test/language/statements/do-while/S12.6.1_A6_T3.js
@@ -6463,7 +6463,7 @@ Sub-category progress
   - [x] test/language/statements/for/12.6.3_2-3-a-ii-2.js
   - [x] test/language/statements/for/12.6.3_2-3-a-ii-20.js
   - [x] test/language/statements/for/12.6.3_2-3-a-ii-21.js
-  - [ ] test/language/statements/for/12.6.3_2-3-a-ii-3.js
+  - [x] test/language/statements/for/12.6.3_2-3-a-ii-3.js
   - [x] test/language/statements/for/12.6.3_2-3-a-ii-4.js
   - [x] test/language/statements/for/12.6.3_2-3-a-ii-5.js
   - [x] test/language/statements/for/12.6.3_2-3-a-ii-6.js
@@ -7508,7 +7508,7 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-array-rest-put-prop-ref-no-get.js
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-array-rest-put-prop-ref.js
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-array-rest-put-unresolvable-no-strict.js
-  - [ ] test/language/statements/for-await-of/async-gen-decl-dstr-array-rest-yield-expr.js
+  - [x] test/language/statements/for-await-of/async-gen-decl-dstr-array-rest-yield-expr.js
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-obj-empty-bool.js
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-obj-empty-num.js
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-obj-empty-obj.js
@@ -10403,7 +10403,7 @@ Sub-category progress
   - [x] test/language/statements/variable/dstr/ary-ptrn-elem-id-iter-val-err.js
   - [x] test/language/statements/variable/dstr/ary-ptrn-elem-id-iter-val.js
   - [x] test/language/statements/variable/dstr/ary-ptrn-elem-id-static-init-await-invalid.js
-  - [ ] test/language/statements/variable/dstr/ary-ptrn-elem-id-static-init-await-valid.js
+  - [x] test/language/statements/variable/dstr/ary-ptrn-elem-id-static-init-await-valid.js
   - [x] test/language/statements/variable/dstr/ary-ptrn-elem-obj-id-init.js
   - [x] test/language/statements/variable/dstr/ary-ptrn-elem-obj-id.js
   - [x] test/language/statements/variable/dstr/ary-ptrn-elem-obj-prop-id-init.js
@@ -10436,7 +10436,7 @@ Sub-category progress
   - [x] test/language/statements/variable/dstr/obj-init-null.js
   - [x] test/language/statements/variable/dstr/obj-init-undefined.js
   - [x] test/language/statements/variable/dstr/obj-ptrn-elem-id-static-init-await-invalid.js
-  - [ ] test/language/statements/variable/dstr/obj-ptrn-elem-id-static-init-await-valid.js
+  - [x] test/language/statements/variable/dstr/obj-ptrn-elem-id-static-init-await-valid.js
   - [x] test/language/statements/variable/dstr/obj-ptrn-empty.js
   - [x] test/language/statements/variable/dstr/obj-ptrn-id-get-value-err.js
   - [x] test/language/statements/variable/dstr/obj-ptrn-id-init-fn-name-arrow.js
@@ -10500,7 +10500,7 @@ Sub-category progress
   - [x] test/language/statements/while/S12.6.2_A4_T3.js
   - [x] test/language/statements/while/S12.6.2_A4_T4.js
   - [x] test/language/statements/while/S12.6.2_A4_T5.js
-  - [ ] test/language/statements/while/S12.6.2_A5.js
+  - [x] test/language/statements/while/S12.6.2_A5.js
   - [x] test/language/statements/while/S12.6.2_A6_T1.js
   - [x] test/language/statements/while/S12.6.2_A6_T2.js
   - [x] test/language/statements/while/S12.6.2_A6_T3.js
@@ -11224,7 +11224,7 @@ Sub-category progress
   - [x] test/language/expressions/assignment/dstr/array-elem-nested-array-undefined.js
   - [x] test/language/expressions/assignment/dstr/array-elem-nested-array-yield-expr.js
   - [x] test/language/expressions/assignment/dstr/array-elem-nested-array-yield-ident-invalid.js
-  - [ ] test/language/expressions/assignment/dstr/array-elem-nested-array-yield-ident-valid.js
+  - [x] test/language/expressions/assignment/dstr/array-elem-nested-array-yield-ident-valid.js
   - [x] test/language/expressions/assignment/dstr/array-elem-nested-array.js
   - [x] test/language/expressions/assignment/dstr/array-elem-nested-memberexpr-optchain-prop-ref-init.js
   - [x] test/language/expressions/assignment/dstr/array-elem-nested-obj-invalid.js
@@ -11252,7 +11252,7 @@ Sub-category progress
   - [x] test/language/expressions/assignment/dstr/array-elem-target-simple-strict.js
   - [x] test/language/expressions/assignment/dstr/array-elem-target-yield-expr.js
   - [x] test/language/expressions/assignment/dstr/array-elem-target-yield-invalid.js
-  - [ ] test/language/expressions/assignment/dstr/array-elem-target-yield-valid.js
+  - [x] test/language/expressions/assignment/dstr/array-elem-target-yield-valid.js
   - [x] test/language/expressions/assignment/dstr/array-elem-trlg-iter-elision-iter-abpt.js
   - [x] test/language/expressions/assignment/dstr/array-elem-trlg-iter-elision-iter-nrml-close-err.js
   - [x] test/language/expressions/assignment/dstr/array-elem-trlg-iter-elision-iter-nrml-close-null.js
@@ -11329,7 +11329,7 @@ Sub-category progress
   - [x] test/language/expressions/assignment/dstr/array-rest-nested-array-undefined.js
   - [x] test/language/expressions/assignment/dstr/array-rest-nested-array-yield-expr.js
   - [x] test/language/expressions/assignment/dstr/array-rest-nested-array-yield-ident-invalid.js
-  - [ ] test/language/expressions/assignment/dstr/array-rest-nested-array-yield-ident-valid.js
+  - [x] test/language/expressions/assignment/dstr/array-rest-nested-array-yield-ident-valid.js
   - [x] test/language/expressions/assignment/dstr/array-rest-nested-array.js
   - [x] test/language/expressions/assignment/dstr/array-rest-nested-obj-invalid.js
   - [x] test/language/expressions/assignment/dstr/array-rest-nested-obj-null.js
@@ -17586,7 +17586,7 @@ Sub-category progress
   - [x] test/language/expressions/delete/S11.4.1_A3.3_T4.js
   - [x] test/language/expressions/delete/S11.4.1_A3.3_T5.js
   - [x] test/language/expressions/delete/S11.4.1_A3.3_T6.js
-  - [ ] test/language/expressions/delete/S11.4.1_A4.js
+  - [x] test/language/expressions/delete/S11.4.1_A4.js
   - [x] test/language/expressions/delete/S11.4.1_A5.js
   - [x] test/language/expressions/delete/S8.12.7_A1.js
   - [x] test/language/expressions/delete/S8.12.7_A2_T1.js
@@ -18947,8 +18947,8 @@ Sub-category progress
   - [x] test/language/expressions/function/name-eval-stricteval.js
   - [ ] test/language/expressions/function/name.js
   - [x] test/language/expressions/function/named-no-strict-reassign-fn-name-in-body-in-arrow.js
-  - [ ] test/language/expressions/function/named-no-strict-reassign-fn-name-in-body-in-eval.js
-  - [ ] test/language/expressions/function/named-no-strict-reassign-fn-name-in-body.js
+  - [x] test/language/expressions/function/named-no-strict-reassign-fn-name-in-body-in-eval.js
+  - [x] test/language/expressions/function/named-no-strict-reassign-fn-name-in-body.js
   - [x] test/language/expressions/function/named-strict-error-reassign-fn-name-in-body-in-arrow.js
   - [x] test/language/expressions/function/named-strict-error-reassign-fn-name-in-body-in-eval.js
   - [x] test/language/expressions/function/named-strict-error-reassign-fn-name-in-body.js
@@ -20037,7 +20037,7 @@ Sub-category progress
   - [x] test/language/expressions/object/cpn-obj-lit-computed-property-name-from-expression-logical-or.js
   - [x] test/language/expressions/object/cpn-obj-lit-computed-property-name-from-function-declaration.js
   - [x] test/language/expressions/object/cpn-obj-lit-computed-property-name-from-function-expression.js
-  - [ ] test/language/expressions/object/cpn-obj-lit-computed-property-name-from-generator-function-declaration.js
+  - [x] test/language/expressions/object/cpn-obj-lit-computed-property-name-from-generator-function-declaration.js
   - [x] test/language/expressions/object/cpn-obj-lit-computed-property-name-from-identifier.js
   - [x] test/language/expressions/object/cpn-obj-lit-computed-property-name-from-integer-e-notational-literal.js
   - [x] test/language/expressions/object/cpn-obj-lit-computed-property-name-from-integer-separators.js
@@ -20723,7 +20723,7 @@ Sub-category progress
   - [x] test/language/expressions/object/identifier-shorthand-protected-invalid-strict-mode.js
   - [x] test/language/expressions/object/identifier-shorthand-public-invalid-strict-mode.js
   - [x] test/language/expressions/object/identifier-shorthand-static-init-await-invalid.js
-  - [ ] test/language/expressions/object/identifier-shorthand-static-init-await-valid.js
+  - [x] test/language/expressions/object/identifier-shorthand-static-init-await-valid.js
   - [x] test/language/expressions/object/identifier-shorthand-static-invalid-strict-mode.js
   - [x] test/language/expressions/object/identifier-shorthand-yield-invalid-strict-mode.js
   - [x] test/language/expressions/object/let-non-strict-access.js
@@ -21095,7 +21095,7 @@ Sub-category progress
   - [x] test/language/expressions/optional-chaining/eval-optional-call.js
   - [x] test/language/expressions/optional-chaining/iteration-statement-do.js
   - [ ] test/language/expressions/optional-chaining/iteration-statement-for-await-of.js
-  - [ ] test/language/expressions/optional-chaining/iteration-statement-for-in.js
+  - [x] test/language/expressions/optional-chaining/iteration-statement-for-in.js
   - [x] test/language/expressions/optional-chaining/iteration-statement-for-of-type-error.js
   - [x] test/language/expressions/optional-chaining/iteration-statement-for.js
   - [x] test/language/expressions/optional-chaining/iteration-statement-while.js
@@ -21820,7 +21820,7 @@ Sub-category progress
   - [x] test/language/types/object/S8.6_A2_T2.js
   - [x] test/language/types/object/S8.6_A3_T1.js
   - [x] test/language/types/object/S8.6_A3_T2.js
-  - [ ] test/language/types/object/S8.6_A4_T1.js
+  - [x] test/language/types/object/S8.6_A4_T1.js
   - [x] test/language/types/reference/8.7.2-1-s.js
   - [x] test/language/types/reference/8.7.2-2-s.js
   - [x] test/language/types/reference/8.7.2-3-1-s.js
@@ -22565,7 +22565,7 @@ Sub-category progress
   - [x] test/language/block-scope/syntax/redeclaration-global/allowed-to-declare-function-with-function-declaration.js
   - [x] test/language/block-scope/syntax/redeclaration-global/allowed-to-redeclare-function-declaration-with-var.js
   - [x] test/language/block-scope/syntax/redeclaration-global/allowed-to-redeclare-var-with-function-declaration.js
-- [ ] identifier-resolution
+- [x] identifier-resolution
   - [x] test/language/identifier-resolution/S10.2.2_A1_T1.js
   - [x] test/language/identifier-resolution/S10.2.2_A1_T2.js
   - [x] test/language/identifier-resolution/S10.2.2_A1_T3.js
@@ -22575,7 +22575,7 @@ Sub-category progress
   - [x] test/language/identifier-resolution/S10.2.2_A1_T7.js
   - [x] test/language/identifier-resolution/S10.2.2_A1_T8.js
   - [x] test/language/identifier-resolution/S10.2.2_A1_T9.js
-  - [ ] test/language/identifier-resolution/S11.1.2_A1_T1.js
+  - [x] test/language/identifier-resolution/S11.1.2_A1_T1.js
   - [x] test/language/identifier-resolution/S11.1.2_A1_T2.js
   - [x] test/language/identifier-resolution/assign-to-global-undefined.js
   - [x] test/language/identifier-resolution/static-init-invalid-await.js
