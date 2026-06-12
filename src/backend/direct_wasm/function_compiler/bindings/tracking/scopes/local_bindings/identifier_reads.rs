@@ -392,8 +392,29 @@ impl<'a> FunctionCompiler<'a> {
         self.push_control_frame();
         self.push_global_get(binding.value_index);
         self.state.emission.output.instructions.push(0x05);
-        self.emit_named_error_throw("ReferenceError")?;
-        self.push_i32_const(JS_UNDEFINED_TAG);
+        if let Some(value) = self
+            .static_module_hidden_binding_post_init_value(name)
+            .filter(|value| {
+                matches!(
+                    value,
+                    Expression::Number(_)
+                        | Expression::BigInt(_)
+                        | Expression::String(_)
+                        | Expression::Bool(_)
+                        | Expression::Null
+                        | Expression::Undefined
+                )
+            })
+        {
+            // Module export getter capture slots are only written when the
+            // init body's local store is actually emitted; a statically
+            // elided initializer leaves the slot absent, so fall back to the
+            // post-init value instead of a spurious ReferenceError.
+            self.emit_numeric_expression(&value)?;
+        } else {
+            self.emit_named_error_throw("ReferenceError")?;
+            self.push_i32_const(JS_UNDEFINED_TAG);
+        }
         self.state.emission.output.instructions.push(0x0b);
         self.pop_control_frame();
         if trace_identifier_reads {

@@ -8,9 +8,15 @@ impl<'a> FunctionCompiler<'a> {
         environment: &StaticResolutionEnvironment,
     ) {
         for (name, value) in &environment.global_value_overrides {
+            if crate::ayy_env_flag!("AYY_TRACE_SYNC_OVERRIDES") {
+                eprintln!("sync_overrides:global name={name} value={value:?}");
+            }
             self.update_static_global_assignment_metadata(name, value);
         }
         for (name, value) in &environment.local_bindings {
+            if crate::ayy_env_flag!("AYY_TRACE_SYNC_OVERRIDES") {
+                eprintln!("sync_overrides:local name={name} value={value:?}");
+            }
             self.update_local_value_binding(name, value);
             let kind = self
                 .infer_value_kind(value)

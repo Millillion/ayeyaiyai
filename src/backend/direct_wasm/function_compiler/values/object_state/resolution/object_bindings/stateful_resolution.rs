@@ -871,6 +871,16 @@ impl<'a> FunctionCompiler<'a> {
                 ) {
                     return Some(expression.clone());
                 }
+                // Module export live bindings that escaping closures can
+                // mutate after evaluation must stay identifier-shaped so
+                // namespace member reads keep routing to the live global.
+                if matches!(
+                    expression,
+                    Expression::Identifier(name)
+                        if self.module_hidden_binding_is_live_mutable(name)
+                ) {
+                    return Some(expression.clone());
+                }
                 if self.resolve_iterator_source_kind(expression).is_some() {
                     return Some(expression.clone());
                 }

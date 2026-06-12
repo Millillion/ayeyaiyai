@@ -19,6 +19,9 @@ impl<'a> FunctionCompiler<'a> {
             }
             Expression::Identifier(name) => Some(!self.is_identifier_bound(name)),
             Expression::Member { object, property } => {
+                if let Some(result) = self.module_namespace_static_delete_result(object, property) {
+                    return Some(result);
+                }
                 let resolved_property = self
                     .resolve_property_key_expression(property)
                     .or_else(|| {
@@ -164,6 +167,17 @@ impl<'a> FunctionCompiler<'a> {
     ) -> Option<bool> {
         if self.boolean_expression_reads_runtime_nonlocal_binding(expression) {
             return None;
+        }
+
+        // Resolve `delete` against the unmaterialized operand: materializing
+        // replaces the property reference with its value, which destroys the
+        // deletability question being asked.
+        if let Expression::Unary {
+            op: UnaryOp::Delete,
+            expression: operand,
+        } = expression
+        {
+            return self.resolve_static_delete_expression_result(operand);
         }
 
         let materialized = self.materialize_static_expression(expression);

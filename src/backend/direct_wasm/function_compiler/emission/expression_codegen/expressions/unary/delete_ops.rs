@@ -595,7 +595,7 @@ impl<'a> FunctionCompiler<'a> {
         Ok(true)
     }
 
-    fn module_namespace_static_delete_result(
+    pub(in crate::backend::direct_wasm) fn module_namespace_static_delete_result(
         &self,
         target: &Expression,
         property: &Expression,
@@ -633,6 +633,14 @@ impl<'a> FunctionCompiler<'a> {
                 })
         });
 
+        if crate::ayy_env_flag!("AYY_TRACE_NAMESPACE_DESCRIPTOR") {
+            eprintln!(
+                "ns_static_delete target={target:?} property={property_key:?} module_index={module_index:?} binding_marker={}",
+                object_binding
+                    .as_ref()
+                    .is_some_and(Self::object_binding_has_module_namespace_marker)
+            );
+        }
         if module_index.is_none()
             && !object_binding
                 .as_ref()

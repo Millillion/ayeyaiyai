@@ -773,11 +773,30 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         init_function: &FunctionDeclaration,
     ) -> Vec<(String, Expression)> {
-        let local_bindings = self.static_dynamic_import_module_local_bindings(init_function);
+        let module_index = init_function
+            .name
+            .strip_prefix("__ayy_module_init_")
+            .and_then(|suffix| suffix.parse::<usize>().ok());
+        let (statements, local_bindings) = match module_index {
+            Some(module_index) => (
+                self.static_dynamic_import_module_statements_with_continuations(
+                    module_index,
+                    init_function,
+                ),
+                self.static_dynamic_import_module_local_bindings_with_continuations(
+                    module_index,
+                    init_function,
+                ),
+            ),
+            None => (
+                init_function.body.clone(),
+                self.static_dynamic_import_module_local_bindings(init_function),
+            ),
+        };
         let mut initializers = Vec::new();
         let mut seen = HashSet::new();
 
-        for statement in &init_function.body {
+        for statement in &statements {
             let Some((_, getter_name, _, _)) = self.static_dynamic_import_export_getter(statement)
             else {
                 continue;
@@ -1566,7 +1585,11 @@ impl<'a> FunctionCompiler<'a> {
         if !visited.insert(module_index) {
             return Expression::Identifier(format!("__ayy_module_namespace_{module_index}"));
         }
-        let local_bindings = self.static_dynamic_import_module_local_bindings(init_function);
+        let local_bindings = self
+            .static_dynamic_import_module_local_bindings_with_continuations(
+                module_index,
+                init_function,
+            );
         if import_type == Some("text")
             && let Some(value) = local_bindings.get(&format!("__ayy_text_default_{module_index}"))
         {
@@ -1594,7 +1617,12 @@ impl<'a> FunctionCompiler<'a> {
                 value: Expression::Number(module_index as f64),
             },
         ];
-        for statement in &init_function.body {
+        for statement in
+            &self.static_dynamic_import_module_statements_with_continuations(
+                module_index,
+                init_function,
+            )
+        {
             let Some((export_name, getter_name, namespace_module_index, reexport_source)) =
                 self.static_dynamic_import_export_getter(statement)
             else {
@@ -1684,6 +1712,42 @@ impl<'a> FunctionCompiler<'a> {
             self.collect_static_dynamic_import_module_local_bindings(statement, &mut bindings);
         }
         bindings
+    }
+
+    /// Init bodies that contain top-level awaits are split into async
+    /// continuations; late export getter registrations (default exports,
+    /// hoisted functions) land in the final continuation, so namespace
+    /// resolution must scan the whole chain.
+    fn static_dynamic_import_module_statements_with_continuations(
+        &self,
+        module_index: usize,
+        init_function: &FunctionDeclaration,
+    ) -> Vec<Statement> {
+        let mut statements = init_function.body.clone();
+        let prefix = format!("__ayy_module_async_continuation_{module_index}_");
+        let mut continuations = self
+            .user_functions()
+            .into_iter()
+            .filter_map(|function| {
+                function
+                    .name
+                    .starts_with(&prefix)
+                    .then(|| function.name.clone())
+            })
+            .collect::<Vec<_>>();
+        continuations.sort_by_key(|name| {
+            name.strip_prefix(&prefix)
+                .and_then(|suffix| suffix.parse::<usize>().ok())
+                .unwrap_or(usize::MAX)
+        });
+        for continuation_name in continuations {
+            if let Some(continuation) =
+                self.resolve_registered_function_declaration(&continuation_name)
+            {
+                statements.extend(continuation.body.iter().cloned());
+            }
+        }
+        statements
     }
 
     fn static_dynamic_import_module_local_bindings_with_continuations(
@@ -2023,7 +2087,12 @@ impl<'a> FunctionCompiler<'a> {
             module_index,
             init_function,
         );
-        for statement in &init_function.body {
+        for statement in
+            &self.static_dynamic_import_module_statements_with_continuations(
+                module_index,
+                init_function,
+            )
+        {
             let Some((candidate_name, getter_name, namespace_module_index, reexport_source)) =
                 self.static_dynamic_import_export_getter(statement)
             else {
@@ -2096,7 +2165,12 @@ impl<'a> FunctionCompiler<'a> {
             "__ayy_module_init_{module_index}"
         ))?;
         let mut names = Vec::new();
-        for statement in &init_function.body {
+        for statement in
+            &self.static_dynamic_import_module_statements_with_continuations(
+                module_index,
+                init_function,
+            )
+        {
             let Some((export_name, _, _, _)) = self.static_dynamic_import_export_getter(statement)
             else {
                 continue;
@@ -2194,7 +2268,12 @@ impl<'a> FunctionCompiler<'a> {
             module_index,
             init_function,
         );
-        for statement in &init_function.body {
+        for statement in
+            &self.static_dynamic_import_module_statements_with_continuations(
+                module_index,
+                init_function,
+            )
+        {
             let Some((candidate_name, getter_name, namespace_module_index, reexport_source)) =
                 self.static_dynamic_import_export_getter(statement)
             else {
@@ -2251,6 +2330,9 @@ impl<'a> FunctionCompiler<'a> {
         name: &str,
     ) -> Option<Expression> {
         let module_index = Self::module_hidden_binding_name_module_index(name)?;
+        if self.module_hidden_binding_is_mutated_outside_init(name, module_index) {
+            return None;
+        }
         let init_function = self.resolve_registered_function_declaration(&format!(
             "__ayy_module_init_{module_index}"
         ))?;
@@ -2278,6 +2360,50 @@ impl<'a> FunctionCompiler<'a> {
             return None;
         }
         Some(value)
+    }
+
+    /// A module export live binding (`__ayy_module_binding_*`) that some
+    /// escaping closure can mutate after evaluation must never be folded to
+    /// a snapshot value; reads have to keep routing to the live global.
+    pub(in crate::backend::direct_wasm) fn module_hidden_binding_is_live_mutable(
+        &self,
+        name: &str,
+    ) -> bool {
+        if !name.starts_with("__ayy_module_binding_") {
+            return false;
+        }
+        let Some(module_index) = Self::module_hidden_binding_name_module_index(name) else {
+            return false;
+        };
+        let mutated = self.module_hidden_binding_is_mutated_outside_init(name, module_index);
+        if crate::ayy_env_flag!("AYY_TRACE_LIVE_MUTABLE") {
+            eprintln!("live_mutable name={name} module={module_index} mutated={mutated}");
+        }
+        mutated
+    }
+
+    /// A module hidden binding's post-init snapshot is only sound when no
+    /// function other than the module's own init/continuation chain can
+    /// assign it after evaluation; exported live bindings mutated through
+    /// escaping closures must keep resolving to the live global instead.
+    fn module_hidden_binding_is_mutated_outside_init(
+        &self,
+        name: &str,
+        module_index: usize,
+    ) -> bool {
+        let init_name = format!("__ayy_module_init_{module_index}");
+        let continuation_prefix = format!("__ayy_module_async_continuation_{module_index}_");
+        let getter_prefix = format!("__ayy_module_export_getter_{module_index}_");
+        self.user_functions().into_iter().any(|user_function| {
+            if user_function.name == init_name
+                || user_function.name.starts_with(&continuation_prefix)
+                || user_function.name.starts_with(&getter_prefix)
+            {
+                return false;
+            }
+            self.collect_user_function_raw_assigned_binding_names(&user_function)
+                .contains(name)
+        })
     }
 
     fn static_dynamic_import_live_binding_value(

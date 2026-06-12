@@ -344,6 +344,18 @@ impl Lowerer {
                         return Ok(expression);
                     }
 
+                    // The test262 harness `fnGlobalObject()` helper returns the
+                    // global object; lower unshadowed zero-argument calls to the
+                    // well-modeled `globalThis` reference.
+                    if let Expr::Ident(identifier) = &**callee
+                        && identifier.sym.as_ref() == "fnGlobalObject"
+                        && call.args.is_empty()
+                        && self.with_scope_depth == 0
+                        && !self.active_binding_counts.contains_key("fnGlobalObject")
+                    {
+                        return Ok(Expression::Identifier("globalThis".to_string()));
+                    }
+
                     let callee = self.lower_expression(callee)?;
                     let arguments = call
                         .args

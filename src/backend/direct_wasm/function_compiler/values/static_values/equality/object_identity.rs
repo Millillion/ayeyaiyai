@@ -266,6 +266,46 @@ impl<'a> FunctionCompiler<'a> {
             .map(|object_key| format!("{object_key}.prototype"))
     }
 
+    fn module_namespace_reference_identity_key(&self, expression: &Expression) -> Option<String> {
+        if let Expression::Identifier(name) = expression {
+            if let Some(module_index) = name
+                .strip_prefix("__ayy_module_deferred_namespace_")
+                .and_then(|suffix| suffix.parse::<usize>().ok())
+            {
+                return Some(format!("module-deferred-namespace:{module_index}"));
+            }
+            if let Some(module_index) = name
+                .strip_prefix("__ayy_module_namespace_")
+                .and_then(|suffix| suffix.parse::<usize>().ok())
+            {
+                return Some(format!("module-namespace:{module_index}"));
+            }
+        }
+        let binding = self.resolve_object_binding_from_expression(expression)?;
+        if !matches!(
+            object_binding_lookup_value(
+                &binding,
+                &Expression::String("__ayy$module$namespace".to_string()),
+            ),
+            Some(Expression::Bool(true))
+        ) {
+            return None;
+        }
+        let module_index = object_binding_lookup_value(
+            &binding,
+            &Expression::String("__ayy$module$namespace$moduleIndex".to_string()),
+        )
+        .and_then(|value| match value {
+            Expression::Number(index)
+                if index.is_finite() && *index >= 0.0 && index.fract() == 0.0 =>
+            {
+                Some(*index as usize)
+            }
+            _ => None,
+        })?;
+        Some(format!("module-namespace:{module_index}"))
+    }
+
     pub(in crate::backend::direct_wasm) fn resolve_static_reference_identity_key(
         &self,
         expression: &Expression,
@@ -283,6 +323,12 @@ impl<'a> FunctionCompiler<'a> {
         }
 
         if let Some(key) = template_object_reference_identity_key(expression) {
+            return Some(key);
+        }
+
+        // Module namespace objects are singletons per module: every import()
+        // (and namespace import) of the same module observes the same object.
+        if let Some(key) = self.module_namespace_reference_identity_key(expression) {
             return Some(key);
         }
 

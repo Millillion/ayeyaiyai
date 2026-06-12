@@ -68,6 +68,9 @@ impl<'a> FunctionCompiler<'a> {
             return None;
         }
         let canonical = self.canonical_object_property_expression(expression);
+        if crate::ayy_env_flag!("AYY_TRACE_LIVE_MUTABLE") {
+            eprintln!("condition_property_name expr={expression:?} canonical={canonical:?}");
+        }
         static_property_name_from_expression(&canonical)
             .or_else(|| static_property_name_from_expression(expression))
     }

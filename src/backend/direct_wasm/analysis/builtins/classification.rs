@@ -9,6 +9,7 @@ pub(in crate::backend::direct_wasm) fn infer_call_result_kind(
         "Date" => Some(StaticValueKind::String),
         "Boolean" => Some(StaticValueKind::Bool),
         "isNaN" => Some(StaticValueKind::Bool),
+        "Reflect.deleteProperty" => Some(StaticValueKind::Bool),
         "Object" | "Array" | "ArrayBuffer" | "SharedArrayBuffer" | "DataView" | "RegExp"
         | "Map" | "Set" | "Error" | "EvalError" | "RangeError" | "ReferenceError"
         | "SyntaxError" | "TypeError" | "URIError" | "AggregateError" | "SuppressedError"

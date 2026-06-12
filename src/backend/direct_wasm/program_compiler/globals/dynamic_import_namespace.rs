@@ -434,6 +434,9 @@ impl DirectWasmCompiler {
         value: &Expression,
         getter_name: &str,
     ) -> Option<Expression> {
+        if binding_name.starts_with("__ayy_module_binding_") {
+            return Some(Expression::Identifier(binding_name.to_string()));
+        }
         if let Expression::Identifier(function_name) = value
             && let Some(hidden_name) = self
                 .state

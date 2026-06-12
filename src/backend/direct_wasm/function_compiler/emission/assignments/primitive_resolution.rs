@@ -6,6 +6,18 @@ impl<'a> FunctionCompiler<'a> {
         expression: &Expression,
         current_function_name: Option<&str>,
     ) -> Option<Expression> {
+        // Resolve `delete` before materialization: materializing the operand
+        // replaces the property reference with its value, which destroys the
+        // deletability question being asked.
+        if let Expression::Unary {
+            op: UnaryOp::Delete,
+            ..
+        } = expression
+        {
+            return self
+                .resolve_static_boolean_expression(expression)
+                .map(Expression::Bool);
+        }
         let materialized = self.materialize_static_expression(expression);
         if !static_expression_matches(&materialized, expression) {
             if self.expression_is_static_boxed_primitive_object(&materialized) {

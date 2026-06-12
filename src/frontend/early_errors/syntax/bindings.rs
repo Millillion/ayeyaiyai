@@ -56,6 +56,21 @@ pub(crate) fn collect_module_declared_names(module: &Module) -> Result<HashSet<S
                 }
                 _ => {}
             },
+            ModuleItem::ModuleDecl(ModuleDecl::ExportDefaultDecl(export_default)) => {
+                match &export_default.decl {
+                    DefaultDecl::Fn(function_expression) => {
+                        if let Some(identifier) = &function_expression.ident {
+                            names.insert(identifier.sym.to_string());
+                        }
+                    }
+                    DefaultDecl::Class(class_expression) => {
+                        if let Some(identifier) = &class_expression.ident {
+                            names.insert(identifier.sym.to_string());
+                        }
+                    }
+                    _ => {}
+                }
+            }
             _ => {}
         }
     }

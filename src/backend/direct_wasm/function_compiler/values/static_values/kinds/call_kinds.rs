@@ -107,6 +107,7 @@ impl<'a> FunctionCompiler<'a> {
             "Boolean" => Some(StaticValueKind::Bool),
             "isNaN" => Some(StaticValueKind::Bool),
             "Reflect.has" => Some(StaticValueKind::Bool),
+            "Reflect.deleteProperty" => Some(StaticValueKind::Bool),
             "Proxy.revocable" => Some(StaticValueKind::Object),
             "Object" | "Array" | "ArrayBuffer" | "SharedArrayBuffer" | "DataView" | "RegExp"
             | "Map" | "Set" | "Error" | "EvalError" | "RangeError" | "ReferenceError"
