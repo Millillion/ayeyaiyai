@@ -1407,6 +1407,16 @@ impl<'a> FunctionCompiler<'a> {
             self.backend
                 .shared_global_semantics
                 .set_global_binding_kind(name, kind);
+            // The hoisted var descriptor still carries the initial Undefined
+            // value; refresh it in program order so typeof folds observe the
+            // constructed-object kind after this store (the instance itself
+            // stays opaque: the expression binding below is cleared).
+            if self.backend.global_property_descriptor(name).is_some() {
+                let opaque_instance = state.module_assignment_expression.clone();
+                if matches!(opaque_instance, Expression::New { .. }) {
+                    self.ensure_global_property_descriptor_value(name, &opaque_instance, true);
+                }
+            }
             self.backend.sync_global_expression_binding(name, None);
             self.backend
                 .shared_global_semantics

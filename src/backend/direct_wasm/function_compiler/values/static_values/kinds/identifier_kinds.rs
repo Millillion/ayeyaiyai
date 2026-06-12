@@ -420,6 +420,25 @@ impl<'a> FunctionCompiler<'a> {
             if self.expression_is_static_boxed_primitive_object(&materialized) {
                 return Some(StaticValueKind::Object);
             }
+            // A constructed-object binding (`var a = new Object()`) can
+            // materialize to a degenerate Undefined when the constructor
+            // result has no static object model; the binding's tracked kind
+            // remains authoritative for typeof.
+            if matches!(materialized, Expression::Undefined)
+                && let Expression::Identifier(name) = expression
+                && matches!(
+                    self.state
+                        .speculation
+                        .static_semantics
+                        .local_value_binding(name)
+                        .or_else(|| self.global_value_binding(name)),
+                    Some(Expression::New { .. })
+                )
+                && let Some(kind) = self.lookup_identifier_kind(name)
+                && !matches!(kind, StaticValueKind::Undefined | StaticValueKind::Unknown)
+            {
+                return Some(kind);
+            }
             return self.infer_typeof_operand_kind(&materialized);
         }
         match expression {
@@ -498,9 +517,20 @@ impl<'a> FunctionCompiler<'a> {
             {
                 None
             }
-            Expression::Identifier(name) => self
-                .lookup_identifier_kind(name)
-                .or(Some(StaticValueKind::Undefined)),
+            Expression::Identifier(name) => {
+                self.lookup_identifier_kind(name).or_else(|| {
+                // typeof of a genuinely undeclared identifier folds to
+                // "undefined"; a declared binding without kind information
+                // stays unknown so the check defers to runtime.
+                (self.resolve_current_local_binding(name).is_none()
+                    && !self.global_has_binding(name)
+                    && !self.global_has_implicit_binding(name)
+                    && !self.backend.global_has_lexical_binding(name)
+                    && self.backend.global_function_binding(name).is_none()
+                    && self.global_value_binding(name).is_none())
+                .then_some(StaticValueKind::Undefined)
+                })
+            }
             _ => self.infer_value_kind(expression),
         }
     }
