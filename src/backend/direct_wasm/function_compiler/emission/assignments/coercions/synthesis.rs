@@ -1419,6 +1419,26 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    pub(in crate::backend::direct_wasm) fn resolve_static_function_to_string_value_with_context(
+        &self,
+        expression: &Expression,
+        current_function_name: Option<&str>,
+    ) -> Option<String> {
+        let materialized = self.materialize_static_expression(expression);
+        let binding = self
+            .resolve_function_binding_from_expression_with_context(
+                &materialized,
+                current_function_name,
+            )
+            .or_else(|| {
+                self.resolve_function_binding_from_expression_with_context(
+                    expression,
+                    current_function_name,
+                )
+            })?;
+        Some(self.synthesize_static_function_binding_to_string(&binding))
+    }
+
     pub(in crate::backend::direct_wasm) fn synthesize_static_function_binding_to_string(
         &self,
         binding: &LocalFunctionBinding,

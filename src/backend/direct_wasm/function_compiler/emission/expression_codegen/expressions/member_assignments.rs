@@ -683,6 +683,21 @@ impl<'a> FunctionCompiler<'a> {
                 substitute_member_property_key(value, object, property, &resolved_key);
             return self.emit_assign_member_expression(object, &resolved_key, &substituted_value);
         }
+        // An assignment expression used as the property key (`o[x |= 1] = v`)
+        // must apply its side effect exactly once even when the key value is
+        // statically resolvable; emit the key effects up front and continue
+        // with the resolved key.
+        if matches!(property, Expression::Assign { .. })
+            && self
+                .resolve_property_key_expression_with_coercion(property)
+                .is_some()
+            && let Some(resolved_key) = self.emit_property_key_expression_effects(property)?
+            && !static_expression_matches(&resolved_key, property)
+        {
+            let substituted_value =
+                substitute_member_property_key(value, object, property, &resolved_key);
+            return self.emit_assign_member_expression(object, &resolved_key, &substituted_value);
+        }
         let trace_member_assignment = crate::ayy_env_flag!("AYY_TRACE_MEMBER_ASSIGNMENT");
         if trace_member_assignment {
             eprintln!(

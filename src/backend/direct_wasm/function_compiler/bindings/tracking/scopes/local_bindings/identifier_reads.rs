@@ -308,6 +308,24 @@ impl<'a> FunctionCompiler<'a> {
             }
             self.emit_named_error_throw("TypeError")?;
             self.push_i32_const(JS_UNDEFINED_TAG);
+        } else if let Some(function_name) = self
+            .current_user_function_declaration()
+            .filter(|function| {
+                let source_name = scoped_binding_source_name(name).unwrap_or(name);
+                function.self_binding.as_deref().is_some_and(|self_binding| {
+                    self_binding == name || self_binding == source_name
+                })
+            })
+            .map(|function| function.name.clone())
+            && let Some(runtime_value) = self.user_function_runtime_value(&function_name)
+        {
+            // A named function expression's own name binding resolves to the
+            // function itself inside its body.
+            if trace_identifier_reads {
+                eprintln!("identifier_read:fallback:path function_self_binding name={name}");
+            }
+            self.record_function_definition_with_scopes(&function_name);
+            self.push_i32_const(runtime_value);
         } else {
             if trace_identifier_reads {
                 eprintln!("identifier_read:fallback:path missing name={name}");

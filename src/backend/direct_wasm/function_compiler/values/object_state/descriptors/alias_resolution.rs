@@ -333,6 +333,10 @@ impl<'a> FunctionCompiler<'a> {
                     .local_value_binding(&current_name)
                     .or_else(|| self.backend.global_value_binding(&current_name))
             };
+            let mut next = next;
+            while let Some(Expression::Sequence(expressions)) = next {
+                next = expressions.last();
+            }
             match next {
                 Some(Expression::Identifier(next_name))
                     if self.lookup_identifier_kind(next_name) == Some(StaticValueKind::Symbol) =>

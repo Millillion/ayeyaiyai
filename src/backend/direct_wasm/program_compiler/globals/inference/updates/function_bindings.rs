@@ -217,6 +217,10 @@ impl DirectWasmCompiler {
         &self,
         property: &Expression,
     ) -> Option<MemberFunctionBindingProperty> {
+        let mut property = property;
+        while let Expression::Sequence(expressions) = property {
+            property = expressions.last()?;
+        }
         let materialized = self.materialize_global_expression(property);
         for candidate in [property, &materialized] {
             if let Some(symbol_name) = match candidate {
