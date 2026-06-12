@@ -1,7 +1,7 @@
-22810/23668 (96.37%)
+22808/23668 (96.37%)
 Sub-category progress
 
-- comments: 52/52 (100.00%)
+- comments: 51/52 (98.08%)
 - white-space: 67/67 (100.00%)
 - line-terminators: 41/41 (100.00%)
 - punctuators: 11/11 (100.00%)
@@ -14,7 +14,7 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 8998/9337 (96.37%)
+- statements: 8997/9337 (96.36%)
 - expressions: 10680/11061 (96.56%)
 - types: 107/113 (94.69%)
 - function-code: 208/217 (95.85%)
@@ -30,7 +30,7 @@ Sub-category progress
 - export: 3/3 (100.00%)
 - module-code: 518/596 (86.91%)
 
-- [x] comments
+- [ ] comments
   - [x] test/language/comments/S7.4_A1_T1.js
   - [x] test/language/comments/S7.4_A1_T2.js
   - [x] test/language/comments/S7.4_A2_T1.js
@@ -43,7 +43,7 @@ Sub-category progress
   - [x] test/language/comments/S7.4_A4_T5.js
   - [x] test/language/comments/S7.4_A4_T6.js
   - [x] test/language/comments/S7.4_A4_T7.js
-  - [x] test/language/comments/S7.4_A5.js
+  - [ ] test/language/comments/S7.4_A5.js
   - [x] test/language/comments/S7.4_A6.js
   - [x] test/language/comments/hashbang/escaped-bang-041.js
   - [x] test/language/comments/hashbang/escaped-bang-u0021.js
@@ -2183,7 +2183,7 @@ Sub-category progress
   - [x] test/language/statements/class/async-method-static/params-trailing-comma-single.js
   - [x] test/language/statements/class/async-method-static/rest-param-strict-body.js
   - [x] test/language/statements/class/async-method-static/rest-params-trailing-comma-early-error.js
-  - [x] test/language/statements/class/async-method-static/returns-async-arrow-returns-arguments-from-parent-function.js
+  - [ ] test/language/statements/class/async-method-static/returns-async-arrow-returns-arguments-from-parent-function.js
   - [x] test/language/statements/class/async-method-static/returns-async-arrow-returns-newtarget.js
   - [x] test/language/statements/class/async-method-static/returns-async-arrow.js
   - [x] test/language/statements/class/async-method-static/returns-async-function-returns-arguments-from-own-function.js
