@@ -1,4 +1,4 @@
-22810/23668 (96.37%)
+22816/23668 (96.40%)
 Sub-category progress
 
 - comments: 51/52 (98.08%)
@@ -15,7 +15,7 @@ Sub-category progress
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
 - statements: 8999/9337 (96.38%)
-- expressions: 10680/11061 (96.56%)
+- expressions: 10686/11061 (96.61%)
 - types: 107/113 (94.69%)
 - function-code: 208/217 (95.85%)
 - global-code: 41/42 (97.62%)
@@ -21360,8 +21360,8 @@ Sub-category progress
   - [x] test/language/expressions/strict-equals/S11.9.4_A2.4_T3.js
   - [x] test/language/expressions/strict-equals/S11.9.4_A2.4_T4.js
   - [x] test/language/expressions/strict-equals/S11.9.4_A3.js
-  - [ ] test/language/expressions/strict-equals/S11.9.4_A4.1_T1.js
-  - [ ] test/language/expressions/strict-equals/S11.9.4_A4.1_T2.js
+  - [x] test/language/expressions/strict-equals/S11.9.4_A4.1_T1.js
+  - [x] test/language/expressions/strict-equals/S11.9.4_A4.1_T2.js
   - [x] test/language/expressions/strict-equals/S11.9.4_A4.2.js
   - [x] test/language/expressions/strict-equals/S11.9.4_A4.3.js
   - [x] test/language/expressions/strict-equals/S11.9.4_A5.js
@@ -21369,10 +21369,10 @@ Sub-category progress
   - [x] test/language/expressions/strict-equals/S11.9.4_A6.2.js
   - [x] test/language/expressions/strict-equals/S11.9.4_A7.js
   - [x] test/language/expressions/strict-equals/S11.9.4_A8_T1.js
-  - [ ] test/language/expressions/strict-equals/S11.9.4_A8_T2.js
-  - [ ] test/language/expressions/strict-equals/S11.9.4_A8_T3.js
-  - [ ] test/language/expressions/strict-equals/S11.9.4_A8_T4.js
-  - [ ] test/language/expressions/strict-equals/S11.9.4_A8_T5.js
+  - [x] test/language/expressions/strict-equals/S11.9.4_A8_T2.js
+  - [x] test/language/expressions/strict-equals/S11.9.4_A8_T3.js
+  - [x] test/language/expressions/strict-equals/S11.9.4_A8_T4.js
+  - [x] test/language/expressions/strict-equals/S11.9.4_A8_T5.js
   - [x] test/language/expressions/strict-equals/bigint-and-bigint.js
   - [x] test/language/expressions/strict-equals/bigint-and-boolean.js
   - [x] test/language/expressions/strict-equals/bigint-and-incomparable-primitive.js

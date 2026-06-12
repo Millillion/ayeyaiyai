@@ -2264,6 +2264,45 @@ fn resolves_static_math_intrinsic_numbers_through_bound_identifiers() {
 }
 
 #[test]
+fn static_if_condition_prefers_js_equality_over_property_key_names() {
+    let mut compiler = DirectWasmCompiler::default();
+    let function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+
+    let number_nan = Expression::Member {
+        object: Box::new(Expression::Identifier("Number".to_string())),
+        property: Box::new(Expression::String("NaN".to_string())),
+    };
+    assert_eq!(
+        function_compiler.resolve_static_if_condition_value(&Expression::Binary {
+            op: crate::ir::hir::BinaryOp::Equal,
+            left: Box::new(number_nan.clone()),
+            right: Box::new(number_nan),
+        }),
+        Some(false)
+    );
+
+    assert_eq!(
+        function_compiler.resolve_static_if_condition_value(&Expression::Binary {
+            op: crate::ir::hir::BinaryOp::Equal,
+            left: Box::new(Expression::Number(1.0)),
+            right: Box::new(Expression::String("1".to_string())),
+        }),
+        Some(false)
+    );
+}
+
+#[test]
 fn tracks_descriptor_locals_from_get_own_property_descriptor_with_bound_parameter_name() {
     let program = frontend::parse(
         r#"

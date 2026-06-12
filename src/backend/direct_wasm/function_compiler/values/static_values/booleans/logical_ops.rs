@@ -14,6 +14,9 @@ impl<'a> FunctionCompiler<'a> {
                 BinaryOp::NotEqual | BinaryOp::LooseNotEqual => Some(lhs != rhs),
                 _ => None,
             };
+            if let Some(result) = self.resolve_static_binary_boolean_result(op, left, right) {
+                return Some(result);
+            }
             if let Some(result) = self.resolve_static_property_key_condition(*op, left, right) {
                 return Some(result);
             }
