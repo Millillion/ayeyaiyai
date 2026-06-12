@@ -1,5 +1,39 @@
 use super::*;
 
+/// Collects `(owner, property)` pairs for every `delete owner.property`
+/// (string-keyed, identifier- or `this`-based owner) inside a statement.
+fn collect_member_delete_targets_from_statement(
+    statement: &Statement,
+    targets: &mut Vec<(String, String)>,
+) {
+    struct MemberDeleteCollector<'t> {
+        targets: &'t mut Vec<(String, String)>,
+    }
+    impl crate::ir::visit::Visitor for MemberDeleteCollector<'_> {
+        fn visit_expression(&mut self, expression: &Expression) {
+            if let Expression::Unary {
+                op: UnaryOp::Delete,
+                expression: operand,
+            } = expression
+                && let Expression::Member { object, property } = operand.as_ref()
+                && let Expression::String(property_name) = property.as_ref()
+            {
+                let owner_name = match object.as_ref() {
+                    Expression::Identifier(name) => Some(name.clone()),
+                    Expression::This => Some("this".to_string()),
+                    _ => None,
+                };
+                if let Some(owner_name) = owner_name {
+                    self.targets.push((owner_name, property_name.clone()));
+                }
+            }
+            crate::ir::visit::walk_expression(self, expression);
+        }
+    }
+    let mut collector = MemberDeleteCollector { targets };
+    crate::ir::visit::Visitor::visit_statement(&mut collector, statement);
+}
+
 impl<'a> FunctionCompiler<'a> {
     fn argument_expression_cannot_introduce_call_effects(expression: &Expression) -> bool {
         match expression {
@@ -246,6 +280,57 @@ impl<'a> FunctionCompiler<'a> {
             if self.sync_static_with_scope_member_assignment_effects_from_statement(statement, None)
             {
                 break;
+            }
+        }
+        let mut visited = HashSet::new();
+        self.register_transitive_member_delete_shadows_for_function(&user_function.name, &mut visited);
+    }
+
+    /// Registers runtime delete-shadow pairs for every `delete obj.prop` a
+    /// called function (or a function it transitively references) may
+    /// perform on a global-object-bound owner. The callee bodies compile
+    /// out-of-line after the caller, so presence queries (`'prop' in obj`)
+    /// emitted in the caller must already know to defer to the runtime
+    /// deleted-shadow pair instead of folding the static property table.
+    fn register_transitive_member_delete_shadows_for_function(
+        &mut self,
+        function_name: &str,
+        visited: &mut HashSet<String>,
+    ) {
+        if !visited.insert(function_name.to_string()) {
+            return;
+        }
+        let Some(function) = self
+            .resolve_registered_function_declaration(function_name)
+            .cloned()
+        else {
+            return;
+        };
+        let mut deletes = Vec::new();
+        let mut referenced = HashSet::new();
+        for statement in &function.body {
+            collect_member_delete_targets_from_statement(statement, &mut deletes);
+            collect_referenced_binding_names_from_statement(statement, &mut referenced);
+        }
+        for (owner_name, property_name) in deletes {
+            let owner_is_global_object_bound = self.global_object_binding(&owner_name).is_some()
+                || self
+                    .backend
+                    .shared_global_semantics
+                    .values
+                    .object_binding(&owner_name)
+                    .is_some();
+            if !owner_is_global_object_bound {
+                continue;
+            }
+            let property = Expression::String(property_name);
+            self.runtime_object_property_shadow_deleted_binding_by_property(&owner_name, &property);
+            self.record_emitted_delete_shadow_for(&owner_name, &property);
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
+        }
+        for name in referenced {
+            if is_internal_user_function_identifier(&name) && self.user_function(&name).is_some() {
+                self.register_transitive_member_delete_shadows_for_function(&name, visited);
             }
         }
     }

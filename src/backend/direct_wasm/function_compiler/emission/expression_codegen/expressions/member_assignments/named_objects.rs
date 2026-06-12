@@ -2629,6 +2629,27 @@ impl<'a> FunctionCompiler<'a> {
         if trace_member_assignment {
             eprintln!("named_member_assignment:name name={name}");
         }
+        // Destructuring lowers member targets (`[x.y] = iter`) through a
+        // `__ayy_target_object_*` alias temp; the write must land on the real
+        // owner's static binding and shadow channel, not the alias copy, or
+        // later reads of the owner's property observe stale state.
+        if name.starts_with("__ayy_target_object_")
+            && let Some(owner_name) =
+                self.runtime_object_property_shadow_owner_name_for_identifier(name)
+            && owner_name != name
+        {
+            if trace_member_assignment {
+                eprintln!(
+                    "named_member_assignment:alias_owner name={name} owner={owner_name}"
+                );
+            }
+            let owner_expression = if owner_name == "this" {
+                Expression::This
+            } else {
+                Expression::Identifier(owner_name)
+            };
+            return self.emit_named_object_member_assignment(&owner_expression, property, value);
+        }
 
         if trace_member_assignment {
             eprintln!("named_member_assignment:static_array_property:start");
@@ -3395,6 +3416,60 @@ impl<'a> FunctionCompiler<'a> {
                         Expression::String(property_name.clone()),
                         materialized.clone(),
                     );
+                }
+            }
+            // A global var can carry both a local static channel and the
+            // global object binding; reads materialize through either, so the
+            // write must land on both or later reads observe stale state.
+            if self.binding_name_is_global(name) {
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
+                if let Some(global_binding) = self
+                    .backend
+                    .global_semantics
+                    .values
+                    .object_bindings
+                    .get_mut(name)
+                {
+                    if dynamic_property_candidates.is_empty() {
+                        object_binding_set_property(
+                            global_binding,
+                            resolved_property.clone(),
+                            materialized.clone(),
+                        );
+                    } else {
+                        for property_name in &dynamic_property_candidates {
+                            object_binding_set_property(
+                                global_binding,
+                                Expression::String(property_name.clone()),
+                                materialized.clone(),
+                            );
+                        }
+                    }
+                }
+                if self.current_function_name().is_none() {
+                    let shared_binding = self
+                        .backend
+                        .shared_global_semantics
+                        .values
+                        .object_bindings
+                        .get_mut(name);
+                    if let Some(shared_binding) = shared_binding {
+                        if dynamic_property_candidates.is_empty() {
+                            object_binding_set_property(
+                                shared_binding,
+                                resolved_property.clone(),
+                                materialized.clone(),
+                            );
+                        } else {
+                            for property_name in &dynamic_property_candidates {
+                                object_binding_set_property(
+                                    shared_binding,
+                                    Expression::String(property_name.clone()),
+                                    materialized.clone(),
+                                );
+                            }
+                        }
+                    }
                 }
             }
             self.clear_runtime_object_property_shadow_deleted_binding(object, &resolved_property);

@@ -265,6 +265,7 @@ impl<'a> FunctionCompiler<'a> {
             if trace_identifier_reads {
                 eprintln!("identifier_read:fallback:path internal_user_function name={name}");
             }
+            self.record_function_definition_with_scopes(name);
             if self.should_prepare_identifier_function_captures_on_read(name) {
                 self.emit_prepare_user_function_capture_globals(name)?;
             }

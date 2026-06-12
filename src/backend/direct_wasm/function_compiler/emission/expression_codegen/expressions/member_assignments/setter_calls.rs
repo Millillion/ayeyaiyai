@@ -216,6 +216,18 @@ impl<'a> FunctionCompiler<'a> {
         let value_expression = Expression::Identifier(value_hidden_name.clone());
         self.update_local_value_binding(&receiver_hidden_name, object);
         self.update_local_object_binding(&receiver_hidden_name, object);
+        // The setter argument flows through this hidden local; carry the
+        // assigned value's static metadata so nonlocal stores performed by
+        // the setter (`setValue = val`) keep array/object contents visible.
+        self.update_local_value_binding(&value_hidden_name, value);
+        self.update_local_object_binding(&value_hidden_name, value);
+        if let Some(array_binding) = self.resolve_array_binding_from_expression(value) {
+            self.state
+                .speculation
+                .static_semantics
+                .set_local_array_binding(&value_hidden_name, array_binding);
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
+        }
         if trace_member_assignment {
             eprintln!("member_assignment:dynamic_setter:locals_ready");
         }

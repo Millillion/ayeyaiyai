@@ -1811,6 +1811,25 @@ impl<'a> FunctionCompiler<'a> {
         if let Some(deleted_shadow_name) = &deleted_shadow_name {
             self.backend.record_emitted_delete_shadow(deleted_shadow_name);
         }
+        // A global-object property deletion must also set the dedicated
+        // delete-sync flag when presence queries were compiled to read it:
+        // the `this` shadow channel is saved/restored around user calls, so
+        // the deleted-shadow pair alone cannot carry a deletion performed
+        // inside an accessor or closure back to the caller's `in` checks.
+        if let Expression::String(property_name) = &canonical_property
+            && self
+                .runtime_object_property_shadow_owner_name_for_expression(object)
+                .is_some_and(|owner_name| owner_name == "this")
+        {
+            let sync_name = Self::global_object_property_delete_sync_binding_name(property_name);
+            if self.backend.delete_shadow_was_emitted(&sync_name) {
+                let sync_binding = self.ensure_implicit_global_binding(&sync_name);
+                self.push_i32_const(JS_UNDEFINED_TAG);
+                self.push_global_set(sync_binding.value_index);
+                self.push_i32_const(1);
+                self.push_global_set(sync_binding.present_index);
+            }
+        }
         if let Expression::String(property_name) = &canonical_property
             && let Some(function_name) = self.current_function_name()
             && !self.assigned_user_function_capture_originates_in_enclosing_local(
