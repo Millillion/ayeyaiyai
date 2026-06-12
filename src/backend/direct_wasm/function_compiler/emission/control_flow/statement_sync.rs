@@ -930,7 +930,7 @@ impl<'a> FunctionCompiler<'a> {
             arguments: vec![CallArgument::Expression(prototype_parent.clone())],
         };
 
-        self.update_prototype_object_binding(&target_name, &prototype_object);
+        self.update_prototype_object_binding_without_snapshot(&target_name, &prototype_object);
         let mut target_names = vec![target_name.clone()];
         if let Some(Expression::Identifier(alias)) =
             self.resolve_static_class_init_local_alias_expression(&target_name)

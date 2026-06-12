@@ -1937,7 +1937,14 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(false);
         };
 
-        self.discard_call_arguments(rest)?;
+        if let [CallArgument::Expression(superclass)] = rest {
+            let superclass = superclass.clone();
+            if self.emit_class_heritage_validation_throw(&superclass)? {
+                return Ok(true);
+            }
+        } else {
+            self.discard_call_arguments(rest)?;
+        }
 
         let prototype_object = Expression::Call {
             callee: Box::new(Expression::Member {
@@ -1947,7 +1954,34 @@ impl<'a> FunctionCompiler<'a> {
             arguments: vec![CallArgument::Expression(prototype_parent.clone())],
         };
         if let Expression::Identifier(name) = target {
-            self.update_prototype_object_binding(name, &prototype_object);
+            // Record the parent through the materialized superclass binding:
+            // the heritage temporary is block-scoped to the class definition,
+            // so later prototype-chain reads must not reference it.
+            let recorded_parent = match prototype_parent {
+                Expression::Member { object, property }
+                    if matches!(property.as_ref(), Expression::String(name) if name == "prototype")
+                        && matches!(object.as_ref(), Expression::Identifier(object_name) if object_name.starts_with("__ayy_class_super_")) =>
+                {
+                    let materialized_object = self.materialize_static_expression(object);
+                    if static_expression_matches(&materialized_object, object) {
+                        prototype_parent.clone()
+                    } else {
+                        Expression::Member {
+                            object: Box::new(materialized_object),
+                            property: property.clone(),
+                        }
+                    }
+                }
+                other => other.clone(),
+            };
+            let recorded_prototype_object = Expression::Call {
+                callee: Box::new(Expression::Member {
+                    object: Box::new(Expression::Identifier("Object".to_string())),
+                    property: Box::new(Expression::String("create".to_string())),
+                }),
+                arguments: vec![CallArgument::Expression(recorded_parent)],
+            };
+            self.update_prototype_object_binding_without_snapshot(name, &recorded_prototype_object);
         }
 
         self.emit_numeric_expression(&prototype_object)?;
@@ -1955,6 +1989,215 @@ impl<'a> FunctionCompiler<'a> {
         self.emit_numeric_expression(target)?;
         Ok(true)
     }
+
+    /// ClassDefinitionEvaluation heritage validation: a non-null superclass
+    /// must satisfy IsConstructor, and Get(superclass, "prototype") must be
+    /// an Object or null. Emits a TypeError throw (returning `true`) when the
+    /// heritage is statically known to violate either requirement.
+    fn emit_class_heritage_validation_throw(
+        &mut self,
+        superclass: &Expression,
+    ) -> DirectResult<bool> {
+        let mut materialized = self.materialize_static_expression(superclass);
+        if static_expression_matches(&materialized, superclass)
+            && let Some(resolved_alias) = self
+                .resolve_bound_alias_expression(superclass)
+                .filter(|resolved| !static_expression_matches(resolved, superclass))
+        {
+            materialized = resolved_alias;
+        }
+        if matches!(materialized, Expression::Null) {
+            return Ok(false);
+        }
+        if crate::ayy_env_flag!("AYY_TRACE_CONSTRUCT_CALLS") {
+            eprintln!(
+                "class_heritage:validate superclass={superclass:?} materialized={materialized:?} kind={:?}",
+                self.infer_value_kind(&materialized)
+            );
+        }
+
+        let primitive_heritage = matches!(
+            self.infer_value_kind(&materialized),
+            Some(
+                StaticValueKind::Number
+                    | StaticValueKind::Bool
+                    | StaticValueKind::String
+                    | StaticValueKind::BigInt
+                    | StaticValueKind::Symbol
+                    | StaticValueKind::Undefined
+            )
+        );
+        if primitive_heritage {
+            return self.emit_class_heritage_type_error();
+        }
+
+        // Bound functions satisfy IsConstructor when their target does, but
+        // they have no own `prototype`: Get resolves through an explicitly
+        // defined property or yields undefined, which must throw.
+        let bind_call_target = self
+            .resolve_function_prototype_bind_call(superclass, self.current_function_name())
+            .or_else(|| {
+                self.resolve_function_prototype_bind_call(
+                    &materialized,
+                    self.current_function_name(),
+                )
+            });
+        if crate::ayy_env_flag!("AYY_TRACE_CONSTRUCT_CALLS") {
+            eprintln!(
+                "class_heritage:classify bind_call={} function_binding={:?}",
+                bind_call_target.is_some(),
+                self.resolve_function_binding_from_expression(superclass)
+                    .or_else(|| self.resolve_function_binding_from_expression(&materialized))
+            );
+        }
+        if bind_call_target.is_some() {
+            return self
+                .emit_class_heritage_bound_function_prototype_validation(superclass, &materialized);
+        }
+
+        let function_binding = self
+            .resolve_function_binding_from_expression(superclass)
+            .or_else(|| self.resolve_function_binding_from_expression(&materialized));
+        match function_binding {
+            Some(LocalFunctionBinding::User(function_name)) => {
+                if self
+                    .user_function(&function_name)
+                    .is_some_and(|user_function| !user_function.is_constructible())
+                {
+                    return self.emit_class_heritage_type_error();
+                }
+                Ok(false)
+            }
+            Some(LocalFunctionBinding::Builtin(builtin_name)) => {
+                if builtin_constructor_prototype_kind(&builtin_name).is_some()
+                    || native_error_runtime_value(&builtin_name).is_some()
+                    || matches!(
+                        builtin_name.as_str(),
+                        "AsyncFunction" | "GeneratorFunction" | "AsyncGeneratorFunction"
+                    )
+                {
+                    return Ok(false);
+                }
+                if builtin_name == "Proxy" {
+                    // IsConstructor(Proxy) holds but Proxy has no `prototype`
+                    // property, so Get yields undefined.
+                    return self.emit_class_heritage_type_error();
+                }
+                if builtin_name.contains('.') {
+                    // Builtin member functions (Math.abs, ...) never have
+                    // [[Construct]].
+                    return self.emit_class_heritage_type_error();
+                }
+                Ok(false)
+            }
+            None => {
+                if matches!(superclass, Expression::Identifier(name) if name == "Proxy")
+                    || matches!(&materialized, Expression::Identifier(name) if name == "Proxy")
+                {
+                    return self.emit_class_heritage_type_error();
+                }
+                // Statically known non-callable objects are not constructors.
+                if self.expression_is_known_non_constructible_object_new_callee(&materialized) {
+                    return self.emit_class_heritage_type_error();
+                }
+                Ok(false)
+            }
+        }
+    }
+
+    fn emit_class_heritage_bound_function_prototype_validation(
+        &mut self,
+        superclass: &Expression,
+        materialized: &Expression,
+    ) -> DirectResult<bool> {
+        let prototype_property = Expression::String("prototype".to_string());
+        let source_binding = self
+            .resolve_bound_alias_expression(superclass)
+            .filter(|resolved| !static_expression_matches(resolved, superclass));
+        if let Some(getter_binding) = self
+            .resolve_member_getter_binding(superclass, &prototype_property)
+            .or_else(|| {
+                source_binding.as_ref().and_then(|source| {
+                    self.resolve_member_getter_binding(source, &prototype_property)
+                })
+            })
+            .or_else(|| self.resolve_member_getter_binding(materialized, &prototype_property))
+        {
+            if crate::ayy_env_flag!("AYY_TRACE_CONSTRUCT_CALLS") {
+                let registered = match &getter_binding {
+                    LocalFunctionBinding::User(name) => self.user_function(name).is_some(),
+                    LocalFunctionBinding::Builtin(_) => false,
+                };
+                eprintln!(
+                    "class_heritage:bound_getter getter={getter_binding:?} registered={registered}"
+                );
+            }
+            let LocalFunctionBinding::User(getter_name) = &getter_binding else {
+                return Ok(false);
+            };
+            // Perform the single Get by invoking the tracked getter (the
+            // Object.create emission folds the member read without re-running
+            // getter side effects), then validate the result is an Object or
+            // null.
+            let getter_name = getter_name.clone();
+            let Some(user_function) = self.user_function(&getter_name).cloned() else {
+                return Ok(false);
+            };
+            self.emit_user_function_call_without_inline_with_new_target_and_this_expression(
+                &user_function,
+                &[],
+                JS_UNDEFINED_TAG,
+                superclass,
+            )?;
+            let result_local = self.allocate_temp_local();
+            self.push_local_set(result_local);
+            self.emit_runtime_typeof_tag_from_local(result_local)?;
+            let tag_local = self.allocate_temp_local();
+            self.push_local_set(tag_local);
+            self.push_local_get(tag_local);
+            self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
+            self.push_binary_op(BinaryOp::Equal)?;
+            self.push_local_get(tag_local);
+            self.push_i32_const(JS_TYPEOF_FUNCTION_TAG);
+            self.push_binary_op(BinaryOp::Equal)?;
+            self.state.emission.output.instructions.push(0x72);
+            self.state.emission.output.instructions.push(0x45);
+            self.state.emission.output.instructions.push(0x04);
+            self.state
+                .emission
+                .output
+                .instructions
+                .push(EMPTY_BLOCK_TYPE);
+            self.push_control_frame();
+            self.emit_named_error_throw("TypeError")?;
+            self.state.emission.output.instructions.push(0x0b);
+            self.pop_control_frame();
+            return Ok(false);
+        }
+        let prototype_member = Expression::Member {
+            object: Box::new(superclass.clone()),
+            property: Box::new(prototype_property),
+        };
+        let prototype_value = self.materialize_static_expression(&prototype_member);
+        if static_expression_matches(&prototype_value, &prototype_member) {
+            // No tracked own/defined `prototype`: Get yields undefined.
+            return self.emit_class_heritage_type_error();
+        }
+        match self.infer_value_kind(&prototype_value) {
+            Some(
+                StaticValueKind::Object | StaticValueKind::Function | StaticValueKind::Null,
+            ) => Ok(false),
+            Some(_) => self.emit_class_heritage_type_error(),
+            None => Ok(false),
+        }
+    }
+
+    fn emit_class_heritage_type_error(&mut self) -> DirectResult<bool> {
+        self.emit_named_error_throw("TypeError")?;
+        self.push_i32_const(JS_UNDEFINED_TAG);
+        Ok(true)
+    }
+
 
     pub(in crate::backend::direct_wasm) fn emit_runtime_known_object_has_property_check(
         &mut self,

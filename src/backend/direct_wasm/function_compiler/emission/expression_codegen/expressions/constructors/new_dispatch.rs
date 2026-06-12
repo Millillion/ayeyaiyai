@@ -60,7 +60,10 @@ impl<'a> FunctionCompiler<'a> {
         Ok(())
     }
 
-    fn expression_is_known_non_constructible_object_new_callee(&self, callee: &Expression) -> bool {
+    pub(in crate::backend::direct_wasm) fn expression_is_known_non_constructible_object_new_callee(
+        &self,
+        callee: &Expression,
+    ) -> bool {
         match callee {
             Expression::This | Expression::Object(_) | Expression::Array(_) => true,
             Expression::Identifier(name)

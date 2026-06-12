@@ -429,16 +429,25 @@ impl Lowerer {
             mutable: Self::scoped_class_expression_source_name(&binding_name).is_none(),
             value: Expression::Identifier(constructor_name.clone()),
         });
+        let mut heritage_reference = None;
         if let (Some(super_expression), Some(super_name)) =
             (&class.super_class, super_name.as_ref())
         {
             self.strict_modes.push(true);
             let lowered_super_expression = self.lower_expression(super_expression);
             self.strict_modes.pop();
+            let lowered_super_expression = lowered_super_expression?;
+            // Prefer the original identifier for heritage validation so the
+            // backend can resolve tracked property state keyed on it; the
+            // temporary still captures the single heritage evaluation.
+            heritage_reference = Some(match &lowered_super_expression {
+                Expression::Identifier(name) => Expression::Identifier(name.clone()),
+                _ => Expression::Identifier(super_name.clone()),
+            });
             statements.push(Statement::Let {
                 name: super_name.clone(),
                 mutable: false,
-                value: lowered_super_expression?,
+                value: lowered_super_expression,
             });
         }
         if let Some(instance_private_brand_binding) = instance_private_brand_binding.as_ref() {
@@ -464,10 +473,21 @@ impl Lowerer {
                 callee: Box::new(Expression::Identifier(
                     "__ayyClassPrototypeInit".to_string(),
                 )),
-                arguments: vec![
-                    CallArgument::Expression(class_identifier.clone()),
-                    CallArgument::Expression(prototype_parent),
-                ],
+                arguments: {
+                    let mut prototype_init_arguments = vec![
+                        CallArgument::Expression(class_identifier.clone()),
+                        CallArgument::Expression(prototype_parent),
+                    ];
+                    // Pass the evaluated superclass so the backend can apply
+                    // ClassDefinitionEvaluation heritage validation:
+                    // IsConstructor(superclass) and Get(superclass,
+                    // "prototype") must be an Object or null.
+                    if let Some(heritage_reference) = heritage_reference.clone() {
+                        prototype_init_arguments
+                            .push(CallArgument::Expression(heritage_reference));
+                    }
+                    prototype_init_arguments
+                },
             }),
             define_property_statement(
                 prototype_target.clone(),

@@ -263,6 +263,11 @@ impl<'a> FunctionCompiler<'a> {
         self.discard_call_arguments(rest)?;
         if let Some(prototype) = self.resolve_static_object_prototype_expression(target) {
             let prototype = self.resolve_static_class_init_local_aliases_in_expression(&prototype);
+            if crate::ayy_env_flag!("AYY_TRACE_OBJECT_PROTOTYPES") {
+                eprintln!(
+                    "object_get_prototype_of target={target:?} resolved_prototype={prototype:?}"
+                );
+            }
             self.emit_numeric_expression(&prototype)?;
         } else {
             self.push_i32_const(JS_UNDEFINED_TAG);

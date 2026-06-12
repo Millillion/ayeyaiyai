@@ -788,6 +788,12 @@ impl<'a> FunctionCompiler<'a> {
             .collect::<Vec<_>>();
 
         for object_name in referencing_object_names {
+            if crate::ayy_env_flag!("AYY_TRACE_OBJECT_PROTOTYPES") {
+                eprintln!(
+                    "prototype_snapshot owner={owner_name} object={object_name} current_fn={:?}",
+                    self.current_function_name()
+                );
+            }
             let snapshot_owner = format!("__ayy_prototype_snapshot_{owner_name}_{object_name}");
             let snapshot_prototype = Expression::Member {
                 object: Box::new(Expression::Identifier(snapshot_owner.clone())),
@@ -811,6 +817,27 @@ impl<'a> FunctionCompiler<'a> {
         name: &str,
         value: &Expression,
     ) {
+        self.update_prototype_object_binding_impl(name, value, true);
+    }
+
+    /// Class definitions always pair a fresh constructor with a fresh
+    /// prototype object: re-recording one (e.g. on a later analysis pass)
+    /// must not divert existing referents to a snapshot of the previous
+    /// recording.
+    pub(in crate::backend::direct_wasm) fn update_prototype_object_binding_without_snapshot(
+        &mut self,
+        name: &str,
+        value: &Expression,
+    ) {
+        self.update_prototype_object_binding_impl(name, value, false);
+    }
+
+    fn update_prototype_object_binding_impl(
+        &mut self,
+        name: &str,
+        value: &Expression,
+        allow_snapshot: bool,
+    ) {
         let old_binding = self
             .state
             .speculation
@@ -833,10 +860,6 @@ impl<'a> FunctionCompiler<'a> {
                 ))
                 .and_then(|binding| self.default_function_prototype_object_binding(&binding))
             });
-        if let Some(old_binding) = old_binding.as_ref() {
-            self.snapshot_existing_object_prototype_references(name, old_binding);
-        }
-
         let object_binding = match value {
             Expression::Identifier(value_name) => {
                 let resolved_name = self
@@ -858,6 +881,14 @@ impl<'a> FunctionCompiler<'a> {
             }
             _ => self.resolve_object_binding_from_expression(value),
         };
+        // A re-recorded identical prototype binding is not a replacement;
+        // only genuine changes may divert existing referents to a snapshot.
+        if allow_snapshot
+            && let Some(old_binding) = old_binding.as_ref()
+            && object_binding.as_ref() != Some(old_binding)
+        {
+            self.snapshot_existing_object_prototype_references(name, old_binding);
+        }
         let Some(object_binding) = object_binding else {
             self.state
                 .speculation
