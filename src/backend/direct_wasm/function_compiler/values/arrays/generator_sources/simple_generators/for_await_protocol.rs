@@ -470,25 +470,6 @@ impl<'a> FunctionCompiler<'a> {
             &HashMap::new(),
             true,
         ) {
-            if crate::ayy_env_flag!("AYY_EXPERIMENT_OUTER_UNTRACKED")
-                && let ForAwaitProtocolIterator::Steps {
-                    steps,
-                    completion_value,
-                    completion_effects,
-                    index,
-                    closed,
-                    ..
-                } = state
-            {
-                return Some(ForAwaitProtocolIterator::Steps {
-                    steps,
-                    completion_value,
-                    completion_effects,
-                    index,
-                    binding_name: None,
-                    closed,
-                });
-            }
             return Some(state);
         }
         let resolved = self
