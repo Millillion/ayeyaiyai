@@ -1,4 +1,4 @@
-22586/23668 (95.43%)
+22641/23668 (95.66%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,10 +14,10 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 8902/9337 (95.34%)
-- expressions: 10561/11061 (95.48%)
+- statements: 8929/9337 (95.63%)
+- expressions: 10587/11061 (95.71%)
 - types: 103/113 (91.15%)
-- function-code: 206/217 (94.93%)
+- function-code: 208/217 (95.85%)
 - global-code: 41/42 (97.62%)
 - arguments-object: 263/263 (100.00%)
 - rest-parameters: 10/11 (90.91%)
@@ -5282,7 +5282,7 @@ Sub-category progress
   - [x] test/language/statements/class/elements/privatefieldset-typeerror-4.js
   - [x] test/language/statements/class/elements/privatefieldset-typeerror-5.js
   - [x] test/language/statements/class/elements/privatefieldset-typeerror-6.js
-  - [ ] test/language/statements/class/elements/privatefieldset-typeerror-7.js
+  - [x] test/language/statements/class/elements/privatefieldset-typeerror-7.js
   - [x] test/language/statements/class/elements/privatefieldset-typeerror-8.js
   - [x] test/language/statements/class/elements/privatefieldset-typeerror-9.js
   - [ ] test/language/statements/class/elements/privategetter-on-proxy.js
@@ -6279,7 +6279,7 @@ Sub-category progress
   - [x] test/language/statements/const/dstr/ary-ptrn-elem-id-iter-done.js
   - [x] test/language/statements/const/dstr/ary-ptrn-elem-id-iter-step-err.js
   - [x] test/language/statements/const/dstr/ary-ptrn-elem-id-iter-val-array-prototype.js
-  - [ ] test/language/statements/const/dstr/ary-ptrn-elem-id-iter-val-err.js
+  - [x] test/language/statements/const/dstr/ary-ptrn-elem-id-iter-val-err.js
   - [x] test/language/statements/const/dstr/ary-ptrn-elem-id-iter-val.js
   - [x] test/language/statements/const/dstr/ary-ptrn-elem-obj-id-init.js
   - [x] test/language/statements/const/dstr/ary-ptrn-elem-obj-id.js
@@ -6549,7 +6549,7 @@ Sub-category progress
   - [x] test/language/statements/for/dstr/const-ary-ptrn-elem-id-iter-done.js
   - [x] test/language/statements/for/dstr/const-ary-ptrn-elem-id-iter-step-err.js
   - [x] test/language/statements/for/dstr/const-ary-ptrn-elem-id-iter-val-array-prototype.js
-  - [ ] test/language/statements/for/dstr/const-ary-ptrn-elem-id-iter-val-err.js
+  - [x] test/language/statements/for/dstr/const-ary-ptrn-elem-id-iter-val-err.js
   - [x] test/language/statements/for/dstr/const-ary-ptrn-elem-id-iter-val.js
   - [x] test/language/statements/for/dstr/const-ary-ptrn-elem-obj-id-init.js
   - [x] test/language/statements/for/dstr/const-ary-ptrn-elem-obj-id.js
@@ -6644,7 +6644,7 @@ Sub-category progress
   - [x] test/language/statements/for/dstr/let-ary-ptrn-elem-id-iter-done.js
   - [x] test/language/statements/for/dstr/let-ary-ptrn-elem-id-iter-step-err.js
   - [x] test/language/statements/for/dstr/let-ary-ptrn-elem-id-iter-val-array-prototype.js
-  - [ ] test/language/statements/for/dstr/let-ary-ptrn-elem-id-iter-val-err.js
+  - [x] test/language/statements/for/dstr/let-ary-ptrn-elem-id-iter-val-err.js
   - [x] test/language/statements/for/dstr/let-ary-ptrn-elem-id-iter-val.js
   - [x] test/language/statements/for/dstr/let-ary-ptrn-elem-obj-id-init.js
   - [x] test/language/statements/for/dstr/let-ary-ptrn-elem-obj-id.js
@@ -9035,12 +9035,12 @@ Sub-category progress
   - [x] test/language/statements/function/S13.2.2_A18_T2.js
   - [x] test/language/statements/function/S13.2.2_A19_T1.js
   - [ ] test/language/statements/function/S13.2.2_A19_T2.js
-  - [ ] test/language/statements/function/S13.2.2_A19_T3.js
+  - [x] test/language/statements/function/S13.2.2_A19_T3.js
   - [x] test/language/statements/function/S13.2.2_A19_T4.js
-  - [ ] test/language/statements/function/S13.2.2_A19_T5.js
-  - [ ] test/language/statements/function/S13.2.2_A19_T6.js
+  - [x] test/language/statements/function/S13.2.2_A19_T5.js
+  - [x] test/language/statements/function/S13.2.2_A19_T6.js
   - [x] test/language/statements/function/S13.2.2_A19_T7.js
-  - [ ] test/language/statements/function/S13.2.2_A19_T8.js
+  - [x] test/language/statements/function/S13.2.2_A19_T8.js
   - [x] test/language/statements/function/S13.2.2_A1_T1.js
   - [x] test/language/statements/function/S13.2.2_A1_T2.js
   - [x] test/language/statements/function/S13.2.2_A2.js
@@ -9189,7 +9189,7 @@ Sub-category progress
   - [x] test/language/statements/function/dstr/ary-ptrn-rest-obj-id.js
   - [x] test/language/statements/function/dstr/ary-ptrn-rest-obj-prop-id.js
   - [x] test/language/statements/function/dstr/dflt-ary-init-iter-close.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-init-iter-get-err-array-prototype.js
+  - [x] test/language/statements/function/dstr/dflt-ary-init-iter-get-err-array-prototype.js
   - [x] test/language/statements/function/dstr/dflt-ary-init-iter-get-err.js
   - [x] test/language/statements/function/dstr/dflt-ary-init-iter-no-close.js
   - [x] test/language/statements/function/dstr/dflt-ary-name-iter-val.js
@@ -9200,7 +9200,7 @@ Sub-category progress
   - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elem-ary-empty-init.js
   - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elem-ary-empty-iter.js
   - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elem-ary-rest-init.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-elem-ary-rest-iter.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elem-ary-rest-iter.js
   - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elem-ary-val-null.js
   - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elem-id-init-exhausted.js
   - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elem-id-init-fn-name-arrow.js
@@ -9217,7 +9217,7 @@ Sub-category progress
   - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elem-id-iter-done.js
   - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elem-id-iter-step-err.js
   - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elem-id-iter-val-array-prototype.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-elem-id-iter-val-err.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elem-id-iter-val-err.js
   - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elem-id-iter-val.js
   - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elem-obj-id-init.js
   - [x] test/language/statements/function/dstr/dflt-ary-ptrn-elem-obj-id.js
@@ -9235,7 +9235,7 @@ Sub-category progress
   - [x] test/language/statements/function/dstr/dflt-ary-ptrn-rest-ary-rest.js
   - [x] test/language/statements/function/dstr/dflt-ary-ptrn-rest-id-direct.js
   - [x] test/language/statements/function/dstr/dflt-ary-ptrn-rest-id-elision-next-err.js
-  - [ ] test/language/statements/function/dstr/dflt-ary-ptrn-rest-id-elision.js
+  - [x] test/language/statements/function/dstr/dflt-ary-ptrn-rest-id-elision.js
   - [x] test/language/statements/function/dstr/dflt-ary-ptrn-rest-id-exhausted.js
   - [x] test/language/statements/function/dstr/dflt-ary-ptrn-rest-id-iter-step-err.js
   - [x] test/language/statements/function/dstr/dflt-ary-ptrn-rest-id-iter-val-err.js
@@ -9278,7 +9278,7 @@ Sub-category progress
   - [x] test/language/statements/function/dstr/dflt-obj-ptrn-prop-obj-value-null.js
   - [x] test/language/statements/function/dstr/dflt-obj-ptrn-prop-obj-value-undef.js
   - [x] test/language/statements/function/dstr/dflt-obj-ptrn-prop-obj.js
-  - [ ] test/language/statements/function/dstr/dflt-obj-ptrn-rest-getter.js
+  - [x] test/language/statements/function/dstr/dflt-obj-ptrn-rest-getter.js
   - [x] test/language/statements/function/dstr/dflt-obj-ptrn-rest-skip-non-enumerable.js
   - [x] test/language/statements/function/dstr/dflt-obj-ptrn-rest-val-obj.js
   - [x] test/language/statements/function/dstr/obj-init-null.js
@@ -9720,7 +9720,7 @@ Sub-category progress
   - [x] test/language/statements/if/let-identifier-with-newline.js
   - [x] test/language/statements/if/tco-else-body.js
   - [x] test/language/statements/if/tco-if-body.js
-  - [ ] test/language/statements/labeled/S12.12_A1_T1.js
+  - [x] test/language/statements/labeled/S12.12_A1_T1.js
   - [x] test/language/statements/labeled/continue.js
   - [x] test/language/statements/labeled/cptn-break.js
   - [x] test/language/statements/labeled/cptn-nrml.js
@@ -9778,7 +9778,7 @@ Sub-category progress
   - [x] test/language/statements/let/dstr/ary-ptrn-elem-id-iter-done.js
   - [x] test/language/statements/let/dstr/ary-ptrn-elem-id-iter-step-err.js
   - [x] test/language/statements/let/dstr/ary-ptrn-elem-id-iter-val-array-prototype.js
-  - [ ] test/language/statements/let/dstr/ary-ptrn-elem-id-iter-val-err.js
+  - [x] test/language/statements/let/dstr/ary-ptrn-elem-id-iter-val-err.js
   - [x] test/language/statements/let/dstr/ary-ptrn-elem-id-iter-val.js
   - [x] test/language/statements/let/dstr/ary-ptrn-elem-obj-id-init.js
   - [x] test/language/statements/let/dstr/ary-ptrn-elem-obj-id.js
@@ -10061,7 +10061,7 @@ Sub-category progress
   - [x] test/language/statements/try/S12.14_A13_T2.js
   - [x] test/language/statements/try/S12.14_A13_T3.js
   - [x] test/language/statements/try/S12.14_A14.js
-  - [ ] test/language/statements/try/S12.14_A15.js
+  - [x] test/language/statements/try/S12.14_A15.js
   - [x] test/language/statements/try/S12.14_A16_T1.js
   - [x] test/language/statements/try/S12.14_A16_T10.js
   - [x] test/language/statements/try/S12.14_A16_T11.js
@@ -10089,7 +10089,7 @@ Sub-category progress
   - [x] test/language/statements/try/S12.14_A2.js
   - [x] test/language/statements/try/S12.14_A3.js
   - [x] test/language/statements/try/S12.14_A4.js
-  - [ ] test/language/statements/try/S12.14_A5.js
+  - [x] test/language/statements/try/S12.14_A5.js
   - [x] test/language/statements/try/S12.14_A6.js
   - [x] test/language/statements/try/S12.14_A7_T1.js
   - [x] test/language/statements/try/S12.14_A7_T2.js
@@ -10148,7 +10148,7 @@ Sub-category progress
   - [x] test/language/statements/try/dstr/ary-ptrn-elem-id-iter-done.js
   - [x] test/language/statements/try/dstr/ary-ptrn-elem-id-iter-step-err.js
   - [x] test/language/statements/try/dstr/ary-ptrn-elem-id-iter-val-array-prototype.js
-  - [ ] test/language/statements/try/dstr/ary-ptrn-elem-id-iter-val-err.js
+  - [x] test/language/statements/try/dstr/ary-ptrn-elem-id-iter-val-err.js
   - [x] test/language/statements/try/dstr/ary-ptrn-elem-id-iter-val.js
   - [x] test/language/statements/try/dstr/ary-ptrn-elem-obj-id-init.js
   - [x] test/language/statements/try/dstr/ary-ptrn-elem-obj-id.js
@@ -10400,7 +10400,7 @@ Sub-category progress
   - [x] test/language/statements/variable/dstr/ary-ptrn-elem-id-iter-done.js
   - [x] test/language/statements/variable/dstr/ary-ptrn-elem-id-iter-step-err.js
   - [x] test/language/statements/variable/dstr/ary-ptrn-elem-id-iter-val-array-prototype.js
-  - [ ] test/language/statements/variable/dstr/ary-ptrn-elem-id-iter-val-err.js
+  - [x] test/language/statements/variable/dstr/ary-ptrn-elem-id-iter-val-err.js
   - [x] test/language/statements/variable/dstr/ary-ptrn-elem-id-iter-val.js
   - [x] test/language/statements/variable/dstr/ary-ptrn-elem-id-static-init-await-invalid.js
   - [ ] test/language/statements/variable/dstr/ary-ptrn-elem-id-static-init-await-valid.js
@@ -10580,8 +10580,8 @@ Sub-category progress
   - [ ] test/language/statements/with/S12.10_A1.4_T4.js
   - [x] test/language/statements/with/S12.10_A1.4_T5.js
   - [ ] test/language/statements/with/S12.10_A1.5_T1.js
-  - [ ] test/language/statements/with/S12.10_A1.5_T2.js
-  - [ ] test/language/statements/with/S12.10_A1.5_T3.js
+  - [x] test/language/statements/with/S12.10_A1.5_T2.js
+  - [x] test/language/statements/with/S12.10_A1.5_T3.js
   - [ ] test/language/statements/with/S12.10_A1.5_T4.js
   - [x] test/language/statements/with/S12.10_A1.5_T5.js
   - [x] test/language/statements/with/S12.10_A1.6_T1.js
@@ -10632,10 +10632,10 @@ Sub-category progress
   - [x] test/language/statements/with/S12.10_A3.4_T3.js
   - [x] test/language/statements/with/S12.10_A3.4_T4.js
   - [x] test/language/statements/with/S12.10_A3.4_T5.js
-  - [ ] test/language/statements/with/S12.10_A3.5_T1.js
-  - [ ] test/language/statements/with/S12.10_A3.5_T2.js
-  - [ ] test/language/statements/with/S12.10_A3.5_T3.js
-  - [ ] test/language/statements/with/S12.10_A3.5_T4.js
+  - [x] test/language/statements/with/S12.10_A3.5_T1.js
+  - [x] test/language/statements/with/S12.10_A3.5_T2.js
+  - [x] test/language/statements/with/S12.10_A3.5_T3.js
+  - [x] test/language/statements/with/S12.10_A3.5_T4.js
   - [x] test/language/statements/with/S12.10_A3.5_T5.js
   - [x] test/language/statements/with/S12.10_A3.6_T1.js
   - [x] test/language/statements/with/S12.10_A3.6_T2.js
@@ -10650,8 +10650,8 @@ Sub-category progress
   - [x] test/language/statements/with/S12.10_A3.8_T3.js
   - [ ] test/language/statements/with/S12.10_A3.8_T4.js
   - [x] test/language/statements/with/S12.10_A3.8_T5.js
-  - [ ] test/language/statements/with/S12.10_A3.9_T1.js
-  - [ ] test/language/statements/with/S12.10_A3.9_T2.js
+  - [x] test/language/statements/with/S12.10_A3.9_T1.js
+  - [x] test/language/statements/with/S12.10_A3.9_T2.js
   - [x] test/language/statements/with/S12.10_A3.9_T3.js
   - [x] test/language/statements/with/S12.10_A4_T1.js
   - [x] test/language/statements/with/S12.10_A4_T2.js
@@ -10887,7 +10887,7 @@ Sub-category progress
   - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-rest-obj-id.js
   - [x] test/language/expressions/arrow-function/dstr/ary-ptrn-rest-obj-prop-id.js
   - [x] test/language/expressions/arrow-function/dstr/dflt-ary-init-iter-close.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-init-iter-get-err-array-prototype.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-init-iter-get-err-array-prototype.js
   - [x] test/language/expressions/arrow-function/dstr/dflt-ary-init-iter-get-err.js
   - [x] test/language/expressions/arrow-function/dstr/dflt-ary-init-iter-no-close.js
   - [x] test/language/expressions/arrow-function/dstr/dflt-ary-name-iter-val.js
@@ -10898,7 +10898,7 @@ Sub-category progress
   - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-ary-empty-init.js
   - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-ary-empty-iter.js
   - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-ary-rest-init.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-ary-rest-iter.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-ary-rest-iter.js
   - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-ary-val-null.js
   - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-id-init-exhausted.js
   - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-id-init-fn-name-arrow.js
@@ -10915,7 +10915,7 @@ Sub-category progress
   - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-id-iter-done.js
   - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-id-iter-step-err.js
   - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-id-iter-val-array-prototype.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-id-iter-val-err.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-id-iter-val-err.js
   - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-id-iter-val.js
   - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-obj-id-init.js
   - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-elem-obj-id.js
@@ -10933,7 +10933,7 @@ Sub-category progress
   - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-rest-ary-rest.js
   - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-rest-id-direct.js
   - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-rest-id-elision-next-err.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-rest-id-elision.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-rest-id-elision.js
   - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-rest-id-exhausted.js
   - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-rest-id-iter-step-err.js
   - [x] test/language/expressions/arrow-function/dstr/dflt-ary-ptrn-rest-id-iter-val-err.js
@@ -10976,7 +10976,7 @@ Sub-category progress
   - [x] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-prop-obj-value-null.js
   - [x] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-prop-obj-value-undef.js
   - [x] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-prop-obj.js
-  - [ ] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-rest-getter.js
+  - [x] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-rest-getter.js
   - [x] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-rest-skip-non-enumerable.js
   - [x] test/language/expressions/arrow-function/dstr/dflt-obj-ptrn-rest-val-obj.js
   - [x] test/language/expressions/arrow-function/dstr/obj-init-null.js
@@ -18568,10 +18568,10 @@ Sub-category progress
   - [x] test/language/expressions/dynamic-import/usage/nested-async-function-specifier-tostring.js
   - [ ] test/language/expressions/dynamic-import/usage/nested-async-gen-await-eval-gtbndng-indirect-update-dflt.js
   - [ ] test/language/expressions/dynamic-import/usage/nested-async-gen-await-eval-gtbndng-indirect-update.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-async-gen-await-eval-script-code-host-resolves-module-code.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-async-gen-await-is-call-expression-square-brackets.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-async-gen-await-returns-thenable.js
-  - [ ] test/language/expressions/dynamic-import/usage/nested-async-gen-await-specifier-tostring.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-async-gen-await-eval-script-code-host-resolves-module-code.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-async-gen-await-is-call-expression-square-brackets.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-async-gen-await-returns-thenable.js
+  - [x] test/language/expressions/dynamic-import/usage/nested-async-gen-await-specifier-tostring.js
   - [ ] test/language/expressions/dynamic-import/usage/nested-async-gen-return-await-eval-gtbndng-indirect-update-dflt.js
   - [ ] test/language/expressions/dynamic-import/usage/nested-async-gen-return-await-eval-gtbndng-indirect-update.js
   - [x] test/language/expressions/dynamic-import/usage/nested-async-gen-return-await-eval-script-code-host-resolves-module-code.js
@@ -18798,7 +18798,7 @@ Sub-category progress
   - [x] test/language/expressions/function/dstr/ary-ptrn-rest-obj-id.js
   - [x] test/language/expressions/function/dstr/ary-ptrn-rest-obj-prop-id.js
   - [x] test/language/expressions/function/dstr/dflt-ary-init-iter-close.js
-  - [ ] test/language/expressions/function/dstr/dflt-ary-init-iter-get-err-array-prototype.js
+  - [x] test/language/expressions/function/dstr/dflt-ary-init-iter-get-err-array-prototype.js
   - [x] test/language/expressions/function/dstr/dflt-ary-init-iter-get-err.js
   - [x] test/language/expressions/function/dstr/dflt-ary-init-iter-no-close.js
   - [x] test/language/expressions/function/dstr/dflt-ary-name-iter-val.js
@@ -18809,7 +18809,7 @@ Sub-category progress
   - [x] test/language/expressions/function/dstr/dflt-ary-ptrn-elem-ary-empty-init.js
   - [x] test/language/expressions/function/dstr/dflt-ary-ptrn-elem-ary-empty-iter.js
   - [x] test/language/expressions/function/dstr/dflt-ary-ptrn-elem-ary-rest-init.js
-  - [ ] test/language/expressions/function/dstr/dflt-ary-ptrn-elem-ary-rest-iter.js
+  - [x] test/language/expressions/function/dstr/dflt-ary-ptrn-elem-ary-rest-iter.js
   - [x] test/language/expressions/function/dstr/dflt-ary-ptrn-elem-ary-val-null.js
   - [x] test/language/expressions/function/dstr/dflt-ary-ptrn-elem-id-init-exhausted.js
   - [x] test/language/expressions/function/dstr/dflt-ary-ptrn-elem-id-init-fn-name-arrow.js
@@ -18826,7 +18826,7 @@ Sub-category progress
   - [x] test/language/expressions/function/dstr/dflt-ary-ptrn-elem-id-iter-done.js
   - [x] test/language/expressions/function/dstr/dflt-ary-ptrn-elem-id-iter-step-err.js
   - [x] test/language/expressions/function/dstr/dflt-ary-ptrn-elem-id-iter-val-array-prototype.js
-  - [ ] test/language/expressions/function/dstr/dflt-ary-ptrn-elem-id-iter-val-err.js
+  - [x] test/language/expressions/function/dstr/dflt-ary-ptrn-elem-id-iter-val-err.js
   - [x] test/language/expressions/function/dstr/dflt-ary-ptrn-elem-id-iter-val.js
   - [x] test/language/expressions/function/dstr/dflt-ary-ptrn-elem-obj-id-init.js
   - [x] test/language/expressions/function/dstr/dflt-ary-ptrn-elem-obj-id.js
@@ -18844,7 +18844,7 @@ Sub-category progress
   - [x] test/language/expressions/function/dstr/dflt-ary-ptrn-rest-ary-rest.js
   - [x] test/language/expressions/function/dstr/dflt-ary-ptrn-rest-id-direct.js
   - [x] test/language/expressions/function/dstr/dflt-ary-ptrn-rest-id-elision-next-err.js
-  - [ ] test/language/expressions/function/dstr/dflt-ary-ptrn-rest-id-elision.js
+  - [x] test/language/expressions/function/dstr/dflt-ary-ptrn-rest-id-elision.js
   - [x] test/language/expressions/function/dstr/dflt-ary-ptrn-rest-id-exhausted.js
   - [x] test/language/expressions/function/dstr/dflt-ary-ptrn-rest-id-iter-step-err.js
   - [x] test/language/expressions/function/dstr/dflt-ary-ptrn-rest-id-iter-val-err.js
@@ -18887,7 +18887,7 @@ Sub-category progress
   - [x] test/language/expressions/function/dstr/dflt-obj-ptrn-prop-obj-value-null.js
   - [x] test/language/expressions/function/dstr/dflt-obj-ptrn-prop-obj-value-undef.js
   - [x] test/language/expressions/function/dstr/dflt-obj-ptrn-prop-obj.js
-  - [ ] test/language/expressions/function/dstr/dflt-obj-ptrn-rest-getter.js
+  - [x] test/language/expressions/function/dstr/dflt-obj-ptrn-rest-getter.js
   - [x] test/language/expressions/function/dstr/dflt-obj-ptrn-rest-skip-non-enumerable.js
   - [x] test/language/expressions/function/dstr/dflt-obj-ptrn-rest-val-obj.js
   - [x] test/language/expressions/function/dstr/obj-init-null.js
@@ -19643,9 +19643,9 @@ Sub-category progress
   - [x] test/language/expressions/logical-and/S11.11.1_A4_T4.js
   - [x] test/language/expressions/logical-and/symbol-logical-and-evaluation.js
   - [x] test/language/expressions/logical-and/tco-right.js
-  - [ ] test/language/expressions/logical-assignment/left-hand-side-private-reference-accessor-property-and.js
-  - [ ] test/language/expressions/logical-assignment/left-hand-side-private-reference-accessor-property-nullish.js
-  - [ ] test/language/expressions/logical-assignment/left-hand-side-private-reference-accessor-property-or.js
+  - [x] test/language/expressions/logical-assignment/left-hand-side-private-reference-accessor-property-and.js
+  - [x] test/language/expressions/logical-assignment/left-hand-side-private-reference-accessor-property-nullish.js
+  - [x] test/language/expressions/logical-assignment/left-hand-side-private-reference-accessor-property-or.js
   - [x] test/language/expressions/logical-assignment/left-hand-side-private-reference-accessor-property-short-circuit-and.js
   - [x] test/language/expressions/logical-assignment/left-hand-side-private-reference-accessor-property-short-circuit-nullish.js
   - [x] test/language/expressions/logical-assignment/left-hand-side-private-reference-accessor-property-short-circuit-or.js
@@ -19900,7 +19900,7 @@ Sub-category progress
   - [x] test/language/expressions/new/spread-sngl-obj-ident.js
   - [x] test/language/expressions/new.target/asi.js
   - [x] test/language/expressions/new.target/escaped-new.js
-  - [ ] test/language/expressions/new.target/escaped-target.js
+  - [x] test/language/expressions/new.target/escaped-target.js
   - [ ] test/language/expressions/new.target/unary-expr.js
   - [x] test/language/expressions/new.target/value-via-call.js
   - [x] test/language/expressions/new.target/value-via-fpapply.js
@@ -20481,7 +20481,7 @@ Sub-category progress
   - [x] test/language/expressions/object/dstr/meth-ary-ptrn-rest-obj-id.js
   - [x] test/language/expressions/object/dstr/meth-ary-ptrn-rest-obj-prop-id.js
   - [x] test/language/expressions/object/dstr/meth-dflt-ary-init-iter-close.js
-  - [ ] test/language/expressions/object/dstr/meth-dflt-ary-init-iter-get-err-array-prototype.js
+  - [x] test/language/expressions/object/dstr/meth-dflt-ary-init-iter-get-err-array-prototype.js
   - [x] test/language/expressions/object/dstr/meth-dflt-ary-init-iter-get-err.js
   - [x] test/language/expressions/object/dstr/meth-dflt-ary-init-iter-no-close.js
   - [x] test/language/expressions/object/dstr/meth-dflt-ary-name-iter-val.js
@@ -20492,7 +20492,7 @@ Sub-category progress
   - [x] test/language/expressions/object/dstr/meth-dflt-ary-ptrn-elem-ary-empty-init.js
   - [x] test/language/expressions/object/dstr/meth-dflt-ary-ptrn-elem-ary-empty-iter.js
   - [x] test/language/expressions/object/dstr/meth-dflt-ary-ptrn-elem-ary-rest-init.js
-  - [ ] test/language/expressions/object/dstr/meth-dflt-ary-ptrn-elem-ary-rest-iter.js
+  - [x] test/language/expressions/object/dstr/meth-dflt-ary-ptrn-elem-ary-rest-iter.js
   - [x] test/language/expressions/object/dstr/meth-dflt-ary-ptrn-elem-ary-val-null.js
   - [x] test/language/expressions/object/dstr/meth-dflt-ary-ptrn-elem-id-init-exhausted.js
   - [x] test/language/expressions/object/dstr/meth-dflt-ary-ptrn-elem-id-init-fn-name-arrow.js
@@ -20509,7 +20509,7 @@ Sub-category progress
   - [x] test/language/expressions/object/dstr/meth-dflt-ary-ptrn-elem-id-iter-done.js
   - [x] test/language/expressions/object/dstr/meth-dflt-ary-ptrn-elem-id-iter-step-err.js
   - [x] test/language/expressions/object/dstr/meth-dflt-ary-ptrn-elem-id-iter-val-array-prototype.js
-  - [ ] test/language/expressions/object/dstr/meth-dflt-ary-ptrn-elem-id-iter-val-err.js
+  - [x] test/language/expressions/object/dstr/meth-dflt-ary-ptrn-elem-id-iter-val-err.js
   - [x] test/language/expressions/object/dstr/meth-dflt-ary-ptrn-elem-id-iter-val.js
   - [x] test/language/expressions/object/dstr/meth-dflt-ary-ptrn-elem-obj-id-init.js
   - [x] test/language/expressions/object/dstr/meth-dflt-ary-ptrn-elem-obj-id.js
@@ -20527,7 +20527,7 @@ Sub-category progress
   - [x] test/language/expressions/object/dstr/meth-dflt-ary-ptrn-rest-ary-rest.js
   - [x] test/language/expressions/object/dstr/meth-dflt-ary-ptrn-rest-id-direct.js
   - [x] test/language/expressions/object/dstr/meth-dflt-ary-ptrn-rest-id-elision-next-err.js
-  - [ ] test/language/expressions/object/dstr/meth-dflt-ary-ptrn-rest-id-elision.js
+  - [x] test/language/expressions/object/dstr/meth-dflt-ary-ptrn-rest-id-elision.js
   - [x] test/language/expressions/object/dstr/meth-dflt-ary-ptrn-rest-id-exhausted.js
   - [x] test/language/expressions/object/dstr/meth-dflt-ary-ptrn-rest-id-iter-step-err.js
   - [x] test/language/expressions/object/dstr/meth-dflt-ary-ptrn-rest-id-iter-val-err.js
@@ -20570,7 +20570,7 @@ Sub-category progress
   - [x] test/language/expressions/object/dstr/meth-dflt-obj-ptrn-prop-obj-value-null.js
   - [x] test/language/expressions/object/dstr/meth-dflt-obj-ptrn-prop-obj-value-undef.js
   - [x] test/language/expressions/object/dstr/meth-dflt-obj-ptrn-prop-obj.js
-  - [ ] test/language/expressions/object/dstr/meth-dflt-obj-ptrn-rest-getter.js
+  - [x] test/language/expressions/object/dstr/meth-dflt-obj-ptrn-rest-getter.js
   - [x] test/language/expressions/object/dstr/meth-dflt-obj-ptrn-rest-skip-non-enumerable.js
   - [x] test/language/expressions/object/dstr/meth-dflt-obj-ptrn-rest-val-obj.js
   - [x] test/language/expressions/object/dstr/meth-obj-init-null.js
@@ -21102,7 +21102,7 @@ Sub-category progress
   - [ ] test/language/expressions/optional-chaining/member-expression-async-identifier.js
   - [ ] test/language/expressions/optional-chaining/member-expression-async-literal.js
   - [ ] test/language/expressions/optional-chaining/member-expression-async-this.js
-  - [ ] test/language/expressions/optional-chaining/member-expression.js
+  - [x] test/language/expressions/optional-chaining/member-expression.js
   - [ ] test/language/expressions/optional-chaining/new-target-optional-call.js
   - [x] test/language/expressions/optional-chaining/optional-call-preserves-this.js
   - [ ] test/language/expressions/optional-chaining/optional-chain-async-optional-chain-square-brackets.js
@@ -21117,7 +21117,7 @@ Sub-category progress
   - [x] test/language/expressions/optional-chaining/runtime-semantics-evaluation.js
   - [x] test/language/expressions/optional-chaining/short-circuiting.js
   - [x] test/language/expressions/optional-chaining/static-semantics-simple-assignment.js
-  - [ ] test/language/expressions/optional-chaining/super-property-optional-call.js
+  - [x] test/language/expressions/optional-chaining/super-property-optional-call.js
   - [x] test/language/expressions/optional-chaining/update-expression-postfix.js
   - [x] test/language/expressions/optional-chaining/update-expression-prefix.js
   - [x] test/language/expressions/postfix-decrement/11.3.2-2-3-s.js
@@ -21512,7 +21512,7 @@ Sub-category progress
   - [x] test/language/expressions/super/prop-expr-uninitialized-this-putvalue.js
   - [ ] test/language/expressions/super/prop-poisoned-underscore-proto.js
   - [x] test/language/expressions/super/realm.js
-  - [ ] test/language/expressions/super/super-reference-resolution.js
+  - [x] test/language/expressions/super/super-reference-resolution.js
   - [x] test/language/expressions/tagged-template/cache-different-functions-same-site.js
   - [x] test/language/expressions/tagged-template/cache-differing-expressions-eval.js
   - [x] test/language/expressions/tagged-template/cache-differing-expressions-new-function.js
@@ -21988,7 +21988,7 @@ Sub-category progress
   - [x] test/language/function-code/10.4.3-1-54-s.js
   - [x] test/language/function-code/10.4.3-1-54gs.js
   - [x] test/language/function-code/10.4.3-1-55-s.js
-  - [ ] test/language/function-code/10.4.3-1-55gs.js
+  - [x] test/language/function-code/10.4.3-1-55gs.js
   - [x] test/language/function-code/10.4.3-1-56-s.js
   - [x] test/language/function-code/10.4.3-1-56gs.js
   - [x] test/language/function-code/10.4.3-1-57-s.js
@@ -21996,7 +21996,7 @@ Sub-category progress
   - [x] test/language/function-code/10.4.3-1-58-s.js
   - [x] test/language/function-code/10.4.3-1-58gs.js
   - [x] test/language/function-code/10.4.3-1-59-s.js
-  - [ ] test/language/function-code/10.4.3-1-59gs.js
+  - [x] test/language/function-code/10.4.3-1-59gs.js
   - [x] test/language/function-code/10.4.3-1-60-s.js
   - [x] test/language/function-code/10.4.3-1-60gs.js
   - [x] test/language/function-code/10.4.3-1-61-s.js
