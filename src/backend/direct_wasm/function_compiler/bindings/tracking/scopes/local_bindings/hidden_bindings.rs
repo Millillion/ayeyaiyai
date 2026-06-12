@@ -8,7 +8,7 @@ impl<'a> FunctionCompiler<'a> {
     /// its deleted marker is set when a strict reference resolves) must be
     /// synced through this dedicated flag for top-level presence queries
     /// (`'name' in this`) to observe it after the call returns.
-    fn emit_global_delete_sync_flag_write_for_source(
+    pub(in crate::backend::direct_wasm) fn emit_global_delete_sync_flag_write_for_source(
         &mut self,
         hidden_name: &str,
         fallback_source_name: Option<&str>,

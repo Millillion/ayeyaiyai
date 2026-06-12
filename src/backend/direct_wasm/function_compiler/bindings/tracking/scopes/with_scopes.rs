@@ -1,6 +1,90 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    /// Records the active `with`-scope object chain as the definition-site
+    /// chain of an internal function expression. Function expressions and
+    /// arrows are hoisted by the frontend, so their only syntactic reference
+    /// (`__ayy_fnexpr_*` / `__ayy_arrow_*`) marks the source position where
+    /// they were created; bodies compile out-of-line later, where the chain
+    /// is re-seeded (see `seed_definition_with_scopes_for_current_function`).
+    pub(in crate::backend::direct_wasm) fn record_function_definition_with_scopes(
+        &mut self,
+        function_name: &str,
+    ) {
+        if !(function_name.starts_with("__ayy_fnexpr_")
+            || function_name.starts_with("__ayy_arrow_"))
+        {
+            return;
+        }
+        if self.state.emission.lexical_scopes.with_scopes.is_empty() {
+            return;
+        }
+        if self
+            .backend
+            .function_registry
+            .analysis
+            .function_definition_with_scopes(function_name)
+            .is_some()
+        {
+            return;
+        }
+        let with_scopes = self.state.emission.lexical_scopes.with_scopes.clone();
+        // Only scope-object expressions that stay resolvable inside the
+        // function's own compile (globals / the top-level global object) can
+        // be transplanted; enclosing-function locals cannot.
+        let portable = with_scopes.iter().all(|scope_object| match scope_object {
+            Expression::This => self.current_function_name().is_none(),
+            Expression::Identifier(name) => {
+                self.resolve_current_local_binding(name).is_none()
+                    && (self.global_has_binding(name)
+                        || self.backend.global_has_lexical_binding(name)
+                        || self.global_object_binding(name).is_some()
+                        || self
+                            .backend
+                            .shared_global_semantics
+                            .values
+                            .object_binding(name)
+                            .is_some())
+            }
+            _ => false,
+        });
+        if !portable {
+            return;
+        }
+        self.backend
+            .function_registry
+            .analysis
+            .set_function_definition_with_scopes(function_name, with_scopes);
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
+    }
+
+    /// Re-seeds the definition-site `with`-scope chain recorded by
+    /// `record_function_definition_with_scopes` when this function's body is
+    /// compiled out-of-line, so identifier reads/writes resolve through the
+    /// scope objects exactly as they would have at the definition site.
+    pub(in crate::backend::direct_wasm) fn seed_definition_with_scopes_for_current_function(
+        &mut self,
+    ) {
+        if !self.state.emission.lexical_scopes.with_scopes.is_empty() {
+            return;
+        }
+        let Some(function_name) = self.current_function_name().map(str::to_string) else {
+            return;
+        };
+        let Some(with_scopes) = self
+            .backend
+            .function_registry
+            .analysis
+            .function_definition_with_scopes(&function_name)
+            .cloned()
+        else {
+            return;
+        };
+        for with_scope in with_scopes {
+            self.state.push_with_scope(with_scope);
+        }
+    }
+
     pub(in crate::backend::direct_wasm) fn canonicalize_with_scope_expression(
         &self,
         expression: &Expression,

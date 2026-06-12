@@ -540,6 +540,7 @@ impl<'a> FunctionCompiler<'a> {
             self.push_global_set(binding.value_index);
             self.sync_updated_identifier_capture_from_local(name, next_local)?;
             self.state.emission.output.instructions.push(0x05);
+            self.emit_global_delete_sync_flag_write_for_source(&hidden_name, Some(name))?;
             self.emit_named_error_throw("ReferenceError")?;
             self.state.emission.output.instructions.push(0x0b);
             self.pop_control_frame();
@@ -568,6 +569,7 @@ impl<'a> FunctionCompiler<'a> {
             self.push_global_set(binding.value_index);
             self.sync_updated_identifier_capture_from_local(name, next_local)?;
             self.state.emission.output.instructions.push(0x05);
+            self.emit_global_delete_sync_flag_write_for_source(name, Some(name))?;
             self.emit_named_error_throw("ReferenceError")?;
             self.state.emission.output.instructions.push(0x0b);
             self.pop_control_frame();

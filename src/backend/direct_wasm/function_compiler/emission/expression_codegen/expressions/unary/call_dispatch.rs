@@ -1097,6 +1097,7 @@ impl<'a> FunctionCompiler<'a> {
                     name
                 );
             }
+            self.record_function_definition_with_scopes(name);
             return self.emit_identifier_call_expression(expression, callee, name, arguments);
         }
         if Self::expression_is_nested_assert_helper_member_expression(callee)

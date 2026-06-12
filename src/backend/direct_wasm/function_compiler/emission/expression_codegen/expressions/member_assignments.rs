@@ -751,6 +751,68 @@ impl<'a> FunctionCompiler<'a> {
             }
         }
 
+        // A destructuring rest target builds its array in a `__ayy_array_rest_*`
+        // temp via runtime pushes; when the contents are statically known,
+        // assign the materialized array literal instead so a setter parameter
+        // (and the nonlocal bindings it stores to) carries the contents in
+        // static metadata.
+        let materialized_rest_value = if let Expression::Identifier(value_name) = value
+            && value_name.starts_with("__ayy_array_rest_")
+            && let Some(array_binding) = self.resolve_array_binding_from_expression(value)
+            && !array_binding.values.is_empty()
+            && array_binding.values.iter().all(Option::is_some)
+        {
+            Some(Expression::Array(
+                array_binding
+                    .values
+                    .iter()
+                    .map(|element| ArrayElement::Expression(element.clone().expect("checked")))
+                    .collect(),
+            ))
+        } else {
+            None
+        };
+        let value = materialized_rest_value.as_ref().unwrap_or(value);
+
+        // Destructuring member targets are evaluated into
+        // `__ayy_target_object_*` / `__ayy_target_property_*` temps for
+        // spec-ordered reference resolution; canonicalize them back to the
+        // real owner and static key so the static setter/data paths apply
+        // instead of degrading to the dynamic-key fallbacks.
+        let canonical_target_object;
+        let object = if let Expression::Identifier(object_name) = object
+            && object_name.starts_with("__ayy_target_object_")
+            && let Some(owner_name) =
+                self.runtime_object_property_shadow_owner_name_for_identifier(object_name)
+            && owner_name != *object_name
+        {
+            canonical_target_object = if owner_name == "this" {
+                Expression::This
+            } else {
+                Expression::Identifier(owner_name)
+            };
+            &canonical_target_object
+        } else {
+            object
+        };
+        let canonical_target_property;
+        let property = if let Expression::Identifier(property_name) = property
+            && property_name.starts_with("__ayy_target_property_")
+        {
+            let materialized_property = self.materialize_static_expression(property);
+            if matches!(
+                materialized_property,
+                Expression::String(_) | Expression::Number(_)
+            ) {
+                canonical_target_property = materialized_property;
+                &canonical_target_property
+            } else {
+                property
+            }
+        } else {
+            property
+        };
+
         if trace_member_assignment {
             eprintln!("member_assignment:setter:start");
         }

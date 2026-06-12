@@ -28,6 +28,7 @@ impl<'a> FunctionCompiler<'a> {
         if trace {
             eprintln!("function_compile=register_statements");
         }
+        self.seed_definition_with_scopes_for_current_function();
         self.bindings_domain().register_statements(statements)?;
         let mut declared_local_indices = self
             .state

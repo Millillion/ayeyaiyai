@@ -1179,8 +1179,14 @@ impl<'a> FunctionCompiler<'a> {
                         return Ok(());
                     }
                 }
-                self.emit_numeric_expression(expression)?;
+                // `delete obj.prop` evaluates the base object and the
+                // property key, but must NOT Get the member value: reading
+                // it here runs getters the spec never invokes (and a getter
+                // that deletes its own property would recurse through this
+                // emission forever).
+                self.emit_numeric_expression(object)?;
                 self.state.emission.output.instructions.push(0x1a);
+                self.emit_property_key_expression_effects(property)?;
                 self.push_i32_const(1);
             }
             Expression::SuperMember { .. }

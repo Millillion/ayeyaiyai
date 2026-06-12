@@ -426,6 +426,46 @@ impl<'a> FunctionCompiler<'a> {
                         "member_read:materialized object={object:?} property={property:?} value={materialized:?}"
                     );
                 }
+                // A global-object member read (`this.x` at top level) can
+                // materialize to the bare identifier, but property reads of
+                // missing globals yield undefined — they must not adopt the
+                // bare identifier's ReferenceError semantics.
+                if let Expression::Identifier(materialized_name) = &materialized
+                    && matches!(
+                        &static_array_property,
+                        Expression::String(property_name) if property_name == materialized_name
+                    )
+                    && matches!(object, Expression::This)
+                    && (self.state.speculation.execution_context.top_level_function
+                        || self.current_function_name().is_none())
+                    && self.resolve_current_local_binding(materialized_name).is_none()
+                    && self.resolve_global_binding_index(materialized_name).is_none()
+                    && !self.global_has_binding(materialized_name)
+                    && !self.backend.global_has_lexical_binding(materialized_name)
+                    && self
+                        .backend
+                        .global_function_binding(materialized_name)
+                        .is_none()
+                    && builtin_identifier_kind(materialized_name).is_none()
+                {
+                    if let Some(binding) = self.implicit_global_binding(materialized_name) {
+                        // Property reads of a not-yet-created implicit global
+                        // yield undefined instead of the bare identifier's
+                        // ReferenceError.
+                        self.push_global_get(binding.present_index);
+                        self.state.emission.output.instructions.push(0x04);
+                        self.state.emission.output.instructions.push(I32_TYPE);
+                        self.push_control_frame();
+                        self.push_global_get(binding.value_index);
+                        self.state.emission.output.instructions.push(0x05);
+                        self.push_i32_const(JS_UNDEFINED_TAG);
+                        self.state.emission.output.instructions.push(0x0b);
+                        self.pop_control_frame();
+                    } else {
+                        self.push_i32_const(JS_UNDEFINED_TAG);
+                    }
+                    return Ok(());
+                }
                 self.emit_numeric_expression(&materialized)?;
                 return Ok(());
             }
