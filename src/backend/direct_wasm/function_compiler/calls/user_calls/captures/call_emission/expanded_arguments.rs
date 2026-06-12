@@ -170,7 +170,10 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
-    fn user_function_body_contains_super_call(&self, user_function: &UserFunction) -> bool {
+    pub(in crate::backend::direct_wasm) fn user_function_body_contains_super_call(
+        &self,
+        user_function: &UserFunction,
+    ) -> bool {
         self.resolve_registered_function_declaration(&user_function.name)
             .is_some_and(|function| {
                 function.params.iter().any(|parameter| {

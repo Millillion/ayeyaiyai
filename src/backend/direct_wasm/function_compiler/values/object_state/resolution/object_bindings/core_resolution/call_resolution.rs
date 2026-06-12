@@ -1175,16 +1175,36 @@ impl<'a> FunctionCompiler<'a> {
             .into_iter()
             .map(|entry| {
                 let entry = entry?;
-                let entry_binding = self.resolve_array_binding_from_expression(&entry)?;
-                let key = entry_binding
-                    .values
-                    .first()
-                    .and_then(|value| value.clone())?;
-                let value = entry_binding
-                    .values
-                    .get(1)
-                    .and_then(|value| value.clone())
-                    .unwrap_or(Expression::Undefined);
+                if let Some(entry_binding) = self.resolve_array_binding_from_expression(&entry) {
+                    let key = entry_binding
+                        .values
+                        .first()
+                        .and_then(|value| value.clone())?;
+                    let value = entry_binding
+                        .values
+                        .get(1)
+                        .and_then(|value| value.clone())
+                        .unwrap_or(Expression::Undefined);
+                    return Some(Some(Expression::Array(vec![
+                        ArrayElement::Expression(key),
+                        ArrayElement::Expression(value),
+                    ])));
+                }
+                // Non-array object entries read Get(entry, "0") and
+                // Get(entry, "1"), which default to undefined.
+                let entry_binding = self.resolve_object_binding_from_expression(&entry)?;
+                let key = object_binding_lookup_value(
+                    &entry_binding,
+                    &Expression::String("0".to_string()),
+                )
+                .cloned()
+                .unwrap_or(Expression::Undefined);
+                let value = object_binding_lookup_value(
+                    &entry_binding,
+                    &Expression::String("1".to_string()),
+                )
+                .cloned()
+                .unwrap_or(Expression::Undefined);
                 Some(Some(Expression::Array(vec![
                     ArrayElement::Expression(key),
                     ArrayElement::Expression(value),
@@ -1225,6 +1245,38 @@ impl<'a> FunctionCompiler<'a> {
         let Some(collection_kind) = self.static_map_kind_from_binding(&object_binding) else {
             return false;
         };
+        // The same call statement applies its mutation twice (once during
+        // emission, once during the statement update pass). Primitive keys
+        // make the second application a no-op, but object keys have no
+        // static identity and would be inserted twice; dedupe back-to-back
+        // identical applications through a one-shot marker.
+        let mutation_marker_property =
+            Expression::String("__ayy[[MapLastMutation]]".to_string());
+        let mutation_marker = Expression::String(format!(
+            "{property_name}:{:?}",
+            arguments
+                .iter()
+                .map(|argument| match argument {
+                    CallArgument::Expression(expression) | CallArgument::Spread(expression) =>
+                        self.materialize_static_expression(expression),
+                })
+                .collect::<Vec<_>>()
+        ));
+        if object_binding_lookup_value(&object_binding, &mutation_marker_property)
+            == Some(&mutation_marker)
+        {
+            object_binding_remove_property(&mut object_binding, &mutation_marker_property);
+            self.state
+                .speculation
+                .static_semantics
+                .set_local_object_binding(&object_name, object_binding.clone());
+            if self.binding_name_is_global(&object_name) {
+                self.backend
+                    .sync_global_object_binding(&object_name, Some(object_binding));
+            }
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
+            return true;
+        }
         let mut entries = self
             .static_map_entries_from_binding(&object_binding)
             .unwrap_or_default();
@@ -1278,6 +1330,12 @@ impl<'a> FunctionCompiler<'a> {
         let current_size = entries.iter().filter(|entry| entry.is_some()).count() as f64;
         self.define_static_map_entries(&mut object_binding, entries);
         self.define_static_map_size(&mut object_binding, current_size);
+        object_binding_define_property(
+            &mut object_binding,
+            mutation_marker_property,
+            mutation_marker,
+            false,
+        );
         self.sync_static_map_runtime_entries(&object_name, &collection_kind, &runtime_entries);
         self.state
             .speculation
@@ -1512,7 +1570,7 @@ impl<'a> FunctionCompiler<'a> {
     fn resolve_static_weak_collection_object_binding(
         &self,
         callee: &Expression,
-        _arguments: &[CallArgument],
+        arguments: &[CallArgument],
     ) -> Option<ObjectValueBinding> {
         let kind = match callee {
             Expression::Identifier(name)
@@ -1521,7 +1579,33 @@ impl<'a> FunctionCompiler<'a> {
             {
                 name.as_str()
             }
-            _ => return None,
+            _ => match self.resolve_function_binding_from_expression(callee) {
+                Some(LocalFunctionBinding::Builtin(function_name))
+                    if matches!(function_name.as_str(), "WeakMap" | "WeakSet") =>
+                {
+                    if function_name == "WeakMap" {
+                        "WeakMap"
+                    } else {
+                        "WeakSet"
+                    }
+                }
+                // Subclass constructors inherit from the builtin prototype.
+                _ if self.static_constructor_prototype_fallback_is_bounded(callee)
+                    && self.constructor_callee_inherits_from_builtin_prototype(
+                        callee, arguments, "WeakMap",
+                    ) =>
+                {
+                    "WeakMap"
+                }
+                _ if self.static_constructor_prototype_fallback_is_bounded(callee)
+                    && self.constructor_callee_inherits_from_builtin_prototype(
+                        callee, arguments, "WeakSet",
+                    ) =>
+                {
+                    "WeakSet"
+                }
+                _ => return None,
+            },
         };
         let mut object_binding = empty_object_value_binding();
         object_binding_define_property(

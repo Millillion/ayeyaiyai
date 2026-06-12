@@ -452,6 +452,13 @@ impl<'a> FunctionCompiler<'a> {
                 "construct_call:default_derived_builtin callee={callee:?} super={function_name}"
             );
         }
+        if matches!(function_name.as_str(), "Symbol" | "BigInt") {
+            // Symbol and BigInt have [[Construct]] slots that always throw,
+            // so the default derived super(...args) call throws a TypeError.
+            self.emit_named_error_throw("TypeError")?;
+            self.push_i32_const(JS_UNDEFINED_TAG);
+            return Ok(true);
+        }
         self.state
             .speculation
             .static_semantics
@@ -1195,8 +1202,40 @@ impl<'a> FunctionCompiler<'a> {
                 capture_source_bindings.as_ref(),
             )
         })
-        .flatten()
-        .filter(|(expression, _)| {
+        .flatten();
+        // Derived-constructor return overrides: an explicit primitive return
+        // value throws a TypeError, and an explicit `return undefined`
+        // without any super() call throws a ReferenceError (`this` was never
+        // initialized).
+        if self.user_function_is_derived_constructor(user_function)
+            && let Some((expression, true)) = constructor_return_resolution.as_ref()
+        {
+            let materialized = self.materialize_static_expression(expression);
+            if matches!(materialized, Expression::Undefined)
+                && !self.user_function_body_contains_super_call(user_function)
+            {
+                self.emit_named_error_throw("ReferenceError")?;
+                self.push_i32_const(JS_UNDEFINED_TAG);
+                return Ok(true);
+            }
+            if matches!(
+                self.infer_value_kind(&materialized),
+                Some(
+                    StaticValueKind::Number
+                        | StaticValueKind::Bool
+                        | StaticValueKind::String
+                        | StaticValueKind::BigInt
+                        | StaticValueKind::Symbol
+                        | StaticValueKind::Null
+                )
+            ) || self.resolve_symbol_identity_expression(&materialized).is_some()
+            {
+                self.emit_named_error_throw("TypeError")?;
+                self.push_i32_const(JS_UNDEFINED_TAG);
+                return Ok(true);
+            }
+        }
+        let constructor_return_resolution = constructor_return_resolution.filter(|(expression, _)| {
             self.resolve_object_binding_from_expression(expression)
                 .is_some()
                 || self
