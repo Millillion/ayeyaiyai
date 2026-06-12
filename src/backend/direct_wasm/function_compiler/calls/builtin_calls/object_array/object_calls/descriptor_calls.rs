@@ -1235,6 +1235,16 @@ impl<'a> FunctionCompiler<'a> {
                 object_binding.extensible
             );
         }
+        // A `this`-target define inside a function can observe its own
+        // earlier-pass static application (the local `this` binding persists
+        // across compile passes), so a no-change conclusion would suppress
+        // the real store. Fall through to real emission instead.
+        if no_change
+            && matches!(target, Expression::This)
+            && self.current_function_name().is_some()
+        {
+            return None;
+        }
         no_change.then_some(true)
     }
 

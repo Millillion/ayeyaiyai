@@ -257,6 +257,12 @@ impl<'a> FunctionCompiler<'a> {
                     )
                     .or_else(|| {
                         self.resolve_static_string_concat_value(argument, current_function_name)
+                    })
+                    .or_else(|| {
+                        self.resolve_static_function_to_string_value_with_context(
+                            argument,
+                            current_function_name,
+                        )
                     })?,
                 None => String::new(),
             })),

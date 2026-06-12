@@ -1110,7 +1110,7 @@ impl<'a> FunctionCompiler<'a> {
         property: &Expression,
         environment: &mut StaticResolutionEnvironment,
     ) -> Option<Expression> {
-        self.resolve_static_constructor_property_key(property, environment)
+        self.resolve_static_constructor_property_key(property, environment, None)
             .or_else(|| self.evaluate_static_expression_with_state(property, environment))
             .or_else(|| self.materialize_static_expression_with_state(property, environment))
             .and_then(|property| self.resolve_primitive_property_key_expression(&property))
@@ -1212,6 +1212,7 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         expression: &Expression,
         environment: &mut StaticResolutionEnvironment,
+        current_function_name: Option<&str>,
     ) -> Option<Expression> {
         let mut candidates = Vec::new();
         let mut push_candidate = |candidate: Expression| {
@@ -1225,6 +1226,21 @@ impl<'a> FunctionCompiler<'a> {
         };
 
         push_candidate(expression.clone());
+
+        // Class-field computed keys reference bindings captured from the
+        // class-init scope; resolve them through the capture-binding channel
+        // so the static define lands on the same canonical key as reads.
+        if let Expression::Identifier(name) = expression
+            && let Some(function_name) = current_function_name
+            && let Some(hidden_name) = self
+                .user_function_capture_bindings(function_name)
+                .and_then(|bindings| bindings.get(name).cloned())
+        {
+            push_candidate(Expression::Identifier(hidden_name.clone()));
+            if let Some(value) = self.global_value_binding(&hidden_name) {
+                push_candidate(value.clone());
+            }
+        }
 
         if let Some(resolved) = self
             .resolve_bound_alias_expression_with_state(expression, environment)
@@ -1312,7 +1328,11 @@ impl<'a> FunctionCompiler<'a> {
                         _ => continue,
                     };
                     let property = self
-                        .resolve_static_constructor_property_key(property, environment)
+                        .resolve_static_constructor_property_key(
+                            property,
+                            environment,
+                            current_function_name,
+                        )
                         .or_else(|| {
                             self.evaluate_static_expression_with_state(property, environment)
                         })
@@ -1437,7 +1457,11 @@ impl<'a> FunctionCompiler<'a> {
                         continue;
                     };
                     let property = self
-                        .resolve_static_constructor_property_key(property_expression, environment)
+                        .resolve_static_constructor_property_key(
+                            property_expression,
+                            environment,
+                            current_function_name,
+                        )
                         .or_else(|| {
                             self.evaluate_static_expression_with_state(
                                 property_expression,
@@ -1485,6 +1509,32 @@ impl<'a> FunctionCompiler<'a> {
                             })
                             .unwrap_or(Expression::Undefined)
                     };
+                    // A computed class-field key that failed canonical
+                    // resolution (e.g. the capture-binding metadata is not
+                    // populated yet on an early pass) must not be stored
+                    // under a junk key: the resulting binding would claim
+                    // closed-world absence of the real key. Store an Update
+                    // marker value instead so snapshot consumers treat the
+                    // binding as containing an unresolved static update.
+                    let property_is_canonical =
+                        static_property_name_from_expression(&property).is_some()
+                            || self.well_known_symbol_name(&property).is_some()
+                            || self.resolve_symbol_identity_expression(&property).is_some();
+                    let value = if property_is_canonical {
+                        value
+                    } else {
+                        Expression::Update {
+                            name: "__ayy_unresolved_static_define_key".to_string(),
+                            op: UpdateOp::Increment,
+                            prefix: false,
+                        }
+                    };
+                    if crate::ayy_env_flag!("AYY_TRACE_STATIC_CTOR_DEFINE") {
+                        eprintln!(
+                            "static_ctor_define target={target_name} raw_property={property_expression:?} property={property:?} value={value:?} binding_present={}",
+                            environment.object_binding_mut(&target_name).is_some()
+                        );
+                    }
                     if let Some(object_binding) = environment.object_binding_mut(&target_name) {
                         if !object_binding_can_define_property(object_binding, &property) {
                             return Err(StaticThrowValue::NamedError("TypeError"));
@@ -2044,11 +2094,17 @@ impl<'a> FunctionCompiler<'a> {
             .and_then(|result| self.resolve_object_binding_from_expression(result));
         if trace_constructor {
             eprintln!(
-                "constructor_new_object:snapshot function={function_name} props={:?}",
+                "constructor_new_object:snapshot function={function_name} props={:?} result_expr={:?}",
                 snapshot_result
                     .as_ref()
                     .map(ordered_object_property_names)
-                    .unwrap_or_default()
+                    .unwrap_or_default(),
+                self.state
+                    .speculation
+                    .static_semantics
+                    .last_bound_user_function_call
+                    .as_ref()
+                    .map(|snapshot| &snapshot.result_expression)
             );
         }
         if snapshot_result
