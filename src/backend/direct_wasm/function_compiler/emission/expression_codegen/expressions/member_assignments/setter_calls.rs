@@ -151,6 +151,18 @@ impl<'a> FunctionCompiler<'a> {
             }
             return Ok(false);
         }
+        if matches!(
+            self.member_function_binding_property(property),
+            Some(
+                MemberFunctionBindingProperty::Symbol(_)
+                    | MemberFunctionBindingProperty::SymbolExpression(_)
+            )
+        ) {
+            if trace_member_assignment {
+                eprintln!("member_assignment:dynamic_setter:symbol_property_skip");
+            }
+            return Ok(false);
+        }
 
         let object_binding = self
             .resolve_object_binding_from_expression(object)

@@ -16472,6 +16472,66 @@ fn compiles_class_field_computed_name_abrupt_completion() {
 }
 
 #[test]
+fn compiles_object_computed_symbol_setter_after_string_setters() {
+    let tempdir = tempdir().unwrap();
+    let input = tempdir
+        .path()
+        .join("object-computed-symbol-setter-after-string-setters.js");
+    let output = tempdir
+        .path()
+        .join("object-computed-symbol-setter-after-string-setters.wasm");
+
+    fs::write(
+        &input,
+        r#"
+        var calls = 0;
+        var s = Symbol();
+        var object = {
+          set ['a'](_) {
+            calls += 1;
+          },
+          set [1](_) {
+            calls += 1;
+          },
+          set [s](_) {
+            calls += 1;
+          }
+        };
+
+        object.a = 'A';
+        object[1] = 1;
+        object[s] = s;
+        console.log(calls);
+        "#,
+    )
+    .unwrap();
+
+    let compile = Command::new(env!("CARGO_BIN_EXE_ayeyaiyai"))
+        .arg(&input)
+        .arg("-o")
+        .arg(&output)
+        .output()
+        .unwrap();
+
+    assert!(
+        compile.status.success(),
+        "compiler failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&compile.stdout),
+        String::from_utf8_lossy(&compile.stderr),
+    );
+
+    let run = Command::new("wasmtime").arg(&output).output().unwrap();
+
+    assert!(
+        run.status.success(),
+        "wasmtime failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&run.stdout),
+        String::from_utf8_lossy(&run.stderr),
+    );
+    assert_eq!(String::from_utf8_lossy(&run.stdout), "3\n");
+}
+
+#[test]
 fn compiles_class_accessor_computed_numeric_name() {
     let tempdir = tempdir().unwrap();
     let input = tempdir

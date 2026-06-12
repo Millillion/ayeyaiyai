@@ -1,4 +1,4 @@
-22820/23668 (96.42%)
+22821/23668 (96.42%)
 Sub-category progress
 
 - comments: 51/52 (98.08%)
@@ -23,7 +23,7 @@ Sub-category progress
 - rest-parameters: 10/11 (90.91%)
 - block-scope: 145/145 (100.00%)
 - identifier-resolution: 14/14 (100.00%)
-- computed-property-names: 47/48 (97.92%)
+- computed-property-names: 48/48 (100.00%)
 - destructuring: 17/19 (89.47%)
 - eval-code: 343/347 (98.85%)
 - import: 91/127 (71.65%)
@@ -22618,7 +22618,7 @@ Sub-category progress
   - [x] test/language/computed-property-names/object/accessor/getter.js
   - [x] test/language/computed-property-names/object/accessor/setter-duplicates.js
   - [x] test/language/computed-property-names/object/accessor/setter-super.js
-  - [ ] test/language/computed-property-names/object/accessor/setter.js
+  - [x] test/language/computed-property-names/object/accessor/setter.js
   - [x] test/language/computed-property-names/object/method/generator.js
   - [x] test/language/computed-property-names/object/method/number.js
   - [x] test/language/computed-property-names/object/method/string.js
