@@ -412,6 +412,8 @@ impl<'a> RefinedAotValidator<'a> {
                     || self.is_direct_compile_time_string_eval_call(callee, arguments)
                     || self.is_direct_comment_eval_call(callee, arguments)
                     || self.is_direct_non_string_eval_call(callee, arguments)
+                    || self.is_direct_spread_eval_call(callee, arguments)
+                    || self.is_direct_throwing_reference_eval_call(callee, arguments)
                     || self.is_test262_compile_time_eval_script_call(callee, arguments)
                 {
                     return Ok(());

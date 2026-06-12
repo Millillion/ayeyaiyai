@@ -1,5 +1,7 @@
 use super::*;
 
+use crate::ir::hir::SPREAD_ITERATE_HELPER_NAME;
+
 impl<'a> FunctionCompiler<'a> {
     pub(in crate::backend::direct_wasm) fn with_eval_template_cache_epoch<T>(
         &mut self,
@@ -122,19 +124,109 @@ impl<'a> FunctionCompiler<'a> {
                 let raw_source = self
                     .resolve_static_string_value(expression)
                     .expect("guard checked static string eval source");
-                let argument_source = if self.state.speculation.execution_context.strict_mode {
-                    let mut strict_argument_source = String::from("\"use strict\";");
-                    strict_argument_source.push_str(&raw_source);
-                    Cow::Owned(strict_argument_source)
-                } else {
-                    Cow::Borrowed(raw_source.as_str())
-                };
 
                 for argument in arguments.iter().skip(1) {
                     emit_argument_discard(self, argument)?;
                 }
 
-                let contextual_program =
+                self.emit_direct_eval_compile_time_source(&raw_source)?;
+                Ok(true)
+            }
+            CallArgument::Spread(expression)
+                if self.user_function(SPREAD_ITERATE_HELPER_NAME).is_some() =>
+            {
+                // Drain the spread operand through the runtime iterator
+                // protocol so GetIterator/next() calls (and their errors)
+                // are observable, mirroring ArgumentListEvaluation.
+                let drained_name = self
+                    .allocate_named_hidden_local("eval_spread_drain", StaticValueKind::Object);
+                let drained_local = self
+                    .state
+                    .runtime
+                    .locals
+                    .get(&drained_name)
+                    .copied()
+                    .expect("fresh eval spread drain hidden local must exist");
+                self.emit_numeric_expression(&Self::spread_iterate_runtime_call(expression))?;
+                self.push_local_set(drained_local);
+
+                let trailing_static_source = match arguments.get(1) {
+                    Some(CallArgument::Expression(second)) => {
+                        self.resolve_static_string_value(second)
+                    }
+                    _ => None,
+                };
+                if let Some(raw_source) = trailing_static_source {
+                    // `eval(...spread, "source")`: the trailing compile-time
+                    // string is the eval text exactly when the drained
+                    // argument list is empty.
+                    for argument in arguments.iter().skip(2) {
+                        emit_argument_discard(self, argument)?;
+                    }
+                    let result_local = self.allocate_temp_local();
+                    let drained_is_empty = Expression::Binary {
+                        op: BinaryOp::Equal,
+                        left: Box::new(Expression::Member {
+                            object: Box::new(Expression::Identifier(drained_name.clone())),
+                            property: Box::new(Expression::String("length".to_string())),
+                        }),
+                        right: Box::new(Expression::Number(0.0)),
+                    };
+                    self.emit_truthy_expression(&drained_is_empty)?;
+                    self.state.emission.output.instructions.push(0x04);
+                    self.state
+                        .emission
+                        .output
+                        .instructions
+                        .push(EMPTY_BLOCK_TYPE);
+                    self.push_control_frame();
+                    self.emit_direct_eval_compile_time_source(&raw_source)?;
+                    self.push_local_set(result_local);
+                    self.state.emission.output.instructions.push(0x05);
+                    self.push_i32_const(JS_UNDEFINED_TAG);
+                    self.push_local_set(result_local);
+                    self.state.emission.output.instructions.push(0x0b);
+                    self.pop_control_frame();
+                    self.push_local_get(result_local);
+                } else {
+                    for argument in arguments.iter().skip(1) {
+                        emit_argument_discard(self, argument)?;
+                    }
+                    self.push_i32_const(JS_UNDEFINED_TAG);
+                }
+                Ok(true)
+            }
+            _ => {
+                match argument {
+                    CallArgument::Expression(expression) => {
+                        self.emit_numeric_expression(expression)?
+                    }
+                    CallArgument::Spread(expression) => {
+                        self.emit_numeric_expression(expression)?;
+                        self.state.emission.output.instructions.push(0x1a);
+                        self.push_i32_const(JS_UNDEFINED_TAG);
+                    }
+                }
+
+                for argument in arguments.iter().skip(1) {
+                    emit_argument_discard(self, argument)?;
+                }
+
+                Ok(true)
+            }
+        }
+    }
+
+    fn emit_direct_eval_compile_time_source(&mut self, raw_source: &str) -> DirectResult<()> {
+        let argument_source = if self.state.speculation.execution_context.strict_mode {
+            let mut strict_argument_source = String::from("\"use strict\";");
+            strict_argument_source.push_str(raw_source);
+            Cow::Owned(strict_argument_source)
+        } else {
+            Cow::Borrowed(raw_source)
+        };
+
+        let contextual_program =
                     self.parse_eval_program_in_current_function_context(&argument_source);
                 let program = if let Some(program) = contextual_program {
                     program
@@ -142,53 +234,53 @@ impl<'a> FunctionCompiler<'a> {
                     program
                 } else {
                     self.emit_named_error_throw("SyntaxError")?;
-                    return Ok(true);
+                    return Ok(());
                 };
                 if eval_program_contains_top_level_return(&program) {
                     self.emit_named_error_throw("SyntaxError")?;
-                    return Ok(true);
+                    return Ok(());
                 }
                 let mut program = lower_eval_static_function_constructors(program);
                 namespace_eval_program_internal_function_names(
                     &mut program,
                     self.current_function_name(),
-                    &raw_source,
+                    raw_source,
                 );
                 self.normalize_eval_scoped_bindings_to_source_names(&mut program);
 
                 if self.eval_arguments_initializer_conflict(&program) {
                     self.emit_named_error_throw("SyntaxError")?;
-                    return Ok(true);
+                    return Ok(());
                 }
 
                 if self.eval_arguments_declaration_conflicts(&program) {
                     self.emit_named_error_throw("SyntaxError")?;
-                    return Ok(true);
+                    return Ok(());
                 }
 
                 if self.eval_parameter_var_declaration_conflicts(&program) {
                     self.emit_named_error_throw("SyntaxError")?;
-                    return Ok(true);
+                    return Ok(());
                 }
 
                 if self.eval_program_declares_var_collision_with_global_lexical(&program) {
                     self.emit_named_error_throw("SyntaxError")?;
-                    return Ok(true);
+                    return Ok(());
                 }
 
                 if self.eval_program_declares_var_collision_with_active_lexical(&program) {
                     self.emit_named_error_throw("SyntaxError")?;
-                    return Ok(true);
+                    return Ok(());
                 }
 
                 if self.eval_program_declares_non_definable_global_function(&program) {
                     self.emit_named_error_throw("TypeError")?;
-                    return Ok(true);
+                    return Ok(());
                 }
 
                 if self.eval_program_declares_non_declarable_global_var(&program, false) {
                     self.emit_named_error_throw("TypeError")?;
-                    return Ok(true);
+                    return Ok(());
                 }
 
                 let preexisting_locals = self
@@ -276,26 +368,6 @@ impl<'a> FunctionCompiler<'a> {
                     )
                 })?;
 
-                Ok(true)
-            }
-            _ => {
-                match argument {
-                    CallArgument::Expression(expression) => {
-                        self.emit_numeric_expression(expression)?
-                    }
-                    CallArgument::Spread(expression) => {
-                        self.emit_numeric_expression(expression)?;
-                        self.state.emission.output.instructions.push(0x1a);
-                        self.push_i32_const(JS_UNDEFINED_TAG);
-                    }
-                }
-
-                for argument in arguments.iter().skip(1) {
-                    emit_argument_discard(self, argument)?;
-                }
-
-                Ok(true)
-            }
-        }
+        Ok(())
     }
 }

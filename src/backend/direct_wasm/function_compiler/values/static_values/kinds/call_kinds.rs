@@ -25,7 +25,9 @@ fn spread_operand_assignment_effects(expression: &Expression) -> bool {
 }
 
 impl<'a> FunctionCompiler<'a> {
-    fn spread_iterate_runtime_call(expression: &Expression) -> Expression {
+    pub(in crate::backend::direct_wasm) fn spread_iterate_runtime_call(
+        expression: &Expression,
+    ) -> Expression {
         Expression::Call {
             callee: Box::new(Expression::Identifier(SPREAD_ITERATE_HELPER_NAME.to_string())),
             arguments: vec![CallArgument::Expression(expression.clone())],

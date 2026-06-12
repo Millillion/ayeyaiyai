@@ -22,6 +22,14 @@ fn program_uses_call_spread(program: &Program) -> bool {
     finder.found
 }
 
+// The helper body is hand-built rather than lowered from source on purpose:
+// the canonical `__ayy_for_of_*` binding names produced by the for-of
+// lowering are recognized by the backend's static iterator machinery, which
+// would specialize the loop away and drop the observable GetIterator/next()
+// protocol effects this helper exists to preserve. The distinct
+// `__ayy_spread_iterate_*` names keep the loop opaque so it always runs at
+// runtime. `Var` statements are used (instead of `Let`) so the bindings are
+// plain function-scoped locals without TDZ-initialization tracking.
 fn spread_iterate_helper_declaration() -> FunctionDeclaration {
     let source_name = "__ayy_spread_iterate_source";
     let result_name = "__ayy_spread_iterate_result";
@@ -30,28 +38,26 @@ fn spread_iterate_helper_declaration() -> FunctionDeclaration {
     let value_name = "__ayy_spread_iterate_value";
 
     let body = vec![
-        Statement::Let {
+        Statement::Var {
             name: result_name.to_string(),
-            mutable: true,
             value: Expression::Array(Vec::new()),
+        },
+        Statement::Var {
+            name: iterator_name.to_string(),
+            value: Expression::GetIterator(Box::new(Expression::Identifier(
+                source_name.to_string(),
+            ))),
         },
         Statement::For {
             labels: Vec::new(),
-            init: vec![Statement::Let {
-                name: iterator_name.to_string(),
-                mutable: true,
-                value: Expression::GetIterator(Box::new(Expression::Identifier(
-                    source_name.to_string(),
-                ))),
-            }],
+            init: Vec::new(),
             per_iteration_bindings: Vec::new(),
             condition: Some(Expression::Bool(true)),
             update: None,
             break_hook: None,
             body: vec![
-                Statement::Let {
+                Statement::Var {
                     name: step_name.to_string(),
-                    mutable: true,
                     value: Expression::Call {
                         callee: Box::new(Expression::Member {
                             object: Box::new(Expression::Identifier(iterator_name.to_string())),
@@ -68,9 +74,8 @@ fn spread_iterate_helper_declaration() -> FunctionDeclaration {
                     then_branch: vec![Statement::Break { label: None }],
                     else_branch: Vec::new(),
                 },
-                Statement::Let {
+                Statement::Var {
                     name: value_name.to_string(),
-                    mutable: true,
                     value: Expression::Member {
                         object: Box::new(Expression::Identifier(step_name.to_string())),
                         property: Box::new(Expression::String("value".to_string())),

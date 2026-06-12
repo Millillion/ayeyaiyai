@@ -5,6 +5,122 @@ enum EvalStringFragment {
     Dynamic,
 }
 
+/// Names that resolve on the global object (builtins plus the test262
+/// harness globals, which are compiled as builtins), so an identifier
+/// reference to them cannot be proven to throw a ReferenceError.
+fn is_well_known_global_name(name: &str) -> bool {
+    matches!(
+        name,
+        "globalThis"
+            | "undefined"
+            | "NaN"
+            | "Infinity"
+            | "eval"
+            | "parseInt"
+            | "parseFloat"
+            | "isNaN"
+            | "isFinite"
+            | "decodeURI"
+            | "decodeURIComponent"
+            | "encodeURI"
+            | "encodeURIComponent"
+            | "escape"
+            | "unescape"
+            | "print"
+            | "console"
+            | "Object"
+            | "Function"
+            | "Array"
+            | "String"
+            | "Number"
+            | "Boolean"
+            | "Symbol"
+            | "BigInt"
+            | "Math"
+            | "JSON"
+            | "Date"
+            | "RegExp"
+            | "Error"
+            | "AggregateError"
+            | "EvalError"
+            | "RangeError"
+            | "ReferenceError"
+            | "SyntaxError"
+            | "TypeError"
+            | "URIError"
+            | "SuppressedError"
+            | "Promise"
+            | "Proxy"
+            | "Reflect"
+            | "Map"
+            | "Set"
+            | "WeakMap"
+            | "WeakSet"
+            | "WeakRef"
+            | "FinalizationRegistry"
+            | "ArrayBuffer"
+            | "SharedArrayBuffer"
+            | "DataView"
+            | "Atomics"
+            | "Int8Array"
+            | "Uint8Array"
+            | "Uint8ClampedArray"
+            | "Int16Array"
+            | "Uint16Array"
+            | "Int32Array"
+            | "Uint32Array"
+            | "Float16Array"
+            | "Float32Array"
+            | "Float64Array"
+            | "BigInt64Array"
+            | "BigUint64Array"
+            | "Iterator"
+            | "AsyncIterator"
+            | "DisposableStack"
+            | "AsyncDisposableStack"
+            | "$262"
+            | "$DONOTEVALUATE"
+            | "Test262Error"
+            | "assert"
+            | "verifyProperty"
+            | "verifyEqualTo"
+            | "verifyWritable"
+            | "verifyNotWritable"
+            | "verifyEnumerable"
+            | "verifyNotEnumerable"
+            | "verifyConfigurable"
+            | "verifyNotConfigurable"
+            | "isConfigurable"
+            | "isEnumerable"
+            | "isWritable"
+            | "compareArray"
+            | "arrayContains"
+            | "fnGlobalObject"
+            | "throwsAsync"
+            | "asyncTest"
+            | "compareIterator"
+            | "testWithBigIntTypedArrayConstructors"
+            | "testWithTypedArrayConstructors"
+            | "TypedArray"
+            | "propertyHelper"
+            | "byteConversionValues"
+            | "decimalToHexString"
+            | "decimalToPercentHexString"
+            | "buildString"
+            | "testPropertyEscapes"
+            | "isConstructor"
+            | "nativeFunctionMatcher"
+            | "validateNativeFunctionSource"
+            | "timeout"
+            | "makeDate"
+            | "makeDay"
+            | "makeTime"
+            | "timeClip"
+            | "dateFromTime"
+            | "$MAX_ITERATIONS"
+    )
+}
+
 impl RefinedAotValidator<'_> {
     pub(super) fn is_bound(&self, name: &str) -> bool {
         self.scopes.contains(name)
@@ -98,6 +214,56 @@ impl RefinedAotValidator<'_> {
             }
             _ => false,
         }
+    }
+
+    /// `eval(...spread)` / `eval(...spread, "source")`: the spread operand is
+    /// drained through the runtime iterator protocol, and the only eval text
+    /// that can ever be executed is a trailing compile-time string (used
+    /// exactly when the drained argument list is empty), so no runtime source
+    /// evaluation is required.
+    pub(super) fn is_direct_spread_eval_call(
+        &self,
+        callee: &Expression,
+        arguments: &[CallArgument],
+    ) -> bool {
+        if !self.is_global_identifier(callee, "eval") {
+            return false;
+        }
+
+        let Some(CallArgument::Spread(_)) = arguments.first() else {
+            return false;
+        };
+
+        match arguments.get(1) {
+            None => true,
+            Some(CallArgument::Expression(argument)) => {
+                self.resolve_compile_time_string(argument).is_some()
+                    || self.infer_known_kind(argument) == KnownValueKind::NonString
+            }
+            Some(CallArgument::Spread(_)) => false,
+        }
+    }
+
+    /// `eval(unresolvable)`: evaluating the argument throws a ReferenceError
+    /// before eval is ever invoked, so no runtime source evaluation can
+    /// occur.
+    pub(super) fn is_direct_throwing_reference_eval_call(
+        &self,
+        callee: &Expression,
+        arguments: &[CallArgument],
+    ) -> bool {
+        if !self.is_global_identifier(callee, "eval") {
+            return false;
+        }
+
+        let Some(CallArgument::Expression(Expression::Identifier(name))) = arguments.first()
+        else {
+            return false;
+        };
+
+        !self.is_bound(name)
+            && !self.functions.contains_key(name.as_str())
+            && !is_well_known_global_name(name)
     }
 
     pub(super) fn is_direct_comment_eval_call(

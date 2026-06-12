@@ -154,6 +154,12 @@ where
     let LocalFunctionBinding::User(function_name) = binding else {
         return None;
     };
+    // The synthesized spread-iterate helper exists precisely to run the
+    // iterator protocol at runtime (observable GetIterator/next() calls and
+    // their errors); never fold it statically.
+    if function_name == crate::ir::hir::SPREAD_ITERATE_HELPER_NAME {
+        return None;
+    }
     if let Some(result) =
         executor.inline_static_user_function_binding(function_name, arguments, environment)
     {
