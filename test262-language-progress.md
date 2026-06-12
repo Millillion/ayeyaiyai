@@ -1,4 +1,4 @@
-22705/23668 (95.93%)
+22713/23668 (95.97%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,7 +14,7 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 8958/9337 (95.94%)
+- statements: 8966/9337 (96.03%)
 - expressions: 10619/11061 (96.00%)
 - types: 106/113 (93.81%)
 - function-code: 208/217 (95.85%)
@@ -8074,10 +8074,10 @@ Sub-category progress
   - [x] test/language/statements/for-in/S12.6.4_A14_T2.js
   - [x] test/language/statements/for-in/S12.6.4_A15.js
   - [x] test/language/statements/for-in/S12.6.4_A2.js
-  - [ ] test/language/statements/for-in/S12.6.4_A3.1.js
-  - [ ] test/language/statements/for-in/S12.6.4_A3.js
-  - [ ] test/language/statements/for-in/S12.6.4_A4.1.js
-  - [ ] test/language/statements/for-in/S12.6.4_A4.js
+  - [x] test/language/statements/for-in/S12.6.4_A3.1.js
+  - [x] test/language/statements/for-in/S12.6.4_A3.js
+  - [x] test/language/statements/for-in/S12.6.4_A4.1.js
+  - [x] test/language/statements/for-in/S12.6.4_A4.js
   - [ ] test/language/statements/for-in/S12.6.4_A5.1.js
   - [ ] test/language/statements/for-in/S12.6.4_A5.js
   - [ ] test/language/statements/for-in/S12.6.4_A6.1.js
@@ -8149,7 +8149,7 @@ Sub-category progress
   - [x] test/language/statements/for-in/head-lhs-cover.js
   - [x] test/language/statements/for-in/head-lhs-invalid-asnmt-ptrn-ary.js
   - [x] test/language/statements/for-in/head-lhs-invalid-asnmt-ptrn-obj.js
-  - [ ] test/language/statements/for-in/head-lhs-let.js
+  - [x] test/language/statements/for-in/head-lhs-let.js
   - [x] test/language/statements/for-in/head-lhs-member.js
   - [x] test/language/statements/for-in/head-lhs-non-asnmt-trgt.js
   - [ ] test/language/statements/for-in/head-var-bound-names-dup.js
@@ -8164,11 +8164,11 @@ Sub-category progress
   - [x] test/language/statements/for-in/let-array-with-newline.js
   - [x] test/language/statements/for-in/let-block-with-newline.js
   - [x] test/language/statements/for-in/let-identifier-with-newline.js
-  - [ ] test/language/statements/for-in/order-after-define-property.js
-  - [ ] test/language/statements/for-in/order-enumerable-shadowed.js
+  - [x] test/language/statements/for-in/order-after-define-property.js
+  - [x] test/language/statements/for-in/order-enumerable-shadowed.js
   - [x] test/language/statements/for-in/order-property-added.js
   - [x] test/language/statements/for-in/order-property-on-prototype.js
-  - [ ] test/language/statements/for-in/order-simple-object.js
+  - [x] test/language/statements/for-in/order-simple-object.js
   - [ ] test/language/statements/for-in/resizable-buffer.js
   - [ ] test/language/statements/for-in/scope-body-lex-boundary.js
   - [ ] test/language/statements/for-in/scope-body-lex-close.js
