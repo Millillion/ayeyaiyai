@@ -1,4 +1,4 @@
-22505/23668 (95.09%)
+22560/23668 (95.32%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,8 +14,8 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 8874/9337 (95.04%)
-- expressions: 10508/11061 (95.00%)
+- statements: 8891/9337 (95.22%)
+- expressions: 10546/11061 (95.34%)
 - types: 103/113 (91.15%)
 - function-code: 206/217 (94.93%)
 - global-code: 41/42 (97.62%)
@@ -8068,10 +8068,10 @@ Sub-category progress
   - [ ] test/language/statements/for-await-of/ticks-with-async-iter-resolved-promise-and-constructor-lookup-two.js
   - [ ] test/language/statements/for-await-of/ticks-with-async-iter-resolved-promise-and-constructor-lookup.js
   - [ ] test/language/statements/for-await-of/ticks-with-sync-iter-resolved-promise-and-constructor-lookup.js
-  - [ ] test/language/statements/for-in/12.6.4-1.js
+  - [x] test/language/statements/for-in/12.6.4-1.js
   - [x] test/language/statements/for-in/12.6.4-2.js
   - [x] test/language/statements/for-in/S12.6.4_A1.js
-  - [ ] test/language/statements/for-in/S12.6.4_A14_T2.js
+  - [x] test/language/statements/for-in/S12.6.4_A14_T2.js
   - [x] test/language/statements/for-in/S12.6.4_A15.js
   - [x] test/language/statements/for-in/S12.6.4_A2.js
   - [ ] test/language/statements/for-in/S12.6.4_A3.1.js
@@ -8084,12 +8084,12 @@ Sub-category progress
   - [ ] test/language/statements/for-in/S12.6.4_A6.js
   - [ ] test/language/statements/for-in/S12.6.4_A7_T1.js
   - [ ] test/language/statements/for-in/S12.6.4_A7_T2.js
-  - [ ] test/language/statements/for-in/cptn-decl-abrupt-empty.js
-  - [ ] test/language/statements/for-in/cptn-decl-itr.js
+  - [x] test/language/statements/for-in/cptn-decl-abrupt-empty.js
+  - [x] test/language/statements/for-in/cptn-decl-itr.js
   - [x] test/language/statements/for-in/cptn-decl-skip-itr.js
   - [x] test/language/statements/for-in/cptn-decl-zero-itr.js
-  - [ ] test/language/statements/for-in/cptn-expr-abrupt-empty.js
-  - [ ] test/language/statements/for-in/cptn-expr-itr.js
+  - [x] test/language/statements/for-in/cptn-expr-abrupt-empty.js
+  - [x] test/language/statements/for-in/cptn-expr-itr.js
   - [x] test/language/statements/for-in/cptn-expr-skip-itr.js
   - [x] test/language/statements/for-in/cptn-expr-zero-itr.js
   - [x] test/language/statements/for-in/decl-async-fun.js
@@ -8137,8 +8137,8 @@ Sub-category progress
   - [x] test/language/statements/for-in/head-const-bound-names-in-stmt.js
   - [x] test/language/statements/for-in/head-const-bound-names-let.js
   - [ ] test/language/statements/for-in/head-const-fresh-binding-per-iteration.js
-  - [ ] test/language/statements/for-in/head-decl-expr.js
-  - [ ] test/language/statements/for-in/head-expr-expr.js
+  - [x] test/language/statements/for-in/head-decl-expr.js
+  - [x] test/language/statements/for-in/head-expr-expr.js
   - [x] test/language/statements/for-in/head-let-bound-names-dup.js
   - [x] test/language/statements/for-in/head-let-bound-names-fordecl-tdz.js
   - [x] test/language/statements/for-in/head-let-bound-names-in-stmt.js
@@ -8146,16 +8146,16 @@ Sub-category progress
   - [ ] test/language/statements/for-in/head-let-destructuring.js
   - [ ] test/language/statements/for-in/head-let-fresh-binding-per-iteration.js
   - [x] test/language/statements/for-in/head-lhs-cover-non-asnmt-trgt.js
-  - [ ] test/language/statements/for-in/head-lhs-cover.js
+  - [x] test/language/statements/for-in/head-lhs-cover.js
   - [x] test/language/statements/for-in/head-lhs-invalid-asnmt-ptrn-ary.js
   - [x] test/language/statements/for-in/head-lhs-invalid-asnmt-ptrn-obj.js
   - [ ] test/language/statements/for-in/head-lhs-let.js
-  - [ ] test/language/statements/for-in/head-lhs-member.js
+  - [x] test/language/statements/for-in/head-lhs-member.js
   - [x] test/language/statements/for-in/head-lhs-non-asnmt-trgt.js
   - [ ] test/language/statements/for-in/head-var-bound-names-dup.js
-  - [ ] test/language/statements/for-in/head-var-bound-names-in-stmt.js
-  - [ ] test/language/statements/for-in/head-var-bound-names-let.js
-  - [ ] test/language/statements/for-in/head-var-expr.js
+  - [x] test/language/statements/for-in/head-var-bound-names-in-stmt.js
+  - [x] test/language/statements/for-in/head-var-bound-names-let.js
+  - [x] test/language/statements/for-in/head-var-expr.js
   - [x] test/language/statements/for-in/identifier-let-allowed-as-lefthandside-expression-not-strict.js
   - [x] test/language/statements/for-in/labelled-fn-stmt-const.js
   - [x] test/language/statements/for-in/labelled-fn-stmt-let.js
@@ -8166,17 +8166,17 @@ Sub-category progress
   - [x] test/language/statements/for-in/let-identifier-with-newline.js
   - [ ] test/language/statements/for-in/order-after-define-property.js
   - [ ] test/language/statements/for-in/order-enumerable-shadowed.js
-  - [ ] test/language/statements/for-in/order-property-added.js
-  - [ ] test/language/statements/for-in/order-property-on-prototype.js
+  - [x] test/language/statements/for-in/order-property-added.js
+  - [x] test/language/statements/for-in/order-property-on-prototype.js
   - [ ] test/language/statements/for-in/order-simple-object.js
   - [ ] test/language/statements/for-in/resizable-buffer.js
   - [ ] test/language/statements/for-in/scope-body-lex-boundary.js
   - [ ] test/language/statements/for-in/scope-body-lex-close.js
   - [ ] test/language/statements/for-in/scope-body-lex-open.js
-  - [ ] test/language/statements/for-in/scope-body-var-none.js
+  - [x] test/language/statements/for-in/scope-body-var-none.js
   - [ ] test/language/statements/for-in/scope-head-lex-close.js
   - [ ] test/language/statements/for-in/scope-head-lex-open.js
-  - [ ] test/language/statements/for-in/scope-head-var-none.js
+  - [x] test/language/statements/for-in/scope-head-var-none.js
   - [x] test/language/statements/for-in/var-arguments-fn-strict-init.js
   - [x] test/language/statements/for-in/var-arguments-fn-strict.js
   - [x] test/language/statements/for-in/var-arguments-strict-init.js
@@ -11181,7 +11181,7 @@ Sub-category progress
   - [x] test/language/expressions/assignment/S11.13.1_A7_T4.js
   - [x] test/language/expressions/assignment/S8.12.4_A1.js
   - [x] test/language/expressions/assignment/S8.12.5_A1.js
-  - [ ] test/language/expressions/assignment/S8.12.5_A2.js
+  - [x] test/language/expressions/assignment/S8.12.5_A2.js
   - [ ] test/language/expressions/assignment/assignment-operator-calls-putvalue-lref--rval--1.js
   - [ ] test/language/expressions/assignment/assignment-operator-calls-putvalue-lref--rval-.js
   - [ ] test/language/expressions/assignment/destructuring/default-expr-throws-iterator-return-get-throws.js
@@ -11570,15 +11570,15 @@ Sub-category progress
   - [ ] test/language/expressions/assignment/id-arguments-strict.js
   - [ ] test/language/expressions/assignment/id-eval-strict.js
   - [x] test/language/expressions/assignment/line-terminator.js
-  - [ ] test/language/expressions/assignment/member-expr-ident-name-break-escaped.js
-  - [ ] test/language/expressions/assignment/member-expr-ident-name-case-escaped.js
-  - [ ] test/language/expressions/assignment/member-expr-ident-name-catch-escaped.js
-  - [ ] test/language/expressions/assignment/member-expr-ident-name-class-escaped.js
+  - [x] test/language/expressions/assignment/member-expr-ident-name-break-escaped.js
+  - [x] test/language/expressions/assignment/member-expr-ident-name-case-escaped.js
+  - [x] test/language/expressions/assignment/member-expr-ident-name-catch-escaped.js
+  - [x] test/language/expressions/assignment/member-expr-ident-name-class-escaped.js
   - [x] test/language/expressions/assignment/member-expr-ident-name-const-escaped.js
   - [x] test/language/expressions/assignment/member-expr-ident-name-continue-escaped.js
   - [x] test/language/expressions/assignment/member-expr-ident-name-debugger-escaped.js
-  - [ ] test/language/expressions/assignment/member-expr-ident-name-default-escaped-ext.js
-  - [ ] test/language/expressions/assignment/member-expr-ident-name-default-escaped.js
+  - [x] test/language/expressions/assignment/member-expr-ident-name-default-escaped-ext.js
+  - [x] test/language/expressions/assignment/member-expr-ident-name-default-escaped.js
   - [x] test/language/expressions/assignment/member-expr-ident-name-default.js
   - [x] test/language/expressions/assignment/member-expr-ident-name-delete-escaped.js
   - [x] test/language/expressions/assignment/member-expr-ident-name-do-escaped.js
@@ -11591,30 +11591,30 @@ Sub-category progress
   - [x] test/language/expressions/assignment/member-expr-ident-name-finally-escaped.js
   - [x] test/language/expressions/assignment/member-expr-ident-name-for-escaped.js
   - [x] test/language/expressions/assignment/member-expr-ident-name-function-escaped.js
-  - [ ] test/language/expressions/assignment/member-expr-ident-name-if-escaped.js
+  - [x] test/language/expressions/assignment/member-expr-ident-name-if-escaped.js
   - [x] test/language/expressions/assignment/member-expr-ident-name-implements-escaped.js
   - [x] test/language/expressions/assignment/member-expr-ident-name-import-escaped.js
   - [x] test/language/expressions/assignment/member-expr-ident-name-in-escaped.js
   - [x] test/language/expressions/assignment/member-expr-ident-name-instanceof-escaped.js
-  - [ ] test/language/expressions/assignment/member-expr-ident-name-interface-escaped.js
-  - [ ] test/language/expressions/assignment/member-expr-ident-name-let-escaped.js
-  - [ ] test/language/expressions/assignment/member-expr-ident-name-new-escaped.js
-  - [ ] test/language/expressions/assignment/member-expr-ident-name-package-escaped.js
-  - [ ] test/language/expressions/assignment/member-expr-ident-name-private-escaped.js
-  - [ ] test/language/expressions/assignment/member-expr-ident-name-protected-escaped.js
-  - [ ] test/language/expressions/assignment/member-expr-ident-name-public-escaped.js
-  - [ ] test/language/expressions/assignment/member-expr-ident-name-return-escaped.js
-  - [ ] test/language/expressions/assignment/member-expr-ident-name-static-escaped.js
-  - [ ] test/language/expressions/assignment/member-expr-ident-name-super-escaped.js
-  - [ ] test/language/expressions/assignment/member-expr-ident-name-switch-escaped.js
-  - [ ] test/language/expressions/assignment/member-expr-ident-name-this-escaped.js
-  - [ ] test/language/expressions/assignment/member-expr-ident-name-throw-escaped.js
-  - [ ] test/language/expressions/assignment/member-expr-ident-name-try-escaped.js
-  - [ ] test/language/expressions/assignment/member-expr-ident-name-typeof-escaped.js
-  - [ ] test/language/expressions/assignment/member-expr-ident-name-var-escaped.js
-  - [ ] test/language/expressions/assignment/member-expr-ident-name-void-escaped.js
-  - [ ] test/language/expressions/assignment/member-expr-ident-name-while-escaped.js
-  - [ ] test/language/expressions/assignment/member-expr-ident-name-with-escaped.js
+  - [x] test/language/expressions/assignment/member-expr-ident-name-interface-escaped.js
+  - [x] test/language/expressions/assignment/member-expr-ident-name-let-escaped.js
+  - [x] test/language/expressions/assignment/member-expr-ident-name-new-escaped.js
+  - [x] test/language/expressions/assignment/member-expr-ident-name-package-escaped.js
+  - [x] test/language/expressions/assignment/member-expr-ident-name-private-escaped.js
+  - [x] test/language/expressions/assignment/member-expr-ident-name-protected-escaped.js
+  - [x] test/language/expressions/assignment/member-expr-ident-name-public-escaped.js
+  - [x] test/language/expressions/assignment/member-expr-ident-name-return-escaped.js
+  - [x] test/language/expressions/assignment/member-expr-ident-name-static-escaped.js
+  - [x] test/language/expressions/assignment/member-expr-ident-name-super-escaped.js
+  - [x] test/language/expressions/assignment/member-expr-ident-name-switch-escaped.js
+  - [x] test/language/expressions/assignment/member-expr-ident-name-this-escaped.js
+  - [x] test/language/expressions/assignment/member-expr-ident-name-throw-escaped.js
+  - [x] test/language/expressions/assignment/member-expr-ident-name-try-escaped.js
+  - [x] test/language/expressions/assignment/member-expr-ident-name-typeof-escaped.js
+  - [x] test/language/expressions/assignment/member-expr-ident-name-var-escaped.js
+  - [x] test/language/expressions/assignment/member-expr-ident-name-void-escaped.js
+  - [x] test/language/expressions/assignment/member-expr-ident-name-while-escaped.js
+  - [x] test/language/expressions/assignment/member-expr-ident-name-with-escaped.js
   - [x] test/language/expressions/assignment/non-simple-target.js
   - [x] test/language/expressions/assignment/target-assignment-inside-function.js
   - [x] test/language/expressions/assignment/target-assignment.js
@@ -17394,27 +17394,27 @@ Sub-category progress
   - [x] test/language/expressions/compound-assignment/btws-and-non-simple.js
   - [x] test/language/expressions/compound-assignment/btws-or-non-simple.js
   - [x] test/language/expressions/compound-assignment/btws-xor-non-simple.js
-  - [ ] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--1.js
+  - [x] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--1.js
   - [ ] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--10.js
-  - [ ] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--11.js
+  - [x] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--11.js
   - [ ] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--12.js
-  - [ ] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--13.js
+  - [x] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--13.js
   - [ ] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--14.js
-  - [ ] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--15.js
+  - [x] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--15.js
   - [ ] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--16.js
-  - [ ] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--17.js
+  - [x] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--17.js
   - [ ] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--18.js
-  - [ ] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--19.js
+  - [x] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--19.js
   - [ ] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--2.js
   - [ ] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--20.js
-  - [ ] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--21.js
-  - [ ] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--3.js
+  - [x] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--21.js
+  - [x] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--3.js
   - [ ] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--4.js
-  - [ ] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--5.js
+  - [x] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--5.js
   - [ ] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--6.js
-  - [ ] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--7.js
+  - [x] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--7.js
   - [ ] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--8.js
-  - [ ] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--9.js
+  - [x] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v--9.js
   - [ ] test/language/expressions/compound-assignment/compound-assignment-operator-calls-putvalue-lref--v-.js
   - [x] test/language/expressions/compound-assignment/div-arguments-strict.js
   - [x] test/language/expressions/compound-assignment/div-eval-strict.js
