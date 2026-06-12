@@ -5,6 +5,51 @@ impl<'a> FunctionCompiler<'a> {
         name.strip_prefix("__ayy_module_init_")?.parse().ok()
     }
 
+    fn prepared_call_static_snapshot_result_is_direct_literal(result: &Expression) -> bool {
+        matches!(
+            result,
+            Expression::Number(_)
+                | Expression::BigInt(_)
+                | Expression::String(_)
+                | Expression::Bool(_)
+                | Expression::Null
+                | Expression::Undefined
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn prepared_call_static_snapshot_can_replace_runtime_call(
+        &self,
+        user_function: &UserFunction,
+        expanded_arguments: &[Expression],
+        prepared_capture_bindings: &[PreparedCaptureBinding],
+        result: &Expression,
+        module_init_call: bool,
+        runtime_only_promise_chain_call: bool,
+        assigned_nonlocal_bindings: &HashSet<String>,
+        call_effect_nonlocal_bindings: &HashSet<String>,
+        additional_call_effect_nonlocal_bindings: &HashSet<String>,
+        updated_nonlocal_bindings: &HashSet<String>,
+    ) -> bool {
+        self.user_function_uses_direct_arguments_object(user_function)
+            && Self::prepared_call_static_snapshot_result_is_direct_literal(result)
+            && !module_init_call
+            && !runtime_only_promise_chain_call
+            && !user_function.is_async()
+            && !user_function.is_generator()
+            && !user_function.has_parameter_defaults()
+            && prepared_capture_bindings.is_empty()
+            && expanded_arguments
+                .iter()
+                .all(inline_summary_side_effect_free_expression)
+            && !self.user_function_contains_print(user_function)
+            && !self.user_function_contains_identifier_callee_call(user_function)
+            && assigned_nonlocal_bindings.is_empty()
+            && call_effect_nonlocal_bindings.is_empty()
+            && additional_call_effect_nonlocal_bindings.is_empty()
+            && updated_nonlocal_bindings.is_empty()
+    }
+
     fn emit_cache_sync_module_init_throw_if_pending(
         &mut self,
         user_function: &UserFunction,
@@ -273,6 +318,29 @@ impl<'a> FunctionCompiler<'a> {
                 user_function.name,
                 updated_nonlocal_bindings.len()
             );
+        }
+        if let Some((static_result, _)) = &static_result
+            && self.prepared_call_static_snapshot_can_replace_runtime_call(
+                user_function,
+                expanded_arguments,
+                &prepared_capture_bindings,
+                static_result,
+                module_init_call,
+                runtime_only_promise_chain_call,
+                &assigned_nonlocal_bindings,
+                &call_effect_nonlocal_bindings,
+                &additional_call_effect_nonlocal_bindings,
+                &updated_nonlocal_bindings,
+            )
+        {
+            if trace_user_calls {
+                eprintln!(
+                    "prepared_user_call:emit_static_snapshot_result target={}",
+                    user_function.name
+                );
+            }
+            self.emit_literal_expression(static_result)?;
+            return Ok(());
         }
         let saved_new_target_local = if user_function.lexical_this {
             None

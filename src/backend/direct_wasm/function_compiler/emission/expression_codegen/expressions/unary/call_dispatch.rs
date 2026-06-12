@@ -454,7 +454,10 @@ impl<'a> FunctionCompiler<'a> {
 
     // Print is I/O: folding a call whose body prints to its static return
     // value would silently drop the output.
-    fn user_function_contains_print(&self, user_function: &UserFunction) -> bool {
+    pub(in crate::backend::direct_wasm) fn user_function_contains_print(
+        &self,
+        user_function: &UserFunction,
+    ) -> bool {
         struct PrintFinder {
             found: bool,
         }

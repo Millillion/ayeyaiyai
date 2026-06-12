@@ -4210,6 +4210,64 @@ fn resolves_bound_snapshot_result_for_getter_returned_closure_call_with_this_and
 }
 
 #[test]
+fn resolves_bound_snapshot_for_arguments_index_string_append_loop() {
+    let program = frontend::parse(
+        r#"
+            function __mFunc() {
+              var __accum = "";
+              for (var i = 0; i < arguments.length; ++i) {
+                __accum += arguments[i];
+              }
+              return __accum;
+            }
+        "#,
+    )
+    .expect("program should parse");
+
+    let mut compiler = DirectWasmCompiler::default();
+    compiler
+        .register_functions(&program.functions)
+        .expect("functions should register");
+    compiler
+        .register_static_eval_functions(&program)
+        .expect("static eval functions should register");
+    compiler.register_global_bindings(&program.statements);
+    compiler.register_global_function_bindings(&program.functions);
+    compiler.register_user_function_capture_bindings(&program.functions);
+
+    let function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+
+    let (result, _) = function_compiler
+        .resolve_bound_snapshot_user_function_result_with_arguments_and_this(
+            "__mFunc",
+            &HashMap::new(),
+            &[
+                Expression::String("A".to_string()),
+                Expression::String("B".to_string()),
+                Expression::String("C".to_string()),
+                Expression::String("D".to_string()),
+                Expression::String("E".to_string()),
+                Expression::String("F".to_string()),
+            ],
+            &Expression::This,
+        )
+        .expect("expected snapshot result for arguments append loop");
+
+    assert_eq!(result, Expression::String("ABCDEF".to_string()));
+}
+
+#[test]
 fn does_not_infer_object_parameter_bindings_for_undefined_member_argument_values() {
     let program = frontend::parse(
         r#"

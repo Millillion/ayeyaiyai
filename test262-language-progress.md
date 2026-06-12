@@ -1,4 +1,4 @@
-22818/23668 (96.41%)
+22819/23668 (96.41%)
 Sub-category progress
 
 - comments: 51/52 (98.08%)
@@ -16,7 +16,7 @@ Sub-category progress
 - statementList: 80/80 (100.00%)
 - statements: 8999/9337 (96.38%)
 - expressions: 10686/11061 (96.61%)
-- types: 109/113 (96.46%)
+- types: 110/113 (97.35%)
 - function-code: 208/217 (95.85%)
 - global-code: 41/42 (97.62%)
 - arguments-object: 263/263 (100.00%)
@@ -21776,7 +21776,7 @@ Sub-category progress
   - [x] test/language/types/boolean/S8.3_A3.js
   - [x] test/language/types/list/S8.8_A2_T1.js
   - [x] test/language/types/list/S8.8_A2_T2.js
-  - [ ] test/language/types/list/S8.8_A2_T3.js
+  - [x] test/language/types/list/S8.8_A2_T3.js
   - [x] test/language/types/null/S8.2_A1_T1.js
   - [x] test/language/types/null/S8.2_A1_T2.js
   - [x] test/language/types/null/S8.2_A2.js

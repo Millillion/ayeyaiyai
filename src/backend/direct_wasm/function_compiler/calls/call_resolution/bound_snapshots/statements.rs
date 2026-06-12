@@ -1,6 +1,8 @@
 use super::*;
 use crate::ir::hir::SwitchCase;
 
+const BOUND_SNAPSHOT_LOOP_ITERATION_LIMIT: usize = 4096;
+
 impl<'a> FunctionCompiler<'a> {
     fn bound_snapshot_static_throw_expression(
         &self,
@@ -103,6 +105,13 @@ impl<'a> FunctionCompiler<'a> {
     }
 
     fn bound_snapshot_break_targets_switch(labels: &[String], label: Option<&String>) -> bool {
+        match label {
+            None => true,
+            Some(label) => labels.iter().any(|candidate| candidate == label),
+        }
+    }
+
+    fn bound_snapshot_break_targets_loop(labels: &[String], label: Option<&String>) -> bool {
         match label {
             None => true,
             Some(label) => labels.iter().any(|candidate| candidate == label),
@@ -335,6 +344,80 @@ impl<'a> FunctionCompiler<'a> {
                     )?;
                     if !matches!(result, BoundSnapshotControlFlow::None) {
                         return Some(result);
+                    }
+                }
+                Statement::For {
+                    labels,
+                    init,
+                    per_iteration_bindings,
+                    condition,
+                    update,
+                    break_hook,
+                    body,
+                } => {
+                    if !per_iteration_bindings.is_empty() || break_hook.is_some() {
+                        return None;
+                    }
+
+                    let init_result = self.execute_bound_snapshot_statements(
+                        init,
+                        bindings,
+                        current_function_name,
+                    )?;
+                    if !matches!(init_result, BoundSnapshotControlFlow::None) {
+                        return Some(init_result);
+                    }
+
+                    let mut completed = false;
+                    for _ in 0..BOUND_SNAPSHOT_LOOP_ITERATION_LIMIT {
+                        if let Some(condition) = condition {
+                            let condition = self.evaluate_bound_snapshot_expression(
+                                condition,
+                                bindings,
+                                current_function_name,
+                            )?;
+                            match condition {
+                                Expression::Bool(true) => {}
+                                Expression::Bool(false) => {
+                                    completed = true;
+                                    break;
+                                }
+                                _ => return None,
+                            }
+                        }
+
+                        let body_result = self.execute_bound_snapshot_statements(
+                            body,
+                            bindings,
+                            current_function_name,
+                        )?;
+                        match body_result {
+                            BoundSnapshotControlFlow::None => {}
+                            BoundSnapshotControlFlow::Break(label)
+                                if Self::bound_snapshot_break_targets_loop(
+                                    labels,
+                                    label.as_ref(),
+                                ) =>
+                            {
+                                completed = true;
+                                break;
+                            }
+                            other => return Some(other),
+                        }
+
+                        if let Some(update) = update
+                            && let Err(throw_value) = self.evaluate_bound_snapshot_statement_value(
+                                update,
+                                bindings,
+                                current_function_name,
+                            )?
+                        {
+                            return Some(BoundSnapshotControlFlow::Throw(throw_value));
+                        }
+                    }
+
+                    if !completed {
+                        return None;
                     }
                 }
                 Statement::Return(value) => {
