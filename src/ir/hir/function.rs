@@ -1,5 +1,13 @@
 use super::{Expression, Statement};
 
+/// Name of the synthesized helper that drains an iterable through the
+/// iterator protocol at runtime, collecting the produced values into an
+/// array. Injected by the frontend lowering whenever a program contains a
+/// spread call argument so the backend can route spread operands that are
+/// not provably plain arrays through real GetIterator/IteratorStep
+/// semantics.
+pub const SPREAD_ITERATE_HELPER_NAME: &str = "__ayySpreadIterate";
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct FunctionDeclaration {
     pub name: String,

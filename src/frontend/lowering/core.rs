@@ -1,4 +1,119 @@
 use super::*;
+use crate::ir::hir::SPREAD_ITERATE_HELPER_NAME;
+use crate::ir::visit::{Visitor, walk_call_argument, walk_program};
+
+fn program_uses_call_spread(program: &Program) -> bool {
+    #[derive(Default)]
+    struct SpreadCallArgumentFinder {
+        found: bool,
+    }
+
+    impl Visitor for SpreadCallArgumentFinder {
+        fn visit_call_argument(&mut self, argument: &CallArgument) {
+            if matches!(argument, CallArgument::Spread(_)) {
+                self.found = true;
+            }
+            walk_call_argument(self, argument);
+        }
+    }
+
+    let mut finder = SpreadCallArgumentFinder::default();
+    walk_program(&mut finder, program);
+    finder.found
+}
+
+fn spread_iterate_helper_declaration() -> FunctionDeclaration {
+    let source_name = "__ayy_spread_iterate_source";
+    let result_name = "__ayy_spread_iterate_result";
+    let iterator_name = "__ayy_spread_iterate_iter";
+    let step_name = "__ayy_spread_iterate_step";
+    let value_name = "__ayy_spread_iterate_value";
+
+    let body = vec![
+        Statement::Let {
+            name: result_name.to_string(),
+            mutable: true,
+            value: Expression::Array(Vec::new()),
+        },
+        Statement::For {
+            labels: Vec::new(),
+            init: vec![Statement::Let {
+                name: iterator_name.to_string(),
+                mutable: true,
+                value: Expression::GetIterator(Box::new(Expression::Identifier(
+                    source_name.to_string(),
+                ))),
+            }],
+            per_iteration_bindings: Vec::new(),
+            condition: Some(Expression::Bool(true)),
+            update: None,
+            break_hook: None,
+            body: vec![
+                Statement::Let {
+                    name: step_name.to_string(),
+                    mutable: true,
+                    value: Expression::Call {
+                        callee: Box::new(Expression::Member {
+                            object: Box::new(Expression::Identifier(iterator_name.to_string())),
+                            property: Box::new(Expression::String("next".to_string())),
+                        }),
+                        arguments: Vec::new(),
+                    },
+                },
+                Statement::If {
+                    condition: Expression::Member {
+                        object: Box::new(Expression::Identifier(step_name.to_string())),
+                        property: Box::new(Expression::String("done".to_string())),
+                    },
+                    then_branch: vec![Statement::Break { label: None }],
+                    else_branch: Vec::new(),
+                },
+                Statement::Let {
+                    name: value_name.to_string(),
+                    mutable: true,
+                    value: Expression::Member {
+                        object: Box::new(Expression::Identifier(step_name.to_string())),
+                        property: Box::new(Expression::String("value".to_string())),
+                    },
+                },
+                Statement::Expression(Expression::Call {
+                    callee: Box::new(Expression::Member {
+                        object: Box::new(Expression::Identifier(result_name.to_string())),
+                        property: Box::new(Expression::String("push".to_string())),
+                    }),
+                    arguments: vec![CallArgument::Expression(Expression::Identifier(
+                        value_name.to_string(),
+                    ))],
+                }),
+            ],
+        },
+        Statement::Return(Expression::Identifier(result_name.to_string())),
+    ];
+
+    FunctionDeclaration {
+        name: SPREAD_ITERATE_HELPER_NAME.to_string(),
+        top_level_binding: None,
+        params: vec![Parameter {
+            name: source_name.to_string(),
+            default: None,
+            rest: false,
+        }],
+        body,
+        register_global: false,
+        kind: FunctionKind::Ordinary,
+        self_binding: None,
+        mapped_arguments: false,
+        strict: true,
+        lexical_this: false,
+        constructible: false,
+        derived_constructor: false,
+        direct_eval_in_class_field_initializer: false,
+        length: 1,
+        synthetic_capture_bindings: Vec::new(),
+        immutable_class_bindings: Vec::new(),
+        private_brand_binding: None,
+    }
+}
 
 impl Lowerer {
     pub(crate) fn with_source_text(source_text: String) -> Self {
@@ -299,11 +414,15 @@ impl Lowerer {
         }
         functions.reverse();
 
-        Program {
+        let mut program = Program {
             strict,
             functions,
             statements,
+        };
+        if !seen.contains(SPREAD_ITERATE_HELPER_NAME) && program_uses_call_spread(&program) {
+            program.functions.push(spread_iterate_helper_declaration());
         }
+        program
     }
 
     pub(crate) fn fresh_temporary_name(&mut self, prefix: &str) -> String {
