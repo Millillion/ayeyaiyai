@@ -2630,6 +2630,15 @@ impl<'a> FunctionCompiler<'a> {
             return false;
         }
 
+        if matches!(
+            materialized_property,
+            Expression::String(ref property_name) if property_name == "name"
+        ) && inline_summary_side_effect_free_expression(value)
+            && self.resolve_function_binding_from_expression(target).is_some()
+        {
+            return true;
+        }
+
         self.member_function_binding_key(target, &materialized_property)
             .is_some()
             && self

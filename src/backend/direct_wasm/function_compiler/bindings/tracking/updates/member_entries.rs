@@ -233,10 +233,12 @@ impl<'a> FunctionCompiler<'a> {
         let value_binding = self.resolve_function_binding_from_descriptor_expression(descriptor);
         let getter_binding = self.resolve_getter_binding_from_descriptor_expression(descriptor);
         let setter_binding = self.resolve_setter_binding_from_descriptor_expression(descriptor);
+        let descriptor_is_accessor =
+            has_get_field || has_set_field || getter_binding.is_some() || setter_binding.is_some();
 
         if let Some(binding) = value_binding {
             self.set_member_function_binding_entry(&key, binding);
-        } else if has_value_field {
+        } else if has_value_field || descriptor_is_accessor {
             self.clear_member_function_binding_entry(&key);
         }
 

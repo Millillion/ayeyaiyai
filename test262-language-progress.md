@@ -1,4 +1,4 @@
-22808/23668 (96.37%)
+22810/23668 (96.37%)
 Sub-category progress
 
 - comments: 51/52 (98.08%)
@@ -14,7 +14,7 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 8997/9337 (96.36%)
+- statements: 8999/9337 (96.38%)
 - expressions: 10680/11061 (96.56%)
 - types: 107/113 (94.69%)
 - function-code: 208/217 (95.85%)
@@ -2360,8 +2360,8 @@ Sub-category progress
   - [x] test/language/statements/class/definition/fn-name-accessor-set.js
   - [x] test/language/statements/class/definition/fn-name-gen-method.js
   - [x] test/language/statements/class/definition/fn-name-method.js
-  - [ ] test/language/statements/class/definition/fn-name-static-precedence-order.js
-  - [ ] test/language/statements/class/definition/fn-name-static-precedence.js
+  - [x] test/language/statements/class/definition/fn-name-static-precedence-order.js
+  - [x] test/language/statements/class/definition/fn-name-static-precedence.js
   - [x] test/language/statements/class/definition/getters-non-configurable-err.js
   - [x] test/language/statements/class/definition/getters-prop-desc.js
   - [x] test/language/statements/class/definition/getters-restricted-ids.js
