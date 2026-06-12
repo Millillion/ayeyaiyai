@@ -1,4 +1,4 @@
-22110/23668 (93.42%)
+22125/23668 (93.48%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,8 +14,8 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 8515/9337 (91.20%)
-- expressions: 10472/11061 (94.67%)
+- statements: 8522/9337 (91.27%)
+- expressions: 10480/11061 (94.75%)
 - types: 103/113 (91.15%)
 - function-code: 206/217 (94.93%)
 - global-code: 41/42 (97.62%)
@@ -2240,7 +2240,7 @@ Sub-category progress
   - [x] test/language/statements/class/cpn-class-decl-computed-property-name-from-assignment-expression-logical-and.js
   - [x] test/language/statements/class/cpn-class-decl-computed-property-name-from-assignment-expression-logical-or.js
   - [x] test/language/statements/class/cpn-class-decl-computed-property-name-from-async-arrow-function-expression.js
-  - [ ] test/language/statements/class/cpn-class-decl-computed-property-name-from-await-expression.js
+  - [x] test/language/statements/class/cpn-class-decl-computed-property-name-from-await-expression.js
   - [x] test/language/statements/class/cpn-class-decl-computed-property-name-from-condition-expression-false.js
   - [x] test/language/statements/class/cpn-class-decl-computed-property-name-from-condition-expression-true.js
   - [x] test/language/statements/class/cpn-class-decl-computed-property-name-from-decimal-e-notational-literal.js
@@ -2337,7 +2337,7 @@ Sub-category progress
   - [x] test/language/statements/class/decorator/syntax/valid/decorator-member-expr-identifier-reference.js
   - [x] test/language/statements/class/decorator/syntax/valid/decorator-parenthesized-expr-identifier-reference-yield.js
   - [x] test/language/statements/class/decorator/syntax/valid/decorator-parenthesized-expr-identifier-reference.js
-  - [ ] test/language/statements/class/definition/accessors.js
+  - [x] test/language/statements/class/definition/accessors.js
   - [x] test/language/statements/class/definition/basics.js
   - [x] test/language/statements/class/definition/class-method-returns-promise.js
   - [ ] test/language/statements/class/definition/constructable-but-no-prototype.js
@@ -5539,18 +5539,18 @@ Sub-category progress
   - [ ] test/language/statements/class/elements/static-private-getter-access-on-inner-arrow-function.js
   - [ ] test/language/statements/class/elements/static-private-getter-access-on-inner-class.js
   - [ ] test/language/statements/class/elements/static-private-getter-access-on-inner-function.js
-  - [ ] test/language/statements/class/elements/static-private-getter.js
+  - [x] test/language/statements/class/elements/static-private-getter.js
   - [x] test/language/statements/class/elements/static-private-init-err-contains-arguments.js
   - [x] test/language/statements/class/elements/static-private-init-err-contains-super.js
   - [ ] test/language/statements/class/elements/static-private-method-access-on-inner-arrow-function.js
   - [ ] test/language/statements/class/elements/static-private-method-access-on-inner-function.js
   - [ ] test/language/statements/class/elements/static-private-method-and-instance-method-brand-check.js
   - [ ] test/language/statements/class/elements/static-private-method-referenced-from-instance-method.js
-  - [ ] test/language/statements/class/elements/static-private-method-subclass-receiver.js
-  - [ ] test/language/statements/class/elements/static-private-setter-access-on-inner-arrow-function.js
+  - [x] test/language/statements/class/elements/static-private-method-subclass-receiver.js
+  - [x] test/language/statements/class/elements/static-private-setter-access-on-inner-arrow-function.js
   - [x] test/language/statements/class/elements/static-private-setter-access-on-inner-class.js
-  - [ ] test/language/statements/class/elements/static-private-setter-access-on-inner-function.js
-  - [ ] test/language/statements/class/elements/static-private-setter.js
+  - [x] test/language/statements/class/elements/static-private-setter-access-on-inner-function.js
+  - [x] test/language/statements/class/elements/static-private-setter.js
   - [x] test/language/statements/class/elements/static-string-literal-name-init-err-contains-arguments.js
   - [x] test/language/statements/class/elements/static-string-literal-name-init-err-contains-super.js
   - [x] test/language/statements/class/elements/string-literal-name-init-err-contains-arguments.js
@@ -16190,13 +16190,13 @@ Sub-category progress
   - [x] test/language/expressions/class/elements/private-methods/prod-private-method-initialize-order.js
   - [x] test/language/expressions/class/elements/private-methods/prod-private-method.js
   - [ ] test/language/expressions/class/elements/private-setter-access-on-inner-arrow-function.js
-  - [ ] test/language/expressions/class/elements/private-setter-access-on-inner-function.js
+  - [x] test/language/expressions/class/elements/private-setter-access-on-inner-function.js
   - [x] test/language/expressions/class/elements/private-setter-is-not-a-own-property.js
   - [x] test/language/expressions/class/elements/private-setter-on-nested-class.js
   - [ ] test/language/expressions/class/elements/private-setter-shadowed-by-field-on-nested-class.js
-  - [ ] test/language/expressions/class/elements/private-setter-shadowed-by-getter-on-nested-class.js
-  - [ ] test/language/expressions/class/elements/private-setter-shadowed-by-method-on-nested-class.js
-  - [ ] test/language/expressions/class/elements/private-setter-shadowed-by-setter-on-nested-class.js
+  - [x] test/language/expressions/class/elements/private-setter-shadowed-by-getter-on-nested-class.js
+  - [x] test/language/expressions/class/elements/private-setter-shadowed-by-method-on-nested-class.js
+  - [x] test/language/expressions/class/elements/private-setter-shadowed-by-setter-on-nested-class.js
   - [x] test/language/expressions/class/elements/private-static-async-generator-method-name.js
   - [x] test/language/expressions/class/elements/private-static-async-method-name.js
   - [ ] test/language/expressions/class/elements/private-static-field-shadowed-by-field-on-nested-class.js
@@ -16442,19 +16442,19 @@ Sub-category progress
   - [ ] test/language/expressions/class/elements/static-private-getter-access-on-inner-arrow-function.js
   - [ ] test/language/expressions/class/elements/static-private-getter-access-on-inner-class.js
   - [ ] test/language/expressions/class/elements/static-private-getter-access-on-inner-function.js
-  - [ ] test/language/expressions/class/elements/static-private-getter.js
+  - [x] test/language/expressions/class/elements/static-private-getter.js
   - [x] test/language/expressions/class/elements/static-private-init-err-contains-arguments.js
   - [x] test/language/expressions/class/elements/static-private-init-err-contains-super.js
   - [ ] test/language/expressions/class/elements/static-private-method-access-on-inner-arrow-function.js
   - [ ] test/language/expressions/class/elements/static-private-method-access-on-inner-function.js
   - [ ] test/language/expressions/class/elements/static-private-method-and-instance-method-brand-check.js
   - [ ] test/language/expressions/class/elements/static-private-method-referenced-from-instance-method.js
-  - [ ] test/language/expressions/class/elements/static-private-method-subclass-receiver.js
+  - [x] test/language/expressions/class/elements/static-private-method-subclass-receiver.js
   - [x] test/language/expressions/class/elements/static-private-methods-proxy-default-handler-throws.js
   - [ ] test/language/expressions/class/elements/static-private-setter-access-on-inner-arrow-function.js
   - [ ] test/language/expressions/class/elements/static-private-setter-access-on-inner-class.js
-  - [ ] test/language/expressions/class/elements/static-private-setter-access-on-inner-function.js
-  - [ ] test/language/expressions/class/elements/static-private-setter.js
+  - [x] test/language/expressions/class/elements/static-private-setter-access-on-inner-function.js
+  - [x] test/language/expressions/class/elements/static-private-setter.js
   - [x] test/language/expressions/class/elements/static-string-literal-name-init-err-contains-arguments.js
   - [x] test/language/expressions/class/elements/static-string-literal-name-init-err-contains-super.js
   - [x] test/language/expressions/class/elements/string-literal-name-init-err-contains-arguments.js
