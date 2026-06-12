@@ -1907,6 +1907,57 @@ impl<'a> FunctionCompiler<'a> {
         )
     }
 
+    /// Follow the static value-binding alias chain from `name` while every
+    /// hop lands on a synthetic class-related binding. When the chain
+    /// terminates at a canonical class constructor channel, return the
+    /// deepest chain entry that owns runtime shadow bindings, so every alias
+    /// of a class object shares one shadow channel.
+    pub(in crate::backend::direct_wasm) fn canonical_class_alias_shadow_owner(
+        &self,
+        name: &str,
+    ) -> Option<String> {
+        let is_class_channel_name = |candidate: &str| {
+            candidate.starts_with("__ayy_class_ctor_") || candidate.starts_with("__ayy_class_expr_")
+        };
+        let is_chain_name = |candidate: &str| {
+            is_class_channel_name(candidate)
+                || candidate.starts_with("__ayy_local$")
+                || candidate.starts_with("__ayy_scope$")
+        };
+        if is_class_channel_name(name) {
+            return None;
+        }
+        let mut current = name.to_string();
+        let mut deepest_owner_with_bindings = None;
+        let mut reached_class_channel = false;
+        for _ in 0..4 {
+            let Some(Expression::Identifier(next)) = self
+                .state
+                .speculation
+                .static_semantics
+                .local_value_binding(&current)
+                .or_else(|| self.global_value_binding(&current))
+            else {
+                break;
+            };
+            if next == &current || !is_chain_name(next) {
+                break;
+            }
+            if self.runtime_object_property_shadow_owner_has_bindings(next) {
+                deepest_owner_with_bindings = Some(next.clone());
+            }
+            if is_class_channel_name(next) {
+                reached_class_channel = true;
+                break;
+            }
+            current = next.clone();
+        }
+        if !reached_class_channel {
+            return None;
+        }
+        deepest_owner_with_bindings.filter(|owner| owner != name)
+    }
+
     pub(in crate::backend::direct_wasm) fn runtime_object_property_shadow_owner_name_for_identifier(
         &self,
         name: &str,
@@ -1945,6 +1996,18 @@ impl<'a> FunctionCompiler<'a> {
             )
         {
             return Some(name.to_string());
+        }
+        // Class bindings and their scoped/class-local aliases all denote the
+        // same object identity; route every alias whose static value chain
+        // reaches the canonical class constructor channel through the deepest
+        // chain entry that owns shadow bindings, so private member and static
+        // property state stays on a single shadow channel regardless of which
+        // alias performed the access.
+        if let Some(class_owner) = self.canonical_class_alias_shadow_owner(name) {
+            if trace_runtime_shadows {
+                eprintln!("runtime_shadow_owner_class_canonical name={name} owner={class_owner}");
+            }
+            return Some(class_owner);
         }
         if self.contains_user_function(name) {
             return Some(name.to_string());
@@ -2830,6 +2893,14 @@ impl<'a> FunctionCompiler<'a> {
                 ))
             });
         let had_static_object_binding = static_object_binding.is_some();
+        if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOW_RESOLVE") {
+            eprintln!(
+                "runtime_shadow_resolve owner={owner_name} resolved_owner={resolved_owner_name} base={:?}",
+                static_object_binding
+                    .as_ref()
+                    .map(object_binding_to_expression),
+            );
+        }
         let mut object_binding = static_object_binding.unwrap_or_else(empty_object_value_binding);
         self.filter_proxy_private_object_binding_entries(owner_name, &mut object_binding);
         let mut found_shadow_entry = false;
@@ -2882,6 +2953,11 @@ impl<'a> FunctionCompiler<'a> {
                 continue;
             };
             let property = Expression::String(property_name);
+            if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOW_RESOLVE") {
+                eprintln!(
+                    "runtime_shadow_resolve_override owner={owner_name} shadow={name} value={value:?}"
+                );
+            }
             if let Some(descriptor) = self.backend.global_property_descriptor(&name).or_else(|| {
                 self.backend
                     .shared_global_semantics
@@ -3280,6 +3356,43 @@ impl<'a> FunctionCompiler<'a> {
                     setter: None,
                     has_get: false,
                     has_set: false,
+                };
+                self.backend.upsert_global_property_descriptor(
+                    shadow_binding_name.clone(),
+                    descriptor_state.clone(),
+                );
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
+                self.backend
+                    .shared_global_semantics
+                    .values
+                    .property_descriptors
+                    .insert(shadow_binding_name.clone(), descriptor_state);
+            } else if let Some(stale_descriptor) = self
+                .backend
+                .global_property_descriptor(&shadow_binding_name)
+                .cloned()
+                .or_else(|| {
+                    self.backend
+                        .shared_global_semantics
+                        .values
+                        .property_descriptor(&shadow_binding_name)
+                        .cloned()
+                })
+                .filter(|state| {
+                    !state.has_get
+                        && !state.has_set
+                        && state.getter.is_none()
+                        && state.setter.is_none()
+                })
+                .filter(|state| !static_expression_matches(&state.value, &materialized_value))
+            {
+                // The synced binding carries no descriptor for this property,
+                // but a previously copied/seeded shadow descriptor still holds
+                // the pre-call value. Refresh the data value so static
+                // resolution does not fall back to the stale snapshot.
+                let descriptor_state = GlobalPropertyDescriptorState {
+                    value: materialized_value.clone(),
+                    ..stale_descriptor
                 };
                 self.backend.upsert_global_property_descriptor(
                     shadow_binding_name.clone(),

@@ -491,15 +491,32 @@ impl<'a> FunctionCompiler<'a> {
         };
         match this_expression {
             Expression::Identifier(name) => {
+                // When the identifier aliases a canonical class shadow channel
+                // (its value binding chain reaches the class constructor),
+                // overwriting the value binding with the materialized object
+                // snapshot would sever the alias and split future accesses
+                // onto a divergent shadow channel; the channel metadata sync
+                // above already recorded the update, so keep the alias.
+                let preserve_class_alias = self
+                    .canonical_class_alias_shadow_owner(name)
+                    .is_some_and(|owner| owner == target_owner && owner != *name);
                 if let Some(resolved_name) = resolved_identifier_name.as_deref() {
-                    self.update_local_value_binding(resolved_name, &updated_receiver_expression);
+                    if !preserve_class_alias {
+                        self.update_local_value_binding(
+                            resolved_name,
+                            &updated_receiver_expression,
+                        );
+                    }
                     self.update_local_object_binding(resolved_name, &updated_receiver_expression);
                 }
-                self.update_local_value_binding(name, &updated_receiver_expression);
+                if !preserve_class_alias {
+                    self.update_local_value_binding(name, &updated_receiver_expression);
+                }
                 self.update_local_object_binding(name, &updated_receiver_expression);
-                if self.binding_name_is_global(name)
-                    || self.global_has_binding(name)
-                    || self.global_has_implicit_binding(name)
+                if !preserve_class_alias
+                    && (self.binding_name_is_global(name)
+                        || self.global_has_binding(name)
+                        || self.global_has_implicit_binding(name))
                 {
                     self.update_static_global_assignment_metadata(
                         name,
@@ -534,8 +551,62 @@ impl<'a> FunctionCompiler<'a> {
                     let materialized_value = self.materialize_static_expression(&value);
                     static_expression_matches(&materialized_value, &expected_value)
                         || static_expression_matches(&expected_value, &materialized_value)
+                        // Closure-slot aliases of the brand binding (seeded on
+                        // class channels) still denote the same brand object.
+                        || matches!(
+                            (&materialized_value, &expected_value),
+                            (
+                                Expression::Identifier(marker_name),
+                                Expression::Identifier(expected_name),
+                            ) if marker_name.ends_with(expected_name.as_str())
+                                && marker_name.starts_with("__ayy_closure_slot_")
+                        )
                 })
             })
+    }
+
+    /// True when `function_name` is registered as a member function (method,
+    /// getter, or setter) of the class binding identified by `owner` or one of
+    /// its scoped aliases.
+    fn user_function_is_member_function_of_class_owner(
+        &self,
+        function_name: &str,
+        owner: &str,
+    ) -> bool {
+        if !function_name.starts_with("__ayy_class_method_") {
+            return false;
+        }
+        let expected = LocalFunctionBinding::User(function_name.to_string());
+        let owner_source = scoped_binding_source_name(owner).unwrap_or(owner);
+        let target_matches = |target: &MemberFunctionBindingTarget| match target {
+            MemberFunctionBindingTarget::Identifier(target_name) => {
+                let target_source = scoped_binding_source_name(target_name).unwrap_or(target_name);
+                target_name == owner || target_source == owner_source
+            }
+            _ => false,
+        };
+        self.state
+            .speculation
+            .static_semantics
+            .objects
+            .member_function_bindings
+            .iter()
+            .any(|(key, binding)| *binding == expected && target_matches(&key.target))
+            || self
+                .backend
+                .global_member_function_binding_entries()
+                .into_iter()
+                .any(|(key, binding)| binding == expected && target_matches(&key.target))
+            || self
+                .backend
+                .global_member_getter_binding_entries()
+                .into_iter()
+                .any(|(key, binding)| binding == expected && target_matches(&key.target))
+            || self
+                .backend
+                .global_member_setter_binding_entries()
+                .into_iter()
+                .any(|(key, binding)| binding == expected && target_matches(&key.target))
     }
 
     pub(in crate::backend::direct_wasm) fn user_function_call_allows_static_this_shadow_commit(
@@ -548,10 +619,50 @@ impl<'a> FunctionCompiler<'a> {
         {
             return true;
         }
+        if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
+            eprintln!(
+                "static_this_shadow_commit_check fn={} private_brand_binding={:?} receiver_owner={:?}",
+                user_function.name,
+                user_function.private_brand_binding,
+                self.resolve_user_function_call_receiver_shadow_owner(this_expression),
+            );
+        }
+        let receiver_owner = self.resolve_user_function_call_receiver_shadow_owner(this_expression);
+        // When the receiver is the very class object this method is defined
+        // on, brand checks against that class cannot fail; the conservative
+        // private-access scan must not block static receiver modeling.
+        if let Some(owner) = receiver_owner.as_deref()
+            && self.user_function_is_member_function_of_class_owner(&user_function.name, owner)
+        {
+            return true;
+        }
         let Some(private_brand_binding) = user_function.private_brand_binding.as_deref() else {
             return false;
         };
-        self.resolve_user_function_call_receiver_shadow_owner(this_expression)
+        // A class object always carries its own static private brand; when the
+        // receiver is the class binding that declares private members present
+        // on its own object binding, the brand check cannot fail.
+        if let Some(owner) = receiver_owner.as_deref()
+            && let Some(object_binding) = self.resolve_runtime_shadow_object_binding(owner)
+            && ordered_object_property_names(&object_binding)
+                .into_iter()
+                .any(|property_name| {
+                    let Some(remainder) = property_name.strip_prefix("__ayy$private$") else {
+                        return false;
+                    };
+                    let Some((declaring_class, _)) = remainder.rsplit_once('$') else {
+                        return false;
+                    };
+                    declaring_class == owner
+                        || scoped_binding_source_name(declaring_class) == Some(owner)
+                        || scoped_binding_source_name(declaring_class)
+                            .zip(scoped_binding_source_name(owner))
+                            .is_some_and(|(left, right)| left == right)
+                })
+        {
+            return true;
+        }
+        receiver_owner
             .and_then(|owner| self.resolve_runtime_shadow_object_binding(&owner))
             .is_some_and(|object_binding| {
                 self.object_binding_contains_private_brand_marker(
@@ -3854,6 +3965,12 @@ impl<'a> FunctionCompiler<'a> {
             let mut property_names =
                 self.user_function_static_this_member_write_property_names(user_function);
             property_names.extend(property_values.keys().cloned());
+            if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
+                eprintln!(
+                    "runtime_this_shadow_property_values fn={:?} property_values={property_values:?} property_names={property_names:?}",
+                    self.current_function_name(),
+                );
+            }
             for property_name in property_names {
                 self.predeclare_runtime_shadow_property("this", &property_name);
             }
@@ -3866,9 +3983,11 @@ impl<'a> FunctionCompiler<'a> {
             }
             if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                 eprintln!(
-                    "runtime_this_shadow_sync fn={:?} target_owner={target_owner} updated_receiver_binding_present={} copied={should_copy_runtime_this_shadow}",
+                    "runtime_this_shadow_sync fn={:?} target_owner={target_owner} updated_receiver_binding={:?} copied={should_copy_runtime_this_shadow}",
                     self.current_function_name(),
-                    updated_receiver_binding.is_some(),
+                    updated_receiver_binding
+                        .as_ref()
+                        .map(object_binding_to_expression),
                 );
             }
             if let Some(updated_receiver_binding) = updated_receiver_binding {
