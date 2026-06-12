@@ -82,12 +82,28 @@ impl<'a> FunctionCompiler<'a> {
     /// the preceding getter). The emitted store only executes when the
     /// deleted marker is clear, so static resolution must defer to the
     /// runtime shadow state instead of asserting the post-store value.
-    fn scrub_scoped_property_static_claims_after_may_throw_store(
+    pub(in crate::backend::direct_wasm) fn scrub_scoped_property_static_claims_after_may_throw_store(
         &mut self,
         scope_object: &Expression,
         name: &str,
     ) {
         let property = Expression::String(name.to_string());
+        // The global descriptor/in model also answers `'name' in this` and
+        // related presence queries; a store that may throw against a deleted
+        // global binding leaves the property's runtime presence unknown, so
+        // the descriptor claim must not survive to fold later `in` checks.
+        if matches!(scope_object, Expression::This)
+            || matches!(scope_object, Expression::Identifier(scope_name) if scope_name == "globalThis")
+        {
+            self.backend
+                .global_semantics
+                .values
+                .clear_property_descriptor(name);
+            self.backend
+                .shared_global_semantics
+                .values
+                .clear_property_descriptor(name);
+        }
         let mut scope_names: Vec<String> = Vec::new();
         match scope_object {
             Expression::Identifier(scope_name) => scope_names.push(scope_name.clone()),

@@ -507,7 +507,18 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(false);
         };
         let object = Expression::Identifier(object_name);
-        let store_local = if matches!(value, Expression::Identifier(_)) {
+        // Re-emitting the static writeback expression at the call site is only
+        // sound when every binding it references still resolves here; the
+        // callee evaluated the value inside its own scope (a with-scoped
+        // compound assignment reads through the scope object), so an
+        // unresolvable reference would synthesize a ReferenceError outside the
+        // caller's protected regions. The runtime capture value already holds
+        // the evaluated result; use it instead.
+        let value_is_reemittable =
+            self.with_suspended_with_scopes_if_active_scope_object(&object, |compiler| {
+                Ok(compiler.runtime_shadow_fallback_references_readable_bindings(value))
+            })?;
+        let store_local = if matches!(value, Expression::Identifier(_)) || !value_is_reemittable {
             value_local
         } else {
             let store_local = self.allocate_temp_local();

@@ -2125,6 +2125,7 @@ impl<'a> FunctionCompiler<'a> {
             self.detach_global_reference_aliases_before_rebind(name, state);
             self.preserve_identifier_store_global_metadata(name, state, true)?;
         }
+        self.emit_strict_implicit_global_delete_sync(name, binding)?;
         self.emit_store_implicit_global_from_local(binding, value_local)?;
         self.sync_identifier_store_runtime_object_shadows(name, name, state)?;
         if self.emit_force_global_runtime_array_state_from_internal_rest_source(

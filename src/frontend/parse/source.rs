@@ -138,9 +138,12 @@ fn normalize_unmodified_parser_source(source: &str) -> Cow<'_, str> {
     // parser rejects; escaped-keyword identifier negatives still error.
     // Object property names are always-valid IdentifierName positions, so the
     // escaped-property rewrite (which only fires before `:`/`(` inside an
-    // object literal context) preserves identifier-position negatives.
+    // object literal context) preserves identifier-position negatives. The
+    // member-property rewrite likewise only fires after `.`, another
+    // always-valid IdentifierName position.
     let normalized = normalize_escaped_class_method_names(Cow::Borrowed(source));
     let normalized = normalize_escaped_object_property_names(normalized);
+    let normalized = normalize_escaped_member_property_names(normalized);
     let normalized = normalize_static_constructor_methods(normalized);
     normalize_for_statement_using_declarations(normalized)
 }

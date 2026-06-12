@@ -422,6 +422,20 @@ impl<'a> FunctionCompiler<'a> {
                 return Some(true);
             }
             let materialized_left = self.materialize_static_expression(left);
+            // A property expression that still varies at runtime (for example
+            // the lowered for-in guard `keys[index] in target`, whose index is
+            // reassigned by the active loop) has no single static key; the
+            // materialized form degrades to a placeholder, so answering a
+            // definite miss here would statically skip every loop iteration.
+            // Defer to the runtime presence check instead.
+            if self
+                .static_property_name_for_in_result(&materialized_left)
+                .is_none()
+                && (self.expression_depends_on_active_loop_assignment(left)
+                    || self.expression_depends_on_active_loop_assignment(&materialized_left))
+            {
+                return None;
+            }
             let shadow_object = if static_expression_matches(&materialized_right, right) {
                 right
             } else {
@@ -429,6 +443,17 @@ impl<'a> FunctionCompiler<'a> {
             };
             if self.runtime_object_property_shadow_deletion_may_affect_property(
                 shadow_object,
+                &materialized_left,
+            ) {
+                return None;
+            }
+            // A self-deleting accessor (`get x() { delete this.x; ... }`)
+            // makes the property's presence depend on whether the getter has
+            // run; the deletion may be observed inside a later-compiled
+            // closure, so the answer must come from the runtime shadow state.
+            if self.static_in_object_property_getter_may_delete_property(
+                right,
+                &object_binding,
                 &materialized_left,
             ) {
                 return None;
@@ -441,6 +466,48 @@ impl<'a> FunctionCompiler<'a> {
         }
 
         None
+    }
+
+    /// True when the object's own descriptor for `property` is an accessor
+    /// whose getter deletes that same property from its receiver, making the
+    /// property's static presence unreliable once the getter may have run.
+    pub(in crate::backend::direct_wasm) fn static_in_object_property_getter_may_delete_property(
+        &self,
+        object: &Expression,
+        object_binding: &ObjectValueBinding,
+        property: &Expression,
+    ) -> bool {
+        let Some(property_name) = static_property_name_from_expression(property) else {
+            return false;
+        };
+        let getter_binding = object_binding_lookup_descriptor(object_binding, property)
+            .and_then(|descriptor| descriptor.getter.clone())
+            .and_then(|getter| self.resolve_function_binding_from_expression(&getter))
+            .or_else(|| self.resolve_member_getter_binding(object, property));
+        let Some(LocalFunctionBinding::User(function_name)) = getter_binding else {
+            return false;
+        };
+        let Some(summary) = self
+            .user_function(&function_name)
+            .and_then(|user_function| user_function.inline_summary.clone())
+        else {
+            return false;
+        };
+        summary.effects.iter().any(|effect| {
+            let InlineFunctionEffect::Expression(Expression::Unary {
+                op: UnaryOp::Delete,
+                expression,
+            }) = effect
+            else {
+                return false;
+            };
+            let Expression::Member { object, property } = expression.as_ref() else {
+                return false;
+            };
+            matches!(object.as_ref(), Expression::This)
+                && static_property_name_from_expression(property).as_deref()
+                    == Some(property_name.as_str())
+        })
     }
 
     pub(in crate::backend::direct_wasm) fn resolve_static_private_in_predicate_call_result(
