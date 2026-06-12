@@ -244,6 +244,9 @@ impl DirectWasmCompiler {
         param_name: &str,
         candidate: Option<Expression>,
     ) {
+        if crate::ayy_env_flag!("AYY_TRACE_PARAM_ANALYSIS") {
+            eprintln!("param_analysis:candidate param={param_name} candidate={candidate:?}");
+        }
         let Some(candidate) = candidate else {
             parameter_bindings.insert(param_name.to_string(), None);
             return;
@@ -260,11 +263,40 @@ impl DirectWasmCompiler {
         }
     }
 
+    /// Resolves an argument identifier to a destructuring rest-array
+    /// temporary (`__ayy_array_rest_*`). Rest arrays are fresh allocations
+    /// minted per destructuring evaluation, so the temp name is a sound
+    /// identity alias for strict-equality resolution inside callees.
+    fn parameter_rest_array_alias_argument(
+        &self,
+        argument: &Expression,
+        current_function_value_bindings: &HashMap<String, Option<Expression>>,
+    ) -> Option<Expression> {
+        let Expression::Identifier(name) = argument else {
+            return None;
+        };
+        if name.contains("__ayy_array_rest_") {
+            return Some(argument.clone());
+        }
+        if let Some(Some(Expression::Identifier(alias))) =
+            current_function_value_bindings.get(name)
+            && alias.contains("__ayy_array_rest_")
+        {
+            return Some(Expression::Identifier(alias.clone()));
+        }
+        super::rest_array_aliases::stable_rest_array_alias(name).map(Expression::Identifier)
+    }
+
     fn effective_parameter_value_binding_argument(
         &self,
         argument: &Expression,
         current_function_value_bindings: &HashMap<String, Option<Expression>>,
     ) -> Option<Expression> {
+        if let Some(rest_alias) =
+            self.parameter_rest_array_alias_argument(argument, current_function_value_bindings)
+        {
+            return Some(rest_alias);
+        }
         let materialized_argument = self.materialize_current_or_global_parameter_value_argument(
             argument,
             current_function_value_bindings,

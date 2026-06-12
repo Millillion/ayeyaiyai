@@ -752,28 +752,57 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         expression: &Expression,
     ) -> Option<(Vec<SimpleGeneratorStep>, Vec<Statement>, Expression)> {
-        let object_binding = self.resolve_object_binding_from_expression(expression)?;
+        let trace_static_iterable = crate::ayy_env_flag!("AYY_TRACE_STATIC_ITERABLE");
+        macro_rules! trace_bail {
+            ($label:expr, $value:expr) => {
+                match $value {
+                    Some(value) => value,
+                    None => {
+                        if trace_static_iterable {
+                            eprintln!(
+                                "static_iterable:bail:{} expression={expression:?}",
+                                $label
+                            );
+                        }
+                        return None;
+                    }
+                }
+            };
+        }
+        let object_binding =
+            trace_bail!("object", self.resolve_object_binding_from_expression(expression));
         let symbol_iterator = self.materialize_static_expression(&Expression::Member {
             object: Box::new(Expression::Identifier("Symbol".to_string())),
             property: Box::new(Expression::String("iterator".to_string())),
         });
-        let iterator_method =
-            object_binding_lookup_value(&object_binding, &symbol_iterator)?.clone();
-        let LocalFunctionBinding::User(iterator_function_name) =
-            self.resolve_function_binding_from_expression(&iterator_method)?
-        else {
+        let iterator_method = trace_bail!(
+            "method",
+            object_binding_lookup_value(&object_binding, &symbol_iterator)
+        )
+        .clone();
+        let LocalFunctionBinding::User(iterator_function_name) = trace_bail!(
+            "method_binding",
+            self.resolve_function_binding_from_expression(&iterator_method)
+        ) else {
             return None;
         };
         if self.static_iterable_user_function_has_observable_effects(&iterator_function_name) {
+            if trace_static_iterable {
+                eprintln!("static_iterable:bail:method_effects expression={expression:?}");
+            }
             return None;
         }
-        let (iterator_result, iterator_bindings) = self
-            .execute_simple_static_user_function_with_bindings(
+        let (iterator_result, iterator_bindings) = trace_bail!(
+            "iterator_exec",
+            self.execute_simple_static_user_function_with_bindings(
                 &iterator_function_name,
                 &HashMap::new(),
-            )?;
-        let iterator_result_binding =
-            self.resolve_object_binding_from_expression(&iterator_result)?;
+            )
+        );
+        let iterator_result_binding = trace_bail!(
+            "iterator_object",
+            self.resolve_object_binding_from_expression(&iterator_result)
+        );
         if self.static_iterator_result_has_observable_return(&iterator_result_binding) {
             return None;
         }

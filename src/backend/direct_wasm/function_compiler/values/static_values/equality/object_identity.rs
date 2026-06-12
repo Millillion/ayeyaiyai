@@ -654,7 +654,9 @@ impl<'a> FunctionCompiler<'a> {
                         .speculation
                         .static_semantics
                         .local_value_binding(&name)
-                });
+                })
+                .or_else(|| self.global_value_binding(&resolved_name))
+                .or_else(|| self.global_value_binding(&name));
             if trace_object_identity {
                 eprintln!(
                     "object_identity:rest_walk name={name} resolved={resolved_name} value={value:?}"

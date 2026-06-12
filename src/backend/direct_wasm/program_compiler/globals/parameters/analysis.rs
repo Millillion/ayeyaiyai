@@ -107,6 +107,7 @@ impl DirectWasmCompiler {
         &self,
         program: &Program,
     ) -> HashMap<String, HashMap<String, Option<Expression>>> {
+        super::value_bindings::rest_array_aliases::collect_stable_rest_array_aliases(program);
         let mut previous = HashMap::new();
         for function in &program.functions {
             previous.insert(function.name.clone(), HashMap::new());
