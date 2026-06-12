@@ -15,6 +15,10 @@ enum ForAwaitProtocolIterator {
         /// Effects performed by the final (done) `next()` call, replayed when
         /// the completion step is consumed.
         completion_effects: Vec<Statement>,
+        /// The iterator object expression whose (observable) `return` an
+        /// IteratorClose invokes; close effects mined from steps stand in
+        /// when absent.
+        close_target: Option<Expression>,
         index: usize,
         /// The consumption-site iterator binding this state was seeded from
         /// (a generator object visible after the fold): its static index must
@@ -495,6 +499,7 @@ impl<'a> FunctionCompiler<'a> {
             steps,
             completion_value,
             completion_effects,
+            close_target: None,
             index: 0,
             binding_name: None,
             closed: false,
@@ -532,6 +537,7 @@ impl<'a> FunctionCompiler<'a> {
             steps,
             completion_value,
             completion_effects,
+            close_target: Some(iterator_value),
             index: 0,
             binding_name: None,
             closed: false,
@@ -833,6 +839,7 @@ impl<'a> FunctionCompiler<'a> {
                 steps,
                 completion_value,
                 completion_effects,
+                close_target: None,
                 index: 0,
                 binding_name: None,
                 closed: false,
@@ -870,6 +877,7 @@ impl<'a> FunctionCompiler<'a> {
                         steps,
                         completion_value,
                         completion_effects,
+                        close_target: Some(iterator_value),
                         index: 0,
                         binding_name: None,
                         closed: false,
@@ -930,6 +938,7 @@ impl<'a> FunctionCompiler<'a> {
                     steps: steps.clone(),
                     completion_value: completion_value.clone(),
                     completion_effects: Vec::new(),
+                    close_target: None,
                     index,
                     binding_name: Some(binding_name.clone()),
                     closed: false,
@@ -1200,6 +1209,7 @@ impl<'a> FunctionCompiler<'a> {
                 index,
                 closed,
                 binding_name,
+                close_target: explicit_close_target,
                 ..
             } => {
                 if *closed {
@@ -1220,13 +1230,15 @@ impl<'a> FunctionCompiler<'a> {
                     *closed = true;
                     return Some(Ok(Expression::Undefined));
                 }
-                let close_target = steps.iter().find_map(|step| {
-                    let [Statement::Expression(Expression::IteratorClose(target))] =
-                        step.close_effects.as_slice()
-                    else {
-                        return None;
-                    };
-                    Some(target.as_ref().clone())
+                let close_target = explicit_close_target.clone().or_else(|| {
+                    steps.iter().find_map(|step| {
+                        let [Statement::Expression(Expression::IteratorClose(target))] =
+                            step.close_effects.as_slice()
+                        else {
+                            return None;
+                        };
+                        Some(target.as_ref().clone())
+                    })
                 });
                 *closed = true;
                 let Some(close_target) = close_target else {
@@ -1280,9 +1292,20 @@ impl<'a> FunctionCompiler<'a> {
                 Ok(_) => None,
             };
         }
-        let LocalFunctionBinding::User(function_name) =
-            self.resolve_member_function_binding(close_target, &return_property)?
+        let Some(return_binding) =
+            self.resolve_member_function_binding(close_target, &return_property)
         else {
+            // GetMethod with an absent or nullish `return` skips the call;
+            // an unresolvable iterator binding bails the fold instead.
+            let binding = self.resolve_object_binding_from_expression(close_target)?;
+            return match object_binding_lookup_value(&binding, &return_property) {
+                None | Some(Expression::Undefined | Expression::Null) => {
+                    Some(Ok(Expression::Undefined))
+                }
+                Some(_) => None,
+            };
+        };
+        let LocalFunctionBinding::User(function_name) = return_binding else {
             return None;
         };
         match self.for_await_protocol_replay_function_body(&function_name, close_target, context)? {
@@ -1774,6 +1797,21 @@ impl<'a> FunctionCompiler<'a> {
             }
             Expression::Array(_) => Some(Ok(value)),
             Expression::Identifier(_) | Expression::New { .. } => {
+                // Generator objects are not plain object bindings but are
+                // still non-thenable objects.
+                if self
+                    .resolve_simple_generator_iterator_source_kind(&value)
+                    .is_some()
+                    || self
+                        .for_await_protocol_tracked_iterator_state_with_async(
+                            &value,
+                            &HashMap::new(),
+                            true,
+                        )
+                        .is_some()
+                {
+                    return Some(Ok(value));
+                }
                 let then_property = Expression::String("then".to_string());
                 let object_binding = self.resolve_object_binding_from_expression(&value)?;
                 if object_binding_lookup_value(&object_binding, &then_property).is_some()
