@@ -56,6 +56,17 @@ impl<'a> FunctionCompiler<'a> {
     }
 
     fn static_condition_property_name(&self, expression: &Expression) -> Option<String> {
+        // Function-valued operands compare by identity, not by their
+        // stringified source text; two distinct functions with identical
+        // source (for example a with-scope `parseInt` shadow versus the
+        // builtin `parseInt`) must not fold equal through their coerced
+        // property-key strings.
+        if self
+            .resolve_function_binding_from_expression(expression)
+            .is_some()
+        {
+            return None;
+        }
         let canonical = self.canonical_object_property_expression(expression);
         static_property_name_from_expression(&canonical)
             .or_else(|| static_property_name_from_expression(expression))
