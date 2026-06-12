@@ -1326,13 +1326,19 @@ pub(super) fn validate_expression_syntax_with_restrictions(
             validate_function_syntax(&function.function, file)?
         }
         Expr::Arrow(arrow) => {
+            // A non-async arrow body is parsed with [~Await]
+            // (ConciseBody : { FunctionBody[~Yield, ~Await] }), so an
+            // enclosing await restriction (async function or class static
+            // block) does not reach into the body: `await` is a valid
+            // binding there. Arrow parameters, however, inherit [?Await]
+            // from the enclosing context.
             let body_restrictions = BindingRestrictions {
-                await_reserved: restrictions.await_reserved || arrow.is_async,
+                await_reserved: arrow.is_async,
                 yield_reserved: false,
                 await_expression_forbidden: false,
             };
             let parameter_restrictions = BindingRestrictions {
-                await_reserved: body_restrictions.await_reserved,
+                await_reserved: restrictions.await_reserved || arrow.is_async,
                 yield_reserved: body_restrictions.yield_reserved,
                 await_expression_forbidden: restrictions.await_expression_forbidden
                     || restrictions.await_reserved
