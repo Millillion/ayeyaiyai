@@ -183,6 +183,25 @@ impl<'a> FunctionCompiler<'a> {
         self.state.emission.output.instructions.push(0x05);
         if let Some(source_name) = global_fallback_source {
             self.emit_global_capture_fallback_read(&source_name)?;
+        } else if let Some(value) = self
+            .static_module_hidden_binding_post_init_value(&hidden_name)
+            .filter(|value| {
+                matches!(
+                    value,
+                    Expression::Number(_)
+                        | Expression::BigInt(_)
+                        | Expression::String(_)
+                        | Expression::Bool(_)
+                        | Expression::Null
+                        | Expression::Undefined
+                )
+            })
+        {
+            // Module export getter capture slots are only written when the
+            // init body's local store is actually emitted; a statically
+            // elided initializer leaves the slot absent, so fall back to the
+            // post-init value instead of a spurious ReferenceError.
+            self.emit_numeric_expression(&value)?;
         } else {
             self.emit_global_delete_sync_flag_write_for_source(&hidden_name, Some(name))?;
             self.emit_named_error_throw("ReferenceError")?;

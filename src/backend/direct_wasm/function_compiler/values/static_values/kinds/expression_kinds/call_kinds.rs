@@ -140,6 +140,12 @@ impl<'a> FunctionCompiler<'a> {
         ) {
             return self.infer_value_kind(&value);
         }
+        if let Expression::Member { object, property } = callee
+            && matches!(object.as_ref(), Expression::Identifier(name) if name == "Reflect")
+            && matches!(property.as_ref(), Expression::String(name) if name == "deleteProperty")
+        {
+            return Some(StaticValueKind::Bool);
+        }
         match callee {
             Expression::Identifier(name) => {
                 if let Some(LocalFunctionBinding::Builtin(function_name)) =

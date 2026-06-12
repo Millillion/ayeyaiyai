@@ -222,6 +222,11 @@ impl<'a> FunctionCompiler<'a> {
         if let Some(value) =
             self.resolve_module_namespace_live_binding_member_value(object, property)
         {
+            if crate::ayy_env_flag!("AYY_TRACE_LIVE_MUTABLE") {
+                eprintln!(
+                    "materialize_member:namespace object={object:?} property={property:?} value={value:?}"
+                );
+            }
             return self.materialize_static_expression(&value);
         }
 

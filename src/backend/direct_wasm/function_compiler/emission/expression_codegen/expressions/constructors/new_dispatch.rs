@@ -284,6 +284,19 @@ impl<'a> FunctionCompiler<'a> {
                 self.push_i32_const(native_error_value);
                 return Ok(());
             }
+
+            if name == "Test262Error" && self.is_unshadowed_builtin_identifier(name) {
+                for argument in arguments {
+                    match argument {
+                        CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                            self.emit_numeric_expression(expression)?;
+                            self.state.emission.output.instructions.push(0x1a);
+                        }
+                    }
+                }
+                self.push_i32_const(TEST262_ERROR_RUNTIME_VALUE);
+                return Ok(());
+            }
         }
         if matches!(
             callee,

@@ -2251,6 +2251,9 @@ impl<'a> FunctionCompiler<'a> {
         name: &str,
     ) -> Option<Expression> {
         let module_index = Self::module_hidden_binding_name_module_index(name)?;
+        if self.module_hidden_binding_is_mutated_outside_init(name, module_index) {
+            return None;
+        }
         let init_function = self.resolve_registered_function_declaration(&format!(
             "__ayy_module_init_{module_index}"
         ))?;
@@ -2278,6 +2281,50 @@ impl<'a> FunctionCompiler<'a> {
             return None;
         }
         Some(value)
+    }
+
+    /// A module export live binding (`__ayy_module_binding_*`) that some
+    /// escaping closure can mutate after evaluation must never be folded to
+    /// a snapshot value; reads have to keep routing to the live global.
+    pub(in crate::backend::direct_wasm) fn module_hidden_binding_is_live_mutable(
+        &self,
+        name: &str,
+    ) -> bool {
+        if !name.starts_with("__ayy_module_binding_") {
+            return false;
+        }
+        let Some(module_index) = Self::module_hidden_binding_name_module_index(name) else {
+            return false;
+        };
+        let mutated = self.module_hidden_binding_is_mutated_outside_init(name, module_index);
+        if crate::ayy_env_flag!("AYY_TRACE_LIVE_MUTABLE") {
+            eprintln!("live_mutable name={name} module={module_index} mutated={mutated}");
+        }
+        mutated
+    }
+
+    /// A module hidden binding's post-init snapshot is only sound when no
+    /// function other than the module's own init/continuation chain can
+    /// assign it after evaluation; exported live bindings mutated through
+    /// escaping closures must keep resolving to the live global instead.
+    fn module_hidden_binding_is_mutated_outside_init(
+        &self,
+        name: &str,
+        module_index: usize,
+    ) -> bool {
+        let init_name = format!("__ayy_module_init_{module_index}");
+        let continuation_prefix = format!("__ayy_module_async_continuation_{module_index}_");
+        let getter_prefix = format!("__ayy_module_export_getter_{module_index}_");
+        self.user_functions().into_iter().any(|user_function| {
+            if user_function.name == init_name
+                || user_function.name.starts_with(&continuation_prefix)
+                || user_function.name.starts_with(&getter_prefix)
+            {
+                return false;
+            }
+            self.collect_user_function_raw_assigned_binding_names(&user_function)
+                .contains(name)
+        })
     }
 
     fn static_dynamic_import_live_binding_value(

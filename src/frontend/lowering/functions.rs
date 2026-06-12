@@ -55,7 +55,10 @@ impl Lowerer {
             body,
             register_global: false,
             kind,
-            self_binding: Some(identifier.sym.to_string()),
+            // `export default function fn() {}` is a declaration: the inner
+            // `fn` references resolve to the (mutable) module-scope binding,
+            // not an immutable function-expression self binding.
+            self_binding: None,
             mapped_arguments: self.function_has_mapped_arguments(&function_expression.function),
             strict: self.function_strict_mode(&function_expression.function),
             lexical_this: false,

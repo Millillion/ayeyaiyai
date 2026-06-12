@@ -294,9 +294,60 @@ impl<'a> FunctionCompiler<'a> {
                 "call_dispatch:static_global_member:emit function={function_name} result={result:?}"
             );
         }
+        // This path elides the runtime call entirely, so every global the
+        // call statically wrote must be materialized into runtime storage;
+        // otherwise later emitted runtime reads of those globals observe a
+        // stale value (the static metadata and the wasm global diverge).
+        let mut runtime_global_stores = Vec::new();
+        for (name, value) in &environment.global_value_overrides {
+            let has_runtime_storage = self.resolve_global_binding_index(name).is_some()
+                || self.implicit_global_binding(name).is_some();
+            if !has_runtime_storage {
+                continue;
+            }
+            if !matches!(
+                value,
+                Expression::Number(_)
+                    | Expression::BigInt(_)
+                    | Expression::String(_)
+                    | Expression::Bool(_)
+                    | Expression::Null
+                    | Expression::Undefined
+            ) {
+                if trace_call_dispatch {
+                    eprintln!(
+                        "call_dispatch:static_global_member:bail non_primitive_global_write name={name}"
+                    );
+                }
+                return Ok(false);
+            }
+            runtime_global_stores.push((name.clone(), value.clone()));
+        }
         self.sync_static_resolution_environment_overrides(&environment);
+        for (name, value) in &runtime_global_stores {
+            self.emit_static_global_member_call_global_store(name, value)?;
+        }
         self.emit_numeric_expression(&self.materialize_static_expression(&result))?;
         Ok(true)
+    }
+
+    fn emit_static_global_member_call_global_store(
+        &mut self,
+        name: &str,
+        value: &Expression,
+    ) -> DirectResult<()> {
+        if let Some(global_index) = self.resolve_global_binding_index(name) {
+            self.emit_numeric_expression(value)?;
+            self.push_global_set(global_index);
+            return Ok(());
+        }
+        if let Some(binding) = self.implicit_global_binding(name) {
+            self.emit_numeric_expression(value)?;
+            self.push_global_set(binding.value_index);
+            self.push_i32_const(1);
+            self.push_global_set(binding.present_index);
+        }
+        Ok(())
     }
 
     fn call_expression_static_number_shortcut_requires_runtime(

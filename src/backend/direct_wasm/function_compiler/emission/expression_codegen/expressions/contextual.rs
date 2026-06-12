@@ -1784,6 +1784,11 @@ impl<'a> FunctionCompiler<'a> {
         if let Some(descriptor) = object_binding_lookup_descriptor(&object_binding, &property)
             && let Some(value) = descriptor.value.clone()
         {
+            if let Some(live) =
+                self.module_namespace_live_mutable_member_override(&object_binding, &property)
+            {
+                return Some(live);
+            }
             return Some(value);
         }
         let value = object_binding_lookup_value(&object_binding, &property)?.clone();
@@ -1875,6 +1880,11 @@ impl<'a> FunctionCompiler<'a> {
         if let Some(descriptor) = object_binding_lookup_descriptor(&object_binding, &property)
             && let Some(value) = descriptor.value.clone()
         {
+            if let Some(live) =
+                self.module_namespace_live_mutable_member_override(&object_binding, &property)
+            {
+                return Some(live);
+            }
             return Some(value);
         }
         let value = object_binding_lookup_value(&object_binding, &property)?.clone();
@@ -1897,6 +1907,39 @@ impl<'a> FunctionCompiler<'a> {
             module_index,
             &property,
         )
+    }
+
+    /// When an export's live binding can be mutated after module evaluation
+    /// (an escaping closure assigns it), namespace member reads must resolve
+    /// to the live hidden global instead of any value snapshotted into the
+    /// namespace object binding's descriptors.
+    fn module_namespace_live_mutable_member_override(
+        &self,
+        object_binding: &ObjectValueBinding,
+        property: &Expression,
+    ) -> Option<Expression> {
+        let module_index = object_binding_lookup_value(
+            object_binding,
+            &Expression::String("__ayy$module$namespace$moduleIndex".to_string()),
+        )
+        .and_then(|value| match value {
+            Expression::Number(index)
+                if index.is_finite() && *index >= 0.0 && index.fract() == 0.0 =>
+            {
+                Some(*index as usize)
+            }
+            _ => None,
+        })?;
+        let live = self.resolve_static_dynamic_import_namespace_live_binding_member_value(
+            module_index,
+            property,
+        )?;
+        match &live {
+            Expression::Identifier(name) if self.module_hidden_binding_is_live_mutable(name) => {
+                Some(live)
+            }
+            _ => None,
+        }
     }
 
     pub(in crate::backend::direct_wasm) fn module_namespace_live_binding_value_is_capture_slot(
