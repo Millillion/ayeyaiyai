@@ -728,6 +728,9 @@ impl<'a> FunctionCompiler<'a> {
         {
             return self.emit_numeric_expression(&resolved_value);
         }
+        if self.emit_static_for_await_protocol_async_call_initializer(value)? {
+            return Ok(());
+        }
         if let Expression::Conditional {
             condition,
             then_expression,

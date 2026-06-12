@@ -40,6 +40,11 @@ struct ForAwaitProtocolContext {
     /// Names mutated by recorded effects: reads of these from the replay
     /// would observe stale static values, so they bail the fold.
     effect_names: HashSet<String>,
+    /// Member writes performed on nonlocal object bindings during the replay
+    /// (assignment-pattern stores like `for await ([x.y] of ...)`), keyed by
+    /// binding name then property key: later replay reads observe the written
+    /// value instead of the stale static binding state.
+    member_overrides: HashMap<String, Vec<(Expression, Expression)>>,
     /// Executing a lowered catch path: IteratorClose runs with a throw
     /// completion, whose errors the protocol swallows (the original throw
     /// wins).
@@ -322,6 +327,7 @@ impl<'a> FunctionCompiler<'a> {
         // Values of effect-mutated nonlocals carry across iterations so later
         // reads (trailing assertions of step/close counters) stay evaluable.
         let mut effect_bindings: HashMap<String, Expression> = HashMap::new();
+        let mut member_overrides: HashMap<String, Vec<(Expression, Expression)>> = HashMap::new();
         let mut iterations = 0;
         let mut final_context = loop {
             if iterations >= FOR_AWAIT_PROTOCOL_WHILE_LIMIT {
@@ -332,6 +338,7 @@ impl<'a> FunctionCompiler<'a> {
             // Effects recorded by earlier iterations stay observable.
             context.effect_names = std::mem::take(&mut effect_names);
             context.bindings = std::mem::take(&mut effect_bindings);
+            context.member_overrides = std::mem::take(&mut member_overrides);
             context.committed_updates = iterator_updates
                 .iter()
                 .map(|(name, (index, _))| (name.clone(), *index))
@@ -422,6 +429,7 @@ impl<'a> FunctionCompiler<'a> {
             }
             effects.extend(std::mem::take(&mut context.effects));
             effect_names = std::mem::take(&mut context.effect_names);
+            member_overrides = std::mem::take(&mut context.member_overrides);
             // Carry forward the values of effect-mutated nonlocals.
             effect_bindings = context
                 .bindings
@@ -623,6 +631,16 @@ impl<'a> FunctionCompiler<'a> {
                         None => return None,
                     };
                     if targets_nonlocal {
+                        // PutValue on an immutable binding (const assignment
+                        // targets) throws TypeError after the value evaluates.
+                        if self.assignment_targets_immutable_binding(name) {
+                            return Some(ForAwaitProtocolFlow::Throw(Expression::New {
+                                callee: Box::new(Expression::Identifier(
+                                    "TypeError".to_string(),
+                                )),
+                                arguments: Vec::new(),
+                            }));
+                        }
                         let recorded = evaluated.clone().unwrap_or_else(|| value.clone());
                         if !self.static_iterator_throw_expression_is_portable(&recorded) {
                             return None;
@@ -634,9 +652,24 @@ impl<'a> FunctionCompiler<'a> {
                         context.effect_names.insert(name.clone());
                     }
                     if let Some(evaluated) = evaluated {
+                        Self::for_await_protocol_apply_class_binding_name(name, &evaluated, context);
                         context.bindings.insert(name.clone(), evaluated);
                     } else {
                         context.bindings.remove(name);
+                    }
+                }
+                Statement::AssignMember {
+                    object,
+                    property,
+                    value,
+                } => {
+                    match self
+                        .for_await_protocol_assign_member_value(object, property, value, context)?
+                    {
+                        Ok(_) => {}
+                        Err(throw_value) => {
+                            return Some(ForAwaitProtocolFlow::Throw(throw_value));
+                        }
                     }
                 }
                 Statement::If {
@@ -816,6 +849,19 @@ impl<'a> FunctionCompiler<'a> {
         {
             return Some(Ok(state));
         }
+        // An identifier naming a static array binding iterates as a static
+        // array (reads of effect-mutated names were already rejected by the
+        // identifier evaluation above); element holes iterate as undefined.
+        if matches!(&source, Expression::Identifier(_))
+            && let Some(binding) = self.resolve_array_binding_from_expression(&source)
+        {
+            let values = binding
+                .values
+                .iter()
+                .map(|value| value.clone().unwrap_or(Expression::Undefined))
+                .collect();
+            return Some(Ok(ForAwaitProtocolIterator::StaticArray { values, index: 0 }));
+        }
         if let Some((steps, completion_effects, completion_value)) = self
             .resolve_simple_generator_iterator_source_kind(&source)
             .and_then(|kind| match kind {
@@ -929,7 +975,7 @@ impl<'a> FunctionCompiler<'a> {
                 completion_value,
             } => {
                 if (*is_async && !allow_async)
-                    || !completion_effects.is_empty()
+                    || !self.for_await_protocol_effects_are_replayable(completion_effects)
                     || !self.for_await_protocol_steps_have_replayable_effects(steps)
                 {
                     return None;
@@ -937,7 +983,7 @@ impl<'a> FunctionCompiler<'a> {
                 Some(ForAwaitProtocolIterator::Steps {
                     steps: steps.clone(),
                     completion_value: completion_value.clone(),
-                    completion_effects: Vec::new(),
+                    completion_effects: completion_effects.clone(),
                     close_target: None,
                     index,
                     binding_name: Some(binding_name.clone()),
@@ -1006,13 +1052,25 @@ impl<'a> FunctionCompiler<'a> {
         effects: &[Statement],
     ) {
         for effect in effects {
+            self.for_await_protocol_track_step_effect_values(context, std::slice::from_ref(effect));
+            context.effects.push(effect.clone());
+        }
+    }
+
+    /// Tracks step-effect mutations symbolically (post-assignment values and
+    /// effect names) without recording the effect statements: used when the
+    /// runtime application is conveyed separately by a synthetic `next()`
+    /// call, so later replay reads (in-loop assertions of step counters)
+    /// observe the live value instead of bailing. Evaluation precedes the
+    /// effect-name guard: the value's own reads see the pre-assignment state.
+    fn for_await_protocol_track_step_effect_values(
+        &self,
+        context: &mut ForAwaitProtocolContext,
+        effects: &[Statement],
+    ) {
+        for effect in effects {
             match effect {
                 Statement::Assign { name, value } => {
-                    // Track the post-assignment value symbolically so later
-                    // replay reads (in-loop assertions of step counters)
-                    // observe the live value instead of bailing. Evaluation
-                    // precedes the effect-name guard: the value's own reads
-                    // see the pre-assignment state.
                     let evaluated =
                         self.evaluate_for_await_protocol_nonlocal_assignment(value, context);
                     context.effect_names.insert(name.clone());
@@ -1022,13 +1080,100 @@ impl<'a> FunctionCompiler<'a> {
                         context.bindings.remove(name);
                     }
                 }
-                Statement::Expression(Expression::Update { name, .. }) => {
-                    context.effect_names.insert(name.clone());
-                    context.bindings.remove(name);
+                Statement::Expression(Expression::Update { name, op, .. }) => {
+                    self.for_await_protocol_track_update_effect_value(context, name, *op);
                 }
                 _ => {}
             }
-            context.effects.push(effect.clone());
+        }
+    }
+
+    /// Resolves a scoped lowering alias (`__ayy_scope$<src>$<id>`) to the
+    /// unique replay binding declared for the same source name under a
+    /// different scope id.
+    fn for_await_protocol_scoped_alias_value(
+        name: &str,
+        context: &ForAwaitProtocolContext,
+    ) -> Option<Expression> {
+        let rest = name.strip_prefix("__ayy_scope$")?;
+        let (source_name, _) = rest.split_once('$')?;
+        let prefix = format!("__ayy_scope${source_name}$");
+        let mut matches = context
+            .bindings
+            .iter()
+            .filter(|(key, _)| key.starts_with(&prefix) && key.as_str() != name);
+        let (_, value) = matches.next()?;
+        if matches.next().is_some() {
+            return None;
+        }
+        Some(value.clone())
+    }
+
+    /// NamedEvaluation for replayed anonymous class expressions: when a
+    /// binding receives a replay-local class constructor whose tracked
+    /// `name` override still holds the lowering's placeholder, the override
+    /// becomes the binding's source-level name.
+    fn for_await_protocol_apply_class_binding_name(
+        binding_name: &str,
+        value: &Expression,
+        context: &mut ForAwaitProtocolContext,
+    ) {
+        let Expression::Identifier(constructor_name) = value else {
+            return;
+        };
+        if !constructor_name.starts_with("__ayy_class_ctor_") {
+            return;
+        }
+        let display_name = if let Some(rest) = binding_name.strip_prefix("__ayy_local$") {
+            let Some((source_name, _)) = rest.split_once('$') else {
+                return;
+            };
+            source_name.to_string()
+        } else if !binding_name.starts_with("__ayy_") {
+            binding_name.to_string()
+        } else {
+            return;
+        };
+        let Some(overrides) = context.member_overrides.get_mut(constructor_name) else {
+            return;
+        };
+        let name_key = Expression::String("name".to_string());
+        if let Some(entry) = overrides
+            .iter_mut()
+            .find(|(existing, _)| static_expression_matches(existing, &name_key))
+            && matches!(
+                &entry.1,
+                Expression::String(placeholder) if placeholder.starts_with("__ayy_class_expr")
+            )
+        {
+            entry.1 = Expression::String(display_name);
+        }
+    }
+
+    /// Tracks the post-update value of a nonlocal `name++`/`name--` effect
+    /// symbolically so later replay reads observe the live counter.
+    fn for_await_protocol_track_update_effect_value(
+        &self,
+        context: &mut ForAwaitProtocolContext,
+        name: &str,
+        op: UpdateOp,
+    ) {
+        let identifier = Expression::Identifier(name.to_string());
+        let evaluated = match self.evaluate_for_await_protocol_expression(&identifier, context) {
+            Some(Ok(value)) => self.for_await_protocol_number_value(&value),
+            _ => None,
+        }
+        .map(|value| {
+            Expression::Number(match op {
+                UpdateOp::Increment => value + 1.0,
+                UpdateOp::Decrement => value - 1.0,
+            })
+        });
+        context.effect_names.insert(name.to_string());
+        if let Some(evaluated) = evaluated {
+            context.bindings.insert(name.to_string(), evaluated);
+        } else {
+            context.bindings.remove(name);
         }
     }
 
@@ -1108,10 +1253,24 @@ impl<'a> FunctionCompiler<'a> {
                 let Some(step) = steps.get(current) else {
                     // The completion-consuming `next()`: its effects replay
                     // exactly once (synthetic next statements re-emit them
-                    // through the standard machinery for tracked bindings).
-                    if !synthetic_next(context) && current == steps.len() {
+                    // through the standard machinery for tracked bindings,
+                    // with their values tracked symbolically for replay
+                    // reads).
+                    if current == steps.len() {
                         let completion_effects = completion_effects.clone();
-                        self.for_await_protocol_record_step_effects(context, &completion_effects);
+                        if synthetic_next(context) {
+                            self.for_await_protocol_track_step_effect_values(
+                                context,
+                                &completion_effects,
+                            );
+                        } else {
+                            self.for_await_protocol_record_step_effects(
+                                context,
+                                &completion_effects,
+                            );
+                        }
+                    } else {
+                        synthetic_next(context);
                     }
                     return Some(Ok(Self::for_await_protocol_step_object(
                         true,
@@ -1122,18 +1281,9 @@ impl<'a> FunctionCompiler<'a> {
                     && synthetic_next(context)
                 {
                     // The synthetic statement re-emits the step's own effects;
-                    // only their names need registering so later replay reads
-                    // of those nonlocals bail instead of observing stale
-                    // static values.
-                    for effect in &step.effects {
-                        match effect {
-                            Statement::Assign { name, .. }
-                            | Statement::Expression(Expression::Update { name, .. }) => {
-                                context.effect_names.insert(name.clone());
-                            }
-                            _ => {}
-                        }
-                    }
+                    // their values are tracked symbolically so later replay
+                    // reads of those nonlocals observe the live values.
+                    self.for_await_protocol_track_step_effect_values(context, &step.effects);
                 } else {
                     self.for_await_protocol_record_step_effects(context, &step.effects);
                 }
@@ -1210,12 +1360,29 @@ impl<'a> FunctionCompiler<'a> {
                 closed,
                 binding_name,
                 close_target: explicit_close_target,
+                completion_effects,
                 ..
             } => {
                 if *closed {
                     return Some(Ok(Expression::Undefined));
                 }
                 if let Some(binding_name) = binding_name {
+                    // Draining via next() runs the completion's effects; a
+                    // true close (generator return()) skips them, so an
+                    // iterator with an effectful completion closes through
+                    // an IteratorClose effect instead: the standard close
+                    // machinery applies the completed state at the
+                    // consumption site without running the remaining body.
+                    if !completion_effects.is_empty() && *index <= steps.len() {
+                        context
+                            .effects
+                            .push(Statement::Expression(Expression::IteratorClose(Box::new(
+                                Expression::Identifier(binding_name.clone()),
+                            ))));
+                        *index = steps.len().saturating_add(1);
+                        *closed = true;
+                        return Some(Ok(Expression::Undefined));
+                    }
                     let drained = steps.len().saturating_add(1);
                     for _ in *index..drained {
                         context.effects.push(Statement::Expression(Expression::Call {
@@ -1334,29 +1501,59 @@ impl<'a> FunctionCompiler<'a> {
         close_target: &Expression,
         context: &mut ForAwaitProtocolContext,
     ) -> Option<Result<Expression, Expression>> {
+        self.for_await_protocol_replay_function_body_with_arguments(
+            function_name,
+            close_target,
+            &[],
+            context,
+        )
+    }
+
+    fn for_await_protocol_replay_function_body_with_arguments(
+        &self,
+        function_name: &str,
+        close_target: &Expression,
+        arguments: &[CallArgument],
+        context: &mut ForAwaitProtocolContext,
+    ) -> Option<Result<Expression, Expression>> {
         let function = self.resolve_registered_function_declaration(function_name)?;
         let user_function = self.user_function(function_name)?;
-        if !user_function.params.is_empty()
+        if (!user_function.params.is_empty() && arguments.is_empty())
+            || user_function.has_parameter_defaults()
+            || !user_function.extra_argument_indices.is_empty()
             || self.user_function_mentions_direct_eval(user_function)
         {
             return None;
         }
+        // `this` inside the replayed body is the call receiver; a bare
+        // `arguments` reference with no supplied arguments is observably an
+        // empty list; parameters substitute their argument values.
+        let substitute = |value: &Expression| -> Option<Expression> {
+            let value = Self::substitute_this_in_expression(value, close_target);
+            let value = if arguments.is_empty()
+                && matches!(&value, Expression::Identifier(name) if name == "arguments")
+            {
+                Expression::Array(Vec::new())
+            } else {
+                value
+            };
+            if arguments.is_empty() {
+                return Some(value);
+            }
+            let substituted =
+                self.substitute_user_function_argument_bindings(&value, user_function, arguments);
+            if expression_mentions_call_frame_state(&substituted) {
+                return None;
+            }
+            Some(substituted)
+        };
         for statement in &function.body {
             match statement {
                 Statement::Assign { name, value } => {
                     if name.starts_with("__ayy_") {
                         return None;
                     }
-                    // `this` inside the replayed `return()` is the close
-                    // target; a bare `arguments` reference is the call's
-                    // (empty) arguments object, observably an empty list.
-                    let value = &Self::substitute_this_in_expression(value, close_target);
-                    let value = &if matches!(value, Expression::Identifier(name) if name == "arguments")
-                    {
-                        Expression::Array(Vec::new())
-                    } else {
-                        value.clone()
-                    };
+                    let value = &substitute(value)?;
                     if !self.static_iterator_throw_expression_is_portable(value) {
                         return None;
                     }
@@ -1378,23 +1575,23 @@ impl<'a> FunctionCompiler<'a> {
                         context.bindings.remove(name);
                     }
                 }
-                Statement::Expression(Expression::Update { name, .. }) => {
+                Statement::Expression(Expression::Update { name, op, .. }) => {
                     if name.starts_with("__ayy_") {
                         return None;
                     }
                     context.effects.push(statement.clone());
-                    context.effect_names.insert(name.clone());
-                    context.bindings.remove(name);
+                    self.for_await_protocol_track_update_effect_value(context, name, *op);
                 }
                 Statement::Block { body } if body.is_empty() => {}
                 Statement::Throw(value) => {
-                    if !self.static_iterator_throw_expression_is_portable(value) {
+                    let value = substitute(value)?;
+                    if !self.static_iterator_throw_expression_is_portable(&value) {
                         return None;
                     }
-                    return Some(Err(value.clone()));
+                    return Some(Err(value));
                 }
                 Statement::Return(value) => {
-                    return Some(Ok(value.clone()));
+                    return Some(Ok(substitute(value)?));
                 }
                 _ => return None,
             }
@@ -1446,6 +1643,11 @@ impl<'a> FunctionCompiler<'a> {
                 if let Some(value) = context.bindings.get(name) {
                     return Some(Ok(value.clone()));
                 }
+                // Scoped lowering aliases (`__ayy_scope$<src>$<id>`) read the
+                // unique replay binding sharing their source name.
+                if let Some(value) = Self::for_await_protocol_scoped_alias_value(name, context) {
+                    return Some(Ok(value));
+                }
                 // A read of a name an earlier recorded effect mutated would
                 // observe a stale static value.
                 if context.effect_names.contains(name) {
@@ -1460,6 +1662,13 @@ impl<'a> FunctionCompiler<'a> {
                     return None;
                 }
                 Some(Ok(expression.clone()))
+            }
+            Expression::Object(entries)
+                if entries
+                    .iter()
+                    .any(|entry| matches!(entry, ObjectEntry::Spread(_))) =>
+            {
+                self.for_await_protocol_object_literal_with_spread(entries, context)
             }
             Expression::Object(_) | Expression::Array(_) => Some(Ok(expression.clone())),
             Expression::Await(inner) => {
@@ -1479,6 +1688,16 @@ impl<'a> FunctionCompiler<'a> {
                     Ok(value) => value,
                     Err(throw_value) => return Some(Err(throw_value)),
                 };
+                // Member writes recorded by the replay shadow the stale
+                // static binding state for later reads.
+                if let Expression::Identifier(object_name) = &object
+                    && let Some(overrides) = context.member_overrides.get(object_name)
+                    && let Some((_, value)) = overrides
+                        .iter()
+                        .find(|(key, _)| static_expression_matches(key, &property_key))
+                {
+                    return Some(Ok(value.clone()));
+                }
                 self.for_await_protocol_member_value(&object, &property_key)
             }
             Expression::Call { callee, arguments } => {
@@ -1521,6 +1740,127 @@ impl<'a> FunctionCompiler<'a> {
                             arguments: Vec::new(),
                         })
                     });
+                }
+                // The harness `verifyProperty(object, key, expected)` call on
+                // a replay-built plain object: every data entry is a fresh
+                // enumerable/writable/configurable property, so the expected
+                // descriptor literal checks fold directly.
+                // The emit-time machinery dispatches `verifyProperty` by name
+                // (the harness helper does not resolve as a static function
+                // binding), so the replay mirrors that interception.
+                if matches!(callee.as_ref(), Expression::Identifier(name) if name == "verifyProperty")
+                    && !context.bindings.contains_key("verifyProperty")
+                    && arguments.len() == 3
+                    && self.for_await_protocol_identifier_resolves("Test262Error")
+                {
+                    let [
+                        CallArgument::Expression(object),
+                        CallArgument::Expression(key),
+                        CallArgument::Expression(expected),
+                    ] = arguments.as_slice()
+                    else {
+                        return None;
+                    };
+                    let object = match self.evaluate_for_await_protocol_expression(object, context)?
+                    {
+                        Ok(value) => value,
+                        Err(throw_value) => return Some(Err(throw_value)),
+                    };
+                    let Expression::Object(entries) = &object else {
+                        return None;
+                    };
+                    let key = match self.for_await_protocol_property_key(key, context)? {
+                        Ok(key) => key,
+                        Err(throw_value) => return Some(Err(throw_value)),
+                    };
+                    let Expression::Object(expected_entries) = expected else {
+                        return None;
+                    };
+                    let test262_error = || Expression::New {
+                        callee: Box::new(Expression::Identifier("Test262Error".to_string())),
+                        arguments: Vec::new(),
+                    };
+                    let mut actual = None;
+                    for entry in entries {
+                        match entry {
+                            ObjectEntry::Data {
+                                key: entry_key,
+                                value,
+                            } => {
+                                if self.materialize_static_expression(entry_key) == key {
+                                    actual = Some(value.clone());
+                                }
+                            }
+                            ObjectEntry::Getter { key: entry_key, .. }
+                            | ObjectEntry::Setter { key: entry_key, .. } => {
+                                if self.materialize_static_expression(entry_key) == key {
+                                    // Accessor properties have different
+                                    // descriptor shapes; bail.
+                                    return None;
+                                }
+                            }
+                            ObjectEntry::Spread(_) => return None,
+                        }
+                    }
+                    let Some(actual) = actual else {
+                        return Some(Err(test262_error()));
+                    };
+                    let actual = match self.evaluate_for_await_protocol_expression(&actual, context)?
+                    {
+                        Ok(value) => value,
+                        Err(throw_value) => return Some(Err(throw_value)),
+                    };
+                    for expected_entry in expected_entries {
+                        let ObjectEntry::Data {
+                            key: expected_key,
+                            value: expected_value,
+                        } = expected_entry
+                        else {
+                            return None;
+                        };
+                        let Expression::String(expected_name) =
+                            self.materialize_static_expression(expected_key)
+                        else {
+                            return None;
+                        };
+                        match expected_name.as_str() {
+                            "enumerable" | "writable" | "configurable" => {
+                                match expected_value {
+                                    // Fresh data properties are enumerable,
+                                    // writable, and configurable.
+                                    Expression::Bool(true) => {}
+                                    Expression::Bool(false) => {
+                                        return Some(Err(test262_error()));
+                                    }
+                                    _ => return None,
+                                }
+                            }
+                            "value" => {
+                                let expected_value = match self
+                                    .evaluate_for_await_protocol_expression(
+                                        expected_value,
+                                        context,
+                                    )? {
+                                    Ok(value) => value,
+                                    Err(throw_value) => return Some(Err(throw_value)),
+                                };
+                                let actual =
+                                    self.for_await_protocol_comparable_value(actual.clone());
+                                let expected_value =
+                                    self.for_await_protocol_comparable_value(expected_value);
+                                if Self::for_await_protocol_values_equal(
+                                    &actual,
+                                    &expected_value,
+                                    false,
+                                )? {
+                                    continue;
+                                }
+                                return Some(Err(test262_error()));
+                            }
+                            _ => return None,
+                        }
+                    }
+                    return Some(Ok(Expression::Undefined));
                 }
                 if let Expression::Member { object, property } = callee.as_ref()
                     && let Expression::Identifier(object_name) = object.as_ref()
@@ -1571,6 +1911,16 @@ impl<'a> FunctionCompiler<'a> {
                             )
                         {
                             true
+                        } else if matches!(
+                            (actual, expected),
+                            (Expression::Array(_) | Expression::Object(_), Expression::Identifier(_))
+                                | (Expression::Identifier(_), Expression::Array(_) | Expression::Object(_))
+                        ) {
+                            // A literal array/object value was constructed
+                            // during this replay (identifier reads stay in
+                            // identifier form), so it is identity-distinct
+                            // from any pre-existing named binding.
+                            false
                         } else {
                             let actual = self.for_await_protocol_comparable_value(actual.clone());
                             let expected =
@@ -1592,6 +1942,232 @@ impl<'a> FunctionCompiler<'a> {
                                 arguments: Vec::new(),
                             })
                         });
+                    }
+                    // Harness throw assertions: the callback's static outcome
+                    // decides whether the expected error was produced.
+                    if object_name == "assert"
+                        && !context.bindings.contains_key("assert")
+                        && method_name == "throws"
+                        && (2..=3).contains(&arguments.len())
+                        && self.for_await_protocol_identifier_resolves("Test262Error")
+                    {
+                        let (
+                            CallArgument::Expression(expected),
+                            CallArgument::Expression(callback),
+                        ) = (&arguments[0], &arguments[1])
+                        else {
+                            return None;
+                        };
+                        let Expression::Identifier(expected_name) = expected else {
+                            return None;
+                        };
+                        if context.bindings.contains_key(expected_name)
+                            || !self.for_await_protocol_identifier_resolves(expected_name)
+                        {
+                            return None;
+                        }
+                        let binding = self.resolve_function_binding_from_expression(callback)?;
+                        let outcome = self
+                            .resolve_static_function_outcome_from_binding_with_context(
+                                &binding,
+                                &[],
+                                self.current_function_name(),
+                            )
+                            .or_else(|| {
+                                // A callback body that only reads a single
+                                // unresolvable identifier throws
+                                // ReferenceError.
+                                let LocalFunctionBinding::User(function_name) = &binding else {
+                                    return None;
+                                };
+                                let function =
+                                    self.resolve_registered_function_declaration(function_name)?;
+                                if !self
+                                    .user_function(function_name)?
+                                    .params
+                                    .is_empty()
+                                {
+                                    return None;
+                                }
+                                let [Statement::Expression(Expression::Identifier(read_name))] =
+                                    function.body.as_slice()
+                                else {
+                                    return None;
+                                };
+                                (!context.bindings.contains_key(read_name)
+                                    && !self.for_await_protocol_identifier_resolves(read_name))
+                                .then(|| {
+                                    StaticEvalOutcome::Throw(StaticThrowValue::NamedError(
+                                        "ReferenceError",
+                                    ))
+                                })
+                            })?;
+                        let test262_error = || Expression::New {
+                            callee: Box::new(Expression::Identifier(
+                                "Test262Error".to_string(),
+                            )),
+                            arguments: Vec::new(),
+                        };
+                        return Some(match outcome {
+                            StaticEvalOutcome::Throw(throw_value) => {
+                                let thrown =
+                                    self.resolve_static_throw_value_expression(&throw_value)?;
+                                let (Expression::New { callee, .. }
+                                | Expression::Call { callee, .. }) = &thrown
+                                else {
+                                    return None;
+                                };
+                                let Expression::Identifier(thrown_name) = callee.as_ref()
+                                else {
+                                    return None;
+                                };
+                                if thrown_name == expected_name {
+                                    Ok(Expression::Undefined)
+                                } else {
+                                    Err(test262_error())
+                                }
+                            }
+                            StaticEvalOutcome::Value(_) => Err(test262_error()),
+                        });
+                    }
+                    // `Object.defineProperty` on a replay-local target (the
+                    // lowered class-expression name assignment): the defined
+                    // data value is tracked as a member override.
+                    if object_name == "Object"
+                        && method_name == "defineProperty"
+                        && arguments.len() == 3
+                        && !context.bindings.contains_key("Object")
+                        && self.is_unshadowed_builtin_identifier("Object")
+                    {
+                        let [
+                            CallArgument::Expression(target),
+                            CallArgument::Expression(key),
+                            CallArgument::Expression(descriptor),
+                        ] = arguments.as_slice()
+                        else {
+                            return None;
+                        };
+                        // The lowered `prototype.constructor` wiring on a
+                        // replay-local class is unobservable to the replay.
+                        if let Expression::Member {
+                            object: target_object,
+                            property: target_property,
+                        } = target
+                            && matches!(
+                                target_object.as_ref(),
+                                Expression::Identifier(name) if name.starts_with("__ayy_")
+                            )
+                            && matches!(
+                                target_property.as_ref(),
+                                Expression::String(name) if name == "prototype"
+                            )
+                        {
+                            return Some(Ok(target.clone()));
+                        }
+                        let target = match self
+                            .evaluate_for_await_protocol_expression(target, context)?
+                        {
+                            Ok(value) => value,
+                            Err(throw_value) => return Some(Err(throw_value)),
+                        };
+                        let Expression::Identifier(target_name) = &target else {
+                            return None;
+                        };
+                        // Only replay-local internal targets: nonlocal
+                        // defineProperty effects are not re-emitted.
+                        if !target_name.starts_with("__ayy_") {
+                            return None;
+                        }
+                        let key = match self.for_await_protocol_property_key(key, context)? {
+                            Ok(key) => key,
+                            Err(throw_value) => return Some(Err(throw_value)),
+                        };
+                        let Expression::Object(descriptor_entries) = descriptor else {
+                            return None;
+                        };
+                        let mut defined_value = None;
+                        for entry in descriptor_entries {
+                            let ObjectEntry::Data {
+                                key: descriptor_key,
+                                value: descriptor_value,
+                            } = entry
+                            else {
+                                return None;
+                            };
+                            let Expression::String(descriptor_name) =
+                                self.materialize_static_expression(descriptor_key)
+                            else {
+                                return None;
+                            };
+                            match descriptor_name.as_str() {
+                                "value" => {
+                                    defined_value = Some(
+                                        match self.evaluate_for_await_protocol_expression(
+                                            descriptor_value,
+                                            context,
+                                        )? {
+                                            Ok(value) => value,
+                                            Err(throw_value) => {
+                                                return Some(Err(throw_value));
+                                            }
+                                        },
+                                    );
+                                }
+                                "writable" | "enumerable" | "configurable" => {
+                                    if !matches!(descriptor_value, Expression::Bool(_)) {
+                                        return None;
+                                    }
+                                }
+                                _ => return None,
+                            }
+                        }
+                        let defined_value = defined_value.unwrap_or(Expression::Undefined);
+                        let overrides = context
+                            .member_overrides
+                            .entry(target_name.clone())
+                            .or_default();
+                        if let Some(entry) = overrides
+                            .iter_mut()
+                            .find(|(existing, _)| static_expression_matches(existing, &key))
+                        {
+                            entry.1 = defined_value;
+                        } else {
+                            overrides.push((key, defined_value));
+                        }
+                        return Some(Ok(target));
+                    }
+                    if object_name == "Array"
+                        && method_name == "isArray"
+                        && arguments.len() == 1
+                        && !context.bindings.contains_key("Array")
+                        && self.is_unshadowed_builtin_identifier("Array")
+                    {
+                        let CallArgument::Expression(argument) = &arguments[0] else {
+                            return None;
+                        };
+                        let value =
+                            match self.evaluate_for_await_protocol_expression(argument, context)? {
+                                Ok(value) => value,
+                                Err(throw_value) => return Some(Err(throw_value)),
+                            };
+                        let value = match &value {
+                            Expression::Identifier(_) => {
+                                self.materialize_static_expression(&value)
+                            }
+                            _ => value,
+                        };
+                        let result = match value {
+                            Expression::Array(_) => true,
+                            Expression::Object(_)
+                            | Expression::Number(_)
+                            | Expression::BigInt(_)
+                            | Expression::String(_)
+                            | Expression::Bool(_)
+                            | Expression::Null
+                            | Expression::Undefined => false,
+                            _ => return None,
+                        };
+                        return Some(Ok(Expression::Bool(result)));
                     }
                     if method_name == "next"
                         && arguments.is_empty()
@@ -1630,6 +2206,57 @@ impl<'a> FunctionCompiler<'a> {
                         return Some(Ok(Expression::Number(length as f64)));
                     }
                 }
+                // A no-argument call of a sync generator function evaluates
+                // to the generator object symbolically: the call expression
+                // itself stands in as the value, and a later `GetIterator`
+                // resolves it to a replayable step source (the body has not
+                // run yet, so the call carries no effects).
+                if arguments.is_empty()
+                    && let Some(IteratorSourceKind::SimpleGenerator {
+                        is_async: false,
+                        steps,
+                        completion_effects,
+                        ..
+                    }) = self.resolve_simple_generator_iterator_source_kind(expression)
+                    && self.for_await_protocol_effects_are_replayable(&completion_effects)
+                    && self.for_await_protocol_steps_have_replayable_effects_with_close(
+                        &steps, true,
+                    )
+                {
+                    return Some(Ok(expression.clone()));
+                }
+                // The lowered prototype wiring for a heritage-free class
+                // expression is unobservable to the replay: validation
+                // cannot throw when the parent is literally
+                // `Object.prototype`.
+                if matches!(callee.as_ref(), Expression::Identifier(name) if name == "__ayyClassPrototypeInit")
+                    && arguments.len() == 2
+                    && matches!(
+                        &arguments[1],
+                        CallArgument::Expression(Expression::Member { object, property })
+                            if matches!(object.as_ref(), Expression::Identifier(name) if name == "Object")
+                                && matches!(property.as_ref(), Expression::String(name) if name == "prototype")
+                    )
+                {
+                    return Some(Ok(Expression::Undefined));
+                }
+                // Class-expression initializers: replay the lowered init
+                // function body (class definition plus name assignment) so
+                // the class binding and its `.name` resolve.
+                if let Expression::Identifier(callee_name) = callee.as_ref()
+                    && callee_name.starts_with("__ayy_class_init_")
+                    && arguments.is_empty()
+                    && !context.bindings.contains_key(callee_name)
+                {
+                    let function = self.resolve_registered_function_declaration(callee_name)?;
+                    let body = function.body.clone();
+                    return match self.execute_for_await_protocol_statements(&body, context)? {
+                        ForAwaitProtocolFlow::Return(value) => Some(Ok(value)),
+                        ForAwaitProtocolFlow::Throw(value) => Some(Err(value)),
+                        ForAwaitProtocolFlow::None => Some(Ok(Expression::Undefined)),
+                        ForAwaitProtocolFlow::Break(_) => None,
+                    };
+                }
                 let mut call_arguments = Vec::new();
                 for argument in arguments {
                     let CallArgument::Expression(argument) = argument else {
@@ -1651,12 +2278,27 @@ impl<'a> FunctionCompiler<'a> {
                         &call_arguments,
                         self.current_function_name(),
                     );
-                if outcome.is_none() && crate::ayy_env_flag!("AYY_TRACE_FOR_AWAIT_PROTOCOL") {
-                    eprintln!(
-                        "for_await_protocol:reject-call-outcome callee={callee:?} args={call_arguments:?}"
-                    );
-                }
-                let outcome = outcome?;
+                let Some(outcome) = outcome else {
+                    // An effect-bearing no-argument user function (nonlocal
+                    // counter increments around a terminal return) replays
+                    // with its effects recorded for fold-site re-emission.
+                    if call_arguments.is_empty()
+                        && let LocalFunctionBinding::User(function_name) = &binding
+                        && let Some(result) = self.for_await_protocol_replay_function_body(
+                            &function_name.clone(),
+                            &Expression::Undefined,
+                            context,
+                        )
+                    {
+                        return Some(result);
+                    }
+                    if crate::ayy_env_flag!("AYY_TRACE_FOR_AWAIT_PROTOCOL") {
+                        eprintln!(
+                            "for_await_protocol:reject-call-outcome callee={callee:?} args={call_arguments:?}"
+                        );
+                    }
+                    return None;
+                };
                 Some(match outcome {
                     StaticEvalOutcome::Value(value) => Ok(value),
                     StaticEvalOutcome::Throw(throw_value) => {
@@ -1730,8 +2372,58 @@ impl<'a> FunctionCompiler<'a> {
                     Ok(value) => value,
                     Err(throw_value) => return Some(Err(throw_value)),
                 };
+                // Identifier operands materialize through the static binding
+                // state (stale effect-mutated reads were already rejected).
+                let value = match &value {
+                    Expression::Identifier(_) => self.materialize_static_expression(&value),
+                    _ => value,
+                };
                 let value = Self::for_await_protocol_to_boolean(&value)?;
                 Some(Ok(Expression::Bool(!value)))
+            }
+            // Property deletion on a replay-local object value (the lowered
+            // `{a, ...rest}` excluded-name removal): the matching data
+            // entries drop from the tracked literal.
+            Expression::Unary {
+                op: UnaryOp::Delete,
+                expression,
+            } => {
+                let Expression::Member { object, property } = expression.as_ref() else {
+                    return None;
+                };
+                let property_key =
+                    match self.for_await_protocol_property_key(property, context)? {
+                        Ok(key) => key,
+                        Err(throw_value) => return Some(Err(throw_value)),
+                    };
+                let Expression::Identifier(object_name) = object.as_ref() else {
+                    return None;
+                };
+                let Some(Expression::Object(entries)) = context.bindings.get(object_name) else {
+                    return None;
+                };
+                if entries.iter().any(|entry| {
+                    !matches!(entry, ObjectEntry::Data { .. } | ObjectEntry::Getter { .. }
+                        | ObjectEntry::Setter { .. })
+                }) {
+                    return None;
+                }
+                let retained = entries
+                    .iter()
+                    .filter(|entry| match entry {
+                        ObjectEntry::Data { key, .. }
+                        | ObjectEntry::Getter { key, .. }
+                        | ObjectEntry::Setter { key, .. } => {
+                            self.materialize_static_expression(key) != property_key
+                        }
+                        ObjectEntry::Spread(_) => true,
+                    })
+                    .cloned()
+                    .collect();
+                context
+                    .bindings
+                    .insert(object_name.clone(), Expression::Object(retained));
+                Some(Ok(Expression::Bool(true)))
             }
             Expression::IteratorClose(target) => {
                 let Expression::Identifier(name) = target.as_ref() else {
@@ -1759,6 +2451,38 @@ impl<'a> FunctionCompiler<'a> {
                 }
                 Some(Ok(last))
             }
+            Expression::Assign { name, value } => {
+                let targets_nonlocal = !name.starts_with("__ayy_")
+                    && (!context.bindings.contains_key(name)
+                        || context.effect_names.contains(name));
+                let evaluated = match self.evaluate_for_await_protocol_expression(value, context)? {
+                    Ok(value) => value,
+                    Err(throw_value) => return Some(Err(throw_value)),
+                };
+                if targets_nonlocal {
+                    if self.assignment_targets_immutable_binding(name) {
+                        return Some(Err(Expression::New {
+                            callee: Box::new(Expression::Identifier("TypeError".to_string())),
+                            arguments: Vec::new(),
+                        }));
+                    }
+                    if !self.static_iterator_throw_expression_is_portable(&evaluated) {
+                        return None;
+                    }
+                    context.effects.push(Statement::Assign {
+                        name: name.clone(),
+                        value: evaluated.clone(),
+                    });
+                    context.effect_names.insert(name.clone());
+                }
+                context.bindings.insert(name.clone(), evaluated.clone());
+                Some(Ok(evaluated))
+            }
+            Expression::AssignMember {
+                object,
+                property,
+                value,
+            } => self.for_await_protocol_assign_member_value(object, property, value, context),
             _ => {
                 if crate::ayy_env_flag!("AYY_TRACE_FOR_AWAIT_PROTOCOL") {
                     eprintln!("for_await_protocol:reject-expression {expression:?}");
@@ -1812,6 +2536,29 @@ impl<'a> FunctionCompiler<'a> {
                 {
                     return Some(Ok(value));
                 }
+                // Identifiers naming static array bindings or materializing
+                // to primitives are not thenables: the await resolves to the
+                // value itself.
+                if matches!(value, Expression::Identifier(_)) {
+                    if self.resolve_array_binding_from_expression(&value).is_some() {
+                        return Some(Ok(value));
+                    }
+                    let materialized = self.materialize_static_expression(&value);
+                    if !static_expression_matches(&materialized, &value)
+                        && matches!(
+                            materialized,
+                            Expression::Array(_)
+                                | Expression::Number(_)
+                                | Expression::BigInt(_)
+                                | Expression::String(_)
+                                | Expression::Bool(_)
+                                | Expression::Null
+                                | Expression::Undefined
+                        )
+                    {
+                        return Some(Ok(value));
+                    }
+                }
                 let then_property = Expression::String("then".to_string());
                 let object_binding = self.resolve_object_binding_from_expression(&value)?;
                 if object_binding_lookup_value(&object_binding, &then_property).is_some()
@@ -1848,6 +2595,235 @@ impl<'a> FunctionCompiler<'a> {
             .resolve_property_key_expression(&evaluated)
             .unwrap_or(evaluated);
         matches!(key, Expression::String(_) | Expression::Number(_)).then_some(Ok(key))
+    }
+
+    /// Replays an object literal containing spread entries (the lowered
+    /// `{...rest}` destructure collection) by expanding each spread source's
+    /// enumerable own properties into data entries: getters are invoked
+    /// (CopyDataProperties performs [[Get]], with their nonlocal effects
+    /// recorded) and non-enumerable properties are skipped.
+    fn for_await_protocol_object_literal_with_spread(
+        &self,
+        entries: &[ObjectEntry],
+        context: &mut ForAwaitProtocolContext,
+    ) -> Option<Result<Expression, Expression>> {
+        let mut expanded = Vec::new();
+        for entry in entries {
+            let ObjectEntry::Spread(source) = entry else {
+                expanded.push(entry.clone());
+                continue;
+            };
+            let source = match self.evaluate_for_await_protocol_expression(source, context)? {
+                Ok(value) => value,
+                Err(throw_value) => return Some(Err(throw_value)),
+            };
+            match &source {
+                // CopyDataProperties from nullish sources is a no-op.
+                Expression::Null | Expression::Undefined => {}
+                Expression::Object(source_entries) => {
+                    for source_entry in source_entries {
+                        match source_entry {
+                            ObjectEntry::Data { key, value } => {
+                                expanded.push(ObjectEntry::Data {
+                                    key: self.materialize_static_expression(key),
+                                    value: value.clone(),
+                                });
+                            }
+                            ObjectEntry::Getter { key, getter } => {
+                                let LocalFunctionBinding::User(getter_name) =
+                                    self.resolve_function_binding_from_expression(getter)?
+                                else {
+                                    return None;
+                                };
+                                let value = match self.for_await_protocol_replay_function_body(
+                                    &getter_name,
+                                    &source,
+                                    context,
+                                )? {
+                                    Ok(value) => value,
+                                    Err(throw_value) => return Some(Err(throw_value)),
+                                };
+                                expanded.push(ObjectEntry::Data {
+                                    key: self.materialize_static_expression(key),
+                                    value,
+                                });
+                            }
+                            ObjectEntry::Setter { key, .. } => {
+                                // A setter-only property reads as undefined;
+                                // a paired getter elsewhere in the literal
+                                // provides the value instead.
+                                let key = self.materialize_static_expression(key);
+                                let has_getter = source_entries.iter().any(|other| {
+                                    matches!(
+                                        other,
+                                        ObjectEntry::Getter { key: getter_key, .. }
+                                            if self.materialize_static_expression(getter_key)
+                                                == key
+                                    )
+                                });
+                                if !has_getter {
+                                    expanded.push(ObjectEntry::Data {
+                                        key,
+                                        value: Expression::Undefined,
+                                    });
+                                }
+                            }
+                            ObjectEntry::Spread(_) => return None,
+                        }
+                    }
+                }
+                Expression::Identifier(_) => {
+                    let binding = self.resolve_object_binding_from_expression(&source)?;
+                    if binding.runtime_symbol_properties {
+                        return None;
+                    }
+                    let mut covered = Vec::new();
+                    for (property, descriptor) in &binding.property_descriptors {
+                        let Expression::String(name) = property else {
+                            return None;
+                        };
+                        covered.push(name.clone());
+                        if !descriptor.enumerable {
+                            continue;
+                        }
+                        if descriptor.has_set && !descriptor.has_get {
+                            expanded.push(ObjectEntry::Data {
+                                key: property.clone(),
+                                value: Expression::Undefined,
+                            });
+                            continue;
+                        }
+                        if let Some(getter) = &descriptor.getter {
+                            let LocalFunctionBinding::User(getter_name) =
+                                self.resolve_function_binding_from_expression(getter)?
+                            else {
+                                return None;
+                            };
+                            let value = match self.for_await_protocol_replay_function_body(
+                                &getter_name,
+                                &source,
+                                context,
+                            )? {
+                                Ok(value) => value,
+                                Err(throw_value) => return Some(Err(throw_value)),
+                            };
+                            expanded.push(ObjectEntry::Data {
+                                key: property.clone(),
+                                value,
+                            });
+                            continue;
+                        }
+                        if descriptor.has_get {
+                            return None;
+                        }
+                        expanded.push(ObjectEntry::Data {
+                            key: property.clone(),
+                            value: descriptor.value.clone().unwrap_or(Expression::Undefined),
+                        });
+                    }
+                    for (name, value) in &binding.string_properties {
+                        if covered.iter().any(|existing| existing == name)
+                            || binding
+                                .non_enumerable_string_properties
+                                .iter()
+                                .any(|existing| existing == name)
+                        {
+                            continue;
+                        }
+                        expanded.push(ObjectEntry::Data {
+                            key: Expression::String(name.clone()),
+                            value: value.clone(),
+                        });
+                    }
+                    if !binding.symbol_properties.is_empty() {
+                        return None;
+                    }
+                }
+                _ => return None,
+            }
+        }
+        Some(Ok(Expression::Object(expanded)))
+    }
+
+    /// Replays a member store (`object.property = value`): a statically
+    /// visible setter dispatches (its throw propagates), and a data write on
+    /// a nonlocal object binding is recorded as a fold-site effect with its
+    /// written value tracked for later replay reads. Resolves to the written
+    /// value.
+    fn for_await_protocol_assign_member_value(
+        &self,
+        object: &Expression,
+        property: &Expression,
+        value: &Expression,
+        context: &mut ForAwaitProtocolContext,
+    ) -> Option<Result<Expression, Expression>> {
+        let property_key = match self.for_await_protocol_property_key(property, context)? {
+            Ok(key) => key,
+            Err(throw_value) => return Some(Err(throw_value)),
+        };
+        let evaluated_value = match self.evaluate_for_await_protocol_expression(value, context)? {
+            Ok(value) => value,
+            Err(throw_value) => return Some(Err(throw_value)),
+        };
+        let object_value = match self.evaluate_for_await_protocol_expression(object, context)? {
+            Ok(value) => value,
+            Err(throw_value) => return Some(Err(throw_value)),
+        };
+        if let Some(setter_binding) =
+            self.resolve_member_setter_binding(&object_value, &property_key)
+        {
+            // Effect-bearing setters replay with their nonlocal stores
+            // recorded; pure setters resolve through the static outcome.
+            if let LocalFunctionBinding::User(setter_name) = &setter_binding
+                && let Some(result) = self.for_await_protocol_replay_function_body_with_arguments(
+                    &setter_name.clone(),
+                    &object_value,
+                    &[CallArgument::Expression(evaluated_value.clone())],
+                    context,
+                )
+            {
+                return match result {
+                    Ok(_) => Some(Ok(evaluated_value)),
+                    Err(throw_value) => Some(Err(throw_value)),
+                };
+            }
+            return match self.for_await_protocol_function_outcome(
+                &setter_binding,
+                &[CallArgument::Expression(evaluated_value.clone())],
+                &object_value,
+            )? {
+                Ok(_) => Some(Ok(evaluated_value)),
+                Err(throw_value) => Some(Err(throw_value)),
+            };
+        }
+        let Expression::Identifier(target_name) = &object_value else {
+            return None;
+        };
+        if target_name.starts_with("__ayy_")
+            || !self.for_await_protocol_identifier_resolves(target_name)
+            || !self.static_iterator_throw_expression_is_portable(&evaluated_value)
+            || !matches!(property_key, Expression::String(_) | Expression::Number(_))
+        {
+            return None;
+        }
+        context.effects.push(Statement::AssignMember {
+            object: object_value.clone(),
+            property: property_key.clone(),
+            value: evaluated_value.clone(),
+        });
+        let overrides = context
+            .member_overrides
+            .entry(target_name.clone())
+            .or_default();
+        if let Some(entry) = overrides
+            .iter_mut()
+            .find(|(key, _)| static_expression_matches(key, &property_key))
+        {
+            entry.1 = evaluated_value.clone();
+        } else {
+            overrides.push((property_key, evaluated_value.clone()));
+        }
+        Some(Ok(evaluated_value))
     }
 
     fn for_await_protocol_member_value(
@@ -1922,6 +2898,17 @@ impl<'a> FunctionCompiler<'a> {
                         &[],
                         object,
                     );
+                }
+                // `name` reads on function values (fn-name destructuring
+                // assertions) resolve through the static function-name
+                // machinery, which models named-binding name inference.
+                if matches!(property, Expression::String(name) if name == "name")
+                    && self
+                        .resolve_function_binding_from_expression(object)
+                        .is_some()
+                    && let Some(name_value) = self.resolve_function_name_value(object, property)
+                {
+                    return Some(Ok(Expression::String(name_value)));
                 }
                 let object_binding = self.resolve_object_binding_from_expression(object)?;
                 if let Some(descriptor) =
@@ -2119,13 +3106,23 @@ impl<'a> FunctionCompiler<'a> {
     /// nullish), and identifiers that materialize to primitives compare as
     /// those primitives.
     fn for_await_protocol_comparable_value(&self, value: Expression) -> Expression {
+        // A symbolic generator-object value (a deferred generator call) is an
+        // object: never nullish.
+        if matches!(&value, Expression::Call { .. })
+            && self
+                .resolve_simple_generator_iterator_source_kind(&value)
+                .is_some()
+        {
+            return Expression::Object(Vec::new());
+        }
         let Expression::Identifier(_) = &value else {
             return value;
         };
         if self.resolve_object_binding_from_expression(&value).is_some()
             || self.resolve_function_binding_from_expression(&value).is_some()
-            // Generator objects are not plain object bindings but are still
-            // objects (never nullish).
+            // Array bindings and generator objects are not plain object
+            // bindings but are still objects (never nullish).
+            || self.resolve_array_binding_from_expression(&value).is_some()
             || self
                 .resolve_simple_generator_iterator_source_kind(&value)
                 .is_some()
@@ -2202,16 +3199,24 @@ impl<'a> FunctionCompiler<'a> {
             (Expression::Bool(lhs), Expression::Bool(rhs)) => Some(lhs == rhs),
             (Expression::Number(lhs), Expression::Number(rhs)) => Some(lhs == rhs),
             (Expression::String(lhs), Expression::String(rhs)) => Some(lhs == rhs),
+            // Strict comparison of an object-like value with a primitive is
+            // always unequal; loose comparison coerces and stays undecided.
             (Expression::Bool(_), Expression::Object(_) | Expression::Array(_))
             | (Expression::Object(_) | Expression::Array(_), Expression::Bool(_))
             | (Expression::Number(_), Expression::Object(_) | Expression::Array(_))
             | (Expression::Object(_) | Expression::Array(_), Expression::Number(_))
             | (Expression::String(_), Expression::Object(_) | Expression::Array(_))
-            | (Expression::Object(_) | Expression::Array(_), Expression::String(_)) => None,
+            | (Expression::Object(_) | Expression::Array(_), Expression::String(_)) => {
+                if loose { None } else { Some(false) }
+            }
+            // Strict comparison across distinct primitive types is always
+            // unequal; loose comparison coerces and stays undecided.
             (Expression::Bool(_), Expression::Number(_) | Expression::String(_))
             | (Expression::Number(_) | Expression::String(_), Expression::Bool(_))
             | (Expression::Number(_), Expression::String(_))
-            | (Expression::String(_), Expression::Number(_)) => None,
+            | (Expression::String(_), Expression::Number(_)) => {
+                if loose { None } else { Some(false) }
+            }
             _ => None,
         }
     }

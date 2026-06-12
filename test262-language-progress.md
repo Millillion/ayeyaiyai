@@ -1,4 +1,4 @@
-22210/23668 (93.84%)
+22505/23668 (95.09%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,8 +14,8 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 8578/9337 (91.87%)
-- expressions: 10509/11061 (95.01%)
+- statements: 8874/9337 (95.04%)
+- expressions: 10508/11061 (95.00%)
 - types: 103/113 (91.15%)
 - function-code: 206/217 (94.93%)
 - global-code: 41/42 (97.62%)
@@ -6844,7 +6844,7 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-elem-init-fn-name-gen.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-elem-init-in.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-elem-init-order.js
-  - [ ] test/language/statements/for-await-of/async-func-decl-dstr-array-elem-init-simple-no-strict.js
+  - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-elem-init-simple-no-strict.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-elem-init-yield-ident-invalid.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-elem-init-yield-ident-valid.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-elem-iter-nrml-close.js
@@ -6854,7 +6854,7 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-elem-nested-array-undefined-own.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-elem-nested-array-undefined.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-elem-nested-array-yield-ident-invalid.js
-  - [ ] test/language/statements/for-await-of/async-func-decl-dstr-array-elem-nested-array-yield-ident-valid.js
+  - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-elem-nested-array-yield-ident-valid.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-elem-nested-array.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-elem-nested-obj-invalid.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-elem-nested-obj-null.js
@@ -6864,17 +6864,17 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-elem-nested-obj-yield-ident-invalid.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-elem-nested-obj-yield-ident-valid.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-elem-nested-obj.js
-  - [ ] test/language/statements/for-await-of/async-func-decl-dstr-array-elem-put-const.js
+  - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-elem-put-const.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-elem-put-prop-ref-no-get.js
-  - [ ] test/language/statements/for-await-of/async-func-decl-dstr-array-elem-put-prop-ref-user-err.js
-  - [ ] test/language/statements/for-await-of/async-func-decl-dstr-array-elem-put-prop-ref.js
+  - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-elem-put-prop-ref-user-err.js
+  - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-elem-put-prop-ref.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-elem-put-unresolvable-no-strict.js
   - [ ] test/language/statements/for-await-of/async-func-decl-dstr-array-elem-put-unresolvable-strict.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-elem-target-identifier.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-elem-target-simple-strict.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-elem-target-yield-invalid.js
-  - [ ] test/language/statements/for-await-of/async-func-decl-dstr-array-elem-target-yield-valid.js
-  - [ ] test/language/statements/for-await-of/async-func-decl-dstr-array-elem-trlg-iter-elision-iter-nrml-close-null.js
+  - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-elem-target-yield-valid.js
+  - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-elem-trlg-iter-elision-iter-nrml-close-null.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-elision-val-array.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-elision-val-string.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-empty-val-array.js
@@ -6882,12 +6882,12 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-rest-after-element.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-rest-after-elision.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-rest-elision.js
-  - [ ] test/language/statements/for-await-of/async-func-decl-dstr-array-rest-iteration.js
+  - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-rest-iteration.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-rest-nested-array-null.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-rest-nested-array-undefined-hole.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-rest-nested-array-undefined-own.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-rest-nested-array-undefined.js
-  - [ ] test/language/statements/for-await-of/async-func-decl-dstr-array-rest-nested-array-yield-ident-valid.js
+  - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-rest-nested-array-yield-ident-valid.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-rest-nested-array.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-rest-nested-obj-null.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-rest-nested-obj-undefined-hole.js
@@ -6895,7 +6895,7 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-rest-nested-obj-undefined.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-rest-nested-obj-yield-ident-valid.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-rest-nested-obj.js
-  - [ ] test/language/statements/for-await-of/async-func-decl-dstr-array-rest-put-prop-ref-no-get.js
+  - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-rest-put-prop-ref-no-get.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-rest-put-prop-ref.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-rest-put-unresolvable-no-strict.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-array-rest-yield-ident-valid.js
@@ -6954,7 +6954,7 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-obj-prop-put-unresolvable-no-strict.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-obj-rest-descriptors.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-obj-rest-empty-obj.js
-  - [ ] test/language/statements/for-await-of/async-func-decl-dstr-obj-rest-getter.js
+  - [x] test/language/statements/for-await-of/async-func-decl-dstr-obj-rest-getter.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-obj-rest-number.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-obj-rest-same-name.js
   - [x] test/language/statements/for-await-of/async-func-decl-dstr-obj-rest-skip-non-enumerable.js
@@ -6973,14 +6973,14 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-func-dstr-const-ary-ptrn-elem-ary-elision-iter.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-ary-ptrn-elem-ary-empty-init.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-ary-ptrn-elem-ary-empty-iter.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-ary-ptrn-elem-ary-rest-init.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-ary-ptrn-elem-ary-rest-iter.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-ary-ptrn-elem-ary-rest-init.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-ary-ptrn-elem-ary-rest-iter.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-ary-ptrn-elem-ary-val-null.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-ary-ptrn-elem-id-init-exhausted.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-ary-ptrn-elem-id-init-fn-name-arrow.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-ary-ptrn-elem-id-init-fn-name-class.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-ary-ptrn-elem-id-init-fn-name-cover.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-ary-ptrn-elem-id-init-fn-name-fn.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-ary-ptrn-elem-id-init-fn-name-fn.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-ary-ptrn-elem-id-init-fn-name-gen.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-ary-ptrn-elem-id-init-hole.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-ary-ptrn-elem-id-init-skipped.js
@@ -7001,19 +7001,19 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-func-dstr-const-ary-ptrn-elision-exhausted.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-ary-ptrn-elision-iter-close.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-ary-ptrn-elision-step-err.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-ary-ptrn-elision.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-ary-ptrn-empty.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-ary-ptrn-elision.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-ary-ptrn-empty.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-ary-ptrn-rest-ary-elem.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-ary-ptrn-rest-ary-elision.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-ary-ptrn-rest-ary-empty.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-ary-ptrn-rest-ary-rest.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-ary-ptrn-rest-ary-elision.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-ary-ptrn-rest-ary-empty.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-ary-ptrn-rest-ary-rest.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-ary-ptrn-rest-id-elision-next-err.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-ary-ptrn-rest-id-elision.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-ary-ptrn-rest-id-elision.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-ary-ptrn-rest-id-exhausted.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-ary-ptrn-rest-id-iter-close.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-ary-ptrn-rest-id-iter-step-err.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-ary-ptrn-rest-id-iter-val-err.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-ary-ptrn-rest-id.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-ary-ptrn-rest-id.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-ary-ptrn-rest-init-ary.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-ary-ptrn-rest-init-id.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-ary-ptrn-rest-init-obj.js
@@ -7027,18 +7027,18 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-func-dstr-const-async-ary-name-iter-val.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-elem-ary-elem-init.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-elem-ary-elem-iter.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-elem-ary-elision-init.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-elem-ary-elision-init.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-elem-ary-elision-iter.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-elem-ary-empty-init.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-elem-ary-empty-init.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-elem-ary-empty-iter.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-elem-ary-rest-init.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-elem-ary-rest-iter.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-elem-ary-rest-init.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-elem-ary-rest-iter.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-elem-id-init-exhausted.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-elem-id-init-fn-name-arrow.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-elem-id-init-fn-name-class.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-elem-id-init-fn-name-cover.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-elem-id-init-fn-name-fn.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-elem-id-init-fn-name-gen.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-elem-id-init-fn-name-arrow.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-elem-id-init-fn-name-class.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-elem-id-init-fn-name-cover.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-elem-id-init-fn-name-fn.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-elem-id-init-fn-name-gen.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-elem-id-init-hole.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-elem-id-init-skipped.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-elem-id-init-undef.js
@@ -7047,18 +7047,18 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-elem-id-iter-val.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-elem-obj-id-init.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-elem-obj-id.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-elem-obj-prop-id-init.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-elem-obj-prop-id.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-elem-obj-prop-id-init.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-elem-obj-prop-id.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-elision-exhausted.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-elision.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-empty.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-elision.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-empty.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-rest-ary-elem.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-rest-ary-elision.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-rest-ary-empty.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-rest-ary-rest.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-rest-id-elision.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-rest-id-exhausted.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-rest-id.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-rest-ary-elision.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-rest-ary-empty.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-rest-ary-rest.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-rest-id-elision.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-rest-id-exhausted.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-rest-id.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-rest-init-ary.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-rest-init-id.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-rest-init-obj.js
@@ -7068,25 +7068,25 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-rest-obj-id.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-async-ary-ptrn-rest-obj-prop-id.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-async-obj-ptrn-empty.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-async-obj-ptrn-id-init-fn-name-arrow.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-async-obj-ptrn-id-init-fn-name-class.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-async-obj-ptrn-id-init-fn-name-cover.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-async-obj-ptrn-id-init-fn-name-fn.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-async-obj-ptrn-id-init-fn-name-gen.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-async-obj-ptrn-id-init-fn-name-arrow.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-async-obj-ptrn-id-init-fn-name-class.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-async-obj-ptrn-id-init-fn-name-cover.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-async-obj-ptrn-id-init-fn-name-fn.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-async-obj-ptrn-id-init-fn-name-gen.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-async-obj-ptrn-id-init-skipped.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-async-obj-ptrn-id-trailing-comma.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-async-obj-ptrn-prop-ary-init.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-async-obj-ptrn-prop-ary-init.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-async-obj-ptrn-prop-ary-trailing-comma.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-async-obj-ptrn-prop-ary.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-async-obj-ptrn-prop-id-init-skipped.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-async-obj-ptrn-prop-id-init.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-async-obj-ptrn-prop-id-trailing-comma.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-async-obj-ptrn-prop-id.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-async-obj-ptrn-prop-obj-init.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-async-obj-ptrn-prop-obj.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-async-obj-ptrn-rest-getter.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-async-obj-ptrn-rest-skip-non-enumerable.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-async-obj-ptrn-rest-val-obj.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-async-obj-ptrn-prop-ary.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-async-obj-ptrn-prop-id-init-skipped.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-async-obj-ptrn-prop-id-init.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-async-obj-ptrn-prop-id-trailing-comma.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-async-obj-ptrn-prop-id.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-async-obj-ptrn-prop-obj-init.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-async-obj-ptrn-prop-obj.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-async-obj-ptrn-rest-getter.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-async-obj-ptrn-rest-skip-non-enumerable.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-async-obj-ptrn-rest-val-obj.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-obj-init-null.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-obj-init-undefined.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-obj-ptrn-empty.js
@@ -7117,7 +7117,7 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-func-dstr-const-obj-ptrn-prop-obj-value-null.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-obj-ptrn-prop-obj-value-undef.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-obj-ptrn-prop-obj.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-const-obj-ptrn-rest-getter.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-const-obj-ptrn-rest-getter.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-obj-ptrn-rest-skip-non-enumerable.js
   - [x] test/language/statements/for-await-of/async-func-dstr-const-obj-ptrn-rest-val-obj.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-ary-init-iter-close.js
@@ -7130,14 +7130,14 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-func-dstr-let-ary-ptrn-elem-ary-elision-iter.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-ary-ptrn-elem-ary-empty-init.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-ary-ptrn-elem-ary-empty-iter.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-ary-ptrn-elem-ary-rest-init.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-ary-ptrn-elem-ary-rest-iter.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-ary-ptrn-elem-ary-rest-init.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-ary-ptrn-elem-ary-rest-iter.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-ary-ptrn-elem-ary-val-null.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-ary-ptrn-elem-id-init-exhausted.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-ary-ptrn-elem-id-init-fn-name-arrow.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-ary-ptrn-elem-id-init-fn-name-class.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-ary-ptrn-elem-id-init-fn-name-cover.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-ary-ptrn-elem-id-init-fn-name-fn.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-ary-ptrn-elem-id-init-fn-name-fn.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-ary-ptrn-elem-id-init-fn-name-gen.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-ary-ptrn-elem-id-init-hole.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-ary-ptrn-elem-id-init-skipped.js
@@ -7158,19 +7158,19 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-func-dstr-let-ary-ptrn-elision-exhausted.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-ary-ptrn-elision-iter-close.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-ary-ptrn-elision-step-err.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-ary-ptrn-elision.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-ary-ptrn-empty.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-ary-ptrn-elision.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-ary-ptrn-empty.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-ary-ptrn-rest-ary-elem.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-ary-ptrn-rest-ary-elision.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-ary-ptrn-rest-ary-empty.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-ary-ptrn-rest-ary-rest.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-ary-ptrn-rest-ary-elision.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-ary-ptrn-rest-ary-empty.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-ary-ptrn-rest-ary-rest.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-ary-ptrn-rest-id-elision-next-err.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-ary-ptrn-rest-id-elision.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-ary-ptrn-rest-id-elision.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-ary-ptrn-rest-id-exhausted.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-ary-ptrn-rest-id-iter-close.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-ary-ptrn-rest-id-iter-step-err.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-ary-ptrn-rest-id-iter-val-err.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-ary-ptrn-rest-id.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-ary-ptrn-rest-id.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-ary-ptrn-rest-init-ary.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-ary-ptrn-rest-init-id.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-ary-ptrn-rest-init-obj.js
@@ -7184,18 +7184,18 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-func-dstr-let-async-ary-name-iter-val.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-elem-ary-elem-init.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-elem-ary-elem-iter.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-elem-ary-elision-init.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-elem-ary-elision-init.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-elem-ary-elision-iter.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-elem-ary-empty-init.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-elem-ary-empty-init.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-elem-ary-empty-iter.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-elem-ary-rest-init.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-elem-ary-rest-iter.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-elem-ary-rest-init.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-elem-ary-rest-iter.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-elem-id-init-exhausted.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-elem-id-init-fn-name-arrow.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-elem-id-init-fn-name-class.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-elem-id-init-fn-name-cover.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-elem-id-init-fn-name-fn.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-elem-id-init-fn-name-gen.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-elem-id-init-fn-name-arrow.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-elem-id-init-fn-name-class.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-elem-id-init-fn-name-cover.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-elem-id-init-fn-name-fn.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-elem-id-init-fn-name-gen.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-elem-id-init-hole.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-elem-id-init-skipped.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-elem-id-init-undef.js
@@ -7204,18 +7204,18 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-elem-id-iter-val.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-elem-obj-id-init.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-elem-obj-id.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-elem-obj-prop-id-init.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-elem-obj-prop-id.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-elem-obj-prop-id-init.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-elem-obj-prop-id.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-elision-exhausted.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-elision.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-empty.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-elision.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-empty.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-rest-ary-elem.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-rest-ary-elision.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-rest-ary-empty.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-rest-ary-rest.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-rest-id-elision.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-rest-id-exhausted.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-rest-id.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-rest-ary-elision.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-rest-ary-empty.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-rest-ary-rest.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-rest-id-elision.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-rest-id-exhausted.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-rest-id.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-rest-init-ary.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-rest-init-id.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-rest-init-obj.js
@@ -7225,25 +7225,25 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-rest-obj-id.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-async-ary-ptrn-rest-obj-prop-id.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-async-obj-ptrn-empty.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-async-obj-ptrn-id-init-fn-name-arrow.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-async-obj-ptrn-id-init-fn-name-class.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-async-obj-ptrn-id-init-fn-name-cover.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-async-obj-ptrn-id-init-fn-name-fn.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-async-obj-ptrn-id-init-fn-name-gen.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-async-obj-ptrn-id-init-fn-name-arrow.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-async-obj-ptrn-id-init-fn-name-class.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-async-obj-ptrn-id-init-fn-name-cover.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-async-obj-ptrn-id-init-fn-name-fn.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-async-obj-ptrn-id-init-fn-name-gen.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-async-obj-ptrn-id-init-skipped.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-async-obj-ptrn-id-trailing-comma.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-async-obj-ptrn-prop-ary-init.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-async-obj-ptrn-prop-ary-init.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-async-obj-ptrn-prop-ary-trailing-comma.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-async-obj-ptrn-prop-ary.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-async-obj-ptrn-prop-id-init-skipped.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-async-obj-ptrn-prop-id-init.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-async-obj-ptrn-prop-id-trailing-comma.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-async-obj-ptrn-prop-id.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-async-obj-ptrn-prop-obj-init.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-async-obj-ptrn-prop-obj.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-async-obj-ptrn-rest-getter.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-async-obj-ptrn-rest-skip-non-enumerable.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-async-obj-ptrn-rest-val-obj.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-async-obj-ptrn-prop-ary.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-async-obj-ptrn-prop-id-init-skipped.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-async-obj-ptrn-prop-id-init.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-async-obj-ptrn-prop-id-trailing-comma.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-async-obj-ptrn-prop-id.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-async-obj-ptrn-prop-obj-init.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-async-obj-ptrn-prop-obj.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-async-obj-ptrn-rest-getter.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-async-obj-ptrn-rest-skip-non-enumerable.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-async-obj-ptrn-rest-val-obj.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-obj-init-null.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-obj-init-undefined.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-obj-ptrn-empty.js
@@ -7274,7 +7274,7 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-func-dstr-let-obj-ptrn-prop-obj-value-null.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-obj-ptrn-prop-obj-value-undef.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-obj-ptrn-prop-obj.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-let-obj-ptrn-rest-getter.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-let-obj-ptrn-rest-getter.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-obj-ptrn-rest-skip-non-enumerable.js
   - [x] test/language/statements/for-await-of/async-func-dstr-let-obj-ptrn-rest-val-obj.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-ary-init-iter-close.js
@@ -7287,14 +7287,14 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-func-dstr-var-ary-ptrn-elem-ary-elision-iter.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-ary-ptrn-elem-ary-empty-init.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-ary-ptrn-elem-ary-empty-iter.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-ary-ptrn-elem-ary-rest-init.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-ary-ptrn-elem-ary-rest-iter.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-ary-ptrn-elem-ary-rest-init.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-ary-ptrn-elem-ary-rest-iter.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-ary-ptrn-elem-ary-val-null.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-ary-ptrn-elem-id-init-exhausted.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-ary-ptrn-elem-id-init-fn-name-arrow.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-ary-ptrn-elem-id-init-fn-name-class.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-ary-ptrn-elem-id-init-fn-name-cover.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-ary-ptrn-elem-id-init-fn-name-fn.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-ary-ptrn-elem-id-init-fn-name-fn.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-ary-ptrn-elem-id-init-fn-name-gen.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-ary-ptrn-elem-id-init-hole.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-ary-ptrn-elem-id-init-skipped.js
@@ -7315,19 +7315,19 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-func-dstr-var-ary-ptrn-elision-exhausted.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-ary-ptrn-elision-iter-close.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-ary-ptrn-elision-step-err.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-ary-ptrn-elision.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-ary-ptrn-empty.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-ary-ptrn-elision.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-ary-ptrn-empty.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-ary-ptrn-rest-ary-elem.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-ary-ptrn-rest-ary-elision.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-ary-ptrn-rest-ary-empty.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-ary-ptrn-rest-ary-rest.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-ary-ptrn-rest-ary-elision.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-ary-ptrn-rest-ary-empty.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-ary-ptrn-rest-ary-rest.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-ary-ptrn-rest-id-elision-next-err.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-ary-ptrn-rest-id-elision.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-ary-ptrn-rest-id-elision.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-ary-ptrn-rest-id-exhausted.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-ary-ptrn-rest-id-iter-close.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-ary-ptrn-rest-id-iter-step-err.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-ary-ptrn-rest-id-iter-val-err.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-ary-ptrn-rest-id.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-ary-ptrn-rest-id.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-ary-ptrn-rest-init-ary.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-ary-ptrn-rest-init-id.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-ary-ptrn-rest-init-obj.js
@@ -7341,18 +7341,18 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-func-dstr-var-async-ary-name-iter-val.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-elem-ary-elem-init.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-elem-ary-elem-iter.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-elem-ary-elision-init.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-elem-ary-elision-init.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-elem-ary-elision-iter.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-elem-ary-empty-init.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-elem-ary-empty-init.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-elem-ary-empty-iter.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-elem-ary-rest-init.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-elem-ary-rest-iter.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-elem-ary-rest-init.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-elem-ary-rest-iter.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-elem-id-init-exhausted.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-elem-id-init-fn-name-arrow.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-elem-id-init-fn-name-class.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-elem-id-init-fn-name-cover.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-elem-id-init-fn-name-fn.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-elem-id-init-fn-name-gen.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-elem-id-init-fn-name-arrow.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-elem-id-init-fn-name-class.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-elem-id-init-fn-name-cover.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-elem-id-init-fn-name-fn.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-elem-id-init-fn-name-gen.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-elem-id-init-hole.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-elem-id-init-skipped.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-elem-id-init-undef.js
@@ -7361,18 +7361,18 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-elem-id-iter-val.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-elem-obj-id-init.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-elem-obj-id.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-elem-obj-prop-id-init.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-elem-obj-prop-id.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-elem-obj-prop-id-init.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-elem-obj-prop-id.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-elision-exhausted.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-elision.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-empty.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-elision.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-empty.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-rest-ary-elem.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-rest-ary-elision.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-rest-ary-empty.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-rest-ary-rest.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-rest-id-elision.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-rest-id-exhausted.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-rest-id.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-rest-ary-elision.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-rest-ary-empty.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-rest-ary-rest.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-rest-id-elision.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-rest-id-exhausted.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-rest-id.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-rest-init-ary.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-rest-init-id.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-rest-init-obj.js
@@ -7382,25 +7382,25 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-rest-obj-id.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-async-ary-ptrn-rest-obj-prop-id.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-async-obj-ptrn-empty.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-async-obj-ptrn-id-init-fn-name-arrow.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-async-obj-ptrn-id-init-fn-name-class.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-async-obj-ptrn-id-init-fn-name-cover.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-async-obj-ptrn-id-init-fn-name-fn.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-async-obj-ptrn-id-init-fn-name-gen.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-async-obj-ptrn-id-init-fn-name-arrow.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-async-obj-ptrn-id-init-fn-name-class.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-async-obj-ptrn-id-init-fn-name-cover.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-async-obj-ptrn-id-init-fn-name-fn.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-async-obj-ptrn-id-init-fn-name-gen.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-async-obj-ptrn-id-init-skipped.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-async-obj-ptrn-id-trailing-comma.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-async-obj-ptrn-prop-ary-init.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-async-obj-ptrn-prop-ary-init.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-async-obj-ptrn-prop-ary-trailing-comma.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-async-obj-ptrn-prop-ary.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-async-obj-ptrn-prop-id-init-skipped.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-async-obj-ptrn-prop-id-init.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-async-obj-ptrn-prop-id-trailing-comma.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-async-obj-ptrn-prop-id.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-async-obj-ptrn-prop-obj-init.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-async-obj-ptrn-prop-obj.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-async-obj-ptrn-rest-getter.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-async-obj-ptrn-rest-skip-non-enumerable.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-async-obj-ptrn-rest-val-obj.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-async-obj-ptrn-prop-ary.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-async-obj-ptrn-prop-id-init-skipped.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-async-obj-ptrn-prop-id-init.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-async-obj-ptrn-prop-id-trailing-comma.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-async-obj-ptrn-prop-id.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-async-obj-ptrn-prop-obj-init.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-async-obj-ptrn-prop-obj.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-async-obj-ptrn-rest-getter.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-async-obj-ptrn-rest-skip-non-enumerable.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-async-obj-ptrn-rest-val-obj.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-obj-init-null.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-obj-init-undefined.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-obj-ptrn-empty.js
@@ -7420,9 +7420,9 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-func-dstr-var-obj-ptrn-prop-ary-value-null.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-obj-ptrn-prop-ary.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-obj-ptrn-prop-eval-err.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-obj-ptrn-prop-id-get-value-err.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-obj-ptrn-prop-id-get-value-err.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-obj-ptrn-prop-id-init-skipped.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-obj-ptrn-prop-id-init-throws.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-obj-ptrn-prop-id-init-throws.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-obj-ptrn-prop-id-init-unresolvable.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-obj-ptrn-prop-id-init.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-obj-ptrn-prop-id-trailing-comma.js
@@ -7431,7 +7431,7 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-func-dstr-var-obj-ptrn-prop-obj-value-null.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-obj-ptrn-prop-obj-value-undef.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-obj-ptrn-prop-obj.js
-  - [ ] test/language/statements/for-await-of/async-func-dstr-var-obj-ptrn-rest-getter.js
+  - [x] test/language/statements/for-await-of/async-func-dstr-var-obj-ptrn-rest-getter.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-obj-ptrn-rest-skip-non-enumerable.js
   - [x] test/language/statements/for-await-of/async-func-dstr-var-obj-ptrn-rest-val-obj.js
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-array-elem-init-assignment.js
@@ -7465,7 +7465,7 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-array-elem-nested-obj.js
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-array-elem-put-const.js
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-array-elem-put-prop-ref-no-get.js
-  - [ ] test/language/statements/for-await-of/async-gen-decl-dstr-array-elem-put-prop-ref-user-err.js
+  - [x] test/language/statements/for-await-of/async-gen-decl-dstr-array-elem-put-prop-ref-user-err.js
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-array-elem-put-prop-ref.js
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-array-elem-put-unresolvable-no-strict.js
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-array-elem-put-unresolvable-strict.js
@@ -7491,7 +7491,7 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-array-rest-after-elision.js
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-array-rest-elision.js
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-array-rest-iter-nrml-close-skip.js
-  - [ ] test/language/statements/for-await-of/async-gen-decl-dstr-array-rest-iteration.js
+  - [x] test/language/statements/for-await-of/async-gen-decl-dstr-array-rest-iteration.js
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-array-rest-lref.js
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-array-rest-nested-array-null.js
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-array-rest-nested-array-undefined-hole.js
@@ -7567,10 +7567,10 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-obj-rest-getter.js
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-obj-rest-number.js
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-obj-rest-same-name.js
-  - [ ] test/language/statements/for-await-of/async-gen-decl-dstr-obj-rest-skip-non-enumerable.js
+  - [x] test/language/statements/for-await-of/async-gen-decl-dstr-obj-rest-skip-non-enumerable.js
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-obj-rest-str-val.js
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-obj-rest-symbol-val.js
-  - [ ] test/language/statements/for-await-of/async-gen-decl-dstr-obj-rest-to-property-with-setter.js
+  - [x] test/language/statements/for-await-of/async-gen-decl-dstr-obj-rest-to-property-with-setter.js
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-obj-rest-to-property.js
   - [x] test/language/statements/for-await-of/async-gen-decl-dstr-obj-rest-valid-object.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-ary-init-iter-close.js
@@ -7583,12 +7583,12 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-ary-ptrn-elem-ary-elision-iter.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-ary-ptrn-elem-ary-empty-init.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-ary-ptrn-elem-ary-empty-iter.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-ary-ptrn-elem-ary-rest-init.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-ary-ptrn-elem-ary-rest-iter.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-ary-ptrn-elem-ary-rest-init.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-ary-ptrn-elem-ary-rest-iter.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-ary-ptrn-elem-ary-val-null.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-ary-ptrn-elem-id-init-exhausted.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-ary-ptrn-elem-id-init-fn-name-arrow.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-ary-ptrn-elem-id-init-fn-name-class.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-ary-ptrn-elem-id-init-fn-name-class.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-ary-ptrn-elem-id-init-fn-name-cover.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-ary-ptrn-elem-id-init-fn-name-fn.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-ary-ptrn-elem-id-init-fn-name-gen.js
@@ -7611,20 +7611,20 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-ary-ptrn-elision-exhausted.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-ary-ptrn-elision-iter-close.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-ary-ptrn-elision-step-err.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-ary-ptrn-elision.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-ary-ptrn-empty.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-ary-ptrn-elision.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-ary-ptrn-empty.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-ary-ptrn-init-err.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-ary-ptrn-rest-ary-elem.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-ary-ptrn-rest-ary-elision.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-ary-ptrn-rest-ary-empty.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-ary-ptrn-rest-ary-rest.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-ary-ptrn-rest-ary-elision.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-ary-ptrn-rest-ary-empty.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-ary-ptrn-rest-ary-rest.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-ary-ptrn-rest-id-elision-next-err.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-ary-ptrn-rest-id-elision.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-ary-ptrn-rest-id-elision.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-ary-ptrn-rest-id-exhausted.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-ary-ptrn-rest-id-iter-close.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-ary-ptrn-rest-id-iter-step-err.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-ary-ptrn-rest-id-iter-val-err.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-ary-ptrn-rest-id.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-ary-ptrn-rest-id.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-ary-ptrn-rest-init-ary.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-ary-ptrn-rest-init-id.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-ary-ptrn-rest-init-obj.js
@@ -7638,18 +7638,18 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-name-iter-val.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-elem-ary-elem-init.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-elem-ary-elem-iter.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-elem-ary-elision-init.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-elem-ary-elision-init.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-elem-ary-elision-iter.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-elem-ary-empty-init.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-elem-ary-empty-init.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-elem-ary-empty-iter.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-elem-ary-rest-init.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-elem-ary-rest-iter.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-elem-ary-rest-init.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-elem-ary-rest-iter.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-elem-id-init-exhausted.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-elem-id-init-fn-name-arrow.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-elem-id-init-fn-name-class.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-elem-id-init-fn-name-cover.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-elem-id-init-fn-name-fn.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-elem-id-init-fn-name-gen.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-elem-id-init-fn-name-arrow.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-elem-id-init-fn-name-class.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-elem-id-init-fn-name-cover.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-elem-id-init-fn-name-fn.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-elem-id-init-fn-name-gen.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-elem-id-init-hole.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-elem-id-init-skipped.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-elem-id-init-undef.js
@@ -7658,18 +7658,18 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-elem-id-iter-val.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-elem-obj-id-init.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-elem-obj-id.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-elem-obj-prop-id-init.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-elem-obj-prop-id.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-elem-obj-prop-id-init.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-elem-obj-prop-id.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-elision-exhausted.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-elision.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-empty.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-elision.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-empty.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-rest-ary-elem.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-rest-ary-elision.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-rest-ary-empty.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-rest-ary-rest.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-rest-id-elision.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-rest-id-exhausted.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-rest-id.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-rest-ary-elision.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-rest-ary-empty.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-rest-ary-rest.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-rest-id-elision.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-rest-id-exhausted.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-rest-id.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-rest-init-ary.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-rest-init-id.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-rest-init-obj.js
@@ -7679,31 +7679,31 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-rest-obj-id.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-ary-ptrn-rest-obj-prop-id.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-obj-ptrn-empty.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-async-obj-ptrn-id-init-fn-name-arrow.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-async-obj-ptrn-id-init-fn-name-class.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-async-obj-ptrn-id-init-fn-name-cover.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-async-obj-ptrn-id-init-fn-name-fn.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-async-obj-ptrn-id-init-fn-name-gen.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-obj-ptrn-id-init-fn-name-arrow.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-obj-ptrn-id-init-fn-name-class.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-obj-ptrn-id-init-fn-name-cover.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-obj-ptrn-id-init-fn-name-fn.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-obj-ptrn-id-init-fn-name-gen.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-obj-ptrn-id-init-skipped.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-obj-ptrn-id-trailing-comma.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-async-obj-ptrn-prop-ary-init.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-obj-ptrn-prop-ary-init.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-obj-ptrn-prop-ary-trailing-comma.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-async-obj-ptrn-prop-ary.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-async-obj-ptrn-prop-id-init-skipped.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-async-obj-ptrn-prop-id-init.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-async-obj-ptrn-prop-id-trailing-comma.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-async-obj-ptrn-prop-id.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-async-obj-ptrn-prop-obj-init.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-async-obj-ptrn-prop-obj.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-async-obj-ptrn-rest-getter.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-async-obj-ptrn-rest-skip-non-enumerable.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-async-obj-ptrn-rest-val-obj.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-obj-ptrn-prop-ary.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-obj-ptrn-prop-id-init-skipped.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-obj-ptrn-prop-id-init.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-obj-ptrn-prop-id-trailing-comma.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-obj-ptrn-prop-id.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-obj-ptrn-prop-obj-init.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-obj-ptrn-prop-obj.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-obj-ptrn-rest-getter.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-obj-ptrn-rest-skip-non-enumerable.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-async-obj-ptrn-rest-val-obj.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-obj-init-null.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-obj-init-undefined.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-obj-ptrn-empty.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-obj-ptrn-id-get-value-err.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-obj-ptrn-id-init-fn-name-arrow.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-obj-ptrn-id-init-fn-name-class.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-obj-ptrn-id-init-fn-name-class.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-obj-ptrn-id-init-fn-name-cover.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-obj-ptrn-id-init-fn-name-fn.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-obj-ptrn-id-init-fn-name-gen.js
@@ -7730,7 +7730,7 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-obj-ptrn-prop-obj-value-undef.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-obj-ptrn-prop-obj.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-obj-ptrn-rest-getter.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-const-obj-ptrn-rest-skip-non-enumerable.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-const-obj-ptrn-rest-skip-non-enumerable.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-const-obj-ptrn-rest-val-obj.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-ary-init-iter-close.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-ary-init-iter-get-err.js
@@ -7742,12 +7742,12 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-ary-ptrn-elem-ary-elision-iter.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-ary-ptrn-elem-ary-empty-init.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-ary-ptrn-elem-ary-empty-iter.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-ary-ptrn-elem-ary-rest-init.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-ary-ptrn-elem-ary-rest-iter.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-ary-ptrn-elem-ary-rest-init.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-ary-ptrn-elem-ary-rest-iter.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-ary-ptrn-elem-ary-val-null.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-ary-ptrn-elem-id-init-exhausted.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-ary-ptrn-elem-id-init-fn-name-arrow.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-ary-ptrn-elem-id-init-fn-name-class.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-ary-ptrn-elem-id-init-fn-name-class.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-ary-ptrn-elem-id-init-fn-name-cover.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-ary-ptrn-elem-id-init-fn-name-fn.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-ary-ptrn-elem-id-init-fn-name-gen.js
@@ -7770,20 +7770,20 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-ary-ptrn-elision-exhausted.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-ary-ptrn-elision-iter-close.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-ary-ptrn-elision-step-err.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-ary-ptrn-elision.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-ary-ptrn-empty.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-ary-ptrn-elision.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-ary-ptrn-empty.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-ary-ptrn-init-err.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-ary-ptrn-rest-ary-elem.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-ary-ptrn-rest-ary-elision.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-ary-ptrn-rest-ary-empty.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-ary-ptrn-rest-ary-rest.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-ary-ptrn-rest-ary-elision.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-ary-ptrn-rest-ary-empty.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-ary-ptrn-rest-ary-rest.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-ary-ptrn-rest-id-elision-next-err.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-ary-ptrn-rest-id-elision.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-ary-ptrn-rest-id-elision.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-ary-ptrn-rest-id-exhausted.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-ary-ptrn-rest-id-iter-close.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-ary-ptrn-rest-id-iter-step-err.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-ary-ptrn-rest-id-iter-val-err.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-ary-ptrn-rest-id.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-ary-ptrn-rest-id.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-ary-ptrn-rest-init-ary.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-ary-ptrn-rest-init-id.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-ary-ptrn-rest-init-obj.js
@@ -7797,18 +7797,18 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-name-iter-val.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-elem-ary-elem-init.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-elem-ary-elem-iter.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-elem-ary-elision-init.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-elem-ary-elision-init.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-elem-ary-elision-iter.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-elem-ary-empty-init.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-elem-ary-empty-init.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-elem-ary-empty-iter.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-elem-ary-rest-init.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-elem-ary-rest-iter.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-elem-ary-rest-init.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-elem-ary-rest-iter.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-elem-id-init-exhausted.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-elem-id-init-fn-name-arrow.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-elem-id-init-fn-name-class.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-elem-id-init-fn-name-cover.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-elem-id-init-fn-name-fn.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-elem-id-init-fn-name-gen.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-elem-id-init-fn-name-arrow.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-elem-id-init-fn-name-class.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-elem-id-init-fn-name-cover.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-elem-id-init-fn-name-fn.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-elem-id-init-fn-name-gen.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-elem-id-init-hole.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-elem-id-init-skipped.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-elem-id-init-undef.js
@@ -7817,18 +7817,18 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-elem-id-iter-val.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-elem-obj-id-init.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-elem-obj-id.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-elem-obj-prop-id-init.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-elem-obj-prop-id.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-elem-obj-prop-id-init.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-elem-obj-prop-id.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-elision-exhausted.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-elision.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-empty.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-elision.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-empty.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-rest-ary-elem.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-rest-ary-elision.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-rest-ary-empty.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-rest-ary-rest.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-rest-id-elision.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-rest-id-exhausted.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-rest-id.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-rest-ary-elision.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-rest-ary-empty.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-rest-ary-rest.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-rest-id-elision.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-rest-id-exhausted.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-rest-id.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-rest-init-ary.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-rest-init-id.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-rest-init-obj.js
@@ -7838,31 +7838,31 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-rest-obj-id.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-ary-ptrn-rest-obj-prop-id.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-obj-ptrn-empty.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-async-obj-ptrn-id-init-fn-name-arrow.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-async-obj-ptrn-id-init-fn-name-class.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-async-obj-ptrn-id-init-fn-name-cover.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-async-obj-ptrn-id-init-fn-name-fn.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-async-obj-ptrn-id-init-fn-name-gen.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-obj-ptrn-id-init-fn-name-arrow.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-obj-ptrn-id-init-fn-name-class.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-obj-ptrn-id-init-fn-name-cover.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-obj-ptrn-id-init-fn-name-fn.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-obj-ptrn-id-init-fn-name-gen.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-obj-ptrn-id-init-skipped.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-obj-ptrn-id-trailing-comma.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-async-obj-ptrn-prop-ary-init.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-obj-ptrn-prop-ary-init.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-obj-ptrn-prop-ary-trailing-comma.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-async-obj-ptrn-prop-ary.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-async-obj-ptrn-prop-id-init-skipped.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-async-obj-ptrn-prop-id-init.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-async-obj-ptrn-prop-id-trailing-comma.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-async-obj-ptrn-prop-id.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-async-obj-ptrn-prop-obj-init.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-async-obj-ptrn-prop-obj.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-async-obj-ptrn-rest-getter.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-async-obj-ptrn-rest-skip-non-enumerable.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-async-obj-ptrn-rest-val-obj.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-obj-ptrn-prop-ary.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-obj-ptrn-prop-id-init-skipped.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-obj-ptrn-prop-id-init.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-obj-ptrn-prop-id-trailing-comma.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-obj-ptrn-prop-id.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-obj-ptrn-prop-obj-init.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-obj-ptrn-prop-obj.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-obj-ptrn-rest-getter.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-obj-ptrn-rest-skip-non-enumerable.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-async-obj-ptrn-rest-val-obj.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-obj-init-null.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-obj-init-undefined.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-obj-ptrn-empty.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-obj-ptrn-id-get-value-err.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-obj-ptrn-id-init-fn-name-arrow.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-obj-ptrn-id-init-fn-name-class.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-obj-ptrn-id-init-fn-name-class.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-obj-ptrn-id-init-fn-name-cover.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-obj-ptrn-id-init-fn-name-fn.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-obj-ptrn-id-init-fn-name-gen.js
@@ -7889,7 +7889,7 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-obj-ptrn-prop-obj-value-undef.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-obj-ptrn-prop-obj.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-obj-ptrn-rest-getter.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-let-obj-ptrn-rest-skip-non-enumerable.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-let-obj-ptrn-rest-skip-non-enumerable.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-let-obj-ptrn-rest-val-obj.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-ary-init-iter-close.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-ary-init-iter-get-err.js
@@ -7901,14 +7901,14 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-elem-ary-elision-iter.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-elem-ary-empty-init.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-elem-ary-empty-iter.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-elem-ary-rest-init.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-elem-ary-rest-iter.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-elem-ary-rest-init.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-elem-ary-rest-iter.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-elem-ary-val-null.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-elem-id-init-exhausted.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-elem-id-init-fn-name-arrow.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-elem-id-init-fn-name-class.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-elem-id-init-fn-name-class.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-elem-id-init-fn-name-cover.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-elem-id-init-fn-name-fn.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-elem-id-init-fn-name-fn.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-elem-id-init-fn-name-gen.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-elem-id-init-hole.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-elem-id-init-skipped.js
@@ -7929,20 +7929,20 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-elision-exhausted.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-elision-iter-close.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-elision-step-err.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-elision.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-empty.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-elision.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-empty.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-init-err.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-rest-ary-elem.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-rest-ary-elision.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-rest-ary-empty.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-rest-ary-rest.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-rest-ary-elision.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-rest-ary-empty.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-rest-ary-rest.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-rest-id-elision-next-err.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-rest-id-elision.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-rest-id-elision.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-rest-id-exhausted.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-rest-id-iter-close.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-rest-id-iter-step-err.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-rest-id-iter-val-err.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-rest-id.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-rest-id.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-rest-init-ary.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-rest-init-id.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-ary-ptrn-rest-init-obj.js
@@ -7956,18 +7956,18 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-name-iter-val.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-elem-ary-elem-init.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-elem-ary-elem-iter.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-elem-ary-elision-init.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-elem-ary-elision-init.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-elem-ary-elision-iter.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-elem-ary-empty-init.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-elem-ary-empty-init.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-elem-ary-empty-iter.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-elem-ary-rest-init.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-elem-ary-rest-iter.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-elem-ary-rest-init.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-elem-ary-rest-iter.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-elem-id-init-exhausted.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-elem-id-init-fn-name-arrow.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-elem-id-init-fn-name-class.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-elem-id-init-fn-name-cover.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-elem-id-init-fn-name-fn.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-elem-id-init-fn-name-gen.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-elem-id-init-fn-name-arrow.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-elem-id-init-fn-name-class.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-elem-id-init-fn-name-cover.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-elem-id-init-fn-name-fn.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-elem-id-init-fn-name-gen.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-elem-id-init-hole.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-elem-id-init-skipped.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-elem-id-init-undef.js
@@ -7976,18 +7976,18 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-elem-id-iter-val.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-elem-obj-id-init.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-elem-obj-id.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-elem-obj-prop-id-init.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-elem-obj-prop-id.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-elem-obj-prop-id-init.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-elem-obj-prop-id.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-elision-exhausted.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-elision.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-empty.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-elision.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-empty.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-rest-ary-elem.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-rest-ary-elision.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-rest-ary-empty.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-rest-ary-rest.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-rest-id-elision.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-rest-id-exhausted.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-rest-id.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-rest-ary-elision.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-rest-ary-empty.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-rest-ary-rest.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-rest-id-elision.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-rest-id-exhausted.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-rest-id.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-rest-init-ary.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-rest-init-id.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-rest-init-obj.js
@@ -7997,33 +7997,33 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-rest-obj-id.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-ary-ptrn-rest-obj-prop-id.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-obj-ptrn-empty.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-async-obj-ptrn-id-init-fn-name-arrow.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-async-obj-ptrn-id-init-fn-name-class.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-async-obj-ptrn-id-init-fn-name-cover.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-async-obj-ptrn-id-init-fn-name-fn.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-async-obj-ptrn-id-init-fn-name-gen.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-obj-ptrn-id-init-fn-name-arrow.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-obj-ptrn-id-init-fn-name-class.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-obj-ptrn-id-init-fn-name-cover.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-obj-ptrn-id-init-fn-name-fn.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-obj-ptrn-id-init-fn-name-gen.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-obj-ptrn-id-init-skipped.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-obj-ptrn-id-trailing-comma.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-async-obj-ptrn-prop-ary-init.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-obj-ptrn-prop-ary-init.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-obj-ptrn-prop-ary-trailing-comma.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-async-obj-ptrn-prop-ary.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-async-obj-ptrn-prop-id-init-skipped.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-async-obj-ptrn-prop-id-init.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-async-obj-ptrn-prop-id-trailing-comma.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-async-obj-ptrn-prop-id.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-async-obj-ptrn-prop-obj-init.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-async-obj-ptrn-prop-obj.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-async-obj-ptrn-rest-getter.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-async-obj-ptrn-rest-skip-non-enumerable.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-async-obj-ptrn-rest-val-obj.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-obj-ptrn-prop-ary.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-obj-ptrn-prop-id-init-skipped.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-obj-ptrn-prop-id-init.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-obj-ptrn-prop-id-trailing-comma.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-obj-ptrn-prop-id.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-obj-ptrn-prop-obj-init.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-obj-ptrn-prop-obj.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-obj-ptrn-rest-getter.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-obj-ptrn-rest-skip-non-enumerable.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-async-obj-ptrn-rest-val-obj.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-obj-init-null.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-obj-init-undefined.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-obj-ptrn-empty.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-obj-ptrn-id-get-value-err.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-obj-ptrn-id-init-fn-name-arrow.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-obj-ptrn-id-init-fn-name-class.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-obj-ptrn-id-init-fn-name-class.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-obj-ptrn-id-init-fn-name-cover.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-obj-ptrn-id-init-fn-name-fn.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-obj-ptrn-id-init-fn-name-fn.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-obj-ptrn-id-init-fn-name-gen.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-obj-ptrn-id-init-skipped.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-obj-ptrn-id-init-throws.js
@@ -8036,9 +8036,9 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-obj-ptrn-prop-ary-value-null.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-obj-ptrn-prop-ary.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-obj-ptrn-prop-eval-err.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-obj-ptrn-prop-id-get-value-err.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-obj-ptrn-prop-id-get-value-err.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-obj-ptrn-prop-id-init-skipped.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-obj-ptrn-prop-id-init-throws.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-obj-ptrn-prop-id-init-throws.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-obj-ptrn-prop-id-init-unresolvable.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-obj-ptrn-prop-id-init.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-obj-ptrn-prop-id-trailing-comma.js
@@ -8048,7 +8048,7 @@ Sub-category progress
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-obj-ptrn-prop-obj-value-undef.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-obj-ptrn-prop-obj.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-obj-ptrn-rest-getter.js
-  - [ ] test/language/statements/for-await-of/async-gen-dstr-var-obj-ptrn-rest-skip-non-enumerable.js
+  - [x] test/language/statements/for-await-of/async-gen-dstr-var-obj-ptrn-rest-skip-non-enumerable.js
   - [x] test/language/statements/for-await-of/async-gen-dstr-var-obj-ptrn-rest-val-obj.js
   - [x] test/language/statements/for-await-of/escaped-of.js
   - [x] test/language/statements/for-await-of/head-await-using-init.js
@@ -9035,12 +9035,12 @@ Sub-category progress
   - [x] test/language/statements/function/S13.2.2_A18_T2.js
   - [x] test/language/statements/function/S13.2.2_A19_T1.js
   - [ ] test/language/statements/function/S13.2.2_A19_T2.js
-  - [x] test/language/statements/function/S13.2.2_A19_T3.js
+  - [ ] test/language/statements/function/S13.2.2_A19_T3.js
   - [x] test/language/statements/function/S13.2.2_A19_T4.js
-  - [x] test/language/statements/function/S13.2.2_A19_T5.js
-  - [x] test/language/statements/function/S13.2.2_A19_T6.js
+  - [ ] test/language/statements/function/S13.2.2_A19_T5.js
+  - [ ] test/language/statements/function/S13.2.2_A19_T6.js
   - [x] test/language/statements/function/S13.2.2_A19_T7.js
-  - [x] test/language/statements/function/S13.2.2_A19_T8.js
+  - [ ] test/language/statements/function/S13.2.2_A19_T8.js
   - [x] test/language/statements/function/S13.2.2_A1_T1.js
   - [x] test/language/statements/function/S13.2.2_A1_T2.js
   - [x] test/language/statements/function/S13.2.2_A2.js
@@ -11181,7 +11181,7 @@ Sub-category progress
   - [x] test/language/expressions/assignment/S11.13.1_A7_T4.js
   - [x] test/language/expressions/assignment/S8.12.4_A1.js
   - [x] test/language/expressions/assignment/S8.12.5_A1.js
-  - [x] test/language/expressions/assignment/S8.12.5_A2.js
+  - [ ] test/language/expressions/assignment/S8.12.5_A2.js
   - [ ] test/language/expressions/assignment/assignment-operator-calls-putvalue-lref--rval--1.js
   - [ ] test/language/expressions/assignment/assignment-operator-calls-putvalue-lref--rval-.js
   - [ ] test/language/expressions/assignment/destructuring/default-expr-throws-iterator-return-get-throws.js

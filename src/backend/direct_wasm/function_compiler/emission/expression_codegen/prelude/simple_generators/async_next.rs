@@ -2645,7 +2645,10 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
-    fn assignment_targets_immutable_binding(&self, name: &str) -> bool {
+    pub(in crate::backend::direct_wasm) fn assignment_targets_immutable_binding(
+        &self,
+        name: &str,
+    ) -> bool {
         self.assignment_targets_immutable_class_binding(name)
             || self
                 .resolve_current_local_binding(name)
