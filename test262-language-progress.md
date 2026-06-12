@@ -1,4 +1,4 @@
-22713/23668 (95.97%)
+22738/23668 (96.07%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,8 +14,8 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 8966/9337 (96.03%)
-- expressions: 10619/11061 (96.00%)
+- statements: 8992/9337 (96.31%)
+- expressions: 10618/11061 (95.99%)
 - types: 106/113 (93.81%)
 - function-code: 208/217 (95.85%)
 - global-code: 41/42 (97.62%)
@@ -8184,7 +8184,7 @@ Sub-category progress
   - [x] test/language/statements/for-in/var-eval-strict-init.js
   - [x] test/language/statements/for-in/var-eval-strict.js
   - [x] test/language/statements/for-of/Array.prototype.Symbol.iterator.js
-  - [ ] test/language/statements/for-of/Array.prototype.entries.js
+  - [x] test/language/statements/for-of/Array.prototype.entries.js
   - [x] test/language/statements/for-of/Array.prototype.keys.js
   - [x] test/language/statements/for-of/arguments-mapped-aliasing.js
   - [x] test/language/statements/for-of/arguments-mapped-mutation.js
@@ -8262,7 +8262,7 @@ Sub-category progress
   - [x] test/language/statements/for-of/dstr/array-elem-nested-array-undefined.js
   - [x] test/language/statements/for-of/dstr/array-elem-nested-array-yield-expr.js
   - [x] test/language/statements/for-of/dstr/array-elem-nested-array-yield-ident-invalid.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-nested-array-yield-ident-valid.js
+  - [x] test/language/statements/for-of/dstr/array-elem-nested-array-yield-ident-valid.js
   - [x] test/language/statements/for-of/dstr/array-elem-nested-array.js
   - [x] test/language/statements/for-of/dstr/array-elem-nested-memberexpr-optchain-prop-ref-init.js
   - [x] test/language/statements/for-of/dstr/array-elem-nested-obj-invalid.js
@@ -8290,7 +8290,7 @@ Sub-category progress
   - [x] test/language/statements/for-of/dstr/array-elem-target-simple-strict.js
   - [x] test/language/statements/for-of/dstr/array-elem-target-yield-expr.js
   - [x] test/language/statements/for-of/dstr/array-elem-target-yield-invalid.js
-  - [ ] test/language/statements/for-of/dstr/array-elem-target-yield-valid.js
+  - [x] test/language/statements/for-of/dstr/array-elem-target-yield-valid.js
   - [ ] test/language/statements/for-of/dstr/array-elem-trlg-iter-elision-iter-abpt.js
   - [ ] test/language/statements/for-of/dstr/array-elem-trlg-iter-elision-iter-nrml-close-err.js
   - [ ] test/language/statements/for-of/dstr/array-elem-trlg-iter-elision-iter-nrml-close-null.js
@@ -8367,7 +8367,7 @@ Sub-category progress
   - [x] test/language/statements/for-of/dstr/array-rest-nested-array-undefined.js
   - [x] test/language/statements/for-of/dstr/array-rest-nested-array-yield-expr.js
   - [x] test/language/statements/for-of/dstr/array-rest-nested-array-yield-ident-invalid.js
-  - [ ] test/language/statements/for-of/dstr/array-rest-nested-array-yield-ident-valid.js
+  - [x] test/language/statements/for-of/dstr/array-rest-nested-array-yield-ident-valid.js
   - [x] test/language/statements/for-of/dstr/array-rest-nested-array.js
   - [x] test/language/statements/for-of/dstr/array-rest-nested-obj-invalid.js
   - [x] test/language/statements/for-of/dstr/array-rest-nested-obj-null.js
@@ -8748,7 +8748,7 @@ Sub-category progress
   - [x] test/language/statements/for-of/dstr/var-ary-ptrn-rest-ary-elem.js
   - [x] test/language/statements/for-of/dstr/var-ary-ptrn-rest-ary-elision.js
   - [x] test/language/statements/for-of/dstr/var-ary-ptrn-rest-ary-empty.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-rest-ary-rest.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-rest-ary-rest.js
   - [x] test/language/statements/for-of/dstr/var-ary-ptrn-rest-id-direct.js
   - [x] test/language/statements/for-of/dstr/var-ary-ptrn-rest-id-elision-next-err.js
   - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-rest-id-elision.js
@@ -8756,7 +8756,7 @@ Sub-category progress
   - [x] test/language/statements/for-of/dstr/var-ary-ptrn-rest-id-iter-close.js
   - [x] test/language/statements/for-of/dstr/var-ary-ptrn-rest-id-iter-step-err.js
   - [x] test/language/statements/for-of/dstr/var-ary-ptrn-rest-id-iter-val-err.js
-  - [ ] test/language/statements/for-of/dstr/var-ary-ptrn-rest-id.js
+  - [x] test/language/statements/for-of/dstr/var-ary-ptrn-rest-id.js
   - [x] test/language/statements/for-of/dstr/var-ary-ptrn-rest-init-ary.js
   - [x] test/language/statements/for-of/dstr/var-ary-ptrn-rest-init-id.js
   - [x] test/language/statements/for-of/dstr/var-ary-ptrn-rest-init-obj.js
@@ -8800,10 +8800,10 @@ Sub-category progress
   - [x] test/language/statements/for-of/dstr/var-obj-ptrn-rest-skip-non-enumerable.js
   - [x] test/language/statements/for-of/dstr/var-obj-ptrn-rest-val-obj.js
   - [x] test/language/statements/for-of/escaped-of.js
-  - [ ] test/language/statements/for-of/float32array-mutate.js
-  - [ ] test/language/statements/for-of/float32array.js
-  - [ ] test/language/statements/for-of/float64array-mutate.js
-  - [ ] test/language/statements/for-of/float64array.js
+  - [x] test/language/statements/for-of/float32array-mutate.js
+  - [x] test/language/statements/for-of/float32array.js
+  - [x] test/language/statements/for-of/float64array-mutate.js
+  - [x] test/language/statements/for-of/float64array.js
   - [x] test/language/statements/for-of/generator-close-via-break.js
   - [x] test/language/statements/for-of/generator-close-via-continue.js
   - [ ] test/language/statements/for-of/generator-close-via-return.js
@@ -8855,12 +8855,12 @@ Sub-category progress
   - [x] test/language/statements/for-of/head-var-bound-names-let.js
   - [x] test/language/statements/for-of/head-var-init.js
   - [x] test/language/statements/for-of/head-var-no-expr.js
-  - [ ] test/language/statements/for-of/int16array-mutate.js
-  - [ ] test/language/statements/for-of/int16array.js
-  - [ ] test/language/statements/for-of/int32array-mutate.js
-  - [ ] test/language/statements/for-of/int32array.js
-  - [ ] test/language/statements/for-of/int8array-mutate.js
-  - [ ] test/language/statements/for-of/int8array.js
+  - [x] test/language/statements/for-of/int16array-mutate.js
+  - [x] test/language/statements/for-of/int16array.js
+  - [x] test/language/statements/for-of/int32array-mutate.js
+  - [x] test/language/statements/for-of/int32array.js
+  - [x] test/language/statements/for-of/int8array-mutate.js
+  - [x] test/language/statements/for-of/int8array.js
   - [ ] test/language/statements/for-of/iterator-as-proxy.js
   - [x] test/language/statements/for-of/iterator-close-non-object.js
   - [x] test/language/statements/for-of/iterator-close-non-throw-get-method-abrupt.js
@@ -8886,8 +8886,8 @@ Sub-category progress
   - [x] test/language/statements/for-of/let-block-with-newline.js
   - [x] test/language/statements/for-of/let-identifier-with-newline.js
   - [ ] test/language/statements/for-of/map-contract-expand.js
-  - [ ] test/language/statements/for-of/map-contract.js
-  - [ ] test/language/statements/for-of/map-expand-contract.js
+  - [x] test/language/statements/for-of/map-contract.js
+  - [x] test/language/statements/for-of/map-expand-contract.js
   - [ ] test/language/statements/for-of/map-expand.js
   - [ ] test/language/statements/for-of/map.js
   - [x] test/language/statements/for-of/nested.js
@@ -8918,14 +8918,14 @@ Sub-category progress
   - [ ] test/language/statements/for-of/typedarray-backed-by-resizable-buffer-shrink-mid-iteration.js
   - [ ] test/language/statements/for-of/typedarray-backed-by-resizable-buffer-shrink-to-zero-mid-iteration.js
   - [ ] test/language/statements/for-of/typedarray-backed-by-resizable-buffer.js
-  - [ ] test/language/statements/for-of/uint16array-mutate.js
-  - [ ] test/language/statements/for-of/uint16array.js
-  - [ ] test/language/statements/for-of/uint32array-mutate.js
-  - [ ] test/language/statements/for-of/uint32array.js
-  - [ ] test/language/statements/for-of/uint8array-mutate.js
-  - [ ] test/language/statements/for-of/uint8array.js
-  - [ ] test/language/statements/for-of/uint8clampedarray-mutate.js
-  - [ ] test/language/statements/for-of/uint8clampedarray.js
+  - [x] test/language/statements/for-of/uint16array-mutate.js
+  - [x] test/language/statements/for-of/uint16array.js
+  - [x] test/language/statements/for-of/uint32array-mutate.js
+  - [x] test/language/statements/for-of/uint32array.js
+  - [x] test/language/statements/for-of/uint8array-mutate.js
+  - [x] test/language/statements/for-of/uint8array.js
+  - [x] test/language/statements/for-of/uint8clampedarray-mutate.js
+  - [x] test/language/statements/for-of/uint8clampedarray.js
   - [x] test/language/statements/for-of/yield-from-catch.js
   - [x] test/language/statements/for-of/yield-from-finally.js
   - [x] test/language/statements/for-of/yield-from-try.js
@@ -14633,7 +14633,7 @@ Sub-category progress
   - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-id-iter-done.js
   - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-id-iter-step-err.js
   - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-id-iter-val-array-prototype.js
-  - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-id-iter-val-err.js
+  - [ ] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-id-iter-val-err.js
   - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-id-iter-val.js
   - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-obj-id-init.js
   - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-elem-obj-id.js
