@@ -493,17 +493,25 @@ impl<'a> FunctionCompiler<'a> {
                 self.push_local_set(expected_local);
                 if crate::ayy_env_flag!("AYY_TRACE_PRIVATE_MEMBER_VALUES") {
                     self.emit_runtime_shadow_debug_print_local(
-                        "private_brand_check_marker",
+                        "private_brand_check_marker(class)",
                         marker_local,
                     )?;
                     self.emit_runtime_shadow_debug_print_local(
-                        "private_brand_check_expected",
+                        "private_brand_check_expected(class)",
                         expected_local,
                     )?;
                 }
                 self.push_local_get(marker_local);
                 self.push_local_get(expected_local);
                 self.push_binary_op(BinaryOp::Equal)?;
+                // Static field markers seeded from object-binding snapshots
+                // carry the literal `true` marker instead of the brand
+                // object; the class-specific marker property name already
+                // scopes the match, so accept it as well.
+                self.push_local_get(marker_local);
+                self.push_i32_const(1);
+                self.push_binary_op(BinaryOp::Equal)?;
+                self.push_binary_op(BinaryOp::BitwiseOr)?;
                 self.state.emission.output.instructions.push(0x04);
                 self.state
                     .emission

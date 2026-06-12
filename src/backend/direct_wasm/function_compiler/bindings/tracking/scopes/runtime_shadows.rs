@@ -1978,6 +1978,40 @@ impl<'a> FunctionCompiler<'a> {
             return Some(source_name.clone());
         }
         if let Some(hidden_name) = self.resolve_user_function_capture_hidden_name(name) {
+            // Captured class bindings alias the canonical class constructor
+            // channel; capture-prep skips the runtime shadow copy for them, so
+            // private member state only lives on the canonical channel. Route
+            // reads and writes through that channel instead of the (never
+            // populated) capture channel.
+            let class_owner_candidates = [
+                self.state
+                    .speculation
+                    .static_semantics
+                    .local_value_binding(&hidden_name)
+                    .or_else(|| self.global_value_binding(&hidden_name))
+                    .cloned(),
+                self.resolve_bound_alias_expression(&identifier_expression),
+            ];
+            let class_owner =
+                class_owner_candidates
+                    .into_iter()
+                    .flatten()
+                    .find_map(|candidate| match candidate {
+                        Expression::Identifier(source_name)
+                            if source_name != hidden_name
+                                && (source_name.starts_with("__ayy_class_ctor_")
+                                    || source_name.starts_with("__ayy_class_expr_"))
+                                && self.runtime_object_property_shadow_owner_has_bindings(
+                                    &source_name,
+                                ) =>
+                        {
+                            Some(source_name)
+                        }
+                        _ => None,
+                    });
+            if let Some(class_owner) = class_owner {
+                return Some(class_owner);
+            }
             return Some(hidden_name);
         }
         if let Some(hidden_name) = self.resolve_eval_local_function_hidden_name(name) {

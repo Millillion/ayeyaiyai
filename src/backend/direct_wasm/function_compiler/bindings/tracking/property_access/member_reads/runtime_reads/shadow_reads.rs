@@ -199,6 +199,11 @@ impl<'a> FunctionCompiler<'a> {
             self.state.emission.output.instructions.push(I32_TYPE);
             self.push_control_frame();
             if is_private_property {
+                if crate::ayy_env_flag!("AYY_TRACE_PRIVATE_MEMBER_VALUES") {
+                    self.emit_print(&[Expression::String(
+                        "private_shadow_read_deleted_throw".to_string(),
+                    )])?;
+                }
                 self.emit_named_error_throw("TypeError")?;
             } else {
                 self.push_i32_const(JS_UNDEFINED_TAG);
@@ -243,6 +248,11 @@ impl<'a> FunctionCompiler<'a> {
                 && self.emit_private_member_missing_shadow_read_fallback(object, property)?
             {
             } else if is_private_property {
+                if crate::ayy_env_flag!("AYY_TRACE_PRIVATE_MEMBER_VALUES") {
+                    self.emit_print(&[Expression::String(
+                        "private_shadow_read_missing_throw".to_string(),
+                    )])?;
+                }
                 self.emit_named_error_throw("TypeError")?;
             } else if self.emit_runtime_native_error_member_read(object, property)? {
             } else if !self.emit_runtime_user_function_property_read(object, property)? {
@@ -290,6 +300,11 @@ impl<'a> FunctionCompiler<'a> {
             && self.emit_private_member_missing_shadow_read_fallback(object, property)?
         {
         } else if is_private_property {
+            if crate::ayy_env_flag!("AYY_TRACE_PRIVATE_MEMBER_VALUES") {
+                self.emit_print(&[Expression::String(
+                    "private_shadow_read_missing_throw(no-deleted)".to_string(),
+                )])?;
+            }
             self.emit_named_error_throw("TypeError")?;
         } else if self.emit_runtime_native_error_member_read(object, property)? {
         } else if !self.emit_runtime_user_function_property_read(object, property)? {

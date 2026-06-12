@@ -605,7 +605,7 @@ impl<'a> FunctionCompiler<'a> {
                 .and_then(|(resolved_name, _)| self.local_lexical_initialized_local(resolved_name));
             if crate::ayy_env_flag!("AYY_TRACE_CAPTURE_BINDINGS") {
                 eprintln!(
-                    "capture_prepare fn={function_name} source={source_name} capture_source={capture_source_name} hidden={hidden_name} resolved={:?} initialized_local={:?} statically_uninitialized={}",
+                    "capture_prepare fn={function_name} source={source_name} capture_source={capture_source_name} hidden={hidden_name} resolved={:?} initialized_local={:?} statically_uninitialized={} current_fn={:?} prefer_global={} source_expr={:?} materialized={:?}",
                     resolved_local_binding,
                     lexical_initialized_local,
                     resolved_local_binding
@@ -614,7 +614,11 @@ impl<'a> FunctionCompiler<'a> {
                             self.local_lexical_capture_source_is_statically_uninitialized(
                                 resolved_name,
                             )
-                        })
+                        }),
+                    self.current_function_name(),
+                    prefer_global_source,
+                    source_expression,
+                    self.materialize_static_expression(&source_expression),
                 );
             }
             if resolved_local_binding
@@ -689,7 +693,17 @@ impl<'a> FunctionCompiler<'a> {
                 )?;
             }
             if lexical_initialized_local.is_none() {
-                self.push_i32_const(1);
+                // A capture whose source is a global binding without a
+                // resolvable static value at prep time (e.g. `var C = class
+                // { static m() { C.f } }` preparing the method capture while
+                // `C` is still unassigned) must stay non-present so reads
+                // fall back to the live global instead of a stale snapshot.
+                let static_source_unresolved = prefer_global_source && {
+                    let materialized = self.materialize_static_expression(&source_expression);
+                    matches!(materialized, Expression::Undefined)
+                        || static_expression_matches(&materialized, &source_expression)
+                };
+                self.push_i32_const(if static_source_unresolved { 0 } else { 1 });
                 self.push_global_set(binding.present_index);
             }
         }

@@ -1204,6 +1204,90 @@ impl<'a> FunctionCompiler<'a> {
         materialized_referenced_names.contains(self_name)
     }
 
+    /// Stored value expressions produced by compound/logical assignments
+    /// (`x |= 1`, `x ||= 1`, ...) embed the `Assign` node, which later
+    /// materialization refuses to resolve. By the time the identifier store is
+    /// prepared the assignment side effect has already executed, so the
+    /// expression result equals the assignment target's current static value.
+    /// Fold the stored expression to that value when it is a pure literal.
+    fn fold_executed_assignment_store_value(
+        &self,
+        expression: &Expression,
+    ) -> Option<Expression> {
+        let inner = match expression {
+            Expression::Sequence(parts) => match parts.as_slice() {
+                [single] => single,
+                _ => return None,
+            },
+            other => other,
+        };
+        let target_name = match inner {
+            Expression::Assign { name, .. } => name,
+            Expression::Binary {
+                op: BinaryOp::LogicalOr | BinaryOp::LogicalAnd | BinaryOp::NullishCoalescing,
+                left,
+                right,
+            } => {
+                let Expression::Identifier(left_name) = left.as_ref() else {
+                    return None;
+                };
+                let Expression::Assign { name, .. } = right.as_ref() else {
+                    return None;
+                };
+                if left_name != name {
+                    return None;
+                }
+                name
+            }
+            _ => return None,
+        };
+        let is_pure_literal = |expression: &Expression| {
+            matches!(
+                expression,
+                Expression::Number(_)
+                    | Expression::String(_)
+                    | Expression::Bool(_)
+                    | Expression::BigInt(_)
+                    | Expression::Null
+                    | Expression::Undefined
+            )
+        };
+        let target_expression = Expression::Identifier(target_name.clone());
+        let mut materialized = self.materialize_static_expression(&target_expression);
+        if !is_pure_literal(&materialized)
+            && let Some(resolved) = self.resolve_static_primitive_expression_with_context(
+                &target_expression,
+                self.current_function_name(),
+            )
+        {
+            materialized = resolved;
+        }
+        if !is_pure_literal(&materialized)
+            && let Some(hidden_name) = self.resolve_user_function_capture_hidden_name(target_name)
+            && let Some(hidden_value) = self
+                .state
+                .speculation
+                .static_semantics
+                .local_value_binding(&hidden_name)
+                .or_else(|| self.global_value_binding(&hidden_name))
+        {
+            materialized = hidden_value.clone();
+        }
+        if crate::ayy_env_flag!("AYY_TRACE_IDENTIFIER_STORE") {
+            eprintln!(
+                "identifier_store:fold_executed_assignment target={target_name} materialized={materialized:?} resolved_local={:?} local_value={:?} global_value={:?} capture_hidden={:?}",
+                self.resolve_current_local_binding(target_name),
+                self.state
+                    .speculation
+                    .static_semantics
+                    .local_value_binding(target_name),
+                self.global_value_binding(target_name),
+                self.resolve_user_function_capture_hidden_name(target_name),
+            );
+        }
+        is_pure_literal(&materialized).then_some(materialized)
+    }
+
     pub(super) fn prepare_identifier_value_store(
         &mut self,
         name: &str,
@@ -1275,6 +1359,11 @@ impl<'a> FunctionCompiler<'a> {
             self.resolve_static_iterator_step_assignment_value(&canonical_value_expression)
         {
             canonical_value_expression = static_iterator_step_value;
+        }
+        if let Some(folded) =
+            self.fold_executed_assignment_store_value(&canonical_value_expression)
+        {
+            canonical_value_expression = folded;
         }
         if self
             .active_loop_string_assignment_snapshot(&canonical_value_expression)

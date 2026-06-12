@@ -1402,6 +1402,15 @@ impl<'a> FunctionCompiler<'a> {
         prepared: &[PreparedBoundCaptureBinding],
     ) -> DirectResult<()> {
         for binding in prepared {
+            if crate::ayy_env_flag!("AYY_TRACE_CAPTURE_BINDINGS") {
+                eprintln!(
+                    "bound_capture_prepare current_fn={:?} slot={} hidden={} source={:?}",
+                    self.current_function_name(),
+                    binding.slot_name,
+                    binding.capture_hidden_name,
+                    binding.source_binding_name,
+                );
+            }
             let lexical_source_initialized_local =
                 binding
                     .source_binding_name
@@ -1465,6 +1474,40 @@ impl<'a> FunctionCompiler<'a> {
                 self.push_i32_const(JS_UNDEFINED_TAG);
                 self.push_global_set(binding.binding.value_index);
                 self.push_i32_const(0);
+                self.push_global_set(binding.binding.present_index);
+                self.state.emission.output.instructions.push(0x0b);
+                self.pop_control_frame();
+            } else if binding
+                .source_binding_name
+                .as_ref()
+                .is_some_and(|source_name| {
+                    self.resolve_current_local_binding(source_name).is_none()
+                        && self.resolve_global_binding_index(source_name).is_some()
+                })
+            {
+                // The slot may hold a stale pre-initialization snapshot (for
+                // example `var C = class { static m() { return C.#f; } }`
+                // snapshots `C` while it is still undefined). Keep the
+                // capture non-present in that case so reads fall back to the
+                // live global binding.
+                self.push_local_get(binding.slot_local);
+                self.push_i32_const(JS_UNDEFINED_TAG);
+                self.push_binary_op(BinaryOp::Equal)?;
+                self.state.emission.output.instructions.push(0x04);
+                self.state
+                    .emission
+                    .output
+                    .instructions
+                    .push(EMPTY_BLOCK_TYPE);
+                self.push_control_frame();
+                self.push_i32_const(JS_UNDEFINED_TAG);
+                self.push_global_set(binding.binding.value_index);
+                self.push_i32_const(0);
+                self.push_global_set(binding.binding.present_index);
+                self.state.emission.output.instructions.push(0x05);
+                self.push_local_get(binding.slot_local);
+                self.push_global_set(binding.binding.value_index);
+                self.push_i32_const(1);
                 self.push_global_set(binding.binding.present_index);
                 self.state.emission.output.instructions.push(0x0b);
                 self.pop_control_frame();
@@ -1730,8 +1773,22 @@ impl<'a> FunctionCompiler<'a> {
                     }
                 }
             }
+            // The capture binding may be intentionally non-present (stale
+            // pre-initialization snapshots of global sources stay absent so
+            // reads fall back to the live global). Only write the capture
+            // value back to the slot when it is actually present.
+            self.push_global_get(binding.binding.present_index);
+            self.state.emission.output.instructions.push(0x04);
+            self.state
+                .emission
+                .output
+                .instructions
+                .push(EMPTY_BLOCK_TYPE);
+            self.push_control_frame();
             self.push_local_get(value_local);
             self.push_local_set(binding.slot_local);
+            self.state.emission.output.instructions.push(0x0b);
+            self.pop_control_frame();
             if let Some(source_binding_name) = binding.source_binding_name.as_ref() {
                 if source_binding_name == "new.target" {
                     continue;
@@ -1764,10 +1821,20 @@ impl<'a> FunctionCompiler<'a> {
                 } else if let Some(hidden_binding) =
                     self.hidden_implicit_global_binding(source_binding_name)
                 {
+                    self.push_global_get(binding.binding.present_index);
+                    self.state.emission.output.instructions.push(0x04);
+                    self.state
+                        .emission
+                        .output
+                        .instructions
+                        .push(EMPTY_BLOCK_TYPE);
+                    self.push_control_frame();
                     self.push_local_get(value_local);
                     self.push_global_set(hidden_binding.value_index);
                     self.push_i32_const(1);
                     self.push_global_set(hidden_binding.present_index);
+                    self.state.emission.output.instructions.push(0x0b);
+                    self.pop_control_frame();
                 } else if !source_binding_name.starts_with("__ayy_class_brand_")
                     && !source_binding_name.starts_with("__ayy_class_super_")
                 {
@@ -1783,10 +1850,22 @@ impl<'a> FunctionCompiler<'a> {
                             .lexical_global_binding(source_binding_name)
                             .is_some_and(|global_binding| !global_binding.mutable);
                     if !source_is_immutable_local {
+                        // Skip the source write-back when the capture binding
+                        // is non-present (stale snapshot of a global source).
+                        self.push_global_get(binding.binding.present_index);
+                        self.state.emission.output.instructions.push(0x04);
+                        self.state
+                            .emission
+                            .output
+                            .instructions
+                            .push(EMPTY_BLOCK_TYPE);
+                        self.push_control_frame();
                         self.emit_sync_identifier_runtime_value_from_local(
                             source_binding_name,
                             value_local,
                         )?;
+                        self.state.emission.output.instructions.push(0x0b);
+                        self.pop_control_frame();
                     }
                 }
                 if updated_capture_binding.is_none()

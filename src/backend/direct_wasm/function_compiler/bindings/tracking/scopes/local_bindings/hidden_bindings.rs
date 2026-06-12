@@ -120,6 +120,25 @@ impl<'a> FunctionCompiler<'a> {
         let global_fallback_source =
             self.user_function_capture_global_fallback_source(name, &hidden_name);
 
+        if crate::ayy_env_flag!("AYY_TRACE_CAPTURE_BINDINGS") {
+            let present_local = self.allocate_temp_local();
+            self.push_global_get(binding.present_index);
+            self.push_local_set(present_local);
+            self.emit_runtime_shadow_debug_print_local(
+                &format!(
+                    "capture_read hidden={hidden_name} fn={:?} fallback={global_fallback_source:?} present",
+                    self.current_function_name()
+                ),
+                present_local,
+            )?;
+            let value_local = self.allocate_temp_local();
+            self.push_global_get(binding.value_index);
+            self.push_local_set(value_local);
+            self.emit_runtime_shadow_debug_print_local(
+                &format!("capture_read hidden={hidden_name} value"),
+                value_local,
+            )?;
+        }
         self.push_global_get(binding.present_index);
         self.state.emission.output.instructions.push(0x04);
         self.state.emission.output.instructions.push(I32_TYPE);
