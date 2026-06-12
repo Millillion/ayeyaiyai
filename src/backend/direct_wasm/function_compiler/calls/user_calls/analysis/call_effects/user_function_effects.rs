@@ -49,6 +49,44 @@ impl<'a> FunctionCompiler<'a> {
             return;
         }
         let property = Expression::String(name.to_string());
+        // A with-scoped compound assignment whose read runs a self-deleting
+        // accessor (`get x() { delete this.x; ... }`) removes the binding
+        // before the store; a strict store then throws instead of writing, so
+        // claiming the post-store value here would resurrect the property.
+        // Mark the deletion in the runtime shadow pair and the static model
+        // instead, and let presence queries defer to the runtime state.
+        if let Expression::Identifier(owner_name) = object
+            && self
+                .resolve_object_binding_from_expression(object)
+                .is_some_and(|object_binding| {
+                    self.static_in_object_property_getter_may_delete_property(
+                        object,
+                        &object_binding,
+                        &property,
+                    )
+                })
+        {
+            let owner_name = owner_name.clone();
+            let deleted_binding = self
+                .runtime_object_property_shadow_deleted_binding_by_property(&owner_name, &property);
+            self.push_i32_const(JS_UNDEFINED_TAG);
+            self.push_global_set(deleted_binding.value_index);
+            self.push_i32_const(1);
+            self.push_global_set(deleted_binding.present_index);
+            let shadow_binding =
+                self.runtime_object_property_shadow_binding_by_property(&owner_name, &property);
+            self.push_i32_const(JS_UNDEFINED_TAG);
+            self.push_global_set(shadow_binding.value_index);
+            self.push_i32_const(0);
+            self.push_global_set(shadow_binding.present_index);
+            let deleted_shadow_name =
+                Self::runtime_object_property_deleted_shadow_name(&owner_name, &property);
+            self.backend
+                .record_emitted_delete_shadow(&deleted_shadow_name);
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
+            self.scrub_scoped_property_static_claims_after_may_throw_store(object, name);
+            return;
+        }
         let materialized_value = self.reference_preserving_static_value_expression(value);
         self.update_member_function_assignment_binding(object, &property, value);
         if let Expression::Identifier(owner_name) = object {

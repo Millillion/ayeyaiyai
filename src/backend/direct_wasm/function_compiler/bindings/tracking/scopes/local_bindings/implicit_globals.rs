@@ -105,6 +105,103 @@ impl<'a> FunctionCompiler<'a> {
         Ok(true)
     }
 
+    /// A strict-mode implicit-global store throws when the binding is absent
+    /// (PutValue against a deleted binding). Top-level presence queries for
+    /// accessor-deleted global properties read the dedicated delete-sync
+    /// flag, so record the observed absence there before the store's
+    /// ReferenceError unwinds. No-op unless the property registered a sync
+    /// flag when its deleting accessor was bound.
+    pub(in crate::backend::direct_wasm) fn emit_strict_implicit_global_delete_sync(
+        &mut self,
+        name: &str,
+        binding: ImplicitGlobalBinding,
+    ) -> DirectResult<()> {
+        if !self.state.speculation.execution_context.strict_mode {
+            return Ok(());
+        }
+        let sync_name = Self::global_object_property_delete_sync_binding_name(name);
+        let global_sync = self.backend.delete_shadow_was_emitted(&sync_name);
+        // A with-scoped binding backed by a self-deleting accessor resolves
+        // through the scope object; when the strict store observes the
+        // binding absent, presence queries against the scope object must see
+        // the deletion through the scope owner's shadow pair.
+        let with_scope_objects = self.state.emission.lexical_scopes.with_scopes.clone();
+        let scope_owner_candidates = with_scope_objects
+            .iter()
+            .rev()
+            .filter_map(|scope_object| match scope_object {
+                Expression::Identifier(scope_name) => Some((scope_name.clone(), name.to_string())),
+                _ => None,
+            })
+            .chain(
+                // Inside a deferred closure compile the with scope is no
+                // longer on the stack, but the binding's capture source still
+                // names the scope object property it resolved through.
+                self.resolve_user_function_capture_hidden_name(name)
+                    .and_then(|hidden_name| {
+                        self.resolve_capture_slot_source_binding_name(&hidden_name)
+                    })
+                    .and_then(|source_name| {
+                        Self::capture_slot_member_source_key_parts(&source_name)
+                    }),
+            )
+            .collect::<Vec<_>>();
+        let with_scope_owner =
+            scope_owner_candidates
+                .into_iter()
+                .find(|(owner_name, property_name)| {
+                    let scope_object = Expression::Identifier(owner_name.clone());
+                    let Some(object_binding) =
+                        self.resolve_object_binding_from_expression(&scope_object)
+                    else {
+                        return false;
+                    };
+                    let property = Expression::String(property_name.clone());
+                    self.static_in_object_property_getter_may_delete_property(
+                        &scope_object,
+                        &object_binding,
+                        &property,
+                    )
+                });
+        if !global_sync && with_scope_owner.is_none() {
+            return Ok(());
+        }
+        self.push_global_get(binding.present_index);
+        self.state.emission.output.instructions.push(0x45);
+        self.state.emission.output.instructions.push(0x04);
+        self.state
+            .emission
+            .output
+            .instructions
+            .push(EMPTY_BLOCK_TYPE);
+        self.push_control_frame();
+        if global_sync {
+            let sync_binding = self.ensure_implicit_global_binding(&sync_name);
+            self.push_i32_const(JS_UNDEFINED_TAG);
+            self.push_global_set(sync_binding.value_index);
+            self.push_i32_const(1);
+            self.push_global_set(sync_binding.present_index);
+        }
+        if let Some((scope_name, property_name)) = with_scope_owner {
+            let property = Expression::String(property_name);
+            let deleted_binding = self
+                .runtime_object_property_shadow_deleted_binding_by_property(&scope_name, &property);
+            self.push_i32_const(JS_UNDEFINED_TAG);
+            self.push_global_set(deleted_binding.value_index);
+            self.push_i32_const(1);
+            self.push_global_set(deleted_binding.present_index);
+            let shadow_binding =
+                self.runtime_object_property_shadow_binding_by_property(&scope_name, &property);
+            self.push_i32_const(JS_UNDEFINED_TAG);
+            self.push_global_set(shadow_binding.value_index);
+            self.push_i32_const(0);
+            self.push_global_set(shadow_binding.present_index);
+        }
+        self.state.emission.output.instructions.push(0x0b);
+        self.pop_control_frame();
+        Ok(())
+    }
+
     #[track_caller]
     pub(in crate::backend::direct_wasm) fn emit_store_implicit_global_from_local(
         &mut self,

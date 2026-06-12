@@ -62,6 +62,18 @@ impl<'a> FunctionCompiler<'a> {
             self.preserve_identifier_function_capture_slots_for_global_store(name, state)?;
         }
         self.emit_store_user_function_capture_binding_from_local(name, value_local)?;
+        // A strict-mode store against a global binding that an emitted delete
+        // may have removed (PutValue after the getter deleted it) only runs
+        // when the deleted marker is clear; the static global claims must not
+        // survive to fold later presence checks like `'name' in this`.
+        if self.state.speculation.execution_context.strict_mode
+            && self.runtime_object_property_shadow_deletion_may_affect_property(
+                &Expression::This,
+                &Expression::String(name.to_string()),
+            )
+        {
+            self.scrub_scoped_property_static_claims_after_may_throw_store(&Expression::This, name);
+        }
         let fallback_owner = self
             .resolve_user_function_capture_hidden_name(name)
             .unwrap_or_else(|| name.to_string());

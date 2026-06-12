@@ -309,16 +309,49 @@ impl<'a> FunctionCompiler<'a> {
                 if self.backend.global_binding_index(&property_name).is_none()
                     && let Some(binding) = self.backend.implicit_global_binding(&property_name)
                 {
+                    if trace_for_in_keys {
+                        eprintln!("for_in_keys:global_in branch=implicit_present");
+                    }
                     self.push_global_get(binding.present_index);
                     self.push_i32_const(0);
                     self.state.emission.output.instructions.push(0x47);
                     return Ok(true);
                 }
+                // A global accessor that deletes its own binding records a
+                // dedicated delete-sync flag; the `this` shadow channel is
+                // saved/restored around the closure call that observes the
+                // deletion, so the answer must come from that flag instead.
+                let sync_name =
+                    Self::global_object_property_delete_sync_binding_name(&property_name);
+                if self.backend.delete_shadow_was_emitted(&sync_name) {
+                    if trace_for_in_keys {
+                        eprintln!("for_in_keys:global_in branch=delete_sync_flag");
+                    }
+                    let sync_binding = self.backend.ensure_implicit_global_binding(&sync_name);
+                    self.push_global_get(sync_binding.present_index);
+                    self.state.emission.output.instructions.push(0x04);
+                    self.state.emission.output.instructions.push(I32_TYPE);
+                    self.push_control_frame();
+                    self.push_i32_const(0);
+                    self.state.emission.output.instructions.push(0x05);
+                    self.push_i32_const(i32::from(
+                        self.static_top_level_global_object_has_property_name(&property_name),
+                    ));
+                    self.state.emission.output.instructions.push(0x0b);
+                    self.pop_control_frame();
+                    return Ok(true);
+                }
                 if self
                     .emit_runtime_known_object_has_property_check(object, &property_expression)?
                 {
+                    if trace_for_in_keys {
+                        eprintln!("for_in_keys:global_in branch=runtime_known_check");
+                    }
                     return Ok(true);
                 }
+            }
+            if trace_for_in_keys {
+                eprintln!("for_in_keys:global_in branch=static_table");
             }
             self.push_i32_const(
                 if self.static_top_level_global_object_has_property_name(&property_name) {

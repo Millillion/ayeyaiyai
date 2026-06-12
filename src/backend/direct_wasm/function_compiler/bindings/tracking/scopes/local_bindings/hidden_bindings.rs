@@ -1,6 +1,41 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    /// Writes the global delete-sync flag for a capture binding whose source
+    /// is a global-object property with a registered accessor delete. The
+    /// `this`-owner shadow channel is saved/restored around user calls, so a
+    /// deletion observed inside a closure (the capture binding is absent or
+    /// its deleted marker is set when a strict reference resolves) must be
+    /// synced through this dedicated flag for top-level presence queries
+    /// (`'name' in this`) to observe it after the call returns.
+    fn emit_global_delete_sync_flag_write_for_source(
+        &mut self,
+        hidden_name: &str,
+        fallback_source_name: Option<&str>,
+    ) -> DirectResult<()> {
+        let Some(source_name) = self
+            .resolve_capture_slot_source_binding_name(hidden_name)
+            .or_else(|| fallback_source_name.map(str::to_string))
+            .filter(|source_name| {
+                Self::capture_slot_member_source_key_parts(source_name).is_none()
+            })
+        else {
+            return Ok(());
+        };
+        let sync_name = Self::global_object_property_delete_sync_binding_name(&source_name);
+        // Only registered accessor-delete properties have presence queries
+        // reading this flag; skip the write for every other binding.
+        if !self.backend.delete_shadow_was_emitted(&sync_name) {
+            return Ok(());
+        }
+        let sync_binding = self.ensure_implicit_global_binding(&sync_name);
+        self.push_i32_const(JS_UNDEFINED_TAG);
+        self.push_global_set(sync_binding.value_index);
+        self.push_i32_const(1);
+        self.push_global_set(sync_binding.present_index);
+        Ok(())
+    }
+
     fn emit_strict_deleted_member_source_check(
         &mut self,
         hidden_name: &str,
@@ -21,6 +56,7 @@ impl<'a> FunctionCompiler<'a> {
             .instructions
             .push(EMPTY_BLOCK_TYPE);
         self.push_control_frame();
+        self.emit_global_delete_sync_flag_write_for_source(hidden_name, fallback_source_name)?;
         self.emit_named_error_throw("ReferenceError")?;
         self.state.emission.output.instructions.push(0x0b);
         self.pop_control_frame();
@@ -148,6 +184,7 @@ impl<'a> FunctionCompiler<'a> {
         if let Some(source_name) = global_fallback_source {
             self.emit_global_capture_fallback_read(&source_name)?;
         } else {
+            self.emit_global_delete_sync_flag_write_for_source(&hidden_name, Some(name))?;
             self.emit_named_error_throw("ReferenceError")?;
         }
         self.state.emission.output.instructions.push(0x0b);
@@ -328,6 +365,7 @@ impl<'a> FunctionCompiler<'a> {
         if let Some(source_name) = global_fallback_source {
             self.emit_global_capture_fallback_store_from_local(&source_name, value_local)?;
         } else {
+            self.emit_global_delete_sync_flag_write_for_source(&hidden_name, Some(name))?;
             self.emit_named_error_throw("ReferenceError")?;
         }
         self.state.emission.output.instructions.push(0x0b);

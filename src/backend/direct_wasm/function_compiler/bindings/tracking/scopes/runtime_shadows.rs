@@ -226,7 +226,7 @@ impl<'a> FunctionCompiler<'a> {
         )
     }
 
-    fn runtime_object_property_deleted_shadow_name(
+    pub(in crate::backend::direct_wasm) fn runtime_object_property_deleted_shadow_name(
         owner_name: &str,
         property: &Expression,
     ) -> String {
@@ -1907,6 +1907,20 @@ impl<'a> FunctionCompiler<'a> {
         )
     }
 
+    /// Names the implicit flag binding that records, at runtime, that a
+    /// global-object property was deleted by an accessor observed from a
+    /// strict closure store. The `this` shadow channel is saved and restored
+    /// around user calls, so the deletion must be synced through a dedicated
+    /// binding that global presence queries can read after the call returns.
+    pub(in crate::backend::direct_wasm) fn global_object_property_delete_sync_binding_name(
+        property_name: &str,
+    ) -> String {
+        format!(
+            "__ayy_global_property_delete_sync__str__{}",
+            Self::runtime_object_property_shadow_fragment(property_name)
+        )
+    }
+
     /// Follow the static value-binding alias chain from `name` while every
     /// hop lands on a synthetic class-related binding. When the chain
     /// terminates at a canonical class constructor channel, return the
@@ -3209,7 +3223,7 @@ impl<'a> FunctionCompiler<'a> {
             || name == "__ayy_null_super_constructor"
     }
 
-    fn runtime_shadow_fallback_references_readable_bindings(
+    pub(in crate::backend::direct_wasm) fn runtime_shadow_fallback_references_readable_bindings(
         &self,
         fallback_value: &Expression,
     ) -> bool {

@@ -309,10 +309,19 @@ impl<'a> FunctionCompiler<'a> {
                     "record_accessor_delete_shadow owner={owner_name} property={property_name} accessor={function_name}"
                 );
             }
-            self.record_emitted_delete_shadow_for(
-                &owner_name,
-                &Expression::String(property_name),
-            );
+            // A global-object accessor delete observed inside a (later
+            // compiled) closure cannot persist through the `this` shadow
+            // channel, which is saved/restored around calls. Register the
+            // dedicated delete-sync flag now so presence queries emitted at
+            // top level and the closure's strict store check agree on it.
+            if owner_name == "this" {
+                let sync_name =
+                    Self::global_object_property_delete_sync_binding_name(&property_name);
+                self.ensure_implicit_global_binding(&sync_name);
+                self.backend.record_emitted_delete_shadow(&sync_name);
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
+            }
+            self.record_emitted_delete_shadow_for(&owner_name, &Expression::String(property_name));
         }
     }
 
