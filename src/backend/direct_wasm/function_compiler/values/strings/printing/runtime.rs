@@ -173,7 +173,7 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(false);
         }
 
-        let string_data = self.backend.module_artifacts.string_data.clone();
+        let string_data = self.backend.module_artifacts.interned_string_texts();
         let value_local = self.allocate_temp_local();
         let handled_local = self.allocate_temp_local();
         self.emit_numeric_expression(value)?;
@@ -181,7 +181,7 @@ impl<'a> FunctionCompiler<'a> {
         self.push_i32_const(0);
         self.push_local_set(handled_local);
 
-        for (string_pointer, bytes) in string_data {
+        for (string_pointer, text) in string_data {
             self.push_local_get(value_local);
             self.push_i32_const(string_pointer as i32);
             self.push_binary_op(BinaryOp::Equal)?;
@@ -193,7 +193,7 @@ impl<'a> FunctionCompiler<'a> {
                 .push(EMPTY_BLOCK_TYPE);
             self.push_control_frame();
             self.push_i32_const(string_pointer as i32);
-            self.push_i32_const(bytes.len() as i32);
+            self.push_i32_const(text.len() as i32);
             self.push_call(WRITE_BYTES_FUNCTION_INDEX);
             self.push_i32_const(1);
             self.push_local_set(handled_local);

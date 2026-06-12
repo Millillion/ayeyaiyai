@@ -188,6 +188,15 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         expression: &Expression,
     ) -> Option<IteratorSourceKind> {
+        // Loop-body aliases of the current key (e.g. the destructuring source
+        // local) keep their member shape in the active loop context even when
+        // the static value binding was invalidated by branch merges.
+        if let Expression::Identifier(name) = expression
+            && let Some(alias) = self.active_loop_string_member_alias(name)
+            && !static_expression_matches(&alias, expression)
+        {
+            return self.resolve_for_in_key_member_string_iterator_source(&alias);
+        }
         let Expression::Member { object, property } = expression else {
             return None;
         };

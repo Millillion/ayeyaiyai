@@ -596,6 +596,54 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(());
         }
 
+        // `key2 in outer[key1]` where both keys come from active for-in loops:
+        // the target object varies per outer iteration, so dispatch over the
+        // outer key candidates at runtime instead of folding statically.
+        if self.for_in_key_array_member_name(left).is_some()
+            && let Some(Expression::Member { object, property }) =
+                self.for_in_keyed_member_expression(right)
+            && let Some(outer_binding) = self.resolve_object_binding_from_expression(&object)
+        {
+            let left_local = self.allocate_temp_local();
+            let outer_local = self.allocate_temp_local();
+            let result_local = self.allocate_temp_local();
+            self.emit_numeric_expression(left)?;
+            self.push_local_set(left_local);
+            self.emit_numeric_expression(&property)?;
+            self.push_local_set(outer_local);
+            self.push_i32_const(0);
+            self.push_local_set(result_local);
+            for (outer_name, candidate_value) in outer_binding.string_properties.clone() {
+                let Some(candidate_binding) =
+                    self.resolve_object_binding_from_expression(&candidate_value)
+                else {
+                    continue;
+                };
+                for key_name in ordered_object_property_names(&candidate_binding) {
+                    self.push_local_get(outer_local);
+                    self.emit_numeric_expression(&Expression::String(outer_name.clone()))?;
+                    self.push_binary_op(BinaryOp::Equal)?;
+                    self.push_local_get(left_local);
+                    self.emit_numeric_expression(&Expression::String(key_name.clone()))?;
+                    self.push_binary_op(BinaryOp::Equal)?;
+                    self.state.emission.output.instructions.push(0x71);
+                    self.state.emission.output.instructions.push(0x04);
+                    self.state
+                        .emission
+                        .output
+                        .instructions
+                        .push(EMPTY_BLOCK_TYPE);
+                    self.push_control_frame();
+                    self.push_i32_const(1);
+                    self.push_local_set(result_local);
+                    self.state.emission.output.instructions.push(0x0b);
+                    self.pop_control_frame();
+                }
+            }
+            self.push_local_get(result_local);
+            return Ok(());
+        }
+
         if let Some(result) = self.resolve_static_in_expression_result(left, right) {
             self.emit_static_in_operand_effects(left, right)?;
             self.push_i32_const(i32::from(result));

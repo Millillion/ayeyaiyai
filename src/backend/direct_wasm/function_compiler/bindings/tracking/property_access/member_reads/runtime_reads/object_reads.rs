@@ -323,10 +323,18 @@ impl<'a> FunctionCompiler<'a> {
             }
             _ => None,
         };
+        // Properties stored through runtime shadow channels (e.g. constructor
+        // `this.x = ...` writes) may be missing from the static binding; merge
+        // the shadow channel so the dispatch covers every live property name.
+        let shadow_aware_binding = owner_name
+            .as_deref()
+            .filter(|owner| self.runtime_object_property_shadow_owner_has_bindings(owner))
+            .and_then(|owner| self.resolve_runtime_shadow_object_binding(owner));
+        let dispatch_binding = shadow_aware_binding.as_ref().unwrap_or(object_binding);
 
         let mut open_frames = 0;
         for (property_name, fallback_value) in
-            self.object_binding_string_property_values_with_inherited(object, object_binding)
+            self.object_binding_string_property_values_with_inherited(object, dispatch_binding)
         {
             let existing_key = Expression::String(property_name);
             self.emit_runtime_property_key_match_from_local(property_local, &existing_key)?;

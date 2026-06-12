@@ -163,6 +163,7 @@ impl<'a> FunctionCompiler<'a> {
                 direct_step_iterators: std::collections::HashSet::new(),
                 numeric_binding_candidates: HashMap::new(),
                 numeric_spec: None,
+                string_member_alias_bindings: HashMap::new(),
             });
         self.state
             .emission
@@ -250,6 +251,7 @@ impl<'a> FunctionCompiler<'a> {
                 direct_step_iterators: std::collections::HashSet::new(),
                 numeric_binding_candidates: HashMap::new(),
                 numeric_spec: None,
+                string_member_alias_bindings: HashMap::new(),
             });
         self.state
             .emission
@@ -309,6 +311,9 @@ impl<'a> FunctionCompiler<'a> {
                 body,
                 update,
             );
+            let numeric_binding_candidates =
+                compiler.numeric_loop_binding_candidates(init, condition, update);
+            let numeric_spec = compiler.numeric_loop_spec(init, condition, update);
             compiler.invalidate_static_binding_metadata_for_names_with_preserved_kinds(
                 &invalidated_bindings,
                 &preserved_kinds,
@@ -360,8 +365,9 @@ impl<'a> FunctionCompiler<'a> {
                     labels: labels.to_vec(),
                     assigned_bindings: invalidated_bindings.clone(),
                     direct_step_iterators: std::collections::HashSet::new(),
-                    numeric_binding_candidates: HashMap::new(),
-                    numeric_spec: None,
+                    numeric_binding_candidates,
+                    numeric_spec,
+                    string_member_alias_bindings: Self::collect_for_in_key_alias_bindings(body),
                 });
             compiler
                 .state
@@ -1011,6 +1017,9 @@ impl<'a> FunctionCompiler<'a> {
                 break_hook,
                 body,
             } => {
+                if crate::ayy_env_flag!("AYY_TRACE_EVAL_COMPLETION") {
+                    eprintln!("eval_completion:for labels={labels:?}");
+                }
                 self.emit_eval_for_completion_value(
                     labels,
                     init,

@@ -1795,14 +1795,17 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    /// Outer `None` means the completion value cannot be determined statically
+    /// (fall back to runtime completion emission); inner `None` means the
+    /// statement provably contributes no completion value ("empty").
     fn resolve_static_eval_statement_completion_expression(
         &self,
         statement: &Statement,
-    ) -> Option<Expression> {
+    ) -> Option<Option<Expression>> {
         match statement {
-            Statement::Expression(expression) => Some(expression.clone()),
+            Statement::Expression(expression) => Some(Some(expression.clone())),
             Statement::Assign { value, .. } | Statement::AssignMember { value, .. } => {
-                Some(value.clone())
+                Some(Some(value.clone()))
             }
             Statement::Block { body } => {
                 self.resolve_static_eval_statement_list_completion_expression(body)
@@ -1810,34 +1813,40 @@ impl<'a> FunctionCompiler<'a> {
             // Declarations have an empty completion value; recursing into the
             // lowered body would surface internal statements (e.g. the
             // defineProperty calls a class declaration lowers to).
-            Statement::Declaration { .. } => None,
-            Statement::With { body, .. } => self
-                .resolve_static_eval_statement_list_completion_expression(body)
-                .or(Some(Expression::Undefined)),
-            Statement::Labeled { body, .. }
-            | Statement::DoWhile { body, .. }
-            | Statement::While { body, .. }
-            | Statement::For { body, .. } => {
-                self.resolve_static_eval_statement_list_completion_expression(body)
+            Statement::Declaration { .. } => Some(None),
+            Statement::With { body, .. } => {
+                let completion =
+                    self.resolve_static_eval_statement_list_completion_expression(body)?;
+                Some(Some(completion.unwrap_or(Expression::Undefined)))
             }
+            Statement::Labeled { body, .. } => {
+                let completion =
+                    self.resolve_static_eval_statement_list_completion_expression(body)?;
+                Some(Some(completion.unwrap_or(Expression::Undefined)))
+            }
+            // A loop's completion value is the last iteration's non-empty body
+            // value, which depends on the dynamic iteration count and on
+            // loop-carried state; defer to the runtime completion emission.
+            Statement::DoWhile { .. } | Statement::While { .. } | Statement::For { .. } => None,
             Statement::If {
                 then_branch,
                 else_branch,
                 ..
             } => {
-                let then_completion =
-                    self.resolve_static_eval_statement_list_completion_expression(then_branch);
-                let else_completion =
-                    self.resolve_static_eval_statement_list_completion_expression(else_branch);
-                match (then_completion, else_completion) {
-                    (Some(then_completion), Some(else_completion))
-                        if static_expression_matches(&then_completion, &else_completion) =>
-                    {
-                        Some(then_completion)
-                    }
-                    _ => None,
+                let then_completion = self
+                    .resolve_static_eval_statement_list_completion_expression(then_branch)?
+                    .unwrap_or(Expression::Undefined);
+                let else_completion = self
+                    .resolve_static_eval_statement_list_completion_expression(else_branch)?
+                    .unwrap_or(Expression::Undefined);
+                if static_expression_matches(&then_completion, &else_completion) {
+                    Some(Some(then_completion))
+                } else {
+                    None
                 }
             }
+            Statement::Var { .. } | Statement::Let { .. } => Some(None),
+            Statement::Break { .. } | Statement::Continue { .. } => Some(None),
             _ => None,
         }
     }
@@ -1845,16 +1854,16 @@ impl<'a> FunctionCompiler<'a> {
     fn resolve_static_eval_statement_list_completion_expression(
         &self,
         statements: &[Statement],
-    ) -> Option<Expression> {
+    ) -> Option<Option<Expression>> {
         let mut completion = None;
         for statement in statements {
             if let Some(statement_completion) =
-                self.resolve_static_eval_statement_completion_expression(statement)
+                self.resolve_static_eval_statement_completion_expression(statement)?
             {
                 completion = Some(statement_completion);
             }
         }
-        Some(completion.unwrap_or(Expression::Undefined))
+        Some(completion)
     }
 
     fn static_eval_expression_reads_current_local_binding(&self, expression: &Expression) -> bool {
@@ -1961,9 +1970,16 @@ impl<'a> FunctionCompiler<'a> {
         match self
             .parse_validated_static_direct_eval_program_with_context(arguments, eval_function_name)
         {
-            Ok(Some(program)) => self
-                .resolve_static_eval_statement_list_completion_expression(&program.statements)
-                .map(StaticEvalOutcome::Value),
+            Ok(Some(program)) => {
+                let completion = self
+                    .resolve_static_eval_statement_list_completion_expression(&program.statements);
+                if crate::ayy_env_flag!("AYY_TRACE_EVAL_COMPLETION") {
+                    eprintln!("eval_completion:static_direct completion={completion:?}");
+                }
+                completion.map(|completion| {
+                    StaticEvalOutcome::Value(completion.unwrap_or(Expression::Undefined))
+                })
+            }
             Ok(None) => None,
             Err(error) => Some(StaticEvalOutcome::Throw(error)),
         }
@@ -1979,9 +1995,9 @@ impl<'a> FunctionCompiler<'a> {
             current_function_name,
         ) {
             Ok(Some(program)) => {
-                let completion = self.resolve_static_eval_statement_list_completion_expression(
-                    &program.statements,
-                )?;
+                let completion = self
+                    .resolve_static_eval_statement_list_completion_expression(&program.statements)?
+                    .unwrap_or(Expression::Undefined);
                 if self.static_eval_expression_reads_current_local_binding(&completion) {
                     return None;
                 }
@@ -2098,11 +2114,43 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         arguments: &[CallArgument],
     ) -> Option<StaticValueKind> {
+        // Kind inference re-parses the eval program and walks its statements
+        // through member/kind resolution; analyses of expressions referencing
+        // the eval completion repeat this many times, so cache per source text
+        // and static-state generation.
+        thread_local! {
+            static EVAL_COMPLETION_KIND_CACHE: std::cell::RefCell<
+                HashMap<(String, u64), Option<StaticValueKind>>,
+            > = std::cell::RefCell::new(HashMap::new());
+        }
+        let source = self.static_eval_argument_source_from_arguments(arguments);
+        let cache_key = source.map(|source| {
+            (
+                source,
+                crate::backend::direct_wasm::memo::static_state_generation(),
+            )
+        });
+        if let Some(cache_key) = cache_key.as_ref()
+            && let Some(cached) =
+                EVAL_COMPLETION_KIND_CACHE.with(|cache| cache.borrow().get(cache_key).copied())
+        {
+            return cached;
+        }
         let program = self
             .parse_validated_static_direct_eval_program(arguments)
             .ok()
             .flatten()?;
-        self.infer_eval_statement_list_completion_kind(&program.statements)
+        let kind = self.infer_eval_statement_list_completion_kind(&program.statements);
+        if let Some(cache_key) = cache_key {
+            EVAL_COMPLETION_KIND_CACHE.with(|cache| {
+                let mut cache = cache.borrow_mut();
+                if cache.len() >= 512 {
+                    cache.clear();
+                }
+                cache.insert(cache_key, kind);
+            });
+        }
+        kind
     }
 
     fn infer_eval_statement_list_completion_kind(
@@ -2144,10 +2192,11 @@ impl<'a> FunctionCompiler<'a> {
             } => {
                 let then_kind = self.infer_eval_statement_list_completion_kind(then_branch);
                 let else_kind = self.infer_eval_statement_list_completion_kind(else_branch);
-                if then_kind == else_kind {
-                    then_kind
-                } else {
-                    Some(StaticValueKind::Unknown)
+                match (then_kind, else_kind) {
+                    (Some(then_kind), Some(else_kind)) if then_kind == else_kind => Some(then_kind),
+                    (Some(kind), None) | (None, Some(kind)) => Some(kind),
+                    (None, None) => None,
+                    _ => Some(StaticValueKind::Unknown),
                 }
             }
             _ => None,

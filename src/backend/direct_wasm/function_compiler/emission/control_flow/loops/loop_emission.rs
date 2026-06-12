@@ -25,6 +25,162 @@ impl<'a> FunctionCompiler<'a> {
             })
     }
 
+    pub(in crate::backend::direct_wasm) fn active_loop_string_member_alias(
+        &self,
+        name: &str,
+    ) -> Option<Expression> {
+        let source_name = scoped_binding_source_name(name).unwrap_or(name);
+        self.state
+            .emission
+            .control_flow
+            .loop_stack
+            .iter()
+            .rev()
+            .find_map(|loop_context| {
+                loop_context
+                    .string_member_alias_bindings
+                    .get(name)
+                    .or_else(|| {
+                        (source_name != name)
+                            .then(|| {
+                                loop_context
+                                    .string_member_alias_bindings
+                                    .get(source_name)
+                            })
+                            .flatten()
+                    })
+                    .cloned()
+            })
+    }
+
+    /// Collects loop-body bindings that alias the current for-in key
+    /// (`name = __ayy_for_in_keys_N[index]`). Aliases assigned more than once
+    /// in the loop body are discarded so the recorded member expression always
+    /// describes the binding's value for the whole iteration.
+    pub(in crate::backend::direct_wasm) fn collect_for_in_key_alias_bindings(
+        body: &[Statement],
+    ) -> HashMap<String, Expression> {
+        let mut aliases = HashMap::new();
+        let mut assignment_counts: HashMap<String, usize> = HashMap::new();
+        Self::scan_for_in_key_alias_bindings(body, &mut aliases, &mut assignment_counts);
+        aliases.retain(|name, _| assignment_counts.get(name).copied().unwrap_or(0) <= 1);
+        aliases
+    }
+
+    fn bump_for_in_alias_assignment_counts_from_expression(
+        expression: &Expression,
+        assignment_counts: &mut HashMap<String, usize>,
+        weight: usize,
+    ) {
+        let mut names = HashSet::new();
+        collect_assigned_binding_names_from_expression(expression, &mut names);
+        for name in names {
+            *assignment_counts.entry(name).or_default() += weight;
+        }
+    }
+
+    fn scan_for_in_key_alias_bindings(
+        statements: &[Statement],
+        aliases: &mut HashMap<String, Expression>,
+        assignment_counts: &mut HashMap<String, usize>,
+    ) {
+        for statement in statements {
+            match statement {
+                Statement::Assign { name, value }
+                | Statement::Var { name, value }
+                | Statement::Let { name, value, .. } => {
+                    *assignment_counts.entry(name.clone()).or_default() += 1;
+                    Self::bump_for_in_alias_assignment_counts_from_expression(
+                        value,
+                        assignment_counts,
+                        1,
+                    );
+                    if let Expression::Member { object, .. } = value
+                        && matches!(
+                            object.as_ref(),
+                            Expression::Identifier(object_name)
+                                if object_name.starts_with("__ayy_for_in_keys_")
+                        )
+                    {
+                        aliases.insert(name.clone(), value.clone());
+                    }
+                }
+                Statement::If {
+                    condition,
+                    then_branch,
+                    else_branch,
+                } => {
+                    Self::bump_for_in_alias_assignment_counts_from_expression(
+                        condition,
+                        assignment_counts,
+                        1,
+                    );
+                    Self::scan_for_in_key_alias_bindings(then_branch, aliases, assignment_counts);
+                    Self::scan_for_in_key_alias_bindings(else_branch, aliases, assignment_counts);
+                }
+                Statement::Block { body }
+                | Statement::Labeled { body, .. }
+                | Statement::Declaration { body } => {
+                    Self::scan_for_in_key_alias_bindings(body, aliases, assignment_counts);
+                }
+                Statement::Try {
+                    body,
+                    catch_setup,
+                    catch_body,
+                    ..
+                } => {
+                    Self::scan_for_in_key_alias_bindings(body, aliases, assignment_counts);
+                    Self::scan_for_in_key_alias_bindings(catch_setup, aliases, assignment_counts);
+                    Self::scan_for_in_key_alias_bindings(catch_body, aliases, assignment_counts);
+                }
+                Statement::Expression(expression)
+                | Statement::Throw(expression)
+                | Statement::Return(expression)
+                | Statement::Yield { value: expression }
+                | Statement::YieldDelegate { value: expression } => {
+                    Self::bump_for_in_alias_assignment_counts_from_expression(
+                        expression,
+                        assignment_counts,
+                        1,
+                    );
+                }
+                Statement::AssignMember {
+                    object,
+                    property,
+                    value,
+                } => {
+                    for expression in [object, property, value] {
+                        Self::bump_for_in_alias_assignment_counts_from_expression(
+                            expression,
+                            assignment_counts,
+                            1,
+                        );
+                    }
+                }
+                Statement::Print { values } => {
+                    for expression in values {
+                        Self::bump_for_in_alias_assignment_counts_from_expression(
+                            expression,
+                            assignment_counts,
+                            1,
+                        );
+                    }
+                }
+                Statement::Break { .. } | Statement::Continue { .. } => {}
+                other => {
+                    // Nested loops, switch, and with statements get their own
+                    // contexts; disqualify any binding they assign by counting
+                    // it twice.
+                    let mut names = HashSet::new();
+                    collect_assigned_binding_names_from_statement(other, &mut names);
+                    for name in names {
+                        *assignment_counts.entry(name).or_default() += 2;
+                    }
+                }
+            }
+        }
+    }
+
     fn integer_number_literal(expression: &Expression) -> Option<i64> {
         let Expression::Number(value) = expression else {
             return None;
@@ -833,7 +989,7 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
-    fn numeric_loop_binding_candidates(
+    pub(in crate::backend::direct_wasm) fn numeric_loop_binding_candidates(
         &self,
         init: &[Statement],
         condition: Option<&Expression>,
@@ -870,7 +1026,7 @@ impl<'a> FunctionCompiler<'a> {
         candidates
     }
 
-    fn numeric_loop_spec(
+    pub(in crate::backend::direct_wasm) fn numeric_loop_spec(
         &self,
         init: &[Statement],
         condition: Option<&Expression>,
@@ -1421,6 +1577,7 @@ impl<'a> FunctionCompiler<'a> {
                 direct_step_iterators: Self::direct_loop_step_iterators(body),
                 numeric_binding_candidates,
                 numeric_spec,
+                string_member_alias_bindings: HashMap::new(),
             });
         self.state
             .emission
@@ -1538,6 +1695,7 @@ impl<'a> FunctionCompiler<'a> {
                 direct_step_iterators: Self::direct_loop_step_iterators(body),
                 numeric_binding_candidates,
                 numeric_spec,
+                string_member_alias_bindings: HashMap::new(),
             });
         self.state
             .emission
@@ -1692,6 +1850,7 @@ impl<'a> FunctionCompiler<'a> {
                     direct_step_iterators: Self::direct_loop_step_iterators(body),
                     numeric_binding_candidates,
                     numeric_spec,
+                    string_member_alias_bindings: Self::collect_for_in_key_alias_bindings(body),
                 });
             compiler
                 .state

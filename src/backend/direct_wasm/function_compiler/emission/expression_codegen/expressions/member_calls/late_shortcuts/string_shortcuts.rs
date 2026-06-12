@@ -113,6 +113,17 @@ impl<'a> FunctionCompiler<'a> {
             self.push_i32_const(text.find(search).map(|index| index as i32).unwrap_or(-1));
             return Ok(true);
         }
+        if crate::ayy_env_flag!("AYY_TRACE_STRING_SHORTCUTS")
+            && matches!(property, Expression::String(property_name) if property_name == "indexOf")
+        {
+            eprintln!(
+                "string_shortcut:indexOf object={object:?} sefree={} kind={:?} static={:?} print_candidates={}",
+                inline_summary_side_effect_free_expression(object),
+                self.infer_value_kind(object),
+                self.resolve_static_string_value(object),
+                self.runtime_string_print_candidates(object).len()
+            );
+        }
         if matches!(property, Expression::String(property_name) if property_name == "indexOf")
             && inline_summary_side_effect_free_expression(object)
             && (self.infer_value_kind(object) == Some(StaticValueKind::String)
@@ -130,16 +141,34 @@ impl<'a> FunctionCompiler<'a> {
             self.push_i32_const(-1);
             self.push_local_set(result_local);
 
-            for (string_pointer, bytes) in self.backend.module_artifacts.string_data.clone() {
-                let Ok(text) = String::from_utf8(bytes) else {
-                    continue;
-                };
-                let index = text
+            // Numeric-looking strings are canonically represented as their
+            // integer value at runtime, not as an interned pointer; the
+            // observable text for such values is the canonical numeric string,
+            // so compute the index from it and dedupe collisions (e.g.
+            // "\n2143" trims to the same runtime value as "2143"). Numeric
+            // comparisons are emitted last so they win over an interned
+            // pointer that happens to share the same i32 value.
+            let mut emitted_numeric_values = std::collections::HashSet::new();
+            let mut comparison_entries = Vec::new();
+            let mut numeric_comparison_entries = Vec::new();
+            for (string_pointer, text) in self.backend.module_artifacts.interned_string_texts() {
+                match parse_string_to_i32(&text) {
+                    Ok(parsed) => {
+                        if emitted_numeric_values.insert(parsed) {
+                            numeric_comparison_entries.push((parsed, parsed.to_string()));
+                        }
+                    }
+                    Err(_) => comparison_entries.push((string_pointer as i32, text)),
+                }
+            }
+            comparison_entries.extend(numeric_comparison_entries);
+            for (comparison_value, index_text) in comparison_entries {
+                let index = index_text
                     .find(search.as_str())
                     .map(|index| index as i32)
                     .unwrap_or(-1);
                 self.push_local_get(value_local);
-                self.push_i32_const(string_pointer as i32);
+                self.push_i32_const(comparison_value);
                 self.push_binary_op(BinaryOp::Equal)?;
                 self.state.emission.output.instructions.push(0x04);
                 self.state
