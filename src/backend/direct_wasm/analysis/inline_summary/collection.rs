@@ -1,8 +1,78 @@
 use super::*;
 
+use crate::ir::visit::{Visitor, walk_expression, walk_statement};
+
+/// Returns true when the function body contains a `++`/`--` update targeting
+/// one of the function's own bindings (a parameter or a body-declared
+/// var/let). Such updates cannot be replayed at an inline call site: the
+/// binding has no storage in the caller, so the update emission would treat
+/// it as an unresolvable global and raise a spurious ReferenceError (e.g.
+/// `function f(a) { return ++a; }`).
+pub(in crate::backend::direct_wasm) fn function_body_updates_own_binding(
+    function: &FunctionDeclaration,
+) -> bool {
+    struct DeclaredNameCollector {
+        names: HashSet<String>,
+    }
+
+    impl Visitor for DeclaredNameCollector {
+        fn visit_statement(&mut self, statement: &Statement) {
+            match statement {
+                Statement::Var { name, .. } | Statement::Let { name, .. } => {
+                    self.names.insert(name.clone());
+                }
+                _ => {}
+            }
+            walk_statement(self, statement);
+        }
+    }
+
+    struct UpdateFinder<'a> {
+        names: &'a HashSet<String>,
+        found: bool,
+    }
+
+    impl Visitor for UpdateFinder<'_> {
+        fn visit_expression(&mut self, expression: &Expression) {
+            if let Expression::Update { name, .. } = expression
+                && self.names.contains(name)
+            {
+                self.found = true;
+            }
+            walk_expression(self, expression);
+        }
+    }
+
+    let mut declared = DeclaredNameCollector {
+        names: function
+            .params
+            .iter()
+            .map(|param| param.name.clone())
+            .collect(),
+    };
+    for statement in &function.body {
+        declared.visit_statement(statement);
+    }
+
+    let mut finder = UpdateFinder {
+        names: &declared.names,
+        found: false,
+    };
+    for statement in &function.body {
+        finder.visit_statement(statement);
+        if finder.found {
+            return true;
+        }
+    }
+    false
+}
+
 pub(in crate::backend::direct_wasm) fn collect_inline_function_summary(
     function: &FunctionDeclaration,
 ) -> Option<InlineFunctionSummary> {
+    if function_body_updates_own_binding(function) {
+        return None;
+    }
     let mut summary = InlineFunctionSummary::default();
     let parameter_names = function
         .params

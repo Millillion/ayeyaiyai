@@ -721,6 +721,9 @@ impl<'a> FunctionCompiler<'a> {
         else {
             return false;
         };
+        if crate::backend::direct_wasm::analysis::function_body_updates_own_binding(function) {
+            return false;
+        }
         let Some((terminal_statement, effect_statements)) = function.body.split_last() else {
             return false;
         };
@@ -780,6 +783,9 @@ impl<'a> FunctionCompiler<'a> {
         else {
             return false;
         };
+        if crate::backend::direct_wasm::analysis::function_body_updates_own_binding(function) {
+            return false;
+        }
         let Some((terminal_statement, effect_statements)) = function.body.split_last() else {
             return false;
         };
