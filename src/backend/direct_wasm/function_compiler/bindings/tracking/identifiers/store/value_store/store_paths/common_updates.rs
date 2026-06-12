@@ -1643,6 +1643,24 @@ impl<'a> FunctionCompiler<'a> {
         target_name: &str,
         value: &Expression,
     ) -> DirectResult<Option<ArrayValueBinding>> {
+        // Stores through a for-of value temp (`x = __ayy_for_of_value_*`)
+        // carry the entry pair via the temp's value binding; resolve one step
+        // so entry-array slots propagate to the user binding.
+        let resolved_value;
+        let value = if let Expression::Identifier(name) = value
+            && let Some(binding) = self
+                .state
+                .speculation
+                .static_semantics
+                .local_value_binding(name)
+                .or_else(|| self.global_value_binding(name))
+            && matches!(binding, Expression::Member { .. })
+        {
+            resolved_value = binding.clone();
+            &resolved_value
+        } else {
+            value
+        };
         let Expression::Member { object, property } = value else {
             return Ok(None);
         };
@@ -2082,17 +2100,25 @@ impl<'a> FunctionCompiler<'a> {
                 &state.object_binding_expression,
             );
         }
-        let skip_static_object_seeds =
-            expression_references_internal_iterator_step(&state.tracked_value_expression)
-                || expression_is_unresolved_constructor_instance(&state.canonical_value_expression)
-                || expression_is_unresolved_constructor_instance(&state.tracked_value_expression)
-                || expression_references_internal_iterator_step(
-                    state.prototype_source_expression(),
-                );
         let state_object_binding_is_typed_array = state
             .object_binding
             .as_ref()
             .is_some_and(|binding| self.static_typed_array_name_from_binding(binding).is_some());
+        // Typed-array constructions (`new Int8Array([...])`) are "unresolved
+        // constructor instances" syntactically, but their element values are
+        // statically modeled; let the typed-array seed run so element reads,
+        // writes, and iteration resolve through the tracked array channel.
+        let skip_static_object_seeds =
+            expression_references_internal_iterator_step(&state.tracked_value_expression)
+                || (!state_object_binding_is_typed_array
+                    && (expression_is_unresolved_constructor_instance(
+                        &state.canonical_value_expression,
+                    ) || expression_is_unresolved_constructor_instance(
+                        &state.tracked_value_expression,
+                    )))
+                || expression_references_internal_iterator_step(
+                    state.prototype_source_expression(),
+                );
         if !skip_static_object_seeds {
             if !state_object_binding_is_typed_array {
                 self.seed_local_date_object_binding(

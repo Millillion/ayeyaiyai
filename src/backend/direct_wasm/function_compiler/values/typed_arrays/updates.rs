@@ -121,6 +121,9 @@ impl<'a> FunctionCompiler<'a> {
         let Some(typed_array_binding) =
             self.resolve_static_typed_array_object_binding_from_expression(source_expression)
         else {
+            if crate::ayy_env_flag!("AYY_TRACE_UPDATES") {
+                eprintln!("typed_array_seed:no_binding name={name}");
+            }
             return;
         };
         let mut object_binding = self
@@ -136,7 +139,26 @@ impl<'a> FunctionCompiler<'a> {
             .speculation
             .static_semantics
             .set_local_object_binding(name, object_binding.clone());
-        if let Some(array_binding) =
+        if crate::ayy_env_flag!("AYY_TRACE_UPDATES") {
+            eprintln!(
+                "typed_array_seed:binding name={name} values={:?}",
+                self.static_typed_array_values_from_expression(source_expression)
+                    .map(|binding| binding.values)
+            );
+        }
+        // Buffer-backed views are tracked live through the typed-array view
+        // channel (their element state lives in the buffer's runtime slots);
+        // seeding a value snapshot here would go stale after buffer writes.
+        let has_view_binding = self
+            .state
+            .speculation
+            .static_semantics
+            .local_typed_array_view_binding(name)
+            .is_some()
+            || self
+                .resolve_typed_array_view_binding_from_expression(source_expression)
+                .is_some();
+        if !has_view_binding && let Some(array_binding) =
             self.static_typed_array_values_from_expression(source_expression)
         {
             let length_local = self.ensure_runtime_array_length_local(name);

@@ -1775,6 +1775,23 @@ impl<'a> FunctionCompiler<'a> {
                 .values
                 .set_value_binding(name.to_string(), state.canonical_value_expression.clone());
         }
+        // Rest-array temporaries are fresh allocations minted per
+        // destructuring evaluation; preserving the alias keeps
+        // strict-equality identity (`x !== source`) resolvable for bindings
+        // assigned inside loop bodies.
+        if matches!(
+            &state.canonical_value_expression,
+            Expression::Identifier(alias) if alias.contains("__ayy_array_rest_")
+        ) {
+            self.backend.sync_global_expression_binding(
+                name,
+                Some(state.canonical_value_expression.clone()),
+            );
+            self.backend
+                .shared_global_semantics
+                .values
+                .set_value_binding(name.to_string(), state.canonical_value_expression.clone());
+        }
         if matches!(
             state.kind,
             Some(StaticValueKind::Object | StaticValueKind::Function | StaticValueKind::String)

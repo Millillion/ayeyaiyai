@@ -154,6 +154,12 @@ impl<'a> FunctionCompiler<'a> {
         let [candidate] = value_candidates.as_slice() else {
             return None;
         };
+        // Resolve the unmaterialized candidate first: materialization can
+        // collapse a custom iterable to a value snapshot (`Object([...])`)
+        // that drops symbol-keyed properties like Symbol.iterator.
+        if let Some(source) = self.resolve_iterator_source_kind(candidate) {
+            return Some(source);
+        }
         self.resolve_iterator_source_kind(&self.materialize_static_expression(candidate))
     }
 
@@ -176,11 +182,20 @@ impl<'a> FunctionCompiler<'a> {
             return None;
         };
         if let Some(value) = static_value {
+            // Resolve the unmaterialized value first: materialization can
+            // collapse a custom iterable to a value snapshot that drops
+            // symbol-keyed properties like Symbol.iterator.
+            if let Some(source) = self.resolve_iterator_source_kind(&value) {
+                return Some(source);
+            }
             return self.resolve_iterator_source_kind(&self.materialize_static_expression(&value));
         }
         let [candidate] = value_candidates.as_slice() else {
             return None;
         };
+        if let Some(source) = self.resolve_iterator_source_kind(candidate) {
+            return Some(source);
+        }
         self.resolve_iterator_source_kind(&self.materialize_static_expression(candidate))
     }
 
@@ -483,6 +498,33 @@ impl<'a> FunctionCompiler<'a> {
                     });
                 }
                 trace_source!("internal-iterator-materialized-value-binding");
+                return Some(source);
+            }
+            // The value-binding chain can dead-end on a materialized object
+            // expression (`Object([...])`) that lost symbol-keyed properties;
+            // the object-binding channel still resolves custom iterables
+            // (`obj[Symbol.iterator]`) inside function bodies, so try the
+            // static-iterable resolutions before caching a miss.
+            if let Some((steps, completion_effects, completion_value)) = self
+                .resolve_static_iterable_simple_generator_source(expression)
+                .or_else(|| {
+                    self.resolve_static_iterable_iterator_object_simple_generator_source(expression)
+                })
+            {
+                let source = IteratorSourceKind::SimpleGenerator {
+                    is_async: false,
+                    steps,
+                    completion_effects,
+                    completion_value,
+                };
+                if let Some(cache_key) = internal_iterator_value_cache_key.as_ref() {
+                    INTERNAL_ITERATOR_VALUE_SOURCE_CACHE.with(|cache| {
+                        cache
+                            .borrow_mut()
+                            .insert(cache_key.clone(), Some(source.clone()));
+                    });
+                }
+                trace_source!("internal-iterator-static-iterable");
                 return Some(source);
             }
             if let Some(cache_key) = internal_iterator_value_cache_key.as_ref() {
