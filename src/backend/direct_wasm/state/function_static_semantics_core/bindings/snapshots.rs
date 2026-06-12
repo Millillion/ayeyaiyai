@@ -1,7 +1,7 @@
 use super::super::FunctionStaticSemanticsState;
 use crate::backend::direct_wasm::{
     FunctionStaticBindingMetadataSnapshot, LocalStaticBindingSnapshot, LocalStaticBindingState,
-    SharedGlobalBindingEnvironment, StaticResolutionEnvironment,
+    SharedGlobalBindingEnvironment, StaticResolutionEnvironment, object_binding_from_array_binding,
 };
 use crate::ir::hir::Expression;
 use std::collections::HashMap;
@@ -61,11 +61,17 @@ impl FunctionStaticSemanticsState {
         global_bindings: &SharedGlobalBindingEnvironment,
         local_bindings: HashMap<String, Expression>,
     ) -> StaticResolutionEnvironment {
+        let mut local_object_bindings = self.objects.local_object_bindings_snapshot();
+        for (name, array_binding) in &self.arrays.local_array_bindings {
+            local_object_bindings
+                .entry(name.clone())
+                .or_insert_with(|| object_binding_from_array_binding(array_binding));
+        }
         StaticResolutionEnvironment::from_binding_snapshots(
             global_bindings.value_bindings.clone(),
             global_bindings.object_bindings.clone(),
             local_bindings,
-            self.objects.local_object_bindings_snapshot(),
+            local_object_bindings,
             self.objects.local_descriptor_bindings_snapshot(),
         )
     }

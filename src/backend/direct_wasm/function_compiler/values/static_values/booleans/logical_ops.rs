@@ -14,6 +14,11 @@ impl<'a> FunctionCompiler<'a> {
                 BinaryOp::NotEqual | BinaryOp::LooseNotEqual => Some(lhs != rhs),
                 _ => None,
             };
+            if let Some(result) =
+                self.resolve_static_if_primitive_equality_condition(*op, left, right)
+            {
+                return Some(result);
+            }
             if let Some(result) = self.resolve_static_binary_boolean_result(op, left, right) {
                 return Some(result);
             }
@@ -32,6 +37,94 @@ impl<'a> FunctionCompiler<'a> {
             }
         }
         self.resolve_static_boolean_expression(expression)
+    }
+
+    fn resolve_static_if_primitive_equality_condition(
+        &self,
+        op: BinaryOp,
+        left: &Expression,
+        right: &Expression,
+    ) -> Option<bool> {
+        if !matches!(op, BinaryOp::Equal | BinaryOp::NotEqual) {
+            return None;
+        }
+
+        let (left, left_from_array_member) =
+            self.resolve_static_if_primitive_condition_operand(left)?;
+        let (right, right_from_array_member) =
+            self.resolve_static_if_primitive_condition_operand(right)?;
+        if !left_from_array_member && !right_from_array_member {
+            return None;
+        }
+        let equal = match (&left, &right) {
+            (Expression::Bool(left), Expression::Bool(right)) => Some(left == right),
+            (Expression::Number(left), Expression::Number(right)) => Some(left == right),
+            (Expression::String(left), Expression::String(right)) => Some(left == right),
+            (Expression::BigInt(left), Expression::BigInt(right)) => {
+                Some(parse_static_bigint_literal(left)? == parse_static_bigint_literal(right)?)
+            }
+            (Expression::Null, Expression::Null)
+            | (Expression::Undefined, Expression::Undefined) => Some(true),
+            (
+                Expression::Number(_)
+                | Expression::BigInt(_)
+                | Expression::String(_)
+                | Expression::Bool(_)
+                | Expression::Null
+                | Expression::Undefined,
+                Expression::Number(_)
+                | Expression::BigInt(_)
+                | Expression::String(_)
+                | Expression::Bool(_)
+                | Expression::Null
+                | Expression::Undefined,
+            ) => Some(false),
+            _ => None,
+        }?;
+        Some(equal ^ matches!(op, BinaryOp::NotEqual))
+    }
+
+    fn resolve_static_if_primitive_condition_operand(
+        &self,
+        expression: &Expression,
+    ) -> Option<(Expression, bool)> {
+        if let Some(value) = self.resolve_static_if_array_member_condition_operand(expression) {
+            return Some((value, true));
+        }
+        self.resolve_static_primitive_expression_with_context(
+            expression,
+            self.current_function_name(),
+        )
+        .map(|value| (value, false))
+    }
+
+    fn resolve_static_if_array_member_condition_operand(
+        &self,
+        expression: &Expression,
+    ) -> Option<Expression> {
+        let Expression::Member { object, property } = expression else {
+            return None;
+        };
+        if !matches!(object.as_ref(), Expression::Identifier(_)) {
+            return None;
+        }
+
+        let property = self
+            .resolve_property_key_expression(property)
+            .unwrap_or_else(|| self.materialize_static_expression(property));
+        let array_binding = self.resolve_array_binding_from_expression(object)?;
+        let value = if matches!(&property, Expression::String(name) if name == "length") {
+            Expression::Number(array_binding.values.len() as f64)
+        } else {
+            let index = argument_index_from_expression(&property)? as usize;
+            array_binding
+                .values
+                .get(index)
+                .cloned()
+                .flatten()
+                .unwrap_or(Expression::Undefined)
+        };
+        self.resolve_static_primitive_expression_with_context(&value, self.current_function_name())
     }
 
     fn resolve_static_property_key_condition(

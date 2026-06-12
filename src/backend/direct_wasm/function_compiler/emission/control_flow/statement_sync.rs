@@ -31,6 +31,12 @@ impl<'a> FunctionCompiler<'a> {
                 .speculation
                 .static_semantics
                 .set_local_object_binding(name, binding.clone());
+            if let Some(array_binding) = array_binding_from_object_binding(binding) {
+                self.state
+                    .speculation
+                    .static_semantics
+                    .set_local_array_binding(name, array_binding);
+            }
             self.state
                 .speculation
                 .static_semantics
@@ -641,6 +647,19 @@ impl<'a> FunctionCompiler<'a> {
                         self.fast_static_loop_expression(value, environment, array_cache)?;
                     environment.assign_binding_value(name.clone(), value);
                 }
+                Statement::AssignMember {
+                    object,
+                    property,
+                    value,
+                } => {
+                    self.fast_static_loop_assign_member_expression(
+                        object,
+                        property,
+                        value,
+                        environment,
+                        array_cache,
+                    )?;
+                }
                 Statement::Expression(expression) => {
                     self.fast_static_loop_expression(expression, environment, array_cache)?;
                 }
@@ -666,9 +685,25 @@ impl<'a> FunctionCompiler<'a> {
             | Expression::Null
             | Expression::Undefined => Some(expression.clone()),
             Expression::Identifier(name) => environment.binding(name).cloned(),
+            Expression::Assign { name, value } => {
+                let value = self.fast_static_loop_expression(value, environment, array_cache)?;
+                environment.assign_binding_value(name.clone(), value.clone());
+                Some(value)
+            }
             Expression::Member { object, property } => {
                 self.fast_static_loop_member_expression(object, property, environment, array_cache)
             }
+            Expression::AssignMember {
+                object,
+                property,
+                value,
+            } => self.fast_static_loop_assign_member_expression(
+                object,
+                property,
+                value,
+                environment,
+                array_cache,
+            ),
             Expression::Unary { op, expression } => {
                 let value =
                     self.fast_static_loop_expression(expression, environment, array_cache)?;
@@ -706,6 +741,41 @@ impl<'a> FunctionCompiler<'a> {
             }
             _ => None,
         }
+    }
+
+    fn fast_static_loop_assign_member_expression(
+        &self,
+        object: &Expression,
+        property: &Expression,
+        value: &Expression,
+        environment: &mut StaticResolutionEnvironment,
+        array_cache: &mut HashMap<String, ArrayValueBinding>,
+    ) -> Option<Expression> {
+        let property = self.fast_static_loop_expression(property, environment, array_cache)?;
+        let value = self.fast_static_loop_expression(value, environment, array_cache)?;
+        let Expression::Identifier(object_name) = object else {
+            return None;
+        };
+        let index = argument_index_from_expression(&property)? as usize;
+
+        if !array_cache.contains_key(object_name) {
+            let binding = environment
+                .object_binding(object_name)
+                .and_then(array_binding_from_object_binding)?;
+            array_cache.insert(object_name.clone(), binding);
+        }
+
+        let mut array_binding = array_cache.get(object_name)?.clone();
+        if array_binding.values.len() <= index {
+            array_binding.values.resize(index + 1, None);
+        }
+        array_binding.values[index] = Some(value.clone());
+        array_cache.insert(object_name.clone(), array_binding.clone());
+        environment.sync_object_binding(
+            object_name,
+            Some(object_binding_from_array_binding(&array_binding)),
+        );
+        Some(value)
     }
 
     fn fast_static_loop_member_expression(

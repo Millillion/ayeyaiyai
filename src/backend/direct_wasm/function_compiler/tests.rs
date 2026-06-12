@@ -2303,6 +2303,64 @@ fn static_if_condition_prefers_js_equality_over_property_key_names() {
 }
 
 #[test]
+fn static_if_condition_reads_static_array_slot_with_runtime_array_state() {
+    let mut compiler = DirectWasmCompiler::default();
+    let mut function_compiler = FunctionCompiler::new(
+        &mut compiler,
+        None,
+        false,
+        false,
+        false,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .expect("function compiler should initialize");
+
+    let mut values = vec![None; 1076];
+    values[1074] = Some(Expression::Number(f64::from_bits(1)));
+    values[1075] = Some(Expression::Number(0.0));
+    function_compiler
+        .state
+        .speculation
+        .static_semantics
+        .set_local_array_binding("floatValues", ArrayValueBinding { values });
+    function_compiler.ensure_runtime_array_length_local("floatValues");
+
+    let slot_1075 = Expression::Member {
+        object: Box::new(Expression::Identifier("floatValues".to_string())),
+        property: Box::new(Expression::Number(1075.0)),
+    };
+    assert!(
+        function_compiler.expression_uses_runtime_array_state(&Expression::Identifier(
+            "floatValues".to_string()
+        ))
+    );
+    assert_eq!(
+        function_compiler.resolve_static_if_condition_value(&Expression::Binary {
+            op: crate::ir::hir::BinaryOp::NotEqual,
+            left: Box::new(slot_1075),
+            right: Box::new(Expression::Number(0.0)),
+        }),
+        Some(false)
+    );
+
+    let slot_1074 = Expression::Member {
+        object: Box::new(Expression::Identifier("floatValues".to_string())),
+        property: Box::new(Expression::Number(1074.0)),
+    };
+    assert_eq!(
+        function_compiler.resolve_static_if_condition_value(&Expression::Binary {
+            op: crate::ir::hir::BinaryOp::NotEqual,
+            left: Box::new(slot_1074),
+            right: Box::new(Expression::Number(f64::from_bits(1))),
+        }),
+        Some(false)
+    );
+}
+
+#[test]
 fn tracks_descriptor_locals_from_get_own_property_descriptor_with_bound_parameter_name() {
     let program = frontend::parse(
         r#"
