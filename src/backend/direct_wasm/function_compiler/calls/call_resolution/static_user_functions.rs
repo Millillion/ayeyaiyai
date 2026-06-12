@@ -135,6 +135,27 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    fn static_execution_statement_contains_with(statement: &Statement) -> bool {
+        struct WithFinder {
+            found: bool,
+        }
+        impl crate::ir::visit::Visitor for WithFinder {
+            fn visit_statement(&mut self, statement: &Statement) {
+                if self.found {
+                    return;
+                }
+                if matches!(statement, Statement::With { .. }) {
+                    self.found = true;
+                    return;
+                }
+                crate::ir::visit::walk_statement(self, statement);
+            }
+        }
+        let mut finder = WithFinder { found: false };
+        crate::ir::visit::Visitor::visit_statement(&mut finder, statement);
+        finder.found
+    }
+
     pub(in crate::backend::direct_wasm) fn prepare_static_user_function_execution(
         &self,
         function_name: &str,
@@ -146,6 +167,17 @@ impl<'a> FunctionCompiler<'a> {
         mut transform_statement: impl FnMut(Statement) -> Statement,
     ) -> Option<PreparedStaticUserFunctionExecution> {
         let function = self.resolve_registered_function_declaration(function_name)?;
+        // A `with` body resolves identifiers against the scope object at
+        // runtime; the static executor and the define-property applier both
+        // resolve lexically, so any static execution of a with-containing
+        // body would mis-route scope-sensitive reads and writes.
+        if function
+            .body
+            .iter()
+            .any(Self::static_execution_statement_contains_with)
+        {
+            return None;
+        }
         let call_arguments = self.expand_static_user_function_call_arguments(arguments);
         let arguments_binding = Self::static_user_function_arguments_binding(&call_arguments);
         let argument_values = call_arguments

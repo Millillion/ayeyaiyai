@@ -175,7 +175,13 @@ impl<'a> FunctionCompiler<'a> {
         callback: impl FnOnce(&mut Self) -> DirectResult<T>,
     ) -> DirectResult<T> {
         crate::backend::direct_wasm::memo::bump_static_state_generation();
-        self.with_current_user_function_name(Some(user_function.name.clone()), callback)
+        // The callee's lexical environment does not include the caller's
+        // `with` scopes; identifiers in inline-emitted callee bodies must
+        // resolve against the callee's own scope chain (definition-site
+        // with captures are modeled separately via hidden capture bindings).
+        self.with_current_user_function_name(Some(user_function.name.clone()), |compiler| {
+            compiler.with_suspended_with_scopes(callback)
+        })
     }
 
     pub(in crate::backend::direct_wasm) fn with_named_function_execution_context<T>(

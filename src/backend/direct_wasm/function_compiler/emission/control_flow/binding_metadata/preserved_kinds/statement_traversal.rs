@@ -21,13 +21,25 @@ impl<'a> FunctionCompiler<'a> {
                     );
                 }
             }
-            Statement::Var { name, value } | Statement::Let { name, value, .. } => {
+            Statement::Var { name, value } | Statement::Assign { name, value } => {
+                // A var/assignment inside an active `with` scope may route to
+                // the scope object's property instead of the binding, so the
+                // assigned value's kind must not be claimed for the binding
+                // (the binding may keep its pre-loop value entirely).
+                let candidate = if self
+                    .resolve_with_scope_binding_for_capture_source(name)
+                    .is_some()
+                {
+                    None
+                } else {
+                    self.preserved_expression_kind(preserved_kinds, value)
+                };
                 self.merge_preserved_binding_kind(
                     invalidated_bindings,
                     preserved_kinds,
                     blocked_bindings,
                     name,
-                    self.preserved_expression_kind(preserved_kinds, value),
+                    candidate,
                 );
                 self.collect_preserved_binding_kinds_from_expression(
                     invalidated_bindings,
@@ -36,7 +48,7 @@ impl<'a> FunctionCompiler<'a> {
                     value,
                 );
             }
-            Statement::Assign { name, value } => {
+            Statement::Let { name, value, .. } => {
                 self.merge_preserved_binding_kind(
                     invalidated_bindings,
                     preserved_kinds,
@@ -104,6 +116,25 @@ impl<'a> FunctionCompiler<'a> {
                     blocked_bindings,
                     object,
                 );
+                // Assignments under a nested `with` may route to the scope
+                // object rather than the binding; this pre-pass cannot model
+                // that scope, so block kind preservation for those names.
+                let mut nested_assigned_names = HashSet::new();
+                for statement in body {
+                    collect_assigned_binding_names_from_statement(
+                        statement,
+                        &mut nested_assigned_names,
+                    );
+                }
+                for name in &nested_assigned_names {
+                    self.merge_preserved_binding_kind(
+                        invalidated_bindings,
+                        preserved_kinds,
+                        blocked_bindings,
+                        name,
+                        None,
+                    );
+                }
                 for statement in body {
                     self.collect_preserved_binding_kinds_from_statement(
                         invalidated_bindings,

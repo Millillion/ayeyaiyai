@@ -90,13 +90,19 @@ impl<'a> FunctionCompiler<'a> {
         let materialized_value = self.reference_preserving_static_value_expression(value);
         self.update_member_function_assignment_binding(object, &property, value);
         if let Expression::Identifier(owner_name) = object {
+            // Seed absent entries from the currently-resolved binding so the
+            // scope object's other properties survive the sync; an empty seed
+            // would drop them and later reads would resolve to undefined.
+            let current_object_binding = self
+                .resolve_object_binding_from_expression(object)
+                .unwrap_or_else(empty_object_value_binding);
             let object_binding = self
                 .backend
                 .global_semantics
                 .values
                 .object_bindings
                 .entry(owner_name.clone())
-                .or_insert_with(empty_object_value_binding);
+                .or_insert_with(|| current_object_binding.clone());
             object_binding_set_property(
                 object_binding,
                 property.clone(),
@@ -109,8 +115,9 @@ impl<'a> FunctionCompiler<'a> {
                 .values
                 .object_bindings
                 .entry(owner_name.clone())
-                .or_insert_with(empty_object_value_binding);
+                .or_insert_with(|| current_object_binding.clone());
             object_binding_set_property(shared_object_binding, property, materialized_value);
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
             self.clear_runtime_object_property_shadow_static_metadata_prefix(owner_name);
             self.sync_runtime_object_property_shadow_static_metadata_from_binding(
                 owner_name,
