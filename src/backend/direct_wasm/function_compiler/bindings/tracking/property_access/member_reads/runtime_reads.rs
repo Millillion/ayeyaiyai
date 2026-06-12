@@ -802,6 +802,17 @@ impl<'a> FunctionCompiler<'a> {
                     ))])?;
                 }
                 if compiler.static_private_property_matches_object_class_owner(object, property) {
+                    // Inside a shared class-method body the owner match only
+                    // reflects the compile-time receiver assumption; verify
+                    // the live receiver brand through the `this` shadow
+                    // channel so extracted methods reject foreign receivers.
+                    if matches!(object, Expression::This)
+                        && compiler
+                            .current_function_name()
+                            .is_some_and(|name| name.starts_with("__ayy_class_method_"))
+                    {
+                        return compiler.emit_private_member_this_brand_presence_check(property);
+                    }
                     return Ok(());
                 }
                 compiler.emit_named_error_throw("TypeError")
@@ -875,6 +886,59 @@ impl<'a> FunctionCompiler<'a> {
     ) -> DirectResult<()> {
         self.emit_private_member_assignment_target_base_or_throw(object)?;
         self.emit_private_data_field_brand_check_after_base_or_throw(object, property)
+    }
+
+    /// Inside a shared class-method body the static modeling of `this`
+    /// assumes the declaring class (or one of its instances), but the method
+    /// can be extracted and invoked with a foreign receiver (`fn.call({})`).
+    /// The per-call receiver shadow prepare seeds the `this` channel with the
+    /// receiver's brand-marker entries, so a presence check on the marker (or
+    /// the private member itself) distinguishes branded receivers from
+    /// foreign ones at runtime. Only emits a check when both shadow channels
+    /// already exist; their absence means receiver shadows are not modeled
+    /// for this member, and a presence test would misfire.
+    pub(in crate::backend::direct_wasm) fn emit_private_member_this_brand_presence_check(
+        &mut self,
+        property: &Expression,
+    ) -> DirectResult<()> {
+        self.emit_private_member_receiver_brand_presence_check(&Expression::This, property)
+    }
+
+    pub(in crate::backend::direct_wasm) fn emit_private_member_receiver_brand_presence_check(
+        &mut self,
+        object: &Expression,
+        property: &Expression,
+    ) -> DirectResult<()> {
+        let Some(marker_property) = private_brand_marker_property_expression(property) else {
+            return Ok(());
+        };
+        let marker_binding =
+            self.resolve_runtime_object_property_shadow_binding(object, &marker_property);
+        let member_binding = self.resolve_runtime_object_property_shadow_binding(object, property);
+        let (Some(marker_binding), Some(member_binding)) = (marker_binding, member_binding) else {
+            return Ok(());
+        };
+        if crate::ayy_env_flag!("AYY_TRACE_PRIVATE_MEMBER_VALUES") {
+            eprintln!(
+                "private_brand_presence_check current_fn={:?} object={object:?} property={property:?}",
+                self.current_function_name(),
+            );
+        }
+        self.push_global_get(marker_binding.present_index);
+        self.push_global_get(member_binding.present_index);
+        self.push_binary_op(BinaryOp::BitwiseOr)?;
+        self.state.emission.output.instructions.push(0x45); // i32.eqz
+        self.state.emission.output.instructions.push(0x04);
+        self.state
+            .emission
+            .output
+            .instructions
+            .push(EMPTY_BLOCK_TYPE);
+        self.push_control_frame();
+        self.emit_named_error_throw("TypeError")?;
+        self.state.emission.output.instructions.push(0x0b);
+        self.pop_control_frame();
+        Ok(())
     }
 
     fn emit_private_member_binding_value_from_local(
