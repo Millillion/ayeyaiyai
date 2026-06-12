@@ -6335,6 +6335,89 @@ fn compiles_direct_eval_comment_patterns_with_dynamic_char_insertions() {
 }
 
 #[test]
+fn compiles_direct_eval_comment_pattern_from_active_loop_hex_digits() {
+    let tempdir = tempdir().unwrap();
+    let input = tempdir
+        .path()
+        .join("direct-eval-comment-pattern-active-loop-hex.js");
+    let output = tempdir
+        .path()
+        .join("direct-eval-comment-pattern-active-loop-hex.wasm");
+
+    fs::write(
+        &input,
+        r#"
+        var hex = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F"];
+        var hits = 0;
+        var flags = 0;
+        for (var i1 = 2; i1 < 3; i1++) {
+          for (var i2 = 0; i2 < 1; i2++) {
+            for (var i3 = 2; i3 < 3; i3++) {
+              for (var i4 = 8; i4 < 10; i4++) {
+                var uu = hex[i1] + hex[i2] + hex[i3] + hex[i4];
+                var xx = String.fromCharCode("0x" + uu);
+                if ((uu === "000A") || (uu === "000D") || (uu === "2028") || (uu === "2029")) {
+                  flags += 1;
+                }
+                var yy = 0;
+                eval("//var " + xx + "yy = -1");
+                if (yy === -1) {
+                  hits += 1;
+                }
+              }
+            }
+          }
+        }
+        for (var i1 = 0; i1 < 1; i1++) {
+          for (var i2 = 0; i2 < 1; i2++) {
+            for (var i3 = 0; i3 < 1; i3++) {
+              for (var i4 = 10; i4 < 14; i4++) {
+                var uu = hex[i1] + hex[i2] + hex[i3] + hex[i4];
+                var xx = String.fromCharCode("0x" + uu);
+                if ((uu === "000A") || (uu === "000D") || (uu === "2028") || (uu === "2029")) {
+                  flags += 1;
+                }
+                var yy = 0;
+                eval("//var " + xx + "yy = -1");
+                if (yy === -1) {
+                  hits += 1;
+                }
+              }
+            }
+          }
+        }
+        console.log(hits);
+        console.log(flags);
+        "#,
+    )
+    .unwrap();
+
+    let compile = Command::new(env!("CARGO_BIN_EXE_ayeyaiyai"))
+        .arg(&input)
+        .arg("-o")
+        .arg(&output)
+        .output()
+        .unwrap();
+
+    assert!(
+        compile.status.success(),
+        "compiler failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&compile.stdout),
+        String::from_utf8_lossy(&compile.stderr),
+    );
+
+    let run = Command::new("wasmtime").arg(&output).output().unwrap();
+
+    assert!(
+        run.status.success(),
+        "wasmtime failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&run.stdout),
+        String::from_utf8_lossy(&run.stderr),
+    );
+    assert_eq!(String::from_utf8_lossy(&run.stdout), "4\n4\n");
+}
+
+#[test]
 fn compiles_indirect_eval_hashbang_script_literals() {
     let tempdir = tempdir().unwrap();
     let input = tempdir.path().join("indirect-eval-hashbang.js");

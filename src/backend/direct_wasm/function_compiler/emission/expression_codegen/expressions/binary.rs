@@ -578,7 +578,9 @@ impl<'a> FunctionCompiler<'a> {
             return false;
         };
         self.for_in_key_array_member_name(property).is_some()
-            && self.resolve_object_binding_from_expression(object).is_some()
+            && self
+                .resolve_object_binding_from_expression(object)
+                .is_some()
     }
 
     /// Like `expression_has_dynamic_member_property_access`, but dynamic
@@ -3180,12 +3182,12 @@ impl<'a> FunctionCompiler<'a> {
                 Ok(())
             }
             BinaryOp::Equal | BinaryOp::NotEqual
-                if self.emit_runtime_static_string_equality_comparison(left, right, op)? =>
+                if self.emit_hex_quad_string_comparison(left, right, op)? =>
             {
                 Ok(())
             }
             BinaryOp::Equal | BinaryOp::NotEqual
-                if self.emit_hex_quad_string_comparison(left, right, op)? =>
+                if self.emit_runtime_static_string_equality_comparison(left, right, op)? =>
             {
                 Ok(())
             }
@@ -3210,12 +3212,12 @@ impl<'a> FunctionCompiler<'a> {
                 Ok(())
             }
             BinaryOp::LooseEqual | BinaryOp::LooseNotEqual
-                if self.emit_runtime_static_string_equality_comparison(left, right, op)? =>
+                if self.emit_hex_quad_string_comparison(left, right, op)? =>
             {
                 Ok(())
             }
             BinaryOp::LooseEqual | BinaryOp::LooseNotEqual
-                if self.emit_hex_quad_string_comparison(left, right, op)? =>
+                if self.emit_runtime_static_string_equality_comparison(left, right, op)? =>
             {
                 Ok(())
             }

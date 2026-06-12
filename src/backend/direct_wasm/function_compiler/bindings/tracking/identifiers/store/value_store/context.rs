@@ -1113,6 +1113,17 @@ impl<'a> FunctionCompiler<'a> {
         (!snapshot.is_empty()).then_some(snapshot)
     }
 
+    fn expression_is_string_from_char_code_call(expression: &Expression) -> bool {
+        let Expression::Call { callee, .. } = expression else {
+            return false;
+        };
+        let Expression::Member { object, property } = callee.as_ref() else {
+            return false;
+        };
+        matches!(object.as_ref(), Expression::Identifier(name) if name == "String")
+            && matches!(property.as_ref(), Expression::String(name) if name == "fromCharCode")
+    }
+
     fn for_await_step_value_without_await(&self, expression: &Expression) -> Option<Expression> {
         let Expression::Await(inner) = expression else {
             return None;
@@ -1210,10 +1221,7 @@ impl<'a> FunctionCompiler<'a> {
     /// prepared the assignment side effect has already executed, so the
     /// expression result equals the assignment target's current static value.
     /// Fold the stored expression to that value when it is a pure literal.
-    fn fold_executed_assignment_store_value(
-        &self,
-        expression: &Expression,
-    ) -> Option<Expression> {
+    fn fold_executed_assignment_store_value(&self, expression: &Expression) -> Option<Expression> {
         let inner = match expression {
             Expression::Sequence(parts) => match parts.as_slice() {
                 [single] => single,
@@ -1360,15 +1368,15 @@ impl<'a> FunctionCompiler<'a> {
         {
             canonical_value_expression = static_iterator_step_value;
         }
-        if let Some(folded) =
-            self.fold_executed_assignment_store_value(&canonical_value_expression)
+        if let Some(folded) = self.fold_executed_assignment_store_value(&canonical_value_expression)
         {
             canonical_value_expression = folded;
         }
-        if self
+        let active_loop_string_assignment = self
             .active_loop_string_assignment_snapshot(&canonical_value_expression)
-            .is_some()
-        {
+            .is_some();
+        if active_loop_string_assignment {
+            self.record_active_loop_eval_source_alias(name, &canonical_value_expression);
             return PreparedIdentifierValueStore {
                 canonical_value_expression: canonical_value_expression.clone(),
                 tracked_value_expression: Expression::Undefined,
@@ -1390,6 +1398,11 @@ impl<'a> FunctionCompiler<'a> {
                 runtime_value_override: None,
                 opaque_runtime_value: false,
             };
+        }
+        if self.expression_depends_on_active_loop_assignment(&canonical_value_expression)
+            && Self::expression_is_string_from_char_code_call(&canonical_value_expression)
+        {
+            self.record_active_loop_eval_source_alias(name, &canonical_value_expression);
         }
         if expression_is_object_create_null_call(&canonical_value_expression) {
             let object_expression = Expression::Object(Vec::new());

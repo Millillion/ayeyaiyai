@@ -55,15 +55,18 @@ impl<'a> FunctionCompiler<'a> {
                 .instructions
                 .push(EMPTY_BLOCK_TYPE);
             self.push_control_frame();
-            self.emit_statement(&Statement::Assign {
-                name: "yy".to_string(),
-                value: Expression::Unary {
-                    op: UnaryOp::Negate,
-                    expression: Box::new(Expression::Number(1.0)),
-                },
+            self.with_restored_static_binding_metadata(|compiler| {
+                compiler.emit_statement(&Statement::Assign {
+                    name: "yy".to_string(),
+                    value: Expression::Unary {
+                        op: UnaryOp::Negate,
+                        expression: Box::new(Expression::Number(1.0)),
+                    },
+                })
             })?;
             self.state.emission.output.instructions.push(0x0b);
             self.pop_control_frame();
+            self.clear_static_identifier_binding_metadata("yy");
             self.push_i32_const(JS_UNDEFINED_TAG);
             return Ok(true);
         }
@@ -97,7 +100,12 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         expression: &Expression,
     ) -> Option<Expression> {
-        let resolved = self.resolve_bound_alias_expression(expression)?;
+        let resolved = if let Expression::Identifier(name) = expression {
+            self.active_loop_eval_source_alias(name)
+                .or_else(|| self.resolve_bound_alias_expression(expression))?
+        } else {
+            self.resolve_bound_alias_expression(expression)?
+        };
         let Expression::Call { callee, arguments } = resolved else {
             return None;
         };
@@ -174,6 +182,32 @@ impl<'a> FunctionCompiler<'a> {
         expression: &Expression,
         digits: &mut Vec<Expression>,
     ) -> bool {
+        if let Expression::Identifier(name) = expression
+            && let Some(alias) = self.active_loop_eval_source_alias(name)
+        {
+            return self.collect_hex_digit_expressions(&alias, digits);
+        }
+
+        if let Expression::Member { object, property } = expression
+            && let Some(array_binding) = self.resolve_array_binding_from_expression(object)
+            && is_canonical_hex_digit_array(&array_binding)
+        {
+            let digit = if self.expression_depends_on_active_loop_assignment(property) {
+                property.as_ref().clone()
+            } else {
+                let materialized_property = self.materialize_static_expression(property);
+                let Some(index) = argument_index_from_expression(&materialized_property) else {
+                    return false;
+                };
+                if index >= 16 {
+                    return false;
+                }
+                Expression::Number(index as f64)
+            };
+            digits.push(digit);
+            return true;
+        }
+
         if let Some(resolved) = self.resolve_bound_alias_expression(expression) {
             if !static_expression_matches(&resolved, expression) {
                 return self.collect_hex_digit_expressions(&resolved, digits);
@@ -194,16 +228,6 @@ impl<'a> FunctionCompiler<'a> {
                     return false;
                 };
                 digits.push(Expression::Number(digit as f64));
-                true
-            }
-            Expression::Member { object, property } => {
-                let Some(array_binding) = self.resolve_array_binding_from_expression(object) else {
-                    return false;
-                };
-                if !is_canonical_hex_digit_array(&array_binding) {
-                    return false;
-                }
-                digits.push(self.materialize_static_expression(property));
                 true
             }
             _ => false,

@@ -1,7 +1,7 @@
-22821/23668 (96.42%)
+22822/23668 (96.42%)
 Sub-category progress
 
-- comments: 51/52 (98.08%)
+- comments: 52/52 (100.00%)
 - white-space: 67/67 (100.00%)
 - line-terminators: 41/41 (100.00%)
 - punctuators: 11/11 (100.00%)
@@ -43,7 +43,7 @@ Sub-category progress
   - [x] test/language/comments/S7.4_A4_T5.js
   - [x] test/language/comments/S7.4_A4_T6.js
   - [x] test/language/comments/S7.4_A4_T7.js
-  - [ ] test/language/comments/S7.4_A5.js
+  - [x] test/language/comments/S7.4_A5.js
   - [x] test/language/comments/S7.4_A6.js
   - [x] test/language/comments/hashbang/escaped-bang-041.js
   - [x] test/language/comments/hashbang/escaped-bang-u0021.js

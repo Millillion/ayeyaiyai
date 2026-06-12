@@ -164,6 +164,7 @@ impl<'a> FunctionCompiler<'a> {
                 numeric_binding_candidates: HashMap::new(),
                 numeric_spec: None,
                 string_member_alias_bindings: HashMap::new(),
+                eval_source_alias_bindings: HashMap::new(),
             });
         self.state
             .emission
@@ -252,6 +253,7 @@ impl<'a> FunctionCompiler<'a> {
                 numeric_binding_candidates: HashMap::new(),
                 numeric_spec: None,
                 string_member_alias_bindings: HashMap::new(),
+                eval_source_alias_bindings: HashMap::new(),
             });
         self.state
             .emission
@@ -368,6 +370,7 @@ impl<'a> FunctionCompiler<'a> {
                     numeric_binding_candidates,
                     numeric_spec,
                     string_member_alias_bindings: Self::collect_for_in_key_alias_bindings(body),
+                    eval_source_alias_bindings: HashMap::new(),
                 });
             compiler
                 .state

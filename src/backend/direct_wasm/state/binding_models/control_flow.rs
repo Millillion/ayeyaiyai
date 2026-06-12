@@ -26,6 +26,7 @@ pub(in crate::backend::direct_wasm) struct LoopContext {
     /// (`name = __ayy_for_in_keys_N[index]`) and are assigned nowhere else in
     /// the loop body, so the alias stays valid for the whole iteration.
     pub(in crate::backend::direct_wasm) string_member_alias_bindings: HashMap<String, Expression>,
+    pub(in crate::backend::direct_wasm) eval_source_alias_bindings: HashMap<String, Expression>,
 }
 
 #[derive(Clone)]

@@ -42,15 +42,55 @@ impl<'a> FunctionCompiler<'a> {
                     .get(name)
                     .or_else(|| {
                         (source_name != name)
-                            .then(|| {
-                                loop_context
-                                    .string_member_alias_bindings
-                                    .get(source_name)
-                            })
+                            .then(|| loop_context.string_member_alias_bindings.get(source_name))
                             .flatten()
                     })
                     .cloned()
             })
+    }
+
+    pub(in crate::backend::direct_wasm) fn active_loop_eval_source_alias(
+        &self,
+        name: &str,
+    ) -> Option<Expression> {
+        let source_name = scoped_binding_source_name(name).unwrap_or(name);
+        self.state
+            .emission
+            .control_flow
+            .loop_stack
+            .iter()
+            .rev()
+            .find_map(|loop_context| {
+                loop_context
+                    .eval_source_alias_bindings
+                    .get(name)
+                    .or_else(|| {
+                        (source_name != name)
+                            .then(|| loop_context.eval_source_alias_bindings.get(source_name))
+                            .flatten()
+                    })
+                    .cloned()
+            })
+    }
+
+    pub(in crate::backend::direct_wasm) fn record_active_loop_eval_source_alias(
+        &mut self,
+        name: &str,
+        expression: &Expression,
+    ) {
+        let Some(loop_context) = self.state.emission.control_flow.loop_stack.last_mut() else {
+            return;
+        };
+        loop_context
+            .eval_source_alias_bindings
+            .insert(name.to_string(), expression.clone());
+        if let Some(source_name) = scoped_binding_source_name(name)
+            && source_name != name
+        {
+            loop_context
+                .eval_source_alias_bindings
+                .insert(source_name.to_string(), expression.clone());
+        }
     }
 
     /// Collects loop-body bindings that alias the current for-in key
@@ -1115,7 +1155,9 @@ impl<'a> FunctionCompiler<'a> {
         let trace = crate::ayy_env_flag!("AYY_TRACE_WITH_SCOPE");
         if !self.scope_object_has_binding_property(object, name) {
             if trace {
-                eprintln!("with_scope shadow_dynamic skip-no-binding object={object:?} name={name}");
+                eprintln!(
+                    "with_scope shadow_dynamic skip-no-binding object={object:?} name={name}"
+                );
             }
             return;
         }
@@ -1578,6 +1620,7 @@ impl<'a> FunctionCompiler<'a> {
                 numeric_binding_candidates,
                 numeric_spec,
                 string_member_alias_bindings: HashMap::new(),
+                eval_source_alias_bindings: HashMap::new(),
             });
         self.state
             .emission
@@ -1696,6 +1739,7 @@ impl<'a> FunctionCompiler<'a> {
                 numeric_binding_candidates,
                 numeric_spec,
                 string_member_alias_bindings: HashMap::new(),
+                eval_source_alias_bindings: HashMap::new(),
             });
         self.state
             .emission
@@ -1851,6 +1895,7 @@ impl<'a> FunctionCompiler<'a> {
                     numeric_binding_candidates,
                     numeric_spec,
                     string_member_alias_bindings: Self::collect_for_in_key_alias_bindings(body),
+                    eval_source_alias_bindings: HashMap::new(),
                 });
             compiler
                 .state
