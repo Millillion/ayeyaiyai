@@ -1,4 +1,4 @@
-22560/23668 (95.32%)
+22586/23668 (95.43%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,8 +14,8 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 8891/9337 (95.22%)
-- expressions: 10546/11061 (95.34%)
+- statements: 8902/9337 (95.34%)
+- expressions: 10561/11061 (95.48%)
 - types: 103/113 (91.15%)
 - function-code: 206/217 (94.93%)
 - global-code: 41/42 (97.62%)
@@ -6051,7 +6051,7 @@ Sub-category progress
   - [ ] test/language/statements/class/static-init-arguments-functions.js
   - [ ] test/language/statements/class/static-init-arguments-methods.js
   - [x] test/language/statements/class/static-init-await-binding-invalid.js
-  - [ ] test/language/statements/class/static-init-await-binding-valid.js
+  - [x] test/language/statements/class/static-init-await-binding-valid.js
   - [x] test/language/statements/class/static-init-expr-new-target.js
   - [x] test/language/statements/class/static-init-expr-this.js
   - [x] test/language/statements/class/static-init-invalid-arguments.js
@@ -6356,7 +6356,7 @@ Sub-category progress
   - [x] test/language/statements/const/global-use-before-initialization-in-prior-statement.js
   - [x] test/language/statements/const/redeclaration-error-from-within-strict-mode-function-const.js
   - [x] test/language/statements/const/static-init-await-binding-invalid.js
-  - [ ] test/language/statements/const/static-init-await-binding-valid.js
+  - [x] test/language/statements/const/static-init-await-binding-valid.js
   - [x] test/language/statements/const/syntax/block-scope-syntax-const-declarations-mixed-with-without-initialiser.js
   - [x] test/language/statements/const/syntax/block-scope-syntax-const-declarations-mixed-without-with-initialiser.js
   - [x] test/language/statements/const/syntax/block-scope-syntax-const-declarations-without-initialiser.js
@@ -9097,11 +9097,11 @@ Sub-category progress
   - [x] test/language/statements/function/S13_A2_T1.js
   - [x] test/language/statements/function/S13_A2_T2.js
   - [x] test/language/statements/function/S13_A2_T3.js
-  - [ ] test/language/statements/function/S13_A3_T1.js
+  - [x] test/language/statements/function/S13_A3_T1.js
   - [x] test/language/statements/function/S13_A3_T2.js
-  - [ ] test/language/statements/function/S13_A3_T3.js
+  - [x] test/language/statements/function/S13_A3_T3.js
   - [x] test/language/statements/function/S13_A4_T1.js
-  - [ ] test/language/statements/function/S13_A4_T2.js
+  - [x] test/language/statements/function/S13_A4_T2.js
   - [x] test/language/statements/function/S13_A4_T3.js
   - [x] test/language/statements/function/S13_A4_T4.js
   - [x] test/language/statements/function/S13_A6_T1.js
@@ -9111,7 +9111,7 @@ Sub-category progress
   - [x] test/language/statements/function/S13_A8_T1.js
   - [x] test/language/statements/function/S13_A8_T2.js
   - [x] test/language/statements/function/S13_A9.js
-  - [ ] test/language/statements/function/S14_A2.js
+  - [x] test/language/statements/function/S14_A2.js
   - [x] test/language/statements/function/S14_A3.js
   - [x] test/language/statements/function/S14_A5_T1.js
   - [x] test/language/statements/function/S14_A5_T2.js
@@ -9381,7 +9381,7 @@ Sub-category progress
   - [x] test/language/statements/function/scope-paramsbody-var-close.js
   - [x] test/language/statements/function/scope-paramsbody-var-open.js
   - [x] test/language/statements/function/static-init-await-binding-invalid.js
-  - [ ] test/language/statements/function/static-init-await-binding-valid.js
+  - [x] test/language/statements/function/static-init-await-binding-valid.js
   - [ ] test/language/statements/function/unscopables-with-in-nested-fn.js
   - [ ] test/language/statements/function/unscopables-with.js
   - [x] test/language/statements/function/use-strict-with-non-simple-param.js
@@ -9857,7 +9857,7 @@ Sub-category progress
   - [x] test/language/statements/let/global-use-before-initialization-in-prior-statement.js
   - [x] test/language/statements/let/redeclaration-error-from-within-strict-mode-function.js
   - [x] test/language/statements/let/static-init-await-binding-invalid.js
-  - [ ] test/language/statements/let/static-init-await-binding-valid.js
+  - [x] test/language/statements/let/static-init-await-binding-valid.js
   - [ ] test/language/statements/let/syntax/escaped-let.js
   - [x] test/language/statements/let/syntax/identifier-let-allowed-as-lefthandside-expression-strict.js
   - [x] test/language/statements/let/syntax/identifier-let-disallowed-as-boundname.js
@@ -10227,7 +10227,7 @@ Sub-category progress
   - [ ] test/language/statements/try/scope-catch-param-lex-open.js
   - [x] test/language/statements/try/scope-catch-param-var-none.js
   - [x] test/language/statements/try/static-init-await-binding-invalid.js
-  - [ ] test/language/statements/try/static-init-await-binding-valid.js
+  - [x] test/language/statements/try/static-init-await-binding-valid.js
   - [x] test/language/statements/try/tco-catch-finally.js
   - [x] test/language/statements/try/tco-catch.js
   - [x] test/language/statements/try/tco-finally.js
@@ -10262,7 +10262,7 @@ Sub-category progress
   - [x] test/language/statements/using/puts-initializer-on-top-of-disposableresourcestack-subsequent-usings.js
   - [x] test/language/statements/using/redeclaration-error-from-within-strict-mode-function-using.js
   - [x] test/language/statements/using/static-init-await-binding-invalid.js
-  - [ ] test/language/statements/using/static-init-await-binding-valid.js
+  - [x] test/language/statements/using/static-init-await-binding-valid.js
   - [x] test/language/statements/using/syntax/block-scope-syntax-using-declarations-mixed-with-without-initializer.js
   - [x] test/language/statements/using/syntax/block-scope-syntax-using-declarations-mixed-without-with-initializer.js
   - [x] test/language/statements/using/syntax/block-scope-syntax-using-declarations-without-initializer.js
@@ -10486,7 +10486,7 @@ Sub-category progress
   - [x] test/language/statements/variable/id-arguments-strict.js
   - [x] test/language/statements/variable/id-eval-strict.js
   - [x] test/language/statements/variable/static-init-await-binding-invalid.js
-  - [ ] test/language/statements/variable/static-init-await-binding-valid.js
+  - [x] test/language/statements/variable/static-init-await-binding-valid.js
   - [ ] test/language/statements/while/S12.6.2_A1.js
   - [x] test/language/statements/while/S12.6.2_A10.js
   - [x] test/language/statements/while/S12.6.2_A11.js
@@ -12892,7 +12892,7 @@ Sub-category progress
   - [x] test/language/expressions/call/S11.2.4_A1.4_T2.js
   - [x] test/language/expressions/call/S11.2.4_A1.4_T3.js
   - [x] test/language/expressions/call/S11.2.4_A1.4_T4.js
-  - [ ] test/language/expressions/call/eval-err-args.js
+  - [x] test/language/expressions/call/eval-err-args.js
   - [x] test/language/expressions/call/eval-first-arg.js
   - [x] test/language/expressions/call/eval-no-args.js
   - [ ] test/language/expressions/call/eval-realm-indirect.js
@@ -12906,24 +12906,24 @@ Sub-category progress
   - [ ] test/language/expressions/call/scope-lex-open.js
   - [x] test/language/expressions/call/scope-var-close.js
   - [ ] test/language/expressions/call/scope-var-open.js
-  - [ ] test/language/expressions/call/spread-err-mult-err-expr-throws.js
-  - [ ] test/language/expressions/call/spread-err-mult-err-iter-get-value.js
-  - [ ] test/language/expressions/call/spread-err-mult-err-itr-get-call.js
-  - [ ] test/language/expressions/call/spread-err-mult-err-itr-get-get.js
-  - [ ] test/language/expressions/call/spread-err-mult-err-itr-step.js
-  - [ ] test/language/expressions/call/spread-err-mult-err-itr-value.js
+  - [x] test/language/expressions/call/spread-err-mult-err-expr-throws.js
+  - [x] test/language/expressions/call/spread-err-mult-err-iter-get-value.js
+  - [x] test/language/expressions/call/spread-err-mult-err-itr-get-call.js
+  - [x] test/language/expressions/call/spread-err-mult-err-itr-get-get.js
+  - [x] test/language/expressions/call/spread-err-mult-err-itr-step.js
+  - [x] test/language/expressions/call/spread-err-mult-err-itr-value.js
   - [x] test/language/expressions/call/spread-err-mult-err-obj-unresolvable.js
   - [x] test/language/expressions/call/spread-err-mult-err-unresolvable.js
-  - [ ] test/language/expressions/call/spread-err-sngl-err-expr-throws.js
-  - [ ] test/language/expressions/call/spread-err-sngl-err-itr-get-call.js
-  - [ ] test/language/expressions/call/spread-err-sngl-err-itr-get-get.js
-  - [ ] test/language/expressions/call/spread-err-sngl-err-itr-get-value.js
-  - [ ] test/language/expressions/call/spread-err-sngl-err-itr-step.js
-  - [ ] test/language/expressions/call/spread-err-sngl-err-itr-value.js
+  - [x] test/language/expressions/call/spread-err-sngl-err-expr-throws.js
+  - [x] test/language/expressions/call/spread-err-sngl-err-itr-get-call.js
+  - [x] test/language/expressions/call/spread-err-sngl-err-itr-get-get.js
+  - [x] test/language/expressions/call/spread-err-sngl-err-itr-get-value.js
+  - [x] test/language/expressions/call/spread-err-sngl-err-itr-step.js
+  - [x] test/language/expressions/call/spread-err-sngl-err-itr-value.js
   - [x] test/language/expressions/call/spread-err-sngl-err-obj-unresolvable.js
   - [x] test/language/expressions/call/spread-err-sngl-err-unresolvable.js
   - [x] test/language/expressions/call/spread-mult-empty.js
-  - [ ] test/language/expressions/call/spread-mult-expr.js
+  - [x] test/language/expressions/call/spread-mult-expr.js
   - [ ] test/language/expressions/call/spread-mult-iter.js
   - [x] test/language/expressions/call/spread-mult-literal.js
   - [x] test/language/expressions/call/spread-mult-obj-ident.js
@@ -12943,7 +12943,7 @@ Sub-category progress
   - [x] test/language/expressions/call/spread-obj-undefined.js
   - [x] test/language/expressions/call/spread-obj-with-overrides.js
   - [x] test/language/expressions/call/spread-sngl-empty.js
-  - [ ] test/language/expressions/call/spread-sngl-expr.js
+  - [x] test/language/expressions/call/spread-sngl-expr.js
   - [ ] test/language/expressions/call/spread-sngl-iter.js
   - [x] test/language/expressions/call/spread-sngl-literal.js
   - [x] test/language/expressions/call/spread-sngl-obj-ident.js
