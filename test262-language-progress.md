@@ -1,4 +1,4 @@
-22681/23668 (95.83%)
+22705/23668 (95.93%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,8 +14,8 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 8949/9337 (95.84%)
-- expressions: 10604/11061 (95.87%)
+- statements: 8958/9337 (95.94%)
+- expressions: 10619/11061 (96.00%)
 - types: 106/113 (93.81%)
 - function-code: 208/217 (95.85%)
 - global-code: 41/42 (97.62%)
@@ -2251,7 +2251,7 @@ Sub-category progress
   - [x] test/language/statements/class/cpn-class-decl-computed-property-name-from-expression-logical-or.js
   - [x] test/language/statements/class/cpn-class-decl-computed-property-name-from-function-declaration.js
   - [x] test/language/statements/class/cpn-class-decl-computed-property-name-from-function-expression.js
-  - [ ] test/language/statements/class/cpn-class-decl-computed-property-name-from-generator-function-declaration.js
+  - [x] test/language/statements/class/cpn-class-decl-computed-property-name-from-generator-function-declaration.js
   - [x] test/language/statements/class/cpn-class-decl-computed-property-name-from-identifier.js
   - [x] test/language/statements/class/cpn-class-decl-computed-property-name-from-integer-e-notational-literal.js
   - [x] test/language/statements/class/cpn-class-decl-computed-property-name-from-integer-separators.js
@@ -2264,13 +2264,13 @@ Sub-category progress
   - [x] test/language/statements/class/cpn-class-decl-computed-property-name-from-yield-expression.js
   - [x] test/language/statements/class/cpn-class-decl-fields-computed-property-name-from-additive-expression-add.js
   - [x] test/language/statements/class/cpn-class-decl-fields-computed-property-name-from-additive-expression-subtract.js
-  - [ ] test/language/statements/class/cpn-class-decl-fields-computed-property-name-from-arrow-function-expression.js
+  - [x] test/language/statements/class/cpn-class-decl-fields-computed-property-name-from-arrow-function-expression.js
   - [x] test/language/statements/class/cpn-class-decl-fields-computed-property-name-from-assignment-expression-assignment.js
   - [ ] test/language/statements/class/cpn-class-decl-fields-computed-property-name-from-assignment-expression-bitwise-or.js
   - [ ] test/language/statements/class/cpn-class-decl-fields-computed-property-name-from-assignment-expression-coalesce.js
   - [ ] test/language/statements/class/cpn-class-decl-fields-computed-property-name-from-assignment-expression-logical-and.js
   - [ ] test/language/statements/class/cpn-class-decl-fields-computed-property-name-from-assignment-expression-logical-or.js
-  - [ ] test/language/statements/class/cpn-class-decl-fields-computed-property-name-from-async-arrow-function-expression.js
+  - [x] test/language/statements/class/cpn-class-decl-fields-computed-property-name-from-async-arrow-function-expression.js
   - [ ] test/language/statements/class/cpn-class-decl-fields-computed-property-name-from-await-expression.js
   - [x] test/language/statements/class/cpn-class-decl-fields-computed-property-name-from-condition-expression-false.js
   - [x] test/language/statements/class/cpn-class-decl-fields-computed-property-name-from-condition-expression-true.js
@@ -2281,8 +2281,8 @@ Sub-category progress
   - [x] test/language/statements/class/cpn-class-decl-fields-computed-property-name-from-expression-logical-and.js
   - [x] test/language/statements/class/cpn-class-decl-fields-computed-property-name-from-expression-logical-or.js
   - [x] test/language/statements/class/cpn-class-decl-fields-computed-property-name-from-function-declaration.js
-  - [ ] test/language/statements/class/cpn-class-decl-fields-computed-property-name-from-function-expression.js
-  - [ ] test/language/statements/class/cpn-class-decl-fields-computed-property-name-from-generator-function-declaration.js
+  - [x] test/language/statements/class/cpn-class-decl-fields-computed-property-name-from-function-expression.js
+  - [x] test/language/statements/class/cpn-class-decl-fields-computed-property-name-from-generator-function-declaration.js
   - [x] test/language/statements/class/cpn-class-decl-fields-computed-property-name-from-identifier.js
   - [x] test/language/statements/class/cpn-class-decl-fields-computed-property-name-from-integer-e-notational-literal.js
   - [x] test/language/statements/class/cpn-class-decl-fields-computed-property-name-from-integer-separators.js
@@ -2295,13 +2295,13 @@ Sub-category progress
   - [x] test/language/statements/class/cpn-class-decl-fields-computed-property-name-from-yield-expression.js
   - [x] test/language/statements/class/cpn-class-decl-fields-methods-computed-property-name-from-additive-expression-add.js
   - [x] test/language/statements/class/cpn-class-decl-fields-methods-computed-property-name-from-additive-expression-subtract.js
-  - [ ] test/language/statements/class/cpn-class-decl-fields-methods-computed-property-name-from-arrow-function-expression.js
+  - [x] test/language/statements/class/cpn-class-decl-fields-methods-computed-property-name-from-arrow-function-expression.js
   - [x] test/language/statements/class/cpn-class-decl-fields-methods-computed-property-name-from-assignment-expression-assignment.js
   - [ ] test/language/statements/class/cpn-class-decl-fields-methods-computed-property-name-from-assignment-expression-bitwise-or.js
   - [x] test/language/statements/class/cpn-class-decl-fields-methods-computed-property-name-from-assignment-expression-coalesce.js
   - [ ] test/language/statements/class/cpn-class-decl-fields-methods-computed-property-name-from-assignment-expression-logical-and.js
   - [ ] test/language/statements/class/cpn-class-decl-fields-methods-computed-property-name-from-assignment-expression-logical-or.js
-  - [ ] test/language/statements/class/cpn-class-decl-fields-methods-computed-property-name-from-async-arrow-function-expression.js
+  - [x] test/language/statements/class/cpn-class-decl-fields-methods-computed-property-name-from-async-arrow-function-expression.js
   - [ ] test/language/statements/class/cpn-class-decl-fields-methods-computed-property-name-from-await-expression.js
   - [x] test/language/statements/class/cpn-class-decl-fields-methods-computed-property-name-from-condition-expression-false.js
   - [x] test/language/statements/class/cpn-class-decl-fields-methods-computed-property-name-from-condition-expression-true.js
@@ -2312,8 +2312,8 @@ Sub-category progress
   - [x] test/language/statements/class/cpn-class-decl-fields-methods-computed-property-name-from-expression-logical-and.js
   - [x] test/language/statements/class/cpn-class-decl-fields-methods-computed-property-name-from-expression-logical-or.js
   - [x] test/language/statements/class/cpn-class-decl-fields-methods-computed-property-name-from-function-declaration.js
-  - [ ] test/language/statements/class/cpn-class-decl-fields-methods-computed-property-name-from-function-expression.js
-  - [ ] test/language/statements/class/cpn-class-decl-fields-methods-computed-property-name-from-generator-function-declaration.js
+  - [x] test/language/statements/class/cpn-class-decl-fields-methods-computed-property-name-from-function-expression.js
+  - [x] test/language/statements/class/cpn-class-decl-fields-methods-computed-property-name-from-generator-function-declaration.js
   - [x] test/language/statements/class/cpn-class-decl-fields-methods-computed-property-name-from-identifier.js
   - [x] test/language/statements/class/cpn-class-decl-fields-methods-computed-property-name-from-integer-e-notational-literal.js
   - [x] test/language/statements/class/cpn-class-decl-fields-methods-computed-property-name-from-integer-separators.js
@@ -13276,13 +13276,13 @@ Sub-category progress
   - [ ] test/language/expressions/class/constructor-this-tdz-during-initializers.js
   - [x] test/language/expressions/class/cpn-class-expr-accessors-computed-property-name-from-additive-expression-add.js
   - [x] test/language/expressions/class/cpn-class-expr-accessors-computed-property-name-from-additive-expression-subtract.js
-  - [ ] test/language/expressions/class/cpn-class-expr-accessors-computed-property-name-from-arrow-function-expression.js
+  - [x] test/language/expressions/class/cpn-class-expr-accessors-computed-property-name-from-arrow-function-expression.js
   - [x] test/language/expressions/class/cpn-class-expr-accessors-computed-property-name-from-assignment-expression-assignment.js
   - [ ] test/language/expressions/class/cpn-class-expr-accessors-computed-property-name-from-assignment-expression-bitwise-or.js
   - [x] test/language/expressions/class/cpn-class-expr-accessors-computed-property-name-from-assignment-expression-coalesce.js
   - [ ] test/language/expressions/class/cpn-class-expr-accessors-computed-property-name-from-assignment-expression-logical-and.js
   - [ ] test/language/expressions/class/cpn-class-expr-accessors-computed-property-name-from-assignment-expression-logical-or.js
-  - [ ] test/language/expressions/class/cpn-class-expr-accessors-computed-property-name-from-async-arrow-function-expression.js
+  - [x] test/language/expressions/class/cpn-class-expr-accessors-computed-property-name-from-async-arrow-function-expression.js
   - [x] test/language/expressions/class/cpn-class-expr-accessors-computed-property-name-from-await-expression.js
   - [x] test/language/expressions/class/cpn-class-expr-accessors-computed-property-name-from-condition-expression-false.js
   - [x] test/language/expressions/class/cpn-class-expr-accessors-computed-property-name-from-condition-expression-true.js
@@ -13293,8 +13293,8 @@ Sub-category progress
   - [x] test/language/expressions/class/cpn-class-expr-accessors-computed-property-name-from-expression-logical-and.js
   - [x] test/language/expressions/class/cpn-class-expr-accessors-computed-property-name-from-expression-logical-or.js
   - [x] test/language/expressions/class/cpn-class-expr-accessors-computed-property-name-from-function-declaration.js
-  - [ ] test/language/expressions/class/cpn-class-expr-accessors-computed-property-name-from-function-expression.js
-  - [ ] test/language/expressions/class/cpn-class-expr-accessors-computed-property-name-from-generator-function-declaration.js
+  - [x] test/language/expressions/class/cpn-class-expr-accessors-computed-property-name-from-function-expression.js
+  - [x] test/language/expressions/class/cpn-class-expr-accessors-computed-property-name-from-generator-function-declaration.js
   - [x] test/language/expressions/class/cpn-class-expr-accessors-computed-property-name-from-identifier.js
   - [x] test/language/expressions/class/cpn-class-expr-accessors-computed-property-name-from-integer-e-notational-literal.js
   - [x] test/language/expressions/class/cpn-class-expr-accessors-computed-property-name-from-integer-separators.js
@@ -13307,13 +13307,13 @@ Sub-category progress
   - [x] test/language/expressions/class/cpn-class-expr-accessors-computed-property-name-from-yield-expression.js
   - [x] test/language/expressions/class/cpn-class-expr-computed-property-name-from-additive-expression-add.js
   - [x] test/language/expressions/class/cpn-class-expr-computed-property-name-from-additive-expression-subtract.js
-  - [ ] test/language/expressions/class/cpn-class-expr-computed-property-name-from-arrow-function-expression.js
+  - [x] test/language/expressions/class/cpn-class-expr-computed-property-name-from-arrow-function-expression.js
   - [x] test/language/expressions/class/cpn-class-expr-computed-property-name-from-assignment-expression-assignment.js
   - [ ] test/language/expressions/class/cpn-class-expr-computed-property-name-from-assignment-expression-bitwise-or.js
   - [x] test/language/expressions/class/cpn-class-expr-computed-property-name-from-assignment-expression-coalesce.js
   - [ ] test/language/expressions/class/cpn-class-expr-computed-property-name-from-assignment-expression-logical-and.js
   - [ ] test/language/expressions/class/cpn-class-expr-computed-property-name-from-assignment-expression-logical-or.js
-  - [ ] test/language/expressions/class/cpn-class-expr-computed-property-name-from-async-arrow-function-expression.js
+  - [x] test/language/expressions/class/cpn-class-expr-computed-property-name-from-async-arrow-function-expression.js
   - [x] test/language/expressions/class/cpn-class-expr-computed-property-name-from-await-expression.js
   - [x] test/language/expressions/class/cpn-class-expr-computed-property-name-from-condition-expression-false.js
   - [x] test/language/expressions/class/cpn-class-expr-computed-property-name-from-condition-expression-true.js
@@ -13324,8 +13324,8 @@ Sub-category progress
   - [x] test/language/expressions/class/cpn-class-expr-computed-property-name-from-expression-logical-and.js
   - [x] test/language/expressions/class/cpn-class-expr-computed-property-name-from-expression-logical-or.js
   - [x] test/language/expressions/class/cpn-class-expr-computed-property-name-from-function-declaration.js
-  - [ ] test/language/expressions/class/cpn-class-expr-computed-property-name-from-function-expression.js
-  - [ ] test/language/expressions/class/cpn-class-expr-computed-property-name-from-generator-function-declaration.js
+  - [x] test/language/expressions/class/cpn-class-expr-computed-property-name-from-function-expression.js
+  - [x] test/language/expressions/class/cpn-class-expr-computed-property-name-from-generator-function-declaration.js
   - [x] test/language/expressions/class/cpn-class-expr-computed-property-name-from-identifier.js
   - [x] test/language/expressions/class/cpn-class-expr-computed-property-name-from-integer-e-notational-literal.js
   - [x] test/language/expressions/class/cpn-class-expr-computed-property-name-from-integer-separators.js
@@ -13338,13 +13338,13 @@ Sub-category progress
   - [x] test/language/expressions/class/cpn-class-expr-computed-property-name-from-yield-expression.js
   - [x] test/language/expressions/class/cpn-class-expr-fields-computed-property-name-from-additive-expression-add.js
   - [x] test/language/expressions/class/cpn-class-expr-fields-computed-property-name-from-additive-expression-subtract.js
-  - [ ] test/language/expressions/class/cpn-class-expr-fields-computed-property-name-from-arrow-function-expression.js
+  - [x] test/language/expressions/class/cpn-class-expr-fields-computed-property-name-from-arrow-function-expression.js
   - [x] test/language/expressions/class/cpn-class-expr-fields-computed-property-name-from-assignment-expression-assignment.js
   - [ ] test/language/expressions/class/cpn-class-expr-fields-computed-property-name-from-assignment-expression-bitwise-or.js
   - [ ] test/language/expressions/class/cpn-class-expr-fields-computed-property-name-from-assignment-expression-coalesce.js
   - [ ] test/language/expressions/class/cpn-class-expr-fields-computed-property-name-from-assignment-expression-logical-and.js
   - [ ] test/language/expressions/class/cpn-class-expr-fields-computed-property-name-from-assignment-expression-logical-or.js
-  - [ ] test/language/expressions/class/cpn-class-expr-fields-computed-property-name-from-async-arrow-function-expression.js
+  - [x] test/language/expressions/class/cpn-class-expr-fields-computed-property-name-from-async-arrow-function-expression.js
   - [ ] test/language/expressions/class/cpn-class-expr-fields-computed-property-name-from-await-expression.js
   - [x] test/language/expressions/class/cpn-class-expr-fields-computed-property-name-from-condition-expression-false.js
   - [x] test/language/expressions/class/cpn-class-expr-fields-computed-property-name-from-condition-expression-true.js
@@ -13355,8 +13355,8 @@ Sub-category progress
   - [x] test/language/expressions/class/cpn-class-expr-fields-computed-property-name-from-expression-logical-and.js
   - [x] test/language/expressions/class/cpn-class-expr-fields-computed-property-name-from-expression-logical-or.js
   - [x] test/language/expressions/class/cpn-class-expr-fields-computed-property-name-from-function-declaration.js
-  - [ ] test/language/expressions/class/cpn-class-expr-fields-computed-property-name-from-function-expression.js
-  - [ ] test/language/expressions/class/cpn-class-expr-fields-computed-property-name-from-generator-function-declaration.js
+  - [x] test/language/expressions/class/cpn-class-expr-fields-computed-property-name-from-function-expression.js
+  - [x] test/language/expressions/class/cpn-class-expr-fields-computed-property-name-from-generator-function-declaration.js
   - [x] test/language/expressions/class/cpn-class-expr-fields-computed-property-name-from-identifier.js
   - [x] test/language/expressions/class/cpn-class-expr-fields-computed-property-name-from-integer-e-notational-literal.js
   - [x] test/language/expressions/class/cpn-class-expr-fields-computed-property-name-from-integer-separators.js
@@ -13369,13 +13369,13 @@ Sub-category progress
   - [x] test/language/expressions/class/cpn-class-expr-fields-computed-property-name-from-yield-expression.js
   - [x] test/language/expressions/class/cpn-class-expr-fields-methods-computed-property-name-from-additive-expression-add.js
   - [x] test/language/expressions/class/cpn-class-expr-fields-methods-computed-property-name-from-additive-expression-subtract.js
-  - [ ] test/language/expressions/class/cpn-class-expr-fields-methods-computed-property-name-from-arrow-function-expression.js
+  - [x] test/language/expressions/class/cpn-class-expr-fields-methods-computed-property-name-from-arrow-function-expression.js
   - [x] test/language/expressions/class/cpn-class-expr-fields-methods-computed-property-name-from-assignment-expression-assignment.js
   - [ ] test/language/expressions/class/cpn-class-expr-fields-methods-computed-property-name-from-assignment-expression-bitwise-or.js
   - [x] test/language/expressions/class/cpn-class-expr-fields-methods-computed-property-name-from-assignment-expression-coalesce.js
   - [ ] test/language/expressions/class/cpn-class-expr-fields-methods-computed-property-name-from-assignment-expression-logical-and.js
   - [ ] test/language/expressions/class/cpn-class-expr-fields-methods-computed-property-name-from-assignment-expression-logical-or.js
-  - [ ] test/language/expressions/class/cpn-class-expr-fields-methods-computed-property-name-from-async-arrow-function-expression.js
+  - [x] test/language/expressions/class/cpn-class-expr-fields-methods-computed-property-name-from-async-arrow-function-expression.js
   - [ ] test/language/expressions/class/cpn-class-expr-fields-methods-computed-property-name-from-await-expression.js
   - [x] test/language/expressions/class/cpn-class-expr-fields-methods-computed-property-name-from-condition-expression-false.js
   - [x] test/language/expressions/class/cpn-class-expr-fields-methods-computed-property-name-from-condition-expression-true.js
@@ -13386,8 +13386,8 @@ Sub-category progress
   - [x] test/language/expressions/class/cpn-class-expr-fields-methods-computed-property-name-from-expression-logical-and.js
   - [x] test/language/expressions/class/cpn-class-expr-fields-methods-computed-property-name-from-expression-logical-or.js
   - [x] test/language/expressions/class/cpn-class-expr-fields-methods-computed-property-name-from-function-declaration.js
-  - [ ] test/language/expressions/class/cpn-class-expr-fields-methods-computed-property-name-from-function-expression.js
-  - [ ] test/language/expressions/class/cpn-class-expr-fields-methods-computed-property-name-from-generator-function-declaration.js
+  - [x] test/language/expressions/class/cpn-class-expr-fields-methods-computed-property-name-from-function-expression.js
+  - [x] test/language/expressions/class/cpn-class-expr-fields-methods-computed-property-name-from-generator-function-declaration.js
   - [x] test/language/expressions/class/cpn-class-expr-fields-methods-computed-property-name-from-identifier.js
   - [x] test/language/expressions/class/cpn-class-expr-fields-methods-computed-property-name-from-integer-e-notational-literal.js
   - [x] test/language/expressions/class/cpn-class-expr-fields-methods-computed-property-name-from-integer-separators.js
@@ -14651,7 +14651,7 @@ Sub-category progress
   - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-rest-ary-rest.js
   - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-rest-id-direct.js
   - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-rest-id-elision-next-err.js
-  - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-rest-id-elision.js
+  - [ ] test/language/expressions/class/dstr/meth-static-ary-ptrn-rest-id-elision.js
   - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-rest-id-exhausted.js
   - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-rest-id-iter-step-err.js
   - [x] test/language/expressions/class/dstr/meth-static-ary-ptrn-rest-id-iter-val-err.js

@@ -156,6 +156,7 @@ test/language/expressions/class/cpn-class-expr-fields-methods-computed-property-
 test/language/expressions/class/cpn-class-expr-fields-methods-computed-property-name-from-function-expression.js
 test/language/expressions/class/cpn-class-expr-fields-methods-computed-property-name-from-generator-function-declaration.js
 test/language/expressions/class/dstr/gen-meth-ary-init-iter-close.js
+test/language/expressions/class/dstr/meth-static-ary-ptrn-rest-id-elision.js
 test/language/expressions/class/dstr/meth-static-dflt-ary-init-iter-close.js
 test/language/expressions/class/dstr/private-meth-static-ary-init-iter-close.js
 test/language/expressions/class/elements/after-same-line-gen-computed-symbol-names.js
