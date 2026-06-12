@@ -1189,6 +1189,21 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         expression: &Expression,
     ) -> DirectResult<()> {
+        self.emit_direct_async_function_call_await_effects_with_protocol(expression, true)
+    }
+
+    fn emit_direct_async_function_call_await_effects_without_protocol(
+        &mut self,
+        expression: &Expression,
+    ) -> DirectResult<()> {
+        self.emit_direct_async_function_call_await_effects_with_protocol(expression, false)
+    }
+
+    fn emit_direct_async_function_call_await_effects_with_protocol(
+        &mut self,
+        expression: &Expression,
+        apply_protocol_effects: bool,
+    ) -> DirectResult<()> {
         let Expression::Call { callee, arguments } = expression else {
             return Ok(());
         };
@@ -1222,10 +1237,17 @@ impl<'a> FunctionCompiler<'a> {
         // A folded for-await protocol loop's observable side effects
         // (pre-throw increments, consumed tracked iterators) must still apply
         // at the call site.
-        if self.lowered_for_await_throw_completion_outcome(&body).is_none()
-            && self.lowered_for_await_protocol_apply_call_effects(&body)?
-        {
-            return Ok(());
+        if self.lowered_for_await_throw_completion_outcome(&body).is_none() {
+            if !apply_protocol_effects
+                && self
+                    .lowered_for_await_protocol_completion_outcome(&body)
+                    .is_some()
+            {
+                return Ok(());
+            }
+            if self.lowered_for_await_protocol_apply_call_effects(&body)? {
+                return Ok(());
+            }
         }
         let Some((terminal_statement, prefix_statements)) = body.split_last() else {
             return Ok(());
@@ -4882,7 +4904,15 @@ impl<'a> FunctionCompiler<'a> {
                 && !static_expression_matches(&bound_value, expression)
             {
                 if let Some(outcome) = self.direct_async_function_call_outcome(&bound_value) {
-                    self.emit_direct_async_function_call_await_effects(&bound_value)?;
+                    // The binding stores an already-evaluated call. Bodies the
+                    // protocol replay folds compile faithfully as the real
+                    // call the store emitted, so re-applying their protocol
+                    // effects here would run non-idempotent effects twice;
+                    // the legacy break-close/throw side-effect paths still
+                    // compensate for their shapes.
+                    self.emit_direct_async_function_call_await_effects_without_protocol(
+                        &bound_value,
+                    )?;
                     return Ok(Some(outcome));
                 }
                 if let Some(outcome) = self.resolve_static_await_resolution_outcome(&bound_value) {

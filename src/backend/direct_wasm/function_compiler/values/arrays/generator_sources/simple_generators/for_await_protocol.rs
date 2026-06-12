@@ -36,6 +36,10 @@ struct ForAwaitProtocolContext {
     /// Names mutated by recorded effects: reads of these from the replay
     /// would observe stale static values, so they bail the fold.
     effect_names: HashSet<String>,
+    /// Executing a lowered catch path: IteratorClose runs with a throw
+    /// completion, whose errors the protocol swallows (the original throw
+    /// wins).
+    throw_completion_close: bool,
     /// Final static indices of tracked iterator bindings consumed by earlier
     /// iterations of the replay.
     committed_updates: HashMap<String, usize>,
@@ -67,14 +71,17 @@ impl<'a> FunctionCompiler<'a> {
         statements: &[Statement],
     ) -> Option<StaticEvalOutcome> {
         let (first, rest) = statements.split_first()?;
-        match self.lowered_for_await_protocol_loop_control_flow(first)?.0 {
+        match self
+            .lowered_for_await_protocol_loop_control_flow_with_trailing(first, rest)?
+            .0
+        {
             ForAwaitProtocolControl::Throw(value) => {
                 Some(StaticEvalOutcome::Throw(StaticThrowValue::Value(value)))
             }
             ForAwaitProtocolControl::Return(value) => Some(StaticEvalOutcome::Value(value)),
-            ForAwaitProtocolControl::Completed => rest
-                .is_empty()
-                .then_some(StaticEvalOutcome::Value(Expression::Undefined)),
+            ForAwaitProtocolControl::Completed => {
+                Some(StaticEvalOutcome::Value(Expression::Undefined))
+            }
         }
     }
 
@@ -87,10 +94,12 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         statements: &[Statement],
     ) -> DirectResult<bool> {
-        let Some((first, _)) = statements.split_first() else {
+        let Some((first, rest)) = statements.split_first() else {
             return Ok(false);
         };
-        let Some((_, effects)) = self.lowered_for_await_protocol_loop_control_flow(first) else {
+        let Some((_, effects)) =
+            self.lowered_for_await_protocol_loop_control_flow_with_trailing(first, rest)
+        else {
             return Ok(false);
         };
         for effect in &effects {
@@ -150,6 +159,14 @@ impl<'a> FunctionCompiler<'a> {
     fn lowered_for_await_protocol_loop_control_flow(
         &self,
         statement: &Statement,
+    ) -> Option<(ForAwaitProtocolControl, Vec<Statement>)> {
+        self.lowered_for_await_protocol_loop_control_flow_with_trailing(statement, &[])
+    }
+
+    fn lowered_for_await_protocol_loop_control_flow_with_trailing(
+        &self,
+        statement: &Statement,
+        trailing: &[Statement],
     ) -> Option<(ForAwaitProtocolControl, Vec<Statement>)> {
         let trace = crate::ayy_env_flag!("AYY_TRACE_FOR_AWAIT_PROTOCOL");
         macro_rules! trace {
@@ -298,10 +315,19 @@ impl<'a> FunctionCompiler<'a> {
             };
         let done_property = Expression::String("done".to_string());
         let value_property = Expression::String("value".to_string());
-        for _ in 0..FOR_AWAIT_PROTOCOL_WHILE_LIMIT {
+        // Values of effect-mutated nonlocals carry across iterations so later
+        // reads (trailing assertions of step/close counters) stay evaluable.
+        let mut effect_bindings: HashMap<String, Expression> = HashMap::new();
+        let mut iterations = 0;
+        let mut final_context = loop {
+            if iterations >= FOR_AWAIT_PROTOCOL_WHILE_LIMIT {
+                return None;
+            }
+            iterations += 1;
             let mut context = ForAwaitProtocolContext::default();
             // Effects recorded by earlier iterations stay observable.
             context.effect_names = std::mem::take(&mut effect_names);
+            context.bindings = std::mem::take(&mut effect_bindings);
             context.committed_updates = iterator_updates
                 .iter()
                 .map(|(name, (index, _))| (name.clone(), *index))
@@ -333,8 +359,7 @@ impl<'a> FunctionCompiler<'a> {
             };
             let done = Self::for_await_protocol_to_boolean(&done)?;
             if done {
-                effects.extend(std::mem::take(&mut context.effects));
-                return Some((ForAwaitProtocolControl::Completed, effects));
+                break context;
             }
             let value = match self.for_await_protocol_member_value(&step, &value_property)? {
                 Ok(value) => value,
@@ -362,30 +387,74 @@ impl<'a> FunctionCompiler<'a> {
             let executed = executed;
             outer_state = context.iterators.remove(iterator_name)?;
             let executed = executed?;
-            effects.extend(std::mem::take(&mut context.effects));
-            effect_names = std::mem::take(&mut context.effect_names);
-            collect_iterator_updates(&context, &mut iterator_updates);
             match executed {
                 ForAwaitProtocolFlow::None => {}
                 ForAwaitProtocolFlow::Break(None) => {
-                    return Some((ForAwaitProtocolControl::Completed, effects));
+                    // The loop shape's break hook closes the still-open outer
+                    // iterator (its observable `return` replays here).
+                    match self.for_await_protocol_close_iterator(&mut outer_state, &mut context)? {
+                        Ok(_) => {}
+                        Err(throw_value) => {
+                            return outer_throw(&mut effects, &mut context, throw_value);
+                        }
+                    }
+                    break context;
                 }
                 ForAwaitProtocolFlow::Break(Some(_)) => return None,
                 ForAwaitProtocolFlow::Return(value) => {
                     if !self.static_iterator_throw_expression_is_portable(&value) {
                         return None;
                     }
+                    effects.extend(std::mem::take(&mut context.effects));
                     return Some((ForAwaitProtocolControl::Return(value), effects));
                 }
                 ForAwaitProtocolFlow::Throw(value) => {
                     if !self.static_iterator_throw_expression_is_portable(&value) {
                         return None;
                     }
+                    effects.extend(std::mem::take(&mut context.effects));
                     return Some((ForAwaitProtocolControl::Throw(value), effects));
                 }
             }
+            effects.extend(std::mem::take(&mut context.effects));
+            effect_names = std::mem::take(&mut context.effect_names);
+            // Carry forward the values of effect-mutated nonlocals.
+            effect_bindings = context
+                .bindings
+                .iter()
+                .filter(|(name, _)| effect_names.contains(*name))
+                .map(|(name, value)| (name.clone(), value.clone()))
+                .collect();
+            collect_iterator_updates(&context, &mut iterator_updates);
+        };
+        // The statements after the loop in the enclosing body execute with
+        // the loop's final replay state.
+        let trailing_flow = if trailing.is_empty() {
+            ForAwaitProtocolFlow::None
+        } else {
+            let flow = self.execute_for_await_protocol_statements(trailing, &mut final_context);
+            if flow.is_none() {
+                trace!("reject trailing-execution");
+            }
+            flow?
+        };
+        effects.extend(std::mem::take(&mut final_context.effects));
+        match trailing_flow {
+            ForAwaitProtocolFlow::None => Some((ForAwaitProtocolControl::Completed, effects)),
+            ForAwaitProtocolFlow::Return(value) => {
+                if !self.static_iterator_throw_expression_is_portable(&value) {
+                    return None;
+                }
+                Some((ForAwaitProtocolControl::Return(value), effects))
+            }
+            ForAwaitProtocolFlow::Throw(value) => {
+                if !self.static_iterator_throw_expression_is_portable(&value) {
+                    return None;
+                }
+                Some((ForAwaitProtocolControl::Throw(value), effects))
+            }
+            ForAwaitProtocolFlow::Break(_) => None,
         }
-        None
     }
 
     /// Resolves a non-array outer `for await` iterable to a replayable
@@ -422,7 +491,7 @@ impl<'a> FunctionCompiler<'a> {
             }
             return Some(state);
         }
-        let (steps, completion_effects, completion_value) = self
+        let resolved = self
             .resolve_simple_generator_iterator_source_kind(source)
             .and_then(|kind| match kind {
                 IteratorSourceKind::SimpleGenerator {
@@ -432,9 +501,49 @@ impl<'a> FunctionCompiler<'a> {
                     ..
                 } => Some((steps, completion_effects, completion_value)),
                 _ => None,
-            })?;
+            });
+        let Some((steps, completion_effects, completion_value)) = resolved else {
+            return self.for_await_protocol_outer_method_iterator_state(source);
+        };
         if !self.for_await_protocol_effects_are_replayable(&completion_effects)
             || !self.for_await_protocol_steps_have_replayable_effects(&steps)
+        {
+            return None;
+        }
+        Some(ForAwaitProtocolIterator::Steps {
+            steps,
+            completion_value,
+            completion_effects,
+            index: 0,
+            binding_name: None,
+            closed: false,
+        })
+    }
+
+    /// Resolves an outer iterable whose `Symbol.asyncIterator` (or
+    /// `Symbol.iterator`) member is an effect-free method returning a
+    /// classifiable iterator object (closes through its observable `return`
+    /// are replayed by the untracked Steps state).
+    fn for_await_protocol_outer_method_iterator_state(
+        &self,
+        source: &Expression,
+    ) -> Option<ForAwaitProtocolIterator> {
+        let method_binding = ["asyncIterator", "iterator"].iter().find_map(|name| {
+            let symbol_member = self.materialize_static_expression(&Expression::Member {
+                object: Box::new(Expression::Identifier("Symbol".to_string())),
+                property: Box::new(Expression::String((*name).to_string())),
+            });
+            self.resolve_member_function_binding(source, &symbol_member)
+        })?;
+        let Ok(iterator_value) =
+            self.for_await_protocol_function_outcome(&method_binding, &[], source)?
+        else {
+            return None;
+        };
+        let (steps, completion_effects, completion_value) =
+            self.resolve_static_iterator_object_simple_generator_source(&iterator_value)?;
+        if !self.for_await_protocol_effects_are_replayable(&completion_effects)
+            || !self.for_await_protocol_steps_have_replayable_effects_with_close(&steps, true)
         {
             return None;
         }
@@ -501,31 +610,47 @@ impl<'a> FunctionCompiler<'a> {
                         }
                         continue;
                     }
-                    let value = match self.evaluate_for_await_protocol_expression(value, context)?
-                    {
-                        Ok(value) => value,
-                        Err(throw_value) => {
-                            return Some(ForAwaitProtocolFlow::Throw(throw_value));
-                        }
-                    };
                     // An assignment to a name with no local declaration in
                     // the replay targets a nonlocal (assignment-pattern
                     // stores like `for await ([x] of ...)`): it must be
                     // re-emitted at the fold site to stay observable.
-                    if matches!(statement, Statement::Assign { .. })
+                    let targets_nonlocal = matches!(statement, Statement::Assign { .. })
                         && !name.starts_with("__ayy_")
-                        && !context.bindings.contains_key(name)
+                        && (!context.bindings.contains_key(name)
+                            || context.effect_names.contains(name));
+                    let evaluated = match self.evaluate_for_await_protocol_expression(value, context)
                     {
-                        if !self.static_iterator_throw_expression_is_portable(&value) {
+                        Some(Ok(value)) => Some(value),
+                        Some(Err(throw_value)) => {
+                            return Some(ForAwaitProtocolFlow::Throw(throw_value));
+                        }
+                        // A nonlocal counter whose initial value is not
+                        // visible here (`count = count + 1` with invalidated
+                        // statics) still replays faithfully as a recorded
+                        // raw assignment; only the symbolic value is lost.
+                        None if targets_nonlocal
+                            && self.static_iterator_throw_expression_is_portable(value) =>
+                        {
+                            None
+                        }
+                        None => return None,
+                    };
+                    if targets_nonlocal {
+                        let recorded = evaluated.clone().unwrap_or_else(|| value.clone());
+                        if !self.static_iterator_throw_expression_is_portable(&recorded) {
                             return None;
                         }
                         context.effects.push(Statement::Assign {
                             name: name.clone(),
-                            value: value.clone(),
+                            value: recorded,
                         });
                         context.effect_names.insert(name.clone());
                     }
-                    context.bindings.insert(name.clone(), value);
+                    if let Some(evaluated) = evaluated {
+                        context.bindings.insert(name.clone(), evaluated);
+                    } else {
+                        context.bindings.remove(name);
+                    }
                 }
                 Statement::If {
                     condition,
@@ -593,13 +718,21 @@ impl<'a> FunctionCompiler<'a> {
                             if let Some(catch_binding) = catch_binding {
                                 context.bindings.insert(catch_binding.clone(), throw_value);
                             }
+                            // IteratorClose inside the catch path runs with a
+                            // throw completion: its own errors are swallowed.
+                            let prior_throw_completion_close = context.throw_completion_close;
+                            context.throw_completion_close = true;
                             let setup_result =
-                                self.execute_for_await_protocol_statements(catch_setup, context)?;
-                            if !matches!(setup_result, ForAwaitProtocolFlow::None) {
-                                return Some(setup_result);
-                            }
-                            let catch_result =
-                                self.execute_for_await_protocol_statements(catch_body, context)?;
+                                self.execute_for_await_protocol_statements(catch_setup, context);
+                            let catch_result = setup_result.map(|setup_result| {
+                                if matches!(setup_result, ForAwaitProtocolFlow::None) {
+                                    self.execute_for_await_protocol_statements(catch_body, context)
+                                } else {
+                                    Some(setup_result)
+                                }
+                            });
+                            context.throw_completion_close = prior_throw_completion_close;
+                            let catch_result = catch_result??;
                             if !matches!(catch_result, ForAwaitProtocolFlow::None) {
                                 return Some(catch_result);
                             }
@@ -1135,15 +1268,34 @@ impl<'a> FunctionCompiler<'a> {
         context: &mut ForAwaitProtocolContext,
     ) -> Option<Result<Expression, Expression>> {
         let return_property = Expression::String("return".to_string());
+        let type_error = || {
+            Expression::New {
+                callee: Box::new(Expression::Identifier("TypeError".to_string())),
+                arguments: Vec::new(),
+            }
+        };
         if let Some(getter_binding) =
             self.resolve_member_getter_binding(close_target, &return_property)
         {
-            return match self.for_await_protocol_function_outcome(
-                &getter_binding,
-                &[],
+            // GetMethod invokes the `return` getter: its effects replay, a
+            // throw propagates, a nullish method value skips the call, and a
+            // non-callable value resolves to the protocol TypeError.
+            let LocalFunctionBinding::User(getter_name) = getter_binding else {
+                return None;
+            };
+            return match self.for_await_protocol_replay_function_body(
+                &getter_name,
                 close_target,
+                context,
             )? {
                 Err(throw_value) => Some(Err(throw_value)),
+                Ok(Expression::Null | Expression::Undefined) => Some(Ok(Expression::Undefined)),
+                Ok(Expression::Number(_)
+                | Expression::BigInt(_)
+                | Expression::String(_)
+                | Expression::Bool(_)
+                | Expression::Object(_)
+                | Expression::Array(_)) => Some(Err(type_error())),
                 Ok(_) => None,
             };
         }
@@ -1152,19 +1304,39 @@ impl<'a> FunctionCompiler<'a> {
         else {
             return None;
         };
-        let function = self.resolve_registered_function_declaration(&function_name)?;
-        let user_function = self.user_function(&function_name)?;
+        match self.for_await_protocol_replay_function_body(&function_name, close_target, context)? {
+            Err(throw_value) => Some(Err(throw_value)),
+            Ok(Expression::Object(_) | Expression::Array(_) | Expression::New { .. }) => {
+                Some(Ok(Expression::Undefined))
+            }
+            Ok(Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined) => Some(Err(type_error())),
+            Ok(_) => None,
+        }
+    }
+
+    /// Symbolically replays an effect-bearing user function body during an
+    /// IteratorClose: nonlocal assignments are recorded as fold-site effects
+    /// (with `this` bound to the close target and a bare `arguments` read
+    /// observing the call's empty arguments list), and the terminal
+    /// `return`/`throw` value is the result.
+    fn for_await_protocol_replay_function_body(
+        &self,
+        function_name: &str,
+        close_target: &Expression,
+        context: &mut ForAwaitProtocolContext,
+    ) -> Option<Result<Expression, Expression>> {
+        let function = self.resolve_registered_function_declaration(function_name)?;
+        let user_function = self.user_function(function_name)?;
         if !user_function.params.is_empty()
             || self.user_function_mentions_direct_eval(user_function)
         {
             return None;
         }
-        let type_error = || {
-            Expression::New {
-                callee: Box::new(Expression::Identifier("TypeError".to_string())),
-                arguments: Vec::new(),
-            }
-        };
         for statement in &function.body {
             match statement {
                 Statement::Assign { name, value } => {
@@ -1218,24 +1390,13 @@ impl<'a> FunctionCompiler<'a> {
                     return Some(Err(value.clone()));
                 }
                 Statement::Return(value) => {
-                    return Some(match value {
-                        Expression::Object(_) | Expression::Array(_) | Expression::New { .. } => {
-                            Ok(Expression::Undefined)
-                        }
-                        Expression::Number(_)
-                        | Expression::BigInt(_)
-                        | Expression::String(_)
-                        | Expression::Bool(_)
-                        | Expression::Null
-                        | Expression::Undefined => Err(type_error()),
-                        _ => return None,
-                    });
+                    return Some(Ok(value.clone()));
                 }
                 _ => return None,
             }
         }
-        // Implicit `return undefined`: not an object, the close throws.
-        Some(Err(type_error()))
+        // Implicit completion: `return undefined`.
+        Some(Ok(Expression::Undefined))
     }
 
     /// Evaluates a nonlocal assignment's value during a `return()` replay to
@@ -1575,6 +1736,13 @@ impl<'a> FunctionCompiler<'a> {
                 let mut state = context.iterators.remove(name)?;
                 let result = self.for_await_protocol_close_iterator(&mut state, context);
                 context.iterators.insert(name.clone(), state);
+                // A close evaluated with a throw completion swallows its own
+                // errors: the original throw wins (its effects still ran).
+                if context.throw_completion_close
+                    && matches!(result, Some(Err(_)))
+                {
+                    return Some(Ok(Expression::Undefined));
+                }
                 result
             }
             Expression::Sequence(expressions) => {
