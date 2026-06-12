@@ -248,6 +248,27 @@ impl<'a> FunctionCompiler<'a> {
         if self.emit_deferred_generator_call_result(user_function, &expanded_arguments)? {
             return Ok(());
         }
+        // Iterator-consuming lowered-pattern parameters replay simple
+        // generator/getter effects only on the inline emission path; the
+        // standalone-call path folds those protocol steps statically without
+        // re-emitting their runtime mutations. When every bound capture slot
+        // aliases the same-named live global (or is a class brand), inline
+        // emission at the call site observes exactly the bindings the closure
+        // would, so prefer the inline path.
+        if enable_static_snapshot
+            && new_target_value == JS_UNDEFINED_TAG
+            && !expanded_arguments
+                .iter()
+                .any(Self::expression_contains_await_for_user_call_runtime)
+            && self.bound_capture_slots_are_inline_lowered_pattern_safe(user_function, capture_slots)
+            && self.emit_inline_lowered_pattern_user_function_with_validated_captures(
+                user_function,
+                &expanded_arguments,
+                this_expression,
+            )?
+        {
+            return Ok(());
+        }
         let (
             prepared_capture_bindings,
             synced_capture_source_bindings,

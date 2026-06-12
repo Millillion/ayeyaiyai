@@ -42,9 +42,219 @@ impl<'a> FunctionCompiler<'a> {
             .user_function_capture_bindings
             .get(&user_function.name)
             .is_none_or(|captures| {
-                captures
-                    .keys()
-                    .all(|name| name == "assert" || name.starts_with("__ayy_class_brand_"))
+                captures.keys().all(|name| {
+                    let safe = name == "assert"
+                        // verifyProperty is dispatched by name at every call
+                        // site (emit_verify_property_call), never through a
+                        // binding, so capturing it cannot change resolution.
+                        || name == "verifyProperty"
+                        || name.starts_with("__ayy_class_brand_")
+                        // Captured user-function bindings (e.g. harness
+                        // helpers) resolve to the same program function at
+                        // any unshadowed call site.
+                        || (self.resolve_current_local_binding(name).is_none()
+                            && (self.user_function(name).is_some()
+                                || self.backend.global_function_binding(name).is_some()
+                                || self
+                                    .resolve_function_binding_from_expression(
+                                        &Expression::Identifier(name.clone())
+                                    )
+                                    .is_some()));
+                    if !safe && crate::ayy_env_flag!("AYY_TRACE_USER_CALLS") {
+                        eprintln!(
+                            "lowered_pattern_inline:capture-unsafe target={} capture={name} local={} user_fn={}",
+                            user_function.name,
+                            self.resolve_current_local_binding(name).is_some(),
+                            self.user_function(name).is_some()
+                        );
+                    }
+                    safe
+                })
+            })
+    }
+
+    /// Bound capture slots are inline-safe when every captured binding either
+    /// is a class brand/assert helper or its resolved slot is the same-named
+    /// live global at the call site, so inline emission reads and writes the
+    /// exact binding the standalone closure call would.
+    pub(in crate::backend::direct_wasm) fn bound_capture_slots_are_inline_lowered_pattern_safe(
+        &self,
+        user_function: &UserFunction,
+        capture_slots: &BTreeMap<String, String>,
+    ) -> bool {
+        let trace_user_calls = crate::ayy_env_flag!("AYY_TRACE_USER_CALLS");
+        self.backend
+            .function_registry
+            .analysis
+            .user_function_capture_bindings
+            .get(&user_function.name)
+            .is_none_or(|captures| {
+                captures.keys().all(|name| {
+                    if name == "assert"
+                        || name == "verifyProperty"
+                        || name.starts_with("__ayy_class_brand_")
+                    {
+                        return true;
+                    }
+                    if self.resolve_current_local_binding(name).is_some() {
+                        if trace_user_calls {
+                            eprintln!(
+                                "bound_capture_inline_safe:reject-local target={} capture={name}",
+                                user_function.name
+                            );
+                        }
+                        return false;
+                    }
+                    // Captured user-function bindings (e.g. harness helpers)
+                    // resolve to the same program function at any call site.
+                    if matches!(
+                        self.resolve_function_binding_from_expression(&Expression::Identifier(
+                            name.clone()
+                        )),
+                        Some(LocalFunctionBinding::User(_))
+                    ) {
+                        return true;
+                    }
+                    let slot_safe = capture_slots.get(name).is_some_and(|slot| {
+                        if slot == name {
+                            return true;
+                        }
+                        // Closure-slot snapshots remember the live binding
+                        // they were taken from; the capture stays inline-safe
+                        // when that source is the same-named binding.
+                        let source = self
+                            .state
+                            .speculation
+                            .static_semantics
+                            .capture_slot_source_bindings
+                            .get(slot)
+                            .cloned()
+                            .unwrap_or_else(|| slot.clone());
+                        self.capture_slot_live_source_binding_name(&source) == *name
+                    }) && self.resolve_global_binding_index(name).is_some();
+                    if !slot_safe && trace_user_calls {
+                        eprintln!(
+                            "bound_capture_inline_safe:reject-slot target={} capture={name} slot={:?} global={}",
+                            user_function.name,
+                            capture_slots.get(name),
+                            self.resolve_global_binding_index(name).is_some()
+                        );
+                    }
+                    slot_safe
+                })
+            })
+    }
+
+    /// Resolves parameter defaults for the lowered-pattern inline path.
+    /// Returns `None` when the defaults cannot be replayed faithfully at the
+    /// call site; otherwise returns the `(parameter, default)` pairs that must
+    /// be bound through prepended `Let` statements so each default evaluates
+    /// exactly once, in order, at function entry.
+    fn lowered_pattern_inline_defaulted_parameter_lets(
+        &self,
+        user_function: &UserFunction,
+        arguments: &[Expression],
+    ) -> Option<Vec<(String, Expression)>> {
+        if !user_function.has_parameter_defaults() {
+            return Some(Vec::new());
+        }
+        let function = self.resolve_registered_function_declaration(&user_function.name)?;
+        let mut defaulted_parameter_lets = Vec::new();
+        for (index, parameter) in function.params.iter().enumerate() {
+            let Some(default) = parameter.default.as_ref() else {
+                continue;
+            };
+            let use_default = match arguments.get(index) {
+                None => true,
+                Some(argument) => {
+                    match self.materialize_static_expression(argument) {
+                        Expression::Undefined => true,
+                        materialized => {
+                            // The default must be skipped only when the
+                            // argument is statically known to not be
+                            // undefined; otherwise the choice is a runtime
+                            // decision this path cannot represent.
+                            let kind = self.infer_value_kind(&materialized);
+                            match kind {
+                                Some(StaticValueKind::Unknown) | None => return None,
+                                Some(StaticValueKind::Undefined) => true,
+                                Some(_) => false,
+                            }
+                        }
+                    }
+                }
+            };
+            if !use_default {
+                continue;
+            }
+            // Only compiler-generated parameter names can be rebound by a
+            // prepended `Let` without colliding with call-site bindings, and
+            // `this` inside a default would resolve to the caller's receiver.
+            if !parameter.name.starts_with("__ayy_param_")
+                || expression_references_this(default)
+                || self.inline_argument_mentions_shadowed_implicit_global(default)
+            {
+                return None;
+            }
+            defaulted_parameter_lets.push((parameter.name.clone(), default.clone()));
+        }
+        Some(defaulted_parameter_lets)
+    }
+
+    /// Every nonlocal binding referenced by the function body (and by any
+    /// user function the body references, transitively) must resolve at the
+    /// call site to the same-named global so inline emission dispatches
+    /// identifier callees and nonlocal reads exactly as the standalone
+    /// closure call would.
+    fn lowered_pattern_inline_nonlocal_references_resolve_at_call_site(
+        &self,
+        function_name: &str,
+        visited: &mut HashSet<String>,
+    ) -> bool {
+        if !visited.insert(function_name.to_string()) {
+            return true;
+        }
+        let Some(function) = self.resolve_registered_function_declaration(function_name) else {
+            return false;
+        };
+        let Some(user_function) = self.user_function(function_name) else {
+            return false;
+        };
+        collect_referenced_binding_names_from_statements(&function.body)
+            .iter()
+            .all(|name| {
+                let source_name = scoped_binding_source_name(name).unwrap_or(name);
+                if source_name == function.name
+                    || user_function
+                        .params
+                        .iter()
+                        .any(|param| param == source_name)
+                    || user_function.scope_bindings.iter().any(|binding| {
+                        scoped_binding_source_name(binding).unwrap_or(binding) == source_name
+                    })
+                {
+                    return true;
+                }
+                let is_nonlocal = self.global_has_binding(source_name)
+                    || self.global_has_implicit_binding(source_name)
+                    || self.user_function(source_name).is_some();
+                if !is_nonlocal {
+                    return true;
+                }
+                if self.resolve_current_local_binding(source_name).is_some()
+                    || self
+                        .resolve_user_function_capture_hidden_name(source_name)
+                        .is_some()
+                {
+                    return false;
+                }
+                if self.user_function(source_name).is_some() {
+                    return self.lowered_pattern_inline_nonlocal_references_resolve_at_call_site(
+                        source_name,
+                        visited,
+                    );
+                }
+                true
             })
     }
 
@@ -434,6 +644,39 @@ impl<'a> FunctionCompiler<'a> {
         arguments: &[Expression],
         this_expression: &Expression,
     ) -> DirectResult<bool> {
+        self.emit_inline_lowered_pattern_user_function_with_arguments_impl(
+            user_function,
+            arguments,
+            this_expression,
+            false,
+        )
+    }
+
+    /// Variant for call sites that have already proven the function's bound
+    /// capture slots alias call-site-visible bindings (see
+    /// `bound_capture_slots_are_inline_lowered_pattern_safe`), bypassing the
+    /// name-based capture safety gate.
+    pub(in crate::backend::direct_wasm) fn emit_inline_lowered_pattern_user_function_with_validated_captures(
+        &mut self,
+        user_function: &UserFunction,
+        arguments: &[Expression],
+        this_expression: &Expression,
+    ) -> DirectResult<bool> {
+        self.emit_inline_lowered_pattern_user_function_with_arguments_impl(
+            user_function,
+            arguments,
+            this_expression,
+            true,
+        )
+    }
+
+    fn emit_inline_lowered_pattern_user_function_with_arguments_impl(
+        &mut self,
+        user_function: &UserFunction,
+        arguments: &[Expression],
+        this_expression: &Expression,
+        captures_validated: bool,
+    ) -> DirectResult<bool> {
         let trace_user_calls = crate::ayy_env_flag!("AYY_TRACE_USER_CALLS");
         let consumes_parameter_iterator = !self
             .user_function_parameter_iterator_consumption_indices(user_function)
@@ -446,15 +689,27 @@ impl<'a> FunctionCompiler<'a> {
                 consumes_parameter_iterator
             );
         }
+        let defaulted_parameter_lets =
+            self.lowered_pattern_inline_defaulted_parameter_lets(user_function, arguments);
+        // Identifier callees and references to captured user functions are
+        // safe to emit inline when every nonlocal name involved resolves at
+        // the call site to the same-named global.
+        let nonlocal_references_resolve = self
+            .lowered_pattern_inline_nonlocal_references_resolve_at_call_site(
+                &user_function.name,
+                &mut HashSet::new(),
+            );
         if !(user_function.has_lowered_pattern_parameters() || consumes_parameter_iterator)
             || user_function.is_async()
             || user_function.is_generator()
-            || user_function.has_parameter_defaults()
+            || defaulted_parameter_lets.is_none()
             || self.user_function_mentions_direct_eval(user_function)
-            || self.user_function_contains_identifier_callee_call(user_function)
+            || (self.user_function_contains_identifier_callee_call(user_function)
+                && !nonlocal_references_resolve)
             || self.user_function_may_read_restricted_function_property(user_function)
-            || !self.lowered_pattern_inline_captures_are_safe(user_function)
-            || self.user_function_references_captured_user_function(user_function)
+            || !(captures_validated || self.lowered_pattern_inline_captures_are_safe(user_function))
+            || (self.user_function_references_captured_user_function(user_function)
+                && !nonlocal_references_resolve)
             || !user_function.extra_argument_indices.is_empty()
             || !self.inline_safe_argument_expression(this_expression)
             || !arguments
@@ -515,7 +770,9 @@ impl<'a> FunctionCompiler<'a> {
             }
             return Ok(false);
         }
-        if self.lowered_pattern_inline_body_references_nonlocal_user_function(&function.body) {
+        if self.lowered_pattern_inline_body_references_nonlocal_user_function(&function.body)
+            && !nonlocal_references_resolve
+        {
             if trace_user_calls {
                 eprintln!(
                     "lowered_pattern_inline:reject-nonlocal-user-function target={}",
@@ -538,8 +795,18 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(false);
         }
 
+        let defaulted_parameter_lets =
+            defaulted_parameter_lets.expect("defaulted parameter lets were validated above");
         let mut bindings = HashMap::new();
         for (index, parameter) in function.params.iter().enumerate() {
+            if defaulted_parameter_lets
+                .iter()
+                .any(|(name, _)| name == &parameter.name)
+            {
+                // Bound through a prepended `Let` so the default expression
+                // evaluates exactly once at function entry.
+                continue;
+            }
             let value = if parameter.rest {
                 Expression::Array(
                     arguments
@@ -557,10 +824,19 @@ impl<'a> FunctionCompiler<'a> {
             };
             bindings.insert(parameter.name.clone(), value);
         }
-        let body = function
-            .body
-            .iter()
-            .map(|statement| self.substitute_statement_bindings(statement, &bindings))
+        let body = defaulted_parameter_lets
+            .into_iter()
+            .map(|(name, default)| Statement::Let {
+                name,
+                mutable: true,
+                value: default,
+            })
+            .chain(
+                function
+                    .body
+                    .iter()
+                    .map(|statement| self.substitute_statement_bindings(statement, &bindings)),
+            )
             .collect::<Vec<_>>();
         if body.iter().any(|statement| {
             self.lowered_pattern_inline_statement_reads_static_member_getter(statement)
