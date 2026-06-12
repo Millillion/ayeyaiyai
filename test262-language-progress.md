@@ -1,4 +1,4 @@
-22046/23668 (93.15%)
+22110/23668 (93.42%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,8 +14,8 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 8513/9337 (91.17%)
-- expressions: 10410/11061 (94.11%)
+- statements: 8515/9337 (91.20%)
+- expressions: 10472/11061 (94.67%)
 - types: 103/113 (91.15%)
 - function-code: 206/217 (94.93%)
 - global-code: 41/42 (97.62%)
@@ -3503,7 +3503,7 @@ Sub-category progress
   - [x] test/language/statements/class/dstr/meth-dflt-ary-ptrn-elem-id-iter-done.js
   - [x] test/language/statements/class/dstr/meth-dflt-ary-ptrn-elem-id-iter-step-err.js
   - [x] test/language/statements/class/dstr/meth-dflt-ary-ptrn-elem-id-iter-val-array-prototype.js
-  - [ ] test/language/statements/class/dstr/meth-dflt-ary-ptrn-elem-id-iter-val-err.js
+  - [x] test/language/statements/class/dstr/meth-dflt-ary-ptrn-elem-id-iter-val-err.js
   - [x] test/language/statements/class/dstr/meth-dflt-ary-ptrn-elem-id-iter-val.js
   - [x] test/language/statements/class/dstr/meth-dflt-ary-ptrn-elem-obj-id-init.js
   - [x] test/language/statements/class/dstr/meth-dflt-ary-ptrn-elem-obj-id.js
@@ -3689,7 +3689,7 @@ Sub-category progress
   - [x] test/language/statements/class/dstr/meth-static-dflt-ary-ptrn-elem-id-iter-done.js
   - [x] test/language/statements/class/dstr/meth-static-dflt-ary-ptrn-elem-id-iter-step-err.js
   - [x] test/language/statements/class/dstr/meth-static-dflt-ary-ptrn-elem-id-iter-val-array-prototype.js
-  - [ ] test/language/statements/class/dstr/meth-static-dflt-ary-ptrn-elem-id-iter-val-err.js
+  - [x] test/language/statements/class/dstr/meth-static-dflt-ary-ptrn-elem-id-iter-val-err.js
   - [x] test/language/statements/class/dstr/meth-static-dflt-ary-ptrn-elem-id-iter-val.js
   - [x] test/language/statements/class/dstr/meth-static-dflt-ary-ptrn-elem-obj-id-init.js
   - [x] test/language/statements/class/dstr/meth-static-dflt-ary-ptrn-elem-obj-id.js
@@ -14507,7 +14507,7 @@ Sub-category progress
   - [x] test/language/expressions/class/dstr/meth-dflt-ary-ptrn-elem-id-iter-done.js
   - [x] test/language/expressions/class/dstr/meth-dflt-ary-ptrn-elem-id-iter-step-err.js
   - [x] test/language/expressions/class/dstr/meth-dflt-ary-ptrn-elem-id-iter-val-array-prototype.js
-  - [ ] test/language/expressions/class/dstr/meth-dflt-ary-ptrn-elem-id-iter-val-err.js
+  - [x] test/language/expressions/class/dstr/meth-dflt-ary-ptrn-elem-id-iter-val-err.js
   - [x] test/language/expressions/class/dstr/meth-dflt-ary-ptrn-elem-id-iter-val.js
   - [x] test/language/expressions/class/dstr/meth-dflt-ary-ptrn-elem-obj-id-init.js
   - [x] test/language/expressions/class/dstr/meth-dflt-ary-ptrn-elem-obj-id.js
@@ -14693,7 +14693,7 @@ Sub-category progress
   - [x] test/language/expressions/class/dstr/meth-static-dflt-ary-ptrn-elem-id-iter-done.js
   - [x] test/language/expressions/class/dstr/meth-static-dflt-ary-ptrn-elem-id-iter-step-err.js
   - [x] test/language/expressions/class/dstr/meth-static-dflt-ary-ptrn-elem-id-iter-val-array-prototype.js
-  - [ ] test/language/expressions/class/dstr/meth-static-dflt-ary-ptrn-elem-id-iter-val-err.js
+  - [x] test/language/expressions/class/dstr/meth-static-dflt-ary-ptrn-elem-id-iter-val-err.js
   - [x] test/language/expressions/class/dstr/meth-static-dflt-ary-ptrn-elem-id-iter-val.js
   - [x] test/language/expressions/class/dstr/meth-static-dflt-ary-ptrn-elem-obj-id-init.js
   - [x] test/language/expressions/class/dstr/meth-static-dflt-ary-ptrn-elem-obj-id.js
@@ -15355,10 +15355,10 @@ Sub-category progress
   - [x] test/language/expressions/class/elements/after-same-line-gen-rs-static-generator-method-privatename-identifier.js
   - [x] test/language/expressions/class/elements/after-same-line-gen-rs-static-method-privatename-identifier-alt.js
   - [x] test/language/expressions/class/elements/after-same-line-gen-rs-static-method-privatename-identifier.js
-  - [ ] test/language/expressions/class/elements/after-same-line-gen-rs-static-privatename-identifier-alt-by-classname.js
+  - [x] test/language/expressions/class/elements/after-same-line-gen-rs-static-privatename-identifier-alt-by-classname.js
   - [x] test/language/expressions/class/elements/after-same-line-gen-rs-static-privatename-identifier-alt.js
-  - [ ] test/language/expressions/class/elements/after-same-line-gen-rs-static-privatename-identifier-by-classname.js
-  - [ ] test/language/expressions/class/elements/after-same-line-gen-rs-static-privatename-identifier-initializer-alt-by-classname.js
+  - [x] test/language/expressions/class/elements/after-same-line-gen-rs-static-privatename-identifier-by-classname.js
+  - [x] test/language/expressions/class/elements/after-same-line-gen-rs-static-privatename-identifier-initializer-alt-by-classname.js
   - [x] test/language/expressions/class/elements/after-same-line-gen-rs-static-privatename-identifier-initializer-alt.js
   - [x] test/language/expressions/class/elements/after-same-line-gen-rs-static-privatename-identifier-initializer.js
   - [x] test/language/expressions/class/elements/after-same-line-gen-rs-static-privatename-identifier.js
@@ -15395,10 +15395,10 @@ Sub-category progress
   - [x] test/language/expressions/class/elements/after-same-line-method-rs-static-generator-method-privatename-identifier.js
   - [x] test/language/expressions/class/elements/after-same-line-method-rs-static-method-privatename-identifier-alt.js
   - [x] test/language/expressions/class/elements/after-same-line-method-rs-static-method-privatename-identifier.js
-  - [ ] test/language/expressions/class/elements/after-same-line-method-rs-static-privatename-identifier-alt-by-classname.js
+  - [x] test/language/expressions/class/elements/after-same-line-method-rs-static-privatename-identifier-alt-by-classname.js
   - [x] test/language/expressions/class/elements/after-same-line-method-rs-static-privatename-identifier-alt.js
-  - [ ] test/language/expressions/class/elements/after-same-line-method-rs-static-privatename-identifier-by-classname.js
-  - [ ] test/language/expressions/class/elements/after-same-line-method-rs-static-privatename-identifier-initializer-alt-by-classname.js
+  - [x] test/language/expressions/class/elements/after-same-line-method-rs-static-privatename-identifier-by-classname.js
+  - [x] test/language/expressions/class/elements/after-same-line-method-rs-static-privatename-identifier-initializer-alt-by-classname.js
   - [x] test/language/expressions/class/elements/after-same-line-method-rs-static-privatename-identifier-initializer-alt.js
   - [x] test/language/expressions/class/elements/after-same-line-method-rs-static-privatename-identifier-initializer.js
   - [x] test/language/expressions/class/elements/after-same-line-method-rs-static-privatename-identifier.js
@@ -15432,13 +15432,13 @@ Sub-category progress
   - [x] test/language/expressions/class/elements/after-same-line-static-async-gen-rs-static-async-method-privatename-identifier-alt.js
   - [x] test/language/expressions/class/elements/after-same-line-static-async-gen-rs-static-async-method-privatename-identifier.js
   - [x] test/language/expressions/class/elements/after-same-line-static-async-gen-rs-static-generator-method-privatename-identifier-alt.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-async-gen-rs-static-generator-method-privatename-identifier.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-async-gen-rs-static-generator-method-privatename-identifier.js
   - [x] test/language/expressions/class/elements/after-same-line-static-async-gen-rs-static-method-privatename-identifier-alt.js
   - [x] test/language/expressions/class/elements/after-same-line-static-async-gen-rs-static-method-privatename-identifier.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-async-gen-rs-static-privatename-identifier-alt-by-classname.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-async-gen-rs-static-privatename-identifier-alt-by-classname.js
   - [x] test/language/expressions/class/elements/after-same-line-static-async-gen-rs-static-privatename-identifier-alt.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-async-gen-rs-static-privatename-identifier-by-classname.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-async-gen-rs-static-privatename-identifier-initializer-alt-by-classname.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-async-gen-rs-static-privatename-identifier-by-classname.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-async-gen-rs-static-privatename-identifier-initializer-alt-by-classname.js
   - [x] test/language/expressions/class/elements/after-same-line-static-async-gen-rs-static-privatename-identifier-initializer-alt.js
   - [x] test/language/expressions/class/elements/after-same-line-static-async-gen-rs-static-privatename-identifier-initializer.js
   - [x] test/language/expressions/class/elements/after-same-line-static-async-gen-rs-static-privatename-identifier.js
@@ -15467,18 +15467,18 @@ Sub-category progress
   - [x] test/language/expressions/class/elements/after-same-line-static-async-method-rs-privatename-identifier-initializer-alt.js
   - [x] test/language/expressions/class/elements/after-same-line-static-async-method-rs-privatename-identifier-initializer.js
   - [x] test/language/expressions/class/elements/after-same-line-static-async-method-rs-privatename-identifier.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-async-method-rs-static-async-generator-method-privatename-identifier-alt.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-async-method-rs-static-async-generator-method-privatename-identifier.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-async-method-rs-static-async-generator-method-privatename-identifier-alt.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-async-method-rs-static-async-generator-method-privatename-identifier.js
   - [x] test/language/expressions/class/elements/after-same-line-static-async-method-rs-static-async-method-privatename-identifier-alt.js
   - [x] test/language/expressions/class/elements/after-same-line-static-async-method-rs-static-async-method-privatename-identifier.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-async-method-rs-static-generator-method-privatename-identifier-alt.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-async-method-rs-static-generator-method-privatename-identifier.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-async-method-rs-static-generator-method-privatename-identifier-alt.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-async-method-rs-static-generator-method-privatename-identifier.js
   - [x] test/language/expressions/class/elements/after-same-line-static-async-method-rs-static-method-privatename-identifier-alt.js
   - [x] test/language/expressions/class/elements/after-same-line-static-async-method-rs-static-method-privatename-identifier.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-async-method-rs-static-privatename-identifier-alt-by-classname.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-async-method-rs-static-privatename-identifier-alt-by-classname.js
   - [x] test/language/expressions/class/elements/after-same-line-static-async-method-rs-static-privatename-identifier-alt.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-async-method-rs-static-privatename-identifier-by-classname.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-async-method-rs-static-privatename-identifier-initializer-alt-by-classname.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-async-method-rs-static-privatename-identifier-by-classname.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-async-method-rs-static-privatename-identifier-initializer-alt-by-classname.js
   - [x] test/language/expressions/class/elements/after-same-line-static-async-method-rs-static-privatename-identifier-initializer-alt.js
   - [x] test/language/expressions/class/elements/after-same-line-static-async-method-rs-static-privatename-identifier-initializer.js
   - [x] test/language/expressions/class/elements/after-same-line-static-async-method-rs-static-privatename-identifier.js
@@ -15515,10 +15515,10 @@ Sub-category progress
   - [x] test/language/expressions/class/elements/after-same-line-static-gen-rs-static-generator-method-privatename-identifier.js
   - [x] test/language/expressions/class/elements/after-same-line-static-gen-rs-static-method-privatename-identifier-alt.js
   - [x] test/language/expressions/class/elements/after-same-line-static-gen-rs-static-method-privatename-identifier.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-gen-rs-static-privatename-identifier-alt-by-classname.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-gen-rs-static-privatename-identifier-alt-by-classname.js
   - [x] test/language/expressions/class/elements/after-same-line-static-gen-rs-static-privatename-identifier-alt.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-gen-rs-static-privatename-identifier-by-classname.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-gen-rs-static-privatename-identifier-initializer-alt-by-classname.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-gen-rs-static-privatename-identifier-by-classname.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-gen-rs-static-privatename-identifier-initializer-alt-by-classname.js
   - [x] test/language/expressions/class/elements/after-same-line-static-gen-rs-static-privatename-identifier-initializer-alt.js
   - [x] test/language/expressions/class/elements/after-same-line-static-gen-rs-static-privatename-identifier-initializer.js
   - [x] test/language/expressions/class/elements/after-same-line-static-gen-rs-static-privatename-identifier.js
@@ -15555,10 +15555,10 @@ Sub-category progress
   - [x] test/language/expressions/class/elements/after-same-line-static-method-rs-static-generator-method-privatename-identifier.js
   - [x] test/language/expressions/class/elements/after-same-line-static-method-rs-static-method-privatename-identifier-alt.js
   - [x] test/language/expressions/class/elements/after-same-line-static-method-rs-static-method-privatename-identifier.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-method-rs-static-privatename-identifier-alt-by-classname.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-method-rs-static-privatename-identifier-alt-by-classname.js
   - [x] test/language/expressions/class/elements/after-same-line-static-method-rs-static-privatename-identifier-alt.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-method-rs-static-privatename-identifier-by-classname.js
-  - [ ] test/language/expressions/class/elements/after-same-line-static-method-rs-static-privatename-identifier-initializer-alt-by-classname.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-method-rs-static-privatename-identifier-by-classname.js
+  - [x] test/language/expressions/class/elements/after-same-line-static-method-rs-static-privatename-identifier-initializer-alt-by-classname.js
   - [x] test/language/expressions/class/elements/after-same-line-static-method-rs-static-privatename-identifier-initializer-alt.js
   - [x] test/language/expressions/class/elements/after-same-line-static-method-rs-static-privatename-identifier-initializer.js
   - [x] test/language/expressions/class/elements/after-same-line-static-method-rs-static-privatename-identifier.js
@@ -15885,10 +15885,10 @@ Sub-category progress
   - [x] test/language/expressions/class/elements/multiple-definitions-rs-static-generator-method-privatename-identifier.js
   - [x] test/language/expressions/class/elements/multiple-definitions-rs-static-method-privatename-identifier-alt.js
   - [x] test/language/expressions/class/elements/multiple-definitions-rs-static-method-privatename-identifier.js
-  - [ ] test/language/expressions/class/elements/multiple-definitions-rs-static-privatename-identifier-alt-by-classname.js
+  - [x] test/language/expressions/class/elements/multiple-definitions-rs-static-privatename-identifier-alt-by-classname.js
   - [x] test/language/expressions/class/elements/multiple-definitions-rs-static-privatename-identifier-alt.js
-  - [ ] test/language/expressions/class/elements/multiple-definitions-rs-static-privatename-identifier-by-classname.js
-  - [ ] test/language/expressions/class/elements/multiple-definitions-rs-static-privatename-identifier-initializer-alt-by-classname.js
+  - [x] test/language/expressions/class/elements/multiple-definitions-rs-static-privatename-identifier-by-classname.js
+  - [x] test/language/expressions/class/elements/multiple-definitions-rs-static-privatename-identifier-initializer-alt-by-classname.js
   - [x] test/language/expressions/class/elements/multiple-definitions-rs-static-privatename-identifier-initializer-alt.js
   - [x] test/language/expressions/class/elements/multiple-definitions-rs-static-privatename-identifier-initializer.js
   - [x] test/language/expressions/class/elements/multiple-definitions-rs-static-privatename-identifier.js
@@ -15925,10 +15925,10 @@ Sub-category progress
   - [x] test/language/expressions/class/elements/multiple-stacked-definitions-rs-static-generator-method-privatename-identifier.js
   - [x] test/language/expressions/class/elements/multiple-stacked-definitions-rs-static-method-privatename-identifier-alt.js
   - [x] test/language/expressions/class/elements/multiple-stacked-definitions-rs-static-method-privatename-identifier.js
-  - [ ] test/language/expressions/class/elements/multiple-stacked-definitions-rs-static-privatename-identifier-alt-by-classname.js
+  - [x] test/language/expressions/class/elements/multiple-stacked-definitions-rs-static-privatename-identifier-alt-by-classname.js
   - [x] test/language/expressions/class/elements/multiple-stacked-definitions-rs-static-privatename-identifier-alt.js
-  - [ ] test/language/expressions/class/elements/multiple-stacked-definitions-rs-static-privatename-identifier-by-classname.js
-  - [ ] test/language/expressions/class/elements/multiple-stacked-definitions-rs-static-privatename-identifier-initializer-alt-by-classname.js
+  - [x] test/language/expressions/class/elements/multiple-stacked-definitions-rs-static-privatename-identifier-by-classname.js
+  - [x] test/language/expressions/class/elements/multiple-stacked-definitions-rs-static-privatename-identifier-initializer-alt-by-classname.js
   - [x] test/language/expressions/class/elements/multiple-stacked-definitions-rs-static-privatename-identifier-initializer-alt.js
   - [x] test/language/expressions/class/elements/multiple-stacked-definitions-rs-static-privatename-identifier-initializer.js
   - [x] test/language/expressions/class/elements/multiple-stacked-definitions-rs-static-privatename-identifier.js
@@ -16023,10 +16023,10 @@ Sub-category progress
   - [x] test/language/expressions/class/elements/new-no-sc-line-method-rs-static-generator-method-privatename-identifier.js
   - [x] test/language/expressions/class/elements/new-no-sc-line-method-rs-static-method-privatename-identifier-alt.js
   - [x] test/language/expressions/class/elements/new-no-sc-line-method-rs-static-method-privatename-identifier.js
-  - [ ] test/language/expressions/class/elements/new-no-sc-line-method-rs-static-privatename-identifier-alt-by-classname.js
+  - [x] test/language/expressions/class/elements/new-no-sc-line-method-rs-static-privatename-identifier-alt-by-classname.js
   - [x] test/language/expressions/class/elements/new-no-sc-line-method-rs-static-privatename-identifier-alt.js
-  - [ ] test/language/expressions/class/elements/new-no-sc-line-method-rs-static-privatename-identifier-by-classname.js
-  - [ ] test/language/expressions/class/elements/new-no-sc-line-method-rs-static-privatename-identifier-initializer-alt-by-classname.js
+  - [x] test/language/expressions/class/elements/new-no-sc-line-method-rs-static-privatename-identifier-by-classname.js
+  - [x] test/language/expressions/class/elements/new-no-sc-line-method-rs-static-privatename-identifier-initializer-alt-by-classname.js
   - [x] test/language/expressions/class/elements/new-no-sc-line-method-rs-static-privatename-identifier-initializer-alt.js
   - [x] test/language/expressions/class/elements/new-no-sc-line-method-rs-static-privatename-identifier-initializer.js
   - [x] test/language/expressions/class/elements/new-no-sc-line-method-rs-static-privatename-identifier.js
@@ -16063,10 +16063,10 @@ Sub-category progress
   - [x] test/language/expressions/class/elements/new-sc-line-gen-rs-static-generator-method-privatename-identifier.js
   - [x] test/language/expressions/class/elements/new-sc-line-gen-rs-static-method-privatename-identifier-alt.js
   - [x] test/language/expressions/class/elements/new-sc-line-gen-rs-static-method-privatename-identifier.js
-  - [ ] test/language/expressions/class/elements/new-sc-line-gen-rs-static-privatename-identifier-alt-by-classname.js
+  - [x] test/language/expressions/class/elements/new-sc-line-gen-rs-static-privatename-identifier-alt-by-classname.js
   - [x] test/language/expressions/class/elements/new-sc-line-gen-rs-static-privatename-identifier-alt.js
-  - [ ] test/language/expressions/class/elements/new-sc-line-gen-rs-static-privatename-identifier-by-classname.js
-  - [ ] test/language/expressions/class/elements/new-sc-line-gen-rs-static-privatename-identifier-initializer-alt-by-classname.js
+  - [x] test/language/expressions/class/elements/new-sc-line-gen-rs-static-privatename-identifier-by-classname.js
+  - [x] test/language/expressions/class/elements/new-sc-line-gen-rs-static-privatename-identifier-initializer-alt-by-classname.js
   - [x] test/language/expressions/class/elements/new-sc-line-gen-rs-static-privatename-identifier-initializer-alt.js
   - [x] test/language/expressions/class/elements/new-sc-line-gen-rs-static-privatename-identifier-initializer.js
   - [x] test/language/expressions/class/elements/new-sc-line-gen-rs-static-privatename-identifier.js
@@ -16103,10 +16103,10 @@ Sub-category progress
   - [x] test/language/expressions/class/elements/new-sc-line-method-rs-static-generator-method-privatename-identifier.js
   - [x] test/language/expressions/class/elements/new-sc-line-method-rs-static-method-privatename-identifier-alt.js
   - [x] test/language/expressions/class/elements/new-sc-line-method-rs-static-method-privatename-identifier.js
-  - [ ] test/language/expressions/class/elements/new-sc-line-method-rs-static-privatename-identifier-alt-by-classname.js
+  - [x] test/language/expressions/class/elements/new-sc-line-method-rs-static-privatename-identifier-alt-by-classname.js
   - [x] test/language/expressions/class/elements/new-sc-line-method-rs-static-privatename-identifier-alt.js
-  - [ ] test/language/expressions/class/elements/new-sc-line-method-rs-static-privatename-identifier-by-classname.js
-  - [ ] test/language/expressions/class/elements/new-sc-line-method-rs-static-privatename-identifier-initializer-alt-by-classname.js
+  - [x] test/language/expressions/class/elements/new-sc-line-method-rs-static-privatename-identifier-by-classname.js
+  - [x] test/language/expressions/class/elements/new-sc-line-method-rs-static-privatename-identifier-initializer-alt-by-classname.js
   - [x] test/language/expressions/class/elements/new-sc-line-method-rs-static-privatename-identifier-initializer-alt.js
   - [x] test/language/expressions/class/elements/new-sc-line-method-rs-static-privatename-identifier-initializer.js
   - [x] test/language/expressions/class/elements/new-sc-line-method-rs-static-privatename-identifier.js
@@ -16253,10 +16253,10 @@ Sub-category progress
   - [x] test/language/expressions/class/elements/regular-definitions-rs-static-generator-method-privatename-identifier.js
   - [x] test/language/expressions/class/elements/regular-definitions-rs-static-method-privatename-identifier-alt.js
   - [x] test/language/expressions/class/elements/regular-definitions-rs-static-method-privatename-identifier.js
-  - [ ] test/language/expressions/class/elements/regular-definitions-rs-static-privatename-identifier-alt-by-classname.js
+  - [x] test/language/expressions/class/elements/regular-definitions-rs-static-privatename-identifier-alt-by-classname.js
   - [x] test/language/expressions/class/elements/regular-definitions-rs-static-privatename-identifier-alt.js
-  - [ ] test/language/expressions/class/elements/regular-definitions-rs-static-privatename-identifier-by-classname.js
-  - [ ] test/language/expressions/class/elements/regular-definitions-rs-static-privatename-identifier-initializer-alt-by-classname.js
+  - [x] test/language/expressions/class/elements/regular-definitions-rs-static-privatename-identifier-by-classname.js
+  - [x] test/language/expressions/class/elements/regular-definitions-rs-static-privatename-identifier-initializer-alt-by-classname.js
   - [x] test/language/expressions/class/elements/regular-definitions-rs-static-privatename-identifier-initializer-alt.js
   - [x] test/language/expressions/class/elements/regular-definitions-rs-static-privatename-identifier-initializer.js
   - [x] test/language/expressions/class/elements/regular-definitions-rs-static-privatename-identifier.js
@@ -16285,18 +16285,18 @@ Sub-category progress
   - [x] test/language/expressions/class/elements/same-line-async-gen-rs-privatename-identifier-initializer-alt.js
   - [x] test/language/expressions/class/elements/same-line-async-gen-rs-privatename-identifier-initializer.js
   - [x] test/language/expressions/class/elements/same-line-async-gen-rs-privatename-identifier.js
-  - [ ] test/language/expressions/class/elements/same-line-async-gen-rs-static-async-generator-method-privatename-identifier-alt.js
-  - [ ] test/language/expressions/class/elements/same-line-async-gen-rs-static-async-generator-method-privatename-identifier.js
+  - [x] test/language/expressions/class/elements/same-line-async-gen-rs-static-async-generator-method-privatename-identifier-alt.js
+  - [x] test/language/expressions/class/elements/same-line-async-gen-rs-static-async-generator-method-privatename-identifier.js
   - [x] test/language/expressions/class/elements/same-line-async-gen-rs-static-async-method-privatename-identifier-alt.js
   - [x] test/language/expressions/class/elements/same-line-async-gen-rs-static-async-method-privatename-identifier.js
-  - [ ] test/language/expressions/class/elements/same-line-async-gen-rs-static-generator-method-privatename-identifier-alt.js
-  - [ ] test/language/expressions/class/elements/same-line-async-gen-rs-static-generator-method-privatename-identifier.js
+  - [x] test/language/expressions/class/elements/same-line-async-gen-rs-static-generator-method-privatename-identifier-alt.js
+  - [x] test/language/expressions/class/elements/same-line-async-gen-rs-static-generator-method-privatename-identifier.js
   - [x] test/language/expressions/class/elements/same-line-async-gen-rs-static-method-privatename-identifier-alt.js
   - [x] test/language/expressions/class/elements/same-line-async-gen-rs-static-method-privatename-identifier.js
   - [x] test/language/expressions/class/elements/same-line-async-gen-rs-static-privatename-identifier-alt-by-classname.js
   - [x] test/language/expressions/class/elements/same-line-async-gen-rs-static-privatename-identifier-alt.js
   - [x] test/language/expressions/class/elements/same-line-async-gen-rs-static-privatename-identifier-by-classname.js
-  - [ ] test/language/expressions/class/elements/same-line-async-gen-rs-static-privatename-identifier-initializer-alt-by-classname.js
+  - [x] test/language/expressions/class/elements/same-line-async-gen-rs-static-privatename-identifier-initializer-alt-by-classname.js
   - [x] test/language/expressions/class/elements/same-line-async-gen-rs-static-privatename-identifier-initializer-alt.js
   - [x] test/language/expressions/class/elements/same-line-async-gen-rs-static-privatename-identifier-initializer.js
   - [x] test/language/expressions/class/elements/same-line-async-gen-rs-static-privatename-identifier.js
@@ -16325,18 +16325,18 @@ Sub-category progress
   - [x] test/language/expressions/class/elements/same-line-async-method-rs-privatename-identifier-initializer-alt.js
   - [x] test/language/expressions/class/elements/same-line-async-method-rs-privatename-identifier-initializer.js
   - [x] test/language/expressions/class/elements/same-line-async-method-rs-privatename-identifier.js
-  - [ ] test/language/expressions/class/elements/same-line-async-method-rs-static-async-generator-method-privatename-identifier-alt.js
-  - [ ] test/language/expressions/class/elements/same-line-async-method-rs-static-async-generator-method-privatename-identifier.js
+  - [x] test/language/expressions/class/elements/same-line-async-method-rs-static-async-generator-method-privatename-identifier-alt.js
+  - [x] test/language/expressions/class/elements/same-line-async-method-rs-static-async-generator-method-privatename-identifier.js
   - [x] test/language/expressions/class/elements/same-line-async-method-rs-static-async-method-privatename-identifier-alt.js
   - [x] test/language/expressions/class/elements/same-line-async-method-rs-static-async-method-privatename-identifier.js
-  - [ ] test/language/expressions/class/elements/same-line-async-method-rs-static-generator-method-privatename-identifier-alt.js
-  - [ ] test/language/expressions/class/elements/same-line-async-method-rs-static-generator-method-privatename-identifier.js
+  - [x] test/language/expressions/class/elements/same-line-async-method-rs-static-generator-method-privatename-identifier-alt.js
+  - [x] test/language/expressions/class/elements/same-line-async-method-rs-static-generator-method-privatename-identifier.js
   - [x] test/language/expressions/class/elements/same-line-async-method-rs-static-method-privatename-identifier-alt.js
   - [x] test/language/expressions/class/elements/same-line-async-method-rs-static-method-privatename-identifier.js
   - [x] test/language/expressions/class/elements/same-line-async-method-rs-static-privatename-identifier-alt-by-classname.js
   - [x] test/language/expressions/class/elements/same-line-async-method-rs-static-privatename-identifier-alt.js
   - [x] test/language/expressions/class/elements/same-line-async-method-rs-static-privatename-identifier-by-classname.js
-  - [ ] test/language/expressions/class/elements/same-line-async-method-rs-static-privatename-identifier-initializer-alt-by-classname.js
+  - [x] test/language/expressions/class/elements/same-line-async-method-rs-static-privatename-identifier-initializer-alt-by-classname.js
   - [x] test/language/expressions/class/elements/same-line-async-method-rs-static-privatename-identifier-initializer-alt.js
   - [x] test/language/expressions/class/elements/same-line-async-method-rs-static-privatename-identifier-initializer.js
   - [x] test/language/expressions/class/elements/same-line-async-method-rs-static-privatename-identifier.js
@@ -16373,10 +16373,10 @@ Sub-category progress
   - [x] test/language/expressions/class/elements/same-line-gen-rs-static-generator-method-privatename-identifier.js
   - [x] test/language/expressions/class/elements/same-line-gen-rs-static-method-privatename-identifier-alt.js
   - [x] test/language/expressions/class/elements/same-line-gen-rs-static-method-privatename-identifier.js
-  - [ ] test/language/expressions/class/elements/same-line-gen-rs-static-privatename-identifier-alt-by-classname.js
+  - [x] test/language/expressions/class/elements/same-line-gen-rs-static-privatename-identifier-alt-by-classname.js
   - [x] test/language/expressions/class/elements/same-line-gen-rs-static-privatename-identifier-alt.js
-  - [ ] test/language/expressions/class/elements/same-line-gen-rs-static-privatename-identifier-by-classname.js
-  - [ ] test/language/expressions/class/elements/same-line-gen-rs-static-privatename-identifier-initializer-alt-by-classname.js
+  - [x] test/language/expressions/class/elements/same-line-gen-rs-static-privatename-identifier-by-classname.js
+  - [x] test/language/expressions/class/elements/same-line-gen-rs-static-privatename-identifier-initializer-alt-by-classname.js
   - [x] test/language/expressions/class/elements/same-line-gen-rs-static-privatename-identifier-initializer-alt.js
   - [x] test/language/expressions/class/elements/same-line-gen-rs-static-privatename-identifier-initializer.js
   - [x] test/language/expressions/class/elements/same-line-gen-rs-static-privatename-identifier.js
@@ -16413,10 +16413,10 @@ Sub-category progress
   - [x] test/language/expressions/class/elements/same-line-method-rs-static-generator-method-privatename-identifier.js
   - [x] test/language/expressions/class/elements/same-line-method-rs-static-method-privatename-identifier-alt.js
   - [x] test/language/expressions/class/elements/same-line-method-rs-static-method-privatename-identifier.js
-  - [ ] test/language/expressions/class/elements/same-line-method-rs-static-privatename-identifier-alt-by-classname.js
+  - [x] test/language/expressions/class/elements/same-line-method-rs-static-privatename-identifier-alt-by-classname.js
   - [x] test/language/expressions/class/elements/same-line-method-rs-static-privatename-identifier-alt.js
-  - [ ] test/language/expressions/class/elements/same-line-method-rs-static-privatename-identifier-by-classname.js
-  - [ ] test/language/expressions/class/elements/same-line-method-rs-static-privatename-identifier-initializer-alt-by-classname.js
+  - [x] test/language/expressions/class/elements/same-line-method-rs-static-privatename-identifier-by-classname.js
+  - [x] test/language/expressions/class/elements/same-line-method-rs-static-privatename-identifier-initializer-alt-by-classname.js
   - [x] test/language/expressions/class/elements/same-line-method-rs-static-privatename-identifier-initializer-alt.js
   - [x] test/language/expressions/class/elements/same-line-method-rs-static-privatename-identifier-initializer.js
   - [x] test/language/expressions/class/elements/same-line-method-rs-static-privatename-identifier.js
@@ -16743,10 +16743,10 @@ Sub-category progress
   - [x] test/language/expressions/class/elements/wrapped-in-sc-rs-static-generator-method-privatename-identifier.js
   - [x] test/language/expressions/class/elements/wrapped-in-sc-rs-static-method-privatename-identifier-alt.js
   - [x] test/language/expressions/class/elements/wrapped-in-sc-rs-static-method-privatename-identifier.js
-  - [ ] test/language/expressions/class/elements/wrapped-in-sc-rs-static-privatename-identifier-alt-by-classname.js
+  - [x] test/language/expressions/class/elements/wrapped-in-sc-rs-static-privatename-identifier-alt-by-classname.js
   - [x] test/language/expressions/class/elements/wrapped-in-sc-rs-static-privatename-identifier-alt.js
-  - [ ] test/language/expressions/class/elements/wrapped-in-sc-rs-static-privatename-identifier-by-classname.js
-  - [ ] test/language/expressions/class/elements/wrapped-in-sc-rs-static-privatename-identifier-initializer-alt-by-classname.js
+  - [x] test/language/expressions/class/elements/wrapped-in-sc-rs-static-privatename-identifier-by-classname.js
+  - [x] test/language/expressions/class/elements/wrapped-in-sc-rs-static-privatename-identifier-initializer-alt-by-classname.js
   - [x] test/language/expressions/class/elements/wrapped-in-sc-rs-static-privatename-identifier-initializer-alt.js
   - [x] test/language/expressions/class/elements/wrapped-in-sc-rs-static-privatename-identifier-initializer.js
   - [x] test/language/expressions/class/elements/wrapped-in-sc-rs-static-privatename-identifier.js
