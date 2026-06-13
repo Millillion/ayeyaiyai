@@ -1866,6 +1866,26 @@ impl<'a> FunctionCompiler<'a> {
         Some(completion)
     }
 
+    fn static_eval_completion_reads_program_mutation(
+        &self,
+        program: &Program,
+        completion: &Expression,
+    ) -> bool {
+        let mut mutated_names = collect_eval_var_names(program);
+        for statement in &program.statements {
+            collect_assigned_binding_names_from_statement(statement, &mut mutated_names);
+        }
+        if mutated_names.is_empty() {
+            return false;
+        }
+
+        let mut referenced_names = HashSet::new();
+        collect_referenced_binding_names_from_expression(completion, &mut referenced_names);
+        referenced_names
+            .iter()
+            .any(|name| mutated_names.contains(name))
+    }
+
     fn static_eval_expression_reads_current_local_binding(&self, expression: &Expression) -> bool {
         match expression {
             Expression::Identifier(name) | Expression::Update { name, .. } => {
@@ -1976,9 +1996,18 @@ impl<'a> FunctionCompiler<'a> {
                 if crate::ayy_env_flag!("AYY_TRACE_EVAL_COMPLETION") {
                     eprintln!("eval_completion:static_direct completion={completion:?}");
                 }
-                completion.map(|completion| {
-                    StaticEvalOutcome::Value(completion.unwrap_or(Expression::Undefined))
-                })
+                let completion = completion?;
+                if let Some(completion_expression) = completion.as_ref()
+                    && self.static_eval_completion_reads_program_mutation(
+                        &program,
+                        completion_expression,
+                    )
+                {
+                    return None;
+                }
+                Some(StaticEvalOutcome::Value(
+                    completion.unwrap_or(Expression::Undefined),
+                ))
             }
             Ok(None) => None,
             Err(error) => Some(StaticEvalOutcome::Throw(error)),
@@ -1998,6 +2027,9 @@ impl<'a> FunctionCompiler<'a> {
                 let completion = self
                     .resolve_static_eval_statement_list_completion_expression(&program.statements)?
                     .unwrap_or(Expression::Undefined);
+                if self.static_eval_completion_reads_program_mutation(&program, &completion) {
+                    return None;
+                }
                 if self.static_eval_expression_reads_current_local_binding(&completion) {
                     return None;
                 }

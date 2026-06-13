@@ -7,7 +7,12 @@ impl<'a> FunctionCompiler<'a> {
     ) -> DirectResult<()> {
         let expression_has_runtime_array_base =
             self.expression_has_direct_runtime_array_state_base(expression);
+        let expression_has_implicit_global_binding = matches!(
+            expression,
+            Expression::Identifier(name) if self.implicit_global_binding(name).is_some()
+        );
         if !expression_has_runtime_array_base
+            && !expression_has_implicit_global_binding
             && let Some(text) = self
                 .infer_typeof_operand_kind(expression)
                 .and_then(StaticValueKind::as_typeof_str)

@@ -1,4 +1,4 @@
-22853/23668 (96.56%)
+22854/23668 (96.56%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -15,7 +15,7 @@ Sub-category progress
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
 - statements: 9002/9337 (96.41%)
-- expressions: 10697/11061 (96.71%)
+- expressions: 10698/11061 (96.72%)
 - types: 113/113 (100.00%)
 - function-code: 217/217 (100.00%)
 - global-code: 42/42 (100.00%)
@@ -21617,7 +21617,7 @@ Sub-category progress
   - [x] test/language/expressions/typeof/proxy.js
   - [x] test/language/expressions/typeof/string.js
   - [x] test/language/expressions/typeof/symbol.js
-  - [ ] test/language/expressions/typeof/syntax.js
+  - [x] test/language/expressions/typeof/syntax.js
   - [x] test/language/expressions/typeof/undefined.js
   - [x] test/language/expressions/typeof/unresolvable-reference.js
   - [x] test/language/expressions/unary-minus/11.4.7-4-1.js
