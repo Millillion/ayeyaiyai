@@ -1,4 +1,4 @@
-22862/23668 (96.59%)
+22869/23668 (96.62%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,7 +14,7 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 9009/9337 (96.49%)
+- statements: 9016/9337 (96.56%)
 - expressions: 10698/11061 (96.72%)
 - types: 113/113 (100.00%)
 - function-code: 217/217 (100.00%)
@@ -9009,8 +9009,8 @@ Sub-category progress
   - [x] test/language/statements/function/S13.2.1_A6_T4.js
   - [x] test/language/statements/function/S13.2.1_A7_T1.js
   - [x] test/language/statements/function/S13.2.1_A7_T2.js
-  - [ ] test/language/statements/function/S13.2.1_A7_T3.js
-  - [ ] test/language/statements/function/S13.2.1_A7_T4.js
+  - [x] test/language/statements/function/S13.2.1_A7_T3.js
+  - [x] test/language/statements/function/S13.2.1_A7_T4.js
   - [x] test/language/statements/function/S13.2.1_A8_T1.js
   - [x] test/language/statements/function/S13.2.1_A8_T2.js
   - [x] test/language/statements/function/S13.2.1_A9.1_T1.js
@@ -9018,10 +9018,10 @@ Sub-category progress
   - [x] test/language/statements/function/S13.2.1_A9_T1.js
   - [x] test/language/statements/function/S13.2.1_A9_T2.js
   - [x] test/language/statements/function/S13.2.2_A10.js
-  - [ ] test/language/statements/function/S13.2.2_A11.js
+  - [x] test/language/statements/function/S13.2.2_A11.js
   - [x] test/language/statements/function/S13.2.2_A12.js
-  - [ ] test/language/statements/function/S13.2.2_A13.js
-  - [ ] test/language/statements/function/S13.2.2_A14.js
+  - [x] test/language/statements/function/S13.2.2_A13.js
+  - [x] test/language/statements/function/S13.2.2_A14.js
   - [x] test/language/statements/function/S13.2.2_A15_T1.js
   - [x] test/language/statements/function/S13.2.2_A15_T2.js
   - [x] test/language/statements/function/S13.2.2_A15_T3.js
@@ -9057,7 +9057,7 @@ Sub-category progress
   - [ ] test/language/statements/function/S13.2.2_A8_T1.js
   - [ ] test/language/statements/function/S13.2.2_A8_T2.js
   - [ ] test/language/statements/function/S13.2.2_A8_T3.js
-  - [ ] test/language/statements/function/S13.2.2_A9.js
+  - [x] test/language/statements/function/S13.2.2_A9.js
   - [x] test/language/statements/function/S13.2_A1_T1.js
   - [x] test/language/statements/function/S13.2_A1_T2.js
   - [x] test/language/statements/function/S13.2_A2_T1.js
@@ -9079,7 +9079,7 @@ Sub-category progress
   - [x] test/language/statements/function/S13_A11_T3.js
   - [x] test/language/statements/function/S13_A11_T4.js
   - [x] test/language/statements/function/S13_A12_T1.js
-  - [ ] test/language/statements/function/S13_A12_T2.js
+  - [x] test/language/statements/function/S13_A12_T2.js
   - [x] test/language/statements/function/S13_A13_T1.js
   - [x] test/language/statements/function/S13_A13_T2.js
   - [x] test/language/statements/function/S13_A13_T3.js
