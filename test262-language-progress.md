@@ -1,4 +1,4 @@
-22826/23668 (96.44%)
+22827/23668 (96.45%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -18,7 +18,7 @@ Sub-category progress
 - expressions: 10686/11061 (96.61%)
 - types: 113/113 (100.00%)
 - function-code: 208/217 (95.85%)
-- global-code: 41/42 (97.62%)
+- global-code: 42/42 (100.00%)
 - arguments-object: 263/263 (100.00%)
 - rest-parameters: 11/11 (100.00%)
 - block-scope: 145/145 (100.00%)
@@ -22130,7 +22130,7 @@ Sub-category progress
   - [x] test/language/global-code/script-decl-lex-restricted-global.js
   - [x] test/language/global-code/script-decl-lex-var-declared-via-eval.js
   - [x] test/language/global-code/script-decl-lex-var.js
-  - [ ] test/language/global-code/script-decl-lex.js
+  - [x] test/language/global-code/script-decl-lex.js
   - [x] test/language/global-code/script-decl-var-collision.js
   - [x] test/language/global-code/script-decl-var-err.js
   - [x] test/language/global-code/script-decl-var.js

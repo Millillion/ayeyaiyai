@@ -1258,7 +1258,7 @@ impl<'a> FunctionCompiler<'a> {
         Ok(())
     }
 
-    fn emit_store_declared_lexical_global_from_local(
+    pub(super) fn emit_store_declared_lexical_global_from_local(
         &mut self,
         _name: &str,
         global_index: u32,
@@ -1511,8 +1511,11 @@ impl<'a> FunctionCompiler<'a> {
                 .sync_array_binding(name, None);
         }
         trace_step("static_global:done");
+        let is_lexical_global_store = self.backend.lexical_global_binding(name).is_some();
         if stores_runtime_array_alias {
-            if ensure_descriptor {
+            if is_lexical_global_store {
+                trace_step("descriptor_lexical_skip");
+            } else if ensure_descriptor {
                 trace_step("descriptor_ensure:start");
                 self.ensure_global_property_descriptor_value(
                     name,
@@ -1602,7 +1605,9 @@ impl<'a> FunctionCompiler<'a> {
             self.update_global_specialized_function_value(name, &metadata_assignment_expression)?;
         }
         trace_step("specialized:done");
-        if ensure_descriptor {
+        if is_lexical_global_store {
+            trace_step("descriptor_lexical_skip");
+        } else if ensure_descriptor {
             trace_step("descriptor_ensure:start");
             if !stores_bind_call && !stores_unresolved_constructor_instance {
                 self.ensure_global_property_descriptor_value(
@@ -2095,11 +2100,12 @@ impl<'a> FunctionCompiler<'a> {
             }
             return Ok(());
         }
-        if !self
-            .state
-            .speculation
-            .execution_context
-            .isolated_indirect_eval
+        if self.backend.lexical_global_binding(name).is_some()
+            || !self
+                .state
+                .speculation
+                .execution_context
+                .isolated_indirect_eval
         {
             self.preserve_identifier_store_global_metadata(name, state, false)?;
         }

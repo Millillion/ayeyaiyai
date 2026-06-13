@@ -493,6 +493,11 @@ impl<'a> FunctionCompiler<'a> {
         {
             return Some(has_own_property);
         }
+        if let Some(has_own_property) =
+            self.resolve_top_level_global_object_has_own_property_result(object, argument_property)
+        {
+            return Some(has_own_property);
+        }
 
         if let Some(array_binding) = self.resolve_array_binding_from_expression(object) {
             return Some(

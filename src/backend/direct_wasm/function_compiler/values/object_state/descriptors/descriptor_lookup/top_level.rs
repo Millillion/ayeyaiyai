@@ -18,6 +18,9 @@ impl<'a> FunctionCompiler<'a> {
             });
         }
         if self.implicit_global_binding(property_name).is_some() {
+            if self.backend.lexical_global_binding(property_name).is_some() {
+                return None;
+            }
             return Some(PropertyDescriptorBinding {
                 value: Some(Expression::Identifier(property_name.to_string())),
                 configurable: true,

@@ -2225,6 +2225,14 @@ impl<'a> FunctionCompiler<'a> {
             resolved_receiver.as_ref(),
             materialized_receiver_is_current_value.then_some(&materialized_receiver),
         ];
+        for candidate in receiver_candidates.iter().flatten() {
+            if let Some(has_property) =
+                self.resolve_top_level_global_object_has_own_property_result(candidate, property)
+            {
+                self.push_i32_const(has_property as i32);
+                return Ok(true);
+            }
+        }
         if self.emit_runtime_known_object_dynamic_has_property_check(receiver, property)? {
             return Ok(true);
         }

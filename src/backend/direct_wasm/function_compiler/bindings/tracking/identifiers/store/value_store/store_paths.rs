@@ -573,6 +573,43 @@ impl<'a> FunctionCompiler<'a> {
         )
     }
 
+    fn immutable_lexical_global_assignment_target(
+        &self,
+        name: &str,
+        state: &PreparedIdentifierStoreState,
+        target: &IdentifierReferenceStoreTarget,
+        initialize_declared_global: bool,
+    ) -> Option<(u32, LexicalGlobalBinding)> {
+        if initialize_declared_global || state.is_internal_iterator_temp {
+            return None;
+        }
+
+        let binding = self.backend.lexical_global_binding(name)?;
+        if binding.mutable {
+            return None;
+        }
+
+        let global_index = match target {
+            IdentifierReferenceStoreTarget::DeclaredGlobal(global_index) => Some(*global_index),
+            IdentifierReferenceStoreTarget::Current
+                if state.resolved_local_binding.is_none()
+                    && self
+                        .resolve_user_function_capture_hidden_name(name)
+                        .is_none() =>
+            {
+                self.backend.global_binding_index(name)
+            }
+            IdentifierReferenceStoreTarget::Current
+            | IdentifierReferenceStoreTarget::ResolvedLocal(_, _)
+            | IdentifierReferenceStoreTarget::Capture
+            | IdentifierReferenceStoreTarget::EvalLocal
+            | IdentifierReferenceStoreTarget::ExistingImplicitGlobal(_)
+            | IdentifierReferenceStoreTarget::NewImplicitGlobal => None,
+        }?;
+
+        Some((global_index, binding))
+    }
+
     fn update_parameter_scope_arguments_static_metadata(
         &mut self,
         state: &PreparedIdentifierStoreState,
@@ -737,6 +774,32 @@ impl<'a> FunctionCompiler<'a> {
         )? {
             if trace_identifier_store {
                 eprintln!("identifier_store:{name}:isolated_eval");
+            }
+            return Ok(());
+        }
+
+        if let Some((global_index, binding)) = self.immutable_lexical_global_assignment_target(
+            name,
+            &state,
+            &target,
+            initialize_declared_global,
+        ) {
+            if trace_identifier_store {
+                eprintln!("identifier_store:{name}:immutable_lexical_global");
+            }
+            self.state.clear_local_static_binding_metadata(name);
+            if state.resolved_name != name {
+                self.state
+                    .clear_local_static_binding_metadata(&state.resolved_name);
+            }
+            self.emit_store_declared_lexical_global_from_local(
+                name,
+                global_index,
+                binding,
+                value_local,
+            )?;
+            if trace_identifier_store {
+                eprintln!("identifier_store:{name}:done");
             }
             return Ok(());
         }
