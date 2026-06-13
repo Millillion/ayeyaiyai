@@ -1,4 +1,5 @@
 use super::*;
+use std::collections::{HashMap, HashSet};
 
 fn class_init_descriptor_data_value(expression: &Expression) -> Option<&Expression> {
     let Expression::Object(entries) = expression else {
@@ -63,6 +64,7 @@ fn class_init_property_key_can_have_to_property_key_side_effects(expression: &Ex
         | Expression::Bool(_)
         | Expression::Null
         | Expression::Undefined => false,
+        Expression::Identifier(name) if name.starts_with("__ayy_class_field_name_") => false,
         Expression::Sequence(expressions) => expressions
             .last()
             .is_some_and(class_init_property_key_can_have_to_property_key_side_effects),
@@ -306,26 +308,411 @@ impl<'a> FunctionCompiler<'a> {
     fn resolve_static_class_init_local_identifier(
         &self,
         name: &str,
-        local_bindings: &std::collections::HashMap<String, Expression>,
+        local_bindings: &HashMap<String, Expression>,
     ) -> Expression {
         let mut current = Expression::Identifier(name.to_string());
-        let mut seen = std::collections::HashSet::new();
+        let mut seen = HashSet::new();
         while let Expression::Identifier(current_name) = &current {
             if !seen.insert(current_name.clone()) {
                 break;
             }
             let Some(next) = local_bindings.get(current_name) else {
-                break;
+                if current_name.starts_with("__ayy_") {
+                    break;
+                }
+                let Some(static_value) = self
+                    .state
+                    .speculation
+                    .static_semantics
+                    .local_value_binding(current_name)
+                    .or_else(|| self.global_value_binding(current_name))
+                else {
+                    break;
+                };
+                if static_expression_matches(static_value, &current) {
+                    break;
+                }
+                current = static_value.clone();
+                continue;
             };
             current = next.clone();
         }
         current
     }
 
+    fn resolve_static_class_init_local_binding_value(
+        &self,
+        expression: &Expression,
+        local_bindings: &mut HashMap<String, Expression>,
+    ) -> Expression {
+        if let Some(value) = self
+            .evaluate_static_class_init_local_expression_with_effects(expression, local_bindings)
+        {
+            return value;
+        }
+        self.resolve_static_class_init_local_expression(expression, local_bindings)
+    }
+
+    fn resolve_static_class_init_local_property_key(
+        &self,
+        expression: &Expression,
+        local_bindings: &mut HashMap<String, Expression>,
+    ) -> Expression {
+        let value = self.resolve_static_class_init_local_binding_value(expression, local_bindings);
+        static_property_name_from_expression(&value)
+            .map(Expression::String)
+            .unwrap_or(value)
+    }
+
+    fn class_init_static_primitive_to_number(expression: &Expression) -> Option<f64> {
+        match expression {
+            Expression::Number(value) => Some(*value),
+            Expression::Bool(value) => Some(if *value { 1.0 } else { 0.0 }),
+            Expression::Null => Some(0.0),
+            Expression::Undefined => Some(f64::NAN),
+            Expression::String(value) => {
+                let trimmed = value.trim();
+                if trimmed.is_empty() {
+                    Some(0.0)
+                } else {
+                    trimmed.parse::<f64>().ok()
+                }
+            }
+            _ => None,
+        }
+    }
+
+    fn class_init_static_to_uint32(value: f64) -> u32 {
+        if !value.is_finite() || value == 0.0 {
+            return 0;
+        }
+        value.trunc().rem_euclid(4_294_967_296.0) as u32
+    }
+
+    fn class_init_static_to_int32(value: f64) -> i32 {
+        Self::class_init_static_to_uint32(value) as i32
+    }
+
+    fn class_init_static_binary_value(
+        op: BinaryOp,
+        left: &Expression,
+        right: &Expression,
+    ) -> Option<Expression> {
+        match op {
+            BinaryOp::Add => {
+                if matches!(left, Expression::String(_)) || matches!(right, Expression::String(_)) {
+                    let left = static_property_name_from_expression(left)?;
+                    let right = static_property_name_from_expression(right)?;
+                    Some(Expression::String(format!("{left}{right}")))
+                } else {
+                    Some(Expression::Number(
+                        Self::class_init_static_primitive_to_number(left)?
+                            + Self::class_init_static_primitive_to_number(right)?,
+                    ))
+                }
+            }
+            BinaryOp::Subtract => Some(Expression::Number(
+                Self::class_init_static_primitive_to_number(left)?
+                    - Self::class_init_static_primitive_to_number(right)?,
+            )),
+            BinaryOp::Multiply => Some(Expression::Number(
+                Self::class_init_static_primitive_to_number(left)?
+                    * Self::class_init_static_primitive_to_number(right)?,
+            )),
+            BinaryOp::Divide => Some(Expression::Number(
+                Self::class_init_static_primitive_to_number(left)?
+                    / Self::class_init_static_primitive_to_number(right)?,
+            )),
+            BinaryOp::Modulo => Some(Expression::Number(
+                Self::class_init_static_primitive_to_number(left)?
+                    % Self::class_init_static_primitive_to_number(right)?,
+            )),
+            BinaryOp::Exponentiate => Some(Expression::Number(
+                Self::class_init_static_primitive_to_number(left)?
+                    .powf(Self::class_init_static_primitive_to_number(right)?),
+            )),
+            BinaryOp::BitwiseAnd | BinaryOp::BitwiseOr | BinaryOp::BitwiseXor => {
+                let left = Self::class_init_static_to_int32(
+                    Self::class_init_static_primitive_to_number(left)?,
+                );
+                let right = Self::class_init_static_to_int32(
+                    Self::class_init_static_primitive_to_number(right)?,
+                );
+                let value = match op {
+                    BinaryOp::BitwiseAnd => left & right,
+                    BinaryOp::BitwiseOr => left | right,
+                    BinaryOp::BitwiseXor => left ^ right,
+                    _ => unreachable!("filtered above"),
+                };
+                Some(Expression::Number(value as f64))
+            }
+            BinaryOp::LeftShift | BinaryOp::RightShift | BinaryOp::UnsignedRightShift => {
+                let left_number = Self::class_init_static_primitive_to_number(left)?;
+                let right = Self::class_init_static_to_uint32(
+                    Self::class_init_static_primitive_to_number(right)?,
+                ) & 0x1f;
+                let value = match op {
+                    BinaryOp::LeftShift => {
+                        Self::class_init_static_to_int32(left_number).wrapping_shl(right) as f64
+                    }
+                    BinaryOp::RightShift => {
+                        Self::class_init_static_to_int32(left_number).wrapping_shr(right) as f64
+                    }
+                    BinaryOp::UnsignedRightShift => {
+                        Self::class_init_static_to_uint32(left_number).wrapping_shr(right) as f64
+                    }
+                    _ => unreachable!("filtered above"),
+                };
+                Some(Expression::Number(value))
+            }
+            BinaryOp::Equal
+            | BinaryOp::LooseEqual
+            | BinaryOp::NotEqual
+            | BinaryOp::LooseNotEqual => {
+                let is_object_like = |expression: &Expression| {
+                    matches!(
+                        expression,
+                        Expression::Array(_)
+                            | Expression::Object(_)
+                            | Expression::New { .. }
+                            | Expression::This
+                            | Expression::Call { .. }
+                            | Expression::Member { .. }
+                    )
+                };
+                let equal = match (left, right) {
+                    (Expression::Bool(left), Expression::Bool(right)) => left == right,
+                    (Expression::Number(left), Expression::Number(right)) => left == right,
+                    (Expression::String(left), Expression::String(right)) => left == right,
+                    (Expression::BigInt(left), Expression::BigInt(right)) => left == right,
+                    (Expression::Null, Expression::Null)
+                    | (Expression::Undefined, Expression::Undefined) => true,
+                    (Expression::Null, Expression::Undefined)
+                    | (Expression::Undefined, Expression::Null)
+                        if matches!(op, BinaryOp::LooseEqual | BinaryOp::LooseNotEqual) =>
+                    {
+                        true
+                    }
+                    _ if is_object_like(left) || is_object_like(right) => return None,
+                    _ => false,
+                };
+                Some(Expression::Bool(match op {
+                    BinaryOp::Equal | BinaryOp::LooseEqual => equal,
+                    BinaryOp::NotEqual | BinaryOp::LooseNotEqual => !equal,
+                    _ => unreachable!("filtered above"),
+                }))
+            }
+            _ => None,
+        }
+    }
+
+    fn class_init_static_truthy(
+        &self,
+        expression: &Expression,
+        local_bindings: &HashMap<String, Expression>,
+    ) -> Option<bool> {
+        if let Some(value) = self.resolve_static_boolean_expression(expression) {
+            return Some(value);
+        }
+        let resolved = self.resolve_static_class_init_local_expression(expression, local_bindings);
+        if !static_expression_matches(&resolved, expression)
+            && let Some(value) = self.resolve_static_boolean_expression(&resolved)
+        {
+            return Some(value);
+        }
+        match resolved {
+            Expression::Bool(value) => Some(value),
+            Expression::Number(value) => Some(value != 0.0 && !value.is_nan()),
+            Expression::String(value) => Some(!value.is_empty()),
+            Expression::BigInt(value) => Some(value.trim_end_matches('n') != "0"),
+            Expression::Null | Expression::Undefined => Some(false),
+            Expression::Array(_)
+            | Expression::Object(_)
+            | Expression::This
+            | Expression::New { .. } => Some(true),
+            Expression::Unary {
+                op: UnaryOp::Not,
+                expression,
+            } => Some(!self.class_init_static_truthy(&expression, local_bindings)?),
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                let branch = if self.class_init_static_truthy(&condition, local_bindings)? {
+                    then_expression
+                } else {
+                    else_expression
+                };
+                self.class_init_static_truthy(&branch, local_bindings)
+            }
+            Expression::Sequence(expressions) => expressions
+                .last()
+                .and_then(|expression| self.class_init_static_truthy(expression, local_bindings)),
+            Expression::Binary { op, left, right } => match op {
+                BinaryOp::LogicalAnd => {
+                    if self.class_init_static_truthy(&left, local_bindings)? {
+                        self.class_init_static_truthy(&right, local_bindings)
+                    } else {
+                        Some(false)
+                    }
+                }
+                BinaryOp::LogicalOr => {
+                    if self.class_init_static_truthy(&left, local_bindings)? {
+                        Some(true)
+                    } else {
+                        self.class_init_static_truthy(&right, local_bindings)
+                    }
+                }
+                BinaryOp::NullishCoalescing => {
+                    let left =
+                        self.resolve_static_class_init_local_expression(&left, local_bindings);
+                    if matches!(left, Expression::Null | Expression::Undefined) {
+                        self.class_init_static_truthy(&right, local_bindings)
+                    } else {
+                        self.class_init_static_truthy(&left, local_bindings)
+                    }
+                }
+                BinaryOp::Equal
+                | BinaryOp::LooseEqual
+                | BinaryOp::NotEqual
+                | BinaryOp::LooseNotEqual => Self::class_init_static_binary_value(
+                    op,
+                    &self.resolve_static_class_init_local_expression(&left, local_bindings),
+                    &self.resolve_static_class_init_local_expression(&right, local_bindings),
+                )
+                .and_then(|value| match value {
+                    Expression::Bool(value) => Some(value),
+                    _ => None,
+                }),
+                _ => Self::class_init_static_binary_value(
+                    op,
+                    &self.resolve_static_class_init_local_expression(&left, local_bindings),
+                    &self.resolve_static_class_init_local_expression(&right, local_bindings),
+                )
+                .and_then(|value| self.class_init_static_truthy(&value, local_bindings)),
+            },
+            _ => static_numeric_property_name_value(&resolved)
+                .map(|value| value != 0.0 && !value.is_nan()),
+        }
+    }
+
+    fn evaluate_static_class_init_local_expression_with_effects(
+        &self,
+        expression: &Expression,
+        local_bindings: &mut HashMap<String, Expression>,
+    ) -> Option<Expression> {
+        match expression {
+            Expression::Assign { name, value } => {
+                let value =
+                    self.resolve_static_class_init_local_binding_value(value, local_bindings);
+                local_bindings.insert(name.clone(), value.clone());
+                Some(value)
+            }
+            Expression::Sequence(expressions) => {
+                let mut last = Expression::Undefined;
+                for expression in expressions {
+                    last = self
+                        .resolve_static_class_init_local_binding_value(expression, local_bindings);
+                }
+                Some(last)
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                let condition =
+                    self.resolve_static_class_init_local_expression(condition, local_bindings);
+                let selected = if self.class_init_static_truthy(&condition, local_bindings)? {
+                    then_expression
+                } else {
+                    else_expression
+                };
+                Some(self.resolve_static_class_init_local_binding_value(selected, local_bindings))
+            }
+            Expression::Binary {
+                op: op @ (BinaryOp::LogicalAnd | BinaryOp::LogicalOr | BinaryOp::NullishCoalescing),
+                left,
+                right,
+            } => {
+                let left_value = self
+                    .evaluate_static_class_init_local_expression_with_effects(left, local_bindings)
+                    .unwrap_or_else(|| {
+                        self.resolve_static_class_init_local_expression(left, local_bindings)
+                    });
+                match op {
+                    BinaryOp::LogicalAnd => {
+                        if self.class_init_static_truthy(&left_value, local_bindings)? {
+                            Some(self.resolve_static_class_init_local_binding_value(
+                                right,
+                                local_bindings,
+                            ))
+                        } else {
+                            Some(left_value)
+                        }
+                    }
+                    BinaryOp::LogicalOr => {
+                        if self.class_init_static_truthy(&left_value, local_bindings)? {
+                            Some(left_value)
+                        } else {
+                            Some(self.resolve_static_class_init_local_binding_value(
+                                right,
+                                local_bindings,
+                            ))
+                        }
+                    }
+                    BinaryOp::NullishCoalescing => {
+                        if matches!(left_value, Expression::Null | Expression::Undefined) {
+                            Some(self.resolve_static_class_init_local_binding_value(
+                                right,
+                                local_bindings,
+                            ))
+                        } else {
+                            Some(left_value)
+                        }
+                    }
+                    _ => None,
+                }
+            }
+            Expression::Binary { op, left, right } => {
+                let left = self.resolve_static_class_init_local_binding_value(left, local_bindings);
+                let right =
+                    self.resolve_static_class_init_local_binding_value(right, local_bindings);
+                Self::class_init_static_binary_value(*op, &left, &right)
+            }
+            _ => None,
+        }
+    }
+
+    fn store_static_class_init_local_binding(
+        &self,
+        name: &str,
+        value: &Expression,
+        local_bindings: &mut HashMap<String, Expression>,
+    ) {
+        let value = if name.starts_with("__ayy_class_field_name_") {
+            self.resolve_static_class_init_local_property_key(value, local_bindings)
+        } else {
+            self.resolve_static_class_init_local_binding_value(value, local_bindings)
+        };
+        local_bindings.insert(name.to_string(), value);
+    }
+
+    fn assign_static_class_init_local_binding(
+        &self,
+        name: &str,
+        value: &Expression,
+        local_bindings: &mut HashMap<String, Expression>,
+    ) {
+        let value = self.resolve_static_class_init_local_binding_value(value, local_bindings);
+        local_bindings.insert(name.to_string(), value);
+    }
+
     fn resolve_static_class_init_local_expression(
         &self,
         expression: &Expression,
-        local_bindings: &std::collections::HashMap<String, Expression>,
+        local_bindings: &HashMap<String, Expression>,
     ) -> Expression {
         match expression {
             Expression::Identifier(name) => {
@@ -517,16 +904,10 @@ impl<'a> FunctionCompiler<'a> {
         for statement in &function.body {
             match statement {
                 Statement::Var { name, value } | Statement::Let { name, value, .. } => {
-                    local_bindings.insert(
-                        name.clone(),
-                        self.resolve_static_class_init_local_expression(value, &local_bindings),
-                    );
+                    self.store_static_class_init_local_binding(name, value, &mut local_bindings);
                 }
                 Statement::Assign { name, value } => {
-                    local_bindings.insert(
-                        name.clone(),
-                        self.resolve_static_class_init_local_expression(value, &local_bindings),
-                    );
+                    self.assign_static_class_init_local_binding(name, value, &mut local_bindings);
                 }
                 Statement::Return(value) => {
                     return Some(
@@ -662,12 +1043,18 @@ impl<'a> FunctionCompiler<'a> {
             let mut local_bindings = std::collections::HashMap::new();
             for statement in &function.body {
                 match statement {
-                    Statement::Var { name, value }
-                    | Statement::Let { name, value, .. }
-                    | Statement::Assign { name, value } => {
-                        local_bindings.insert(
-                            name.clone(),
-                            self.resolve_static_class_init_local_expression(value, &local_bindings),
+                    Statement::Var { name, value } | Statement::Let { name, value, .. } => {
+                        self.store_static_class_init_local_binding(
+                            name,
+                            value,
+                            &mut local_bindings,
+                        );
+                    }
+                    Statement::Assign { name, value } => {
+                        self.assign_static_class_init_local_binding(
+                            name,
+                            value,
+                            &mut local_bindings,
                         );
                     }
                     Statement::Expression(Expression::Call { callee, arguments }) if matches!(callee.as_ref(), Expression::Identifier(name) if name == "__ayyClassPrototypeInit") =>
@@ -730,16 +1117,27 @@ impl<'a> FunctionCompiler<'a> {
             for statement in &function.body {
                 match statement {
                     Statement::Var { name, value } | Statement::Let { name, value, .. } => {
-                        let resolved =
-                            self.resolve_static_class_init_local_expression(value, &local_bindings);
+                        let resolved = if name.starts_with("__ayy_class_field_name_") {
+                            self.resolve_static_class_init_local_property_key(
+                                value,
+                                &mut local_bindings,
+                            )
+                        } else {
+                            self.resolve_static_class_init_local_binding_value(
+                                value,
+                                &mut local_bindings,
+                            )
+                        };
                         if name == alias_name {
                             return Some(resolved);
                         }
                         local_bindings.insert(name.clone(), resolved);
                     }
                     Statement::Assign { name, value } => {
-                        let resolved =
-                            self.resolve_static_class_init_local_expression(value, &local_bindings);
+                        let resolved = self.resolve_static_class_init_local_binding_value(
+                            value,
+                            &mut local_bindings,
+                        );
                         if name == alias_name {
                             return Some(resolved);
                         }
@@ -801,7 +1199,7 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         arguments: &[CallArgument],
         returned_constructor: &Expression,
-        local_bindings: &std::collections::HashMap<String, Expression>,
+        local_bindings: &mut HashMap<String, Expression>,
         constructor_binding: &mut ObjectValueBinding,
     ) -> bool {
         let [
@@ -824,7 +1222,7 @@ impl<'a> FunctionCompiler<'a> {
             return false;
         };
         let property =
-            self.resolve_static_class_init_local_expression(property_expression, local_bindings);
+            self.resolve_static_class_init_local_property_key(property_expression, local_bindings);
         let property = self.canonical_object_property_expression(&property);
         let property_name = static_property_name_from_expression(&property);
         let existing_value = object_binding_lookup_value(constructor_binding, &property).cloned();
@@ -932,7 +1330,7 @@ impl<'a> FunctionCompiler<'a> {
         property: &Expression,
         value: &Expression,
         returned_constructor: &Expression,
-        local_bindings: &std::collections::HashMap<String, Expression>,
+        local_bindings: &mut HashMap<String, Expression>,
         constructor_binding: &mut ObjectValueBinding,
     ) -> bool {
         let resolved_object =
@@ -942,7 +1340,7 @@ impl<'a> FunctionCompiler<'a> {
         {
             return false;
         }
-        let property = self.resolve_static_class_init_local_expression(property, local_bindings);
+        let property = self.resolve_static_class_init_local_property_key(property, local_bindings);
         let property = self.canonical_object_property_expression(&property);
         let value = self.resolve_static_class_init_local_expression(value, local_bindings);
         let enumerable = !matches!(
@@ -976,16 +1374,10 @@ impl<'a> FunctionCompiler<'a> {
                 }
             }
             Statement::Var { name, value } | Statement::Let { name, value, .. } => {
-                local_bindings.insert(
-                    name.clone(),
-                    self.resolve_static_class_init_local_expression(value, local_bindings),
-                );
+                self.store_static_class_init_local_binding(name, value, local_bindings);
             }
             Statement::Assign { name, value } => {
-                local_bindings.insert(
-                    name.clone(),
-                    self.resolve_static_class_init_local_expression(value, local_bindings),
-                );
+                self.assign_static_class_init_local_binding(name, value, local_bindings);
             }
             Statement::Expression(Expression::Call { callee, arguments })
                 if matches!(
@@ -1146,16 +1538,10 @@ impl<'a> FunctionCompiler<'a> {
         for statement in &init_function.body {
             match statement {
                 Statement::Var { name, value } | Statement::Let { name, value, .. } => {
-                    local_bindings.insert(
-                        name.clone(),
-                        self.resolve_static_class_init_local_expression(value, &local_bindings),
-                    );
+                    self.store_static_class_init_local_binding(name, value, &mut local_bindings);
                 }
                 Statement::Assign { name, value } => {
-                    local_bindings.insert(
-                        name.clone(),
-                        self.resolve_static_class_init_local_expression(value, &local_bindings),
-                    );
+                    self.assign_static_class_init_local_binding(name, value, &mut local_bindings);
                 }
                 Statement::Expression(Expression::Call { callee, arguments })
                     if matches!(
@@ -1197,9 +1583,9 @@ impl<'a> FunctionCompiler<'a> {
                     else {
                         continue;
                     };
-                    let property = self.resolve_static_class_init_local_expression(
+                    let property = self.resolve_static_class_init_local_property_key(
                         property_expression,
-                        &local_bindings,
+                        &mut local_bindings,
                     );
                     let property = self.canonical_object_property_expression(&property);
                     let property_name = static_property_name_from_expression(&property);

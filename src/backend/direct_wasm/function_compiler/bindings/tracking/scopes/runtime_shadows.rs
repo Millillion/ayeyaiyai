@@ -217,6 +217,23 @@ impl<'a> FunctionCompiler<'a> {
         )
     }
 
+    fn canonical_runtime_shadow_property_expression(&self, property: &Expression) -> Expression {
+        let materialized_property = self
+            .resolve_property_key_expression(property)
+            .unwrap_or_else(|| self.materialize_static_expression(property));
+        if let Some(property_name) = static_property_name_from_expression(&materialized_property)
+            .or_else(|| static_property_name_from_expression(property))
+        {
+            return Expression::String(property_name);
+        }
+        if let Some(symbol_identity) =
+            self.resolve_symbol_identity_expression(&materialized_property)
+        {
+            return symbol_identity;
+        }
+        materialized_property
+    }
+
     fn runtime_object_member_shadow_owner_name(owner_name: &str, property: &Expression) -> String {
         format!(
             "__ayy_member_object__{}__{}",
@@ -512,7 +529,12 @@ impl<'a> FunctionCompiler<'a> {
             object_binding
                 .symbol_properties
                 .iter()
-                .map(|(property, value)| (property.clone(), value.clone())),
+                .map(|(property, value)| {
+                    (
+                        self.canonical_runtime_shadow_property_expression(property),
+                        value.clone(),
+                    )
+                }),
         );
         entries
     }
@@ -3536,15 +3558,23 @@ impl<'a> FunctionCompiler<'a> {
         let target_expression = Expression::Identifier(target_owner.to_string());
         let mut properties = ordered_object_property_names(object_binding)
             .into_iter()
-            .map(Expression::String)
+            .map(|property_name| {
+                let property = Expression::String(property_name);
+                (property.clone(), property)
+            })
             .collect::<Vec<_>>();
         properties.extend(
             object_binding
                 .symbol_properties
                 .iter()
-                .map(|(property, _)| property.clone()),
+                .map(|(property, _)| {
+                    (
+                        property.clone(),
+                        self.canonical_runtime_shadow_property_expression(property),
+                    )
+                }),
         );
-        for property in properties {
+        for (raw_property, property) in properties {
             if Self::runtime_shadow_owner_is_class_object(target_owner)
                 && Self::runtime_shadow_property_is_private(&property)
             {
@@ -3561,8 +3591,10 @@ impl<'a> FunctionCompiler<'a> {
                     continue;
                 }
             }
-            let descriptor = object_binding_lookup_descriptor(object_binding, &property);
+            let descriptor = object_binding_lookup_descriptor(object_binding, &property)
+                .or_else(|| object_binding_lookup_descriptor(object_binding, &raw_property));
             let fallback_value = object_binding_lookup_value(object_binding, &property)
+                .or_else(|| object_binding_lookup_value(object_binding, &raw_property))
                 .cloned()
                 .unwrap_or(Expression::Undefined);
             let fallback_value =

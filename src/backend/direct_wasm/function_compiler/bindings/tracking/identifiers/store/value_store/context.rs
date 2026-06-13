@@ -317,7 +317,575 @@ fn static_promise_with_resolvers_object_binding() -> ObjectValueBinding {
     binding
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum NullishAssignmentCheck {
+    Undefined,
+    Null,
+}
+
 impl<'a> FunctionCompiler<'a> {
+    fn normalize_prepared_object_binding_property_key(&self, property: &Expression) -> Expression {
+        let resolved_key = self.resolve_property_key_expression(property);
+        if let Some(key) = resolved_key.as_ref() {
+            if let Some(property_name) = static_property_name_from_expression(&key) {
+                return Expression::String(property_name);
+            }
+            if self.well_known_symbol_name(key).is_some() {
+                return key.clone();
+            }
+            if let Some(symbol_identity) = self.resolve_symbol_identity_expression(key) {
+                return symbol_identity;
+            }
+        }
+
+        let mut assignments = Vec::new();
+        let evaluated = self.evaluate_prepared_object_binding_property_key_expression(
+            property,
+            &mut assignments,
+            0,
+        );
+        if let Some(value) = evaluated
+            && let Some(key) = self.prepared_object_binding_property_key_from_value(&value)
+        {
+            return key;
+        }
+
+        let materialized = self.materialize_static_expression(property);
+        if !static_expression_matches(&materialized, property) {
+            if let Some(key) = self.resolve_property_key_expression(&materialized) {
+                if let Some(property_name) = static_property_name_from_expression(&key) {
+                    return Expression::String(property_name);
+                }
+                return key;
+            }
+            if let Some(property_name) = static_property_name_from_expression(&materialized) {
+                return Expression::String(property_name);
+            }
+            if self.well_known_symbol_name(&materialized).is_some() {
+                return materialized;
+            }
+            if let Some(symbol_identity) = self.resolve_symbol_identity_expression(&materialized) {
+                return symbol_identity;
+            }
+        }
+
+        if let Some(property_name) = static_property_name_from_expression(property) {
+            return Expression::String(property_name);
+        }
+
+        property.clone()
+    }
+
+    fn prepared_object_binding_property_key_from_value(
+        &self,
+        value: &Expression,
+    ) -> Option<Expression> {
+        self.resolve_property_key_expression(value)
+            .or_else(|| static_property_name_from_expression(value).map(Expression::String))
+            .or_else(|| {
+                self.well_known_symbol_name(value)
+                    .is_some()
+                    .then(|| value.clone())
+            })
+            .or_else(|| self.resolve_symbol_identity_expression(value))
+    }
+
+    fn evaluate_prepared_object_binding_property_key_expression(
+        &self,
+        expression: &Expression,
+        assignments: &mut Vec<(String, Expression)>,
+        depth: usize,
+    ) -> Option<Expression> {
+        if depth > 16 {
+            return None;
+        }
+
+        match expression {
+            Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined => Some(expression.clone()),
+            Expression::Identifier(name) => self
+                .prepared_object_binding_property_key_identifier_value(name, assignments)
+                .and_then(|value| {
+                    if static_expression_matches(&value, expression) {
+                        Some(value)
+                    } else {
+                        self.evaluate_prepared_object_binding_property_key_expression(
+                            &value,
+                            assignments,
+                            depth + 1,
+                        )
+                        .or(Some(value))
+                    }
+                }),
+            Expression::Assign { name, value } => {
+                let value = self
+                    .evaluate_prepared_object_binding_property_key_expression(
+                        value,
+                        assignments,
+                        depth + 1,
+                    )
+                    .unwrap_or_else(|| value.as_ref().clone());
+                assignments.push((name.clone(), value.clone()));
+                Some(value)
+            }
+            Expression::Sequence(expressions) => {
+                let mut result = None;
+                for expression in expressions {
+                    result = self.evaluate_prepared_object_binding_property_key_expression(
+                        expression,
+                        assignments,
+                        depth + 1,
+                    );
+                }
+                result
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                let branch = if let Some(take_then) = self
+                    .prepared_object_binding_property_key_truthy(condition, assignments, depth + 1)
+                {
+                    if take_then {
+                        then_expression
+                    } else {
+                        else_expression
+                    }
+                } else {
+                    return self.evaluate_prepared_nullish_assignment_property_key_fallback(
+                        condition,
+                        then_expression,
+                        else_expression,
+                        assignments,
+                        depth + 1,
+                    );
+                };
+                self.evaluate_prepared_object_binding_property_key_expression(
+                    branch,
+                    assignments,
+                    depth + 1,
+                )
+            }
+            Expression::Binary { op, left, right } => self
+                .evaluate_prepared_object_binding_property_key_binary(
+                    *op,
+                    left,
+                    right,
+                    assignments,
+                    depth + 1,
+                ),
+            Expression::Unary {
+                op: UnaryOp::Not,
+                expression,
+            } => self
+                .prepared_object_binding_property_key_truthy(expression, assignments, depth + 1)
+                .map(|value| Expression::Bool(!value)),
+            Expression::Unary {
+                op: UnaryOp::Void, ..
+            } => Some(Expression::Undefined),
+            Expression::Unary {
+                op: UnaryOp::Plus,
+                expression,
+            } => self
+                .evaluate_prepared_object_binding_property_key_expression(
+                    expression,
+                    assignments,
+                    depth + 1,
+                )
+                .and_then(|value| {
+                    Self::prepared_object_binding_property_key_to_number(&value)
+                        .map(Expression::Number)
+                }),
+            Expression::Unary {
+                op: UnaryOp::Negate,
+                expression,
+            } => self
+                .evaluate_prepared_object_binding_property_key_expression(
+                    expression,
+                    assignments,
+                    depth + 1,
+                )
+                .and_then(|value| {
+                    Self::prepared_object_binding_property_key_to_number(&value)
+                        .map(|number| Expression::Number(-number))
+                }),
+            Expression::Await(value) => self
+                .evaluate_prepared_object_binding_property_key_expression(
+                    value,
+                    assignments,
+                    depth + 1,
+                ),
+            _ => None,
+        }
+    }
+
+    fn prepared_object_binding_property_key_identifier_value(
+        &self,
+        name: &str,
+        assignments: &[(String, Expression)],
+    ) -> Option<Expression> {
+        let self_identifier = Expression::Identifier(name.to_string());
+        if let Some((_, value)) = assignments
+            .iter()
+            .rev()
+            .find(|(assigned_name, _)| assigned_name == name)
+        {
+            return Some(value.clone());
+        }
+
+        let resolved_local = self.resolve_current_local_binding(name);
+        let resolved_local_value = resolved_local.as_ref().and_then(|(resolved_name, _)| {
+            self.state
+                .speculation
+                .static_semantics
+                .local_value_binding(resolved_name)
+        });
+        if let Some(value) = resolved_local_value
+            && !static_expression_matches(value, &self_identifier)
+        {
+            return Some(value.clone());
+        }
+
+        if let Some(value) = self
+            .state
+            .speculation
+            .static_semantics
+            .local_value_binding(name)
+            .cloned()
+            .or_else(|| self.global_value_binding(name).cloned())
+            .filter(|value| !static_expression_matches(value, &self_identifier))
+        {
+            return Some(value);
+        }
+
+        if name.starts_with("__ayy_class_field_name_")
+            && let Some(value) = self.resolve_static_class_init_local_alias_expression(name)
+        {
+            return Some(value);
+        }
+
+        let materialized = self.materialize_static_expression(&self_identifier);
+        (!static_expression_matches(&materialized, &self_identifier)).then_some(materialized)
+    }
+
+    fn evaluate_prepared_nullish_assignment_property_key_fallback(
+        &self,
+        condition: &Expression,
+        then_expression: &Expression,
+        else_expression: &Expression,
+        assignments: &mut Vec<(String, Expression)>,
+        depth: usize,
+    ) -> Option<Expression> {
+        if depth > 16 {
+            return None;
+        }
+        let Expression::Identifier(then_name) = then_expression else {
+            return None;
+        };
+        let Expression::Assign {
+            name: assigned_name,
+            value: _,
+        } = else_expression
+        else {
+            return None;
+        };
+        if then_name != assigned_name {
+            return None;
+        }
+        if !Self::prepared_nullish_assignment_condition_matches(condition, then_name) {
+            return None;
+        }
+
+        if let Some(current_value) =
+            self.prepared_object_binding_property_key_identifier_value(then_name, assignments)
+        {
+            let selected = if matches!(current_value, Expression::Null | Expression::Undefined) {
+                else_expression
+            } else {
+                then_expression
+            };
+            return self.evaluate_prepared_object_binding_property_key_expression(
+                selected,
+                assignments,
+                depth + 1,
+            );
+        }
+
+        self.evaluate_prepared_object_binding_property_key_expression(
+            else_expression,
+            assignments,
+            depth + 1,
+        )
+    }
+
+    fn prepared_nullish_assignment_condition_matches(
+        condition: &Expression,
+        binding_name: &str,
+    ) -> bool {
+        let Expression::Binary {
+            op: BinaryOp::LogicalAnd,
+            left,
+            right,
+        } = condition
+        else {
+            return false;
+        };
+
+        let left_matches = Self::prepared_nullish_assignment_check_matches(left, binding_name);
+        let right_matches = Self::prepared_nullish_assignment_check_matches(right, binding_name);
+        matches!(
+            (left_matches, right_matches),
+            (
+                Some(NullishAssignmentCheck::Undefined),
+                Some(NullishAssignmentCheck::Null)
+            ) | (
+                Some(NullishAssignmentCheck::Null),
+                Some(NullishAssignmentCheck::Undefined)
+            )
+        )
+    }
+
+    fn prepared_nullish_assignment_check_matches(
+        expression: &Expression,
+        binding_name: &str,
+    ) -> Option<NullishAssignmentCheck> {
+        let Expression::Binary { op, left, right } = expression else {
+            return None;
+        };
+        if !matches!(op, BinaryOp::NotEqual | BinaryOp::LooseNotEqual) {
+            return None;
+        }
+        match (left.as_ref(), right.as_ref()) {
+            (Expression::Identifier(name), Expression::Undefined) if name == binding_name => {
+                Some(NullishAssignmentCheck::Undefined)
+            }
+            (Expression::Undefined, Expression::Identifier(name)) if name == binding_name => {
+                Some(NullishAssignmentCheck::Undefined)
+            }
+            (Expression::Identifier(name), Expression::Null) if name == binding_name => {
+                Some(NullishAssignmentCheck::Null)
+            }
+            (Expression::Null, Expression::Identifier(name)) if name == binding_name => {
+                Some(NullishAssignmentCheck::Null)
+            }
+            _ => None,
+        }
+    }
+
+    fn evaluate_prepared_object_binding_property_key_binary(
+        &self,
+        op: BinaryOp,
+        left: &Expression,
+        right: &Expression,
+        assignments: &mut Vec<(String, Expression)>,
+        depth: usize,
+    ) -> Option<Expression> {
+        match op {
+            BinaryOp::LogicalAnd => {
+                let left_value = self
+                    .evaluate_prepared_object_binding_property_key_expression(
+                        left,
+                        assignments,
+                        depth + 1,
+                    )
+                    .unwrap_or_else(|| left.clone());
+                if Self::prepared_object_binding_property_key_value_truthy(&left_value)? {
+                    self.evaluate_prepared_object_binding_property_key_expression(
+                        right,
+                        assignments,
+                        depth + 1,
+                    )
+                    .or(Some(left_value))
+                } else {
+                    Some(left_value)
+                }
+            }
+            BinaryOp::LogicalOr => {
+                let left_value = self
+                    .evaluate_prepared_object_binding_property_key_expression(
+                        left,
+                        assignments,
+                        depth + 1,
+                    )
+                    .unwrap_or_else(|| left.clone());
+                if Self::prepared_object_binding_property_key_value_truthy(&left_value)? {
+                    Some(left_value)
+                } else {
+                    self.evaluate_prepared_object_binding_property_key_expression(
+                        right,
+                        assignments,
+                        depth + 1,
+                    )
+                    .or(Some(left_value))
+                }
+            }
+            BinaryOp::NullishCoalescing => {
+                let left_value = self
+                    .evaluate_prepared_object_binding_property_key_expression(
+                        left,
+                        assignments,
+                        depth + 1,
+                    )
+                    .unwrap_or_else(|| left.clone());
+                if matches!(left_value, Expression::Null | Expression::Undefined) {
+                    self.evaluate_prepared_object_binding_property_key_expression(
+                        right,
+                        assignments,
+                        depth + 1,
+                    )
+                    .or(Some(left_value))
+                } else {
+                    Some(left_value)
+                }
+            }
+            BinaryOp::Equal
+            | BinaryOp::NotEqual
+            | BinaryOp::LooseEqual
+            | BinaryOp::LooseNotEqual => {
+                let left = self.evaluate_prepared_object_binding_property_key_expression(
+                    left,
+                    assignments,
+                    depth + 1,
+                )?;
+                let right = self.evaluate_prepared_object_binding_property_key_expression(
+                    right,
+                    assignments,
+                    depth + 1,
+                )?;
+                let equal = Self::prepared_object_binding_property_key_values_equal(&left, &right)?;
+                let is_not_equal = matches!(op, BinaryOp::NotEqual | BinaryOp::LooseNotEqual);
+                Some(Expression::Bool(equal ^ is_not_equal))
+            }
+            BinaryOp::BitwiseAnd | BinaryOp::BitwiseOr | BinaryOp::BitwiseXor => {
+                let left = self.evaluate_prepared_object_binding_property_key_expression(
+                    left,
+                    assignments,
+                    depth + 1,
+                )?;
+                let right = self.evaluate_prepared_object_binding_property_key_expression(
+                    right,
+                    assignments,
+                    depth + 1,
+                )?;
+                let left = Self::prepared_object_binding_property_key_to_number(&left)? as i32;
+                let right = Self::prepared_object_binding_property_key_to_number(&right)? as i32;
+                let value = match op {
+                    BinaryOp::BitwiseAnd => left & right,
+                    BinaryOp::BitwiseOr => left | right,
+                    BinaryOp::BitwiseXor => left ^ right,
+                    _ => unreachable!("filtered above"),
+                };
+                Some(Expression::Number(value as f64))
+            }
+            _ => None,
+        }
+    }
+
+    fn prepared_object_binding_property_key_truthy(
+        &self,
+        expression: &Expression,
+        assignments: &mut Vec<(String, Expression)>,
+        depth: usize,
+    ) -> Option<bool> {
+        let value = self.evaluate_prepared_object_binding_property_key_expression(
+            expression,
+            assignments,
+            depth + 1,
+        )?;
+        Self::prepared_object_binding_property_key_value_truthy(&value)
+    }
+
+    fn prepared_object_binding_property_key_value_truthy(value: &Expression) -> Option<bool> {
+        match value {
+            Expression::Bool(value) => Some(*value),
+            Expression::Null | Expression::Undefined => Some(false),
+            Expression::Number(value) => Some(*value != 0.0 && !value.is_nan()),
+            Expression::String(value) => Some(!value.is_empty()),
+            Expression::BigInt(value) => Some(value != "0"),
+            Expression::Array(_)
+            | Expression::Object(_)
+            | Expression::New { .. }
+            | Expression::This => Some(true),
+            _ => None,
+        }
+    }
+
+    fn prepared_object_binding_property_key_values_equal(
+        left: &Expression,
+        right: &Expression,
+    ) -> Option<bool> {
+        match (left, right) {
+            (Expression::Undefined, Expression::Undefined)
+            | (Expression::Null, Expression::Null) => Some(true),
+            (Expression::Bool(left), Expression::Bool(right)) => Some(left == right),
+            (Expression::Number(left), Expression::Number(right)) => Some(left == right),
+            (Expression::String(left), Expression::String(right)) => Some(left == right),
+            (Expression::BigInt(left), Expression::BigInt(right)) => Some(left == right),
+            _ => Some(false),
+        }
+    }
+
+    fn prepared_object_binding_property_key_to_number(value: &Expression) -> Option<f64> {
+        match value {
+            Expression::Number(value) => Some(*value),
+            Expression::Bool(value) => Some(if *value { 1.0 } else { 0.0 }),
+            Expression::Null => Some(0.0),
+            Expression::String(value) if value.is_empty() => Some(0.0),
+            Expression::String(value) => value.parse::<f64>().ok(),
+            _ => None,
+        }
+    }
+
+    fn normalize_prepared_object_binding_property_keys(
+        &self,
+        object_binding: ObjectValueBinding,
+    ) -> ObjectValueBinding {
+        let mut normalized = ObjectValueBinding {
+            string_properties: Vec::new(),
+            symbol_properties: Vec::new(),
+            property_descriptors: Vec::new(),
+            non_enumerable_string_properties: Vec::new(),
+            runtime_symbol_properties: object_binding.runtime_symbol_properties,
+            extensible: object_binding.extensible,
+        };
+        let hidden_string_properties = object_binding.non_enumerable_string_properties;
+
+        for (name, value) in object_binding.string_properties {
+            let enumerable = !hidden_string_properties
+                .iter()
+                .any(|hidden_name| hidden_name == &name);
+            object_binding_define_property(
+                &mut normalized,
+                Expression::String(name),
+                value,
+                enumerable,
+            );
+        }
+
+        for (property, value) in object_binding.symbol_properties {
+            let property = self.normalize_prepared_object_binding_property_key(&property);
+            let enumerable = match static_property_name_from_expression(&property) {
+                Some(property_name) => !hidden_string_properties
+                    .iter()
+                    .any(|hidden_name| hidden_name == &property_name),
+                None => true,
+            };
+            object_binding_define_property(&mut normalized, property, value, enumerable);
+        }
+
+        for (property, descriptor) in object_binding.property_descriptors {
+            let property = self.normalize_prepared_object_binding_property_key(&property);
+            object_binding_define_property_descriptor(&mut normalized, property, descriptor);
+        }
+
+        normalized
+    }
+
     fn is_direct_local_array_iterator_method_call_expression(
         &mut self,
         expression: &Expression,
@@ -2298,23 +2866,23 @@ impl<'a> FunctionCompiler<'a> {
                 canonical_value_expression.clone()
             } else {
                 call_result_snapshot_expression
-                .as_ref()
-                .filter(|expression| {
-                    self.resolve_object_binding_from_expression(expression)
-                        .is_some()
-                })
-                .or_else(|| {
-                    resolved_construct_object_binding
-                        .as_ref()
-                        .map(|_| &function_binding_expression)
-                })
-                .or_else(|| {
-                    returned_call_object_binding
-                        .as_ref()
-                        .map(|_| &canonical_value_expression)
-                })
-                .unwrap_or(&tracked_object_expression)
-                .clone()
+                    .as_ref()
+                    .filter(|expression| {
+                        self.resolve_object_binding_from_expression(expression)
+                            .is_some()
+                    })
+                    .or_else(|| {
+                        resolved_construct_object_binding
+                            .as_ref()
+                            .map(|_| &function_binding_expression)
+                    })
+                    .or_else(|| {
+                        returned_call_object_binding
+                            .as_ref()
+                            .map(|_| &canonical_value_expression)
+                    })
+                    .unwrap_or(&tracked_object_expression)
+                    .clone()
             }
         };
         let object_binding =
@@ -2331,7 +2899,8 @@ impl<'a> FunctionCompiler<'a> {
                 self.resolve_object_binding_from_expression(&object_binding_expression)
             } else {
                 None
-            };
+            }
+            .map(|binding| self.normalize_prepared_object_binding_property_keys(binding));
         if trace_identifier_store {
             eprintln!(
                 "identifier_store:{name}:object_binding expr={object_binding_expression:?} prepared_binding={}",

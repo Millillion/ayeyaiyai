@@ -991,6 +991,12 @@ impl<'a> FunctionCompiler<'a> {
                 .then(|| value.clone())
             }),
             Expression::Identifier(name) => {
+                if let Some(shadow_binding_name) = self
+                    .runtime_object_property_shadow_binding_name_for_expression(object, property)
+                    && let Some(value) = self.global_value_binding(&shadow_binding_name)
+                {
+                    return Some(value.clone());
+                }
                 if let Some(value) = self
                     .state
                     .speculation
@@ -1008,9 +1014,77 @@ impl<'a> FunctionCompiler<'a> {
                     .static_semantics
                     .local_object_binding(name)
                     .or_else(|| self.backend.global_object_binding(name))
-                    .and_then(|binding| object_binding_lookup_value(binding, property).cloned())
+                    .and_then(|binding| {
+                        self.same_value_object_binding_property_value(binding, property)
+                    })
             }
             _ => None,
+        }
+    }
+
+    fn same_value_object_binding_property_value(
+        &self,
+        object_binding: &ObjectValueBinding,
+        property: &Expression,
+    ) -> Option<Expression> {
+        if let Some(value) = self.resolve_object_binding_property_value(object_binding, property) {
+            return Some(value);
+        }
+
+        let requested_property = self.same_value_resolved_property_key(property);
+        object_binding
+            .symbol_properties
+            .iter()
+            .rev()
+            .find_map(|(existing_key, value)| {
+                if Self::expression_is_runtime_object_property_shadow_identifier(value) {
+                    return None;
+                }
+
+                let existing_key = self.same_value_property_lookup_key(existing_key);
+                let requested_key = self.same_value_property_lookup_key(property);
+                if static_expression_matches(existing_key, requested_key)
+                    || static_expression_matches(existing_key, property)
+                {
+                    return Some(value.clone());
+                }
+
+                let existing_property = self.same_value_resolved_property_key(existing_key);
+                (static_expression_matches(&existing_property, &requested_property)
+                    || static_expression_matches(&existing_property, property))
+                .then(|| value.clone())
+            })
+    }
+
+    fn same_value_property_lookup_key<'b>(&self, expression: &'b Expression) -> &'b Expression {
+        let expression = Self::same_value_sequence_tail(expression);
+        let expression = Self::same_value_string_call_argument(expression).unwrap_or(expression);
+        let expression = Self::same_value_sequence_tail(expression);
+        match expression {
+            Expression::Assign { value, .. } => Self::same_value_sequence_tail(value),
+            _ => expression,
+        }
+    }
+
+    fn same_value_sequence_tail(expression: &Expression) -> &Expression {
+        match expression {
+            Expression::Sequence(expressions) => expressions
+                .last()
+                .map(Self::same_value_sequence_tail)
+                .unwrap_or(expression),
+            _ => expression,
+        }
+    }
+
+    fn same_value_string_call_argument(expression: &Expression) -> Option<&Expression> {
+        let Expression::Call { callee, arguments } = expression else {
+            return None;
+        };
+        if !matches!(callee.as_ref(), Expression::Identifier(name) if name == "String") {
+            return None;
+        }
+        match arguments.first()? {
+            CallArgument::Expression(argument) | CallArgument::Spread(argument) => Some(argument),
         }
     }
 
@@ -1237,6 +1311,79 @@ impl<'a> FunctionCompiler<'a> {
                 });
         }
 
+        if let Some(member_value) =
+            self.same_value_assertion_member_callee_static_value(callee, depth - 1)
+            && let Some(value) = self.same_value_assertion_fast_static_call_bound_value(
+                &member_value,
+                arguments,
+                depth - 1,
+            )
+        {
+            return Some(value);
+        }
+
+        let LocalFunctionBinding::User(function_name) = self
+            .resolve_function_binding_from_expression_with_context(
+                callee,
+                self.current_function_name(),
+            )?
+        else {
+            return None;
+        };
+        let user_function = self.user_function(&function_name)?;
+        if !self
+            .collect_user_function_assigned_nonlocal_bindings(user_function)
+            .is_empty()
+            || !self
+                .collect_user_function_call_effect_nonlocal_bindings(user_function)
+                .is_empty()
+        {
+            return None;
+        }
+
+        let (value, result_function_name) = self
+            .resolve_static_call_result_expression_with_context(
+                callee,
+                arguments,
+                self.current_function_name(),
+            )?;
+        let result_context = result_function_name
+            .as_deref()
+            .or(Some(function_name.as_str()))
+            .or_else(|| self.current_function_name());
+        self.resolve_static_primitive_expression_with_context(&value, result_context)
+            .or_else(|| {
+                let materialized = self.materialize_static_expression(&value);
+                self.resolve_static_primitive_expression_with_context(&materialized, result_context)
+                    .or_else(|| {
+                        self.same_value_assertion_fast_primitive_value(&materialized, depth - 1)
+                    })
+            })
+    }
+
+    fn same_value_assertion_member_callee_static_value(
+        &self,
+        callee: &Expression,
+        depth: usize,
+    ) -> Option<Expression> {
+        if depth == 0 {
+            return None;
+        }
+        let Expression::Member { object, property } = callee else {
+            return None;
+        };
+        self.same_value_assertion_direct_object_property(object, property, depth - 1)
+    }
+
+    fn same_value_assertion_fast_static_call_bound_value(
+        &self,
+        callee: &Expression,
+        arguments: &[CallArgument],
+        depth: usize,
+    ) -> Option<Expression> {
+        if depth == 0 {
+            return None;
+        }
         let LocalFunctionBinding::User(function_name) = self
             .resolve_function_binding_from_expression_with_context(
                 callee,
@@ -2146,7 +2293,7 @@ impl<'a> FunctionCompiler<'a> {
         }
         if let Some(value) = self
             .same_value_assertion_direct_object_binding(object, depth - 1)
-            .and_then(|binding| object_binding_lookup_value(&binding, property).cloned())
+            .and_then(|binding| self.same_value_object_binding_property_value(&binding, property))
         {
             return Some(value);
         }
@@ -2169,7 +2316,9 @@ impl<'a> FunctionCompiler<'a> {
                 .static_semantics
                 .local_object_binding(name)
                 .or_else(|| self.backend.global_object_binding(name))
-                .and_then(|binding| object_binding_lookup_value(binding, property).cloned())
+                .and_then(|binding| {
+                    self.same_value_object_binding_property_value(binding, property)
+                })
                 .or_else(|| {
                     self.state
                         .speculation
@@ -2193,7 +2342,9 @@ impl<'a> FunctionCompiler<'a> {
                     .static_semantics
                     .local_object_binding(&name)
                     .or_else(|| self.backend.global_object_binding(&name))
-                    .and_then(|binding| object_binding_lookup_value(binding, property).cloned()),
+                    .and_then(|binding| {
+                        self.same_value_object_binding_property_value(binding, property)
+                    }),
                 _ => None,
             },
         }

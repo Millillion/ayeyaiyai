@@ -988,6 +988,19 @@ impl<'a> FunctionCompiler<'a> {
         })
     }
 
+    fn expression_is_class_init_call(expression: &Expression) -> bool {
+        matches!(
+            expression,
+            Expression::Call { callee, arguments }
+                if arguments.is_empty()
+                    && matches!(
+                        callee.as_ref(),
+                        Expression::Identifier(function_name)
+                            if function_name.starts_with("__ayy_class_init_")
+                    )
+        )
+    }
+
     fn expression_is_single_spread_shadow_copy(&self, expression: &Expression) -> bool {
         let Expression::Object(entries) = expression else {
             return false;
@@ -1351,6 +1364,32 @@ impl<'a> FunctionCompiler<'a> {
                     binding
                 }
             });
+        let prepared_object_binding = state.object_binding.clone().or_else(|| {
+            self.resolve_object_binding_from_expression(&state.object_binding_expression)
+        });
+        let source_owner_is_class_alias = source_owner.as_deref().is_some_and(|source_owner| {
+            source_owner.starts_with("__ayy_class_expr_")
+                || source_owner.starts_with("__ayy_class_ctor_")
+        });
+        let source_owner_is_class_init_return = source_owner_is_class_alias
+            && (Self::expression_is_class_init_call(&state.canonical_value_expression)
+                || Self::expression_is_class_init_call(&state.module_assignment_expression));
+        let source_owner_matches_target = source_owner.as_deref() == Some(target_owner.as_str());
+        let class_alias_object_binding = (source_owner_is_class_init_return
+            || (source_owner_is_class_alias && source_owner_matches_target))
+            .then(|| {
+                let mut object_binding = source_shadow_object_binding
+                    .clone()
+                    .or_else(|| prepared_object_binding.clone())?;
+                if let Some(prepared_object_binding) = prepared_object_binding.as_ref() {
+                    Self::merge_object_binding_properties(
+                        &mut object_binding,
+                        prepared_object_binding,
+                    );
+                }
+                Some(object_binding)
+            })
+            .flatten();
         let object_binding = self
             .state
             .speculation
@@ -1363,10 +1402,9 @@ impl<'a> FunctionCompiler<'a> {
                     .then(|| state.object_binding.clone())
                     .flatten()
             })
+            .or(class_alias_object_binding)
             .or_else(|| source_shadow_object_binding.clone())
-            .or_else(|| {
-                self.resolve_object_binding_from_expression(&state.object_binding_expression)
-            })
+            .or(prepared_object_binding)
             .or(source_shadow_object_binding)
             .map(|object_binding| {
                 self.rewrite_static_new_this_object_binding_for_owner(
@@ -1423,6 +1461,12 @@ impl<'a> FunctionCompiler<'a> {
         }
 
         if source_owner.as_deref() == Some(target_owner.as_str()) {
+            if let Some(object_binding) = object_binding.as_ref() {
+                self.sync_runtime_object_property_shadow_static_metadata_from_binding(
+                    &target_owner,
+                    object_binding,
+                );
+            }
             return Ok(());
         }
 
@@ -1461,6 +1505,18 @@ impl<'a> FunctionCompiler<'a> {
             }
             self.emit_runtime_object_property_shadow_copy(&source_owner, &target_owner)?;
             self.copy_class_object_member_bindings_for_shadow_alias(&target_owner, &source_owner);
+            if source_owner.starts_with("__ayy_class_expr_")
+                || source_owner.starts_with("__ayy_class_ctor_")
+            {
+                if let Some(source_object_binding) =
+                    self.resolve_runtime_shadow_object_binding(&source_owner)
+                {
+                    self.sync_runtime_object_property_shadow_static_metadata_from_binding(
+                        &target_owner,
+                        &source_object_binding,
+                    );
+                }
+            }
             if let Some(object_binding) = object_binding.as_ref() {
                 self.sync_runtime_object_property_shadow_static_metadata_from_binding(
                     &target_owner,

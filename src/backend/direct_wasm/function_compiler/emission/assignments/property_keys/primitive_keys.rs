@@ -34,6 +34,35 @@ impl<'a> FunctionCompiler<'a> {
         if let Expression::Sequence(expressions) = expression {
             return self.resolve_primitive_property_key_expression(expressions.last()?);
         }
+        if let Expression::Conditional {
+            condition,
+            then_expression,
+            else_expression,
+        } = expression
+            && let Some(key) = self.resolve_primitive_conditional_assignment_property_key(
+                condition,
+                then_expression,
+                else_expression,
+            )
+        {
+            return Some(key);
+        }
+        if let Expression::Conditional {
+            condition,
+            then_expression,
+            else_expression,
+        } = expression
+            && let Some(take_then) = self.resolve_static_boolean_expression(condition)
+        {
+            let selected = if take_then {
+                then_expression
+            } else {
+                else_expression
+            };
+            if let Some(key) = self.resolve_primitive_property_key_expression(selected) {
+                return Some(key);
+            }
+        }
         if let Expression::Identifier(name) = expression
             && name.starts_with("__ayy_class_field_name_")
         {
@@ -269,6 +298,190 @@ impl<'a> FunctionCompiler<'a> {
         }
         self.resolve_symbol_identity_expression(&materialized)
             .or_else(|| self.resolve_symbol_identity_expression(expression))
+    }
+
+    fn resolve_primitive_conditional_assignment_property_key(
+        &self,
+        condition: &Expression,
+        then_expression: &Expression,
+        else_expression: &Expression,
+    ) -> Option<Expression> {
+        if let Some(key) = self.resolve_primitive_conditional_nullish_assignment_property_key(
+            condition,
+            then_expression,
+            else_expression,
+        ) {
+            return Some(key);
+        }
+
+        let Expression::Identifier(condition_name) = condition else {
+            return None;
+        };
+
+        let (op, assigned_value) = match (then_expression, else_expression) {
+            (
+                Expression::Assign {
+                    name: assigned_name,
+                    value,
+                },
+                Expression::Identifier(else_name),
+            ) if assigned_name == condition_name && else_name == condition_name => {
+                (BinaryOp::LogicalAnd, value.as_ref())
+            }
+            (
+                Expression::Identifier(then_name),
+                Expression::Assign {
+                    name: assigned_name,
+                    value,
+                },
+            ) if then_name == condition_name && assigned_name == condition_name => {
+                (BinaryOp::LogicalOr, value.as_ref())
+            }
+            _ => return None,
+        };
+
+        let current_value = self.primitive_property_key_identifier_value(condition_name);
+        let assigned_value = self.materialize_static_expression(assigned_value);
+        let result = match op {
+            BinaryOp::LogicalAnd => {
+                let current_value = current_value?;
+                if self
+                    .resolve_static_boolean_expression(&current_value)
+                    .or_else(|| self.resolve_static_boolean_expression(condition))?
+                {
+                    assigned_value
+                } else {
+                    current_value
+                }
+            }
+            BinaryOp::LogicalOr => {
+                let Some(current_value) = current_value else {
+                    return self.resolve_primitive_property_key_expression(&assigned_value);
+                };
+                if self
+                    .resolve_static_boolean_expression(&current_value)
+                    .or_else(|| self.resolve_static_boolean_expression(condition))?
+                {
+                    current_value
+                } else {
+                    assigned_value
+                }
+            }
+            _ => return None,
+        };
+
+        self.resolve_primitive_property_key_expression(&result)
+    }
+
+    fn resolve_primitive_conditional_nullish_assignment_property_key(
+        &self,
+        condition: &Expression,
+        then_expression: &Expression,
+        else_expression: &Expression,
+    ) -> Option<Expression> {
+        let Expression::Identifier(then_name) = then_expression else {
+            return None;
+        };
+        let Expression::Assign {
+            name: assigned_name,
+            value,
+        } = else_expression
+        else {
+            return None;
+        };
+        if then_name != assigned_name
+            || !Self::conditional_nullish_assignment_condition_matches(condition, then_name)
+        {
+            return None;
+        }
+
+        let assigned_value = self.materialize_static_expression(value);
+        let current_value = self.primitive_property_key_identifier_value(then_name);
+        let result = match current_value {
+            Some(Expression::Null | Expression::Undefined) | None => assigned_value,
+            Some(value) => value,
+        };
+
+        self.resolve_primitive_property_key_expression(&result)
+    }
+
+    fn conditional_nullish_assignment_condition_matches(
+        condition: &Expression,
+        name: &str,
+    ) -> bool {
+        let Expression::Binary {
+            op: BinaryOp::LogicalAnd,
+            left,
+            right,
+        } = condition
+        else {
+            return false;
+        };
+
+        let left_matches =
+            Self::conditional_nullish_assignment_comparison_matches(left, name, true);
+        let right_matches =
+            Self::conditional_nullish_assignment_comparison_matches(right, name, false);
+        let swapped_left =
+            Self::conditional_nullish_assignment_comparison_matches(left, name, false);
+        let swapped_right =
+            Self::conditional_nullish_assignment_comparison_matches(right, name, true);
+
+        (left_matches && right_matches) || (swapped_left && swapped_right)
+    }
+
+    fn conditional_nullish_assignment_comparison_matches(
+        expression: &Expression,
+        name: &str,
+        expect_undefined: bool,
+    ) -> bool {
+        let Expression::Binary { op, left, right } = expression else {
+            return false;
+        };
+        if !matches!(op, BinaryOp::NotEqual | BinaryOp::LooseNotEqual) {
+            return false;
+        }
+
+        let expected_matches = |expression: &Expression| {
+            if expect_undefined {
+                matches!(expression, Expression::Undefined)
+                    || matches!(expression, Expression::Identifier(identifier) if identifier == "undefined")
+            } else {
+                matches!(expression, Expression::Null)
+            }
+        };
+        let identifier_matches = |expression: &Expression| matches!(expression, Expression::Identifier(identifier) if identifier == name);
+
+        (identifier_matches(left) && expected_matches(right))
+            || (identifier_matches(right) && expected_matches(left))
+    }
+
+    fn primitive_property_key_identifier_value(&self, name: &str) -> Option<Expression> {
+        let identifier = Expression::Identifier(name.to_string());
+        let materialized = self.materialize_static_expression(&identifier);
+        if !static_expression_matches(&materialized, &identifier) {
+            return Some(materialized);
+        }
+
+        if let Some((resolved_name, _)) = self.resolve_current_local_binding(name)
+            && resolved_name != name
+            && let Some(value) = self
+                .state
+                .speculation
+                .static_semantics
+                .local_value_binding(&resolved_name)
+            && !static_expression_matches(value, &identifier)
+        {
+            return Some(value.clone());
+        }
+
+        self.state
+            .speculation
+            .static_semantics
+            .local_value_binding(name)
+            .or_else(|| self.global_value_binding(name))
+            .filter(|value| !static_expression_matches(value, &identifier))
+            .cloned()
     }
 
     fn resolve_class_field_name_primitive_property_key_candidate(

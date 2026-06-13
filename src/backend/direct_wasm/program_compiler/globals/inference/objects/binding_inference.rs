@@ -284,14 +284,13 @@ impl DirectWasmCompiler {
             return None;
         };
         let descriptor = resolve_property_descriptor_definition(descriptor_expression)?;
+        let mut property_environment = GlobalStaticEvaluationEnvironment::from_snapshots(
+            HashMap::new(),
+            value_bindings.clone(),
+            object_bindings.clone(),
+        );
         let property = self
-            .materialize_global_expression_with_state(
-                property,
-                &HashMap::new(),
-                value_bindings,
-                object_bindings,
-            )
-            .unwrap_or_else(|| self.materialize_global_expression(property));
+            .resolve_global_static_constructor_property_key(property, &mut property_environment);
         let materialized_target = self
             .materialize_global_expression_with_state(
                 target,
@@ -1338,17 +1337,8 @@ impl DirectWasmCompiler {
                     let Expression::Identifier(target_name) = object else {
                         continue;
                     };
-                    let property = self
-                        .evaluate_static_expression_with_state(property, environment)
-                        .or_else(|| {
-                            self.materialize_global_expression_with_state(
-                                property,
-                                &environment.local_bindings,
-                                &environment.value_bindings,
-                                &environment.object_bindings,
-                            )
-                        })
-                        .unwrap_or_else(|| property.clone());
+                    let property =
+                        self.resolve_global_static_constructor_property_key(property, environment);
                     let value =
                         self.resolve_global_static_constructor_binding_value(value, environment);
                     if let Some(binding) = environment.object_binding_mut(target_name) {
@@ -1430,17 +1420,10 @@ impl DirectWasmCompiler {
                     else {
                         continue;
                     };
-                    let property = self
-                        .evaluate_static_expression_with_state(property_expression, environment)
-                        .or_else(|| {
-                            self.materialize_global_expression_with_state(
-                                property_expression,
-                                &environment.local_bindings,
-                                &environment.value_bindings,
-                                &environment.object_bindings,
-                            )
-                        })
-                        .unwrap_or_else(|| property_expression.clone());
+                    let property = self.resolve_global_static_constructor_property_key(
+                        property_expression,
+                        environment,
+                    );
                     let value = descriptor
                         .value
                         .as_ref()
@@ -1462,11 +1445,27 @@ impl DirectWasmCompiler {
         }
     }
 
+    fn resolve_global_static_constructor_property_key(
+        &self,
+        expression: &Expression,
+        environment: &mut GlobalStaticEvaluationEnvironment,
+    ) -> Expression {
+        let value = self.resolve_global_static_constructor_binding_value(expression, environment);
+        static_property_name_from_expression(&value)
+            .map(Expression::String)
+            .unwrap_or(value)
+    }
+
     fn resolve_global_static_constructor_binding_value(
         &self,
         expression: &Expression,
         environment: &mut GlobalStaticEvaluationEnvironment,
     ) -> Expression {
+        if let Some(value) = self
+            .evaluate_global_static_constructor_binding_value_with_effects(expression, environment)
+        {
+            return value;
+        }
         if let Expression::Call { callee, arguments } = expression
             && let Some(value) = self.infer_static_call_result_expression(callee, arguments)
         {
@@ -1482,5 +1481,123 @@ impl DirectWasmCompiler {
                 )
             })
             .unwrap_or_else(|| expression.clone())
+    }
+
+    fn evaluate_global_static_constructor_binding_value_with_effects(
+        &self,
+        expression: &Expression,
+        environment: &mut GlobalStaticEvaluationEnvironment,
+    ) -> Option<Expression> {
+        match expression {
+            Expression::Assign { name, value } => {
+                let value =
+                    self.resolve_global_static_constructor_binding_value(value, environment);
+                environment.assign_binding_value(name.clone(), value.clone());
+                Some(value)
+            }
+            Expression::Sequence(expressions) => {
+                let mut last = Expression::Undefined;
+                for expression in expressions {
+                    last = self
+                        .resolve_global_static_constructor_binding_value(expression, environment);
+                }
+                Some(last)
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                let condition_value = self
+                    .evaluate_static_expression_with_state(condition, environment)
+                    .or_else(|| {
+                        self.materialize_global_expression_with_state(
+                            condition,
+                            &environment.local_bindings,
+                            &environment.value_bindings,
+                            &environment.object_bindings,
+                        )
+                    })
+                    .unwrap_or_else(|| condition.as_ref().clone());
+                let take_then = Self::global_static_constructor_truthy(&condition_value)?;
+                let selected = if take_then {
+                    then_expression
+                } else {
+                    else_expression
+                };
+                Some(self.resolve_global_static_constructor_binding_value(selected, environment))
+            }
+            Expression::Binary {
+                op: op @ (BinaryOp::LogicalAnd | BinaryOp::LogicalOr | BinaryOp::NullishCoalescing),
+                left,
+                right,
+            } => {
+                let left_value = self
+                    .evaluate_global_static_constructor_binding_value_with_effects(
+                        left,
+                        environment,
+                    )
+                    .or_else(|| {
+                        self.evaluate_static_expression_with_state(left, environment)
+                            .or_else(|| {
+                                self.materialize_global_expression_with_state(
+                                    left,
+                                    &environment.local_bindings,
+                                    &environment.value_bindings,
+                                    &environment.object_bindings,
+                                )
+                            })
+                    })
+                    .unwrap_or_else(|| left.as_ref().clone());
+                match op {
+                    BinaryOp::LogicalAnd => {
+                        if Self::global_static_constructor_truthy(&left_value)? {
+                            Some(self.resolve_global_static_constructor_binding_value(
+                                right,
+                                environment,
+                            ))
+                        } else {
+                            Some(left_value)
+                        }
+                    }
+                    BinaryOp::LogicalOr => {
+                        if Self::global_static_constructor_truthy(&left_value)? {
+                            Some(left_value)
+                        } else {
+                            Some(self.resolve_global_static_constructor_binding_value(
+                                right,
+                                environment,
+                            ))
+                        }
+                    }
+                    BinaryOp::NullishCoalescing => {
+                        if matches!(left_value, Expression::Null | Expression::Undefined) {
+                            Some(self.resolve_global_static_constructor_binding_value(
+                                right,
+                                environment,
+                            ))
+                        } else {
+                            Some(left_value)
+                        }
+                    }
+                    _ => None,
+                }
+            }
+            _ => None,
+        }
+    }
+
+    fn global_static_constructor_truthy(expression: &Expression) -> Option<bool> {
+        match expression {
+            Expression::Bool(value) => Some(*value),
+            Expression::Number(value) => Some(*value != 0.0 && !value.is_nan()),
+            Expression::String(value) => Some(!value.is_empty()),
+            Expression::Null | Expression::Undefined => Some(false),
+            Expression::Array(_)
+            | Expression::Object(_)
+            | Expression::This
+            | Expression::New { .. } => Some(true),
+            _ => None,
+        }
     }
 }

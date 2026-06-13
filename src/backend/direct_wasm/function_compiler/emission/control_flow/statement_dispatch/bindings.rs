@@ -1168,7 +1168,9 @@ impl<'a> FunctionCompiler<'a> {
                 if trace {
                     eprintln!("binding_statement:let:start name={name} value={value:?}");
                 }
-                if name.starts_with("__ayy_source_property_") {
+                if name.starts_with("__ayy_source_property_")
+                    || name.starts_with("__ayy_class_field_name_")
+                {
                     if let Some(resolved_key) = self.emit_property_key_expression_effects(value)? {
                         self.emit_numeric_expression(&resolved_key)?;
                         source_property_store_value = Some(resolved_key);

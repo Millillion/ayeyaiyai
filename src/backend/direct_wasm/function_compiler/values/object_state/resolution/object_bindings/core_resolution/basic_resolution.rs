@@ -267,6 +267,11 @@ impl<'a> FunctionCompiler<'a> {
         let function_object_binding = self
             .identifier_resolves_to_function_object(&resolved_name, name)
             .then(empty_object_value_binding);
+        let class_init_constructor_object_binding = self
+            .infer_static_class_init_constructor_object_binding_for_identifier(&resolved_name)
+            .or_else(|| {
+                self.infer_static_class_init_constructor_object_binding_for_identifier(name)
+            });
         let has_active_local_binding = local_object_binding.is_some()
             || self.resolve_current_local_binding(name).is_some()
             || self
@@ -332,6 +337,7 @@ impl<'a> FunctionCompiler<'a> {
                 .or(global_object_binding.clone())
                 .or(global_value_object_binding.clone())
                 .or(function_object_binding.clone())
+                .or(class_init_constructor_object_binding.clone())
         } else if self.binding_name_is_global(name)
             || self.global_has_binding(name)
             || self.backend.global_has_lexical_binding(name)
@@ -345,6 +351,7 @@ impl<'a> FunctionCompiler<'a> {
                 .or(local_value_object_binding.clone())
                 .or(hidden_object_binding.clone())
                 .or(function_object_binding.clone())
+                .or(class_init_constructor_object_binding.clone())
         } else {
             runtime_shadow_object_binding
                 .clone()
@@ -354,6 +361,7 @@ impl<'a> FunctionCompiler<'a> {
                 .or(global_object_binding.clone())
                 .or(global_value_object_binding.clone())
                 .or(function_object_binding.clone())
+                .or(class_init_constructor_object_binding.clone())
         };
         let binding = candidate_binding
             .or_else(|| {
@@ -371,8 +379,63 @@ impl<'a> FunctionCompiler<'a> {
                 (!static_expression_matches(&resolved, expression))
                     .then(|| self.resolve_object_binding_from_expression(&resolved))
                     .flatten()
+            })
+            .map(|mut binding| {
+                if let Some(class_init_constructor_object_binding) =
+                    class_init_constructor_object_binding.as_ref()
+                {
+                    Self::merge_object_binding_properties(
+                        &mut binding,
+                        class_init_constructor_object_binding,
+                    );
+                }
+                binding
             });
         binding
+    }
+
+    fn infer_static_class_init_constructor_object_binding_for_identifier(
+        &self,
+        name: &str,
+    ) -> Option<ObjectValueBinding> {
+        if !(name.starts_with("__ayy_class_expr_") || name.starts_with("__ayy_class_ctor_")) {
+            return None;
+        }
+
+        self.backend
+            .function_registry
+            .catalog
+            .registered_function_declarations
+            .iter()
+            .filter(|function| function.name.starts_with("__ayy_class_init_"))
+            .find_map(|function| {
+                let returned_constructor =
+                    self.infer_static_class_init_call_result_expression(&function.name)?;
+                if !self.static_class_init_returned_constructor_matches_identifier(
+                    &returned_constructor,
+                    name,
+                ) {
+                    return None;
+                }
+                self.infer_static_class_init_constructor_object_binding(&function.name)
+            })
+    }
+
+    fn static_class_init_returned_constructor_matches_identifier(
+        &self,
+        returned_constructor: &Expression,
+        name: &str,
+    ) -> bool {
+        let Expression::Identifier(returned_name) = returned_constructor else {
+            return false;
+        };
+        if returned_name == name {
+            return true;
+        }
+        matches!(
+            self.resolve_function_binding_from_expression(returned_constructor),
+            Some(LocalFunctionBinding::User(function_name)) if function_name == name
+        )
     }
 
     fn identifier_resolves_to_function_object(&self, resolved_name: &str, name: &str) -> bool {

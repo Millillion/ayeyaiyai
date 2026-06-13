@@ -162,6 +162,14 @@ impl<'a> FunctionCompiler<'a> {
         {
             return Some(object_binding);
         }
+        if arguments.is_empty()
+            && let Expression::Identifier(function_name) = callee
+            && function_name.starts_with("__ayy_class_init_")
+            && let Some(object_binding) =
+                self.infer_static_class_init_constructor_object_binding(function_name)
+        {
+            return Some(object_binding);
+        }
         if let Some(object_binding) =
             self.resolve_side_effect_free_static_call_object_binding(callee, arguments)
         {
@@ -174,14 +182,6 @@ impl<'a> FunctionCompiler<'a> {
                 Expression::String("toString".to_string()),
                 Expression::Identifier("String".to_string()),
             );
-            return Some(object_binding);
-        }
-        if arguments.is_empty()
-            && let Expression::Identifier(function_name) = callee
-            && function_name.starts_with("__ayy_class_init_")
-            && let Some(object_binding) =
-                self.infer_static_class_init_constructor_object_binding(function_name)
-        {
             return Some(object_binding);
         }
         if matches!(
@@ -1273,8 +1273,7 @@ impl<'a> FunctionCompiler<'a> {
         // make the second application a no-op, but object keys have no
         // static identity and would be inserted twice; dedupe back-to-back
         // identical applications through a one-shot marker.
-        let mutation_marker_property =
-            Expression::String("__ayy[[MapLastMutation]]".to_string());
+        let mutation_marker_property = Expression::String("__ayy[[MapLastMutation]]".to_string());
         let mutation_marker = Expression::String(format!(
             "{property_name}:{:?}",
             arguments

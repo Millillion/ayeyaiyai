@@ -1,4 +1,4 @@
-22932/23668 (96.89%)
+22937/23668 (96.91%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,7 +14,7 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 9042/9337 (96.84%)
+- statements: 9047/9337 (96.89%)
 - expressions: 10727/11061 (96.98%)
 - types: 113/113 (100.00%)
 - function-code: 217/217 (100.00%)
@@ -2266,9 +2266,9 @@ Sub-category progress
   - [x] test/language/statements/class/cpn-class-decl-fields-computed-property-name-from-additive-expression-subtract.js
   - [x] test/language/statements/class/cpn-class-decl-fields-computed-property-name-from-arrow-function-expression.js
   - [x] test/language/statements/class/cpn-class-decl-fields-computed-property-name-from-assignment-expression-assignment.js
-  - [ ] test/language/statements/class/cpn-class-decl-fields-computed-property-name-from-assignment-expression-bitwise-or.js
-  - [ ] test/language/statements/class/cpn-class-decl-fields-computed-property-name-from-assignment-expression-coalesce.js
-  - [ ] test/language/statements/class/cpn-class-decl-fields-computed-property-name-from-assignment-expression-logical-and.js
+  - [x] test/language/statements/class/cpn-class-decl-fields-computed-property-name-from-assignment-expression-bitwise-or.js
+  - [x] test/language/statements/class/cpn-class-decl-fields-computed-property-name-from-assignment-expression-coalesce.js
+  - [x] test/language/statements/class/cpn-class-decl-fields-computed-property-name-from-assignment-expression-logical-and.js
   - [x] test/language/statements/class/cpn-class-decl-fields-computed-property-name-from-assignment-expression-logical-or.js
   - [x] test/language/statements/class/cpn-class-decl-fields-computed-property-name-from-async-arrow-function-expression.js
   - [ ] test/language/statements/class/cpn-class-decl-fields-computed-property-name-from-await-expression.js
@@ -2297,9 +2297,9 @@ Sub-category progress
   - [x] test/language/statements/class/cpn-class-decl-fields-methods-computed-property-name-from-additive-expression-subtract.js
   - [x] test/language/statements/class/cpn-class-decl-fields-methods-computed-property-name-from-arrow-function-expression.js
   - [x] test/language/statements/class/cpn-class-decl-fields-methods-computed-property-name-from-assignment-expression-assignment.js
-  - [ ] test/language/statements/class/cpn-class-decl-fields-methods-computed-property-name-from-assignment-expression-bitwise-or.js
+  - [x] test/language/statements/class/cpn-class-decl-fields-methods-computed-property-name-from-assignment-expression-bitwise-or.js
   - [x] test/language/statements/class/cpn-class-decl-fields-methods-computed-property-name-from-assignment-expression-coalesce.js
-  - [ ] test/language/statements/class/cpn-class-decl-fields-methods-computed-property-name-from-assignment-expression-logical-and.js
+  - [x] test/language/statements/class/cpn-class-decl-fields-methods-computed-property-name-from-assignment-expression-logical-and.js
   - [x] test/language/statements/class/cpn-class-decl-fields-methods-computed-property-name-from-assignment-expression-logical-or.js
   - [x] test/language/statements/class/cpn-class-decl-fields-methods-computed-property-name-from-async-arrow-function-expression.js
   - [ ] test/language/statements/class/cpn-class-decl-fields-methods-computed-property-name-from-await-expression.js

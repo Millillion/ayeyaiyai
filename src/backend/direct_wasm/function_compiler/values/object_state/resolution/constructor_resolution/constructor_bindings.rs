@@ -829,9 +829,108 @@ impl<'a> FunctionCompiler<'a> {
         expression: &Expression,
         environment: &mut StaticResolutionEnvironment,
     ) -> Expression {
+        if let Some(value) =
+            self.evaluate_static_constructor_binding_value_with_effects(expression, environment)
+        {
+            return value;
+        }
         self.evaluate_static_expression_with_state(expression, environment)
             .or_else(|| self.materialize_static_expression_with_state(expression, environment))
             .unwrap_or_else(|| expression.clone())
+    }
+
+    fn evaluate_static_constructor_binding_value_with_effects(
+        &self,
+        expression: &Expression,
+        environment: &mut StaticResolutionEnvironment,
+    ) -> Option<Expression> {
+        match expression {
+            Expression::Assign { name, value } => {
+                let value = self.resolve_static_constructor_binding_value(value, environment);
+                environment.assign_binding_value(name.clone(), value.clone());
+                Some(value)
+            }
+            Expression::Sequence(expressions) => {
+                let mut last = Expression::Undefined;
+                for expression in expressions {
+                    last = self.resolve_static_constructor_binding_value(expression, environment);
+                }
+                Some(last)
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                let condition_value = self
+                    .evaluate_static_expression_with_state(condition, environment)
+                    .or_else(|| {
+                        self.materialize_static_expression_with_state(condition, environment)
+                    })
+                    .unwrap_or_else(|| condition.as_ref().clone());
+                let take_then = self
+                    .resolve_static_boolean_expression(&condition_value)
+                    .or_else(|| self.resolve_static_boolean_expression(condition))?;
+                let selected = if take_then {
+                    then_expression
+                } else {
+                    else_expression
+                };
+                Some(self.resolve_static_constructor_binding_value(selected, environment))
+            }
+            Expression::Binary {
+                op: op @ (BinaryOp::LogicalAnd | BinaryOp::LogicalOr | BinaryOp::NullishCoalescing),
+                left,
+                right,
+            } => {
+                let left_value = self
+                    .evaluate_static_constructor_binding_value_with_effects(left, environment)
+                    .or_else(|| self.static_constructor_environment_value(left, environment))
+                    .unwrap_or_else(|| left.as_ref().clone());
+                match op {
+                    BinaryOp::LogicalAnd => {
+                        if self
+                            .resolve_static_boolean_expression(&left_value)
+                            .or_else(|| self.resolve_static_boolean_expression(left))?
+                        {
+                            Some(self.resolve_static_constructor_binding_value(right, environment))
+                        } else {
+                            Some(left_value)
+                        }
+                    }
+                    BinaryOp::LogicalOr => {
+                        if self
+                            .resolve_static_boolean_expression(&left_value)
+                            .or_else(|| self.resolve_static_boolean_expression(left))?
+                        {
+                            Some(left_value)
+                        } else {
+                            Some(self.resolve_static_constructor_binding_value(right, environment))
+                        }
+                    }
+                    BinaryOp::NullishCoalescing => {
+                        let primitive_left = self
+                            .resolve_static_primitive_expression_with_context(
+                                &left_value,
+                                self.current_function_name(),
+                            )
+                            .or_else(|| {
+                                self.resolve_static_primitive_expression_with_context(
+                                    left,
+                                    self.current_function_name(),
+                                )
+                            })?;
+                        if matches!(primitive_left, Expression::Null | Expression::Undefined) {
+                            Some(self.resolve_static_constructor_binding_value(right, environment))
+                        } else {
+                            Some(primitive_left)
+                        }
+                    }
+                    _ => None,
+                }
+            }
+            _ => None,
+        }
     }
 
     fn substitute_static_constructor_capture_source_expression(
@@ -1171,6 +1270,13 @@ impl<'a> FunctionCompiler<'a> {
             .or_else(|| self.materialize_static_expression_with_state(property, environment))
             .and_then(|property| self.resolve_primitive_property_key_expression(&property))
             .or_else(|| self.resolve_primitive_property_key_expression(property))
+    }
+
+    fn static_constructor_property_is_generated_class_field_name(property: &Expression) -> bool {
+        matches!(
+            property,
+            Expression::Identifier(name) if name.starts_with("__ayy_class_field_name_")
+        )
     }
 
     fn static_constructor_environment_value(
@@ -1691,7 +1797,10 @@ impl<'a> FunctionCompiler<'a> {
                         .is_some()
                         || self.well_known_symbol_name(&property).is_some()
                         || self.resolve_symbol_identity_expression(&property).is_some();
-                    let value = if property_is_canonical {
+                    let value = if property_is_canonical
+                        || Self::static_constructor_property_is_generated_class_field_name(
+                            property_expression,
+                        ) {
                         value
                     } else {
                         Expression::Update {
