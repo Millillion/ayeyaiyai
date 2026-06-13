@@ -1,5 +1,18 @@
 use super::*;
 
+fn define_property_prototype_target_name(target: &Expression) -> Option<&str> {
+    let Expression::Member { object, property } = target else {
+        return None;
+    };
+    if !matches!(property.as_ref(), Expression::String(name) if name == "prototype") {
+        return None;
+    }
+    let Expression::Identifier(name) = object.as_ref() else {
+        return None;
+    };
+    Some(name)
+}
+
 impl<'a> FunctionCompiler<'a> {
     pub(super) fn apply_object_define_property_update(&mut self, arguments: &[CallArgument]) {
         if crate::ayy_env_flag!("AYY_TRACE_DEFINE_PROPERTY_UPDATE") {
@@ -24,13 +37,16 @@ impl<'a> FunctionCompiler<'a> {
                 descriptor_expression,
             )
         {
-            if accepted_without_mutation
-                && matches!(target, Expression::This)
-                && self.current_function_name().is_none()
-            {
-                self.update_global_property_descriptor(property, &descriptor);
+            if !accepted_without_mutation {
+                return;
             }
-            return;
+            if matches!(target, Expression::This) && self.current_function_name().is_none() {
+                self.update_global_property_descriptor(property, &descriptor);
+                return;
+            }
+            if define_property_prototype_target_name(target).is_none() {
+                return;
+            }
         }
 
         match target {
@@ -100,13 +116,16 @@ impl<'a> FunctionCompiler<'a> {
             if let Some(accepted_without_mutation) = self
                 .static_define_property_accepts_without_mutation(target, key, descriptor_expression)
             {
-                if accepted_without_mutation
-                    && matches!(target, Expression::This)
-                    && self.current_function_name().is_none()
-                {
-                    self.update_global_property_descriptor(key, &descriptor);
+                if !accepted_without_mutation {
+                    continue;
                 }
-                continue;
+                if matches!(target, Expression::This) && self.current_function_name().is_none() {
+                    self.update_global_property_descriptor(key, &descriptor);
+                    continue;
+                }
+                if define_property_prototype_target_name(target).is_none() {
+                    continue;
+                }
             }
 
             match target {
