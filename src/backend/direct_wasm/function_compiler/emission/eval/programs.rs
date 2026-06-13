@@ -2213,9 +2213,18 @@ impl<'a> FunctionCompiler<'a> {
             Statement::With { body, .. } => self
                 .infer_eval_statement_list_completion_kind(body)
                 .or(Some(StaticValueKind::Undefined)),
-            Statement::DoWhile { body, .. }
-            | Statement::While { body, .. }
-            | Statement::For { body, .. } => self.infer_eval_statement_list_completion_kind(body),
+            Statement::While {
+                condition, body, ..
+            } => {
+                if self.resolve_static_boolean_expression(condition) == Some(false) {
+                    Some(StaticValueKind::Undefined)
+                } else {
+                    self.infer_eval_statement_list_completion_kind(body)
+                }
+            }
+            Statement::DoWhile { body, .. } | Statement::For { body, .. } => {
+                self.infer_eval_statement_list_completion_kind(body)
+            }
             Statement::Labeled { body, .. } => self.infer_eval_statement_list_completion_kind(body),
             Statement::If {
                 then_branch,

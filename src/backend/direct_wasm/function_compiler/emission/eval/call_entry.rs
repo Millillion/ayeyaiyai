@@ -206,6 +206,14 @@ impl<'a> FunctionCompiler<'a> {
         body: &[Statement],
         completion_local: u32,
     ) -> DirectResult<()> {
+        if self.resolve_static_boolean_expression(condition) == Some(false) {
+            self.push_i32_const(JS_UNDEFINED_TAG);
+            self.push_local_set(completion_local);
+            self.emit_numeric_expression(condition)?;
+            self.state.emission.output.instructions.push(0x1a);
+            return Ok(());
+        }
+
         let invalidated_bindings = self
             .collect_loop_assigned_binding_names_with_effectful_iterators(
                 condition, break_hook, body, None, None,
