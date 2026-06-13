@@ -1,4 +1,4 @@
-22954/23668 (96.98%)
+22957/23668 (97.00%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -15,7 +15,7 @@ Sub-category progress
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
 - statements: 9051/9337 (96.94%)
-- expressions: 10740/11061 (97.10%)
+- expressions: 10743/11061 (97.13%)
 - types: 113/113 (100.00%)
 - function-code: 217/217 (100.00%)
 - global-code: 42/42 (100.00%)
@@ -19201,9 +19201,9 @@ Sub-category progress
   - [x] test/language/expressions/generators/length-dflt.js
   - [x] test/language/expressions/generators/length-property-descriptor.js
   - [x] test/language/expressions/generators/name.js
-  - [ ] test/language/expressions/generators/named-no-strict-reassign-fn-name-in-body-in-arrow.js
-  - [ ] test/language/expressions/generators/named-no-strict-reassign-fn-name-in-body-in-eval.js
-  - [ ] test/language/expressions/generators/named-no-strict-reassign-fn-name-in-body.js
+  - [x] test/language/expressions/generators/named-no-strict-reassign-fn-name-in-body-in-arrow.js
+  - [x] test/language/expressions/generators/named-no-strict-reassign-fn-name-in-body-in-eval.js
+  - [x] test/language/expressions/generators/named-no-strict-reassign-fn-name-in-body.js
   - [x] test/language/expressions/generators/named-strict-error-reassign-fn-name-in-body-in-arrow.js
   - [x] test/language/expressions/generators/named-strict-error-reassign-fn-name-in-body-in-eval.js
   - [x] test/language/expressions/generators/named-strict-error-reassign-fn-name-in-body.js

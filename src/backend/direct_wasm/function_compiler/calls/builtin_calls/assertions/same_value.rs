@@ -4226,6 +4226,8 @@ impl<'a> FunctionCompiler<'a> {
             && !operands_contain_dynamic_descriptor_member
             && !self.assertion_requires_runtime_same_value_fallback()
             && !operands_use_direct_tracked_array_snapshot
+            && inline_summary_side_effect_free_expression(actual)
+            && inline_summary_side_effect_free_expression(expected)
             && let Some(static_result) =
                 self.same_value_assertion_fast_reference_result(actual, expected)
         {
