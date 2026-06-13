@@ -57,6 +57,35 @@ impl Drop for StaticCallResultResolutionShapeGuard {
 }
 
 impl<'a> FunctionCompiler<'a> {
+    pub(in crate::backend::direct_wasm) fn resolve_test262_well_known_intrinsic_object_call_result(
+        &self,
+        callee: &Expression,
+        arguments: &[CallArgument],
+    ) -> Option<Expression> {
+        let Expression::Identifier(name) = callee else {
+            return None;
+        };
+        if name != "getWellKnownIntrinsicObject"
+            || self.resolve_current_local_binding(name).is_some()
+            || self.backend.global_function_binding(name).is_some()
+            || self.global_value_binding(name).is_some()
+        {
+            return None;
+        }
+
+        let Some(CallArgument::Expression(Expression::String(key))) = arguments.first() else {
+            return None;
+        };
+        let constructor_name = match key.as_str() {
+            "%AsyncFunction%" => "AsyncFunction",
+            "%AsyncGeneratorFunction%" => "AsyncGeneratorFunction",
+            "%Function%" => "Function",
+            "%GeneratorFunction%" => "GeneratorFunction",
+            _ => return None,
+        };
+        Some(Expression::Identifier(constructor_name.to_string()))
+    }
+
     fn snapshot_live_capture_source_expression(&self, source_name: &str) -> Option<Expression> {
         let identifier = Expression::Identifier(source_name.to_string());
         if let Some(value) = self
@@ -161,6 +190,11 @@ impl<'a> FunctionCompiler<'a> {
     ) -> Option<(Expression, Option<String>)> {
         let _guard =
             StaticCallResultResolutionShapeGuard::enter(callee, arguments, current_function_name)?;
+        if let Some(result) =
+            self.resolve_test262_well_known_intrinsic_object_call_result(callee, arguments)
+        {
+            return Some((result, None));
+        }
         if let Some(LocalFunctionBinding::User(function_name)) = self
             .resolve_function_binding_from_expression_with_context(callee, current_function_name)
             && self

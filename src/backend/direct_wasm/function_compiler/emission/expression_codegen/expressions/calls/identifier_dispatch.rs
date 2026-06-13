@@ -137,6 +137,13 @@ impl<'a> FunctionCompiler<'a> {
         if name == "CreateRab" && self.emit_synthetic_create_rab_call(callee, arguments)? {
             return Ok(());
         }
+        if name == "getWellKnownIntrinsicObject"
+            && let Some(value) =
+                self.resolve_test262_well_known_intrinsic_object_call_result(callee, arguments)
+        {
+            self.emit_numeric_expression(&value)?;
+            return Ok(());
+        }
         if name == "__isArray"
             && self.emit_array_is_array_call(
                 &Expression::Identifier("Array".to_string()),

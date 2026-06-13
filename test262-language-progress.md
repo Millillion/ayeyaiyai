@@ -1,4 +1,4 @@
-22906/23668 (96.78%)
+22907/23668 (96.78%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -15,7 +15,7 @@ Sub-category progress
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
 - statements: 9032/9337 (96.73%)
-- expressions: 10711/11061 (96.84%)
+- expressions: 10712/11061 (96.84%)
 - types: 113/113 (100.00%)
 - function-code: 217/217 (100.00%)
 - global-code: 42/42 (100.00%)
@@ -12005,7 +12005,7 @@ Sub-category progress
   - [x] test/language/expressions/async-arrow-function/object-destructuring-param-strict-body.js
   - [x] test/language/expressions/async-arrow-function/params-trailing-comma-multiple.js
   - [x] test/language/expressions/async-arrow-function/params-trailing-comma-single.js
-  - [ ] test/language/expressions/async-arrow-function/prototype.js
+  - [x] test/language/expressions/async-arrow-function/prototype.js
   - [x] test/language/expressions/async-arrow-function/rest-param-strict-body.js
   - [x] test/language/expressions/async-arrow-function/rest-params-trailing-comma-early-error.js
   - [x] test/language/expressions/async-arrow-function/try-reject-finally-reject.js
