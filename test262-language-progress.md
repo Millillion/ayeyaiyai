@@ -1,4 +1,4 @@
-22855/23668 (96.56%)
+22859/23668 (96.58%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,7 +14,7 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 9002/9337 (96.41%)
+- statements: 9006/9337 (96.45%)
 - expressions: 10698/11061 (96.72%)
 - types: 113/113 (100.00%)
 - function-code: 217/217 (100.00%)
@@ -6825,7 +6825,7 @@ Sub-category progress
   - [x] test/language/statements/for/let-block-with-newline.js
   - [x] test/language/statements/for/let-identifier-with-newline.js
   - [ ] test/language/statements/for/scope-body-lex-boundary.js
-  - [ ] test/language/statements/for/scope-body-lex-open.js
+  - [x] test/language/statements/for/scope-body-lex-open.js
   - [x] test/language/statements/for/scope-body-var-none.js
   - [x] test/language/statements/for/scope-head-lex-close.js
   - [x] test/language/statements/for/scope-head-lex-open.js
@@ -9889,7 +9889,7 @@ Sub-category progress
   - [x] test/language/statements/let/syntax/without-initialisers-in-statement-positions-if-expression-statement.js
   - [x] test/language/statements/let/syntax/without-initialisers-in-statement-positions-label-statement.js
   - [x] test/language/statements/let/syntax/without-initialisers-in-statement-positions-while-expression-statement.js
-  - [ ] test/language/statements/return/12.9-1.js
+  - [x] test/language/statements/return/12.9-1.js
   - [x] test/language/statements/return/S12.9_A1_T1.js
   - [x] test/language/statements/return/S12.9_A1_T10.js
   - [x] test/language/statements/return/S12.9_A1_T2.js
@@ -10487,7 +10487,7 @@ Sub-category progress
   - [x] test/language/statements/variable/id-eval-strict.js
   - [x] test/language/statements/variable/static-init-await-binding-invalid.js
   - [x] test/language/statements/variable/static-init-await-binding-valid.js
-  - [ ] test/language/statements/while/S12.6.2_A1.js
+  - [x] test/language/statements/while/S12.6.2_A1.js
   - [x] test/language/statements/while/S12.6.2_A10.js
   - [x] test/language/statements/while/S12.6.2_A11.js
   - [x] test/language/statements/while/S12.6.2_A14_T1.js
@@ -10509,7 +10509,7 @@ Sub-category progress
   - [x] test/language/statements/while/S12.6.2_A6_T6.js
   - [x] test/language/statements/while/S12.6.2_A7.js
   - [x] test/language/statements/while/S12.6.2_A8.js
-  - [ ] test/language/statements/while/S12.6.2_A9.js
+  - [x] test/language/statements/while/S12.6.2_A9.js
   - [x] test/language/statements/while/cptn-abrupt-empty.js
   - [x] test/language/statements/while/cptn-iter.js
   - [x] test/language/statements/while/cptn-no-iter.js

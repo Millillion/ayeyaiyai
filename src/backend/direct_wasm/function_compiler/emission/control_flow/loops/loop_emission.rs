@@ -1571,6 +1571,12 @@ impl<'a> FunctionCompiler<'a> {
         labels: &[String],
         body: &[Statement],
     ) -> DirectResult<()> {
+        if self.resolve_loop_expression_truthy(condition) == Some(false) {
+            self.emit_numeric_expression(condition)?;
+            self.state.emission.output.instructions.push(0x1a);
+            return Ok(());
+        }
+
         let invalidated_bindings = self
             .collect_loop_assigned_binding_names_with_effectful_iterators(
                 condition, break_hook, body, None, None,
