@@ -331,17 +331,20 @@ pub(in crate::backend::direct_wasm) fn merge_enumerable_object_binding(
     target: &mut ObjectValueBinding,
     source: &ObjectValueBinding,
 ) {
-    for (name, value) in &source.string_properties {
+    for name in ordered_object_property_names(source) {
         let property = Expression::String(name.clone());
         if source
             .non_enumerable_string_properties
             .iter()
-            .any(|hidden_name| hidden_name == name)
+            .any(|hidden_name| hidden_name == &name)
             || object_binding_lookup_descriptor(source, &property)
                 .is_some_and(|descriptor| !descriptor.enumerable)
         {
             continue;
         }
+        let Some(value) = object_binding_lookup_value(source, &property) else {
+            continue;
+        };
         object_binding_define_copied_data_property(target, property, value.clone());
     }
     for (property, value) in &source.symbol_properties {

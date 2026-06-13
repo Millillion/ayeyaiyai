@@ -4344,7 +4344,24 @@ impl<'a> FunctionCompiler<'a> {
             self.state.emission.output.instructions.push(0x1a);
         }
         for (property, _) in &object_binding.symbol_properties {
-            self.emit_member_read_without_prelude(expression, property)?;
+            let getter_binding = self
+                .resolve_member_getter_binding(expression, property)
+                .or_else(|| {
+                    object_binding_lookup_descriptor(&object_binding, property)
+                        .and_then(|descriptor| descriptor.getter.as_ref())
+                        .and_then(|getter| self.resolve_function_binding_from_expression(getter))
+                });
+            if let Some(LocalFunctionBinding::User(function_name)) = getter_binding {
+                let capture_slots =
+                    self.resolve_member_function_capture_slots(expression, property);
+                self.emit_member_getter_call_with_bound_this(
+                    &function_name,
+                    expression,
+                    capture_slots.as_ref(),
+                )?;
+            } else {
+                self.emit_member_read_without_prelude(expression, property)?;
+            }
             self.state.emission.output.instructions.push(0x1a);
         }
 
