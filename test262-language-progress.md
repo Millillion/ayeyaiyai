@@ -1,4 +1,4 @@
-22891/23668 (96.72%)
+22899/23668 (96.75%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -28,7 +28,7 @@ Sub-category progress
 - eval-code: 347/347 (100.00%)
 - import: 91/127 (71.65%)
 - export: 3/3 (100.00%)
-- module-code: 518/596 (86.91%)
+- module-code: 526/596 (88.26%)
 
 - [ ] comments
   - [x] test/language/comments/S7.4_A1_T1.js
@@ -23199,8 +23199,8 @@ Sub-category progress
   - [x] test/language/module-code/eval-gtbndng-local-bndng-let.js
   - [x] test/language/module-code/eval-gtbndng-local-bndng-var.js
   - [x] test/language/module-code/eval-rqstd-abrupt.js
-  - [ ] test/language/module-code/eval-rqstd-once.js
-  - [ ] test/language/module-code/eval-rqstd-order.js
+  - [x] test/language/module-code/eval-rqstd-once.js
+  - [x] test/language/module-code/eval-rqstd-order.js
   - [x] test/language/module-code/eval-self-abrupt.js
   - [ ] test/language/module-code/eval-self-once.js
   - [x] test/language/module-code/eval-this.js
@@ -23260,17 +23260,17 @@ Sub-category progress
   - [ ] test/language/module-code/instn-local-bndng-const.js
   - [ ] test/language/module-code/instn-local-bndng-export-cls.js
   - [ ] test/language/module-code/instn-local-bndng-export-const.js
-  - [ ] test/language/module-code/instn-local-bndng-export-fun.js
+  - [x] test/language/module-code/instn-local-bndng-export-fun.js
   - [ ] test/language/module-code/instn-local-bndng-export-gen.js
   - [ ] test/language/module-code/instn-local-bndng-export-let.js
-  - [ ] test/language/module-code/instn-local-bndng-export-var.js
+  - [x] test/language/module-code/instn-local-bndng-export-var.js
   - [x] test/language/module-code/instn-local-bndng-for-dup.js
-  - [ ] test/language/module-code/instn-local-bndng-for.js
-  - [ ] test/language/module-code/instn-local-bndng-fun.js
+  - [x] test/language/module-code/instn-local-bndng-for.js
+  - [x] test/language/module-code/instn-local-bndng-fun.js
   - [ ] test/language/module-code/instn-local-bndng-gen.js
   - [ ] test/language/module-code/instn-local-bndng-let.js
   - [x] test/language/module-code/instn-local-bndng-var-dup.js
-  - [ ] test/language/module-code/instn-local-bndng-var.js
+  - [x] test/language/module-code/instn-local-bndng-var.js
   - [ ] test/language/module-code/instn-named-bndng-cls.js
   - [ ] test/language/module-code/instn-named-bndng-const.js
   - [x] test/language/module-code/instn-named-bndng-dflt-cls.js
@@ -23486,7 +23486,7 @@ Sub-category progress
   - [ ] test/language/module-code/top-level-await/await-expr-regexp.js
   - [x] test/language/module-code/top-level-await/await-expr-reject-throws.js
   - [ ] test/language/module-code/top-level-await/await-expr-resolution.js
-  - [ ] test/language/module-code/top-level-await/await-void-expr.js
+  - [x] test/language/module-code/top-level-await/await-void-expr.js
   - [x] test/language/module-code/top-level-await/dfs-invariant.js
   - [x] test/language/module-code/top-level-await/dynamic-import-of-waiting-module.js
   - [ ] test/language/module-code/top-level-await/dynamic-import-rejection.js
