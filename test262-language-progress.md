@@ -1,4 +1,4 @@
-22838/23668 (96.49%)
+22839/23668 (96.50%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -25,7 +25,7 @@ Sub-category progress
 - identifier-resolution: 14/14 (100.00%)
 - computed-property-names: 48/48 (100.00%)
 - destructuring: 18/19 (94.74%)
-- eval-code: 345/347 (99.42%)
+- eval-code: 346/347 (99.71%)
 - import: 91/127 (71.65%)
 - export: 3/3 (100.00%)
 - module-code: 518/596 (86.91%)
@@ -22897,7 +22897,7 @@ Sub-category progress
   - [x] test/language/eval-code/direct/super-prop-dot-no-home.js
   - [x] test/language/eval-code/direct/super-prop-expr-no-home-no-eval.js
   - [x] test/language/eval-code/direct/super-prop-expr-no-home.js
-  - [ ] test/language/eval-code/direct/super-prop-method.js
+  - [x] test/language/eval-code/direct/super-prop-method.js
   - [x] test/language/eval-code/direct/super-prop.js
   - [x] test/language/eval-code/direct/switch-case-decl-eval-source-is-strict-nostrict.js
   - [x] test/language/eval-code/direct/switch-case-decl-eval-source-is-strict-onlystrict.js

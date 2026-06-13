@@ -2177,11 +2177,11 @@ impl<'a> FunctionCompiler<'a> {
             }
             return Ok(());
         }
-        if let Some(value) = self.resolve_super_value_expression(property) {
-            self.emit_numeric_expression(&value)?;
+        if self.emit_super_member_read_via_runtime_prototype_binding(property)? {
             return Ok(());
         }
-        if self.emit_super_member_read_via_runtime_prototype_binding(property)? {
+        if let Some(value) = self.resolve_super_value_expression(property) {
+            self.emit_numeric_expression(&value)?;
             return Ok(());
         }
         self.push_i32_const(JS_UNDEFINED_TAG);
