@@ -1,4 +1,4 @@
-22860/23668 (96.59%)
+22862/23668 (96.59%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,7 +14,7 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 9007/9337 (96.47%)
+- statements: 9009/9337 (96.49%)
 - expressions: 10698/11061 (96.72%)
 - types: 113/113 (100.00%)
 - function-code: 217/217 (100.00%)
@@ -8999,8 +8999,8 @@ Sub-category progress
   - [x] test/language/statements/function/S13.2.1_A1_T1.js
   - [x] test/language/statements/function/S13.2.1_A4_T1.js
   - [x] test/language/statements/function/S13.2.1_A4_T2.js
-  - [ ] test/language/statements/function/S13.2.1_A4_T3.js
-  - [ ] test/language/statements/function/S13.2.1_A4_T4.js
+  - [x] test/language/statements/function/S13.2.1_A4_T3.js
+  - [x] test/language/statements/function/S13.2.1_A4_T4.js
   - [x] test/language/statements/function/S13.2.1_A5_T1.js
   - [x] test/language/statements/function/S13.2.1_A5_T2.js
   - [x] test/language/statements/function/S13.2.1_A6_T1.js

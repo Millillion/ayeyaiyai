@@ -3652,6 +3652,251 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    fn direct_arguments_slot_member_writeback_property(
+        &self,
+        object: &Expression,
+        property: &Expression,
+        index: u32,
+    ) -> Option<String> {
+        let Expression::Member {
+            object: base_object,
+            property: base_property,
+        } = object
+        else {
+            return None;
+        };
+        let Expression::Identifier(base_name) = base_object.as_ref() else {
+            return None;
+        };
+        if scoped_binding_source_name(base_name).unwrap_or(base_name) != "arguments" {
+            return None;
+        }
+        let base_property = self.canonical_object_property_expression(base_property);
+        if argument_index_from_expression(&base_property) != Some(index) {
+            return None;
+        }
+        let property = self.canonical_object_property_expression(property);
+        static_property_name_from_expression(&property)
+    }
+
+    fn collect_static_direct_arguments_slot_member_writeback_values_from_expression(
+        &self,
+        expression: &Expression,
+        index: u32,
+        property_values: &mut BTreeMap<String, Expression>,
+    ) {
+        match expression {
+            Expression::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                self.collect_static_direct_arguments_slot_member_writeback_values_from_expression(
+                    object,
+                    index,
+                    property_values,
+                );
+                self.collect_static_direct_arguments_slot_member_writeback_values_from_expression(
+                    property,
+                    index,
+                    property_values,
+                );
+                self.collect_static_direct_arguments_slot_member_writeback_values_from_expression(
+                    value,
+                    index,
+                    property_values,
+                );
+                if let Some(property_name) =
+                    self.direct_arguments_slot_member_writeback_property(object, property, index)
+                {
+                    property_values.insert(
+                        property_name,
+                        self.reference_preserving_static_value_expression(value),
+                    );
+                }
+            }
+            Expression::Member { object, property } => {
+                self.collect_static_direct_arguments_slot_member_writeback_values_from_expression(
+                    object,
+                    index,
+                    property_values,
+                );
+                self.collect_static_direct_arguments_slot_member_writeback_values_from_expression(
+                    property,
+                    index,
+                    property_values,
+                );
+            }
+            Expression::Assign { value, .. }
+            | Expression::AssignSuperMember { value, .. }
+            | Expression::Await(value)
+            | Expression::EnumerateKeys(value)
+            | Expression::GetIterator(value)
+            | Expression::IteratorClose(value)
+            | Expression::Unary {
+                expression: value, ..
+            } => {
+                self.collect_static_direct_arguments_slot_member_writeback_values_from_expression(
+                    value,
+                    index,
+                    property_values,
+                );
+            }
+            Expression::SuperMember { property } => {
+                self.collect_static_direct_arguments_slot_member_writeback_values_from_expression(
+                    property,
+                    index,
+                    property_values,
+                );
+            }
+            Expression::Binary { left, right, .. } => {
+                self.collect_static_direct_arguments_slot_member_writeback_values_from_expression(
+                    left,
+                    index,
+                    property_values,
+                );
+                self.collect_static_direct_arguments_slot_member_writeback_values_from_expression(
+                    right,
+                    index,
+                    property_values,
+                );
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                for expression in [condition, then_expression, else_expression] {
+                    self.collect_static_direct_arguments_slot_member_writeback_values_from_expression(
+                        expression,
+                        index,
+                        property_values,
+                    );
+                }
+            }
+            Expression::Sequence(expressions) => {
+                for expression in expressions {
+                    self.collect_static_direct_arguments_slot_member_writeback_values_from_expression(
+                        expression,
+                        index,
+                        property_values,
+                    );
+                }
+            }
+            Expression::Call { callee, arguments }
+            | Expression::SuperCall { callee, arguments }
+            | Expression::New { callee, arguments } => {
+                self.collect_static_direct_arguments_slot_member_writeback_values_from_expression(
+                    callee,
+                    index,
+                    property_values,
+                );
+                for argument in arguments {
+                    self.collect_static_direct_arguments_slot_member_writeback_values_from_expression(
+                        argument.expression(),
+                        index,
+                        property_values,
+                    );
+                }
+            }
+            Expression::Array(elements) => {
+                for element in elements {
+                    match element {
+                        ArrayElement::Expression(expression) | ArrayElement::Spread(expression) => {
+                            self.collect_static_direct_arguments_slot_member_writeback_values_from_expression(
+                                expression,
+                                index,
+                                property_values,
+                            );
+                        }
+                    }
+                }
+            }
+            Expression::Object(entries) => {
+                for entry in entries {
+                    match entry {
+                        ObjectEntry::Data { key, value } => {
+                            for expression in [key, value] {
+                                self.collect_static_direct_arguments_slot_member_writeback_values_from_expression(
+                                    expression,
+                                    index,
+                                    property_values,
+                                );
+                            }
+                        }
+                        ObjectEntry::Getter { key, getter } => {
+                            for expression in [key, getter] {
+                                self.collect_static_direct_arguments_slot_member_writeback_values_from_expression(
+                                    expression,
+                                    index,
+                                    property_values,
+                                );
+                            }
+                        }
+                        ObjectEntry::Setter { key, setter } => {
+                            for expression in [key, setter] {
+                                self.collect_static_direct_arguments_slot_member_writeback_values_from_expression(
+                                    expression,
+                                    index,
+                                    property_values,
+                                );
+                            }
+                        }
+                        ObjectEntry::Spread(expression) => {
+                            self.collect_static_direct_arguments_slot_member_writeback_values_from_expression(
+                                expression,
+                                index,
+                                property_values,
+                            );
+                        }
+                    }
+                }
+            }
+            Expression::Update { .. }
+            | Expression::Identifier(_)
+            | Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined
+            | Expression::This
+            | Expression::NewTarget
+            | Expression::Sent => {}
+        }
+    }
+
+    fn static_direct_arguments_slot_member_writeback_values(
+        &self,
+        user_function: &UserFunction,
+        index: u32,
+    ) -> BTreeMap<String, Expression> {
+        let mut property_values = BTreeMap::new();
+        if let Some(summary) = user_function.inline_summary.as_ref() {
+            for effect in &summary.effects {
+                match effect {
+                    InlineFunctionEffect::Assign { value, .. }
+                    | InlineFunctionEffect::Expression(value) => {
+                        self.collect_static_direct_arguments_slot_member_writeback_values_from_expression(
+                            value,
+                            index,
+                            &mut property_values,
+                        );
+                    }
+                    InlineFunctionEffect::Update { .. } => {}
+                }
+            }
+            if let Some(return_value) = summary.return_value.as_ref() {
+                self.collect_static_direct_arguments_slot_member_writeback_values_from_expression(
+                    return_value,
+                    index,
+                    &mut property_values,
+                );
+            }
+        }
+        property_values
+    }
+
     pub(in crate::backend::direct_wasm) fn user_function_static_argument_object_member_writeback_values(
         &self,
         user_function: &UserFunction,
@@ -3708,6 +3953,42 @@ impl<'a> FunctionCompiler<'a> {
             }
             if !property_values.is_empty() {
                 writebacks.push((parameter.name.clone(), source_owner, property_values));
+            }
+        }
+        for index in &user_function.extra_argument_indices {
+            let Some(argument_expression) = argument_expressions.get(*index as usize) else {
+                continue;
+            };
+            let source_owner = match argument_expression {
+                Expression::Identifier(name) => {
+                    self.runtime_object_property_shadow_owner_name_for_identifier(name)
+                }
+                Expression::This => {
+                    self.runtime_object_property_shadow_owner_name_for_identifier("this")
+                }
+                _ => None,
+            };
+            let Some(source_owner) = source_owner else {
+                continue;
+            };
+            let slot_owner =
+                Self::user_function_arguments_slot_object_shadow_owner_name(&user_function.name, *index);
+            if source_owner == slot_owner {
+                continue;
+            }
+            let mut property_values =
+                self.static_direct_arguments_slot_member_writeback_values(user_function, *index);
+            property_values.retain(|property_name, _| {
+                self.static_argument_member_writeback_allowed(argument_expression, property_name)
+            });
+            if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
+                eprintln!(
+                    "static_arg_member_writeback function={} arguments_index={} slot_owner={} source_owner={} values={property_values:?}",
+                    user_function.name, index, slot_owner, source_owner,
+                );
+            }
+            if !property_values.is_empty() {
+                writebacks.push((slot_owner, source_owner, property_values));
             }
         }
         writebacks
