@@ -381,6 +381,16 @@ impl<'a> FunctionCompiler<'a> {
             if self.user_function_capture_typeof_needs_runtime_check(name) {
                 return None;
             }
+            if let Some(kind) = self.global_binding_kind(name)
+                && matches!(kind, StaticValueKind::Object | StaticValueKind::Function)
+            {
+                return Some(kind);
+            }
+            if let Some(kind) = self.lookup_identifier_kind(name)
+                && matches!(kind, StaticValueKind::Object | StaticValueKind::Function)
+            {
+                return Some(kind);
+            }
         }
         if let Some(proxy_binding) = self.resolve_proxy_binding_from_expression(expression) {
             return Some(self.infer_proxy_target_typeof_kind(&proxy_binding.target));

@@ -1245,13 +1245,25 @@ impl<'a> FunctionCompiler<'a> {
                     .resolve_function_binding_from_expression(expression)
                     .is_some()
         });
-        let constructor_return_expression = constructor_return_resolution
-            .as_ref()
-            .map(|(expression, _)| expression.clone());
         let constructor_source_expression = Expression::New {
             callee: Box::new(callee.clone()),
             arguments: arguments.to_vec(),
         };
+        let constructor_return_expression =
+            constructor_return_resolution
+                .as_ref()
+                .map(|(expression, _)| {
+                    if matches!(expression, Expression::This)
+                        || matches!(
+                            expression,
+                            Expression::Identifier(name) if name == Self::STATIC_NEW_THIS_BINDING
+                        )
+                    {
+                        constructor_source_expression.clone()
+                    } else {
+                        expression.clone()
+                    }
+                });
         let constructor_prototype_source_expression = constructor_return_resolution
             .as_ref()
             .and_then(|(expression, explicit)| {

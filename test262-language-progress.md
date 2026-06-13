@@ -1,4 +1,4 @@
-22841/23668 (96.51%)
+22844/23668 (96.52%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -17,7 +17,7 @@ Sub-category progress
 - statements: 9000/9337 (96.39%)
 - expressions: 10696/11061 (96.70%)
 - types: 113/113 (100.00%)
-- function-code: 208/217 (95.85%)
+- function-code: 211/217 (97.24%)
 - global-code: 42/42 (100.00%)
 - arguments-object: 263/263 (100.00%)
 - rest-parameters: 11/11 (100.00%)
@@ -21925,12 +21925,12 @@ Sub-category progress
   - [x] test/language/function-code/10.4.3-1-24-s.js
   - [x] test/language/function-code/10.4.3-1-24gs.js
   - [x] test/language/function-code/10.4.3-1-25-s.js
-  - [ ] test/language/function-code/10.4.3-1-25gs.js
+  - [x] test/language/function-code/10.4.3-1-25gs.js
   - [x] test/language/function-code/10.4.3-1-26-s.js
-  - [ ] test/language/function-code/10.4.3-1-26gs.js
+  - [x] test/language/function-code/10.4.3-1-26gs.js
   - [x] test/language/function-code/10.4.3-1-27-s.js
   - [x] test/language/function-code/10.4.3-1-27gs.js
-  - [ ] test/language/function-code/10.4.3-1-28-s.js
+  - [x] test/language/function-code/10.4.3-1-28-s.js
   - [x] test/language/function-code/10.4.3-1-28gs.js
   - [x] test/language/function-code/10.4.3-1-29-s.js
   - [x] test/language/function-code/10.4.3-1-29gs.js

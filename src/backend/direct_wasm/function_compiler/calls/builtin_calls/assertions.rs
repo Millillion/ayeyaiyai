@@ -476,6 +476,14 @@ impl<'a> FunctionCompiler<'a> {
                     self.assertion_static_boolean_condition(right, depth - 1)
                 }
             }
+            Expression::Call { callee, .. }
+                if matches!(
+                    self.resolve_function_binding_from_expression(callee),
+                    Some(LocalFunctionBinding::User(_))
+                ) =>
+            {
+                None
+            }
             _ => self.resolve_static_boolean_expression(condition),
         }
     }
