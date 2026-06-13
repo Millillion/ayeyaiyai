@@ -1,4 +1,4 @@
-22854/23668 (96.56%)
+22855/23668 (96.56%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -25,7 +25,7 @@ Sub-category progress
 - identifier-resolution: 14/14 (100.00%)
 - computed-property-names: 48/48 (100.00%)
 - destructuring: 18/19 (94.74%)
-- eval-code: 346/347 (99.71%)
+- eval-code: 347/347 (100.00%)
 - import: 91/127 (71.65%)
 - export: 3/3 (100.00%)
 - module-code: 518/596 (86.91%)
@@ -22912,7 +22912,7 @@ Sub-category progress
   - [x] test/language/eval-code/direct/var-env-func-init-global-new.js
   - [x] test/language/eval-code/direct/var-env-func-init-global-update-configurable.js
   - [x] test/language/eval-code/direct/var-env-func-init-global-update-non-configurable.js
-  - [ ] test/language/eval-code/direct/var-env-func-init-local-new-delete.js
+  - [x] test/language/eval-code/direct/var-env-func-init-local-new-delete.js
   - [x] test/language/eval-code/direct/var-env-func-init-local-new.js
   - [x] test/language/eval-code/direct/var-env-func-init-local-update.js
   - [x] test/language/eval-code/direct/var-env-func-init-multi.js

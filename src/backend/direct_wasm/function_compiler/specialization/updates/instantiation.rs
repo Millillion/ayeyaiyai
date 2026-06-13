@@ -22,6 +22,9 @@ impl<'a> FunctionCompiler<'a> {
         let mut bindings = HashMap::new();
         for name in captured {
             if let Some((resolved_name, _)) = self.resolve_current_local_binding(&name) {
+                if self.local_lexical_capture_source_is_statically_uninitialized(&resolved_name) {
+                    return Ok(None);
+                }
                 let hidden_name = self.allocate_named_hidden_local(
                     "capture",
                     self.lookup_identifier_kind(&resolved_name)
