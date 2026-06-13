@@ -287,6 +287,17 @@ impl<'a> FunctionCompiler<'a> {
             }
             let property_expression = Expression::String(property_name.clone());
             self.emit_static_in_operand_effects(property, object)?;
+            if self.backend.global_binding_index(&property_name).is_none()
+                && let Some(binding) = self.backend.implicit_global_binding(&property_name)
+            {
+                if trace_for_in_keys {
+                    eprintln!("for_in_keys:global_in branch=implicit_present");
+                }
+                self.push_global_get(binding.present_index);
+                self.push_i32_const(0);
+                self.state.emission.output.instructions.push(0x47);
+                return Ok(true);
+            }
             if self.runtime_object_property_shadow_deletion_is_statically_present(
                 object,
                 &property_expression,

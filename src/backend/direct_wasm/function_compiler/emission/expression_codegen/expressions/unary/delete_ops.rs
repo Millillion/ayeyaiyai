@@ -2,9 +2,38 @@ use super::*;
 
 impl<'a> FunctionCompiler<'a> {
     fn expression_is_top_level_global_object_reference(&self, expression: &Expression) -> bool {
+        self.expression_is_top_level_global_object_reference_inner(expression, 0, false)
+    }
+
+    fn expression_is_top_level_global_object_reference_inner(
+        &self,
+        expression: &Expression,
+        depth: usize,
+        allow_top_level_this_alias: bool,
+    ) -> bool {
         matches!(expression, Expression::Identifier(name) if name == "globalThis" && self.is_unshadowed_builtin_identifier(name))
             || (self.state.speculation.execution_context.top_level_function
                 && matches!(expression, Expression::This))
+            || (allow_top_level_this_alias && matches!(expression, Expression::This))
+            || (depth < 8
+                && matches!(expression, Expression::Identifier(_))
+                && self
+                    .resolve_bound_alias_expression(expression)
+                    .filter(|resolved| !static_expression_matches(resolved, expression))
+                    .or_else(|| {
+                        let materialized = self.materialize_static_expression(expression);
+                        (!static_expression_matches(&materialized, expression))
+                            .then_some(materialized)
+                    })
+                    .is_some_and(|resolved| {
+                        let alias_can_reach_top_level_this =
+                            matches!(expression, Expression::Identifier(name) if self.resolve_current_local_binding(name).is_none());
+                        self.expression_is_top_level_global_object_reference_inner(
+                            &resolved,
+                            depth + 1,
+                            alias_can_reach_top_level_this,
+                        )
+                    }))
     }
 
     fn emit_top_level_global_object_member_delete(
@@ -36,6 +65,23 @@ impl<'a> FunctionCompiler<'a> {
             && !builtin_identifier_delete_returns_true(&property_name)
         {
             self.push_i32_const(0);
+            return Ok(true);
+        }
+
+        let had_global_descriptor = self
+            .backend
+            .global_property_descriptor(&property_name)
+            .is_some();
+        let had_implicit_global = self.backend.implicit_global_binding(&property_name).is_some();
+        if had_global_descriptor || had_implicit_global {
+            let property = Expression::String(property_name.clone());
+            self.mark_runtime_object_property_shadow_deleted_binding(&Expression::This, &property);
+            self.clear_member_function_bindings_for_deleted_property(&Expression::This, &property);
+            if self.emit_delete_implicit_global_binding(&property_name)? {
+                return Ok(true);
+            }
+            self.clear_static_identifier_binding_metadata(&property_name);
+            self.push_i32_const(1);
             return Ok(true);
         }
 

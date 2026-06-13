@@ -1,7 +1,10 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
-    fn expression_is_global_object_has_own_receiver(&self, expression: &Expression) -> bool {
+    pub(in crate::backend::direct_wasm) fn expression_is_global_object_has_own_receiver(
+        &self,
+        expression: &Expression,
+    ) -> bool {
         if self.state.speculation.execution_context.top_level_function
             && matches!(expression, Expression::This)
         {

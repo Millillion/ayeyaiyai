@@ -450,6 +450,13 @@ impl<'a> FunctionCompiler<'a> {
             {
                 return None;
             }
+            if self.expression_is_global_object_has_own_receiver(right)
+                && let Some(property_name) = self.static_property_name_for_in_result(left)
+                && self.backend.global_binding_index(&property_name).is_none()
+                && self.backend.implicit_global_binding(&property_name).is_some()
+            {
+                return None;
+            }
             let shadow_object = if static_expression_matches(&materialized_right, right) {
                 right
             } else {

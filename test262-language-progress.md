@@ -1,4 +1,4 @@
-22850/23668 (96.54%)
+22851/23668 (96.55%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -15,7 +15,7 @@ Sub-category progress
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
 - statements: 9000/9337 (96.39%)
-- expressions: 10696/11061 (96.70%)
+- expressions: 10697/11061 (96.71%)
 - types: 113/113 (100.00%)
 - function-code: 217/217 (100.00%)
 - global-code: 42/42 (100.00%)
@@ -11182,7 +11182,7 @@ Sub-category progress
   - [x] test/language/expressions/assignment/S8.12.4_A1.js
   - [x] test/language/expressions/assignment/S8.12.5_A1.js
   - [x] test/language/expressions/assignment/S8.12.5_A2.js
-  - [ ] test/language/expressions/assignment/assignment-operator-calls-putvalue-lref--rval--1.js
+  - [x] test/language/expressions/assignment/assignment-operator-calls-putvalue-lref--rval--1.js
   - [x] test/language/expressions/assignment/assignment-operator-calls-putvalue-lref--rval-.js
   - [ ] test/language/expressions/assignment/destructuring/default-expr-throws-iterator-return-get-throws.js
   - [x] test/language/expressions/assignment/destructuring/default-expr-throws-iterator-return-is-not-callable.js
