@@ -1,4 +1,4 @@
-22902/23668 (96.76%)
+22906/23668 (96.78%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -15,7 +15,7 @@ Sub-category progress
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
 - statements: 9032/9337 (96.73%)
-- expressions: 10707/11061 (96.80%)
+- expressions: 10711/11061 (96.84%)
 - types: 113/113 (100.00%)
 - function-code: 217/217 (100.00%)
 - global-code: 42/42 (100.00%)
@@ -12047,7 +12047,7 @@ Sub-category progress
   - [x] test/language/expressions/async-function/forbidden-ext/b2/async-func-expr-nameless-forbidden-ext-indirect-access-own-prop-caller-get.js
   - [x] test/language/expressions/async-function/forbidden-ext/b2/async-func-expr-nameless-forbidden-ext-indirect-access-own-prop-caller-value.js
   - [x] test/language/expressions/async-function/forbidden-ext/b2/async-func-expr-nameless-forbidden-ext-indirect-access-prop-caller.js
-  - [ ] test/language/expressions/async-function/name.js
+  - [x] test/language/expressions/async-function/name.js
   - [x] test/language/expressions/async-function/named-array-destructuring-param-strict-body.js
   - [x] test/language/expressions/async-function/named-await-as-binding-identifier-escaped.js
   - [x] test/language/expressions/async-function/named-await-as-binding-identifier.js
@@ -12543,7 +12543,7 @@ Sub-category progress
   - [x] test/language/expressions/async-generator/forbidden-ext/b2/async-gen-named-func-expr-forbidden-ext-indirect-access-own-prop-caller-value.js
   - [x] test/language/expressions/async-generator/forbidden-ext/b2/async-gen-named-func-expr-forbidden-ext-indirect-access-prop-caller.js
   - [x] test/language/expressions/async-generator/generator-created-after-decl-inst.js
-  - [ ] test/language/expressions/async-generator/name.js
+  - [x] test/language/expressions/async-generator/name.js
   - [x] test/language/expressions/async-generator/named-array-destructuring-param-strict-body.js
   - [x] test/language/expressions/async-generator/named-await-as-binding-identifier-escaped.js
   - [x] test/language/expressions/async-generator/named-await-as-binding-identifier.js
@@ -19200,7 +19200,7 @@ Sub-category progress
   - [x] test/language/expressions/generators/invoke-as-constructor.js
   - [x] test/language/expressions/generators/length-dflt.js
   - [x] test/language/expressions/generators/length-property-descriptor.js
-  - [ ] test/language/expressions/generators/name.js
+  - [x] test/language/expressions/generators/name.js
   - [ ] test/language/expressions/generators/named-no-strict-reassign-fn-name-in-body-in-arrow.js
   - [ ] test/language/expressions/generators/named-no-strict-reassign-fn-name-in-body-in-eval.js
   - [ ] test/language/expressions/generators/named-no-strict-reassign-fn-name-in-body.js
@@ -19220,7 +19220,7 @@ Sub-category progress
   - [x] test/language/expressions/generators/named-yield-spread-arr-multiple.js
   - [x] test/language/expressions/generators/named-yield-spread-arr-single.js
   - [x] test/language/expressions/generators/named-yield-spread-obj.js
-  - [ ] test/language/expressions/generators/no-name.js
+  - [x] test/language/expressions/generators/no-name.js
   - [x] test/language/expressions/generators/no-yield.js
   - [x] test/language/expressions/generators/object-destructuring-param-strict-body.js
   - [x] test/language/expressions/generators/param-dflt-yield.js
