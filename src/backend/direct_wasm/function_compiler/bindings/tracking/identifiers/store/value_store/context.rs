@@ -2181,6 +2181,7 @@ impl<'a> FunctionCompiler<'a> {
                     )
                     .or_else(|| self.resolve_function_binding_from_expression(expression))
                 });
+        let call_result_has_function_binding = call_result_function_binding.is_some();
         let raw_function_binding_expression =
             if local_simple_async_generator_next_call && call_result_function_binding.is_none() {
                 Expression::Undefined
@@ -2290,7 +2291,13 @@ impl<'a> FunctionCompiler<'a> {
         {
             object_binding_to_expression(canonical_object_binding)
         } else {
-            call_result_snapshot_expression
+            if call_result_has_function_binding
+                && matches!(canonical_value_expression, Expression::New { .. })
+                && canonical_object_binding.is_some()
+            {
+                canonical_value_expression.clone()
+            } else {
+                call_result_snapshot_expression
                 .as_ref()
                 .filter(|expression| {
                     self.resolve_object_binding_from_expression(expression)
@@ -2308,6 +2315,7 @@ impl<'a> FunctionCompiler<'a> {
                 })
                 .unwrap_or(&tracked_object_expression)
                 .clone()
+            }
         };
         let object_binding =
             if static_expression_matches(&object_binding_expression, &canonical_value_expression) {

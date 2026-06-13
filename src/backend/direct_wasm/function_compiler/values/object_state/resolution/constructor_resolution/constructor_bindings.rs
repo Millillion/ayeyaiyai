@@ -559,6 +559,55 @@ impl<'a> FunctionCompiler<'a> {
         alias_binding.is_some() && alias_binding == return_binding
     }
 
+    fn static_constructor_function_return_expression(
+        &self,
+        expression: &Expression,
+        environment: &StaticResolutionEnvironment,
+        depth: usize,
+    ) -> Option<Expression> {
+        if depth > 8 {
+            return None;
+        }
+        if self.resolve_function_binding_from_expression(expression).is_some() {
+            return Some(expression.clone());
+        }
+        match expression {
+            Expression::Identifier(name) => {
+                let value = environment.binding(name)?;
+                if static_expression_matches(value, expression) {
+                    return None;
+                }
+                self.static_constructor_function_return_expression(value, environment, depth + 1)
+            }
+            Expression::Sequence(expressions) => expressions.last().and_then(|expression| {
+                self.static_constructor_function_return_expression(expression, environment, depth + 1)
+            }),
+            Expression::Conditional {
+                then_expression,
+                else_expression,
+                ..
+            } => {
+                let then_result = self.static_constructor_function_return_expression(
+                    then_expression,
+                    environment,
+                    depth + 1,
+                );
+                let else_result = self.static_constructor_function_return_expression(
+                    else_expression,
+                    environment,
+                    depth + 1,
+                );
+                (then_result == else_result).then_some(then_result).flatten()
+            }
+            Expression::Assign { value, .. } => self.static_constructor_function_return_expression(
+                value,
+                environment,
+                depth + 1,
+            ),
+            _ => None,
+        }
+    }
+
     fn seed_constructed_private_member_markers(
         &self,
         constructor_function_name: &str,
@@ -1516,10 +1565,10 @@ impl<'a> FunctionCompiler<'a> {
                     // closed-world absence of the real key. Store an Update
                     // marker value instead so snapshot consumers treat the
                     // binding as containing an unresolved static update.
-                    let property_is_canonical =
-                        static_property_name_from_expression(&property).is_some()
-                            || self.well_known_symbol_name(&property).is_some()
-                            || self.resolve_symbol_identity_expression(&property).is_some();
+                    let property_is_canonical = static_property_name_from_expression(&property)
+                        .is_some()
+                        || self.well_known_symbol_name(&property).is_some()
+                        || self.resolve_symbol_identity_expression(&property).is_some();
                     let value = if property_is_canonical {
                         value
                     } else {
@@ -1690,6 +1739,11 @@ impl<'a> FunctionCompiler<'a> {
             }
             return None;
         };
+        if let Some(function_return_value) =
+            self.static_constructor_function_return_expression(&return_value, &execution.environment, 0)
+        {
+            return Some((function_return_value, true));
+        }
         if self
             .resolve_object_binding_from_expression_with_state(
                 &return_value,

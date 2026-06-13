@@ -31,8 +31,7 @@ impl<'a> FunctionCompiler<'a> {
         additional_call_effect_nonlocal_bindings: &HashSet<String>,
         updated_nonlocal_bindings: &HashSet<String>,
     ) -> bool {
-        self.user_function_uses_direct_arguments_object(user_function)
-            && Self::prepared_call_static_snapshot_result_is_direct_literal(result)
+        Self::prepared_call_static_snapshot_result_is_direct_literal(result)
             && !module_init_call
             && !runtime_only_promise_chain_call
             && !user_function.is_async()

@@ -221,6 +221,11 @@ impl<'a> FunctionCompiler<'a> {
         left: &Expression,
         right: &Expression,
     ) -> DirectResult<bool> {
+        if self.binary_expression_calls_user_function(left)
+            || self.binary_expression_calls_user_function(right)
+        {
+            return Ok(false);
+        }
         if self.expression_has_dynamic_member_property_access(left)
             || self.expression_has_dynamic_member_property_access(right)
         {

@@ -1228,23 +1228,26 @@ impl<'a> FunctionCompiler<'a> {
                         | StaticValueKind::Symbol
                         | StaticValueKind::Null
                 )
-            ) || self.resolve_symbol_identity_expression(&materialized).is_some()
+            ) || self
+                .resolve_symbol_identity_expression(&materialized)
+                .is_some()
             {
                 self.emit_named_error_throw("TypeError")?;
                 self.push_i32_const(JS_UNDEFINED_TAG);
                 return Ok(true);
             }
         }
-        let constructor_return_resolution = constructor_return_resolution.filter(|(expression, _)| {
-            self.resolve_object_binding_from_expression(expression)
-                .is_some()
-                || self
-                    .resolve_array_binding_from_expression(expression)
+        let constructor_return_resolution =
+            constructor_return_resolution.filter(|(expression, _)| {
+                self.resolve_object_binding_from_expression(expression)
                     .is_some()
-                || self
-                    .resolve_function_binding_from_expression(expression)
-                    .is_some()
-        });
+                    || self
+                        .resolve_array_binding_from_expression(expression)
+                        .is_some()
+                    || self
+                        .resolve_function_binding_from_expression(expression)
+                        .is_some()
+            });
         let constructor_source_expression = Expression::New {
             callee: Box::new(callee.clone()),
             arguments: arguments.to_vec(),
@@ -1401,7 +1404,22 @@ impl<'a> FunctionCompiler<'a> {
         )?;
         self.push_local_get(constructor_return_local);
         self.state.emission.output.instructions.push(0x1a);
-        self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
+        if let Some(runtime_function_value) = constructor_return_expression
+            .as_ref()
+            .and_then(|expression| self.resolve_function_binding_from_expression(expression))
+            .map(|binding| match binding {
+                LocalFunctionBinding::User(function_name) => self
+                    .user_function_runtime_value(&function_name)
+                    .unwrap_or(JS_TYPEOF_FUNCTION_TAG),
+                LocalFunctionBinding::Builtin(function_name) => {
+                    builtin_function_runtime_value(&function_name).unwrap_or(JS_TYPEOF_FUNCTION_TAG)
+                }
+            })
+        {
+            self.push_i32_const(runtime_function_value);
+        } else {
+            self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
+        }
         Ok(true)
     }
 }

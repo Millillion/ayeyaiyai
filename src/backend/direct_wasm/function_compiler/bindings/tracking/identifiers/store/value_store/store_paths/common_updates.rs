@@ -1322,13 +1322,19 @@ impl<'a> FunctionCompiler<'a> {
         let target_owner = self
             .runtime_object_property_shadow_owner_name_for_identifier(target_name)
             .unwrap_or_else(|| fallback_owner.to_string());
-        let source_owner = self
-            .resolve_identifier_store_shadow_source_owner(&state.canonical_value_expression)
-            .or_else(|| {
-                self.resolve_identifier_store_shadow_source_owner(
-                    &state.module_assignment_expression,
-                )
-            });
+        let constructor_returned_function_object_binding = state.function_binding.is_some()
+            && matches!(state.canonical_value_expression, Expression::New { .. })
+            && state.object_binding.is_some();
+        let source_owner = if constructor_returned_function_object_binding {
+            None
+        } else {
+            self.resolve_identifier_store_shadow_source_owner(&state.canonical_value_expression)
+                .or_else(|| {
+                    self.resolve_identifier_store_shadow_source_owner(
+                        &state.module_assignment_expression,
+                    )
+                })
+        };
         let source_owner_is_data_copy = self
             .expression_is_single_spread_shadow_copy(&state.canonical_value_expression)
             || self.expression_is_single_spread_shadow_copy(&state.module_assignment_expression);
@@ -1352,6 +1358,11 @@ impl<'a> FunctionCompiler<'a> {
             .local_object_binding(&state.resolved_name)
             .cloned()
             .filter(|_| source_owner.is_none() || source_owner_is_data_copy)
+            .or_else(|| {
+                constructor_returned_function_object_binding
+                    .then(|| state.object_binding.clone())
+                    .flatten()
+            })
             .or_else(|| source_shadow_object_binding.clone())
             .or_else(|| {
                 self.resolve_object_binding_from_expression(&state.object_binding_expression)
@@ -1812,9 +1823,7 @@ impl<'a> FunctionCompiler<'a> {
                 .as_ref()
                 .filter(|binding| Self::object_binding_has_module_namespace_marker(binding))
                 && matches!(
-                    self.resolve_static_await_resolution_outcome(
-                        &state.canonical_value_expression
-                    ),
+                    self.resolve_static_await_resolution_outcome(&state.canonical_value_expression),
                     Some(StaticEvalOutcome::Value(_))
                 )
             {

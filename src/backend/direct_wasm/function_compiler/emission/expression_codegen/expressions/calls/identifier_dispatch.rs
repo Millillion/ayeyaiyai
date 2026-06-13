@@ -234,6 +234,13 @@ impl<'a> FunctionCompiler<'a> {
                 .static_semantics
                 .local_value_binding(name)
                 .is_some();
+        let binding_name = resolved_local_name.as_deref().unwrap_or(name);
+        let has_static_local_function_binding = self
+            .state
+            .speculation
+            .static_semantics
+            .local_function_binding(binding_name)
+            .is_some();
         if trace_call_dispatch {
             eprintln!(
                 "identifier_call:resolution name={name} resolved_local={resolved_local_name:?} eval_hidden={:?} lexical_global={} local_value={:?} local_function={:?} global_value={:?} global_function={:?}",
@@ -257,8 +264,8 @@ impl<'a> FunctionCompiler<'a> {
         if resolved_local_name.is_some()
             || self.resolve_eval_local_function_hidden_name(name).is_some()
             || has_static_lexical_global_value
+            || has_static_local_function_binding
         {
-            let binding_name = resolved_local_name.as_deref().unwrap_or(name);
             if trace_call_dispatch {
                 eprintln!(
                     "identifier_call:local name={name} binding={binding_name} value={:?} function={:?}",
@@ -320,6 +327,9 @@ impl<'a> FunctionCompiler<'a> {
                             } else {
                                 self.emit_user_function_call(&user_function, arguments)?;
                             }
+                            self.note_last_bound_user_function_source_expression(
+                                source_expression,
+                            );
                             return Ok(());
                         }
                     }
