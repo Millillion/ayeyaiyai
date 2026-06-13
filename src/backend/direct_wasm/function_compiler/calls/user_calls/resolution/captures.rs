@@ -1038,8 +1038,13 @@ impl<'a> FunctionCompiler<'a> {
                 } else {
                     self.resolve_with_scope_binding(capture_name)?
                 };
+            let call_frame_source_expression =
+                matches!(expression, Expression::Call { .. } | Expression::New { .. })
+                    .then(|| capture_source_bindings.get(capture_name).cloned())
+                    .flatten();
             if !self.user_function_capture_source_is_locally_bound(capture_name)
                 && scoped_source_object.is_none()
+                && call_frame_source_expression.is_none()
             {
                 continue;
             }
@@ -1049,7 +1054,8 @@ impl<'a> FunctionCompiler<'a> {
                     property: Box::new(Expression::String(capture_name.clone())),
                 }
             } else {
-                let Some(source_expression) = capture_source_bindings.get(capture_name).cloned()
+                let Some(source_expression) = call_frame_source_expression
+                    .or_else(|| capture_source_bindings.get(capture_name).cloned())
                 else {
                     return Ok(None);
                 };

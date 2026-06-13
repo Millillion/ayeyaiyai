@@ -3344,11 +3344,19 @@ impl<'a> FunctionCompiler<'a> {
                     user_function.name
                 ))])?;
             }
+            let returned_call_capture_slots;
             let synthesized_capture_slots;
             let capture_slots = if let Some(capture_slots) = callee_capture_slots.as_ref() {
                 Some(capture_slots)
             } else if let Some(capture_slots) = member_capture_slots.as_ref() {
                 Some(capture_slots)
+            } else if matches!(callee, Expression::Call { .. } | Expression::New { .. }) {
+                returned_call_capture_slots = self
+                    .initialize_user_function_capture_slots_from_expression(
+                        callee,
+                        user_function,
+                    )?;
+                returned_call_capture_slots.as_ref()
             } else {
                 synthesized_capture_slots =
                     self.synthesize_dynamic_identifier_capture_slots(callee, user_function);
