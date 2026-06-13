@@ -141,7 +141,8 @@ fn normalize_unmodified_parser_source(source: &str) -> Cow<'_, str> {
     // object literal context) preserves identifier-position negatives. The
     // member-property rewrite likewise only fires after `.`, another
     // always-valid IdentifierName position.
-    let normalized = normalize_escaped_class_method_names(Cow::Borrowed(source));
+    let normalized = normalize_script_await_label_identifiers(Cow::Borrowed(source));
+    let normalized = normalize_escaped_class_method_names(normalized);
     let normalized = normalize_escaped_object_property_names(normalized);
     let normalized = normalize_escaped_member_property_names(normalized);
     let normalized = normalize_static_constructor_methods(normalized);
@@ -332,6 +333,77 @@ fn normalize_escaped_let_statement_starts(source: Cow<'_, str>) -> Cow<'_, str> 
                     output.push_str(&source[last_copied..index]);
                     output.push_str("void 0");
                     output.extend(std::iter::repeat_n(' ', end - index - "void 0".len()));
+                    last_copied = end;
+                }
+
+                index = end;
+                statement_start = false;
+            }
+            b';' | b'{' | b'}' => {
+                index += 1;
+                statement_start = true;
+            }
+            _ => {
+                index += 1;
+                statement_start = false;
+            }
+        }
+    }
+
+    if last_copied == 0 {
+        return source;
+    }
+
+    output.push_str(&source[last_copied..]);
+    Cow::Owned(output)
+}
+
+fn normalize_script_await_label_identifiers(source: Cow<'_, str>) -> Cow<'_, str> {
+    if !source.contains("await") && !source.contains("\\u") {
+        return source;
+    }
+
+    let bytes = source.as_bytes();
+    let mut output = String::new();
+    let mut last_copied = 0;
+    let mut index = 0;
+    let mut statement_start = true;
+
+    while index < bytes.len() {
+        match bytes[index] {
+            byte if byte.is_ascii_whitespace() => {
+                index += 1;
+            }
+            b'/' if index + 1 < bytes.len() && bytes[index + 1] == b'/' => {
+                index = skip_line_comment(bytes, index);
+            }
+            b'/' if index + 1 < bytes.len() && bytes[index + 1] == b'*' => {
+                index = skip_block_comment(bytes, index);
+            }
+            b'\'' | b'"' => {
+                index = skip_quoted_string(bytes, index);
+                statement_start = false;
+            }
+            b'`' => {
+                index = skip_template_literal(bytes, index);
+                statement_start = false;
+            }
+            byte if is_identifier_byte(byte) || starts_unicode_escape(bytes, index) => {
+                let Some((end, decoded, _)) =
+                    scan_identifier_name_with_unicode_escapes(&source, index)
+                else {
+                    index += 1;
+                    statement_start = false;
+                    continue;
+                };
+
+                let next_token = skip_whitespace_and_comments(bytes, end);
+                if statement_start
+                    && decoded == "await"
+                    && matches!(next_token.and_then(|next| bytes.get(next)), Some(b':'))
+                {
+                    output.push_str(&source[last_copied..index]);
+                    output.push_str("__ayy_await_ident");
                     last_copied = end;
                 }
 

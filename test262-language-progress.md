@@ -1,4 +1,4 @@
-22880/23668 (96.67%)
+22884/23668 (96.69%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,7 +14,7 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 9021/9337 (96.62%)
+- statements: 9025/9337 (96.66%)
 - expressions: 10704/11061 (96.77%)
 - types: 113/113 (100.00%)
 - function-code: 217/217 (100.00%)
@@ -9738,12 +9738,12 @@ Sub-category progress
   - [x] test/language/statements/labeled/tco.js
   - [x] test/language/statements/labeled/value-await-module-escaped.js
   - [x] test/language/statements/labeled/value-await-module.js
-  - [ ] test/language/statements/labeled/value-await-non-module-escaped.js
-  - [ ] test/language/statements/labeled/value-await-non-module.js
+  - [x] test/language/statements/labeled/value-await-non-module-escaped.js
+  - [x] test/language/statements/labeled/value-await-non-module.js
   - [x] test/language/statements/labeled/value-yield-non-strict-escaped.js
   - [x] test/language/statements/labeled/value-yield-non-strict.js
-  - [ ] test/language/statements/labeled/value-yield-strict-escaped.js
-  - [ ] test/language/statements/labeled/value-yield-strict.js
+  - [x] test/language/statements/labeled/value-yield-strict-escaped.js
+  - [x] test/language/statements/labeled/value-yield-strict.js
   - [x] test/language/statements/let/block-local-closure-get-before-initialization.js
   - [x] test/language/statements/let/block-local-closure-set-before-initialization.js
   - [x] test/language/statements/let/block-local-use-before-initialization-in-declaration-statement.js

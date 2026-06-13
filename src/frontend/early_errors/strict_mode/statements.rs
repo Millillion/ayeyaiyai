@@ -5,6 +5,7 @@ use super::{
         validate_strict_mode_early_errors_in_pattern,
         validate_strict_mode_early_errors_in_variable_declaration,
     },
+    directives::is_strict_mode_reserved_identifier,
     expressions::validate_strict_mode_early_errors_in_expression,
     functions::validate_strict_mode_early_errors_in_declaration,
 };
@@ -167,6 +168,11 @@ fn validate_strict_mode_early_errors_in_statement(statement: &Stmt, strict: bool
             validate_strict_mode_early_errors_in_expression(&statement.arg, strict)?;
         }
         Stmt::Labeled(statement) => {
+            ensure!(
+                !strict || !is_strict_mode_reserved_identifier(statement.label.sym.as_ref()),
+                "strict mode forbids label `{}`",
+                statement.label.sym
+            );
             validate_strict_labeled_body_statement_position(&statement.body, strict)?;
             validate_strict_mode_early_errors_in_statement(&statement.body, strict)?;
         }
