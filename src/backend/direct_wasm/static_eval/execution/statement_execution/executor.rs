@@ -1,5 +1,53 @@
 use super::super::*;
 
+fn evaluate_static_return_expression<Executor>(
+    executor: &Executor,
+    expression: &Expression,
+    environment: &mut Executor::Environment,
+) -> Option<Expression>
+where
+    Executor: StaticExpressionExecutor + ?Sized,
+{
+    match expression {
+        Expression::Array(elements) => elements
+            .iter()
+            .map(|element| match element {
+                ArrayElement::Expression(expression) => Some(ArrayElement::Expression(
+                    evaluate_static_return_expression(executor, expression, environment)?,
+                )),
+                ArrayElement::Spread(_) => None,
+            })
+            .collect::<Option<Vec<_>>>()
+            .map(Expression::Array),
+        Expression::Object(entries) => entries
+            .iter()
+            .map(|entry| match entry {
+                ObjectEntry::Data { key, value } => Some(ObjectEntry::Data {
+                    key: evaluate_static_return_expression(executor, key, environment)?,
+                    value: evaluate_static_return_expression(executor, value, environment)?,
+                }),
+                ObjectEntry::Getter { key, getter } => Some(ObjectEntry::Getter {
+                    key: evaluate_static_return_expression(executor, key, environment)?,
+                    getter: executor
+                        .evaluate_expression(getter, environment)
+                        .or_else(|| executor.materialize_expression(getter, environment))?,
+                }),
+                ObjectEntry::Setter { key, setter } => Some(ObjectEntry::Setter {
+                    key: evaluate_static_return_expression(executor, key, environment)?,
+                    setter: executor
+                        .evaluate_expression(setter, environment)
+                        .or_else(|| executor.materialize_expression(setter, environment))?,
+                }),
+                ObjectEntry::Spread(_) => None,
+            })
+            .collect::<Option<Vec<_>>>()
+            .map(Expression::Object),
+        _ => executor
+            .evaluate_expression(expression, environment)
+            .or_else(|| executor.materialize_expression(expression, environment)),
+    }
+}
+
 pub(in crate::backend::direct_wasm) trait StaticStatementExecutor {
     type Environment;
 
@@ -167,7 +215,7 @@ where
         expression: &Expression,
         environment: &mut Self::Environment,
     ) -> Option<Expression> {
-        self.evaluate_expression(expression, environment)
+        evaluate_static_return_expression(self, expression, environment)
     }
 
     fn execute_print_statement(
