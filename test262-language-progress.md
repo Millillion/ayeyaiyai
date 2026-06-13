@@ -1,4 +1,4 @@
-22827/23668 (96.45%)
+22829/23668 (96.46%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -24,8 +24,8 @@ Sub-category progress
 - block-scope: 145/145 (100.00%)
 - identifier-resolution: 14/14 (100.00%)
 - computed-property-names: 48/48 (100.00%)
-- destructuring: 17/19 (89.47%)
-- eval-code: 344/347 (99.14%)
+- destructuring: 18/19 (94.74%)
+- eval-code: 345/347 (99.42%)
 - import: 91/127 (71.65%)
 - export: 3/3 (100.00%)
 - module-code: 518/596 (86.91%)
@@ -22633,7 +22633,7 @@ Sub-category progress
   - [x] test/language/destructuring/binding/initialization-requires-object-coercible-null.js
   - [x] test/language/destructuring/binding/initialization-requires-object-coercible-undefined.js
   - [x] test/language/destructuring/binding/initialization-returns-normal-completion-for-empty-objects.js
-  - [ ] test/language/destructuring/binding/keyed-destructuring-property-reference-target-evaluation-order-with-bindings.js
+  - [x] test/language/destructuring/binding/keyed-destructuring-property-reference-target-evaluation-order-with-bindings.js
   - [x] test/language/destructuring/binding/syntax/array-elements-with-initializer.js
   - [x] test/language/destructuring/binding/syntax/array-elements-with-object-patterns.js
   - [x] test/language/destructuring/binding/syntax/array-elements-without-initializer.js
@@ -22916,7 +22916,7 @@ Sub-category progress
   - [x] test/language/eval-code/direct/var-env-func-init-local-new.js
   - [x] test/language/eval-code/direct/var-env-func-init-local-update.js
   - [x] test/language/eval-code/direct/var-env-func-init-multi.js
-  - [ ] test/language/eval-code/direct/var-env-func-non-strict.js
+  - [x] test/language/eval-code/direct/var-env-func-non-strict.js
   - [x] test/language/eval-code/direct/var-env-func-strict-caller-2.js
   - [x] test/language/eval-code/direct/var-env-func-strict-caller.js
   - [x] test/language/eval-code/direct/var-env-func-strict-source.js
