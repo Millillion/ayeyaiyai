@@ -817,6 +817,30 @@ impl Lowerer {
                     match property {
                         ObjectPatProp::KeyValue(property) => {
                             let property_key = self.lower_prop_name(&property.key)?;
+                            if matches!(binding_kind, ForOfPatternBindingKind::Assignment)
+                                && let Pat::Expr(expression) = property.value.as_ref()
+                                && Self::is_cached_member_assignment_target(expression)
+                            {
+                                let property_name = self.fresh_temporary_name("source_property");
+                                statements.push(Statement::Let {
+                                    name: property_name.clone(),
+                                    mutable: true,
+                                    value: Self::property_key_value_expression(
+                                        property_key.clone(),
+                                    ),
+                                });
+                                if let Some(target) = self
+                                    .lower_cached_member_assignment_target(expression, statements)?
+                                {
+                                    excluded_properties
+                                        .push(Expression::Identifier(property_name.clone()));
+                                    statements.push(target.into_statement(Expression::Member {
+                                        object: Box::new(value.clone()),
+                                        property: Box::new(Expression::Identifier(property_name)),
+                                    }));
+                                    continue;
+                                }
+                            }
                             let property_value = Expression::Member {
                                 object: Box::new(value.clone()),
                                 property: Box::new(property_key.clone()),
@@ -1376,6 +1400,30 @@ impl Lowerer {
                     match property {
                         ObjectPatProp::KeyValue(property) => {
                             let property_key = self.lower_prop_name(&property.key)?;
+                            if let Pat::Expr(expression) = property.value.as_ref()
+                                && Self::is_cached_member_assignment_target(expression)
+                            {
+                                let property_name = self.fresh_temporary_name("source_property");
+                                expressions.push(Expression::Assign {
+                                    name: property_name.clone(),
+                                    value: Box::new(Self::property_key_value_expression(
+                                        property_key.clone(),
+                                    )),
+                                });
+                                if let Some(target) = self
+                                    .lower_cached_member_assignment_target_to_expressions(
+                                        expression,
+                                        expressions,
+                                    )?
+                                {
+                                    let property_value = Expression::Member {
+                                        object: Box::new(value.clone()),
+                                        property: Box::new(Expression::Identifier(property_name)),
+                                    };
+                                    expressions.push(target.into_expression(property_value));
+                                    continue;
+                                }
+                            }
                             let property_value = Expression::Member {
                                 object: Box::new(value.clone()),
                                 property: Box::new(property_key),
