@@ -1,4 +1,4 @@
-22887/23668 (96.70%)
+22890/23668 (96.71%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,7 +14,7 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 9028/9337 (96.69%)
+- statements: 9031/9337 (96.72%)
 - expressions: 10704/11061 (96.77%)
 - types: 113/113 (100.00%)
 - function-code: 217/217 (100.00%)
@@ -9906,7 +9906,7 @@ Sub-category progress
   - [x] test/language/statements/return/line-terminators.js
   - [x] test/language/statements/return/tco.js
   - [x] test/language/statements/switch/S12.11_A1_T1.js
-  - [ ] test/language/statements/switch/S12.11_A1_T2.js
+  - [x] test/language/statements/switch/S12.11_A1_T2.js
   - [x] test/language/statements/switch/S12.11_A1_T3.js
   - [x] test/language/statements/switch/S12.11_A1_T4.js
   - [x] test/language/statements/switch/S12.11_A2_T1.js
@@ -10275,8 +10275,8 @@ Sub-category progress
   - [x] test/language/statements/using/syntax/using-invalid-arraybindingpattern-after-bindingidentifier.js
   - [x] test/language/statements/using/syntax/using-invalid-arraybindingpattern-does-not-break-element-access.js
   - [x] test/language/statements/using/syntax/using-invalid-arraybindingpattern.js
-  - [ ] test/language/statements/using/syntax/using-invalid-assignment-next-expression-for.js
-  - [ ] test/language/statements/using/syntax/using-invalid-assignment-statement-body-for-of.js
+  - [x] test/language/statements/using/syntax/using-invalid-assignment-next-expression-for.js
+  - [x] test/language/statements/using/syntax/using-invalid-assignment-statement-body-for-of.js
   - [x] test/language/statements/using/syntax/using-invalid-for-in.js
   - [x] test/language/statements/using/syntax/using-invalid-objectbindingpattern-after-bindingidentifier.js
   - [x] test/language/statements/using/syntax/using-invalid-objectbindingpattern.js

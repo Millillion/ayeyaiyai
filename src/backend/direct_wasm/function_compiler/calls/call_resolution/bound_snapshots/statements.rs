@@ -1,5 +1,6 @@
 use super::*;
 use crate::ir::hir::SwitchCase;
+use std::collections::HashSet;
 
 const BOUND_SNAPSHOT_LOOP_ITERATION_LIMIT: usize = 4096;
 
@@ -104,6 +105,139 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    fn bound_snapshot_expression_is_fresh_boxed_primitive(&self, expression: &Expression) -> bool {
+        matches!(
+            expression,
+            Expression::New { callee, .. }
+                if matches!(
+                    callee.as_ref(),
+                    Expression::Identifier(name)
+                        if matches!(name.as_str(), "Boolean" | "Number" | "String")
+                            && self.is_unshadowed_builtin_identifier(name)
+                )
+        )
+    }
+
+    fn evaluate_bound_snapshot_call_arguments_for_effects(
+        &self,
+        arguments: &[CallArgument],
+        bindings: &mut HashMap<String, Expression>,
+        current_function_name: Option<&str>,
+    ) -> Option<()> {
+        for argument in arguments {
+            self.evaluate_bound_snapshot_expression(
+                argument.expression(),
+                bindings,
+                current_function_name,
+            )?;
+        }
+        Some(())
+    }
+
+    fn evaluate_bound_snapshot_fresh_boxed_primitive_for_effects(
+        &self,
+        expression: &Expression,
+        bindings: &mut HashMap<String, Expression>,
+        current_function_name: Option<&str>,
+    ) -> Option<()> {
+        let Expression::New { arguments, .. } = expression else {
+            return Some(());
+        };
+        self.evaluate_bound_snapshot_call_arguments_for_effects(
+            arguments,
+            bindings,
+            current_function_name,
+        )
+    }
+
+    fn bound_snapshot_boxed_primitive_identity_key(
+        &self,
+        expression: &Expression,
+        bindings: &HashMap<String, Expression>,
+    ) -> Option<String> {
+        let mut visited = HashSet::new();
+        self.bound_snapshot_boxed_primitive_identity_key_inner(expression, bindings, &mut visited)
+    }
+
+    fn bound_snapshot_boxed_primitive_identity_key_inner(
+        &self,
+        expression: &Expression,
+        bindings: &HashMap<String, Expression>,
+        visited: &mut HashSet<String>,
+    ) -> Option<String> {
+        let Expression::Identifier(name) = expression else {
+            return None;
+        };
+        let resolved_name = self
+            .resolve_bound_snapshot_binding_name(name, bindings)
+            .to_string();
+        if !visited.insert(resolved_name.clone()) {
+            return None;
+        }
+        let value = bindings
+            .get(&resolved_name)
+            .or_else(|| self.global_value_binding(&resolved_name))
+            .or_else(|| {
+                (resolved_name != *name)
+                    .then(|| self.global_value_binding(name))
+                    .flatten()
+            })?;
+        if self.bound_snapshot_expression_is_fresh_boxed_primitive(value) {
+            return Some(format!("boxed-primitive:{resolved_name}"));
+        }
+        if let Expression::Identifier(alias) = value
+            && alias != name
+        {
+            return self
+                .bound_snapshot_boxed_primitive_identity_key_inner(value, bindings, visited);
+        }
+        None
+    }
+
+    fn evaluate_bound_snapshot_switch_operand(
+        &self,
+        expression: &Expression,
+        bindings: &mut HashMap<String, Expression>,
+        current_function_name: Option<&str>,
+    ) -> Option<Expression> {
+        if self
+            .bound_snapshot_boxed_primitive_identity_key(expression, bindings)
+            .is_some()
+        {
+            return Some(expression.clone());
+        }
+        if self.bound_snapshot_expression_is_fresh_boxed_primitive(expression) {
+            self.evaluate_bound_snapshot_fresh_boxed_primitive_for_effects(
+                expression,
+                bindings,
+                current_function_name,
+            )?;
+            return Some(expression.clone());
+        }
+        self.evaluate_bound_snapshot_expression(expression, bindings, current_function_name)
+    }
+
+    fn bound_snapshot_switch_identity_match(
+        &self,
+        left: &Expression,
+        right: &Expression,
+        bindings: &HashMap<String, Expression>,
+    ) -> Option<bool> {
+        if self.bound_snapshot_expression_is_fresh_boxed_primitive(left)
+            || self.bound_snapshot_expression_is_fresh_boxed_primitive(right)
+        {
+            return Some(false);
+        }
+        match (
+            self.bound_snapshot_boxed_primitive_identity_key(left, bindings),
+            self.bound_snapshot_boxed_primitive_identity_key(right, bindings),
+        ) {
+            (Some(left_key), Some(right_key)) => Some(left_key == right_key),
+            (Some(_), None) | (None, Some(_)) => Some(false),
+            (None, None) => None,
+        }
+    }
+
     fn bound_snapshot_break_targets_switch(labels: &[String], label: Option<&String>) -> bool {
         match label {
             None => true,
@@ -153,6 +287,19 @@ impl<'a> FunctionCompiler<'a> {
         current_function_name: Option<&str>,
     ) -> Option<bool> {
         let test = case.test.as_ref()?;
+        if self.bound_snapshot_expression_is_fresh_boxed_primitive(test) {
+            self.evaluate_bound_snapshot_fresh_boxed_primitive_for_effects(
+                test,
+                bindings,
+                current_function_name,
+            )?;
+            return Some(false);
+        }
+        if let Some(matches) =
+            self.bound_snapshot_switch_identity_match(discriminant, test, bindings)
+        {
+            return Some(matches);
+        }
         if !matches!(
             (discriminant, test),
             (Expression::Identifier(_), Expression::Identifier(_))
@@ -169,7 +316,12 @@ impl<'a> FunctionCompiler<'a> {
             return Some(true);
         }
         let test =
-            self.evaluate_bound_snapshot_expression(test, bindings, current_function_name)?;
+            self.evaluate_bound_snapshot_switch_operand(test, bindings, current_function_name)?;
+        if let Some(matches) =
+            self.bound_snapshot_switch_identity_match(discriminant, &test, bindings)
+        {
+            return Some(matches);
+        }
         Self::bound_snapshot_strict_equal(discriminant, &test)
     }
 
@@ -181,8 +333,11 @@ impl<'a> FunctionCompiler<'a> {
         bindings: &mut HashMap<String, Expression>,
         current_function_name: Option<&str>,
     ) -> Option<BoundSnapshotControlFlow> {
-        let discriminant =
-            self.evaluate_bound_snapshot_expression(discriminant, bindings, current_function_name)?;
+        let discriminant = self.evaluate_bound_snapshot_switch_operand(
+            discriminant,
+            bindings,
+            current_function_name,
+        )?;
         let default_index = cases.iter().position(|case| case.test.is_none());
         let start_index = if let Some(default_index) = default_index {
             let before_default_match = (0..default_index).find(|index| {
