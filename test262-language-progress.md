@@ -1,4 +1,4 @@
-22921/23668 (96.84%)
+22927/23668 (96.87%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,8 +14,8 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 9036/9337 (96.78%)
-- expressions: 10722/11061 (96.94%)
+- statements: 9039/9337 (96.81%)
+- expressions: 10725/11061 (96.96%)
 - types: 113/113 (100.00%)
 - function-code: 217/217 (100.00%)
 - global-code: 42/42 (100.00%)
@@ -4796,11 +4796,11 @@ Sub-category progress
   - [x] test/language/statements/class/elements/equality-init-err-contains-arguments.js
   - [x] test/language/statements/class/elements/equality-init-err-contains-super.js
   - [x] test/language/statements/class/elements/evaluation-error/computed-name-referenceerror.js
-  - [ ] test/language/statements/class/elements/evaluation-error/computed-name-toprimitive-err.js
+  - [x] test/language/statements/class/elements/evaluation-error/computed-name-toprimitive-err.js
   - [ ] test/language/statements/class/elements/evaluation-error/computed-name-toprimitive-returns-noncallable.js
   - [ ] test/language/statements/class/elements/evaluation-error/computed-name-toprimitive-returns-nonobject.js
-  - [ ] test/language/statements/class/elements/evaluation-error/computed-name-tostring-err.js
-  - [ ] test/language/statements/class/elements/evaluation-error/computed-name-valueof-err.js
+  - [x] test/language/statements/class/elements/evaluation-error/computed-name-tostring-err.js
+  - [x] test/language/statements/class/elements/evaluation-error/computed-name-valueof-err.js
   - [x] test/language/statements/class/elements/field-declaration.js
   - [x] test/language/statements/class/elements/field-definition-accessor-no-line-terminator.js
   - [x] test/language/statements/class/elements/fielddefinition-initializer-abrupt-completion.js
@@ -15800,11 +15800,11 @@ Sub-category progress
   - [x] test/language/expressions/class/elements/equality-init-err-contains-arguments.js
   - [x] test/language/expressions/class/elements/equality-init-err-contains-super.js
   - [x] test/language/expressions/class/elements/evaluation-error/computed-name-referenceerror.js
-  - [ ] test/language/expressions/class/elements/evaluation-error/computed-name-toprimitive-err.js
+  - [x] test/language/expressions/class/elements/evaluation-error/computed-name-toprimitive-err.js
   - [x] test/language/expressions/class/elements/evaluation-error/computed-name-toprimitive-returns-noncallable.js
   - [x] test/language/expressions/class/elements/evaluation-error/computed-name-toprimitive-returns-nonobject.js
-  - [ ] test/language/expressions/class/elements/evaluation-error/computed-name-tostring-err.js
-  - [ ] test/language/expressions/class/elements/evaluation-error/computed-name-valueof-err.js
+  - [x] test/language/expressions/class/elements/evaluation-error/computed-name-tostring-err.js
+  - [x] test/language/expressions/class/elements/evaluation-error/computed-name-valueof-err.js
   - [x] test/language/expressions/class/elements/field-declaration.js
   - [x] test/language/expressions/class/elements/field-definition-accessor-no-line-terminator.js
   - [x] test/language/expressions/class/elements/fields-anonymous-function-length.js
