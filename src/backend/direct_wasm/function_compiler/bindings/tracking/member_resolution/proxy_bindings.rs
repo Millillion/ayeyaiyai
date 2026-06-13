@@ -239,14 +239,12 @@ impl<'a> FunctionCompiler<'a> {
         name: &str,
         value: &Expression,
     ) {
-        if matches!(
-            value,
-            Expression::New { callee, .. }
-                if matches!(
-                    callee.as_ref(),
-                    Expression::Identifier(name) if !name.starts_with("__ayy_class_ctor_")
-                )
-        ) {
+        if let Expression::New { callee, .. } = value
+            && let Expression::Identifier(constructor_name) = callee.as_ref()
+            && !constructor_name.starts_with("__ayy_class_ctor_")
+            && !(constructor_name == "Proxy"
+                && self.is_unshadowed_builtin_identifier(constructor_name))
+        {
             self.state
                 .speculation
                 .static_semantics

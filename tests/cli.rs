@@ -6281,6 +6281,83 @@ fn compiles_primitive_getters_and_string_replace_callbacks() {
 }
 
 #[test]
+fn compiles_primitive_put_value_through_proxy_prototype_set_traps() {
+    let tempdir = tempdir().unwrap();
+    let input = tempdir.path().join("primitive-proxy-prototype-set.js");
+    let output = tempdir.path().join("primitive-proxy-prototype-set.wasm");
+
+    fs::write(
+        &input,
+        r#"
+        var numberCount = 0;
+        var stringCount = 0;
+        var booleanCount = 0;
+        var symbolCount = 0;
+        var realmNumberCount = 0;
+        var spy;
+
+        spy = new Proxy({}, { set: function() { numberCount += 1; return true; } });
+        Object.setPrototypeOf(Number.prototype, spy);
+        0..test262 = null;
+
+        spy = new Proxy({}, { set: function() { stringCount += 1; return true; } });
+        Object.setPrototypeOf(String.prototype, spy);
+        ''.test262 = null;
+
+        spy = new Proxy({}, { set: function() { booleanCount += 1; return true; } });
+        Object.setPrototypeOf(Boolean.prototype, spy);
+        true.test262 = null;
+
+        spy = new Proxy({}, { set: function() { symbolCount += 1; return true; } });
+        Object.setPrototypeOf(Symbol.prototype, spy);
+        Symbol().test262 = null;
+
+        var other = $262.createRealm().global;
+        spy = new Proxy({}, { set: function() { realmNumberCount += 1; return true; } });
+        Object.setPrototypeOf(other.Number.prototype, spy);
+        other.eval('0..test262 = null;');
+
+        console.log(
+          "primitive-proxy-set",
+          numberCount,
+          stringCount,
+          booleanCount,
+          symbolCount,
+          realmNumberCount
+        );
+        "#,
+    )
+    .unwrap();
+
+    let compile = Command::new(env!("CARGO_BIN_EXE_ayeyaiyai"))
+        .arg(&input)
+        .arg("-o")
+        .arg(&output)
+        .output()
+        .unwrap();
+
+    assert!(
+        compile.status.success(),
+        "compiler failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&compile.stdout),
+        String::from_utf8_lossy(&compile.stderr),
+    );
+
+    let run = Command::new("wasmtime").arg(&output).output().unwrap();
+
+    assert!(
+        run.status.success(),
+        "wasmtime failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&run.stdout),
+        String::from_utf8_lossy(&run.stderr),
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&run.stdout),
+        "primitive-proxy-set 1 1 1 1 1\n"
+    );
+}
+
+#[test]
 fn compiles_direct_eval_comment_patterns_with_dynamic_char_insertions() {
     let tempdir = tempdir().unwrap();
     let input = tempdir.path().join("direct-eval-comment-patterns.js");
