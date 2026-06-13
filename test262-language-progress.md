@@ -1,4 +1,4 @@
-22916/23668 (96.82%)
+22918/23668 (96.83%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,7 +14,7 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 9032/9337 (96.73%)
+- statements: 9034/9337 (96.75%)
 - expressions: 10721/11061 (96.93%)
 - types: 113/113 (100.00%)
 - function-code: 217/217 (100.00%)
@@ -9382,8 +9382,8 @@ Sub-category progress
   - [x] test/language/statements/function/scope-paramsbody-var-open.js
   - [x] test/language/statements/function/static-init-await-binding-invalid.js
   - [x] test/language/statements/function/static-init-await-binding-valid.js
-  - [ ] test/language/statements/function/unscopables-with-in-nested-fn.js
-  - [ ] test/language/statements/function/unscopables-with.js
+  - [x] test/language/statements/function/unscopables-with-in-nested-fn.js
+  - [x] test/language/statements/function/unscopables-with.js
   - [x] test/language/statements/function/use-strict-with-non-simple-param.js
   - [x] test/language/statements/generators/arguments-with-arguments-fn.js
   - [x] test/language/statements/generators/arguments-with-arguments-lex.js
