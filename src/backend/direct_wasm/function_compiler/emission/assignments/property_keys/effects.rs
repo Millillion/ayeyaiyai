@@ -13,6 +13,13 @@ impl<'a> FunctionCompiler<'a> {
         }
 
         let materialized = self.materialize_static_expression(expression);
+        if self.symbol_to_primitive_non_callable_type_error(expression)
+            || (!static_expression_matches(&materialized, expression)
+                && self.symbol_to_primitive_non_callable_type_error(&materialized))
+        {
+            return true;
+        }
+
         let object_binding = self
             .resolve_object_binding_from_expression(expression)
             .or_else(|| {

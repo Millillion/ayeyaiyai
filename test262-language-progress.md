@@ -1,4 +1,4 @@
-22948/23668 (96.96%)
+22950/23668 (96.97%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,7 +14,7 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 9049/9337 (96.92%)
+- statements: 9051/9337 (96.94%)
 - expressions: 10736/11061 (97.06%)
 - types: 113/113 (100.00%)
 - function-code: 217/217 (100.00%)
@@ -4797,8 +4797,8 @@ Sub-category progress
   - [x] test/language/statements/class/elements/equality-init-err-contains-super.js
   - [x] test/language/statements/class/elements/evaluation-error/computed-name-referenceerror.js
   - [x] test/language/statements/class/elements/evaluation-error/computed-name-toprimitive-err.js
-  - [ ] test/language/statements/class/elements/evaluation-error/computed-name-toprimitive-returns-noncallable.js
-  - [ ] test/language/statements/class/elements/evaluation-error/computed-name-toprimitive-returns-nonobject.js
+  - [x] test/language/statements/class/elements/evaluation-error/computed-name-toprimitive-returns-noncallable.js
+  - [x] test/language/statements/class/elements/evaluation-error/computed-name-toprimitive-returns-nonobject.js
   - [x] test/language/statements/class/elements/evaluation-error/computed-name-tostring-err.js
   - [x] test/language/statements/class/elements/evaluation-error/computed-name-valueof-err.js
   - [x] test/language/statements/class/elements/field-declaration.js
