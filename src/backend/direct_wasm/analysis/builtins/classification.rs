@@ -90,6 +90,10 @@ pub(in crate::backend::direct_wasm) fn native_error_runtime_value(name: &str) ->
 pub(in crate::backend::direct_wasm) fn native_error_instanceof_values(
     name: &str,
 ) -> Option<Vec<i32>> {
+    if name == "Test262Error" {
+        return Some(vec![TEST262_ERROR_RUNTIME_VALUE]);
+    }
+
     if name == "Error" {
         return Some(
             NATIVE_ERROR_NAMES

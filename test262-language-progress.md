@@ -1,4 +1,4 @@
-22851/23668 (96.55%)
+22853/23668 (96.56%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,7 +14,7 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 9000/9337 (96.39%)
+- statements: 9002/9337 (96.41%)
 - expressions: 10697/11061 (96.71%)
 - types: 113/113 (100.00%)
 - function-code: 217/217 (100.00%)
@@ -6415,7 +6415,7 @@ Sub-category progress
   - [x] test/language/statements/do-while/S12.6.1_A14_T1.js
   - [x] test/language/statements/do-while/S12.6.1_A14_T2.js
   - [x] test/language/statements/do-while/S12.6.1_A15.js
-  - [ ] test/language/statements/do-while/S12.6.1_A2.js
+  - [x] test/language/statements/do-while/S12.6.1_A2.js
   - [x] test/language/statements/do-while/S12.6.1_A3.js
   - [x] test/language/statements/do-while/S12.6.1_A4_T1.js
   - [x] test/language/statements/do-while/S12.6.1_A4_T2.js
@@ -6431,7 +6431,7 @@ Sub-category progress
   - [x] test/language/statements/do-while/S12.6.1_A6_T6.js
   - [x] test/language/statements/do-while/S12.6.1_A7.js
   - [x] test/language/statements/do-while/S12.6.1_A8.js
-  - [ ] test/language/statements/do-while/S12.6.1_A9.js
+  - [x] test/language/statements/do-while/S12.6.1_A9.js
   - [x] test/language/statements/do-while/cptn-abrupt-empty.js
   - [x] test/language/statements/do-while/cptn-normal.js
   - [x] test/language/statements/do-while/decl-async-fun.js

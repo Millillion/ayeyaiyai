@@ -259,6 +259,11 @@ impl<'a> FunctionCompiler<'a> {
                 eprintln!("identifier_read:fallback:path builtin_function name={name}");
             }
             self.push_i32_const(runtime_value);
+        } else if name == "Test262Error" && self.is_unshadowed_builtin_identifier(name) {
+            if trace_identifier_reads {
+                eprintln!("identifier_read:fallback:path test262_error name={name}");
+            }
+            self.push_i32_const(TEST262_ERROR_RUNTIME_VALUE);
         } else if is_internal_user_function_identifier(name)
             && let Some(runtime_value) = self.user_function_runtime_value(name)
         {
