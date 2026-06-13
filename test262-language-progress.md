@@ -1,4 +1,4 @@
-22927/23668 (96.87%)
+22929/23668 (96.88%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -14,8 +14,8 @@ Sub-category progress
 - directive-prologue: 62/62 (100.00%)
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
-- statements: 9039/9337 (96.81%)
-- expressions: 10725/11061 (96.96%)
+- statements: 9040/9337 (96.82%)
+- expressions: 10726/11061 (96.97%)
 - types: 113/113 (100.00%)
 - function-code: 217/217 (100.00%)
 - global-code: 42/42 (100.00%)
@@ -4806,7 +4806,7 @@ Sub-category progress
   - [x] test/language/statements/class/elements/fielddefinition-initializer-abrupt-completion.js
   - [x] test/language/statements/class/elements/fields-anonymous-function-length.js
   - [x] test/language/statements/class/elements/fields-asi-1.js
-  - [ ] test/language/statements/class/elements/fields-asi-2.js
+  - [x] test/language/statements/class/elements/fields-asi-2.js
   - [x] test/language/statements/class/elements/fields-asi-3.js
   - [x] test/language/statements/class/elements/fields-asi-4.js
   - [x] test/language/statements/class/elements/fields-asi-5.js
@@ -15809,7 +15809,7 @@ Sub-category progress
   - [x] test/language/expressions/class/elements/field-definition-accessor-no-line-terminator.js
   - [x] test/language/expressions/class/elements/fields-anonymous-function-length.js
   - [ ] test/language/expressions/class/elements/fields-asi-1.js
-  - [ ] test/language/expressions/class/elements/fields-asi-2.js
+  - [x] test/language/expressions/class/elements/fields-asi-2.js
   - [x] test/language/expressions/class/elements/fields-asi-3.js
   - [x] test/language/expressions/class/elements/fields-asi-4.js
   - [x] test/language/expressions/class/elements/fields-asi-5.js

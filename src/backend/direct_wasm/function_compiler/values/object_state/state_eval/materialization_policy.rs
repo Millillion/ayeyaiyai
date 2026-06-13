@@ -13,9 +13,6 @@ impl StaticMaterializationPolicySource for FunctionStaticEvalContext<'_, '_> {
         {
             return Some(expression.clone());
         }
-        if let Some(value) = self.resolve_static_number_value(expression) {
-            return Some(Expression::Number(value));
-        }
         let resolved_property = self
             .evaluate_expression_with_state(property, environment)
             .or_else(|| self.materialize_expression_with_state(property, environment))
@@ -24,6 +21,16 @@ impl StaticMaterializationPolicySource for FunctionStaticEvalContext<'_, '_> {
             .evaluate_expression_with_state(object, environment)
             .or_else(|| self.materialize_expression_with_state(object, environment))
             .unwrap_or_else(|| object.clone());
+        for candidate_object in [object, &resolved_object] {
+            if let Some(value) =
+                materialize_literal_string_member(candidate_object, &resolved_property)
+            {
+                return Some(value);
+            }
+        }
+        if let Some(value) = self.resolve_static_number_value(expression) {
+            return Some(Expression::Number(value));
+        }
         if let Some(property_name) = static_property_name_from_expression(&resolved_property) {
             for candidate_object in [object, &resolved_object] {
                 if let Expression::Identifier(object_name) = candidate_object
