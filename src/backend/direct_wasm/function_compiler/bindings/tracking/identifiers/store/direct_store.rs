@@ -36,6 +36,13 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(());
         }
 
+        if self.local_binding_is_immutable(resolved_name) {
+            self.state
+                .clear_local_static_binding_metadata(resolved_name);
+            self.emit_named_error_throw("TypeError")?;
+            return Ok(());
+        }
+
         self.push_local_get(value_local);
         self.push_local_set(local_index);
         Ok(())

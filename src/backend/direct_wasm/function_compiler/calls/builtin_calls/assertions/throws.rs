@@ -851,7 +851,7 @@ impl<'a> FunctionCompiler<'a> {
                 })
                 .collect::<Vec<_>>();
         let (inline_local_scope_names, initialized_local_snapshots, immutable_local_snapshots) =
-            self.prepare_assert_throws_async_inline_lexical_bindings(
+            self.prepare_assert_throws_inline_lexical_bindings(
                 &inline_local_bindings,
                 &callback_declaration.body,
             );
@@ -872,8 +872,8 @@ impl<'a> FunctionCompiler<'a> {
                     })
                 })
             });
-        self.restore_assert_throws_async_inline_initialized_locals(initialized_local_snapshots);
-        self.restore_assert_throws_async_inline_immutable_locals(immutable_local_snapshots);
+        self.restore_assert_throws_inline_initialized_locals(initialized_local_snapshots);
+        self.restore_assert_throws_inline_immutable_locals(immutable_local_snapshots);
         result?;
 
         self.push_local_get(caught_local);
@@ -893,7 +893,7 @@ impl<'a> FunctionCompiler<'a> {
         Ok(true)
     }
 
-    fn prepare_assert_throws_async_inline_lexical_bindings(
+    fn prepare_assert_throws_inline_lexical_bindings(
         &mut self,
         inline_local_bindings: &[String],
         callback_body: &[Statement],
@@ -903,7 +903,7 @@ impl<'a> FunctionCompiler<'a> {
         let mut immutable_local_snapshots = Vec::new();
         for name in inline_local_bindings {
             let hidden_name = self.allocate_named_hidden_local(
-                &format!("assert_throws_async_inline_local_{name}"),
+                &format!("assert_throws_inline_local_{name}"),
                 StaticValueKind::Unknown,
             );
             let hidden_local = self
@@ -917,7 +917,7 @@ impl<'a> FunctionCompiler<'a> {
             self.push_local_set(hidden_local);
 
             let initialized_name = self.allocate_named_hidden_local(
-                &format!("assert_throws_async_inline_initialized_{name}"),
+                &format!("assert_throws_inline_initialized_{name}"),
                 StaticValueKind::Bool,
             );
             let initialized_local = self
@@ -974,7 +974,7 @@ impl<'a> FunctionCompiler<'a> {
         )
     }
 
-    fn restore_assert_throws_async_inline_initialized_locals(
+    fn restore_assert_throws_inline_initialized_locals(
         &mut self,
         initialized_local_snapshots: Vec<(String, Option<u32>)>,
     ) {
@@ -997,7 +997,7 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
-    fn restore_assert_throws_async_inline_immutable_locals(
+    fn restore_assert_throws_inline_immutable_locals(
         &mut self,
         immutable_local_snapshots: Vec<(String, bool)>,
     ) {
@@ -1629,6 +1629,53 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    fn emit_assert_throws_try_statement_with_inline_context(
+        &mut self,
+        callback: &Expression,
+        try_statement: &Statement,
+        inline_strict_mode: Option<bool>,
+        inline_body: &[Statement],
+    ) -> DirectResult<()> {
+        if let Some(strict_mode) = inline_strict_mode
+            && let Some(callback_function) = self
+                .resolve_user_function_from_expression(callback)
+                .cloned()
+        {
+            let inline_local_bindings =
+                collect_declared_bindings_from_statements_recursive(inline_body)
+                    .into_iter()
+                    .filter(|name| {
+                        !callback_function.params.iter().any(|param| param == name)
+                            && name != "arguments"
+                    })
+                    .collect::<Vec<_>>();
+            let (inline_local_scope_names, initialized_local_snapshots, immutable_local_snapshots) =
+                self.prepare_assert_throws_inline_lexical_bindings(
+                    &inline_local_bindings,
+                    inline_body,
+                );
+            let result =
+                self.with_scoped_lexical_bindings_cleanup(inline_local_scope_names, |compiler| {
+                    compiler.with_user_function_execution_context(&callback_function, |compiler| {
+                        compiler.with_strict_mode(strict_mode, |compiler| {
+                            compiler.emit_statement(try_statement)
+                        })
+                    })
+                });
+            self.restore_assert_throws_inline_initialized_locals(initialized_local_snapshots);
+            self.restore_assert_throws_inline_immutable_locals(immutable_local_snapshots);
+            return result;
+        }
+
+        if let Some(strict_mode) = inline_strict_mode {
+            self.with_strict_mode(strict_mode, |compiler| {
+                compiler.emit_statement(try_statement)
+            })
+        } else {
+            self.emit_statement(try_statement)
+        }
+    }
+
     pub(in crate::backend::direct_wasm) fn emit_assert_throws_call(
         &mut self,
         arguments: &[CallArgument],
@@ -1707,13 +1754,12 @@ impl<'a> FunctionCompiler<'a> {
                 value: Expression::Bool(true),
             }],
         };
-        if let Some(strict_mode) = inline_strict_mode {
-            self.with_strict_mode(strict_mode, |compiler| {
-                compiler.emit_statement(&try_statement)
-            })?;
-        } else {
-            self.emit_statement(&try_statement)?;
-        }
+        self.emit_assert_throws_try_statement_with_inline_context(
+            callback,
+            &try_statement,
+            inline_strict_mode,
+            &iterator_sync_body,
+        )?;
         self.sync_assert_throws_iterator_bindings_for_body(&iterator_sync_body);
 
         self.push_local_get(caught_local);
@@ -1822,13 +1868,12 @@ impl<'a> FunctionCompiler<'a> {
                 value: Expression::Bool(true),
             }],
         };
-        if let Some(strict_mode) = inline_strict_mode {
-            self.with_strict_mode(strict_mode, |compiler| {
-                compiler.emit_statement(&try_statement)
-            })?;
-        } else {
-            self.emit_statement(&try_statement)?;
-        }
+        self.emit_assert_throws_try_statement_with_inline_context(
+            callback,
+            &try_statement,
+            inline_strict_mode,
+            &iterator_sync_body,
+        )?;
         self.sync_assert_throws_iterator_bindings_for_body(&iterator_sync_body);
 
         self.push_local_get(caught_local);

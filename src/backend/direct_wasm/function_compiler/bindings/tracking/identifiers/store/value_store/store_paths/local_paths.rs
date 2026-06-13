@@ -436,6 +436,11 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(());
         }
 
+        if self.local_binding_is_immutable(resolved_name) {
+            self.emit_named_error_throw("TypeError")?;
+            return Ok(());
+        }
+
         self.push_local_get(value_local);
         self.push_local_set(local_index);
         Ok(())
@@ -450,11 +455,7 @@ impl<'a> FunctionCompiler<'a> {
         state: &PreparedIdentifierStoreState,
     ) -> DirectResult<()> {
         let trace_identifier_store = crate::ayy_env_flag!("AYY_TRACE_IDENTIFIER_STORE");
-        if self
-            .local_lexical_initialized_local(resolved_name)
-            .is_some()
-            && self.local_binding_is_immutable(resolved_name)
-        {
+        if self.local_binding_is_immutable(resolved_name) {
             self.state
                 .clear_local_static_binding_metadata(resolved_name);
         } else if is_internal_assignment_temp(name) {

@@ -436,19 +436,24 @@ impl<'a> FunctionCompiler<'a> {
                 let next_local = self.allocate_temp_local();
                 self.state
                     .clear_local_static_binding_metadata(&resolved_name);
-                self.push_local_get(local_index);
-                self.push_local_set(previous_local);
-                let numeric_previous_local = self.emit_runtime_update_from_previous_local(
-                    previous_local,
-                    next_local,
-                    opcode,
-                )?;
-                self.push_local_get(next_local);
-                self.push_local_set(local_index);
-                if prefix {
-                    self.push_local_get(next_local);
+                if self.local_binding_is_immutable(&resolved_name) {
+                    self.emit_named_error_throw("TypeError")?;
+                    self.push_i32_const(JS_UNDEFINED_TAG);
                 } else {
-                    self.push_local_get(numeric_previous_local);
+                    self.push_local_get(local_index);
+                    self.push_local_set(previous_local);
+                    let numeric_previous_local = self.emit_runtime_update_from_previous_local(
+                        previous_local,
+                        next_local,
+                        opcode,
+                    )?;
+                    self.push_local_get(next_local);
+                    self.push_local_set(local_index);
+                    if prefix {
+                        self.push_local_get(next_local);
+                    } else {
+                        self.push_local_get(numeric_previous_local);
+                    }
                 }
                 emitted_runtime_write = true;
             }
