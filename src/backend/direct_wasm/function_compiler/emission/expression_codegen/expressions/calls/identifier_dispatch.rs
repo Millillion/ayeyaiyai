@@ -29,6 +29,16 @@ fn global_identifier_call_requires_runtime_value(
     {
         return false;
     }
+    if compiler.current_function_name().is_none()
+        && compiler.global_binding_index(callee_name).is_some()
+        && !compiler
+            .state
+            .emission
+            .emitted_value_bindings
+            .contains(callee_name)
+    {
+        return true;
+    }
 
     let static_global_binding = compiler
         .global_value_binding(callee_name)
