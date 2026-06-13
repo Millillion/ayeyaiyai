@@ -1,4 +1,4 @@
-22829/23668 (96.46%)
+22831/23668 (96.46%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -15,7 +15,7 @@ Sub-category progress
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
 - statements: 8999/9337 (96.38%)
-- expressions: 10686/11061 (96.61%)
+- expressions: 10688/11061 (96.63%)
 - types: 113/113 (100.00%)
 - function-code: 208/217 (95.85%)
 - global-code: 42/42 (100.00%)
@@ -11186,8 +11186,8 @@ Sub-category progress
   - [x] test/language/expressions/assignment/assignment-operator-calls-putvalue-lref--rval-.js
   - [ ] test/language/expressions/assignment/destructuring/default-expr-throws-iterator-return-get-throws.js
   - [x] test/language/expressions/assignment/destructuring/default-expr-throws-iterator-return-is-not-callable.js
-  - [ ] test/language/expressions/assignment/destructuring/iterator-destructuring-property-reference-target-evaluation-order.js
-  - [ ] test/language/expressions/assignment/destructuring/keyed-destructuring-property-reference-target-evaluation-order-with-bindings.js
+  - [x] test/language/expressions/assignment/destructuring/iterator-destructuring-property-reference-target-evaluation-order.js
+  - [x] test/language/expressions/assignment/destructuring/keyed-destructuring-property-reference-target-evaluation-order-with-bindings.js
   - [ ] test/language/expressions/assignment/destructuring/keyed-destructuring-property-reference-target-evaluation-order.js
   - [x] test/language/expressions/assignment/destructuring/obj-prop-__proto__dup.js
   - [ ] test/language/expressions/assignment/destructuring/target-assign-throws-iterator-return-get-throws.js

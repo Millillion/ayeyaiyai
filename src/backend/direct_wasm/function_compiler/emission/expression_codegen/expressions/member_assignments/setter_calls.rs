@@ -133,16 +133,18 @@ impl<'a> FunctionCompiler<'a> {
         Ok(emitted)
     }
 
-    fn emit_dynamic_runtime_string_accessor_setter_assignment(
+    pub(super) fn emit_dynamic_runtime_string_accessor_setter_assignment_with_receiver(
         &mut self,
-        object: &Expression,
+        lookup_object: &Expression,
+        runtime_object: &Expression,
         property: &Expression,
         value: &Expression,
+        delay_property_until_after_value: bool,
     ) -> DirectResult<bool> {
         let trace_member_assignment = crate::ayy_env_flag!("AYY_TRACE_MEMBER_ASSIGNMENT");
         if trace_member_assignment {
             eprintln!(
-                "member_assignment:dynamic_setter:start object={object:?} property={property:?}"
+                "member_assignment:dynamic_setter:start object={lookup_object:?} runtime_object={runtime_object:?} property={property:?}"
             );
         }
         if static_property_name_from_expression(property).is_some() {
@@ -165,8 +167,8 @@ impl<'a> FunctionCompiler<'a> {
         }
 
         let object_binding = self
-            .resolve_object_binding_from_expression(object)
-            .or_else(|| match object {
+            .resolve_object_binding_from_expression(lookup_object)
+            .or_else(|| match lookup_object {
                 Expression::Identifier(name) => self
                     .resolve_identifier_object_binding_fallback(name)
                     .or_else(|| self.resolve_runtime_shadow_object_binding(name)),
@@ -193,7 +195,7 @@ impl<'a> FunctionCompiler<'a> {
 
         let receiver_hidden_name = self.allocate_named_hidden_local(
             "dynamic_setter_receiver",
-            self.infer_value_kind(object)
+            self.infer_value_kind(runtime_object)
                 .unwrap_or(StaticValueKind::Unknown),
         );
         let receiver_local = self
@@ -217,17 +219,28 @@ impl<'a> FunctionCompiler<'a> {
             .expect("fresh dynamic setter value hidden local must exist");
         let property_local = self.allocate_temp_local();
 
-        self.emit_numeric_expression(object)?;
+        self.emit_numeric_expression(runtime_object)?;
         self.push_local_set(receiver_local);
-        self.emit_numeric_expression(property)?;
-        self.push_local_set(property_local);
-        self.emit_numeric_expression(value)?;
-        self.push_local_set(value_local);
+        if delay_property_until_after_value {
+            self.emit_numeric_expression(value)?;
+            self.push_local_set(value_local);
+            if let Some(resolved_key) = self.emit_property_key_expression_effects(property)? {
+                self.emit_numeric_expression(&resolved_key)?;
+            } else {
+                self.emit_numeric_expression(property)?;
+            }
+            self.push_local_set(property_local);
+        } else {
+            self.emit_numeric_expression(property)?;
+            self.push_local_set(property_local);
+            self.emit_numeric_expression(value)?;
+            self.push_local_set(value_local);
+        }
 
         let receiver_expression = Expression::Identifier(receiver_hidden_name.clone());
         let value_expression = Expression::Identifier(value_hidden_name.clone());
-        self.update_local_value_binding(&receiver_hidden_name, object);
-        self.update_local_object_binding(&receiver_hidden_name, object);
+        self.update_local_value_binding(&receiver_hidden_name, runtime_object);
+        self.update_local_object_binding(&receiver_hidden_name, runtime_object);
         // The setter argument flows through this hidden local; carry the
         // assigned value's static metadata so nonlocal stores performed by
         // the setter (`setValue = val`) keep array/object contents visible.
@@ -359,6 +372,17 @@ impl<'a> FunctionCompiler<'a> {
             eprintln!("member_assignment:dynamic_setter:done fallback_branches");
         }
         Ok(true)
+    }
+
+    fn emit_dynamic_runtime_string_accessor_setter_assignment(
+        &mut self,
+        object: &Expression,
+        property: &Expression,
+        value: &Expression,
+    ) -> DirectResult<bool> {
+        self.emit_dynamic_runtime_string_accessor_setter_assignment_with_receiver(
+            object, object, property, value, false,
+        )
     }
 
     fn evaluate_simple_setter_statement_for_nonlocal_metadata(

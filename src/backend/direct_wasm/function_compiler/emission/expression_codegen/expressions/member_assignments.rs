@@ -794,6 +794,16 @@ impl<'a> FunctionCompiler<'a> {
         // spec-ordered reference resolution; canonicalize them back to the
         // real owner and static key so the static setter/data paths apply
         // instead of degrading to the dynamic-key fallbacks.
+        let original_target_object = object;
+        let original_target_property = property;
+        let is_lowered_destructuring_member_target = matches!(
+            (object, property),
+            (
+                Expression::Identifier(object_name),
+                Expression::Identifier(property_name),
+            ) if object_name.starts_with("__ayy_target_object_")
+                && property_name.starts_with("__ayy_target_property_")
+        );
         let canonical_target_object;
         let object = if let Expression::Identifier(object_name) = object
             && object_name.starts_with("__ayy_target_object_")
@@ -830,6 +840,20 @@ impl<'a> FunctionCompiler<'a> {
 
         if trace_member_assignment {
             eprintln!("member_assignment:setter:start");
+        }
+        if is_lowered_destructuring_member_target
+            && self.emit_dynamic_runtime_string_accessor_setter_assignment_with_receiver(
+                object,
+                original_target_object,
+                original_target_property,
+                value,
+                true,
+            )?
+        {
+            if trace_member_assignment {
+                eprintln!("member_assignment:destructuring_dynamic_setter:hit");
+            }
+            return Ok(());
         }
         if self.emit_setter_member_assignment(object, property, value)? {
             if trace_member_assignment {
