@@ -186,10 +186,19 @@ impl<'a> FunctionCompiler<'a> {
         name: &str,
         previous_kind: StaticValueKind,
     ) -> bool {
-        self.current_function_name().is_some()
-            && previous_kind == StaticValueKind::Undefined
+        if self.current_function_name().is_none()
+            || self.resolve_current_local_binding(name).is_some()
+        {
+            return false;
+        }
+        if self
+            .resolve_user_function_capture_hidden_name(name)
+            .is_some()
+        {
+            return true;
+        }
+        (previous_kind == StaticValueKind::Undefined || self.global_value_binding(name).is_some())
             && self.global_binding_index(name).is_some()
-            && self.global_value_binding(name).is_none()
     }
 
     fn emit_runtime_update_coerced_previous_local(

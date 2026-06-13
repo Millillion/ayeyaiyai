@@ -815,6 +815,10 @@ impl<'a> FunctionCompiler<'a> {
         if trace_identifier_store {
             eprintln!("identifier_store:{name}:shared_updates:start");
         }
+        let target_is_effective_local =
+            matches!(target, IdentifierReferenceStoreTarget::ResolvedLocal(_, _))
+                || (matches!(target, IdentifierReferenceStoreTarget::Current)
+                    && state.resolved_local_binding.is_some());
         let target_may_rebind_global = match &target {
             IdentifierReferenceStoreTarget::DeclaredGlobal(_)
             | IdentifierReferenceStoreTarget::ExistingImplicitGlobal(_) => true,
@@ -834,7 +838,13 @@ impl<'a> FunctionCompiler<'a> {
         {
             self.detach_global_reference_aliases_before_rebind(name, &state);
         }
-        self.apply_identifier_store_shared_updates(value_local, &state)?;
+        if target_is_effective_local {
+            if trace_identifier_store {
+                eprintln!("identifier_store:{name}:shared_updates:skipped_effective_local");
+            }
+        } else {
+            self.apply_identifier_store_shared_updates(value_local, &state)?;
+        }
         if trace_identifier_store {
             eprintln!("identifier_store:{name}:shared_updates:done");
         }

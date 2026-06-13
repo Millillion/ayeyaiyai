@@ -47,18 +47,24 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(false);
         };
 
+        if self.global_has_binding(&property_name)
+            && let Some(global_index) = self.resolve_global_binding_index(&property_name)
+        {
+            self.emit_declared_global_binding_read(&property_name, global_index)?;
+            return Ok(true);
+        }
+        if self.global_has_binding(&property_name)
+            && let Some(value) = self.global_value_binding(&property_name).cloned()
+        {
+            self.emit_numeric_expression(&value)?;
+            return Ok(true);
+        }
         if let Some(state) = self
             .backend
             .global_property_descriptor(&property_name)
             .cloned()
         {
             self.emit_global_object_property_descriptor_value(&property_name, &state.value)?;
-            return Ok(true);
-        }
-        if self.global_has_binding(&property_name)
-            && let Some(global_index) = self.resolve_global_binding_index(&property_name)
-        {
-            self.emit_declared_global_binding_read(&property_name, global_index)?;
             return Ok(true);
         }
         if property_name == "NaN" {

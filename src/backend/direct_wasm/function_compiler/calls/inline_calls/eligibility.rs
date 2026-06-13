@@ -1990,6 +1990,59 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    fn statement_contains_with(statement: &Statement) -> bool {
+        match statement {
+            Statement::With { .. } => true,
+            Statement::Declaration { body }
+            | Statement::Block { body }
+            | Statement::Labeled { body, .. } => body.iter().any(Self::statement_contains_with),
+            Statement::If {
+                then_branch,
+                else_branch,
+                ..
+            } => {
+                then_branch.iter().any(Self::statement_contains_with)
+                    || else_branch.iter().any(Self::statement_contains_with)
+            }
+            Statement::Switch { cases, .. } => cases
+                .iter()
+                .any(|case| case.body.iter().any(Self::statement_contains_with)),
+            Statement::Try {
+                body,
+                catch_setup,
+                catch_body,
+                ..
+            } => body
+                .iter()
+                .chain(catch_setup)
+                .chain(catch_body)
+                .any(Self::statement_contains_with),
+            Statement::For { init, body, .. } => {
+                init.iter().chain(body).any(Self::statement_contains_with)
+            }
+            Statement::While { body, .. } | Statement::DoWhile { body, .. } => {
+                body.iter().any(Self::statement_contains_with)
+            }
+            Statement::Var { .. }
+            | Statement::Let { .. }
+            | Statement::Assign { .. }
+            | Statement::AssignMember { .. }
+            | Statement::Expression(_)
+            | Statement::Return(_)
+            | Statement::Throw(_)
+            | Statement::Print { .. }
+            | Statement::Yield { .. }
+            | Statement::YieldDelegate { .. }
+            | Statement::Break { .. }
+            | Statement::Continue { .. } => false,
+        }
+    }
+
+    fn user_function_contains_with_statement(&self, user_function: &UserFunction) -> bool {
+        self.resolve_registered_function_declaration(&user_function.name)
+            .is_some_and(|function| function.body.iter().any(Self::statement_contains_with))
+    }
+
     pub(in crate::backend::direct_wasm) fn user_function_mentions_private_member_access(
         &self,
         user_function: &UserFunction,
@@ -2103,6 +2156,7 @@ impl<'a> FunctionCompiler<'a> {
                 .is_some_and(inline_summary_mentions_assertion_builtin)
             && !self.user_function_mentions_private_member_access(user_function)
             && !self.user_function_mentions_direct_eval(user_function)
+            && !self.user_function_contains_with_statement(user_function)
             && !self.user_function_contains_identifier_callee_call(user_function)
             && !self.user_function_may_read_restricted_function_property(user_function)
             && !self
@@ -2153,6 +2207,7 @@ impl<'a> FunctionCompiler<'a> {
                 .is_some_and(inline_summary_mentions_assertion_builtin)
             && !self.user_function_mentions_private_member_access(user_function)
             && !self.user_function_mentions_direct_eval(user_function)
+            && !self.user_function_contains_with_statement(user_function)
             && !self.user_function_contains_identifier_callee_call(user_function)
             && !self.user_function_may_read_restricted_function_property(user_function)
             && !self
@@ -2200,6 +2255,7 @@ impl<'a> FunctionCompiler<'a> {
                 .is_some_and(inline_summary_mentions_assertion_builtin)
             && !self.user_function_mentions_private_member_access(user_function)
             && !self.user_function_mentions_direct_eval(user_function)
+            && !self.user_function_contains_with_statement(user_function)
             && !self.user_function_contains_identifier_callee_call(user_function)
             && !self.user_function_may_read_restricted_function_property(user_function)
             && !self
@@ -2251,6 +2307,7 @@ impl<'a> FunctionCompiler<'a> {
                 })
             && !self.registered_function_body_mentions_promise_like_chain(&user_function.name)
             && !self.user_function_mentions_direct_eval(user_function)
+            && !self.user_function_contains_with_statement(user_function)
             && !self.user_function_contains_identifier_callee_call(user_function)
             && !self
                 .backend

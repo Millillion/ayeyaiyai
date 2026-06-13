@@ -352,6 +352,14 @@ impl<'a> FunctionCompiler<'a> {
         }
         let materialized_object = self.materialize_static_expression(object);
         let materialized_property = self.materialize_static_expression(property);
+        if matches!(object, Expression::Identifier(name) if name == "globalThis")
+            && matches!(materialized_property, Expression::String(_))
+        {
+            return Expression::Member {
+                object: Box::new(Expression::Identifier("globalThis".to_string())),
+                property: Box::new(materialized_property),
+            };
+        }
         if let Expression::String(property_name) = &materialized_property {
             let object_candidates = [
                 Some(object),

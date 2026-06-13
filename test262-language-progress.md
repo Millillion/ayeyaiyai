@@ -1,4 +1,4 @@
-22912/23668 (96.81%)
+22916/23668 (96.82%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -15,7 +15,7 @@ Sub-category progress
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
 - statements: 9032/9337 (96.73%)
-- expressions: 10717/11061 (96.89%)
+- expressions: 10721/11061 (96.93%)
 - types: 113/113 (100.00%)
 - function-code: 217/217 (100.00%)
 - global-code: 42/42 (100.00%)
@@ -11148,8 +11148,8 @@ Sub-category progress
   - [x] test/language/expressions/arrow-function/syntax/early-errors/use-strict-with-non-simple-param.js
   - [x] test/language/expressions/arrow-function/syntax/variations.js
   - [x] test/language/expressions/arrow-function/throw-new.js
-  - [ ] test/language/expressions/arrow-function/unscopables-with-in-nested-fn.js
-  - [ ] test/language/expressions/arrow-function/unscopables-with.js
+  - [x] test/language/expressions/arrow-function/unscopables-with-in-nested-fn.js
+  - [x] test/language/expressions/arrow-function/unscopables-with.js
   - [x] test/language/expressions/assignment/11.13.1-1-6-s.js
   - [x] test/language/expressions/assignment/11.13.1-1-s.js
   - [x] test/language/expressions/assignment/11.13.1-2-s.js
@@ -18985,8 +18985,8 @@ Sub-category progress
   - [x] test/language/expressions/function/scope-paramsbody-var-open.js
   - [x] test/language/expressions/function/static-init-await-binding.js
   - [x] test/language/expressions/function/static-init-await-reference.js
-  - [ ] test/language/expressions/function/unscopables-with-in-nested-fn.js
-  - [ ] test/language/expressions/function/unscopables-with.js
+  - [x] test/language/expressions/function/unscopables-with-in-nested-fn.js
+  - [x] test/language/expressions/function/unscopables-with.js
   - [x] test/language/expressions/function/use-strict-with-non-simple-param.js
   - [x] test/language/expressions/generators/arguments-with-arguments-fn.js
   - [x] test/language/expressions/generators/arguments-with-arguments-lex.js
