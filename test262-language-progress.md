@@ -1,4 +1,4 @@
-22920/23668 (96.84%)
+22921/23668 (96.84%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -15,7 +15,7 @@ Sub-category progress
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
 - statements: 9036/9337 (96.78%)
-- expressions: 10721/11061 (96.93%)
+- expressions: 10722/11061 (96.94%)
 - types: 113/113 (100.00%)
 - function-code: 217/217 (100.00%)
 - global-code: 42/42 (100.00%)
@@ -10765,7 +10765,7 @@ Sub-category progress
   - [x] test/language/expressions/array/S11.1.4_A1.5.js
   - [x] test/language/expressions/array/S11.1.4_A1.6.js
   - [x] test/language/expressions/array/S11.1.4_A1.7.js
-  - [ ] test/language/expressions/array/S11.1.4_A2.js
+  - [x] test/language/expressions/array/S11.1.4_A2.js
   - [x] test/language/expressions/array/spread-err-mult-err-expr-throws.js
   - [x] test/language/expressions/array/spread-err-mult-err-iter-get-value.js
   - [x] test/language/expressions/array/spread-err-mult-err-itr-get-call.js

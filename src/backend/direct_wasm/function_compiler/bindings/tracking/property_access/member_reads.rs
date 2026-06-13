@@ -470,6 +470,18 @@ impl<'a> FunctionCompiler<'a> {
                 return Ok(());
             }
         }
+        if !object_uses_internal_assignment_temp
+            && !object_contains_await
+            && object_is_runtime_array_element_base
+            && self.emit_runtime_array_member_read(object, &static_array_property)?
+        {
+            if trace_member_reads {
+                eprintln!(
+                    "member_read:nested_runtime_array_member_hit object={object:?} property={property:?}"
+                );
+            }
+            return Ok(());
+        }
         if trace_member_reads {
             eprintln!("member_read:before_runtime object={object:?} property={property:?}");
         }
