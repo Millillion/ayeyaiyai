@@ -1,4 +1,4 @@
-22907/23668 (96.78%)
+22912/23668 (96.81%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -15,7 +15,7 @@ Sub-category progress
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
 - statements: 9032/9337 (96.73%)
-- expressions: 10712/11061 (96.84%)
+- expressions: 10717/11061 (96.89%)
 - types: 113/113 (100.00%)
 - function-code: 217/217 (100.00%)
 - global-code: 42/42 (100.00%)
@@ -18983,7 +18983,7 @@ Sub-category progress
   - [x] test/language/expressions/function/scope-param-rest-elem-var-open.js
   - [x] test/language/expressions/function/scope-paramsbody-var-close.js
   - [x] test/language/expressions/function/scope-paramsbody-var-open.js
-  - [ ] test/language/expressions/function/static-init-await-binding.js
+  - [x] test/language/expressions/function/static-init-await-binding.js
   - [x] test/language/expressions/function/static-init-await-reference.js
   - [ ] test/language/expressions/function/unscopables-with-in-nested-fn.js
   - [ ] test/language/expressions/function/unscopables-with.js
@@ -19247,7 +19247,7 @@ Sub-category progress
   - [ ] test/language/expressions/generators/scope-param-rest-elem-var-open.js
   - [x] test/language/expressions/generators/scope-paramsbody-var-close.js
   - [x] test/language/expressions/generators/scope-paramsbody-var-open.js
-  - [ ] test/language/expressions/generators/static-init-await-binding.js
+  - [x] test/language/expressions/generators/static-init-await-binding.js
   - [x] test/language/expressions/generators/static-init-await-reference.js
   - [x] test/language/expressions/generators/unscopables-with-in-nested-fn.js
   - [x] test/language/expressions/generators/unscopables-with.js
@@ -21009,9 +21009,9 @@ Sub-category progress
   - [x] test/language/expressions/object/method-definition/private-name-early-error-set-method-inside-class.js
   - [x] test/language/expressions/object/method-definition/private-name-early-error-set-method.js
   - [x] test/language/expressions/object/method-definition/setter-use-strict-with-non-simple-param.js
-  - [ ] test/language/expressions/object/method-definition/static-init-await-binding-accessor.js
-  - [ ] test/language/expressions/object/method-definition/static-init-await-binding-generator.js
-  - [ ] test/language/expressions/object/method-definition/static-init-await-binding-normal.js
+  - [x] test/language/expressions/object/method-definition/static-init-await-binding-accessor.js
+  - [x] test/language/expressions/object/method-definition/static-init-await-binding-generator.js
+  - [x] test/language/expressions/object/method-definition/static-init-await-binding-normal.js
   - [x] test/language/expressions/object/method-definition/static-init-await-reference-accessor.js
   - [x] test/language/expressions/object/method-definition/static-init-await-reference-generator.js
   - [x] test/language/expressions/object/method-definition/static-init-await-reference-normal.js

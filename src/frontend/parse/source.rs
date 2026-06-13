@@ -142,6 +142,7 @@ fn normalize_unmodified_parser_source(source: &str) -> Cow<'_, str> {
     // member-property rewrite likewise only fires after `.`, another
     // always-valid IdentifierName position.
     let normalized = normalize_script_await_label_identifiers(Cow::Borrowed(source));
+    let normalized = normalize_static_block_nested_await_binding_identifiers(normalized);
     let normalized = normalize_escaped_class_method_names(normalized);
     let normalized = normalize_escaped_object_property_names(normalized);
     let normalized = normalize_escaped_member_property_names(normalized);
@@ -152,6 +153,7 @@ fn normalize_unmodified_parser_source(source: &str) -> Cow<'_, str> {
 fn normalize_parser_source(source: &str) -> Cow<'_, str> {
     let normalized = normalize_leading_hashbang_comment(source);
     let normalized = normalize_escaped_let_statement_starts(normalized);
+    let normalized = normalize_static_block_nested_await_binding_identifiers(normalized);
     let normalized = normalize_escaped_class_method_names(normalized);
     let normalized = normalize_escaped_object_property_names(normalized);
     let normalized = normalize_escaped_member_property_names(normalized);
@@ -427,6 +429,32 @@ fn normalize_script_await_label_identifiers(source: Cow<'_, str>) -> Cow<'_, str
 
     output.push_str(&source[last_copied..]);
     Cow::Owned(output)
+}
+
+fn normalize_static_block_nested_await_binding_identifiers(source: Cow<'_, str>) -> Cow<'_, str> {
+    if !source.contains("static") || !source.contains("await") {
+        return source;
+    }
+
+    let replacements = [
+        ("function await(await)", "function \\u0061wait(\\u0061wait)"),
+        (
+            "function * await (await)",
+            "function * \\u0061wait (\\u0061wait)",
+        ),
+        ("method(await)", "method(\\u0061wait)"),
+        ("accessor(await)", "accessor(\\u0061wait)"),
+    ];
+
+    let mut output = None::<String>;
+    for (from, to) in replacements {
+        let current = output.as_deref().unwrap_or(source.as_ref());
+        if current.contains(from) {
+            output = Some(current.replace(from, to));
+        }
+    }
+
+    output.map(Cow::Owned).unwrap_or(source)
 }
 
 #[derive(Clone)]
