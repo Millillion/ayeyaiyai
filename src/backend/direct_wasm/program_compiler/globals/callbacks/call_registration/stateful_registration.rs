@@ -198,10 +198,9 @@ impl DirectWasmCompiler {
                 break;
             }
             let param_name = &user_function.params[index];
-            register_candidate(
-                param_name,
-                self.resolve_function_binding_from_expression_with_aliases(argument, aliases),
-            );
+            let candidate =
+                self.resolve_function_binding_from_expression_with_aliases(argument, aliases);
+            register_candidate(param_name, candidate.clone());
             let materialized_argument = self
                 .materialize_global_expression_with_state(
                     argument,
@@ -239,6 +238,11 @@ impl DirectWasmCompiler {
                     &mut object_state,
                 )
             };
+            let object_candidate = self.parameter_function_metadata_object_candidate(
+                param_name,
+                candidate.as_ref(),
+                object_candidate,
+            );
             register_object_candidate(param_name, object_candidate);
         }
 

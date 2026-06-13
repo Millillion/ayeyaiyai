@@ -213,7 +213,7 @@ impl DirectWasmCompiler {
 
             let candidate =
                 self.resolve_function_binding_from_expression_with_aliases(argument, aliases);
-            register_candidate(param_name, candidate);
+            register_candidate(param_name, candidate.clone());
             let global_bindings = self.snapshot_global_binding_environment();
             let materialized_argument = self
                 .materialize_global_expression_with_state(
@@ -274,6 +274,11 @@ impl DirectWasmCompiler {
             } else {
                 None
             };
+            let object_candidate = self.parameter_function_metadata_object_candidate(
+                param_name,
+                candidate.as_ref(),
+                object_candidate,
+            );
             register_object_candidate(param_name, object_candidate);
         }
 

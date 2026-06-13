@@ -3971,8 +3971,10 @@ impl<'a> FunctionCompiler<'a> {
             let Some(source_owner) = source_owner else {
                 continue;
             };
-            let slot_owner =
-                Self::user_function_arguments_slot_object_shadow_owner_name(&user_function.name, *index);
+            let slot_owner = Self::user_function_arguments_slot_object_shadow_owner_name(
+                &user_function.name,
+                *index,
+            );
             if source_owner == slot_owner {
                 continue;
             }
@@ -4016,11 +4018,79 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    fn static_argument_member_writeback_blocked_by_descriptor(
+        &self,
+        argument_expression: &Expression,
+        property_name: &str,
+    ) -> bool {
+        let property = Expression::String(property_name.to_string());
+        let resolved_argument = self
+            .resolve_bound_alias_expression(argument_expression)
+            .filter(|resolved| !static_expression_matches(resolved, argument_expression));
+        let materialized_argument = self.materialize_static_expression(argument_expression);
+        let descriptor = self
+            .resolve_function_property_descriptor_binding(
+                argument_expression,
+                resolved_argument.as_ref(),
+                &materialized_argument,
+                property_name,
+            )
+            .or_else(|| {
+                self.resolve_object_property_descriptor_binding(
+                    argument_expression,
+                    resolved_argument.as_ref(),
+                    &materialized_argument,
+                    &property,
+                    Some(property_name),
+                )
+            })
+            .or_else(|| {
+                self.resolve_inherited_object_property_descriptor_binding(
+                    argument_expression,
+                    &property,
+                )
+            })
+            .or_else(|| {
+                resolved_argument.as_ref().and_then(|resolved| {
+                    self.resolve_inherited_object_property_descriptor_binding(resolved, &property)
+                })
+            })
+            .or_else(|| {
+                (!static_expression_matches(&materialized_argument, argument_expression)).then(
+                    || {
+                        self.resolve_inherited_object_property_descriptor_binding(
+                            &materialized_argument,
+                            &property,
+                        )
+                    },
+                )?
+            });
+        let Some(descriptor) = descriptor else {
+            return false;
+        };
+        let accessor_without_setter = descriptor.writable.is_none()
+            && (descriptor.has_get
+                || descriptor.getter.is_some()
+                || descriptor.has_set
+                || descriptor.setter.is_some())
+            && descriptor
+                .setter
+                .as_ref()
+                .map_or(true, |setter| matches!(setter, Expression::Undefined));
+        descriptor.writable == Some(false) || accessor_without_setter
+    }
+
     fn static_argument_member_writeback_allowed(
         &self,
         argument_expression: &Expression,
         property_name: &str,
     ) -> bool {
+        if self.static_argument_member_writeback_blocked_by_descriptor(
+            argument_expression,
+            property_name,
+        ) {
+            return false;
+        }
         if !property_name.starts_with("__ayy$private$") {
             return true;
         }

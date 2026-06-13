@@ -667,13 +667,14 @@ impl<'a> FunctionCompiler<'a> {
             };
             let actual_local = self.allocate_temp_local();
             let expected_local = self.allocate_temp_local();
+            let result_local = self.allocate_temp_local();
             self.emit_numeric_expression(&actual_property)?;
             self.push_local_set(actual_local);
             self.emit_numeric_expression(expected_value.as_ref().expect("checked above"))?;
             self.push_local_set(expected_local);
-            self.push_local_get(actual_local);
-            self.push_local_get(expected_local);
-            self.push_binary_op(BinaryOp::NotEqual)?;
+            self.emit_same_value_result_from_locals(actual_local, expected_local, result_local)?;
+            self.push_local_get(result_local);
+            self.state.emission.output.instructions.push(0x45);
             self.state.emission.output.instructions.push(0x04);
             self.state
                 .emission

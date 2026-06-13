@@ -1446,7 +1446,15 @@ impl<'a> FunctionCompiler<'a> {
         property: &Expression,
         value: &Expression,
     ) -> DirectResult<bool> {
-        let materialized_property = self.canonical_object_property_expression(property);
+        let materialized_property = self
+            .resolve_property_key_expression(property)
+            .or_else(|| {
+                self.resolve_static_string_value(property)
+                    .map(Expression::String)
+            })
+            .unwrap_or_else(|| self.canonical_object_property_expression(property));
+        let materialized_property =
+            self.canonical_object_property_expression(&materialized_property);
         let storage_name = self
             .resolve_current_local_binding(name)
             .map(|(resolved_name, _)| resolved_name)
@@ -1784,6 +1792,9 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(false);
         };
         if self.runtime_object_property_shadow_deletion_may_hide_static_property(
+            object,
+            &materialized_property,
+        ) && self.runtime_object_property_shadow_deletion_is_statically_present(
             object,
             &materialized_property,
         ) {
@@ -2645,9 +2656,7 @@ impl<'a> FunctionCompiler<'a> {
             && owner_name != name
         {
             if trace_member_assignment {
-                eprintln!(
-                    "named_member_assignment:alias_owner name={name} owner={owner_name}"
-                );
+                eprintln!("named_member_assignment:alias_owner name={name} owner={owner_name}");
             }
             let owner_expression = if owner_name == "this" {
                 Expression::This

@@ -90,6 +90,7 @@ impl<'a> FunctionCompiler<'a> {
         }
         self.initialize_parameter_defaults()?;
         self.initialize_rest_parameter_runtime_array()?;
+        self.clear_parameter_static_metadata_before_body();
         if trace {
             eprintln!("function_compile=emit_direct_scope");
         }
@@ -274,6 +275,13 @@ impl<'a> FunctionCompiler<'a> {
         self.state.emission.output.instructions.push(0x0b);
         self.pop_control_frame();
         Ok(())
+    }
+
+    fn clear_parameter_static_metadata_before_body(&mut self) {
+        let parameter_names = self.state.parameters.parameter_names.clone();
+        for parameter_name in parameter_names {
+            self.clear_runtime_object_property_shadow_static_metadata_prefix(&parameter_name);
+        }
     }
 
     fn emit_tail_restart_activation_prelude(&mut self, statements: &[Statement]) {

@@ -137,6 +137,42 @@ impl<'a> FunctionCompiler<'a> {
         if name == "CreateRab" && self.emit_synthetic_create_rab_call(callee, arguments)? {
             return Ok(());
         }
+        if name == "__isArray"
+            && self.emit_array_is_array_call(
+                &Expression::Identifier("Array".to_string()),
+                &Expression::String("isArray".to_string()),
+                arguments,
+            )?
+        {
+            return Ok(());
+        }
+        if name == "__defineProperty"
+            && self.emit_object_define_property_call(
+                &Expression::Identifier("Object".to_string()),
+                &Expression::String("defineProperty".to_string()),
+                arguments,
+            )?
+        {
+            return Ok(());
+        }
+        if name == "__getOwnPropertyDescriptor"
+            && self.emit_object_get_own_property_descriptor_call(
+                &Expression::Identifier("Object".to_string()),
+                &Expression::String("getOwnPropertyDescriptor".to_string()),
+                arguments,
+            )?
+        {
+            return Ok(());
+        }
+        if name == "__getOwnPropertyNames"
+            && self.emit_object_array_builtin_call(
+                &Expression::Identifier("Object".to_string()),
+                &Expression::String("getOwnPropertyNames".to_string()),
+                arguments,
+            )?
+        {
+            return Ok(());
+        }
         if name == "__hasOwnProperty" {
             let object = Expression::Member {
                 object: Box::new(Expression::Member {
@@ -337,9 +373,7 @@ impl<'a> FunctionCompiler<'a> {
                             } else {
                                 self.emit_user_function_call(&user_function, arguments)?;
                             }
-                            self.note_last_bound_user_function_source_expression(
-                                source_expression,
-                            );
+                            self.note_last_bound_user_function_source_expression(source_expression);
                             return Ok(());
                         }
                     }

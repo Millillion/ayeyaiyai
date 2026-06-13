@@ -444,6 +444,9 @@ impl<'a> FunctionCompiler<'a> {
             return None;
         }
         if let Some(value) = object_binding_lookup_value(object_binding, &canonical_property) {
+            if Self::expression_is_runtime_object_property_shadow_identifier(value) {
+                return None;
+            }
             return Some(value.clone());
         }
 
@@ -451,6 +454,9 @@ impl<'a> FunctionCompiler<'a> {
             .symbol_properties
             .iter()
             .find_map(|(existing_key, value)| {
+                if Self::expression_is_runtime_object_property_shadow_identifier(value) {
+                    return None;
+                }
                 if let Some(requested_name) = requested_well_known_symbol.as_ref()
                     && self
                         .well_known_symbol_name(existing_key)

@@ -1,4 +1,4 @@
-22899/23668 (96.75%)
+22902/23668 (96.76%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -15,7 +15,7 @@ Sub-category progress
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
 - statements: 9032/9337 (96.73%)
-- expressions: 10704/11061 (96.77%)
+- expressions: 10707/11061 (96.80%)
 - types: 113/113 (100.00%)
 - function-code: 217/217 (100.00%)
 - global-code: 42/42 (100.00%)
@@ -11077,7 +11077,7 @@ Sub-category progress
   - [ ] test/language/expressions/arrow-function/lexical-supercall-from-immediately-invoked-arrow.js
   - [x] test/language/expressions/arrow-function/lexical-this.js
   - [x] test/language/expressions/arrow-function/low-precedence-expression-body-no-parens.js
-  - [ ] test/language/expressions/arrow-function/name.js
+  - [x] test/language/expressions/arrow-function/name.js
   - [x] test/language/expressions/arrow-function/non-strict.js
   - [x] test/language/expressions/arrow-function/object-destructuring-param-strict-body.js
   - [x] test/language/expressions/arrow-function/object-literal-return-requires-body-parens.js
@@ -12001,7 +12001,7 @@ Sub-category progress
   - [x] test/language/expressions/async-arrow-function/forbidden-ext/b2/async-arrow-function-forbidden-ext-indirect-access-own-prop-caller-get.js
   - [x] test/language/expressions/async-arrow-function/forbidden-ext/b2/async-arrow-function-forbidden-ext-indirect-access-own-prop-caller-value.js
   - [x] test/language/expressions/async-arrow-function/forbidden-ext/b2/async-arrow-function-forbidden-ext-indirect-access-prop-caller.js
-  - [ ] test/language/expressions/async-arrow-function/name.js
+  - [x] test/language/expressions/async-arrow-function/name.js
   - [x] test/language/expressions/async-arrow-function/object-destructuring-param-strict-body.js
   - [x] test/language/expressions/async-arrow-function/params-trailing-comma-multiple.js
   - [x] test/language/expressions/async-arrow-function/params-trailing-comma-single.js
@@ -18945,7 +18945,7 @@ Sub-category progress
   - [x] test/language/expressions/function/name-eval-strict-body.js
   - [x] test/language/expressions/function/name-eval-strict.js
   - [x] test/language/expressions/function/name-eval-stricteval.js
-  - [ ] test/language/expressions/function/name.js
+  - [x] test/language/expressions/function/name.js
   - [x] test/language/expressions/function/named-no-strict-reassign-fn-name-in-body-in-arrow.js
   - [x] test/language/expressions/function/named-no-strict-reassign-fn-name-in-body-in-eval.js
   - [x] test/language/expressions/function/named-no-strict-reassign-fn-name-in-body.js

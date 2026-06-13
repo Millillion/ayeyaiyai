@@ -1,6 +1,36 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    pub(in crate::backend::direct_wasm) fn runtime_registered_function_property_value(
+        &self,
+        function_name: &str,
+        property_name: &str,
+    ) -> Option<Expression> {
+        let function = self.resolve_registered_function_declaration(function_name)?;
+        let property = Expression::String(property_name.to_string());
+        let function_expression = Expression::Identifier(function.name.clone());
+        if let Some(value) =
+            self.explicit_function_self_binding_property_value(&function.name, &property)
+        {
+            return match (property_name, value) {
+                ("name", Expression::String(text)) => Some(Expression::String(text)),
+                ("length", Expression::Number(length)) => Some(Expression::Number(length)),
+                _ => None,
+            };
+        }
+        if self.function_object_has_explicit_own_property(&function_expression, &property) {
+            return None;
+        }
+        match property_name {
+            "name" => Some(Expression::String(
+                self.resolve_user_function_display_name(&function.name)
+                    .unwrap_or_default(),
+            )),
+            "length" => Some(Expression::Number(function.length as f64)),
+            _ => None,
+        }
+    }
+
     pub(in crate::backend::direct_wasm) fn function_binding_to_expression(
         binding: &LocalFunctionBinding,
     ) -> Expression {
@@ -19,6 +49,9 @@ impl<'a> FunctionCompiler<'a> {
         property_name: &str,
     ) -> Option<PropertyDescriptorBinding> {
         if self.runtime_object_property_shadow_deletion_may_hide_static_property(
+            target,
+            &Expression::String(property_name.to_string()),
+        ) && self.runtime_object_property_shadow_deletion_is_statically_present(
             target,
             &Expression::String(property_name.to_string()),
         ) {
@@ -115,11 +148,14 @@ impl<'a> FunctionCompiler<'a> {
             }
         }
         let value = match &binding {
-            LocalFunctionBinding::User(function_name) => {
-                self.user_function(function_name).and_then(|user_function| {
+            LocalFunctionBinding::User(function_name) => self
+                .user_function(function_name)
+                .and_then(|user_function| {
                     self.runtime_user_function_property_value(user_function, property_name)
                 })
-            }
+                .or_else(|| {
+                    self.runtime_registered_function_property_value(function_name, property_name)
+                }),
             LocalFunctionBinding::Builtin(function_name) => match property_name {
                 "name" => Some(Expression::String(
                     builtin_function_display_name(function_name).to_string(),

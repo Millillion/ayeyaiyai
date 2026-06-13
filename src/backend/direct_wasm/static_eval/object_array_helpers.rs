@@ -98,13 +98,16 @@ pub(in crate::backend::direct_wasm) fn infer_builtin_object_array_call_binding(
     infer_own_property_names_binding: impl Fn(&Expression) -> Option<ArrayValueBinding>,
     infer_own_property_symbols_binding: impl Fn(&Expression) -> Option<ArrayValueBinding>,
 ) -> Option<ArrayValueBinding> {
+    let [CallArgument::Expression(target), ..] = arguments else {
+        return None;
+    };
+    if matches!(callee, Expression::Identifier(name) if name == "__getOwnPropertyNames") {
+        return infer_own_property_names_binding(target);
+    }
     let Expression::Member { object, property } = callee else {
         return None;
     };
     let Expression::Identifier(object_name) = object.as_ref() else {
-        return None;
-    };
-    let [CallArgument::Expression(target), ..] = arguments else {
         return None;
     };
     match (object_name.as_str(), property.as_ref()) {

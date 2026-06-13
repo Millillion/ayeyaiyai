@@ -56,9 +56,8 @@ impl RuntimeShadowOwnerExpressionGuard {
             // Only mark the resolution context as non-canonical once the
             // recursion is deep enough to suggest cyclic value chasing;
             // shallow nesting is the common, fully deterministic case.
-            let memo = (current >= 8).then(|| {
-                crate::backend::direct_wasm::memo::ResolutionGuardScope::enter_class(26)
-            });
+            let memo = (current >= 8)
+                .then(|| crate::backend::direct_wasm::memo::ResolutionGuardScope::enter_class(26));
             Some(Self { _memo: memo })
         })
     }
@@ -523,6 +522,15 @@ impl<'a> FunctionCompiler<'a> {
             || descriptor.has_set
             || descriptor.getter.is_some()
             || descriptor.setter.is_some()
+    }
+
+    pub(in crate::backend::direct_wasm) fn expression_is_runtime_object_property_shadow_identifier(
+        expression: &Expression,
+    ) -> bool {
+        matches!(
+            expression,
+            Expression::Identifier(name) if name.starts_with("__ayy_object_property__")
+        )
     }
 
     fn runtime_shadow_class_entry_should_defer(
@@ -1299,7 +1307,11 @@ impl<'a> FunctionCompiler<'a> {
             } else {
                 self.resolve_object_binding_from_expression(argument_expression)
                     .map(|binding| {
-                        self.object_binding_with_constructed_constructor_shadow(
+                        let binding = self.object_binding_with_constructed_constructor_shadow(
+                            binding,
+                            argument_expression,
+                        );
+                        self.object_binding_with_function_argument_metadata(
                             binding,
                             argument_expression,
                         )
@@ -1326,6 +1338,7 @@ impl<'a> FunctionCompiler<'a> {
                 continue;
             }
             self.clear_runtime_object_property_shadow_prefix(param_name);
+            self.clear_runtime_object_property_shadow_static_metadata_prefix(param_name);
             self.state.clear_member_bindings_for_name(param_name, true);
             if self.binding_name_is_global(param_name) {
                 self.backend
@@ -1444,7 +1457,11 @@ impl<'a> FunctionCompiler<'a> {
             } else {
                 self.resolve_object_binding_from_expression(argument_expression)
                     .map(|binding| {
-                        self.object_binding_with_constructed_constructor_shadow(
+                        let binding = self.object_binding_with_constructed_constructor_shadow(
+                            binding,
+                            argument_expression,
+                        );
+                        self.object_binding_with_function_argument_metadata(
                             binding,
                             argument_expression,
                         )
@@ -1465,6 +1482,7 @@ impl<'a> FunctionCompiler<'a> {
                 continue;
             }
             self.clear_runtime_object_property_shadow_prefix(&owner_name);
+            self.clear_runtime_object_property_shadow_static_metadata_prefix(&owner_name);
             self.state.clear_member_bindings_for_name(&owner_name, true);
             if self.binding_name_is_global(&owner_name) {
                 self.backend
@@ -1529,13 +1547,22 @@ impl<'a> FunctionCompiler<'a> {
         let function_binding = self.resolve_function_binding_from_expression(argument_expression);
         let mut object_binding = empty_object_value_binding();
         let (name_value, length_value) = match function_binding {
-            Some(LocalFunctionBinding::User(function_name)) => {
-                let user_function = self.user_function(&function_name)?;
-                (
-                    self.runtime_user_function_property_value(user_function, "name"),
-                    self.runtime_user_function_property_value(user_function, "length"),
-                )
-            }
+            Some(LocalFunctionBinding::User(function_name)) => (
+                self.user_function(&function_name)
+                    .and_then(|user_function| {
+                        self.runtime_user_function_property_value(user_function, "name")
+                    })
+                    .or_else(|| {
+                        self.runtime_registered_function_property_value(&function_name, "name")
+                    }),
+                self.user_function(&function_name)
+                    .and_then(|user_function| {
+                        self.runtime_user_function_property_value(user_function, "length")
+                    })
+                    .or_else(|| {
+                        self.runtime_registered_function_property_value(&function_name, "length")
+                    }),
+            ),
             Some(LocalFunctionBinding::Builtin(function_name)) => (
                 Some(Expression::String(
                     builtin_function_display_name(&function_name).to_string(),
@@ -1625,6 +1652,22 @@ impl<'a> FunctionCompiler<'a> {
         (!object_binding.string_properties.is_empty()
             || !object_binding.property_descriptors.is_empty())
         .then_some(object_binding)
+    }
+
+    fn object_binding_with_function_argument_metadata(
+        &self,
+        mut object_binding: ObjectValueBinding,
+        argument_expression: &Expression,
+    ) -> ObjectValueBinding {
+        let Some(function_metadata) =
+            self.function_argument_metadata_object_binding(argument_expression)
+        else {
+            return object_binding;
+        };
+        for (property, descriptor) in function_metadata.property_descriptors {
+            object_binding_define_property_descriptor(&mut object_binding, property, descriptor);
+        }
+        object_binding
     }
 
     pub(in crate::backend::direct_wasm) fn object_binding_with_constructed_constructor_shadow(
@@ -1812,7 +1855,8 @@ impl<'a> FunctionCompiler<'a> {
         self.push_i32_const(1);
         self.push_global_set(deleted_binding.present_index);
         if let Some(deleted_shadow_name) = &deleted_shadow_name {
-            self.backend.record_emitted_delete_shadow(deleted_shadow_name);
+            self.backend
+                .record_emitted_delete_shadow(deleted_shadow_name);
         }
         // A global-object property deletion must also set the dedicated
         // delete-sync flag when presence queries were compiled to read it:
@@ -2091,23 +2135,22 @@ impl<'a> FunctionCompiler<'a> {
                     .cloned(),
                 self.resolve_bound_alias_expression(&identifier_expression),
             ];
-            let class_owner =
-                class_owner_candidates
-                    .into_iter()
-                    .flatten()
-                    .find_map(|candidate| match candidate {
-                        Expression::Identifier(source_name)
-                            if source_name != hidden_name
-                                && (source_name.starts_with("__ayy_class_ctor_")
-                                    || source_name.starts_with("__ayy_class_expr_"))
-                                && self.runtime_object_property_shadow_owner_has_bindings(
-                                    &source_name,
-                                ) =>
-                        {
-                            Some(source_name)
-                        }
-                        _ => None,
-                    });
+            let class_owner = class_owner_candidates
+                .into_iter()
+                .flatten()
+                .find_map(|candidate| match candidate {
+                    Expression::Identifier(source_name)
+                        if source_name != hidden_name
+                            && (source_name.starts_with("__ayy_class_ctor_")
+                                || source_name.starts_with("__ayy_class_expr_"))
+                            && self.runtime_object_property_shadow_owner_has_bindings(
+                                &source_name,
+                            ) =>
+                    {
+                        Some(source_name)
+                    }
+                    _ => None,
+                });
             if let Some(class_owner) = class_owner {
                 return Some(class_owner);
             }
@@ -3177,6 +3220,7 @@ impl<'a> FunctionCompiler<'a> {
         if let Expression::Identifier(name) = fallback_value
             && (self.resolve_current_local_binding(name).is_some()
                 || self.resolve_global_binding_index(name).is_some()
+                || self.backend.implicit_global_binding(name).is_some()
                 || self
                     .resolve_user_function_capture_hidden_name(name)
                     .is_some()
@@ -3310,6 +3354,14 @@ impl<'a> FunctionCompiler<'a> {
                 Self::runtime_object_property_shadow_key(&property)
             );
             self.ensure_implicit_global_binding(&shadow_binding_name);
+            if Self::expression_is_runtime_object_property_shadow_identifier(&fallback_value) {
+                if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
+                    eprintln!(
+                        "runtime_shadow_static_sync_skip_shadow_identifier target={target_owner} property={property:?} fallback={fallback_value:?}"
+                    );
+                }
+                continue;
+            }
             // The deleted marker is created on demand by delete emission;
             // ensuring it here made every synced property look deletable,
             // poisoning static descriptor and kind resolution.

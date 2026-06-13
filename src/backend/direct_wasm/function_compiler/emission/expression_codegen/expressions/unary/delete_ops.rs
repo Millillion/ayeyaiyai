@@ -72,7 +72,10 @@ impl<'a> FunctionCompiler<'a> {
             .backend
             .global_property_descriptor(&property_name)
             .is_some();
-        let had_implicit_global = self.backend.implicit_global_binding(&property_name).is_some();
+        let had_implicit_global = self
+            .backend
+            .implicit_global_binding(&property_name)
+            .is_some();
         if had_global_descriptor || had_implicit_global {
             let property = Expression::String(property_name.clone());
             self.mark_runtime_object_property_shadow_deleted_binding(&Expression::This, &property);
@@ -1022,6 +1025,61 @@ impl<'a> FunctionCompiler<'a> {
                     self.push_i32_const(0);
                     self.emit_delete_result_or_throw_if_strict()?;
                     return Ok(());
+                }
+                if let Some(property_name) =
+                    static_property_name_from_expression(&resolved_property)
+                {
+                    let materialized_object = self.materialize_static_expression(object);
+                    let resolved_object = self
+                        .resolve_bound_alias_expression(object)
+                        .filter(|resolved| !static_expression_matches(resolved, object));
+                    let function_binding = self
+                        .resolve_function_binding_from_expression(object)
+                        .or_else(|| {
+                            resolved_object.as_ref().and_then(|resolved| {
+                                self.resolve_function_binding_from_expression(resolved)
+                            })
+                        })
+                        .or_else(|| {
+                            (!static_expression_matches(&materialized_object, object)).then(
+                                || {
+                                    self.resolve_function_binding_from_expression(
+                                        &materialized_object,
+                                    )
+                                },
+                            )?
+                        });
+                    let descriptor = self.resolve_function_property_descriptor_binding(
+                        object,
+                        resolved_object.as_ref(),
+                        &materialized_object,
+                        &property_name,
+                    );
+                    if descriptor
+                        .as_ref()
+                        .is_some_and(|descriptor| !descriptor.configurable)
+                    {
+                        self.push_i32_const(0);
+                        self.emit_delete_result_or_throw_if_strict()?;
+                        return Ok(());
+                    }
+                    if function_binding.is_some()
+                        && (matches!(property_name.as_str(), "name" | "length")
+                            || descriptor.is_some())
+                    {
+                        let materialized_property =
+                            self.canonical_object_property_expression(&resolved_property);
+                        self.mark_runtime_object_property_shadow_deleted_binding(
+                            object,
+                            &materialized_property,
+                        );
+                        self.clear_member_function_bindings_for_deleted_property(
+                            object,
+                            &materialized_property,
+                        );
+                        self.push_i32_const(1);
+                        return Ok(());
+                    }
                 }
                 if matches!(object.as_ref(), Expression::This) {
                     let materialized_property =

@@ -181,6 +181,11 @@ impl<'a> FunctionCompiler<'a> {
         }
 
         let materialized = self.materialize_static_expression(expression);
+        if !static_expression_matches(&materialized, expression)
+            && self.boolean_expression_reads_runtime_nonlocal_binding(&materialized)
+        {
+            return None;
+        }
         match materialized {
             Expression::Bool(value) => Some(value),
             Expression::Null | Expression::Undefined => Some(false),
@@ -453,7 +458,10 @@ impl<'a> FunctionCompiler<'a> {
             if self.expression_is_global_object_has_own_receiver(right)
                 && let Some(property_name) = self.static_property_name_for_in_result(left)
                 && self.backend.global_binding_index(&property_name).is_none()
-                && self.backend.implicit_global_binding(&property_name).is_some()
+                && self
+                    .backend
+                    .implicit_global_binding(&property_name)
+                    .is_some()
             {
                 return None;
             }
