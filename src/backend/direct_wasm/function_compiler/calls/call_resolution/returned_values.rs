@@ -932,6 +932,9 @@ impl<'a> FunctionCompiler<'a> {
     ) -> Option<Expression> {
         let user_function = self.user_function(function_name)?;
         let function = self.resolve_registered_function_declaration(function_name)?;
+        if !self.state.emission.lexical_scopes.with_scopes.is_empty() {
+            return None;
+        }
         if function
             .body
             .iter()
