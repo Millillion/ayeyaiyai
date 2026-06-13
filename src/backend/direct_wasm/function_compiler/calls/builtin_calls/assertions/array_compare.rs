@@ -1,6 +1,54 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn resolve_compare_array_operand_binding(
+        &self,
+        expression: &Expression,
+    ) -> Option<ArrayValueBinding> {
+        let Expression::Call { callee, arguments } = expression else {
+            return self.resolve_array_binding_from_expression(expression);
+        };
+        let Some(function_name) = self.resolve_compare_array_identifier_user_function(callee)
+        else {
+            return None;
+        };
+        self.resolve_rest_parameter_return_array_binding_from_call(&function_name, arguments)
+    }
+
+    fn resolve_compare_array_identifier_user_function(
+        &self,
+        callee: &Expression,
+    ) -> Option<String> {
+        match self.resolve_function_binding_from_expression(callee) {
+            Some(LocalFunctionBinding::User(function_name)) => Some(function_name),
+            Some(LocalFunctionBinding::Builtin(_)) | None => None,
+        }
+    }
+
+    fn resolve_rest_parameter_return_array_binding_from_call(
+        &self,
+        function_name: &str,
+        arguments: &[CallArgument],
+    ) -> Option<ArrayValueBinding> {
+        let function = self.resolve_registered_function_declaration(function_name)?;
+        let (rest_index, rest_parameter) = function
+            .params
+            .iter()
+            .enumerate()
+            .find(|(_, parameter)| parameter.rest)?;
+        match function.body.as_slice() {
+            [Statement::Return(Expression::Identifier(name))] if name == &rest_parameter.name => {}
+            _ => return None,
+        }
+        let values = self
+            .expand_call_arguments(arguments)
+            .into_iter()
+            .skip(rest_index)
+            .map(Some)
+            .collect();
+        Some(ArrayValueBinding { values })
+    }
+
     fn compare_array_static_operand_safe(&self, expression: &Expression) -> bool {
         if inline_summary_side_effect_free_expression(expression) {
             return true;
@@ -134,7 +182,7 @@ impl<'a> FunctionCompiler<'a> {
                 .emit_runtime_assert_compare_array_against_expected(actual, &expected_binding);
         }
 
-        let Some(actual_binding) = self.resolve_array_binding_from_expression(actual) else {
+        let Some(actual_binding) = self.resolve_compare_array_operand_binding(actual) else {
             return Ok(false);
         };
         if crate::ayy_env_flag!("AYY_TRACE_COMPARE_ARRAY") {
@@ -416,7 +464,7 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(true);
         }
 
-        let Some(actual_binding) = self.resolve_array_binding_from_expression(actual) else {
+        let Some(actual_binding) = self.resolve_compare_array_operand_binding(actual) else {
             return Ok(false);
         };
         if crate::ayy_env_flag!("AYY_TRACE_COMPARE_ARRAY") {

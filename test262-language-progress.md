@@ -1,4 +1,4 @@
-22825/23668 (96.43%)
+22826/23668 (96.44%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -20,7 +20,7 @@ Sub-category progress
 - function-code: 208/217 (95.85%)
 - global-code: 41/42 (97.62%)
 - arguments-object: 263/263 (100.00%)
-- rest-parameters: 10/11 (90.91%)
+- rest-parameters: 11/11 (100.00%)
 - block-scope: 145/145 (100.00%)
 - identifier-resolution: 14/14 (100.00%)
 - computed-property-names: 48/48 (100.00%)
@@ -22409,7 +22409,7 @@ Sub-category progress
   - [x] test/language/arguments-object/unmapped/via-strict.js
 - [ ] rest-parameters
   - [x] test/language/rest-parameters/array-pattern.js
-  - [ ] test/language/rest-parameters/arrow-function.js
+  - [x] test/language/rest-parameters/arrow-function.js
   - [x] test/language/rest-parameters/expected-argument-count.js
   - [x] test/language/rest-parameters/no-alias-arguments.js
   - [x] test/language/rest-parameters/object-pattern.js
