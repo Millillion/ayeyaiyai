@@ -34,6 +34,73 @@ impl<'a> FunctionCompiler<'a> {
         if let Expression::Sequence(expressions) = expression {
             return self.resolve_primitive_property_key_expression(expressions.last()?);
         }
+        if let Expression::Identifier(name) = expression
+            && name.starts_with("__ayy_class_field_name_")
+        {
+            let mut candidates = Vec::new();
+            if let Some(hidden_name) = self.resolve_user_function_capture_hidden_name(name)
+                && let Some(value) = self.global_value_binding(&hidden_name)
+            {
+                candidates.push(value.clone());
+            }
+            if let Some((resolved_name, _)) = self.resolve_current_local_binding(name)
+                && resolved_name != *name
+                && let Some(value) = self
+                    .state
+                    .speculation
+                    .static_semantics
+                    .local_value_binding(&resolved_name)
+            {
+                candidates.push(value.clone());
+            }
+            if let Some(value) = self
+                .state
+                .speculation
+                .static_semantics
+                .local_value_binding(name)
+            {
+                candidates.push(value.clone());
+            }
+            if let Some(value) = self.global_value_binding(name) {
+                candidates.push(value.clone());
+            }
+            for candidate in candidates {
+                if static_expression_matches(&candidate, expression) {
+                    continue;
+                }
+                if let Some(key) =
+                    self.resolve_class_field_name_primitive_property_key_candidate(&candidate)
+                {
+                    return Some(key);
+                }
+                let materialized = self.materialize_static_expression(&candidate);
+                if !static_expression_matches(&materialized, &candidate)
+                    && let Some(key) = self
+                        .resolve_class_field_name_primitive_property_key_candidate(&materialized)
+                {
+                    return Some(key);
+                }
+            }
+        }
+        if let Expression::Binary {
+            op: op @ (BinaryOp::LogicalAnd | BinaryOp::LogicalOr | BinaryOp::NullishCoalescing),
+            left,
+            right,
+        } = expression
+            && let (
+                Expression::Identifier(left_name),
+                Expression::Assign {
+                    name: assigned_name,
+                    ..
+                },
+            ) = (left.as_ref(), right.as_ref())
+            && left_name == assigned_name
+            && let Some(result) =
+                self.resolve_primitive_logical_assignment_property_key_result(*op, left, right)
+            && let Some(key) = self.resolve_primitive_property_key_expression(&result)
+        {
+            return Some(key);
+        }
         if let Some(property_name) = static_property_name_from_expression(expression) {
             return Some(Expression::String(property_name));
         }
@@ -202,5 +269,103 @@ impl<'a> FunctionCompiler<'a> {
         }
         self.resolve_symbol_identity_expression(&materialized)
             .or_else(|| self.resolve_symbol_identity_expression(expression))
+    }
+
+    fn resolve_class_field_name_primitive_property_key_candidate(
+        &self,
+        expression: &Expression,
+    ) -> Option<Expression> {
+        if let Some(key) = self.resolve_primitive_property_key_expression(expression) {
+            return Some(key);
+        }
+
+        let inner = match expression {
+            Expression::Sequence(expressions) => expressions.last()?,
+            other => other,
+        };
+        let Expression::Binary {
+            op: BinaryOp::LogicalOr | BinaryOp::NullishCoalescing,
+            left,
+            right,
+        } = inner
+        else {
+            return None;
+        };
+        let (
+            Expression::Identifier(left_name),
+            Expression::Assign {
+                name: assigned_name,
+                value,
+            },
+        ) = (left.as_ref(), right.as_ref())
+        else {
+            return None;
+        };
+        if left_name != assigned_name {
+            return None;
+        }
+
+        self.resolve_primitive_property_key_expression(value)
+    }
+
+    fn resolve_primitive_logical_assignment_property_key_result(
+        &self,
+        op: BinaryOp,
+        left: &Expression,
+        right: &Expression,
+    ) -> Option<Expression> {
+        let materialized_left = self.materialize_static_expression(left);
+        let assigned_value = match right {
+            Expression::Assign { value, .. } => value.as_ref(),
+            _ => right,
+        };
+
+        match op {
+            BinaryOp::LogicalAnd => {
+                let left_truthy = self
+                    .resolve_static_boolean_expression(&materialized_left)
+                    .or_else(|| self.resolve_static_boolean_expression(left))?;
+                if left_truthy {
+                    Some(self.materialize_static_expression(assigned_value))
+                } else {
+                    Some(materialized_left)
+                }
+            }
+            BinaryOp::LogicalOr => {
+                let Some(left_truthy) = self
+                    .resolve_static_boolean_expression(&materialized_left)
+                    .or_else(|| self.resolve_static_boolean_expression(left))
+                else {
+                    return Some(self.materialize_static_expression(assigned_value));
+                };
+                if left_truthy {
+                    Some(materialized_left)
+                } else {
+                    Some(self.materialize_static_expression(assigned_value))
+                }
+            }
+            BinaryOp::NullishCoalescing => {
+                let Some(primitive_left) = self
+                    .resolve_static_primitive_expression_with_context(
+                        &materialized_left,
+                        self.current_function_name(),
+                    )
+                    .or_else(|| {
+                        self.resolve_static_primitive_expression_with_context(
+                            left,
+                            self.current_function_name(),
+                        )
+                    })
+                else {
+                    return Some(self.materialize_static_expression(assigned_value));
+                };
+                if matches!(primitive_left, Expression::Null | Expression::Undefined) {
+                    Some(self.materialize_static_expression(assigned_value))
+                } else {
+                    Some(primitive_left)
+                }
+            }
+            _ => None,
+        }
     }
 }

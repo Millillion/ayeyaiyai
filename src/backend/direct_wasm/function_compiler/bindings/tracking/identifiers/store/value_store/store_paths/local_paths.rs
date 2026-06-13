@@ -357,6 +357,11 @@ impl<'a> FunctionCompiler<'a> {
             value_local,
             &state.module_assignment_expression,
         )?;
+        self.sync_class_field_name_user_function_capture_globals_from_local_store(
+            resolved_name,
+            value_local,
+            &state.module_assignment_expression,
+        )?;
         if trace_identifier_store {
             eprintln!("identifier_store:{name}:local_init:module_export_capture:done");
             eprintln!("identifier_store:{name}:local_init:closure_capture:start");
@@ -548,6 +553,11 @@ impl<'a> FunctionCompiler<'a> {
             eprintln!("identifier_store:{name}:local:module_export_capture:start");
         }
         self.sync_module_export_capture_globals_from_local_store(
+            resolved_name,
+            value_local,
+            &state.module_assignment_expression,
+        )?;
+        self.sync_class_field_name_user_function_capture_globals_from_local_store(
             resolved_name,
             value_local,
             &state.module_assignment_expression,

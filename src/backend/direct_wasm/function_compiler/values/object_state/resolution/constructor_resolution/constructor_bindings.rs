@@ -568,7 +568,10 @@ impl<'a> FunctionCompiler<'a> {
         if depth > 8 {
             return None;
         }
-        if self.resolve_function_binding_from_expression(expression).is_some() {
+        if self
+            .resolve_function_binding_from_expression(expression)
+            .is_some()
+        {
             return Some(expression.clone());
         }
         match expression {
@@ -580,7 +583,11 @@ impl<'a> FunctionCompiler<'a> {
                 self.static_constructor_function_return_expression(value, environment, depth + 1)
             }
             Expression::Sequence(expressions) => expressions.last().and_then(|expression| {
-                self.static_constructor_function_return_expression(expression, environment, depth + 1)
+                self.static_constructor_function_return_expression(
+                    expression,
+                    environment,
+                    depth + 1,
+                )
             }),
             Expression::Conditional {
                 then_expression,
@@ -597,13 +604,13 @@ impl<'a> FunctionCompiler<'a> {
                     environment,
                     depth + 1,
                 );
-                (then_result == else_result).then_some(then_result).flatten()
+                (then_result == else_result)
+                    .then_some(then_result)
+                    .flatten()
             }
-            Expression::Assign { value, .. } => self.static_constructor_function_return_expression(
-                value,
-                environment,
-                depth + 1,
-            ),
+            Expression::Assign { value, .. } => {
+                self.static_constructor_function_return_expression(value, environment, depth + 1)
+            }
             _ => None,
         }
     }
@@ -1166,6 +1173,114 @@ impl<'a> FunctionCompiler<'a> {
             .or_else(|| self.resolve_primitive_property_key_expression(property))
     }
 
+    fn static_constructor_environment_value(
+        &self,
+        expression: &Expression,
+        environment: &mut StaticResolutionEnvironment,
+    ) -> Option<Expression> {
+        self.evaluate_static_expression_with_state(expression, environment)
+            .or_else(|| self.materialize_static_expression_with_state(expression, environment))
+            .or_else(|| match expression {
+                Expression::Identifier(name) => environment.binding(name).cloned(),
+                _ => None,
+            })
+            .or_else(|| match expression {
+                Expression::Identifier(name) => self.global_value_binding(name).cloned(),
+                _ => None,
+            })
+            .filter(|value| !static_expression_matches(value, expression))
+    }
+
+    fn resolve_static_constructor_logical_assignment_property_key(
+        &self,
+        expression: &Expression,
+        environment: &mut StaticResolutionEnvironment,
+        current_function_name: Option<&str>,
+    ) -> Option<Expression> {
+        let inner = match expression {
+            Expression::Sequence(expressions) => expressions.last()?,
+            other => other,
+        };
+        let Expression::Binary {
+            op: op @ (BinaryOp::LogicalAnd | BinaryOp::LogicalOr | BinaryOp::NullishCoalescing),
+            left,
+            right,
+        } = inner
+        else {
+            return None;
+        };
+        let (
+            Expression::Identifier(left_name),
+            Expression::Assign {
+                name: assigned_name,
+                value,
+            },
+        ) = (left.as_ref(), right.as_ref())
+        else {
+            return None;
+        };
+        if left_name != assigned_name {
+            return None;
+        }
+
+        let left_value = self
+            .static_constructor_environment_value(left, environment)
+            .unwrap_or_else(|| left.as_ref().clone());
+        let assigned_value = self
+            .evaluate_static_expression_with_state(value, environment)
+            .or_else(|| self.materialize_static_expression_with_state(value, environment))
+            .unwrap_or_else(|| value.as_ref().clone());
+        let result = match op {
+            BinaryOp::LogicalAnd => {
+                let left_truthy = self
+                    .resolve_static_boolean_expression(&left_value)
+                    .or_else(|| self.resolve_static_boolean_expression(left))?;
+                if left_truthy {
+                    assigned_value
+                } else {
+                    left_value
+                }
+            }
+            BinaryOp::LogicalOr => {
+                let Some(left_truthy) = self
+                    .resolve_static_boolean_expression(&left_value)
+                    .or_else(|| self.resolve_static_boolean_expression(left))
+                else {
+                    return self.resolve_primitive_property_key_expression(&assigned_value);
+                };
+                if left_truthy {
+                    left_value
+                } else {
+                    assigned_value
+                }
+            }
+            BinaryOp::NullishCoalescing => {
+                let Some(left_primitive) = self
+                    .resolve_static_primitive_expression_with_context(
+                        &left_value,
+                        current_function_name,
+                    )
+                    .or_else(|| {
+                        self.resolve_static_primitive_expression_with_context(
+                            left,
+                            current_function_name,
+                        )
+                    })
+                else {
+                    return self.resolve_primitive_property_key_expression(&assigned_value);
+                };
+                if matches!(left_primitive, Expression::Null | Expression::Undefined) {
+                    assigned_value
+                } else {
+                    left_primitive
+                }
+            }
+            _ => return None,
+        };
+
+        self.resolve_primitive_property_key_expression(&result)
+    }
+
     fn static_constructor_known_member_property(
         &self,
         target_name: &str,
@@ -1320,6 +1435,13 @@ impl<'a> FunctionCompiler<'a> {
         }
 
         for candidate in &candidates {
+            if let Some(key) = self.resolve_static_constructor_logical_assignment_property_key(
+                candidate,
+                environment,
+                current_function_name,
+            ) {
+                return Some(key);
+            }
             if let Some(key) = self.resolve_primitive_property_key_expression(candidate) {
                 return Some(key);
             }
@@ -1739,9 +1861,11 @@ impl<'a> FunctionCompiler<'a> {
             }
             return None;
         };
-        if let Some(function_return_value) =
-            self.static_constructor_function_return_expression(&return_value, &execution.environment, 0)
-        {
+        if let Some(function_return_value) = self.static_constructor_function_return_expression(
+            &return_value,
+            &execution.environment,
+            0,
+        ) {
             return Some((function_return_value, true));
         }
         if self

@@ -477,6 +477,50 @@ impl<'a> FunctionCompiler<'a> {
         Ok(())
     }
 
+    pub(in crate::backend::direct_wasm) fn sync_class_field_name_user_function_capture_globals_from_local_store(
+        &mut self,
+        resolved_name: &str,
+        value_local: u32,
+        value: &Expression,
+    ) -> DirectResult<()> {
+        if !resolved_name.starts_with("__ayy_class_field_name_") {
+            return Ok(());
+        }
+
+        let mut hidden_names = Vec::new();
+        for capture_bindings in self
+            .backend
+            .function_registry
+            .analysis
+            .user_function_capture_bindings
+            .values()
+        {
+            let Some(hidden_name) = capture_bindings.get(resolved_name) else {
+                continue;
+            };
+            if !hidden_names.contains(hidden_name) {
+                hidden_names.push(hidden_name.clone());
+            }
+        }
+
+        for hidden_name in hidden_names {
+            let binding = self.ensure_implicit_global_binding(&hidden_name);
+            self.push_local_get(value_local);
+            self.push_global_set(binding.value_index);
+            self.push_i32_const(1);
+            self.push_global_set(binding.present_index);
+
+            self.update_static_global_assignment_metadata(&hidden_name, value);
+            self.preserve_exact_static_global_number_binding(&hidden_name, value);
+            self.update_global_specialized_function_value(&hidden_name, value)?;
+            self.update_global_property_descriptor_value(&hidden_name, value);
+            self.sync_capture_slot_runtime_object_shadows_from_expression(&hidden_name, value)?;
+            self.sync_module_export_capture_runtime_array_from_source(&hidden_name, value)?;
+        }
+
+        Ok(())
+    }
+
     pub(in crate::backend::direct_wasm) fn local_lexical_capture_source_is_statically_uninitialized(
         &self,
         resolved_name: &str,
@@ -984,7 +1028,10 @@ impl<'a> FunctionCompiler<'a> {
                 && self
                     .resolve_current_local_binding(&binding.source_name)
                     .is_none()
-                && self.backend.global_binding_index(&binding.source_name).is_none()
+                && self
+                    .backend
+                    .global_binding_index(&binding.source_name)
+                    .is_none()
             {
                 continue;
             }

@@ -574,7 +574,23 @@ impl<'a> FunctionCompiler<'a> {
                     .get(&hidden_name)
                     .copied()
                     .expect("fresh member closure capture slot local must exist");
-                self.emit_numeric_expression(&source_expression)?;
+                let source_statically_uninitialized =
+                    if let Expression::Identifier(source_name) = &source_expression {
+                        self.resolve_current_local_binding(source_name)
+                            .as_ref()
+                            .is_some_and(|(resolved_name, _)| {
+                                self.local_lexical_capture_source_is_statically_uninitialized(
+                                    resolved_name,
+                                )
+                            })
+                    } else {
+                        false
+                    };
+                if source_statically_uninitialized {
+                    self.push_i32_const(JS_UNDEFINED_TAG);
+                } else {
+                    self.emit_numeric_expression(&source_expression)?;
+                }
                 self.push_local_set(hidden_local);
                 self.update_capture_slot_binding_from_expression(&hidden_name, &source_expression)?;
                 self.sync_capture_slot_runtime_object_shadows_from_expression(
