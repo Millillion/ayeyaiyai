@@ -229,7 +229,14 @@ impl<'a> FunctionCompiler<'a> {
         }
         let updated_bindings = static_result
             .as_ref()
-            .map(|(_, updated_bindings)| updated_bindings.clone());
+            .map(|(_, updated_bindings)| updated_bindings.clone())
+            .or_else(|| {
+                (allow_static_snapshot
+                    && !runtime_only_parameter_iterator_call
+                    && !arguments_contain_await)
+                    .then(|| self.infer_static_class_init_nonlocal_updated_bindings(user_function))
+                    .flatten()
+            });
         self.state
             .speculation
             .static_semantics

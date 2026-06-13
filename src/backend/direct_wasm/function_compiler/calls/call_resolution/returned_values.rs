@@ -529,6 +529,81 @@ impl<'a> FunctionCompiler<'a> {
             .unwrap_or_else(|| expression.clone())
     }
 
+    fn resolve_static_returned_object_binding_property_key_with_state(
+        &self,
+        property: &Expression,
+        environment: &mut StaticResolutionEnvironment,
+    ) -> Expression {
+        let materialized = self
+            .materialize_static_return_object_binding_expression_with_state(property, environment);
+        self.resolve_property_key_expression(&materialized)
+            .or_else(|| {
+                self.static_eval_context()
+                    .resolve_property_key_with_state(&materialized, environment)
+            })
+            .or_else(|| static_property_name_from_expression(&materialized).map(Expression::String))
+            .unwrap_or(materialized)
+    }
+
+    fn normalize_static_returned_object_binding_property_keys_with_state(
+        &self,
+        object_binding: ObjectValueBinding,
+        environment: &mut StaticResolutionEnvironment,
+    ) -> ObjectValueBinding {
+        let ObjectValueBinding {
+            string_properties,
+            symbol_properties,
+            property_descriptors,
+            non_enumerable_string_properties,
+            runtime_symbol_properties,
+            extensible,
+        } = object_binding;
+        let mut normalized = ObjectValueBinding {
+            string_properties: Vec::new(),
+            symbol_properties: Vec::new(),
+            property_descriptors: Vec::new(),
+            non_enumerable_string_properties: Vec::new(),
+            runtime_symbol_properties,
+            extensible,
+        };
+
+        for (name, value) in string_properties {
+            let enumerable = !non_enumerable_string_properties
+                .iter()
+                .any(|hidden_name| hidden_name == &name);
+            object_binding_define_property(
+                &mut normalized,
+                Expression::String(name),
+                value,
+                enumerable,
+            );
+        }
+
+        for (property, value) in symbol_properties {
+            let property = self.resolve_static_returned_object_binding_property_key_with_state(
+                &property,
+                environment,
+            );
+            let enumerable = match static_property_name_from_expression(&property) {
+                Some(property_name) => !non_enumerable_string_properties
+                    .iter()
+                    .any(|hidden_name| hidden_name == &property_name),
+                None => true,
+            };
+            object_binding_define_property(&mut normalized, property, value, enumerable);
+        }
+
+        for (property, descriptor) in property_descriptors {
+            let property = self.resolve_static_returned_object_binding_property_key_with_state(
+                &property,
+                environment,
+            );
+            object_binding_define_property_descriptor(&mut normalized, property, descriptor);
+        }
+
+        normalized
+    }
+
     fn normalize_static_class_constructor_alias_expression(
         &self,
         expression: &Expression,
@@ -1765,6 +1840,18 @@ impl<'a> FunctionCompiler<'a> {
             }
             return Some(object_binding);
         }
+        if arguments.is_empty()
+            && function_name.starts_with("__ayy_class_init_")
+            && let Some(object_binding) =
+                self.infer_static_class_init_constructor_object_binding(function_name)
+        {
+            if trace_inherited_bindings {
+                eprintln!(
+                    "resolve_static_returned_object_binding_from_user_function_call:class_init_constructor",
+                );
+            }
+            return Some(object_binding);
+        }
         let user_function = self.user_function(function_name)?;
         let mut execution = self.prepare_static_user_function_execution(
             function_name,
@@ -1827,7 +1914,10 @@ impl<'a> FunctionCompiler<'a> {
                         &mut execution.environment,
                         &local_private_constructor_markers,
                     );
-                    object_binding
+                    self.normalize_static_returned_object_binding_property_keys_with_state(
+                        object_binding,
+                        &mut execution.environment,
+                    )
                 })
                 .or_else(|| {
                     self.resolve_returned_object_binding_alias_fallback_with_environment(
@@ -1841,7 +1931,10 @@ impl<'a> FunctionCompiler<'a> {
                             &mut execution.environment,
                             &local_private_constructor_markers,
                         );
-                        object_binding
+                        self.normalize_static_returned_object_binding_property_keys_with_state(
+                            object_binding,
+                            &mut execution.environment,
+                        )
                     })
                 });
         }
@@ -1866,7 +1959,12 @@ impl<'a> FunctionCompiler<'a> {
                 &mut execution.environment,
                 &local_private_constructor_markers,
             );
-            Some(object_binding)
+            Some(
+                self.normalize_static_returned_object_binding_property_keys_with_state(
+                    object_binding,
+                    &mut execution.environment,
+                ),
+            )
         })?
     }
 

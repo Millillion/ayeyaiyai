@@ -558,6 +558,7 @@ impl<'a> FunctionCompiler<'a> {
             .local_value_binding(name)
             .cloned()
             .or_else(|| self.global_value_binding(name).cloned())
+            .or_else(|| self.backend.global_value_binding(name).cloned())
             .filter(|value| !static_expression_matches(value, &self_identifier))
         {
             return Some(value);
@@ -1797,24 +1798,78 @@ impl<'a> FunctionCompiler<'a> {
             },
             other => other,
         };
-        let target_name = match inner {
-            Expression::Assign { name, .. } => name,
-            Expression::Binary {
-                op: BinaryOp::LogicalOr | BinaryOp::LogicalAnd | BinaryOp::NullishCoalescing,
-                left,
-                right,
-            } => {
-                let Expression::Identifier(left_name) = left.as_ref() else {
+        let logical_assignment_result =
+            |op: BinaryOp, left: &Expression, right: &Expression| -> Option<(String, Expression)> {
+                let (
+                    Expression::Identifier(left_name),
+                    Expression::Assign {
+                        name: assigned_name,
+                        value,
+                    },
+                ) = (left, right)
+                else {
                     return None;
                 };
-                let Expression::Assign { name, .. } = right.as_ref() else {
-                    return None;
-                };
-                if left_name != name {
+                if left_name != assigned_name {
                     return None;
                 }
-                name
-            }
+
+                let materialized_left = self.materialize_static_expression(left);
+                match op {
+                    BinaryOp::LogicalAnd => {
+                        let left_truthy = self
+                            .resolve_static_boolean_expression(&materialized_left)
+                            .or_else(|| self.resolve_static_boolean_expression(left))?;
+                        let result = if left_truthy {
+                            self.materialize_static_expression(value)
+                        } else {
+                            materialized_left
+                        };
+                        Some((assigned_name.clone(), result))
+                    }
+                    BinaryOp::LogicalOr => {
+                        let left_truthy = self
+                            .resolve_static_boolean_expression(&materialized_left)
+                            .or_else(|| self.resolve_static_boolean_expression(left))?;
+                        let result = if left_truthy {
+                            materialized_left
+                        } else {
+                            self.materialize_static_expression(value)
+                        };
+                        Some((assigned_name.clone(), result))
+                    }
+                    BinaryOp::NullishCoalescing => {
+                        let primitive_left = self
+                            .resolve_static_primitive_expression_with_context(
+                                &materialized_left,
+                                self.current_function_name(),
+                            )
+                            .or_else(|| {
+                                self.resolve_static_primitive_expression_with_context(
+                                    left,
+                                    self.current_function_name(),
+                                )
+                            })?;
+                        let result =
+                            if matches!(primitive_left, Expression::Null | Expression::Undefined) {
+                                self.materialize_static_expression(value)
+                            } else {
+                                primitive_left
+                            };
+                        Some((assigned_name.clone(), result))
+                    }
+                    _ => None,
+                }
+            };
+
+        let (target_name, direct_result) = match inner {
+            Expression::Assign { name, .. } => (name.clone(), None),
+            Expression::Binary {
+                op: op @ (BinaryOp::LogicalOr | BinaryOp::LogicalAnd | BinaryOp::NullishCoalescing),
+                left,
+                right,
+            } => logical_assignment_result(*op, left, right)
+                .map(|(name, value)| (name, Some(value)))?,
             _ => return None,
         };
         let is_pure_literal = |expression: &Expression| {
@@ -1829,7 +1884,8 @@ impl<'a> FunctionCompiler<'a> {
             )
         };
         let target_expression = Expression::Identifier(target_name.clone());
-        let mut materialized = self.materialize_static_expression(&target_expression);
+        let mut materialized =
+            direct_result.unwrap_or_else(|| self.materialize_static_expression(&target_expression));
         if !is_pure_literal(&materialized)
             && let Some(resolved) = self.resolve_static_primitive_expression_with_context(
                 &target_expression,
@@ -1839,7 +1895,7 @@ impl<'a> FunctionCompiler<'a> {
             materialized = resolved;
         }
         if !is_pure_literal(&materialized)
-            && let Some(hidden_name) = self.resolve_user_function_capture_hidden_name(target_name)
+            && let Some(hidden_name) = self.resolve_user_function_capture_hidden_name(&target_name)
             && let Some(hidden_value) = self
                 .state
                 .speculation
@@ -1852,13 +1908,13 @@ impl<'a> FunctionCompiler<'a> {
         if crate::ayy_env_flag!("AYY_TRACE_IDENTIFIER_STORE") {
             eprintln!(
                 "identifier_store:fold_executed_assignment target={target_name} materialized={materialized:?} resolved_local={:?} local_value={:?} global_value={:?} capture_hidden={:?}",
-                self.resolve_current_local_binding(target_name),
+                self.resolve_current_local_binding(&target_name),
                 self.state
                     .speculation
                     .static_semantics
-                    .local_value_binding(target_name),
-                self.global_value_binding(target_name),
-                self.resolve_user_function_capture_hidden_name(target_name),
+                    .local_value_binding(&target_name),
+                self.global_value_binding(&target_name),
+                self.resolve_user_function_capture_hidden_name(&target_name),
             );
         }
         is_pure_literal(&materialized).then_some(materialized)

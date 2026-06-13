@@ -75,7 +75,12 @@ impl<'a> FunctionCompiler<'a> {
         };
         let updated_bindings = static_result
             .as_ref()
-            .map(|(_, updated_bindings)| updated_bindings.clone());
+            .map(|(_, updated_bindings)| updated_bindings.clone())
+            .or_else(|| {
+                (allow_static_snapshot && new_target_value == JS_UNDEFINED_TAG)
+                    .then(|| self.infer_static_class_init_nonlocal_updated_bindings(user_function))
+                    .flatten()
+            });
         let existing_snapshot = self
             .state
             .speculation

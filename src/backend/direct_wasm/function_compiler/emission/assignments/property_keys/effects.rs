@@ -1,6 +1,30 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn resolve_property_key_logical_assignment_binding_result(
+        &self,
+        expression: &Expression,
+    ) -> Option<(String, Expression)> {
+        match expression {
+            Expression::Sequence(expressions) => expressions.iter().rev().find_map(|expression| {
+                self.resolve_property_key_logical_assignment_binding_result(expression)
+            }),
+            Expression::Call { callee, arguments }
+                if matches!(callee.as_ref(), Expression::Identifier(name)
+                    if name == "String" && self.is_unshadowed_builtin_identifier(name)) =>
+            {
+                let argument = arguments.first()?.expression();
+                self.resolve_property_key_logical_assignment_binding_result(argument)
+            }
+            Expression::Binary {
+                op: op @ (BinaryOp::LogicalAnd | BinaryOp::LogicalOr | BinaryOp::NullishCoalescing),
+                left,
+                right,
+            } => self.resolve_static_logical_assignment_binding_result(*op, left, right),
+            _ => None,
+        }
+    }
+
     fn property_key_expression_requires_to_property_key_type_error(
         &self,
         expression: &Expression,
@@ -51,9 +75,14 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         expression: &Expression,
     ) -> DirectResult<Option<Expression>> {
+        let logical_assignment_result =
+            self.resolve_property_key_logical_assignment_binding_result(expression);
         let resolved = self.resolve_property_key_expression_with_coercion(expression);
         self.emit_numeric_expression(expression)?;
         self.state.emission.output.instructions.push(0x1a);
+        if let Some((name, value)) = logical_assignment_result {
+            self.restore_logical_assignment_binding_metadata(&name, &value)?;
+        }
 
         if let Some(binding) = resolved
             .as_ref()

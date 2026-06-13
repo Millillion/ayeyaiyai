@@ -30,7 +30,13 @@ impl<'a> FunctionCompiler<'a> {
             )
         })
         .flatten()
-        .map(|(_, updated_bindings)| updated_bindings);
+        .map(|(_, updated_bindings)| updated_bindings)
+        .or_else(|| {
+            (!runtime_only_parameter_iterator_call
+                && !self.user_function_body_contains_new_target(user_function))
+            .then(|| self.infer_static_class_init_nonlocal_updated_bindings(user_function))
+            .flatten()
+        });
         let assigned_nonlocal_bindings =
             self.collect_user_function_assigned_nonlocal_bindings(user_function);
         let mut call_effect_nonlocal_bindings =

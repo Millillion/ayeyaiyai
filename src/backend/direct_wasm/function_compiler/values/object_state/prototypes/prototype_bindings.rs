@@ -64,10 +64,23 @@ fn class_init_property_key_can_have_to_property_key_side_effects(expression: &Ex
         | Expression::Bool(_)
         | Expression::Null
         | Expression::Undefined => false,
-        Expression::Identifier(name) if name.starts_with("__ayy_class_field_name_") => false,
+        Expression::Identifier(name)
+            if name.starts_with("__ayy_class_field_name_")
+                || name.starts_with("__ayy_class_prop_") =>
+        {
+            false
+        }
         Expression::Sequence(expressions) => expressions
             .last()
             .is_some_and(class_init_property_key_can_have_to_property_key_side_effects),
+        Expression::Assign { value, .. } => {
+            class_init_property_key_can_have_to_property_key_side_effects(value)
+        }
+        Expression::Binary {
+            op: BinaryOp::LogicalAnd,
+            right,
+            ..
+        } => class_init_property_key_can_have_to_property_key_side_effects(right),
         _ => true,
     }
 }
@@ -319,6 +332,12 @@ impl<'a> FunctionCompiler<'a> {
             let Some(next) = local_bindings.get(current_name) else {
                 if current_name.starts_with("__ayy_") {
                     break;
+                }
+                let expression = Expression::Identifier(current_name.clone());
+                let materialized = self.materialize_static_expression(&expression);
+                if !static_expression_matches(&materialized, &expression) {
+                    current = materialized;
+                    continue;
                 }
                 let Some(static_value) = self
                     .state
@@ -691,7 +710,9 @@ impl<'a> FunctionCompiler<'a> {
         value: &Expression,
         local_bindings: &mut HashMap<String, Expression>,
     ) {
-        let value = if name.starts_with("__ayy_class_field_name_") {
+        let value = if name.starts_with("__ayy_class_field_name_")
+            || name.starts_with("__ayy_class_prop_")
+        {
             self.resolve_static_class_init_local_property_key(value, local_bindings)
         } else {
             self.resolve_static_class_init_local_binding_value(value, local_bindings)
@@ -887,18 +908,11 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
-    pub(in crate::backend::direct_wasm) fn infer_static_class_init_call_result_expression(
+    fn infer_static_class_init_call_result_expression_for_metadata(
         &self,
         function_name: &str,
     ) -> Option<Expression> {
         let function = self.registered_static_class_init_function_declaration(function_name)?;
-        if function
-            .body
-            .iter()
-            .any(class_init_statement_has_external_side_effects)
-        {
-            return None;
-        }
         let mut local_bindings = std::collections::HashMap::new();
 
         for statement in &function.body {
@@ -921,6 +935,181 @@ impl<'a> FunctionCompiler<'a> {
         None
     }
 
+    pub(in crate::backend::direct_wasm) fn infer_static_class_init_call_result_expression(
+        &self,
+        function_name: &str,
+    ) -> Option<Expression> {
+        let function = self.registered_static_class_init_function_declaration(function_name)?;
+        if function
+            .body
+            .iter()
+            .any(class_init_statement_has_external_side_effects)
+        {
+            return None;
+        }
+        self.infer_static_class_init_call_result_expression_for_metadata(function_name)
+    }
+
+    fn apply_static_class_init_update_call_effects(
+        &self,
+        callee: &Expression,
+        arguments: &[CallArgument],
+        local_bindings: &mut HashMap<String, Expression>,
+    ) -> bool {
+        if matches!(
+            callee,
+            Expression::Member { object, property }
+                if matches!(object.as_ref(), Expression::Identifier(name) if name == "Object")
+                    && matches!(property.as_ref(), Expression::String(name) if name == "defineProperty")
+        ) {
+            if let Some(CallArgument::Expression(target)) = arguments.first() {
+                self.resolve_static_class_init_local_binding_value(target, local_bindings);
+            }
+            if let Some(CallArgument::Expression(property)) = arguments.get(1) {
+                self.resolve_static_class_init_local_property_key(property, local_bindings);
+            }
+            if let Some(CallArgument::Expression(descriptor)) = arguments.get(2) {
+                self.resolve_static_class_init_local_binding_value(descriptor, local_bindings);
+            }
+            return true;
+        }
+
+        let expression = Expression::Call {
+            callee: Box::new(callee.clone()),
+            arguments: arguments.to_vec(),
+        };
+        if class_init_expression_has_external_side_effects(&expression) {
+            return false;
+        }
+        self.resolve_static_class_init_local_binding_value(&expression, local_bindings);
+        true
+    }
+
+    fn apply_static_class_init_update_statement(
+        &self,
+        statement: &Statement,
+        local_bindings: &mut HashMap<String, Expression>,
+    ) -> bool {
+        match statement {
+            Statement::Declaration { body }
+            | Statement::Block { body }
+            | Statement::Labeled { body, .. } => body.iter().all(|statement| {
+                self.apply_static_class_init_update_statement(statement, local_bindings)
+            }),
+            Statement::Var { name, value } | Statement::Let { name, value, .. } => {
+                self.store_static_class_init_local_binding(name, value, local_bindings);
+                true
+            }
+            Statement::Assign { name, value } => {
+                self.assign_static_class_init_local_binding(name, value, local_bindings);
+                true
+            }
+            Statement::Expression(Expression::Call { callee, arguments }) => {
+                self.apply_static_class_init_update_call_effects(callee, arguments, local_bindings)
+            }
+            Statement::Expression(value) => {
+                if class_init_expression_has_external_side_effects(value) {
+                    return false;
+                }
+                self.resolve_static_class_init_local_binding_value(value, local_bindings);
+                true
+            }
+            Statement::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                self.resolve_static_class_init_local_binding_value(object, local_bindings);
+                self.resolve_static_class_init_local_property_key(property, local_bindings);
+                self.resolve_static_class_init_local_binding_value(value, local_bindings);
+                true
+            }
+            Statement::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                let condition =
+                    self.resolve_static_class_init_local_binding_value(condition, local_bindings);
+                let Some(condition_value) = self
+                    .resolve_static_if_condition_value(&condition)
+                    .or_else(|| self.class_init_static_truthy(&condition, local_bindings))
+                else {
+                    return false;
+                };
+                let branch = if condition_value {
+                    then_branch
+                } else {
+                    else_branch
+                };
+                branch.iter().all(|statement| {
+                    self.apply_static_class_init_update_statement(statement, local_bindings)
+                })
+            }
+            Statement::Return(value) => {
+                if class_init_expression_has_external_side_effects(value) {
+                    return false;
+                }
+                self.resolve_static_class_init_local_binding_value(value, local_bindings);
+                true
+            }
+            Statement::Throw(_)
+            | Statement::Try { .. }
+            | Statement::Switch { .. }
+            | Statement::For { .. }
+            | Statement::While { .. }
+            | Statement::DoWhile { .. }
+            | Statement::With { .. }
+            | Statement::Print { .. }
+            | Statement::Break { .. }
+            | Statement::Continue { .. }
+            | Statement::Yield { .. }
+            | Statement::YieldDelegate { .. } => false,
+        }
+    }
+
+    pub(in crate::backend::direct_wasm) fn infer_static_class_init_nonlocal_updated_bindings(
+        &self,
+        user_function: &UserFunction,
+    ) -> Option<HashMap<String, Expression>> {
+        if !user_function.name.starts_with("__ayy_class_init_") {
+            return None;
+        }
+        let function =
+            self.registered_static_class_init_function_declaration(&user_function.name)?;
+        let assigned_nonlocal_bindings =
+            self.collect_user_function_assigned_nonlocal_bindings(user_function);
+        if assigned_nonlocal_bindings.is_empty() {
+            return None;
+        }
+
+        let mut local_bindings = HashMap::new();
+        for name in &assigned_nonlocal_bindings {
+            let identifier = Expression::Identifier(name.clone());
+            let value =
+                self.resolve_static_class_init_local_expression(&identifier, &local_bindings);
+            if !static_expression_matches(&value, &identifier) {
+                local_bindings.insert(name.clone(), value);
+            }
+        }
+        for statement in &function.body {
+            if !self.apply_static_class_init_update_statement(statement, &mut local_bindings) {
+                return None;
+            }
+        }
+
+        let updated_bindings = assigned_nonlocal_bindings
+            .into_iter()
+            .filter_map(|name| {
+                local_bindings
+                    .get(&name)
+                    .cloned()
+                    .map(|value| (name, value))
+            })
+            .collect::<HashMap<_, _>>();
+        (!updated_bindings.is_empty()).then_some(updated_bindings)
+    }
+
     pub(in crate::backend::direct_wasm) fn resolve_static_class_init_constructor_alias(
         &self,
         class_binding_name: &str,
@@ -941,7 +1130,7 @@ impl<'a> FunctionCompiler<'a> {
                     })
             })
             .and_then(|function| {
-                self.infer_static_class_init_call_result_expression(&function.name)
+                self.infer_static_class_init_call_result_expression_for_metadata(&function.name)
             })
             .and_then(|result| match result {
                 Expression::Identifier(name) => Some(name),
@@ -1415,7 +1604,9 @@ impl<'a> FunctionCompiler<'a> {
             } => {
                 let condition =
                     self.resolve_static_class_init_local_expression(condition, local_bindings);
-                let Some(condition_value) = self.resolve_static_if_condition_value(&condition)
+                let Some(condition_value) = self
+                    .resolve_static_if_condition_value(&condition)
+                    .or_else(|| self.class_init_static_truthy(&condition, local_bindings))
                 else {
                     return;
                 };
@@ -1452,7 +1643,7 @@ impl<'a> FunctionCompiler<'a> {
         }
         let body = function.body.clone();
         let returned_constructor =
-            self.infer_static_class_init_call_result_expression(function_name)?;
+            self.infer_static_class_init_call_result_expression_for_metadata(function_name)?;
         let mut local_bindings = std::collections::HashMap::new();
         let mut constructor_binding = empty_object_value_binding();
         let mut found_property = false;
@@ -1514,8 +1705,8 @@ impl<'a> FunctionCompiler<'a> {
             .registered_function_declarations
             .iter()
             .find(|function| {
-                let Some(Expression::Identifier(returned_name)) =
-                    self.infer_static_class_init_call_result_expression(&function.name)
+                let Some(Expression::Identifier(returned_name)) = self
+                    .infer_static_class_init_call_result_expression_for_metadata(&function.name)
                 else {
                     return false;
                 };

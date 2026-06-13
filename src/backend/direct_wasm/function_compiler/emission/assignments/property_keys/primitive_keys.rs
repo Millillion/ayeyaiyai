@@ -527,7 +527,19 @@ impl<'a> FunctionCompiler<'a> {
         left: &Expression,
         right: &Expression,
     ) -> Option<Expression> {
-        let materialized_left = self.materialize_static_expression(left);
+        let materialized_left = if let Expression::Identifier(name) = left {
+            self.state
+                .speculation
+                .static_semantics
+                .local_value_binding(name)
+                .or_else(|| self.global_value_binding(name))
+                .or_else(|| self.backend.global_value_binding(name))
+                .filter(|value| !static_expression_matches(value, left))
+                .cloned()
+                .unwrap_or_else(|| self.materialize_static_expression(left))
+        } else {
+            self.materialize_static_expression(left)
+        };
         let assigned_value = match right {
             Expression::Assign { value, .. } => value.as_ref(),
             _ => right,

@@ -92,7 +92,12 @@ impl<'a> FunctionCompiler<'a> {
         };
         let reliable_updated_bindings = static_result
             .as_ref()
-            .map(|(_, updated_bindings)| updated_bindings.clone());
+            .map(|(_, updated_bindings)| updated_bindings.clone())
+            .or_else(|| {
+                (!runtime_only_parameter_iterator_call && allow_static_snapshot)
+                    .then(|| self.infer_static_class_init_nonlocal_updated_bindings(user_function))
+                    .flatten()
+            });
         let existing_snapshot = self
             .state
             .speculation

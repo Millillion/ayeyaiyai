@@ -514,8 +514,8 @@ impl<'a> FunctionCompiler<'a> {
         // unresolvable reference would synthesize a ReferenceError outside the
         // caller's protected regions. The runtime capture value already holds
         // the evaluated result; use it instead.
-        let value_is_reemittable =
-            self.with_suspended_with_scopes_if_active_scope_object(&object, |compiler| {
+        let value_is_reemittable = self
+            .with_suspended_with_scopes_if_active_scope_object(&object, |compiler| {
                 Ok(compiler.runtime_shadow_fallback_references_readable_bindings(value))
             })?;
         let store_local = if matches!(value, Expression::Identifier(_)) || !value_is_reemittable {
@@ -2040,8 +2040,9 @@ impl<'a> FunctionCompiler<'a> {
         value: &Expression,
     ) -> DirectResult<()> {
         let preserved_value = self.preserve_snapshot_binding_prototype(name, value);
-        let is_globally_bound =
-            self.global_has_binding(name) || self.global_has_implicit_binding(name);
+        let is_globally_bound = self.global_has_binding(name)
+            || self.global_has_implicit_binding(name)
+            || self.backend.global_has_lexical_binding(name);
         let preserve_source_binding_metadata =
             self.user_function_capture_source_is_locally_bound(name);
 

@@ -263,7 +263,8 @@ impl<'a> FunctionCompiler<'a> {
             && !expanded_arguments
                 .iter()
                 .any(Self::expression_contains_await_for_user_call_runtime)
-            && self.bound_capture_slots_are_inline_lowered_pattern_safe(user_function, capture_slots)
+            && self
+                .bound_capture_slots_are_inline_lowered_pattern_safe(user_function, capture_slots)
             && self.emit_inline_lowered_pattern_user_function_with_validated_captures(
                 user_function,
                 &expanded_arguments,
@@ -299,7 +300,12 @@ impl<'a> FunctionCompiler<'a> {
         };
         let reliable_updated_bindings = static_result
             .as_ref()
-            .map(|(_, updated_bindings)| updated_bindings.clone());
+            .map(|(_, updated_bindings)| updated_bindings.clone())
+            .or_else(|| {
+                (!runtime_only_parameter_iterator_call && allow_static_snapshot)
+                    .then(|| self.infer_static_class_init_nonlocal_updated_bindings(user_function))
+                    .flatten()
+            });
         let existing_snapshot = self
             .state
             .speculation

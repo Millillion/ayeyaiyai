@@ -94,6 +94,123 @@ fn logical_expression_references_internal_iterator_temp(expression: &Expression)
 }
 
 impl<'a> FunctionCompiler<'a> {
+    pub(in crate::backend::direct_wasm) fn static_logical_assignment_left_value(
+        &self,
+        left: &Expression,
+    ) -> Expression {
+        let materialized = self.materialize_static_expression(left);
+        if !static_expression_matches(&materialized, left) {
+            return materialized;
+        }
+
+        let Expression::Identifier(name) = left else {
+            return materialized;
+        };
+        if let Some((resolved_name, _)) = self.resolve_current_local_binding(name)
+            && let Some(value) = self
+                .state
+                .speculation
+                .static_semantics
+                .local_value_binding(&resolved_name)
+            && !static_expression_matches(value, left)
+        {
+            return value.clone();
+        }
+        self.state
+            .speculation
+            .static_semantics
+            .local_value_binding(name)
+            .or_else(|| self.global_value_binding(name))
+            .or_else(|| self.backend.global_value_binding(name))
+            .filter(|value| !static_expression_matches(value, left))
+            .cloned()
+            .unwrap_or(materialized)
+    }
+
+    pub(in crate::backend::direct_wasm) fn resolve_static_logical_assignment_binding_result(
+        &self,
+        op: BinaryOp,
+        left: &Expression,
+        right: &Expression,
+    ) -> Option<(String, Expression)> {
+        let (
+            Expression::Identifier(left_name),
+            Expression::Assign {
+                name: assigned_name,
+                value,
+            },
+        ) = (left, right)
+        else {
+            return None;
+        };
+        if left_name != assigned_name {
+            return None;
+        }
+
+        let materialized_left = self.static_logical_assignment_left_value(left);
+        match op {
+            BinaryOp::LogicalAnd => {
+                let left_truthy = self
+                    .resolve_static_boolean_expression(&materialized_left)
+                    .or_else(|| self.resolve_static_boolean_expression(left))?;
+                let result = if left_truthy {
+                    self.materialize_static_expression(value)
+                } else {
+                    materialized_left
+                };
+                Some((assigned_name.clone(), result))
+            }
+            BinaryOp::LogicalOr => {
+                let left_truthy = self
+                    .resolve_static_boolean_expression(&materialized_left)
+                    .or_else(|| self.resolve_static_boolean_expression(left))?;
+                let result = if left_truthy {
+                    materialized_left
+                } else {
+                    self.materialize_static_expression(value)
+                };
+                Some((assigned_name.clone(), result))
+            }
+            BinaryOp::NullishCoalescing => {
+                let primitive_left = self
+                    .resolve_static_primitive_expression_with_context(
+                        &materialized_left,
+                        self.current_function_name(),
+                    )
+                    .or_else(|| {
+                        self.resolve_static_primitive_expression_with_context(
+                            left,
+                            self.current_function_name(),
+                        )
+                    })?;
+                let result = if matches!(primitive_left, Expression::Null | Expression::Undefined) {
+                    self.materialize_static_expression(value)
+                } else {
+                    primitive_left
+                };
+                Some((assigned_name.clone(), result))
+            }
+            _ => None,
+        }
+    }
+
+    pub(in crate::backend::direct_wasm) fn restore_logical_assignment_binding_metadata(
+        &mut self,
+        name: &str,
+        value: &Expression,
+    ) -> DirectResult<()> {
+        let has_current_local_binding = self.resolve_current_local_binding(name).is_some();
+        if !has_current_local_binding || self.current_function_name().is_none() {
+            self.sync_bound_capture_source_binding_metadata(name, value)?;
+        }
+
+        if has_current_local_binding {
+            self.update_local_value_binding(name, value);
+        }
+
+        Ok(())
+    }
+
     fn logical_operand_static_truthiness_after_evaluation(
         &self,
         expression: &Expression,
@@ -185,6 +302,11 @@ impl<'a> FunctionCompiler<'a> {
         {
             return self.emit_numeric_expression(&result);
         }
+        let logical_assignment_result = self.resolve_static_logical_assignment_binding_result(
+            BinaryOp::LogicalAnd,
+            left,
+            right,
+        );
         let temp_local = self.allocate_temp_local();
         self.emit_numeric_expression(left)?;
         self.push_local_set(temp_local);
@@ -198,6 +320,9 @@ impl<'a> FunctionCompiler<'a> {
         self.state.emission.output.instructions.push(0x0b);
         self.pop_control_frame();
         self.invalidate_operator_rhs_binding_metadata(right);
+        if let Some((name, value)) = logical_assignment_result {
+            self.restore_logical_assignment_binding_metadata(&name, &value)?;
+        }
         Ok(())
     }
 
@@ -216,6 +341,8 @@ impl<'a> FunctionCompiler<'a> {
         {
             return self.emit_numeric_expression(&result);
         }
+        let logical_assignment_result =
+            self.resolve_static_logical_assignment_binding_result(BinaryOp::LogicalOr, left, right);
         let temp_local = self.allocate_temp_local();
         self.emit_numeric_expression(left)?;
         self.push_local_set(temp_local);
@@ -229,6 +356,9 @@ impl<'a> FunctionCompiler<'a> {
         self.state.emission.output.instructions.push(0x0b);
         self.pop_control_frame();
         self.invalidate_operator_rhs_binding_metadata(right);
+        if let Some((name, value)) = logical_assignment_result {
+            self.restore_logical_assignment_binding_metadata(&name, &value)?;
+        }
         Ok(())
     }
 
@@ -250,6 +380,11 @@ impl<'a> FunctionCompiler<'a> {
         {
             return self.emit_numeric_expression(&result);
         }
+        let logical_assignment_result = self.resolve_static_logical_assignment_binding_result(
+            BinaryOp::NullishCoalescing,
+            left,
+            right,
+        );
         let temp_local = self.allocate_temp_local();
 
         self.emit_numeric_expression(left)?;
@@ -276,6 +411,9 @@ impl<'a> FunctionCompiler<'a> {
         self.state.emission.output.instructions.push(0x0b);
         self.pop_control_frame();
         self.invalidate_operator_rhs_binding_metadata(right);
+        if let Some((name, value)) = logical_assignment_result {
+            self.restore_logical_assignment_binding_metadata(&name, &value)?;
+        }
         Ok(())
     }
 

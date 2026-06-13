@@ -1,4 +1,4 @@
-22950/23668 (96.97%)
+22954/23668 (96.98%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -15,7 +15,7 @@ Sub-category progress
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
 - statements: 9051/9337 (96.94%)
-- expressions: 10736/11061 (97.06%)
+- expressions: 10740/11061 (97.10%)
 - types: 113/113 (100.00%)
 - function-code: 217/217 (100.00%)
 - global-code: 42/42 (100.00%)
@@ -13278,9 +13278,9 @@ Sub-category progress
   - [x] test/language/expressions/class/cpn-class-expr-accessors-computed-property-name-from-additive-expression-subtract.js
   - [x] test/language/expressions/class/cpn-class-expr-accessors-computed-property-name-from-arrow-function-expression.js
   - [x] test/language/expressions/class/cpn-class-expr-accessors-computed-property-name-from-assignment-expression-assignment.js
-  - [ ] test/language/expressions/class/cpn-class-expr-accessors-computed-property-name-from-assignment-expression-bitwise-or.js
+  - [x] test/language/expressions/class/cpn-class-expr-accessors-computed-property-name-from-assignment-expression-bitwise-or.js
   - [x] test/language/expressions/class/cpn-class-expr-accessors-computed-property-name-from-assignment-expression-coalesce.js
-  - [ ] test/language/expressions/class/cpn-class-expr-accessors-computed-property-name-from-assignment-expression-logical-and.js
+  - [x] test/language/expressions/class/cpn-class-expr-accessors-computed-property-name-from-assignment-expression-logical-and.js
   - [x] test/language/expressions/class/cpn-class-expr-accessors-computed-property-name-from-assignment-expression-logical-or.js
   - [x] test/language/expressions/class/cpn-class-expr-accessors-computed-property-name-from-async-arrow-function-expression.js
   - [x] test/language/expressions/class/cpn-class-expr-accessors-computed-property-name-from-await-expression.js
@@ -13309,9 +13309,9 @@ Sub-category progress
   - [x] test/language/expressions/class/cpn-class-expr-computed-property-name-from-additive-expression-subtract.js
   - [x] test/language/expressions/class/cpn-class-expr-computed-property-name-from-arrow-function-expression.js
   - [x] test/language/expressions/class/cpn-class-expr-computed-property-name-from-assignment-expression-assignment.js
-  - [ ] test/language/expressions/class/cpn-class-expr-computed-property-name-from-assignment-expression-bitwise-or.js
+  - [x] test/language/expressions/class/cpn-class-expr-computed-property-name-from-assignment-expression-bitwise-or.js
   - [x] test/language/expressions/class/cpn-class-expr-computed-property-name-from-assignment-expression-coalesce.js
-  - [ ] test/language/expressions/class/cpn-class-expr-computed-property-name-from-assignment-expression-logical-and.js
+  - [x] test/language/expressions/class/cpn-class-expr-computed-property-name-from-assignment-expression-logical-and.js
   - [x] test/language/expressions/class/cpn-class-expr-computed-property-name-from-assignment-expression-logical-or.js
   - [x] test/language/expressions/class/cpn-class-expr-computed-property-name-from-async-arrow-function-expression.js
   - [x] test/language/expressions/class/cpn-class-expr-computed-property-name-from-await-expression.js
