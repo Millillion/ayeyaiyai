@@ -483,8 +483,7 @@ impl Lowerer {
                     // IsConstructor(superclass) and Get(superclass,
                     // "prototype") must be an Object or null.
                     if let Some(heritage_reference) = heritage_reference.clone() {
-                        prototype_init_arguments
-                            .push(CallArgument::Expression(heritage_reference));
+                        prototype_init_arguments.push(CallArgument::Expression(heritage_reference));
                     }
                     prototype_init_arguments
                 },
@@ -908,7 +907,8 @@ impl Lowerer {
                             super_name.map(ToOwned::to_owned)
                         });
                         lowerer.strict_modes.push(true);
-                        let lowered = lowerer.lower_statements(&body.stmts, true, false);
+                        let lowered =
+                            lowerer.lower_function_body_statements(&body.stmts, true, false);
                         lowerer.strict_modes.pop();
                         lowerer.constructor_super_stack.pop();
                         lowered?

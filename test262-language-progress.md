@@ -1,4 +1,4 @@
-22844/23668 (96.52%)
+22850/23668 (96.54%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -17,7 +17,7 @@ Sub-category progress
 - statements: 9000/9337 (96.39%)
 - expressions: 10696/11061 (96.70%)
 - types: 113/113 (100.00%)
-- function-code: 211/217 (97.24%)
+- function-code: 217/217 (100.00%)
 - global-code: 42/42 (100.00%)
 - arguments-object: 263/263 (100.00%)
 - rest-parameters: 11/11 (100.00%)
@@ -21937,7 +21937,7 @@ Sub-category progress
   - [x] test/language/function-code/10.4.3-1-3-s.js
   - [x] test/language/function-code/10.4.3-1-30-s.js
   - [x] test/language/function-code/10.4.3-1-30gs.js
-  - [ ] test/language/function-code/10.4.3-1-31-s.js
+  - [x] test/language/function-code/10.4.3-1-31-s.js
   - [x] test/language/function-code/10.4.3-1-31gs.js
   - [x] test/language/function-code/10.4.3-1-32-s.js
   - [x] test/language/function-code/10.4.3-1-32gs.js
@@ -21949,16 +21949,16 @@ Sub-category progress
   - [x] test/language/function-code/10.4.3-1-35gs.js
   - [x] test/language/function-code/10.4.3-1-36-s.js
   - [x] test/language/function-code/10.4.3-1-36gs.js
-  - [ ] test/language/function-code/10.4.3-1-37-s.js
+  - [x] test/language/function-code/10.4.3-1-37-s.js
   - [x] test/language/function-code/10.4.3-1-37gs.js
-  - [ ] test/language/function-code/10.4.3-1-38-s.js
+  - [x] test/language/function-code/10.4.3-1-38-s.js
   - [x] test/language/function-code/10.4.3-1-38gs.js
   - [x] test/language/function-code/10.4.3-1-39-s.js
   - [x] test/language/function-code/10.4.3-1-39gs.js
   - [x] test/language/function-code/10.4.3-1-4-s.js
-  - [ ] test/language/function-code/10.4.3-1-40-s.js
+  - [x] test/language/function-code/10.4.3-1-40-s.js
   - [x] test/language/function-code/10.4.3-1-40gs.js
-  - [ ] test/language/function-code/10.4.3-1-41-s.js
+  - [x] test/language/function-code/10.4.3-1-41-s.js
   - [x] test/language/function-code/10.4.3-1-41gs.js
   - [x] test/language/function-code/10.4.3-1-42-s.js
   - [x] test/language/function-code/10.4.3-1-42gs.js
@@ -22088,7 +22088,7 @@ Sub-category progress
   - [x] test/language/function-code/S10.2.1_A2.js
   - [x] test/language/function-code/S10.2.1_A3.js
   - [x] test/language/function-code/S10.2.1_A4_T1.js
-  - [ ] test/language/function-code/S10.2.1_A4_T2.js
+  - [x] test/language/function-code/S10.2.1_A4_T2.js
   - [x] test/language/function-code/S10.2.1_A5.1_T1.js
   - [x] test/language/function-code/S10.2.1_A5.1_T2.js
   - [x] test/language/function-code/S10.2.1_A5.2_T1.js

@@ -7,6 +7,10 @@ impl StaticSpecialExpressionSource for FunctionStaticEvalContext<'_, '_> {
         expression: &Expression,
         environment: &mut Self::Environment,
     ) -> Option<Expression> {
+        if let Some(value) = self.static_evaluate_typeof_expression(expression, environment) {
+            return Some(value);
+        }
+
         if let Some(value) = self.static_evaluate_assertion_call(expression, environment) {
             return Some(value);
         }
@@ -379,6 +383,29 @@ impl StaticSpecialExpressionSource for FunctionStaticEvalContext<'_, '_> {
 }
 
 impl FunctionStaticEvalContext<'_, '_> {
+    fn static_evaluate_typeof_expression(
+        &self,
+        expression: &Expression,
+        environment: &StaticResolutionEnvironment,
+    ) -> Option<Expression> {
+        let Expression::Unary {
+            op: UnaryOp::TypeOf,
+            expression,
+        } = expression
+        else {
+            return None;
+        };
+        let Expression::Identifier(name) = expression.as_ref() else {
+            return None;
+        };
+        let operand = environment
+            .binding(name)
+            .cloned()
+            .unwrap_or_else(|| expression.as_ref().clone());
+        let kind = self.infer_typeof_operand_kind(&operand)?;
+        Some(Expression::String(kind.as_typeof_str()?.to_string()))
+    }
+
     fn static_evaluate_assertion_call(
         &self,
         expression: &Expression,

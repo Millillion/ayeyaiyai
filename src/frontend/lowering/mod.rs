@@ -48,7 +48,8 @@ use self::state::{
     AssignmentTarget, BindingScope, ForOfBinding, ForOfPatternBindingKind, LogicalAssignmentKind,
 };
 use self::support::{
-    assert_throws_call, collect_for_of_binding_names, collect_for_per_iteration_bindings,
+    assert_throws_call, collect_direct_function_body_lexical_bindings,
+    collect_for_of_binding_names, collect_for_per_iteration_bindings,
     collect_function_scope_binding_names, collect_parameter_binding_names, collect_switch_bindings,
     console_log_arguments, expected_argument_count, function_has_simple_parameter_list,
     lower_binary_operator, lower_constructor_parameters, lower_function_kind, lower_parameter,

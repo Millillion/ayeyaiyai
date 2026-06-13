@@ -127,6 +127,13 @@ impl<'b, 'a> FunctionStaticEvalContext<'b, 'a> {
         self.compiler.lookup_identifier_kind(name)
     }
 
+    pub(in crate::backend::direct_wasm) fn infer_typeof_operand_kind(
+        &self,
+        expression: &Expression,
+    ) -> Option<StaticValueKind> {
+        self.compiler.infer_typeof_operand_kind(expression)
+    }
+
     pub(in crate::backend::direct_wasm) fn is_unshadowed_builtin_identifier(
         &self,
         name: &str,

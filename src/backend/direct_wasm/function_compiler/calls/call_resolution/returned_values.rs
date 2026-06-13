@@ -704,9 +704,16 @@ impl<'a> FunctionCompiler<'a> {
         let mut aliases = HashMap::new();
         for statement in statements {
             match statement {
-                Statement::Var { name, value }
-                | Statement::Let { name, value, .. }
-                | Statement::Assign { name, value } => {
+                Statement::Var { name, value } => {
+                    if !matches!(value, Expression::Undefined) {
+                        let normalized = self
+                            .normalize_static_function_constructor_alias_expression(
+                                value, &aliases,
+                            );
+                        aliases.insert(name.clone(), normalized);
+                    }
+                }
+                Statement::Let { name, value, .. } | Statement::Assign { name, value } => {
                     let normalized = self
                         .normalize_static_function_constructor_alias_expression(value, &aliases);
                     aliases.insert(name.clone(), normalized);
@@ -823,7 +830,17 @@ impl<'a> FunctionCompiler<'a> {
     ) {
         for statement in statements {
             match statement {
-                Statement::Var { name, value } | Statement::Let { name, value, .. } => {
+                Statement::Var { name, value } => {
+                    if !matches!(value, Expression::Undefined) {
+                        let value = self
+                            .materialize_static_return_object_binding_expression_with_state(
+                                value,
+                                environment,
+                            );
+                        environment.set_local_binding(name.clone(), value);
+                    }
+                }
+                Statement::Let { name, value, .. } => {
                     let value = self
                         .materialize_static_return_object_binding_expression_with_state(
                             value,

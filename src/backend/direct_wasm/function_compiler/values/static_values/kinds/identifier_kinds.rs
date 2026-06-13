@@ -529,16 +529,16 @@ impl<'a> FunctionCompiler<'a> {
             }
             Expression::Identifier(name) => {
                 self.lookup_identifier_kind(name).or_else(|| {
-                // typeof of a genuinely undeclared identifier folds to
-                // "undefined"; a declared binding without kind information
-                // stays unknown so the check defers to runtime.
-                (self.resolve_current_local_binding(name).is_none()
-                    && !self.global_has_binding(name)
-                    && !self.global_has_implicit_binding(name)
-                    && !self.backend.global_has_lexical_binding(name)
-                    && self.backend.global_function_binding(name).is_none()
-                    && self.global_value_binding(name).is_none())
-                .then_some(StaticValueKind::Undefined)
+                    // typeof of a genuinely undeclared identifier folds to
+                    // "undefined"; a declared binding without kind information
+                    // stays unknown so the check defers to runtime.
+                    (self.resolve_current_local_binding(name).is_none()
+                        && !self.global_has_binding(name)
+                        && !self.global_has_implicit_binding(name)
+                        && !self.backend.global_has_lexical_binding(name)
+                        && self.backend.global_function_binding(name).is_none()
+                        && self.global_value_binding(name).is_none())
+                    .then_some(StaticValueKind::Undefined)
                 })
             }
             _ => self.infer_value_kind(expression),
@@ -566,6 +566,9 @@ impl<'a> FunctionCompiler<'a> {
         }
         if crate::ayy_env_flag!("AYY_TRACE_KIND_LOOKUPS") {
             eprintln!("kind_lookup:{name}");
+        }
+        if is_internal_user_function_identifier(name) && self.contains_user_function(name) {
+            return Some(StaticValueKind::Function);
         }
         let _lookup_guard = IdentifierKindLookupGuard::enter(name)?;
         let identifier = Expression::Identifier(name.to_string());
@@ -646,16 +649,6 @@ impl<'a> FunctionCompiler<'a> {
             .contains(name)
         {
             return None;
-        }
-        if is_internal_user_function_identifier(name)
-            && self
-                .backend
-                .function_registry
-                .catalog
-                .user_function(name)
-                .is_some()
-        {
-            return Some(StaticValueKind::Function);
         }
         builtin_identifier_kind(name)
     }

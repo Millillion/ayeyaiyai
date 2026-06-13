@@ -874,7 +874,7 @@ impl Lowerer {
         self.pending_private_brand_captures.push(BTreeSet::new());
         let lowered_body = self.with_this_replacement(None, |lowerer| {
             lowerer.with_super_member_replacement(None, |lowerer| {
-                lowerer.lower_statements(&body.stmts, true, false)
+                lowerer.lower_function_body_statements(&body.stmts, true, false)
             })
         });
         let captured_private_brand_bindings = self
@@ -927,7 +927,8 @@ impl Lowerer {
         let lowered = self.with_this_replacement(None, |lowerer| {
             lowerer.with_super_member_replacement(None, |lowerer| {
                 let (params, mut param_setup) = lower_parameter(lowerer, &setter.param)?;
-                let mut lowered_body = lowerer.lower_statements(&body.stmts, true, false)?;
+                let mut lowered_body =
+                    lowerer.lower_function_body_statements(&body.stmts, true, false)?;
                 lowered_body.splice(0..0, param_setup.drain(..));
                 Ok((params, lowered_body))
             })

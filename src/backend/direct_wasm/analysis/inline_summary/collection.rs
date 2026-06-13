@@ -82,7 +82,22 @@ pub(in crate::backend::direct_wasm) fn collect_inline_function_summary(
     let mut local_bindings = HashMap::new();
     for statement in &function.body {
         match statement {
-            Statement::Var { name, value } | Statement::Let { name, value, .. } => {
+            Statement::Var { name, value } => {
+                if parameter_names.contains(name) {
+                    return None;
+                }
+                if matches!(value, Expression::Undefined) {
+                    local_bindings
+                        .entry(name.clone())
+                        .or_insert(Expression::Undefined);
+                } else {
+                    local_bindings.insert(
+                        name.clone(),
+                        substitute_inline_summary_bindings(value, &local_bindings),
+                    );
+                }
+            }
+            Statement::Let { name, value, .. } => {
                 if parameter_names.contains(name) {
                     return None;
                 }

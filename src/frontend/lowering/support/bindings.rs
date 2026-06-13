@@ -193,8 +193,9 @@ pub(crate) fn collect_switch_bindings(switch_statement: &SwitchStmt) -> Result<V
     Ok(bindings)
 }
 
-pub(crate) fn collect_direct_statement_lexical_bindings(
+fn collect_direct_statement_lexical_bindings_with_functions(
     statements: &[Stmt],
+    include_function_declarations: bool,
 ) -> Result<Vec<String>> {
     let mut bindings = Vec::new();
 
@@ -212,7 +213,7 @@ pub(crate) fn collect_direct_statement_lexical_bindings(
                     collect_pattern_binding_names(&declarator.name, &mut bindings)?;
                 }
             }
-            Stmt::Decl(Decl::Fn(function_declaration)) => {
+            Stmt::Decl(Decl::Fn(function_declaration)) if include_function_declarations => {
                 let name = function_declaration.ident.sym.to_string();
                 if !bindings.contains(&name) {
                     bindings.push(name);
@@ -229,6 +230,18 @@ pub(crate) fn collect_direct_statement_lexical_bindings(
     }
 
     Ok(bindings)
+}
+
+pub(crate) fn collect_direct_statement_lexical_bindings(
+    statements: &[Stmt],
+) -> Result<Vec<String>> {
+    collect_direct_statement_lexical_bindings_with_functions(statements, true)
+}
+
+pub(crate) fn collect_direct_function_body_lexical_bindings(
+    statements: &[Stmt],
+) -> Result<Vec<String>> {
+    collect_direct_statement_lexical_bindings_with_functions(statements, false)
 }
 
 pub(crate) fn collect_for_per_iteration_bindings(init: &VarDeclOrExpr) -> Result<Vec<String>> {

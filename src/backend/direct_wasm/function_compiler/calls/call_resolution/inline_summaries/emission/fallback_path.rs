@@ -119,16 +119,19 @@ impl<'a> FunctionCompiler<'a> {
                 self.emit_statement(&Statement::Throw(substituted))?;
             }
             Statement::Var { name, value } => {
-                self.emit_statement(&Statement::Var {
-                    name: name.clone(),
-                    value: self.substitute_user_function_call_frame_bindings(
-                        value,
-                        user_function,
-                        call_arguments,
-                        this_binding,
-                        arguments_binding,
-                    ),
-                })?;
+                let substituted = self.substitute_user_function_call_frame_bindings(
+                    value,
+                    user_function,
+                    call_arguments,
+                    this_binding,
+                    arguments_binding,
+                );
+                if !matches!(substituted, Expression::Undefined) {
+                    self.emit_statement(&Statement::Var {
+                        name: name.clone(),
+                        value: substituted,
+                    })?;
+                }
                 self.push_i32_const(JS_UNDEFINED_TAG);
                 self.push_local_set(result_local);
             }

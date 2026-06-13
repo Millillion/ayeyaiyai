@@ -11,9 +11,9 @@ pub(crate) use self::analysis::{
 };
 pub(crate) use self::async_lowering::asyncify_statements;
 pub(crate) use self::bindings::{
-    collect_direct_statement_lexical_bindings, collect_for_of_binding_names,
-    collect_for_per_iteration_bindings, collect_function_scope_binding_names,
-    collect_parameter_binding_names, collect_switch_bindings,
+    collect_direct_function_body_lexical_bindings, collect_direct_statement_lexical_bindings,
+    collect_for_of_binding_names, collect_for_per_iteration_bindings,
+    collect_function_scope_binding_names, collect_parameter_binding_names, collect_switch_bindings,
 };
 pub(crate) use self::descriptors::{
     data_property_descriptor, define_property_statement, getter_property_descriptor,

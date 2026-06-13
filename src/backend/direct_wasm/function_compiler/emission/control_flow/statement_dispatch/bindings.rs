@@ -728,6 +728,15 @@ impl<'a> FunctionCompiler<'a> {
         {
             return self.emit_numeric_expression(&resolved_value);
         }
+        if let Expression::Identifier(function_name) = value
+            && is_internal_user_function_identifier(function_name)
+        {
+            let runtime_value = self
+                .user_function_runtime_value(function_name)
+                .unwrap_or(JS_TYPEOF_FUNCTION_TAG);
+            self.push_i32_const(runtime_value);
+            return Ok(());
+        }
         if self.emit_static_for_await_protocol_async_call_initializer(value)? {
             return Ok(());
         }
@@ -776,8 +785,10 @@ impl<'a> FunctionCompiler<'a> {
             && inline_summary_side_effect_free_expression(value)
             && let Some(LocalFunctionBinding::User(function_name)) =
                 self.resolve_function_binding_from_expression(value)
-            && let Some(runtime_value) = self.user_function_runtime_value(&function_name)
         {
+            let runtime_value = self
+                .user_function_runtime_value(&function_name)
+                .unwrap_or(JS_TYPEOF_FUNCTION_TAG);
             self.push_i32_const(runtime_value);
             return Ok(());
         }

@@ -67,7 +67,9 @@ where
                 }
             }
             Statement::Var { name, value } => {
-                trace_unwrap!(executor.declare_var_binding(name, value, environment));
+                if !matches!(value, Expression::Undefined) {
+                    trace_unwrap!(executor.declare_var_binding(name, value, environment));
+                }
             }
             Statement::Let { name, value, .. } => {
                 trace_unwrap!(executor.initialize_binding(name, value, environment));

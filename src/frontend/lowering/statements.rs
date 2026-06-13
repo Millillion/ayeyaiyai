@@ -648,6 +648,19 @@ impl Lowerer {
         lowered
     }
 
+    pub(crate) fn lower_function_body_statements(
+        &mut self,
+        statements: &[Stmt],
+        allow_return: bool,
+        allow_loop_control: bool,
+    ) -> Result<Vec<Statement>> {
+        let scope_bindings = collect_direct_function_body_lexical_bindings(statements)?;
+        self.push_renaming_binding_scope(scope_bindings);
+        let lowered = self.lower_statement_list(statements, allow_return, allow_loop_control);
+        self.pop_binding_scope();
+        lowered
+    }
+
     pub(crate) fn lower_static_block_statements(
         &mut self,
         statements: &[Stmt],

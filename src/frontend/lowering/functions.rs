@@ -249,7 +249,7 @@ impl Lowerer {
 
         let mut body = match &*arrow_expression.body {
             BlockStmtOrExpr::BlockStmt(block) => {
-                self.lower_statements(&block.stmts, true, false)?
+                self.lower_function_body_statements(&block.stmts, true, false)?
             }
             BlockStmtOrExpr::Expr(expression) => {
                 if let Some(arguments) = console_log_arguments(expression) {
@@ -336,7 +336,7 @@ impl Lowerer {
                 let mut body = if function.is_generator {
                     lowerer.lower_generator_statements(&body.stmts, true)?
                 } else {
-                    lowerer.lower_statements(&body.stmts, true, false)?
+                    lowerer.lower_function_body_statements(&body.stmts, true, false)?
                 };
                 hoist_lowered_function_statement_bindings(&mut body);
                 body.splice(0..0, param_setup);

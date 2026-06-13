@@ -20,6 +20,9 @@ impl<'a> FunctionCompiler<'a> {
                     this_binding,
                     arguments_binding,
                 );
+                if matches!(substituted_value, Expression::Undefined) {
+                    return Ok(true);
+                }
                 if self
                     .resolve_descriptor_binding_from_expression(&substituted_value)
                     .is_some()
