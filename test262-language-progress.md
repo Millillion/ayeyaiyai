@@ -1,4 +1,4 @@
-22832/23668 (96.47%)
+22836/23668 (96.48%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -15,7 +15,7 @@ Sub-category progress
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
 - statements: 8999/9337 (96.38%)
-- expressions: 10689/11061 (96.64%)
+- expressions: 10693/11061 (96.67%)
 - types: 113/113 (100.00%)
 - function-code: 208/217 (95.85%)
 - global-code: 42/42 (100.00%)
@@ -11567,8 +11567,8 @@ Sub-category progress
   - [x] test/language/expressions/assignment/fn-name-gen.js
   - [x] test/language/expressions/assignment/fn-name-lhs-cover.js
   - [x] test/language/expressions/assignment/fn-name-lhs-member.js
-  - [ ] test/language/expressions/assignment/id-arguments-strict.js
-  - [ ] test/language/expressions/assignment/id-eval-strict.js
+  - [x] test/language/expressions/assignment/id-arguments-strict.js
+  - [x] test/language/expressions/assignment/id-eval-strict.js
   - [x] test/language/expressions/assignment/line-terminator.js
   - [x] test/language/expressions/assignment/member-expr-ident-name-break-escaped.js
   - [x] test/language/expressions/assignment/member-expr-ident-name-case-escaped.js
@@ -11846,8 +11846,8 @@ Sub-category progress
   - [x] test/language/expressions/assignmenttargettype/parenthesized-expression-comma-assignmentexpression-0.js
   - [x] test/language/expressions/assignmenttargettype/parenthesized-expression-comma-assignmentexpression-1.js
   - [x] test/language/expressions/assignmenttargettype/parenthesized-expression-comma-assignmentexpression-2.js
-  - [ ] test/language/expressions/assignmenttargettype/parenthesized-identifierreference-arguments-strict.js
-  - [ ] test/language/expressions/assignmenttargettype/parenthesized-identifierreference-eval-strict.js
+  - [x] test/language/expressions/assignmenttargettype/parenthesized-identifierreference-arguments-strict.js
+  - [x] test/language/expressions/assignmenttargettype/parenthesized-identifierreference-eval-strict.js
   - [x] test/language/expressions/assignmenttargettype/parenthesized-import.meta.js
   - [x] test/language/expressions/assignmenttargettype/parenthesized-importcall-defer.js
   - [x] test/language/expressions/assignmenttargettype/parenthesized-importcall-source.js

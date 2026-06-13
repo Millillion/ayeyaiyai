@@ -108,24 +108,64 @@ pub(super) fn validate_property_name_strict_mode_early_errors(
     Ok(())
 }
 
+fn validate_strict_mode_assignment_identifier(identifier: &Ident, strict: bool) -> Result<()> {
+    ensure!(
+        !strict || !is_strict_mode_forbidden_binding_identifier(identifier.sym.as_ref()),
+        "strict mode forbids assigning to `{}`",
+        identifier.sym
+    );
+
+    Ok(())
+}
+
+fn validate_strict_mode_member_assignment_target(member: &MemberExpr, strict: bool) -> Result<()> {
+    validate_strict_mode_early_errors_in_expression(&member.obj, strict)?;
+    if let MemberProp::Computed(property) = &member.prop {
+        validate_strict_mode_early_errors_in_expression(&property.expr, strict)?;
+    }
+
+    Ok(())
+}
+
+fn validate_strict_mode_assignment_target_expression(
+    expression: &Expr,
+    strict: bool,
+) -> Result<()> {
+    match expression {
+        Expr::Ident(identifier) => validate_strict_mode_assignment_identifier(identifier, strict)?,
+        Expr::Paren(parenthesized) => {
+            validate_strict_mode_assignment_target_expression(&parenthesized.expr, strict)?
+        }
+        Expr::Member(member) => validate_strict_mode_member_assignment_target(member, strict)?,
+        Expr::SuperProp(super_property) => {
+            if let SuperProp::Computed(property) = &super_property.prop {
+                validate_strict_mode_early_errors_in_expression(&property.expr, strict)?;
+            }
+        }
+        _ => validate_strict_mode_early_errors_in_expression(expression, strict)?,
+    }
+
+    Ok(())
+}
+
 pub(super) fn validate_strict_mode_assignment_target(
     target: &AssignTarget,
     strict: bool,
 ) -> Result<()> {
-    if strict && let AssignTarget::Simple(SimpleAssignTarget::Ident(identifier)) = target {
-        ensure!(
-            !is_strict_mode_forbidden_binding_identifier(identifier.id.sym.as_ref()),
-            "strict mode forbids assigning to `{}`",
-            identifier.id.sym
-        );
-    }
-
     match target {
+        AssignTarget::Simple(SimpleAssignTarget::Ident(identifier)) => {
+            validate_strict_mode_assignment_identifier(&identifier.id, strict)?;
+        }
         AssignTarget::Simple(SimpleAssignTarget::Member(member)) => {
-            validate_strict_mode_early_errors_in_expression(&member.obj, strict)?;
-            if let MemberProp::Computed(property) = &member.prop {
+            validate_strict_mode_member_assignment_target(member, strict)?;
+        }
+        AssignTarget::Simple(SimpleAssignTarget::SuperProp(super_property)) => {
+            if let SuperProp::Computed(property) = &super_property.prop {
                 validate_strict_mode_early_errors_in_expression(&property.expr, strict)?;
             }
+        }
+        AssignTarget::Simple(SimpleAssignTarget::Paren(parenthesized)) => {
+            validate_strict_mode_assignment_target_expression(&parenthesized.expr, strict)?;
         }
         AssignTarget::Pat(pattern) => {
             let pattern: Pat = pattern.clone().into();
