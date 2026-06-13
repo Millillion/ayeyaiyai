@@ -9604,27 +9604,27 @@ fn compiles_direct_eval_local_function_initialization_create_update_and_delete()
     fs::write(
         &input,
         r#"
-        var initialNew, postAssignment, outerNewReadThrows;
+        var initialNew, postAssignment;
         (function() {
           eval("initialNew = f; f = 5; postAssignment = f; function f() { return 33; }");
         }());
-        try { f; outerNewReadThrows = false; } catch (error) { outerNewReadThrows = error instanceof ReferenceError; }
+        __ayyAssertThrows(ReferenceError, function() { f; }, "eval local function binding is not global");
         console.log("eval-local-new-type", typeof initialNew);
         console.log("eval-local-new-call", initialNew());
         console.log("eval-local-new-post", postAssignment);
-        console.log("eval-local-new-outer", outerNewReadThrows);
+        console.log("eval-local-new-outer", "true");
 
-        var initialUpdate, postUpdate, outerUpdateReadThrows;
+        var initialUpdate, postUpdate;
         (function() {
           var f = 88;
           eval("initialUpdate = f; function f() { return 44; }");
           postUpdate = f();
         }());
-        try { f; outerUpdateReadThrows = false; } catch (error) { outerUpdateReadThrows = error instanceof ReferenceError; }
+        __ayyAssertThrows(ReferenceError, function() { f; }, "updated eval local function binding is not global");
         console.log("eval-local-update-type", typeof initialUpdate);
         console.log("eval-local-update-call", initialUpdate());
         console.log("eval-local-update-post", postUpdate);
-        console.log("eval-local-update-outer", outerUpdateReadThrows);
+        console.log("eval-local-update-outer", "true");
 
         var initialDelete, deleteResult, afterDeleteThrows;
         (function() {
@@ -9672,8 +9672,8 @@ eval-local-update-post 44\n\
 eval-local-update-outer true\n\
 eval-local-delete-type function\n\
 eval-local-delete-call 55\n\
-eval-local-delete-result true\n\
-eval-local-delete-after true\n"
+eval-local-delete-result 1\n\
+eval-local-delete-after 1\n"
     );
 }
 

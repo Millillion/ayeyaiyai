@@ -2349,6 +2349,21 @@ impl DirectWasmCompiler {
                     continue;
                 }
                 if !is_synthetic_capture
+                    && !has_enclosing_function
+                    && !captures_enclosing_body_local
+                    && !captures_enclosing_parameter_local
+                    && !matches!(source_name.as_str(), "this" | "new.target")
+                    && !scope_bindings.contains(&source_name)
+                    && !(!is_scoped_binding && self.contains_user_function(&source_name))
+                    && !(self.global_has_binding(&source_name)
+                        || self.global_has_lexical_binding(&source_name))
+                    && self.global_function_binding(&source_name).is_none()
+                    && !self.global_has_implicit_binding(&source_name)
+                    && !is_builtin_like_capture_identifier(&source_name)
+                {
+                    continue;
+                }
+                if !is_synthetic_capture
                     && !captures_enclosing_body_local
                     && !captures_enclosing_parameter_local
                     && (scope_bindings.contains(&source_name)

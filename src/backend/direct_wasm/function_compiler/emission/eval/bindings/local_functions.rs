@@ -10,7 +10,21 @@ impl<'a> FunctionCompiler<'a> {
             let value_local = self.allocate_temp_local();
             self.emit_numeric_expression(&value_expression)?;
             self.push_local_set(value_local);
-            if self.resolve_current_local_binding(binding_name).is_some()
+            let direct_eval_initialized_local = self
+                .resolve_current_local_binding(binding_name)
+                .and_then(|(resolved_name, _)| {
+                    self.current_static_direct_eval_var_binding_source_name(&resolved_name)
+                        .and_then(|_| self.local_lexical_initialized_local(&resolved_name))
+                });
+            if let Some(initialized_local) = direct_eval_initialized_local {
+                self.push_i32_const(1);
+                self.push_local_set(initialized_local);
+                self.emit_initialize_identifier_value_local(
+                    binding_name,
+                    &value_expression,
+                    value_local,
+                )?;
+            } else if self.resolve_current_local_binding(binding_name).is_some()
                 || self.backend.global_binding_index(binding_name).is_some()
                 || self
                     .resolve_eval_local_function_hidden_name(binding_name)
