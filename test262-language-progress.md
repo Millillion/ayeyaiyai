@@ -1,4 +1,4 @@
-22869/23668 (96.62%)
+22875/23668 (96.65%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -15,7 +15,7 @@ Sub-category progress
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
 - statements: 9016/9337 (96.56%)
-- expressions: 10698/11061 (96.72%)
+- expressions: 10704/11061 (96.77%)
 - types: 113/113 (100.00%)
 - function-code: 217/217 (100.00%)
 - global-code: 42/42 (100.00%)
@@ -12754,7 +12754,7 @@ Sub-category progress
   - [x] test/language/expressions/await/early-errors-await-not-simple-assignment-target.js
   - [ ] test/language/expressions/await/for-await-of-interleaved.js
   - [x] test/language/expressions/await/no-operand.js
-  - [ ] test/language/expressions/await/syntax-await-has-UnaryExpression-with-MultiplicativeExpression.js
+  - [x] test/language/expressions/await/syntax-await-has-UnaryExpression-with-MultiplicativeExpression.js
   - [x] test/language/expressions/await/syntax-await-has-UnaryExpression.js
   - [ ] test/language/expressions/await/syntax-await-in-ConditionalExpression.js
   - [x] test/language/expressions/bitwise-and/S11.10.1_A1.js
@@ -17567,7 +17567,7 @@ Sub-category progress
   - [ ] test/language/expressions/delete/11.4.1-4.a-9-s.js
   - [x] test/language/expressions/delete/11.4.1-4.a-9.js
   - [x] test/language/expressions/delete/11.4.1-5-1.js
-  - [ ] test/language/expressions/delete/11.4.1-5-2.js
+  - [x] test/language/expressions/delete/11.4.1-5-2.js
   - [x] test/language/expressions/delete/11.4.1-5-3.js
   - [x] test/language/expressions/delete/11.4.1-5-a-27-s.js
   - [x] test/language/expressions/delete/11.4.1-5-a-28-s.js
@@ -19901,7 +19901,7 @@ Sub-category progress
   - [x] test/language/expressions/new.target/asi.js
   - [x] test/language/expressions/new.target/escaped-new.js
   - [x] test/language/expressions/new.target/escaped-target.js
-  - [ ] test/language/expressions/new.target/unary-expr.js
+  - [x] test/language/expressions/new.target/unary-expr.js
   - [x] test/language/expressions/new.target/value-via-call.js
   - [x] test/language/expressions/new.target/value-via-fpapply.js
   - [x] test/language/expressions/new.target/value-via-fpcall.js
@@ -21100,13 +21100,13 @@ Sub-category progress
   - [x] test/language/expressions/optional-chaining/iteration-statement-for.js
   - [x] test/language/expressions/optional-chaining/iteration-statement-while.js
   - [ ] test/language/expressions/optional-chaining/member-expression-async-identifier.js
-  - [ ] test/language/expressions/optional-chaining/member-expression-async-literal.js
+  - [x] test/language/expressions/optional-chaining/member-expression-async-literal.js
   - [ ] test/language/expressions/optional-chaining/member-expression-async-this.js
   - [x] test/language/expressions/optional-chaining/member-expression.js
   - [ ] test/language/expressions/optional-chaining/new-target-optional-call.js
   - [x] test/language/expressions/optional-chaining/optional-call-preserves-this.js
-  - [ ] test/language/expressions/optional-chaining/optional-chain-async-optional-chain-square-brackets.js
-  - [ ] test/language/expressions/optional-chaining/optional-chain-async-square-brackets.js
+  - [x] test/language/expressions/optional-chaining/optional-chain-async-optional-chain-square-brackets.js
+  - [x] test/language/expressions/optional-chaining/optional-chain-async-square-brackets.js
   - [x] test/language/expressions/optional-chaining/optional-chain-expression-optional-expression.js
   - [x] test/language/expressions/optional-chaining/optional-chain-prod-arguments.js
   - [ ] test/language/expressions/optional-chaining/optional-chain-prod-expression.js
