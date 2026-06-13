@@ -1167,11 +1167,12 @@ impl<'a> FunctionCompiler<'a> {
                     (!bindings.is_empty()).then_some(bindings)
                 })
             });
+        let constructor_direct_eval_in_class_field_initializer = self
+            .resolve_registered_function_declaration(&user_function.name)
+            .is_some_and(|declaration| declaration.direct_eval_in_class_field_initializer);
         let constructor_ordinary_direct_eval = self
             .user_function_mentions_direct_eval(user_function)
-            && !self
-                .resolve_registered_function_declaration(&user_function.name)
-                .is_some_and(|declaration| declaration.direct_eval_in_class_field_initializer);
+            && !constructor_direct_eval_in_class_field_initializer;
         let constructor_static_resolution_allowed = arguments.iter().all(|argument| {
             let expression = match argument {
                 CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
@@ -1297,7 +1298,7 @@ impl<'a> FunctionCompiler<'a> {
         });
         let constructor_updated_bindings = (!constructor_ordinary_direct_eval
             && constructor_static_resolution_allowed
-            && capture_slots.is_none())
+            && (capture_slots.is_none() || constructor_direct_eval_in_class_field_initializer))
         .then(|| {
             self.resolve_user_constructor_updated_bindings_for_function(
                 user_function,

@@ -1,4 +1,4 @@
-22929/23668 (96.88%)
+22930/23668 (96.88%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -15,7 +15,7 @@ Sub-category progress
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
 - statements: 9040/9337 (96.82%)
-- expressions: 10726/11061 (96.97%)
+- expressions: 10727/11061 (96.98%)
 - types: 113/113 (100.00%)
 - function-code: 217/217 (100.00%)
 - global-code: 42/42 (100.00%)
@@ -15808,7 +15808,7 @@ Sub-category progress
   - [x] test/language/expressions/class/elements/field-declaration.js
   - [x] test/language/expressions/class/elements/field-definition-accessor-no-line-terminator.js
   - [x] test/language/expressions/class/elements/fields-anonymous-function-length.js
-  - [ ] test/language/expressions/class/elements/fields-asi-1.js
+  - [x] test/language/expressions/class/elements/fields-asi-1.js
   - [x] test/language/expressions/class/elements/fields-asi-2.js
   - [x] test/language/expressions/class/elements/fields-asi-3.js
   - [x] test/language/expressions/class/elements/fields-asi-4.js

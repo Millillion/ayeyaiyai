@@ -19,6 +19,25 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    fn static_user_function_seed_object_binding(
+        &self,
+        name: &str,
+        value: &Expression,
+        environment: &mut StaticResolutionEnvironment,
+    ) -> Option<ObjectValueBinding> {
+        self.resolve_object_binding_from_expression_with_state(value, environment)
+            .or_else(|| match value {
+                Expression::Identifier(source_name) if source_name == name => self
+                    .state
+                    .speculation
+                    .static_semantics
+                    .local_object_binding(source_name)
+                    .cloned()
+                    .or_else(|| self.global_object_binding(source_name).cloned()),
+                _ => None,
+            })
+    }
+
     fn seed_static_user_function_capture_bindings_with_sources(
         &self,
         function_name: &str,
@@ -287,7 +306,7 @@ impl<'a> FunctionCompiler<'a> {
                 continue;
             };
             if let Some(object_binding) =
-                self.resolve_object_binding_from_expression_with_state(&value, &mut environment)
+                self.static_user_function_seed_object_binding(&name, &value, &mut environment)
             {
                 environment.set_local_object_binding(name, object_binding);
             }
