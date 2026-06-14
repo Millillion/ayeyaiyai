@@ -504,6 +504,12 @@ impl<'a> FunctionCompiler<'a> {
         expression: &Expression,
         environment: &mut StaticResolutionEnvironment,
     ) -> Expression {
+        if let Expression::Identifier(name) = expression
+            && is_internal_user_function_identifier(name)
+            && self.contains_user_function(name)
+        {
+            return expression.clone();
+        }
         if let Some(resolved) = self
             .resolve_bound_alias_expression_with_state(expression, environment)
             .filter(|resolved| !static_expression_matches(resolved, expression))

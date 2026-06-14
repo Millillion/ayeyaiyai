@@ -18,6 +18,9 @@ impl<'a> FunctionCompiler<'a> {
         if name == "undefined" && self.is_unshadowed_builtin_identifier(name) {
             return Expression::Undefined;
         }
+        if is_internal_user_function_identifier(name) && self.contains_user_function(name) {
+            return Expression::Identifier(name.to_string());
+        }
         if self
             .state
             .speculation

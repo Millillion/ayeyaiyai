@@ -17,6 +17,18 @@ impl<'a> FunctionCompiler<'a> {
         )
     }
 
+    fn prepared_call_static_snapshot_result_is_function_identity(
+        &self,
+        result: &Expression,
+    ) -> bool {
+        matches!(
+            result,
+            Expression::Identifier(name)
+                if is_internal_user_function_identifier(name)
+                    && self.user_function_runtime_value(name).is_some()
+        )
+    }
+
     #[allow(clippy::too_many_arguments)]
     fn prepared_call_static_snapshot_can_replace_runtime_call(
         &self,
@@ -31,13 +43,14 @@ impl<'a> FunctionCompiler<'a> {
         additional_call_effect_nonlocal_bindings: &HashSet<String>,
         updated_nonlocal_bindings: &HashSet<String>,
     ) -> bool {
-        Self::prepared_call_static_snapshot_result_is_direct_literal(result)
+        (Self::prepared_call_static_snapshot_result_is_direct_literal(result)
+            && prepared_capture_bindings.is_empty()
+            || self.prepared_call_static_snapshot_result_is_function_identity(result))
             && !module_init_call
             && !runtime_only_promise_chain_call
             && !user_function.is_async()
             && !user_function.is_generator()
             && !user_function.has_parameter_defaults()
-            && prepared_capture_bindings.is_empty()
             && expanded_arguments
                 .iter()
                 .all(inline_summary_side_effect_free_expression)
@@ -345,7 +358,7 @@ impl<'a> FunctionCompiler<'a> {
                     user_function.name
                 );
             }
-            self.emit_literal_expression(static_result)?;
+            self.emit_numeric_expression(static_result)?;
             return Ok(());
         }
         let saved_new_target_local = if user_function.lexical_this {

@@ -8,13 +8,24 @@ impl<'a> FunctionCompiler<'a> {
         bindings: &mut HashMap<String, Expression>,
         current_function_name: Option<&str>,
     ) -> Option<Expression> {
+        let assigned_value =
+            self.evaluate_bound_snapshot_expression(value, bindings, current_function_name)?;
+        if self
+            .resolve_bound_snapshot_captured_self_binding_name(
+                name,
+                bindings,
+                current_function_name,
+            )
+            .is_some()
+        {
+            return (!self.bound_snapshot_current_function_is_strict(current_function_name))
+                .then_some(assigned_value);
+        }
         let resolved_name = self
             .resolve_bound_snapshot_binding_name(name, bindings)
             .to_string();
-        let value =
-            self.evaluate_bound_snapshot_expression(value, bindings, current_function_name)?;
-        bindings.insert(resolved_name, value.clone());
-        Some(value)
+        bindings.insert(resolved_name, assigned_value.clone());
+        Some(assigned_value)
     }
 
     pub(in crate::backend::direct_wasm) fn evaluate_bound_snapshot_assign_member_expression(

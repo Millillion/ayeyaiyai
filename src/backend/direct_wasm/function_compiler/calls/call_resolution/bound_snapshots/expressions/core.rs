@@ -100,6 +100,15 @@ impl<'a> FunctionCompiler<'a> {
         if resolved_name == "Infinity" && self.is_unshadowed_builtin_identifier(resolved_name) {
             return Some(Expression::Number(f64::INFINITY));
         }
+        if let Some(captured_self_binding_name) = self
+            .resolve_bound_snapshot_captured_self_binding_name(
+                resolved_name,
+                bindings,
+                current_function_name,
+            )
+        {
+            return Some(Expression::Identifier(captured_self_binding_name));
+        }
         if let Some(function) = current_function_name
             .and_then(|function_name| self.resolve_registered_function_declaration(function_name))
         {

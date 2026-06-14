@@ -121,7 +121,11 @@ impl<'a> FunctionCompiler<'a> {
         resolve_bound_alias_expression_in_environment(
             expression,
             environment,
-            &|name| self.with_scope_blocks_static_identifier_resolution(name),
+            &|name| {
+                self.with_scope_blocks_static_identifier_resolution(name)
+                    || (is_internal_user_function_identifier(name)
+                        && self.contains_user_function(name))
+            },
             &|name| {
                 self.state
                     .runtime

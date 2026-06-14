@@ -591,8 +591,15 @@ impl<'a> FunctionCompiler<'a> {
                 Statement::Throw(value) => {
                     let throw_value = if let Expression::Identifier(name) = value {
                         Expression::Identifier(
-                            self.resolve_bound_snapshot_binding_name(name, bindings)
-                                .to_string(),
+                            self.resolve_bound_snapshot_captured_self_binding_name(
+                                name,
+                                bindings,
+                                current_function_name,
+                            )
+                            .unwrap_or_else(|| {
+                                self.resolve_bound_snapshot_binding_name(name, bindings)
+                                    .to_string()
+                            }),
                         )
                     } else if let Some(evaluated) = self.evaluate_bound_snapshot_expression(
                         value,
@@ -634,7 +641,7 @@ impl<'a> FunctionCompiler<'a> {
                     };
                     bindings.insert(resolved_name, evaluated_value);
                 }
-                Statement::Let { name, value, .. } | Statement::Assign { name, value } => {
+                Statement::Let { name, value, .. } => {
                     let resolved_name = self
                         .resolve_bound_snapshot_binding_name(name, bindings)
                         .to_string();
@@ -648,6 +655,49 @@ impl<'a> FunctionCompiler<'a> {
                             return Some(BoundSnapshotControlFlow::Throw(throw_value));
                         }
                     };
+                    let value = if let Expression::Identifier(value_name) = value
+                        && matches!(
+                            evaluated_value,
+                            Expression::Array(_)
+                                | Expression::Object(_)
+                                | Expression::Identifier(_)
+                        ) {
+                        Expression::Identifier(
+                            self.resolve_bound_snapshot_binding_name(value_name, bindings)
+                                .to_string(),
+                        )
+                    } else {
+                        evaluated_value
+                    };
+                    bindings.insert(resolved_name, value);
+                }
+                Statement::Assign { name, value } => {
+                    let evaluated_value = match self.evaluate_bound_snapshot_statement_value(
+                        value,
+                        bindings,
+                        current_function_name,
+                    )? {
+                        Ok(value) => value,
+                        Err(throw_value) => {
+                            return Some(BoundSnapshotControlFlow::Throw(throw_value));
+                        }
+                    };
+                    if self
+                        .resolve_bound_snapshot_captured_self_binding_name(
+                            name,
+                            bindings,
+                            current_function_name,
+                        )
+                        .is_some()
+                    {
+                        if self.bound_snapshot_current_function_is_strict(current_function_name) {
+                            return None;
+                        }
+                        continue;
+                    }
+                    let resolved_name = self
+                        .resolve_bound_snapshot_binding_name(name, bindings)
+                        .to_string();
                     let value = if let Expression::Identifier(value_name) = value
                         && matches!(
                             evaluated_value,

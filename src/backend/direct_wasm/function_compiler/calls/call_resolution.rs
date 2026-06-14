@@ -76,4 +76,77 @@ impl<'a> FunctionCompiler<'a> {
             .filter(|source_name| bindings.contains_key(*source_name))
             .unwrap_or(name)
     }
+
+    fn bound_snapshot_name_matches_source(name: &str, source_name: &str) -> bool {
+        name == source_name
+            || scoped_binding_source_name(name).is_some_and(|candidate| candidate == source_name)
+    }
+
+    fn bound_snapshot_current_function_declares_binding_source(
+        &self,
+        current_function_name: Option<&str>,
+        source_name: &str,
+    ) -> bool {
+        let Some(function_name) = current_function_name else {
+            return false;
+        };
+        if let Some(user_function) = self.user_function(function_name)
+            && (user_function
+                .params
+                .iter()
+                .any(|name| Self::bound_snapshot_name_matches_source(name, source_name))
+                || user_function
+                    .scope_bindings
+                    .iter()
+                    .any(|name| Self::bound_snapshot_name_matches_source(name, source_name)))
+        {
+            return true;
+        }
+        let Some(function) = self.resolve_registered_function_declaration(function_name) else {
+            return false;
+        };
+        if function
+            .self_binding
+            .as_deref()
+            .is_some_and(|name| Self::bound_snapshot_name_matches_source(name, source_name))
+        {
+            return true;
+        }
+        collect_declared_bindings_from_statements_recursive(&function.body)
+            .iter()
+            .any(|name| Self::bound_snapshot_name_matches_source(name, source_name))
+    }
+
+    pub(in crate::backend::direct_wasm) fn bound_snapshot_current_function_is_strict(
+        &self,
+        current_function_name: Option<&str>,
+    ) -> bool {
+        current_function_name
+            .and_then(|function_name| self.user_function(function_name))
+            .is_some_and(|function| function.strict)
+    }
+
+    pub(in crate::backend::direct_wasm) fn resolve_bound_snapshot_captured_self_binding_name(
+        &self,
+        name: &str,
+        bindings: &HashMap<String, Expression>,
+        current_function_name: Option<&str>,
+    ) -> Option<String> {
+        let source_name = scoped_binding_source_name(name).unwrap_or(name);
+        if self.bound_snapshot_current_function_declares_binding_source(
+            current_function_name,
+            source_name,
+        ) {
+            return None;
+        }
+        let mut binding_names = bindings.keys().cloned().collect::<Vec<_>>();
+        binding_names.sort();
+        binding_names.into_iter().find(|binding_name| {
+            self.resolve_registered_function_declaration(binding_name)
+                .and_then(|function| function.self_binding.as_deref())
+                .is_some_and(|self_binding| {
+                    Self::bound_snapshot_name_matches_source(self_binding, source_name)
+                })
+        })
+    }
 }

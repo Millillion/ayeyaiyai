@@ -750,6 +750,12 @@ impl<'a> FunctionCompiler<'a> {
         else {
             return None;
         };
+        if self
+            .user_function_capture_bindings(&function_name)
+            .is_some_and(|bindings| !bindings.is_empty())
+        {
+            return None;
+        }
         let declaration = self.prepared_function_declaration(&function_name)?;
         if self.assert_throws_inline_body_drops_observable_iterator_close(
             &function_name,
@@ -784,6 +790,16 @@ impl<'a> FunctionCompiler<'a> {
             }],
             declaration.strict,
         ))
+    }
+
+    fn assert_throws_callback_has_capture_bindings(&self, callback: &Expression) -> bool {
+        matches!(
+            self.resolve_function_binding_from_expression(callback),
+            Some(LocalFunctionBinding::User(function_name))
+                if self
+                    .user_function_capture_bindings(&function_name)
+                    .is_some_and(|bindings| !bindings.is_empty())
+        )
     }
 
     pub(in crate::backend::direct_wasm) fn emit_assert_throws_async_call(
@@ -1729,9 +1745,10 @@ impl<'a> FunctionCompiler<'a> {
                 inline_body.is_some()
             );
         }
-        let fallback_callee = if self
-            .resolve_function_expression_capture_slots(callback)
-            .is_some()
+        let fallback_callee = if self.assert_throws_callback_has_capture_bindings(callback)
+            || self
+                .resolve_function_expression_capture_slots(callback)
+                .is_some()
         {
             callback.clone()
         } else {
@@ -1843,9 +1860,10 @@ impl<'a> FunctionCompiler<'a> {
                 inline_body.is_some()
             );
         }
-        let fallback_callee = if self
-            .resolve_function_expression_capture_slots(callback)
-            .is_some()
+        let fallback_callee = if self.assert_throws_callback_has_capture_bindings(callback)
+            || self
+                .resolve_function_expression_capture_slots(callback)
+                .is_some()
         {
             callback.clone()
         } else {

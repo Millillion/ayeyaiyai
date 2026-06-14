@@ -317,12 +317,36 @@ impl<'a> FunctionCompiler<'a> {
             arguments,
             capture_source_bindings.as_ref(),
         )?;
-        let value = self
-            .resolve_static_primitive_expression_with_context(
+        let capture_identity_bindings = capture_bindings
+            .keys()
+            .map(|name| (name.clone(), Expression::Identifier(name.clone())))
+            .collect::<HashMap<_, _>>();
+        let value = if let Expression::Identifier(name) = &value
+            && let Some(captured_self_binding_name) = self
+                .resolve_bound_snapshot_captured_self_binding_name(
+                    name,
+                    &capture_identity_bindings,
+                    Some(function_name.as_str()),
+                ) {
+            Expression::Identifier(captured_self_binding_name)
+        } else {
+            value
+        };
+        let value = if self
+            .resolve_function_binding_from_expression_with_context(
                 &value,
                 Some(function_name.as_str()).or(current_function_name),
             )
-            .unwrap_or(value);
+            .is_some()
+        {
+            value
+        } else {
+            self.resolve_static_primitive_expression_with_context(
+                &value,
+                Some(function_name.as_str()).or(current_function_name),
+            )
+            .unwrap_or(value)
+        };
         Some((value, Some(function_name)))
     }
 

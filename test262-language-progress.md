@@ -1,4 +1,4 @@
-22957/23668 (97.00%)
+22959/23668 (97.00%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -15,7 +15,7 @@ Sub-category progress
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
 - statements: 9051/9337 (96.94%)
-- expressions: 10743/11061 (97.13%)
+- expressions: 10745/11061 (97.14%)
 - types: 113/113 (100.00%)
 - function-code: 217/217 (100.00%)
 - global-code: 42/42 (100.00%)
@@ -19239,8 +19239,8 @@ Sub-category progress
   - [x] test/language/expressions/generators/return.js
   - [x] test/language/expressions/generators/scope-body-lex-distinct.js
   - [x] test/language/expressions/generators/scope-name-var-close.js
-  - [ ] test/language/expressions/generators/scope-name-var-open-non-strict.js
-  - [ ] test/language/expressions/generators/scope-name-var-open-strict.js
+  - [x] test/language/expressions/generators/scope-name-var-open-non-strict.js
+  - [x] test/language/expressions/generators/scope-name-var-open-strict.js
   - [x] test/language/expressions/generators/scope-param-elem-var-close.js
   - [x] test/language/expressions/generators/scope-param-elem-var-open.js
   - [ ] test/language/expressions/generators/scope-param-rest-elem-var-close.js

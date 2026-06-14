@@ -69,10 +69,26 @@ impl<'a> FunctionCompiler<'a> {
                             .and_then(|bindings| bindings.get(&source_name).cloned())
                     })
                     .unwrap_or_else(|| Expression::Identifier(hidden_name.clone()));
-                local_bindings.insert(
-                    source_name.clone(),
-                    self.normalize_static_capture_source_binding(&source_name, source_expression),
-                );
+                let normalized =
+                    self.normalize_static_capture_source_binding(&source_name, source_expression);
+                local_bindings.insert(source_name.clone(), normalized);
+                if is_internal_user_function_identifier(&source_name)
+                    && let Some(self_binding_source) = self
+                        .resolve_registered_function_declaration(&source_name)
+                        .and_then(|function| function.self_binding.as_deref())
+                        .map(|self_binding| {
+                            scoped_binding_source_name(self_binding).unwrap_or(self_binding)
+                        })
+                    && !self.bound_snapshot_current_function_declares_binding_source(
+                        Some(function_name),
+                        self_binding_source,
+                    )
+                {
+                    local_bindings.insert(
+                        self_binding_source.to_string(),
+                        Expression::Identifier(source_name.clone()),
+                    );
+                }
             }
         }
     }
