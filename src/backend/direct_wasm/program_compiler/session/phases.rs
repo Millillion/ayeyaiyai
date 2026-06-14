@@ -14,6 +14,7 @@ impl<'a> ProgramCompilationSession<'a> {
             .register_global_function_bindings(&program.functions);
         self.compiler
             .register_local_class_member_bindings(&program.functions);
+        self.compiler.seed_process_argv_bindings();
         self.compiler
             .reserve_global_array_runtime_state_bindings(program);
     }

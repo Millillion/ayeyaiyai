@@ -48,18 +48,21 @@ pub(in crate::backend::direct_wasm) const TEST262_REALM_EVAL_BUILTIN_PREFIX: &st
     "__ayyTest262RealmEval";
 
 pub(in crate::backend::direct_wasm) const WASI_FD_WRITE_TYPE_INDEX: u32 = 0;
-pub(in crate::backend::direct_wasm) const WRITE_BYTES_TYPE_INDEX: u32 = 1;
-pub(in crate::backend::direct_wasm) const UNARY_VOID_TYPE_INDEX: u32 = 2;
-pub(in crate::backend::direct_wasm) const START_TYPE_INDEX: u32 = 3;
-pub(in crate::backend::direct_wasm) const USER_TYPE_BASE_INDEX: u32 = 4;
+pub(in crate::backend::direct_wasm) const WASI_ARGS_TYPE_INDEX: u32 = 1;
+pub(in crate::backend::direct_wasm) const WRITE_BYTES_TYPE_INDEX: u32 = 2;
+pub(in crate::backend::direct_wasm) const UNARY_VOID_TYPE_INDEX: u32 = 3;
+pub(in crate::backend::direct_wasm) const START_TYPE_INDEX: u32 = 4;
+pub(in crate::backend::direct_wasm) const USER_TYPE_BASE_INDEX: u32 = 5;
 
-pub(in crate::backend::direct_wasm) const FD_WRITE_FUNCTION_INDEX: u32 = 0;
-pub(in crate::backend::direct_wasm) const WRITE_BYTES_FUNCTION_INDEX: u32 = 1;
-pub(in crate::backend::direct_wasm) const WRITE_CHAR_FUNCTION_INDEX: u32 = 2;
-pub(in crate::backend::direct_wasm) const PRINT_U32_FUNCTION_INDEX: u32 = 3;
-pub(in crate::backend::direct_wasm) const PRINT_I32_FUNCTION_INDEX: u32 = 4;
-pub(in crate::backend::direct_wasm) const START_FUNCTION_INDEX: u32 = 5;
-pub(in crate::backend::direct_wasm) const USER_FUNCTION_BASE_INDEX: u32 = 6;
+pub(in crate::backend::direct_wasm) const ARGS_SIZES_GET_FUNCTION_INDEX: u32 = 0;
+pub(in crate::backend::direct_wasm) const ARGS_GET_FUNCTION_INDEX: u32 = 1;
+pub(in crate::backend::direct_wasm) const FD_WRITE_FUNCTION_INDEX: u32 = 2;
+pub(in crate::backend::direct_wasm) const WRITE_BYTES_FUNCTION_INDEX: u32 = 3;
+pub(in crate::backend::direct_wasm) const WRITE_CHAR_FUNCTION_INDEX: u32 = 4;
+pub(in crate::backend::direct_wasm) const PRINT_U32_FUNCTION_INDEX: u32 = 5;
+pub(in crate::backend::direct_wasm) const PRINT_I32_FUNCTION_INDEX: u32 = 6;
+pub(in crate::backend::direct_wasm) const START_FUNCTION_INDEX: u32 = 7;
+pub(in crate::backend::direct_wasm) const USER_FUNCTION_BASE_INDEX: u32 = 8;
 
 pub(in crate::backend::direct_wasm) const THROW_TAG_GLOBAL_INDEX: u32 = 0;
 pub(in crate::backend::direct_wasm) const THROW_VALUE_GLOBAL_INDEX: u32 = 1;
@@ -75,9 +78,21 @@ pub(in crate::backend::direct_wasm) const TRACKED_ARRAY_SLOT_LIMIT: u32 = 32;
 pub(in crate::backend::direct_wasm) const IOVEC_OFFSET: u32 = 0;
 pub(in crate::backend::direct_wasm) const NWRITTEN_OFFSET: u32 = 8;
 pub(in crate::backend::direct_wasm) const CHAR_OFFSET: u32 = 16;
+pub(in crate::backend::direct_wasm) const PROCESS_ARGV_ARGC_OFFSET: u32 = 20;
+pub(in crate::backend::direct_wasm) const PROCESS_ARGV_BUFFER_SIZE_OFFSET: u32 = 24;
 pub(in crate::backend::direct_wasm) const DATA_START_OFFSET: u32 = 64;
 pub(in crate::backend::direct_wasm) const STRING_LENGTH_PREFIX_SIZE: u32 = 4;
 pub(in crate::backend::direct_wasm) const WASM_MEMORY_PAGE_SIZE: u32 = 65_536;
+pub(in crate::backend::direct_wasm) const PROCESS_GLOBAL_NAME: &str = "process";
+pub(in crate::backend::direct_wasm) const PROCESS_ARGV_GLOBAL_NAME: &str = "__ayy_process_argv";
+pub(in crate::backend::direct_wasm) const PROCESS_ARGV_DISPLAY_NAME: &str = "ayeyaiyai";
+pub(in crate::backend::direct_wasm) const PROCESS_ARGV_TRACKED_WASI_ARG_LIMIT: u32 =
+    TRACKED_ARRAY_SLOT_LIMIT - 1;
+pub(in crate::backend::direct_wasm) const PROCESS_ARGV_RAW_BUFFER_CAPACITY: u32 =
+    WASM_MEMORY_PAGE_SIZE;
+pub(in crate::backend::direct_wasm) const PROCESS_ARGV_SLOT_STRING_CAPACITY: u32 = 4096;
+pub(in crate::backend::direct_wasm) const PROCESS_ARGV_SLOT_STRIDE: u32 =
+    STRING_LENGTH_PREFIX_SIZE + PROCESS_ARGV_SLOT_STRING_CAPACITY;
 
 pub(in crate::backend::direct_wasm) const NATIVE_ERROR_NAMES: [&str;
     JS_NATIVE_ERROR_VALUE_LIMIT as usize] = [

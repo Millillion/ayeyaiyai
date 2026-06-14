@@ -226,6 +226,30 @@ impl<'a> FunctionCompiler<'a> {
         push_u32(&mut self.state.emission.output.instructions, local_index);
     }
 
+    pub(in crate::backend::direct_wasm) fn push_memory_i32_load(&mut self, offset: u32) {
+        self.state.emission.output.instructions.push(0x28);
+        self.state.emission.output.instructions.push(0x02);
+        push_u32(&mut self.state.emission.output.instructions, offset);
+    }
+
+    pub(in crate::backend::direct_wasm) fn push_memory_i32_load8_u(&mut self, offset: u32) {
+        self.state.emission.output.instructions.push(0x2d);
+        self.state.emission.output.instructions.push(0x00);
+        push_u32(&mut self.state.emission.output.instructions, offset);
+    }
+
+    pub(in crate::backend::direct_wasm) fn push_memory_i32_store(&mut self, offset: u32) {
+        self.state.emission.output.instructions.push(0x36);
+        self.state.emission.output.instructions.push(0x02);
+        push_u32(&mut self.state.emission.output.instructions, offset);
+    }
+
+    pub(in crate::backend::direct_wasm) fn push_memory_i32_store8(&mut self, offset: u32) {
+        self.state.emission.output.instructions.push(0x3a);
+        self.state.emission.output.instructions.push(0x00);
+        push_u32(&mut self.state.emission.output.instructions, offset);
+    }
+
     pub(in crate::backend::direct_wasm) fn push_call(&mut self, function_index: u32) {
         self.state.emission.output.instructions.push(0x10);
         push_u32(&mut self.state.emission.output.instructions, function_index);

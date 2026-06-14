@@ -12,6 +12,7 @@ pub(super) fn encode_type_section(user_type_arities: &[u32]) -> Vec<u8> {
         &[I32_TYPE, I32_TYPE, I32_TYPE, I32_TYPE],
         &[I32_TYPE],
     );
+    push_function_type(&mut bytes, &[I32_TYPE, I32_TYPE], &[I32_TYPE]);
     push_function_type(&mut bytes, &[I32_TYPE, I32_TYPE], &[]);
     push_function_type(&mut bytes, &[I32_TYPE], &[]);
     push_function_type(&mut bytes, &[], &[]);
@@ -25,7 +26,15 @@ pub(super) fn encode_type_section(user_type_arities: &[u32]) -> Vec<u8> {
 
 pub(super) fn encode_import_section() -> Vec<u8> {
     let mut bytes = Vec::new();
-    push_u32(&mut bytes, 1);
+    push_u32(&mut bytes, 3);
+    push_name(&mut bytes, "wasi_snapshot_preview1");
+    push_name(&mut bytes, "args_sizes_get");
+    bytes.push(0x00);
+    push_u32(&mut bytes, WASI_ARGS_TYPE_INDEX);
+    push_name(&mut bytes, "wasi_snapshot_preview1");
+    push_name(&mut bytes, "args_get");
+    bytes.push(0x00);
+    push_u32(&mut bytes, WASI_ARGS_TYPE_INDEX);
     push_name(&mut bytes, "wasi_snapshot_preview1");
     push_name(&mut bytes, "fd_write");
     bytes.push(0x00);

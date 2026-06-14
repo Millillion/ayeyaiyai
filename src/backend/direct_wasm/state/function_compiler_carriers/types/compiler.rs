@@ -21,4 +21,5 @@ pub(in crate::backend::direct_wasm) struct FunctionCompilerBackend<'a> {
     pub(in crate::backend::direct_wasm) template_object_raw_array_bindings:
         &'a HashMap<i32, ArrayValueBinding>,
     pub(in crate::backend::direct_wasm) global_semantics: GlobalStaticSemanticsSnapshot,
+    pub(in crate::backend::direct_wasm) process_argv_layout: Option<ProcessArgvRuntimeLayout>,
 }

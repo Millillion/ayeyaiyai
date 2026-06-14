@@ -4,6 +4,14 @@ use super::{
 };
 use std::collections::HashMap;
 
+#[derive(Clone, Copy)]
+pub(in crate::backend::direct_wasm) struct ProcessArgvRuntimeLayout {
+    pub(in crate::backend::direct_wasm) argv_pointers_offset: u32,
+    pub(in crate::backend::direct_wasm) raw_buffer_offset: u32,
+    pub(in crate::backend::direct_wasm) string_slots_offset: u32,
+    pub(in crate::backend::direct_wasm) display_name_ptr: u32,
+}
+
 #[derive(Default)]
 pub(in crate::backend::direct_wasm) struct DirectWasmCompiler {
     pub(in crate::backend::direct_wasm) state: CompilerState,
@@ -19,6 +27,7 @@ pub(in crate::backend::direct_wasm) struct CompilerState {
         HashMap<i32, ArrayValueBinding>,
     pub(in crate::backend::direct_wasm) template_object_raw_array_bindings:
         HashMap<i32, ArrayValueBinding>,
+    pub(in crate::backend::direct_wasm) process_argv_layout: Option<ProcessArgvRuntimeLayout>,
 }
 
 #[derive(Clone, Copy)]

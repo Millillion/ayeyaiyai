@@ -90,6 +90,7 @@ impl<'a> FunctionCompiler<'a> {
         }
         self.initialize_parameter_defaults()?;
         self.initialize_rest_parameter_runtime_array()?;
+        self.initialize_process_argv_runtime_array()?;
         self.clear_parameter_static_metadata_before_body();
         if trace {
             eprintln!("function_compile=emit_direct_scope");

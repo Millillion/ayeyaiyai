@@ -166,10 +166,36 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         value: &Expression,
     ) -> DirectResult<bool> {
+        if self.infer_value_kind(value) == Some(StaticValueKind::String) {
+            let value_local = self.allocate_temp_local();
+            self.emit_numeric_expression(value)?;
+            self.push_local_set(value_local);
+
+            self.push_local_get(value_local);
+            self.push_i32_const(0);
+            self.push_binary_op(BinaryOp::GreaterThan)?;
+            self.state.emission.output.instructions.push(0x04);
+            self.state
+                .emission
+                .output
+                .instructions
+                .push(EMPTY_BLOCK_TYPE);
+            self.push_control_frame();
+            self.push_local_get(value_local);
+            self.push_local_get(value_local);
+            self.push_i32_const(STRING_LENGTH_PREFIX_SIZE as i32);
+            self.push_binary_op(BinaryOp::Subtract)?;
+            self.push_memory_i32_load(0);
+            self.push_call(WRITE_BYTES_FUNCTION_INDEX);
+            self.state.emission.output.instructions.push(0x05);
+            self.emit_runtime_print_numeric_local(value_local)?;
+            self.state.emission.output.instructions.push(0x0b);
+            self.pop_control_frame();
+            return Ok(true);
+        }
+
         let candidates = self.runtime_string_print_candidates(value);
-        let should_handle =
-            self.infer_value_kind(value) == Some(StaticValueKind::String) || !candidates.is_empty();
-        if !should_handle {
+        if candidates.is_empty() {
             return Ok(false);
         }
 
@@ -221,9 +247,16 @@ impl<'a> FunctionCompiler<'a> {
         value: &Expression,
     ) -> DirectResult<()> {
         let value_local = self.allocate_temp_local();
-        let handled_local = self.allocate_temp_local();
         self.emit_numeric_expression(value)?;
         self.push_local_set(value_local);
+        self.emit_runtime_print_numeric_local(value_local)
+    }
+
+    pub(in crate::backend::direct_wasm) fn emit_runtime_print_numeric_local(
+        &mut self,
+        value_local: u32,
+    ) -> DirectResult<()> {
+        let handled_local = self.allocate_temp_local();
         self.push_i32_const(0);
         self.push_local_set(handled_local);
 

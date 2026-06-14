@@ -98,6 +98,7 @@ pub(in crate::backend::direct_wasm) use global_value_query_access::{
 pub(in crate::backend::direct_wasm) use module_artifacts::ModuleArtifactsState;
 pub(in crate::backend::direct_wasm) use root_types::{
     CompilerState, DirectWasmCompiler, ImplicitGlobalBinding, LexicalGlobalBinding,
+    ProcessArgvRuntimeLayout,
 };
 pub(in crate::backend::direct_wasm) use static_env::{
     GlobalBindingEnvironment, GlobalStaticEvaluationEnvironment, SharedGlobalBindingEnvironment,

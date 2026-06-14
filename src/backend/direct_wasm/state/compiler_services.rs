@@ -10,6 +10,7 @@ impl CompilerState {
         self.function_registry.reset_for_program();
         self.global_semantics.reset_for_program();
         self.test262.reset_for_program();
+        self.process_argv_layout = None;
     }
 
     pub(in crate::backend::direct_wasm) fn collect_user_function_assigned_nonlocal_bindings(

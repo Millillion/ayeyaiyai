@@ -31,6 +31,15 @@ impl ModuleArtifactsState {
         (ptr, len)
     }
 
+    pub(in crate::backend::direct_wasm) fn reserve_zeroed_data(&mut self, len: u32) -> u32 {
+        const ALIGNMENT: u32 = 4;
+        let padding = (ALIGNMENT - (self.next_data_offset % ALIGNMENT)) % ALIGNMENT;
+        self.next_data_offset += padding;
+        let offset = self.next_data_offset;
+        self.next_data_offset += len;
+        offset
+    }
+
     pub(in crate::backend::direct_wasm) fn snapshot_data(&self) -> (Vec<(u32, Vec<u8>)>, u32) {
         (self.string_data.clone(), self.next_data_offset)
     }
@@ -59,5 +68,9 @@ impl CompilerState {
         &self,
     ) -> (Vec<(u32, Vec<u8>)>, u32) {
         self.module_artifacts.snapshot_data()
+    }
+
+    pub(in crate::backend::direct_wasm) fn reserve_zeroed_data(&mut self, len: u32) -> u32 {
+        self.module_artifacts.reserve_zeroed_data(len)
     }
 }

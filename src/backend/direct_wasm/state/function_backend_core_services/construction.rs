@@ -10,6 +10,7 @@ impl<'a> FunctionCompilerBackend<'a> {
         template_object_array_bindings: &'a HashMap<i32, ArrayValueBinding>,
         template_object_raw_array_bindings: &'a HashMap<i32, ArrayValueBinding>,
         global_semantics: GlobalStaticSemanticsSnapshot,
+        process_argv_layout: Option<ProcessArgvRuntimeLayout>,
     ) -> FunctionCompilerBackend<'a> {
         Self {
             module_artifacts,
@@ -19,6 +20,7 @@ impl<'a> FunctionCompilerBackend<'a> {
             template_object_array_bindings,
             template_object_raw_array_bindings,
             global_semantics,
+            process_argv_layout,
         }
     }
 

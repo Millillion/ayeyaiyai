@@ -250,6 +250,7 @@ impl<'a> FunctionCompiler<'a> {
             test262,
             template_object_array_bindings,
             template_object_raw_array_bindings,
+            process_argv_layout,
         } = &mut module.state;
         let mut global_static_semantics =
             program_context.required_global_static_semantics().clone();
@@ -278,6 +279,7 @@ impl<'a> FunctionCompiler<'a> {
                 template_object_array_bindings,
                 template_object_raw_array_bindings,
                 global_static_semantics,
+                *process_argv_layout,
             ),
             prepared_program: program_context,
             assigned_nonlocal_binding_results,

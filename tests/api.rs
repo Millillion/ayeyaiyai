@@ -120,6 +120,55 @@ fn compile_file_uses_direct_wasm_backend_for_supported_programs() {
 }
 
 #[test]
+fn compile_file_exposes_process_argv_from_wasi_arguments() {
+    let tempdir = tempfile::tempdir().unwrap();
+    let input = tempdir.path().join("process-argv.js");
+    let output = tempdir.path().join("process-argv.wasm");
+
+    fs::write(
+        &input,
+        r#"
+        console.log(
+          process.argv.length,
+          process.argv[0],
+          process.argv[1],
+          process.argv[2],
+          process.argv[3]
+        );
+        "#,
+    )
+    .unwrap();
+
+    let options = CompileOptions {
+        output: output.clone(),
+        target: "wasm32-wasip2".to_string(),
+    };
+
+    compile_file(&input, &options).unwrap();
+
+    let run = Command::new("wasmtime")
+        .arg(&output)
+        .arg("first")
+        .arg("second")
+        .output()
+        .unwrap();
+    assert!(
+        run.status.success(),
+        "{}",
+        String::from_utf8_lossy(&run.stderr)
+    );
+
+    let stdout = String::from_utf8_lossy(&run.stdout);
+    let fields = stdout.split_whitespace().collect::<Vec<_>>();
+    assert_eq!(fields.len(), 5, "{stdout}");
+    assert_eq!(fields[0], "4");
+    assert_eq!(fields[1], "ayeyaiyai");
+    assert_eq!(fields[2], "process-argv.wasm");
+    assert_eq!(fields[3], "first");
+    assert_eq!(fields[4], "second");
+}
+
+#[test]
 fn compile_file_throws_on_strict_assignment_to_accessor_without_setter() {
     let tempdir = tempfile::tempdir().unwrap();
     let input = tempdir.path().join("strict-accessor-assignment.js");
