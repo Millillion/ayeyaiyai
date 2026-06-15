@@ -2327,12 +2327,14 @@ impl<'a> FunctionCompiler<'a> {
                 || expression_references_internal_iterator_step(
                     state.prototype_source_expression(),
                 );
+        if !state_object_binding_is_typed_array {
+            self.seed_local_date_object_binding(
+                &state.resolved_name,
+                &state.tracked_value_expression,
+            );
+        }
         if !skip_static_object_seeds {
             if !state_object_binding_is_typed_array {
-                self.seed_local_date_object_binding(
-                    &state.resolved_name,
-                    &state.tracked_value_expression,
-                );
                 self.seed_local_native_error_object_binding(
                     &state.resolved_name,
                     &state.tracked_value_expression,

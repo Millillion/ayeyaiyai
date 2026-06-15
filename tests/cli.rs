@@ -8358,7 +8358,10 @@ fn compiles_addition_to_primitive_for_objects_dates_and_functions() {
           { valueOf: function() { return 1; } } + 1 === 2,
           1 + { toString: function() { return 1; } } === 2,
           date.toString() === "Date(0)",
+          date + date === date.toString() + date.toString(),
           date + 0 === date.toString() + "0",
+          date + true === date.toString() + "true",
+          date + new Object() === date.toString() + "[object Object]",
           f1.toString() === "function f1() {}",
           f1 + 1 === f1.toString() + 1,
           1 + f2 === 2,
@@ -8395,7 +8398,7 @@ fn compiles_addition_to_primitive_for_objects_dates_and_functions() {
     );
     assert_eq!(
         String::from_utf8_lossy(&run.stdout),
-        "addition-primitive true true true true true true true true true true true\n"
+        "addition-primitive true true true true true true true true true true true true true true\n"
     );
 }
 

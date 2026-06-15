@@ -1,4 +1,4 @@
-22959/23668 (97.00%)
+22960/23668 (97.01%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -15,7 +15,7 @@ Sub-category progress
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
 - statements: 9051/9337 (96.94%)
-- expressions: 10745/11061 (97.14%)
+- expressions: 10746/11061 (97.15%)
 - types: 113/113 (100.00%)
 - function-code: 217/217 (100.00%)
 - global-code: 42/42 (100.00%)
@@ -10712,7 +10712,7 @@ Sub-category progress
   - [x] test/language/expressions/addition/S11.6.1_A2.1_T2.js
   - [x] test/language/expressions/addition/S11.6.1_A2.1_T3.js
   - [x] test/language/expressions/addition/S11.6.1_A2.2_T1.js
-  - [ ] test/language/expressions/addition/S11.6.1_A2.2_T2.js
+  - [x] test/language/expressions/addition/S11.6.1_A2.2_T2.js
   - [x] test/language/expressions/addition/S11.6.1_A2.2_T3.js
   - [x] test/language/expressions/addition/S11.6.1_A2.3_T1.js
   - [x] test/language/expressions/addition/S11.6.1_A2.4_T1.js

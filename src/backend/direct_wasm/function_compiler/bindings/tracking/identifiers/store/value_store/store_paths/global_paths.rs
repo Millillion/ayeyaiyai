@@ -1571,6 +1571,10 @@ impl<'a> FunctionCompiler<'a> {
             self.seed_global_typed_array_object_binding(name, &state.tracked_value_expression);
             self.seed_global_typed_array_object_binding(name, state.prototype_source_expression());
             trace_step("seed_typed_array:done");
+        } else if !stores_bind_call {
+            trace_step("seed_date_unresolved_constructor:start");
+            self.seed_global_date_object_binding(name, state.prototype_source_expression());
+            trace_step("seed_date_unresolved_constructor:done");
         }
         if !stores_runtime_array_alias && let Some(array_binding) = state.array_binding.as_ref() {
             trace_step("sync_array:start");
