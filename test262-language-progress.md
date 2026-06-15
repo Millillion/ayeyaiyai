@@ -1,4 +1,4 @@
-22960/23668 (97.01%)
+22961/23668 (97.01%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -15,7 +15,7 @@ Sub-category progress
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
 - statements: 9051/9337 (96.94%)
-- expressions: 10746/11061 (97.15%)
+- expressions: 10747/11061 (97.16%)
 - types: 113/113 (100.00%)
 - function-code: 217/217 (100.00%)
 - global-code: 42/42 (100.00%)
@@ -10744,7 +10744,7 @@ Sub-category progress
   - [x] test/language/expressions/addition/S11.6.1_A4_T9.js
   - [x] test/language/expressions/addition/bigint-and-number.js
   - [x] test/language/expressions/addition/bigint-arithmetic.js
-  - [ ] test/language/expressions/addition/bigint-errors.js
+  - [x] test/language/expressions/addition/bigint-errors.js
   - [x] test/language/expressions/addition/bigint-toprimitive.js
   - [x] test/language/expressions/addition/bigint-wrapped-values.js
   - [x] test/language/expressions/addition/coerce-bigint-to-string.js

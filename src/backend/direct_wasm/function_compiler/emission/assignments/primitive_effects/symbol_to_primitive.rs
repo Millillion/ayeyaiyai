@@ -123,6 +123,47 @@ impl<'a> FunctionCompiler<'a> {
         })
     }
 
+    fn symbol_to_primitive_callable_returns_symbol(
+        &self,
+        expression: &Expression,
+        default_argument: &Expression,
+    ) -> bool {
+        let symbol_property = symbol_to_primitive_expression();
+        let Some(function_binding) = self
+            .resolve_member_function_binding(expression, &symbol_property)
+            .or_else(|| {
+                self.resolve_object_binding_from_expression(expression)
+                    .and_then(|object_binding| {
+                        self.resolve_object_binding_property_value(
+                            &object_binding,
+                            &symbol_property,
+                        )
+                        .and_then(|value| self.resolve_function_binding_from_expression(&value))
+                    })
+            })
+        else {
+            return false;
+        };
+        self.resolve_function_binding_static_return_expression_with_call_frame(
+            &function_binding,
+            std::slice::from_ref(default_argument),
+            expression,
+        )
+        .or_else(|| {
+            self.resolve_function_binding_static_return_expression(
+                &function_binding,
+                std::slice::from_ref(default_argument),
+            )
+        })
+        .is_some_and(|return_expression| {
+            self.resolve_static_symbol_to_string_value_with_context(
+                &return_expression,
+                self.current_function_name(),
+            )
+            .is_some()
+        })
+    }
+
     pub(in crate::backend::direct_wasm) fn emit_effectful_symbol_to_primitive_for_operand(
         &mut self,
         expression: &Expression,
@@ -269,6 +310,10 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(false);
         }
         let default_argument = Expression::String("default".to_string());
+        let left_returns_symbol =
+            self.symbol_to_primitive_callable_returns_symbol(left, &default_argument);
+        let right_returns_symbol =
+            self.symbol_to_primitive_callable_returns_symbol(right, &default_argument);
         let left_handling =
             self.emit_effectful_symbol_to_primitive_for_operand(left, &default_argument)?;
         if left_handling == SymbolToPrimitiveHandling::AlwaysThrows {
@@ -277,6 +322,10 @@ impl<'a> FunctionCompiler<'a> {
         }
         let right_handling =
             self.emit_effectful_symbol_to_primitive_for_operand(right, &default_argument)?;
+        if right_handling == SymbolToPrimitiveHandling::AlwaysThrows {
+            self.push_i32_const(JS_UNDEFINED_TAG);
+            return Ok(true);
+        }
 
         if left_handling == SymbolToPrimitiveHandling::NotHandled
             && right_handling == SymbolToPrimitiveHandling::NotHandled
@@ -291,6 +340,12 @@ impl<'a> FunctionCompiler<'a> {
         if right_handling == SymbolToPrimitiveHandling::NotHandled {
             self.emit_numeric_expression(right)?;
             self.state.emission.output.instructions.push(0x1a);
+        }
+
+        if left_returns_symbol || right_returns_symbol {
+            self.emit_named_error_throw("TypeError")?;
+            self.push_i32_const(JS_UNDEFINED_TAG);
+            return Ok(true);
         }
 
         self.push_i32_const(JS_NAN_TAG);

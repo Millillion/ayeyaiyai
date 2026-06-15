@@ -8458,6 +8458,70 @@ fn compiles_addition_with_boxed_boolean_and_number_wrappers() {
 }
 
 #[test]
+fn compiles_addition_symbol_operands_as_type_errors() {
+    let tempdir = tempdir().unwrap();
+    let input = tempdir.path().join("addition-symbol-type-errors.js");
+    let output = tempdir.path().join("addition-symbol-type-errors.wasm");
+
+    fs::write(
+        &input,
+        r#"
+        function throwsTypeError(callback) {
+          try {
+            callback();
+            return false;
+          } catch (error) {
+            return error instanceof TypeError;
+          }
+        }
+
+        console.log(
+          "addition-symbol-errors",
+          throwsTypeError(function() { Symbol("1") + 0n; }),
+          throwsTypeError(function() { 0n + Object(Symbol("1")); }),
+          throwsTypeError(function() {
+            ({ [Symbol.toPrimitive]: function() { return Symbol("1"); } }) + 0n;
+          }),
+          throwsTypeError(function() {
+            ({ valueOf: function() { return Symbol("1"); } }) + 0n;
+          }),
+          throwsTypeError(function() {
+            0n + { toString: function() { return Symbol("1"); } };
+          })
+        );
+        "#,
+    )
+    .unwrap();
+
+    let compile = Command::new(env!("CARGO_BIN_EXE_ayeyaiyai"))
+        .arg(&input)
+        .arg("-o")
+        .arg(&output)
+        .output()
+        .unwrap();
+
+    assert!(
+        compile.status.success(),
+        "compiler failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&compile.stdout),
+        String::from_utf8_lossy(&compile.stderr),
+    );
+
+    let run = Command::new("wasmtime").arg(&output).output().unwrap();
+
+    assert!(
+        run.status.success(),
+        "wasmtime failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&run.stdout),
+        String::from_utf8_lossy(&run.stderr),
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&run.stdout),
+        "addition-symbol-errors true true true true true\n"
+    );
+}
+
+#[test]
 fn compiles_boolean_builtin_calls_to_primitive_values() {
     let tempdir = tempdir().unwrap();
     let input = tempdir.path().join("boolean-builtins.js");

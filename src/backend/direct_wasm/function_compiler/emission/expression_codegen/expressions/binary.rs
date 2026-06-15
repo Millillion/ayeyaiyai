@@ -3802,6 +3802,63 @@ impl<'a> FunctionCompiler<'a> {
         Ok(())
     }
 
+    fn emit_static_addition_throw_after_operand_effects(
+        &mut self,
+        left: &Expression,
+        right: &Expression,
+    ) -> DirectResult<bool> {
+        if self.expression_depends_on_active_loop_assignment(left)
+            || self.expression_depends_on_active_loop_assignment(right)
+            || Self::expression_contains_assignment_or_update(left)
+            || Self::expression_contains_assignment_or_update(right)
+            || self.binary_expression_calls_user_function(left)
+            || self.binary_expression_calls_user_function(right)
+        {
+            return Ok(false);
+        }
+
+        let current_function_name = self.current_function_name();
+        let throw_value = match self.resolve_static_addition_outcome_with_context(
+            left,
+            right,
+            current_function_name,
+        ) {
+            Some(StaticEvalOutcome::Throw(throw_value)) => throw_value,
+            _ if self.static_addition_operand_is_symbol_primitive(left, current_function_name)
+                || self
+                    .static_addition_operand_is_symbol_primitive(right, current_function_name) =>
+            {
+                StaticThrowValue::NamedError("TypeError")
+            }
+            _ => return Ok(false),
+        };
+
+        self.emit_numeric_expression(left)?;
+        self.state.emission.output.instructions.push(0x1a);
+        self.emit_numeric_expression(right)?;
+        self.state.emission.output.instructions.push(0x1a);
+        self.emit_static_throw_value(&throw_value)?;
+        Ok(true)
+    }
+
+    fn static_addition_operand_is_symbol_primitive(
+        &self,
+        expression: &Expression,
+        current_function_name: Option<&str>,
+    ) -> bool {
+        self.resolve_static_symbol_to_string_value_with_context(expression, current_function_name)
+            .is_some()
+            || self
+                .resolve_static_boxed_primitive_value(expression)
+                .is_some_and(|value| {
+                    self.resolve_static_symbol_to_string_value_with_context(
+                        &value,
+                        current_function_name,
+                    )
+                    .is_some()
+                })
+    }
+
     pub(in crate::backend::direct_wasm) fn emit_binary_expression_value(
         &mut self,
         expression: &Expression,
@@ -4070,6 +4127,9 @@ impl<'a> FunctionCompiler<'a> {
                         eprintln!("addition:static outcome resolved");
                     }
                     return self.emit_static_eval_outcome(&outcome);
+                }
+                if self.emit_static_addition_throw_after_operand_effects(left, right)? {
+                    return Ok(());
                 }
                 if !addition_depends_on_active_loop_assignment
                     && !addition_contains_assignment_or_update
