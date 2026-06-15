@@ -1707,6 +1707,775 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    fn loop_condition_guards_runtime_shadow_cursor(
+        &self,
+        condition: &Expression,
+        name: &str,
+    ) -> bool {
+        match condition {
+            Expression::Binary {
+                op: BinaryOp::NotEqual | BinaryOp::LooseNotEqual,
+                left,
+                right,
+            } => {
+                (Self::expression_is_identifier_name(left, name)
+                    && Self::expression_is_nullish_literal(right))
+                    || (Self::expression_is_identifier_name(right, name)
+                        && Self::expression_is_nullish_literal(left))
+            }
+            Expression::Binary {
+                op: BinaryOp::LogicalAnd,
+                left,
+                right,
+            } => {
+                self.loop_condition_guards_runtime_shadow_cursor(left, name)
+                    || self.loop_condition_guards_runtime_shadow_cursor(right, name)
+            }
+            _ => false,
+        }
+    }
+
+    fn expression_is_identifier_name(expression: &Expression, name: &str) -> bool {
+        matches!(expression, Expression::Identifier(candidate) if candidate == name)
+    }
+
+    fn expression_is_nullish_literal(expression: &Expression) -> bool {
+        matches!(expression, Expression::Null | Expression::Undefined)
+    }
+
+    fn expression_is_member_of_identifier(expression: &Expression, name: &str) -> bool {
+        matches!(
+            expression,
+            Expression::Member { object, .. }
+                if Self::expression_is_identifier_name(object, name)
+        )
+    }
+
+    fn loop_expression_advances_runtime_shadow_cursor(expression: &Expression, name: &str) -> bool {
+        match expression {
+            Expression::Assign {
+                name: target_name,
+                value,
+            } => target_name == name && Self::expression_is_member_of_identifier(value, name),
+            Expression::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                Self::loop_expression_advances_runtime_shadow_cursor(object, name)
+                    || Self::loop_expression_advances_runtime_shadow_cursor(property, name)
+                    || Self::loop_expression_advances_runtime_shadow_cursor(value, name)
+            }
+            Expression::Member { object, property } => {
+                Self::loop_expression_advances_runtime_shadow_cursor(object, name)
+                    || Self::loop_expression_advances_runtime_shadow_cursor(property, name)
+            }
+            Expression::SuperMember { property } => {
+                Self::loop_expression_advances_runtime_shadow_cursor(property, name)
+            }
+            Expression::Await(value)
+            | Expression::EnumerateKeys(value)
+            | Expression::GetIterator(value)
+            | Expression::IteratorClose(value)
+            | Expression::Unary {
+                expression: value, ..
+            } => Self::loop_expression_advances_runtime_shadow_cursor(value, name),
+            Expression::Binary { left, right, .. } => {
+                Self::loop_expression_advances_runtime_shadow_cursor(left, name)
+                    || Self::loop_expression_advances_runtime_shadow_cursor(right, name)
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                Self::loop_expression_advances_runtime_shadow_cursor(condition, name)
+                    || Self::loop_expression_advances_runtime_shadow_cursor(then_expression, name)
+                    || Self::loop_expression_advances_runtime_shadow_cursor(else_expression, name)
+            }
+            Expression::Sequence(expressions) => expressions.iter().any(|expression| {
+                Self::loop_expression_advances_runtime_shadow_cursor(expression, name)
+            }),
+            Expression::Call { callee, arguments }
+            | Expression::SuperCall { callee, arguments }
+            | Expression::New { callee, arguments } => {
+                Self::loop_expression_advances_runtime_shadow_cursor(callee, name)
+                    || arguments.iter().any(|argument| match argument {
+                        CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                            Self::loop_expression_advances_runtime_shadow_cursor(expression, name)
+                        }
+                    })
+            }
+            Expression::Array(elements) => elements.iter().any(|element| match element {
+                ArrayElement::Expression(expression) | ArrayElement::Spread(expression) => {
+                    Self::loop_expression_advances_runtime_shadow_cursor(expression, name)
+                }
+            }),
+            Expression::Object(entries) => entries.iter().any(|entry| match entry {
+                ObjectEntry::Data { key, value } => {
+                    Self::loop_expression_advances_runtime_shadow_cursor(key, name)
+                        || Self::loop_expression_advances_runtime_shadow_cursor(value, name)
+                }
+                ObjectEntry::Getter { key, getter } => {
+                    Self::loop_expression_advances_runtime_shadow_cursor(key, name)
+                        || Self::loop_expression_advances_runtime_shadow_cursor(getter, name)
+                }
+                ObjectEntry::Setter { key, setter } => {
+                    Self::loop_expression_advances_runtime_shadow_cursor(key, name)
+                        || Self::loop_expression_advances_runtime_shadow_cursor(setter, name)
+                }
+                ObjectEntry::Spread(expression) => {
+                    Self::loop_expression_advances_runtime_shadow_cursor(expression, name)
+                }
+            }),
+            Expression::Identifier(_)
+            | Expression::Update { .. }
+            | Expression::AssignSuperMember { .. }
+            | Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined
+            | Expression::This
+            | Expression::NewTarget
+            | Expression::Sent => false,
+        }
+    }
+
+    fn loop_statement_advances_runtime_shadow_cursor(statement: &Statement, name: &str) -> bool {
+        match statement {
+            Statement::Assign {
+                name: target_name,
+                value,
+            }
+            | Statement::Var {
+                name: target_name,
+                value,
+            }
+            | Statement::Let {
+                name: target_name,
+                value,
+                ..
+            } => target_name == name && Self::expression_is_member_of_identifier(value, name),
+            Statement::Expression(expression)
+            | Statement::Throw(expression)
+            | Statement::Return(expression)
+            | Statement::Yield { value: expression }
+            | Statement::YieldDelegate { value: expression } => {
+                Self::loop_expression_advances_runtime_shadow_cursor(expression, name)
+            }
+            Statement::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                Self::loop_expression_advances_runtime_shadow_cursor(object, name)
+                    || Self::loop_expression_advances_runtime_shadow_cursor(property, name)
+                    || Self::loop_expression_advances_runtime_shadow_cursor(value, name)
+            }
+            Statement::Print { values } => values
+                .iter()
+                .any(|value| Self::loop_expression_advances_runtime_shadow_cursor(value, name)),
+            Statement::Declaration { body }
+            | Statement::Block { body }
+            | Statement::Labeled { body, .. }
+            | Statement::With { body, .. } => body.iter().any(|statement| {
+                Self::loop_statement_advances_runtime_shadow_cursor(statement, name)
+            }),
+            Statement::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                Self::loop_expression_advances_runtime_shadow_cursor(condition, name)
+                    || then_branch.iter().any(|statement| {
+                        Self::loop_statement_advances_runtime_shadow_cursor(statement, name)
+                    })
+                    || else_branch.iter().any(|statement| {
+                        Self::loop_statement_advances_runtime_shadow_cursor(statement, name)
+                    })
+            }
+            Statement::Try {
+                body,
+                catch_setup,
+                catch_body,
+                ..
+            } => body
+                .iter()
+                .chain(catch_setup)
+                .chain(catch_body)
+                .any(|statement| {
+                    Self::loop_statement_advances_runtime_shadow_cursor(statement, name)
+                }),
+            Statement::Switch {
+                discriminant,
+                cases,
+                ..
+            } => {
+                Self::loop_expression_advances_runtime_shadow_cursor(discriminant, name)
+                    || cases.iter().any(|case| {
+                        case.test.as_ref().is_some_and(|test| {
+                            Self::loop_expression_advances_runtime_shadow_cursor(test, name)
+                        }) || case.body.iter().any(|statement| {
+                            Self::loop_statement_advances_runtime_shadow_cursor(statement, name)
+                        })
+                    })
+            }
+            Statement::For {
+                init,
+                condition,
+                update,
+                break_hook,
+                body,
+                ..
+            } => {
+                init.iter().any(|statement| {
+                    Self::loop_statement_advances_runtime_shadow_cursor(statement, name)
+                }) || condition.as_ref().is_some_and(|condition| {
+                    Self::loop_expression_advances_runtime_shadow_cursor(condition, name)
+                }) || update.as_ref().is_some_and(|update| {
+                    Self::loop_expression_advances_runtime_shadow_cursor(update, name)
+                }) || break_hook.as_ref().is_some_and(|break_hook| {
+                    Self::loop_expression_advances_runtime_shadow_cursor(break_hook, name)
+                }) || body.iter().any(|statement| {
+                    Self::loop_statement_advances_runtime_shadow_cursor(statement, name)
+                })
+            }
+            Statement::While {
+                condition,
+                break_hook,
+                body,
+                ..
+            }
+            | Statement::DoWhile {
+                condition,
+                break_hook,
+                body,
+                ..
+            } => {
+                Self::loop_expression_advances_runtime_shadow_cursor(condition, name)
+                    || break_hook.as_ref().is_some_and(|break_hook| {
+                        Self::loop_expression_advances_runtime_shadow_cursor(break_hook, name)
+                    })
+                    || body.iter().any(|statement| {
+                        Self::loop_statement_advances_runtime_shadow_cursor(statement, name)
+                    })
+            }
+            Statement::Break { .. } | Statement::Continue { .. } => false,
+        }
+    }
+
+    fn collect_runtime_shadow_cursor_member_properties_from_expression(
+        expression: &Expression,
+        name: &str,
+        properties: &mut Vec<Expression>,
+    ) {
+        match expression {
+            Expression::Member { object, property } => {
+                if Self::expression_is_identifier_name(object, name) {
+                    properties.push(property.as_ref().clone());
+                }
+                Self::collect_runtime_shadow_cursor_member_properties_from_expression(
+                    object, name, properties,
+                );
+                Self::collect_runtime_shadow_cursor_member_properties_from_expression(
+                    property, name, properties,
+                );
+            }
+            Expression::SuperMember { property } => {
+                Self::collect_runtime_shadow_cursor_member_properties_from_expression(
+                    property, name, properties,
+                );
+            }
+            Expression::Assign { value, .. }
+            | Expression::Await(value)
+            | Expression::EnumerateKeys(value)
+            | Expression::GetIterator(value)
+            | Expression::IteratorClose(value)
+            | Expression::Unary {
+                expression: value, ..
+            } => Self::collect_runtime_shadow_cursor_member_properties_from_expression(
+                value, name, properties,
+            ),
+            Expression::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                Self::collect_runtime_shadow_cursor_member_properties_from_expression(
+                    object, name, properties,
+                );
+                Self::collect_runtime_shadow_cursor_member_properties_from_expression(
+                    property, name, properties,
+                );
+                Self::collect_runtime_shadow_cursor_member_properties_from_expression(
+                    value, name, properties,
+                );
+            }
+            Expression::AssignSuperMember { property, value } => {
+                Self::collect_runtime_shadow_cursor_member_properties_from_expression(
+                    property, name, properties,
+                );
+                Self::collect_runtime_shadow_cursor_member_properties_from_expression(
+                    value, name, properties,
+                );
+            }
+            Expression::Binary { left, right, .. } => {
+                Self::collect_runtime_shadow_cursor_member_properties_from_expression(
+                    left, name, properties,
+                );
+                Self::collect_runtime_shadow_cursor_member_properties_from_expression(
+                    right, name, properties,
+                );
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                Self::collect_runtime_shadow_cursor_member_properties_from_expression(
+                    condition, name, properties,
+                );
+                Self::collect_runtime_shadow_cursor_member_properties_from_expression(
+                    then_expression,
+                    name,
+                    properties,
+                );
+                Self::collect_runtime_shadow_cursor_member_properties_from_expression(
+                    else_expression,
+                    name,
+                    properties,
+                );
+            }
+            Expression::Sequence(expressions) => {
+                for expression in expressions {
+                    Self::collect_runtime_shadow_cursor_member_properties_from_expression(
+                        expression, name, properties,
+                    );
+                }
+            }
+            Expression::Call { callee, arguments }
+            | Expression::SuperCall { callee, arguments }
+            | Expression::New { callee, arguments } => {
+                Self::collect_runtime_shadow_cursor_member_properties_from_expression(
+                    callee, name, properties,
+                );
+                for argument in arguments {
+                    match argument {
+                        CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                            Self::collect_runtime_shadow_cursor_member_properties_from_expression(
+                                expression, name, properties,
+                            );
+                        }
+                    }
+                }
+            }
+            Expression::Array(elements) => {
+                for element in elements {
+                    match element {
+                        ArrayElement::Expression(expression) | ArrayElement::Spread(expression) => {
+                            Self::collect_runtime_shadow_cursor_member_properties_from_expression(
+                                expression, name, properties,
+                            );
+                        }
+                    }
+                }
+            }
+            Expression::Object(entries) => {
+                for entry in entries {
+                    match entry {
+                        ObjectEntry::Data { key, value } => {
+                            Self::collect_runtime_shadow_cursor_member_properties_from_expression(
+                                key, name, properties,
+                            );
+                            Self::collect_runtime_shadow_cursor_member_properties_from_expression(
+                                value, name, properties,
+                            );
+                        }
+                        ObjectEntry::Getter { key, getter } => {
+                            Self::collect_runtime_shadow_cursor_member_properties_from_expression(
+                                key, name, properties,
+                            );
+                            Self::collect_runtime_shadow_cursor_member_properties_from_expression(
+                                getter, name, properties,
+                            );
+                        }
+                        ObjectEntry::Setter { key, setter } => {
+                            Self::collect_runtime_shadow_cursor_member_properties_from_expression(
+                                key, name, properties,
+                            );
+                            Self::collect_runtime_shadow_cursor_member_properties_from_expression(
+                                setter, name, properties,
+                            );
+                        }
+                        ObjectEntry::Spread(expression) => {
+                            Self::collect_runtime_shadow_cursor_member_properties_from_expression(
+                                expression, name, properties,
+                            );
+                        }
+                    }
+                }
+            }
+            Expression::Identifier(_)
+            | Expression::Update { .. }
+            | Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined
+            | Expression::This
+            | Expression::NewTarget
+            | Expression::Sent => {}
+        }
+    }
+
+    fn collect_runtime_shadow_cursor_member_properties_from_statement(
+        statement: &Statement,
+        name: &str,
+        properties: &mut Vec<Expression>,
+    ) {
+        match statement {
+            Statement::Declaration { body }
+            | Statement::Block { body }
+            | Statement::Labeled { body, .. }
+            | Statement::With { body, .. } => {
+                for statement in body {
+                    Self::collect_runtime_shadow_cursor_member_properties_from_statement(
+                        statement, name, properties,
+                    );
+                }
+            }
+            Statement::Assign { value, .. }
+            | Statement::Var { value, .. }
+            | Statement::Let { value, .. } => {
+                Self::collect_runtime_shadow_cursor_member_properties_from_expression(
+                    value, name, properties,
+                );
+            }
+            Statement::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                Self::collect_runtime_shadow_cursor_member_properties_from_expression(
+                    object, name, properties,
+                );
+                Self::collect_runtime_shadow_cursor_member_properties_from_expression(
+                    property, name, properties,
+                );
+                Self::collect_runtime_shadow_cursor_member_properties_from_expression(
+                    value, name, properties,
+                );
+            }
+            Statement::Expression(expression)
+            | Statement::Throw(expression)
+            | Statement::Return(expression)
+            | Statement::Yield { value: expression }
+            | Statement::YieldDelegate { value: expression } => {
+                Self::collect_runtime_shadow_cursor_member_properties_from_expression(
+                    expression, name, properties,
+                );
+            }
+            Statement::Print { values } => {
+                for value in values {
+                    Self::collect_runtime_shadow_cursor_member_properties_from_expression(
+                        value, name, properties,
+                    );
+                }
+            }
+            Statement::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                Self::collect_runtime_shadow_cursor_member_properties_from_expression(
+                    condition, name, properties,
+                );
+                for statement in then_branch {
+                    Self::collect_runtime_shadow_cursor_member_properties_from_statement(
+                        statement, name, properties,
+                    );
+                }
+                for statement in else_branch {
+                    Self::collect_runtime_shadow_cursor_member_properties_from_statement(
+                        statement, name, properties,
+                    );
+                }
+            }
+            Statement::Try {
+                body,
+                catch_setup,
+                catch_body,
+                ..
+            } => {
+                for statement in body.iter().chain(catch_setup).chain(catch_body) {
+                    Self::collect_runtime_shadow_cursor_member_properties_from_statement(
+                        statement, name, properties,
+                    );
+                }
+            }
+            Statement::Switch {
+                discriminant,
+                cases,
+                ..
+            } => {
+                Self::collect_runtime_shadow_cursor_member_properties_from_expression(
+                    discriminant,
+                    name,
+                    properties,
+                );
+                for case in cases {
+                    if let Some(test) = &case.test {
+                        Self::collect_runtime_shadow_cursor_member_properties_from_expression(
+                            test, name, properties,
+                        );
+                    }
+                    for statement in &case.body {
+                        Self::collect_runtime_shadow_cursor_member_properties_from_statement(
+                            statement, name, properties,
+                        );
+                    }
+                }
+            }
+            Statement::For {
+                init,
+                condition,
+                update,
+                break_hook,
+                body,
+                ..
+            } => {
+                for statement in init {
+                    Self::collect_runtime_shadow_cursor_member_properties_from_statement(
+                        statement, name, properties,
+                    );
+                }
+                if let Some(condition) = condition {
+                    Self::collect_runtime_shadow_cursor_member_properties_from_expression(
+                        condition, name, properties,
+                    );
+                }
+                if let Some(update) = update {
+                    Self::collect_runtime_shadow_cursor_member_properties_from_expression(
+                        update, name, properties,
+                    );
+                }
+                if let Some(break_hook) = break_hook {
+                    Self::collect_runtime_shadow_cursor_member_properties_from_expression(
+                        break_hook, name, properties,
+                    );
+                }
+                for statement in body {
+                    Self::collect_runtime_shadow_cursor_member_properties_from_statement(
+                        statement, name, properties,
+                    );
+                }
+            }
+            Statement::While {
+                condition,
+                break_hook,
+                body,
+                ..
+            }
+            | Statement::DoWhile {
+                condition,
+                break_hook,
+                body,
+                ..
+            } => {
+                Self::collect_runtime_shadow_cursor_member_properties_from_expression(
+                    condition, name, properties,
+                );
+                if let Some(break_hook) = break_hook {
+                    Self::collect_runtime_shadow_cursor_member_properties_from_expression(
+                        break_hook, name, properties,
+                    );
+                }
+                for statement in body {
+                    Self::collect_runtime_shadow_cursor_member_properties_from_statement(
+                        statement, name, properties,
+                    );
+                }
+            }
+            Statement::Break { .. } | Statement::Continue { .. } => {}
+        }
+    }
+
+    fn collect_runtime_shadow_cursor_advance_properties_from_statement(
+        statement: &Statement,
+        name: &str,
+        properties: &mut Vec<Expression>,
+    ) {
+        match statement {
+            Statement::Assign {
+                name: target_name,
+                value,
+            }
+            | Statement::Var {
+                name: target_name,
+                value,
+            }
+            | Statement::Let {
+                name: target_name,
+                value,
+                ..
+            } if target_name == name => {
+                if let Expression::Member { object, property } = value
+                    && Self::expression_is_identifier_name(object, name)
+                {
+                    properties.push(property.as_ref().clone());
+                }
+            }
+            Statement::Expression(Expression::Assign {
+                name: target_name,
+                value,
+            }) if target_name == name => {
+                if let Expression::Member { object, property } = value.as_ref()
+                    && Self::expression_is_identifier_name(object, name)
+                {
+                    properties.push(property.as_ref().clone());
+                }
+            }
+            Statement::Declaration { body }
+            | Statement::Block { body }
+            | Statement::Labeled { body, .. } => {
+                for statement in body {
+                    Self::collect_runtime_shadow_cursor_advance_properties_from_statement(
+                        statement, name, properties,
+                    );
+                }
+            }
+            Statement::If {
+                then_branch,
+                else_branch,
+                ..
+            } => {
+                for statement in then_branch {
+                    Self::collect_runtime_shadow_cursor_advance_properties_from_statement(
+                        statement, name, properties,
+                    );
+                }
+                for statement in else_branch {
+                    Self::collect_runtime_shadow_cursor_advance_properties_from_statement(
+                        statement, name, properties,
+                    );
+                }
+            }
+            _ => {}
+        }
+    }
+
+    fn seed_runtime_shadow_cursor_owner_chain(
+        &mut self,
+        target_owner: &str,
+        source_owner: &str,
+        source_expression: Option<&Expression>,
+        properties: &[Expression],
+        advance_properties: &[Expression],
+        remaining_depth: usize,
+    ) -> DirectResult<()> {
+        if remaining_depth > 0 {
+            for property in advance_properties {
+                let source_member_expression =
+                    source_expression.map(|source_expression| Expression::Member {
+                        object: Box::new(source_expression.clone()),
+                        property: Box::new(property.clone()),
+                    });
+                let source_member_owner =
+                    Self::runtime_object_member_shadow_owner_name(source_owner, property);
+                let target_member_owner =
+                    Self::runtime_object_member_shadow_owner_name(target_owner, property);
+                if source_member_owner != source_owner && target_member_owner != target_owner {
+                    self.seed_runtime_shadow_cursor_owner_chain(
+                        &target_member_owner,
+                        &source_member_owner,
+                        source_member_expression.as_ref(),
+                        properties,
+                        advance_properties,
+                        remaining_depth - 1,
+                    )?;
+                }
+            }
+        }
+
+        self.seed_runtime_shadow_cursor_owner_from_source(
+            target_owner,
+            source_owner,
+            source_expression,
+            properties,
+        )
+    }
+
+    fn seed_runtime_shadow_cursor_owners_for_while_loop(
+        &mut self,
+        invalidated_bindings: &HashSet<String>,
+        condition: &Expression,
+        body: &[Statement],
+    ) -> DirectResult<()> {
+        for name in invalidated_bindings {
+            if !self.loop_condition_guards_runtime_shadow_cursor(condition, name)
+                || !body.iter().any(|statement| {
+                    Self::loop_statement_advances_runtime_shadow_cursor(statement, name)
+                })
+            {
+                continue;
+            }
+            let Some(source_owner) =
+                self.runtime_object_property_shadow_owner_name_for_identifier(name)
+            else {
+                continue;
+            };
+            if source_owner == *name {
+                continue;
+            }
+            let source_expression = self
+                .state
+                .speculation
+                .static_semantics
+                .local_value_binding(name)
+                .or_else(|| self.global_value_binding(name))
+                .cloned();
+            let mut properties = Vec::new();
+            for statement in body {
+                Self::collect_runtime_shadow_cursor_member_properties_from_statement(
+                    statement,
+                    name,
+                    &mut properties,
+                );
+            }
+            if properties.is_empty() {
+                continue;
+            }
+            let mut advance_properties = Vec::new();
+            for statement in body {
+                Self::collect_runtime_shadow_cursor_advance_properties_from_statement(
+                    statement,
+                    name,
+                    &mut advance_properties,
+                );
+            }
+            if advance_properties.is_empty() {
+                continue;
+            }
+            if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
+                eprintln!(
+                    "runtime_shadow_cursor_seed name={name} source_owner={source_owner} properties={properties:?} advance={advance_properties:?}"
+                );
+            }
+            self.seed_runtime_shadow_cursor_owner_chain(
+                name,
+                &source_owner,
+                source_expression.as_ref(),
+                &properties,
+                &advance_properties,
+                2,
+            )?;
+        }
+        Ok(())
+    }
+
     pub(in crate::backend::direct_wasm) fn emit_while(
         &mut self,
         condition: &Expression,
@@ -1744,6 +2513,11 @@ impl<'a> FunctionCompiler<'a> {
         let numeric_binding_candidates = HashMap::new();
         let numeric_spec = None;
         self.seed_loop_assigned_runtime_array_state(&invalidated_bindings)?;
+        self.seed_runtime_shadow_cursor_owners_for_while_loop(
+            &invalidated_bindings,
+            condition,
+            body,
+        )?;
         self.invalidate_static_binding_metadata_for_names_with_preserved_kinds(
             &invalidated_bindings,
             &preserved_kinds,

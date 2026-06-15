@@ -547,6 +547,69 @@ impl<'a> FunctionCompiler<'a> {
         self.runtime_object_property_shadow_deleted_binding_by_property(owner_name, &property);
     }
 
+    pub(in crate::backend::direct_wasm) fn seed_runtime_shadow_cursor_owner_from_source(
+        &mut self,
+        target_owner: &str,
+        source_owner: &str,
+        source_expression: Option<&Expression>,
+        properties: &[Expression],
+    ) -> DirectResult<()> {
+        if target_owner == source_owner || properties.is_empty() {
+            return Ok(());
+        }
+
+        let mut seen_properties = HashSet::new();
+        for property in properties {
+            let property = self
+                .resolve_property_key_expression(property)
+                .unwrap_or_else(|| self.materialize_static_expression(property));
+            let property = self.canonical_runtime_shadow_property_expression(&property);
+            let shadow_key = Self::runtime_object_property_shadow_key(&property);
+            if !seen_properties.insert(shadow_key.clone()) {
+                continue;
+            }
+
+            self.runtime_object_property_shadow_binding_by_property(source_owner, &property);
+            self.runtime_object_property_shadow_deleted_binding_by_property(
+                source_owner,
+                &property,
+            );
+
+            let shadow_value = self
+                .runtime_object_property_shadow_static_value_for_owner(source_owner, &property)
+                .or_else(|| {
+                    let source_expression = source_expression?;
+                    let member_expression = Expression::Member {
+                        object: Box::new(source_expression.clone()),
+                        property: Box::new(property.clone()),
+                    };
+                    let materialized = self.materialize_static_expression(&member_expression);
+                    (!static_expression_matches(&materialized, &member_expression))
+                        .then_some(materialized)
+                });
+            let Some(shadow_value) = shadow_value else {
+                continue;
+            };
+            if Self::expression_is_runtime_object_property_shadow_identifier(&shadow_value)
+                || !self.runtime_shadow_fallback_references_readable_bindings(&shadow_value)
+            {
+                continue;
+            }
+
+            let source_shadow_name = format!(
+                "__ayy_object_property__{source_owner}__{}",
+                Self::runtime_object_property_shadow_key(&property)
+            );
+            let materialized_value =
+                self.reference_preserving_static_value_expression(&shadow_value);
+            self.update_static_global_assignment_metadata(&source_shadow_name, &materialized_value);
+        }
+
+        self.clear_runtime_object_property_shadow_prefix(target_owner);
+        self.clear_runtime_object_property_shadow_static_metadata_prefix(target_owner);
+        self.emit_runtime_object_property_shadow_copy_to_exact_target(source_owner, target_owner)
+    }
+
     fn runtime_object_property_name_from_shadow_suffix(suffix: &str) -> Option<String> {
         let hex = suffix.strip_prefix("str__")?;
         if hex.len() % 2 != 0 {
@@ -5041,6 +5104,15 @@ impl<'a> FunctionCompiler<'a> {
                 &mut copy_entries,
             );
         }
+        copy_entries.sort_by(|(left_property, _), (right_property, _)| {
+            let left_refreshes_source_owner =
+                Self::runtime_object_member_shadow_owner_name(target_owner, left_property)
+                    == source_owner;
+            let right_refreshes_source_owner =
+                Self::runtime_object_member_shadow_owner_name(target_owner, right_property)
+                    == source_owner;
+            left_refreshes_source_owner.cmp(&right_refreshes_source_owner)
+        });
         if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
             let entry_count = copy_entries.len();
             eprintln!(
