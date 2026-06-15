@@ -155,6 +155,12 @@ impl<'a> FunctionCompiler<'a> {
             _ => {
                 let depends_on_active_loop_assignment =
                     self.expression_depends_on_active_loop_assignment(value);
+                if self.emit_print_deferred_runtime_shadow_scalar(value)? {
+                    return Ok(());
+                }
+                if self.emit_runtime_print_numeric_scalar_value(value)? {
+                    return Ok(());
+                }
                 if let Some(primitive) = self.resolve_print_static_member_primitive(value) {
                     return self.emit_print_scalar_value_without_concat_expansion(&primitive);
                 }
@@ -212,7 +218,23 @@ impl<'a> FunctionCompiler<'a> {
         let Expression::Member { object, property } = value else {
             return None;
         };
+        if self
+            .direct_print_runtime_shadow_binding_name(value)
+            .is_some()
+        {
+            return None;
+        }
         let property = self.materialize_static_expression(property);
+        if self
+            .runtime_object_property_shadow_binding_name_for_expression(object, &property)
+            .is_some_and(|shadow_binding_name| {
+                self.runtime_object_property_shadow_binding_should_defer_static_resolution(
+                    &shadow_binding_name,
+                )
+            })
+        {
+            return None;
+        }
         let object_binding = self.resolve_object_binding_from_expression(object)?;
         let property_value =
             self.resolve_object_binding_property_value(&object_binding, &property)?;
@@ -252,6 +274,9 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         value: &Expression,
     ) -> Option<StaticValueKind> {
+        if let Some(kind) = self.direct_print_runtime_shadow_static_value_kind(value) {
+            return Some(kind);
+        }
         let Expression::Member { object, property } = value else {
             return None;
         };
@@ -263,6 +288,43 @@ impl<'a> FunctionCompiler<'a> {
         ) {
             return None;
         }
+        self.global_value_binding(&shadow_binding_name)
+            .and_then(|value| self.infer_value_kind(value))
+            .or_else(|| self.global_binding_kind(&shadow_binding_name))
+    }
+
+    fn direct_print_runtime_shadow_binding_name(&self, value: &Expression) -> Option<String> {
+        let Expression::Member { object, property } = value else {
+            return None;
+        };
+        let Expression::Identifier(owner_name) = object.as_ref() else {
+            return None;
+        };
+        let property_name = static_property_name_from_expression(property)?;
+        let resolved_owner = self
+            .resolve_current_local_binding(owner_name)
+            .map(|(resolved_name, _)| resolved_name);
+        let source_owner = scoped_binding_source_name(owner_name).unwrap_or(owner_name);
+        [
+            resolved_owner.as_deref(),
+            Some(owner_name.as_str()),
+            Some(source_owner),
+        ]
+        .into_iter()
+        .flatten()
+        .find_map(|owner| {
+            let shadow_binding_name =
+                Self::runtime_object_property_shadow_binding_name(owner, &property_name);
+            let has_runtime_binding = self.implicit_global_binding(&shadow_binding_name).is_some();
+            has_runtime_binding.then_some(shadow_binding_name)
+        })
+    }
+
+    fn direct_print_runtime_shadow_static_value_kind(
+        &self,
+        value: &Expression,
+    ) -> Option<StaticValueKind> {
+        let shadow_binding_name = self.direct_print_runtime_shadow_binding_name(value)?;
         self.global_value_binding(&shadow_binding_name)
             .and_then(|value| self.infer_value_kind(value))
             .or_else(|| self.global_binding_kind(&shadow_binding_name))
@@ -288,6 +350,181 @@ impl<'a> FunctionCompiler<'a> {
                         .and_then(|property_value| self.infer_value_kind(&property_value))
                 }),
         }
+    }
+
+    fn emit_print_deferred_runtime_shadow_scalar(
+        &mut self,
+        value: &Expression,
+    ) -> DirectResult<bool> {
+        let Some(kind) = self.print_runtime_shadow_static_value_kind(value) else {
+            return Ok(false);
+        };
+        if let Some(binding) = self.direct_print_runtime_shadow_implicit_binding(value) {
+            let value_local = self.allocate_temp_local();
+            self.push_global_get(binding.value_index);
+            self.push_local_set(value_local);
+            match kind {
+                StaticValueKind::Bool => {
+                    self.emit_print_boolean_runtime_local(value_local)?;
+                    return Ok(true);
+                }
+                StaticValueKind::String => {
+                    self.emit_runtime_print_known_string_local(value_local)?;
+                    return Ok(true);
+                }
+                StaticValueKind::Number | StaticValueKind::Unknown => {
+                    self.emit_runtime_print_numeric_local(value_local)?;
+                    return Ok(true);
+                }
+                _ => {}
+            }
+        }
+        match kind {
+            StaticValueKind::Bool => {
+                self.emit_print_boolean_runtime_value(value)?;
+                Ok(true)
+            }
+            StaticValueKind::String => self.emit_runtime_print_known_string_value(value),
+            StaticValueKind::Number | StaticValueKind::Unknown => {
+                self.emit_runtime_print_numeric_value(value)?;
+                Ok(true)
+            }
+            StaticValueKind::Null => {
+                self.emit_print_string("null")?;
+                Ok(true)
+            }
+            StaticValueKind::Undefined => {
+                self.emit_print_string("undefined")?;
+                Ok(true)
+            }
+            StaticValueKind::Object | StaticValueKind::Function => Ok(false),
+            StaticValueKind::BigInt | StaticValueKind::Symbol => Ok(false),
+        }
+    }
+
+    pub(in crate::backend::direct_wasm) fn direct_print_runtime_shadow_implicit_binding(
+        &self,
+        value: &Expression,
+    ) -> Option<ImplicitGlobalBinding> {
+        self.direct_print_runtime_shadow_binding_name(value)
+            .and_then(|name| self.implicit_global_binding(&name))
+    }
+
+    fn emit_print_boolean_runtime_local(&mut self, bool_local: u32) -> DirectResult<()> {
+        self.push_local_get(bool_local);
+        self.state.emission.output.instructions.push(0x45);
+        self.state.emission.output.instructions.push(0x04);
+        self.state
+            .emission
+            .output
+            .instructions
+            .push(EMPTY_BLOCK_TYPE);
+        self.push_control_frame();
+        self.emit_print_string("false")?;
+        self.state.emission.output.instructions.push(0x05);
+        self.emit_print_string("true")?;
+        self.state.emission.output.instructions.push(0x0b);
+        self.pop_control_frame();
+        Ok(())
+    }
+
+    pub(in crate::backend::direct_wasm) fn print_expression_is_runtime_numeric_scalar(
+        &self,
+        value: &Expression,
+    ) -> bool {
+        match value {
+            Expression::Number(_) => true,
+            Expression::Member { .. } => {
+                self.print_runtime_shadow_static_value_kind(value) == Some(StaticValueKind::Number)
+            }
+            Expression::Unary { op, expression }
+                if matches!(op, UnaryOp::Plus | UnaryOp::Negate | UnaryOp::BitwiseNot) =>
+            {
+                self.print_expression_is_runtime_numeric_scalar(expression)
+            }
+            Expression::Binary { op, left, right } => {
+                let arithmetic_op = matches!(
+                    op,
+                    BinaryOp::Add
+                        | BinaryOp::Subtract
+                        | BinaryOp::Multiply
+                        | BinaryOp::Divide
+                        | BinaryOp::Modulo
+                        | BinaryOp::Exponentiate
+                        | BinaryOp::BitwiseAnd
+                        | BinaryOp::BitwiseOr
+                        | BinaryOp::BitwiseXor
+                        | BinaryOp::LeftShift
+                        | BinaryOp::RightShift
+                        | BinaryOp::UnsignedRightShift
+                );
+                arithmetic_op
+                    && self.print_expression_is_runtime_numeric_scalar(left)
+                    && self.print_expression_is_runtime_numeric_scalar(right)
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                if !Self::print_expression_has_no_runtime_side_effects(condition) {
+                    return false;
+                }
+                self.print_expression_is_runtime_numeric_scalar(then_expression)
+                    && self.print_expression_is_runtime_numeric_scalar(else_expression)
+            }
+            _ => false,
+        }
+    }
+
+    fn emit_runtime_print_numeric_scalar_value(
+        &mut self,
+        value: &Expression,
+    ) -> DirectResult<bool> {
+        if !self.print_expression_is_runtime_numeric_scalar(value) {
+            return Ok(false);
+        }
+        let value_local = self.allocate_temp_local();
+        self.emit_runtime_numeric_scalar_expression(value)?;
+        self.push_local_set(value_local);
+        self.emit_runtime_print_numeric_local(value_local)?;
+        Ok(true)
+    }
+
+    pub(in crate::backend::direct_wasm) fn emit_runtime_numeric_scalar_expression(
+        &mut self,
+        value: &Expression,
+    ) -> DirectResult<()> {
+        match value {
+            Expression::Member { .. } => {
+                if let Some(binding) = self.direct_print_runtime_shadow_implicit_binding(value) {
+                    self.push_global_get(binding.value_index);
+                } else {
+                    self.emit_numeric_expression(value)?;
+                }
+            }
+            Expression::Unary { op, expression } => match op {
+                UnaryOp::Plus => self.emit_runtime_numeric_scalar_expression(expression)?,
+                UnaryOp::Negate => {
+                    self.push_i32_const(0);
+                    self.emit_runtime_numeric_scalar_expression(expression)?;
+                    self.state.emission.output.instructions.push(0x6b);
+                }
+                UnaryOp::BitwiseNot => {
+                    self.emit_runtime_numeric_scalar_expression(expression)?;
+                    self.push_i32_const(-1);
+                    self.state.emission.output.instructions.push(0x73);
+                }
+                _ => self.emit_numeric_expression(value)?,
+            },
+            Expression::Binary { op, left, right } => {
+                self.emit_runtime_numeric_scalar_expression(left)?;
+                self.emit_runtime_numeric_scalar_expression(right)?;
+                self.push_binary_op(*op)?;
+            }
+            _ => self.emit_numeric_expression(value)?,
+        }
+        Ok(())
     }
 
     fn emit_print_static_property_name(&mut self, name: &str) -> DirectResult<()> {
@@ -472,6 +709,12 @@ impl<'a> FunctionCompiler<'a> {
                     self.expression_depends_on_active_loop_assignment(value);
                 let direct_eval_call = is_direct_eval_call_expression(value);
                 if !direct_eval_call && self.emit_print_streamable_string_concat(value)? {
+                    return Ok(());
+                }
+                if self.emit_print_deferred_runtime_shadow_scalar(value)? {
+                    return Ok(());
+                }
+                if self.emit_runtime_print_numeric_scalar_value(value)? {
                     return Ok(());
                 }
                 if let Some(primitive) = self.resolve_print_static_member_primitive(value) {

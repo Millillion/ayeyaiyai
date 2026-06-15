@@ -113,9 +113,13 @@ impl<'a> FunctionCompiler<'a> {
         name: &str,
         entries: &[ObjectEntry],
     ) -> DirectResult<bool> {
-        if !self.object_literal_entries_need_runtime_property_value_seed(entries) {
+        if !Self::object_literal_entries_can_seed_runtime_property_values(entries) {
             return Ok(false);
         }
+        let target_owner = self
+            .resolve_current_local_binding(name)
+            .map(|(resolved_name, _)| resolved_name)
+            .unwrap_or_else(|| name.to_string());
 
         let mut property_values = Vec::new();
         for entry in entries {
@@ -126,20 +130,35 @@ impl<'a> FunctionCompiler<'a> {
             else {
                 unreachable!("filtered by object_literal_entries_can_seed_runtime_property_values")
             };
+            if self
+                .resolve_static_number_value(value)
+                .is_some_and(|number| {
+                    number.is_nan()
+                        || !number.is_finite()
+                        || number.fract() != 0.0
+                        || (number == 0.0 && number.is_sign_negative())
+                })
+            {
+                continue;
+            }
             let value_local = self.allocate_temp_local();
-            self.emit_numeric_expression(value)?;
+            if self.print_expression_is_runtime_numeric_scalar(value) {
+                self.emit_runtime_numeric_scalar_expression(value)?;
+            } else {
+                self.emit_numeric_expression(value)?;
+            }
             self.push_local_set(value_local);
-            property_values.push((property_name.clone(), value_local));
+            property_values.push((
+                property_name.clone(),
+                value_local,
+                self.infer_value_kind(value),
+            ));
         }
 
-        let target_owner = self
-            .resolve_current_local_binding(name)
-            .map(|(resolved_name, _)| resolved_name)
-            .unwrap_or_else(|| name.to_string());
         self.clear_runtime_object_property_shadow_prefix(&target_owner);
         self.clear_runtime_object_property_shadow_static_metadata_prefix(&target_owner);
 
-        for (property_name, value_local) in property_values {
+        for (property_name, value_local, value_kind) in property_values {
             let property = Expression::String(property_name.clone());
             let target_binding =
                 self.runtime_object_property_shadow_binding_by_property(&target_owner, &property);
@@ -155,6 +174,14 @@ impl<'a> FunctionCompiler<'a> {
             self.push_global_set(target_binding.value_index);
             self.push_i32_const(1);
             self.push_global_set(target_binding.present_index);
+            if let Some(kind) = value_kind {
+                let shadow_binding_name = Self::runtime_object_property_shadow_binding_name(
+                    &target_owner,
+                    &property_name,
+                );
+                self.backend
+                    .set_global_binding_kind(&shadow_binding_name, kind);
+            }
         }
 
         self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
@@ -232,9 +259,10 @@ impl<'a> FunctionCompiler<'a> {
         }
         let function = self.resolve_registered_function_declaration(&function_name)?;
         if function.kind != FunctionKind::Ordinary
-            || function.params.iter().any(|param| {
-                param.default.is_some() || param.rest || param.name == "arguments"
-            })
+            || function
+                .params
+                .iter()
+                .any(|param| param.default.is_some() || param.rest || param.name == "arguments")
         {
             return None;
         }
@@ -279,7 +307,8 @@ impl<'a> FunctionCompiler<'a> {
                     allowed_bindings.insert(name.clone());
                     bindings.insert(name.clone(), substituted);
                 }
-                Statement::Return(Expression::Object(entries)) if index + 1 == function.body.len() =>
+                Statement::Return(Expression::Object(entries))
+                    if index + 1 == function.body.len() =>
                 {
                     if !Self::object_literal_entries_can_seed_runtime_property_values(entries) {
                         return None;
@@ -330,8 +359,7 @@ impl<'a> FunctionCompiler<'a> {
         name: &str,
         value: &Expression,
     ) -> DirectResult<bool> {
-        let Some(property_expressions) =
-            self.simple_user_call_return_object_property_values(value)
+        let Some(property_expressions) = self.simple_user_call_return_object_property_values(value)
         else {
             return Ok(false);
         };
@@ -339,9 +367,17 @@ impl<'a> FunctionCompiler<'a> {
         let mut property_values = Vec::new();
         for (property_name, property_expression) in property_expressions {
             let value_local = self.allocate_temp_local();
-            self.emit_numeric_expression(&property_expression)?;
+            if self.print_expression_is_runtime_numeric_scalar(&property_expression) {
+                self.emit_runtime_numeric_scalar_expression(&property_expression)?;
+            } else {
+                self.emit_numeric_expression(&property_expression)?;
+            }
             self.push_local_set(value_local);
-            property_values.push((property_name, value_local));
+            property_values.push((
+                property_name.clone(),
+                value_local,
+                self.infer_value_kind(&property_expression),
+            ));
         }
 
         let target_owner = self
@@ -351,7 +387,7 @@ impl<'a> FunctionCompiler<'a> {
         self.clear_runtime_object_property_shadow_prefix(&target_owner);
         self.clear_runtime_object_property_shadow_static_metadata_prefix(&target_owner);
 
-        for (property_name, value_local) in property_values {
+        for (property_name, value_local, value_kind) in property_values {
             let property = Expression::String(property_name.clone());
             let target_binding =
                 self.runtime_object_property_shadow_binding_by_property(&target_owner, &property);
@@ -367,6 +403,14 @@ impl<'a> FunctionCompiler<'a> {
             self.push_global_set(target_binding.value_index);
             self.push_i32_const(1);
             self.push_global_set(target_binding.present_index);
+            if let Some(kind) = value_kind {
+                let shadow_binding_name = Self::runtime_object_property_shadow_binding_name(
+                    &target_owner,
+                    &property_name,
+                );
+                self.backend
+                    .set_global_binding_kind(&shadow_binding_name, kind);
+            }
         }
 
         self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
@@ -1601,6 +1645,8 @@ impl<'a> FunctionCompiler<'a> {
                     && reference_global_index.is_none()
                     && !reference_targets_eval_local
                     && reference_implicit_global.is_none();
+                let simple_user_call_return_object_seeded =
+                    self.simple_user_call_return_object_needs_runtime_seed(value);
                 if let Some(scope_object) = scoped_target {
                     let value_local = self.allocate_temp_local();
                     let scoped_store_value =
@@ -1648,17 +1694,36 @@ impl<'a> FunctionCompiler<'a> {
                         eprintln!("binding_statement:assign:before_store name={name}");
                     }
                     let store_value = compound_store_value.as_ref().unwrap_or(value);
-                    self.emit_store_identifier_value_local_with_reference_target(
-                        name,
-                        store_value,
-                        value_local,
-                        resolved_reference_local,
-                        reference_targets_capture,
-                        reference_global_index,
-                        reference_targets_eval_local,
-                        reference_implicit_global,
-                        reference_is_unresolvable,
-                    )?;
+                    if simple_user_call_return_object_seeded
+                        && let Some((resolved_name, local_index)) = resolved_reference_local.clone()
+                    {
+                        self.push_local_get(value_local);
+                        self.push_local_set(local_index);
+                        self.state
+                            .emission
+                            .emitted_value_bindings
+                            .insert(name.to_string());
+                        self.state
+                            .speculation
+                            .static_semantics
+                            .clear_local_value_binding(&resolved_name);
+                        self.state
+                            .speculation
+                            .static_semantics
+                            .set_local_kind(&resolved_name, StaticValueKind::Object);
+                    } else {
+                        self.emit_store_identifier_value_local_with_reference_target(
+                            name,
+                            store_value,
+                            value_local,
+                            resolved_reference_local,
+                            reference_targets_capture,
+                            reference_global_index,
+                            reference_targets_eval_local,
+                            reference_implicit_global,
+                            reference_is_unresolvable,
+                        )?;
+                    }
                     if trace {
                         eprintln!("binding_statement:assign:after_store name={name}");
                     }
@@ -1675,7 +1740,9 @@ impl<'a> FunctionCompiler<'a> {
                 if trace {
                     eprintln!("binding_statement:assign:after_member name={name}");
                 }
-                self.update_object_binding_from_expression(value);
+                if !simple_user_call_return_object_seeded {
+                    self.update_object_binding_from_expression(value);
+                }
                 if trace {
                     eprintln!("binding_statement:assign:done name={name}");
                 }

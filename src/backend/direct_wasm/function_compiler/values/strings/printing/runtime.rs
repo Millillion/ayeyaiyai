@@ -173,26 +173,7 @@ impl<'a> FunctionCompiler<'a> {
             self.emit_numeric_expression(value)?;
             self.push_local_set(value_local);
 
-            self.push_local_get(value_local);
-            self.push_i32_const(0);
-            self.push_binary_op(BinaryOp::GreaterThan)?;
-            self.state.emission.output.instructions.push(0x04);
-            self.state
-                .emission
-                .output
-                .instructions
-                .push(EMPTY_BLOCK_TYPE);
-            self.push_control_frame();
-            self.push_local_get(value_local);
-            self.push_local_get(value_local);
-            self.push_i32_const(STRING_LENGTH_PREFIX_SIZE as i32);
-            self.push_binary_op(BinaryOp::Subtract)?;
-            self.push_memory_i32_load(0);
-            self.push_call(WRITE_BYTES_FUNCTION_INDEX);
-            self.state.emission.output.instructions.push(0x05);
-            self.emit_runtime_print_numeric_local(value_local)?;
-            self.state.emission.output.instructions.push(0x0b);
-            self.pop_control_frame();
+            self.emit_runtime_print_known_string_local(value_local)?;
             return Ok(true);
         }
 
@@ -242,6 +223,33 @@ impl<'a> FunctionCompiler<'a> {
         self.state.emission.output.instructions.push(0x0b);
         self.pop_control_frame();
         Ok(true)
+    }
+
+    pub(in crate::backend::direct_wasm) fn emit_runtime_print_known_string_local(
+        &mut self,
+        value_local: u32,
+    ) -> DirectResult<()> {
+        self.push_local_get(value_local);
+        self.push_i32_const(0);
+        self.push_binary_op(BinaryOp::GreaterThan)?;
+        self.state.emission.output.instructions.push(0x04);
+        self.state
+            .emission
+            .output
+            .instructions
+            .push(EMPTY_BLOCK_TYPE);
+        self.push_control_frame();
+        self.push_local_get(value_local);
+        self.push_local_get(value_local);
+        self.push_i32_const(STRING_LENGTH_PREFIX_SIZE as i32);
+        self.push_binary_op(BinaryOp::Subtract)?;
+        self.push_memory_i32_load(0);
+        self.push_call(WRITE_BYTES_FUNCTION_INDEX);
+        self.state.emission.output.instructions.push(0x05);
+        self.emit_runtime_print_numeric_local(value_local)?;
+        self.state.emission.output.instructions.push(0x0b);
+        self.pop_control_frame();
+        Ok(())
     }
 
     pub(in crate::backend::direct_wasm) fn emit_runtime_print_numeric_value(

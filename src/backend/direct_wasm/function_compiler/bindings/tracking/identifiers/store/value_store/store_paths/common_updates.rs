@@ -1565,11 +1565,11 @@ impl<'a> FunctionCompiler<'a> {
         let object_literal_runtime_properties_seeded_by_initializer = matches!(
             &state.tracked_value_expression,
             Expression::Object(entries)
-                if self.object_literal_entries_need_runtime_property_value_seed(entries)
+                if Self::object_literal_entries_can_seed_runtime_property_values(entries)
         ) || matches!(
             &state.canonical_value_expression,
             Expression::Object(entries)
-                if self.object_literal_entries_need_runtime_property_value_seed(entries)
+                if Self::object_literal_entries_can_seed_runtime_property_values(entries)
         );
         let simple_call_return_runtime_properties_seeded_by_initializer = self
             .simple_user_call_return_object_needs_runtime_seed(&state.tracked_value_expression)
@@ -1590,10 +1590,9 @@ impl<'a> FunctionCompiler<'a> {
                 || simple_call_return_runtime_properties_seeded_by_initializer
                 || object_literal_uses_static_metadata_only)
         {
-            if object_literal_runtime_properties_seeded_by_initializer
-                || simple_call_return_runtime_properties_seeded_by_initializer
+            if simple_call_return_runtime_properties_seeded_by_initializer
+                || object_literal_runtime_properties_seeded_by_initializer
             {
-                self.clear_runtime_object_property_shadow_static_metadata_prefix(&target_owner);
             } else {
                 self.clear_runtime_object_property_shadow_prefix(&target_owner);
                 self.clear_runtime_object_property_shadow_static_metadata_prefix(&target_owner);
