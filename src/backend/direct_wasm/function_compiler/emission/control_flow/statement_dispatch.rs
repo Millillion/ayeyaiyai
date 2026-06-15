@@ -126,7 +126,7 @@ impl<'a> FunctionCompiler<'a> {
                 labels,
             } => {
                 let environment = self.snapshot_static_resolution_environment();
-                if Self::statement_allows_static_loop_elision(statement)
+                if self.statement_allows_runtime_static_loop_elision(statement)
                     && self.sync_static_executable_statement_tracking_effects_from_environment(
                         statement,
                         environment.clone(),
@@ -154,7 +154,7 @@ impl<'a> FunctionCompiler<'a> {
                 labels,
             } => {
                 let environment = self.snapshot_static_resolution_environment();
-                if Self::statement_allows_static_loop_elision(statement)
+                if self.statement_allows_runtime_static_loop_elision(statement)
                     && self.sync_static_executable_statement_tracking_effects_from_environment(
                         statement,
                         environment.clone(),
@@ -179,7 +179,7 @@ impl<'a> FunctionCompiler<'a> {
                 per_iteration_bindings,
             } => {
                 let environment = self.snapshot_static_resolution_environment();
-                if Self::statement_allows_static_loop_elision(statement)
+                if self.statement_allows_runtime_static_loop_elision(statement)
                     && self.sync_static_executable_statement_tracking_effects_from_environment(
                         statement,
                         environment.clone(),
@@ -211,44 +211,29 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
-    fn statement_allows_static_loop_elision(statement: &Statement) -> bool {
-        match statement {
-            Statement::Declaration { body } | Statement::Block { body } => {
-                body.iter().all(Self::statement_allows_static_loop_elision)
-            }
-            Statement::Labeled { body, .. } => {
-                body.iter().all(Self::statement_allows_static_loop_elision)
-            }
-            Statement::If {
-                then_branch,
-                else_branch,
-                ..
-            } => then_branch
-                .iter()
-                .chain(else_branch)
-                .all(Self::statement_allows_static_loop_elision),
-            Statement::For { init, body, .. } => init
-                .iter()
-                .chain(body)
-                .all(Self::statement_allows_static_loop_elision),
-            Statement::While { body, .. } | Statement::DoWhile { body, .. } => {
-                body.iter().all(Self::statement_allows_static_loop_elision)
-            }
-            Statement::Var { .. }
-            | Statement::Let { .. }
-            | Statement::Assign { .. }
-            | Statement::AssignMember { .. }
-            | Statement::Throw(..) => true,
-            Statement::Expression(..)
-            | Statement::Print { .. }
-            | Statement::With { .. }
-            | Statement::Try { .. }
-            | Statement::Switch { .. }
-            | Statement::Break { .. }
-            | Statement::Continue { .. }
-            | Statement::Return(..)
-            | Statement::Yield { .. }
-            | Statement::YieldDelegate { .. } => false,
+    pub(in crate::backend::direct_wasm) fn statement_allows_runtime_static_loop_elision(
+        &self,
+        statement: &Statement,
+    ) -> bool {
+        if Self::statement_allows_static_loop_elision(statement) {
+            return true;
         }
+
+        !self.has_current_user_function()
+            && matches!(
+                statement,
+                Statement::For { .. } | Statement::While { .. } | Statement::DoWhile { .. }
+            )
+    }
+
+    pub(in crate::backend::direct_wasm) fn statement_allows_static_loop_elision(
+        statement: &Statement,
+    ) -> bool {
+        let mut assigned_names = HashSet::new();
+        collect_assigned_binding_names_from_statement(statement, &mut assigned_names);
+        !assigned_names.is_empty()
+            && assigned_names
+                .iter()
+                .all(|name| name.starts_with(INTERNAL_BINDING_PREFIX))
     }
 }

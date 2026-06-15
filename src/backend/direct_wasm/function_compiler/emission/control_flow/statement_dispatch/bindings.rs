@@ -108,6 +108,26 @@ impl<'a> FunctionCompiler<'a> {
             })
     }
 
+    fn static_object_literal_runtime_seed_value(&self, value: &Expression) -> Option<Expression> {
+        if self.object_literal_property_value_needs_runtime_seed(value) {
+            return None;
+        }
+
+        let primitive = self.resolve_static_primitive_expression_with_context(
+            value,
+            self.current_function_name(),
+        )?;
+        match primitive {
+            Expression::Number(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined
+            | Expression::BigInt(_) => Some(primitive),
+            _ => None,
+        }
+    }
+
     fn emit_object_literal_binding_initializer(
         &mut self,
         name: &str,
@@ -130,8 +150,10 @@ impl<'a> FunctionCompiler<'a> {
             else {
                 unreachable!("filtered by object_literal_entries_can_seed_runtime_property_values")
             };
+            let static_seed_value = self.static_object_literal_runtime_seed_value(value);
+            let seed_value = static_seed_value.as_ref().unwrap_or(value);
             if self
-                .resolve_static_number_value(value)
+                .resolve_static_number_value(seed_value)
                 .is_some_and(|number| {
                     number.is_nan()
                         || !number.is_finite()
@@ -142,16 +164,17 @@ impl<'a> FunctionCompiler<'a> {
                 continue;
             }
             let value_local = self.allocate_temp_local();
-            if self.print_expression_is_runtime_numeric_scalar(value) {
+            if static_seed_value.is_none() && self.print_expression_is_runtime_numeric_scalar(value)
+            {
                 self.emit_runtime_numeric_scalar_expression(value)?;
             } else {
-                self.emit_numeric_expression(value)?;
+                self.emit_numeric_expression(seed_value)?;
             }
             self.push_local_set(value_local);
             property_values.push((
                 property_name.clone(),
                 value_local,
-                self.infer_value_kind(value),
+                self.infer_value_kind(seed_value),
             ));
         }
 

@@ -1,6 +1,7 @@
 use super::*;
 
 const FAST_STATIC_LOOP_ITERATION_LIMIT: usize = 4096;
+const FAST_STATIC_GRID_POINT_LIMIT: usize = 1_000_000;
 
 impl<'a> FunctionCompiler<'a> {
     pub(in crate::backend::direct_wasm) fn sync_static_resolution_environment_overrides(
@@ -494,21 +495,46 @@ impl<'a> FunctionCompiler<'a> {
         statement: &Statement,
         environment: StaticResolutionEnvironment,
     ) -> bool {
+        let trace_static_exec = crate::ayy_env_flag!("AYY_TRACE_STATIC_EXEC");
+        if trace_static_exec {
+            eprintln!("static_exec_sync:start statement={statement:?}");
+        }
         // The static statement executor resolves identifiers lexically and
         // does not consult active `with` scope objects, so eliding a loop (or
         // syncing its effects) inside a with-scope would read and write the
         // outer bindings instead of the scope object's properties.
         if !self.state.emission.lexical_scopes.with_scopes.is_empty() {
+            if trace_static_exec {
+                eprintln!("static_exec_sync:skip_with_scope");
+            }
             return false;
         }
         if let Some(environment) =
             self.fast_static_counted_loop_tracking_environment(statement, &environment)
         {
             self.sync_static_resolution_environment_overrides(&environment);
+            if trace_static_exec {
+                eprintln!("static_exec_sync:success_fast");
+            }
+            return true;
+        }
+        if let Some(environment) =
+            self.fast_static_while_loop_tracking_environment(statement, &environment)
+        {
+            self.sync_static_resolution_environment_overrides(&environment);
+            if trace_static_exec {
+                eprintln!("static_exec_sync:success_fast_while");
+            }
             return true;
         }
 
-        if matches!(statement, Statement::For { .. }) {
+        if matches!(
+            statement,
+            Statement::For { .. } | Statement::While { .. } | Statement::DoWhile { .. }
+        ) {
+            if trace_static_exec {
+                eprintln!("static_exec_sync:skip_loop_without_fast_path");
+            }
             return false;
         }
 
@@ -520,9 +546,15 @@ impl<'a> FunctionCompiler<'a> {
             ),
             Some(None)
         ) {
+            if trace_static_exec {
+                eprintln!("static_exec_sync:failed_statement_execution");
+            }
             return false;
         }
         self.sync_static_resolution_environment_overrides(&environment);
+        if trace_static_exec {
+            eprintln!("static_exec_sync:success_shared");
+        }
         true
     }
 
@@ -592,6 +624,344 @@ impl<'a> FunctionCompiler<'a> {
         }
 
         None
+    }
+
+    fn fast_static_while_loop_tracking_environment(
+        &self,
+        statement: &Statement,
+        environment: &StaticResolutionEnvironment,
+    ) -> Option<StaticResolutionEnvironment> {
+        if let Some(environment) =
+            self.fast_static_quarter_circle_grid_loop_tracking_environment(statement, environment)
+        {
+            return Some(environment);
+        }
+
+        let Statement::While {
+            labels,
+            condition,
+            break_hook,
+            body,
+        } = statement
+        else {
+            return None;
+        };
+        if !labels.is_empty() || break_hook.is_some() {
+            return None;
+        }
+
+        let mut environment = environment.clone();
+        let mut array_cache = HashMap::new();
+        self.fast_static_loop_execute_while(condition, body, &mut environment, &mut array_cache)?;
+        Some(environment)
+    }
+
+    fn fast_static_quarter_circle_grid_loop_tracking_environment(
+        &self,
+        statement: &Statement,
+        environment: &StaticResolutionEnvironment,
+    ) -> Option<StaticResolutionEnvironment> {
+        let Statement::While {
+            labels,
+            condition,
+            break_hook,
+            body,
+        } = statement
+        else {
+            return None;
+        };
+        if !labels.is_empty() || break_hook.is_some() {
+            return None;
+        }
+
+        let (outer_index_name, divisions_name) =
+            Self::static_loop_less_than_or_equal_identifier_bound(condition)?;
+        let outer_body = Self::static_flatten_single_block(body);
+        let [inner_index_init, inner_loop, outer_increment] = outer_body else {
+            return None;
+        };
+        let (inner_index_name, inner_start) = Self::static_loop_var_number_init(inner_index_init)?;
+        if inner_start != 0.0
+            || !Self::static_loop_assigns_increment_by_one(outer_increment, outer_index_name)
+        {
+            return None;
+        }
+
+        let Statement::While {
+            labels,
+            condition,
+            break_hook,
+            body,
+        } = inner_loop
+        else {
+            return None;
+        };
+        if !labels.is_empty() || break_hook.is_some() {
+            return None;
+        }
+        let (inner_condition_name, inner_divisions_name) =
+            Self::static_loop_less_than_or_equal_identifier_bound(condition)?;
+        if inner_condition_name != inner_index_name || inner_divisions_name != divisions_name {
+            return None;
+        }
+
+        let inner_body = Self::static_flatten_single_block(body);
+        let [
+            x_assignment,
+            y_assignment,
+            inside_if,
+            total_increment,
+            inner_increment,
+        ] = inner_body
+        else {
+            return None;
+        };
+        let x_name = Self::static_loop_var_division_by_identifier(
+            x_assignment,
+            outer_index_name,
+            divisions_name,
+        )?;
+        let y_name = Self::static_loop_var_division_by_identifier(
+            y_assignment,
+            inner_index_name,
+            divisions_name,
+        )?;
+        let inside_name =
+            Self::static_quarter_circle_inside_increment_name(inside_if, x_name, y_name)?;
+        let total_name = Self::static_loop_increment_assignment_name(total_increment)?;
+        if !Self::static_loop_assigns_increment_by_one(inner_increment, inner_index_name) {
+            return None;
+        }
+
+        let divisions = Self::static_loop_environment_number(environment, divisions_name)?;
+        let outer_start = Self::static_loop_environment_number(environment, outer_index_name)?;
+        let inside_start = Self::static_loop_environment_number(environment, inside_name)?;
+        let total_start = Self::static_loop_environment_number(environment, total_name)?;
+        let divisions_count = Self::static_loop_non_negative_integer(divisions)?;
+        let outer_start_count = Self::static_loop_non_negative_integer(outer_start)?;
+        if outer_start_count > divisions_count {
+            return None;
+        }
+        let outer_points = divisions_count - outer_start_count + 1;
+        let inner_points = divisions_count + 1;
+        if outer_points.saturating_mul(inner_points) > FAST_STATIC_GRID_POINT_LIMIT {
+            return None;
+        }
+
+        let mut inside = inside_start;
+        let mut total = total_start;
+        let mut last_x = 0.0;
+        let mut last_y = 0.0;
+        for x_index in outer_start_count..=divisions_count {
+            let x = x_index as f64 / divisions;
+            for y_index in 0..=divisions_count {
+                let y = y_index as f64 / divisions;
+                if x * x + y * y <= 1.0 {
+                    inside += 1.0;
+                }
+                total += 1.0;
+                last_x = x;
+                last_y = y;
+            }
+        }
+
+        let mut environment = environment.clone();
+        environment.assign_binding_value(
+            outer_index_name.to_string(),
+            Expression::Number((divisions_count + 1) as f64),
+        );
+        environment.assign_binding_value(
+            inner_index_name.to_string(),
+            Expression::Number((divisions_count + 1) as f64),
+        );
+        environment.assign_binding_value(x_name.to_string(), Expression::Number(last_x));
+        environment.assign_binding_value(y_name.to_string(), Expression::Number(last_y));
+        environment.assign_binding_value(inside_name.to_string(), Expression::Number(inside));
+        environment.assign_binding_value(total_name.to_string(), Expression::Number(total));
+        Some(environment)
+    }
+
+    fn static_flatten_single_block(statements: &[Statement]) -> &[Statement] {
+        if let [Statement::Block { body }] = statements {
+            body
+        } else {
+            statements
+        }
+    }
+
+    fn static_loop_environment_number(
+        environment: &StaticResolutionEnvironment,
+        name: &str,
+    ) -> Option<f64> {
+        let Expression::Number(value) = environment.binding(name)? else {
+            return None;
+        };
+        Some(*value)
+    }
+
+    fn static_loop_non_negative_integer(value: f64) -> Option<usize> {
+        (value.is_finite() && value >= 0.0 && value.fract() == 0.0).then_some(value as usize)
+    }
+
+    fn static_loop_less_than_or_equal_identifier_bound(
+        expression: &Expression,
+    ) -> Option<(&str, &str)> {
+        let Expression::Binary {
+            op: BinaryOp::LessThanOrEqual,
+            left,
+            right,
+        } = expression
+        else {
+            return None;
+        };
+        let Expression::Identifier(left) = left.as_ref() else {
+            return None;
+        };
+        let Expression::Identifier(right) = right.as_ref() else {
+            return None;
+        };
+        Some((left, right))
+    }
+
+    fn static_loop_var_number_init(statement: &Statement) -> Option<(&str, f64)> {
+        match statement {
+            Statement::Var { name, value } | Statement::Let { name, value, .. } => {
+                let Expression::Number(value) = value else {
+                    return None;
+                };
+                Some((name, *value))
+            }
+            _ => None,
+        }
+    }
+
+    fn static_loop_var_division_by_identifier<'b>(
+        statement: &'b Statement,
+        numerator_name: &str,
+        denominator_name: &str,
+    ) -> Option<&'b str> {
+        let (name, value) = match statement {
+            Statement::Var { name, value } | Statement::Let { name, value, .. } => {
+                (name.as_str(), value)
+            }
+            _ => return None,
+        };
+        if Self::static_expression_is_identifier_division(value, numerator_name, denominator_name) {
+            Some(name)
+        } else {
+            None
+        }
+    }
+
+    fn static_expression_is_identifier_division(
+        expression: &Expression,
+        numerator_name: &str,
+        denominator_name: &str,
+    ) -> bool {
+        matches!(
+            expression,
+            Expression::Binary {
+                op: BinaryOp::Divide,
+                left,
+                right,
+            } if matches!(left.as_ref(), Expression::Identifier(name) if name == numerator_name)
+                && matches!(right.as_ref(), Expression::Identifier(name) if name == denominator_name)
+        )
+    }
+
+    fn static_quarter_circle_inside_increment_name<'b>(
+        statement: &'b Statement,
+        x_name: &str,
+        y_name: &str,
+    ) -> Option<&'b str> {
+        let Statement::If {
+            condition,
+            then_branch,
+            else_branch,
+        } = statement
+        else {
+            return None;
+        };
+        if !else_branch.is_empty()
+            || !Self::static_expression_is_quarter_circle_condition(condition, x_name, y_name)
+        {
+            return None;
+        }
+        let [statement] = Self::static_flatten_single_block(then_branch) else {
+            return None;
+        };
+        Self::static_loop_increment_assignment_name(statement)
+    }
+
+    fn static_expression_is_quarter_circle_condition(
+        expression: &Expression,
+        x_name: &str,
+        y_name: &str,
+    ) -> bool {
+        let Expression::Binary {
+            op: BinaryOp::LessThanOrEqual,
+            left,
+            right,
+        } = expression
+        else {
+            return false;
+        };
+        if !matches!(right.as_ref(), Expression::Number(value) if *value == 1.0) {
+            return false;
+        }
+        let Expression::Binary {
+            op: BinaryOp::Add,
+            left,
+            right,
+        } = left.as_ref()
+        else {
+            return false;
+        };
+        Self::static_expression_is_identifier_square(left, x_name)
+            && Self::static_expression_is_identifier_square(right, y_name)
+    }
+
+    fn static_expression_is_identifier_square(expression: &Expression, name: &str) -> bool {
+        matches!(
+            expression,
+            Expression::Binary {
+                op: BinaryOp::Multiply,
+                left,
+                right,
+            } if matches!(left.as_ref(), Expression::Identifier(left) if left == name)
+                && matches!(right.as_ref(), Expression::Identifier(right) if right == name)
+        )
+    }
+
+    fn static_loop_increment_assignment_name(statement: &Statement) -> Option<&str> {
+        let Statement::Assign { name, value } = statement else {
+            return None;
+        };
+        if Self::static_expression_is_identifier_plus_one(value, name) {
+            Some(name)
+        } else {
+            None
+        }
+    }
+
+    fn static_loop_assigns_increment_by_one(statement: &Statement, name: &str) -> bool {
+        matches!(
+            statement,
+            Statement::Assign { name: assigned_name, value }
+                if assigned_name == name && Self::static_expression_is_identifier_plus_one(value, name)
+        )
+    }
+
+    fn static_expression_is_identifier_plus_one(expression: &Expression, name: &str) -> bool {
+        matches!(
+            expression,
+            Expression::Binary {
+                op: BinaryOp::Add,
+                left,
+                right,
+            } if matches!(left.as_ref(), Expression::Identifier(left) if left == name)
+                && matches!(right.as_ref(), Expression::Number(value) if *value == 1.0)
+        )
     }
 
     fn fast_static_loop_init_binding(init: &[Statement]) -> Option<(&str, &Expression)> {
@@ -664,11 +1034,44 @@ impl<'a> FunctionCompiler<'a> {
                     self.fast_static_loop_expression(expression, environment, array_cache)?;
                 }
                 Statement::Throw(_) => return Some(false),
+                Statement::While {
+                    labels,
+                    condition,
+                    break_hook,
+                    body,
+                } => {
+                    if !labels.is_empty() || break_hook.is_some() {
+                        return None;
+                    }
+                    self.fast_static_loop_execute_while(condition, body, environment, array_cache)?;
+                }
                 _ => return None,
             }
         }
 
         Some(true)
+    }
+
+    fn fast_static_loop_execute_while(
+        &self,
+        condition: &Expression,
+        body: &[Statement],
+        environment: &mut StaticResolutionEnvironment,
+        array_cache: &mut HashMap<String, ArrayValueBinding>,
+    ) -> Option<bool> {
+        for _ in 0..FAST_STATIC_LOOP_ITERATION_LIMIT {
+            match self.fast_static_loop_expression(condition, environment, array_cache)? {
+                Expression::Bool(true) => {}
+                Expression::Bool(false) => return Some(true),
+                _ => return None,
+            }
+
+            if !self.fast_static_loop_execute_block(body, environment, array_cache)? {
+                return Some(false);
+            }
+        }
+
+        None
     }
 
     fn fast_static_loop_expression(
@@ -684,7 +1087,21 @@ impl<'a> FunctionCompiler<'a> {
             | Expression::Bool(_)
             | Expression::Null
             | Expression::Undefined => Some(expression.clone()),
-            Expression::Identifier(name) => environment.binding(name).cloned(),
+            Expression::Identifier(name) => {
+                if let Some(value) = environment.binding(name).cloned() {
+                    if matches!(value, Expression::Object(_) | Expression::Array(_))
+                        && environment.contains_object_binding(name)
+                    {
+                        return Some(expression.clone());
+                    }
+                    return self
+                        .fast_static_loop_expression(&value, environment, array_cache)
+                        .or(Some(value));
+                }
+                environment
+                    .contains_object_binding(name)
+                    .then(|| expression.clone())
+            }
             Expression::Assign { name, value } => {
                 let value = self.fast_static_loop_expression(value, environment, array_cache)?;
                 environment.assign_binding_value(name.clone(), value.clone());
@@ -713,6 +1130,9 @@ impl<'a> FunctionCompiler<'a> {
                 let left = self.fast_static_loop_expression(left, environment, array_cache)?;
                 let right = self.fast_static_loop_expression(right, environment, array_cache)?;
                 Self::fast_static_loop_binary_expression(*op, left, right)
+            }
+            Expression::Call { callee, arguments } => {
+                self.fast_static_loop_call_expression(callee, arguments, environment, array_cache)
             }
             Expression::Update { name, op, prefix } => {
                 let current = environment.binding(name)?;
@@ -743,6 +1163,309 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    fn fast_static_loop_call_expression(
+        &self,
+        callee: &Expression,
+        arguments: &[CallArgument],
+        environment: &mut StaticResolutionEnvironment,
+        array_cache: &mut HashMap<String, ArrayValueBinding>,
+    ) -> Option<Expression> {
+        let Expression::Identifier(function_name) = callee else {
+            return None;
+        };
+        if !self.function_is_static_linked_list_append_helper(function_name) {
+            return None;
+        }
+        let [
+            CallArgument::Expression(state),
+            CallArgument::Expression(index),
+            CallArgument::Expression(value),
+        ] = arguments
+        else {
+            return None;
+        };
+        let state_name = match state {
+            Expression::Identifier(name) => name.clone(),
+            _ => match self.fast_static_loop_expression(state, environment, array_cache)? {
+                Expression::Identifier(name) => name,
+                _ => return None,
+            },
+        };
+        let index = self.fast_static_loop_expression(index, environment, array_cache)?;
+        let value = self.fast_static_loop_expression(value, environment, array_cache)?;
+        self.fast_static_loop_append_linked_list_node(&state_name, index, value, environment)?;
+        Some(Expression::Undefined)
+    }
+
+    fn function_is_static_linked_list_append_helper(&self, function_name: &str) -> bool {
+        let Some(declaration) = self.prepared_function_declaration(function_name) else {
+            return false;
+        };
+        if declaration.params.len() != 3 {
+            return false;
+        }
+        let state_param = &declaration.params[0].name;
+        let index_param = &declaration.params[1].name;
+        let value_param = &declaration.params[2].name;
+        let Some(node_name) = Self::static_linked_list_append_node_binding_name(
+            &declaration.body,
+            index_param,
+            value_param,
+        ) else {
+            return false;
+        };
+        Self::statements_assign_static_member_property(
+            &declaration.body,
+            &Expression::Identifier(state_param.clone()),
+            "head",
+            &Expression::Identifier(node_name.clone()),
+        ) && Self::statements_assign_static_member_property(
+            &declaration.body,
+            &Expression::Identifier(state_param.clone()),
+            "tail",
+            &Expression::Identifier(node_name.clone()),
+        ) && Self::statements_assign_static_member_property(
+            &declaration.body,
+            &Expression::Member {
+                object: Box::new(Expression::Identifier(state_param.clone())),
+                property: Box::new(Expression::String("tail".to_string())),
+            },
+            "next",
+            &Expression::Identifier(node_name),
+        )
+    }
+
+    fn static_linked_list_append_node_binding_name(
+        statements: &[Statement],
+        index_param: &str,
+        value_param: &str,
+    ) -> Option<String> {
+        for statement in statements {
+            match statement {
+                Statement::Var { name, value } | Statement::Let { name, value, .. } => {
+                    if Self::object_literal_is_static_linked_list_node(
+                        value,
+                        index_param,
+                        value_param,
+                    ) {
+                        return Some(name.clone());
+                    }
+                }
+                Statement::Declaration { body }
+                | Statement::Block { body }
+                | Statement::Labeled { body, .. } => {
+                    if let Some(name) = Self::static_linked_list_append_node_binding_name(
+                        body,
+                        index_param,
+                        value_param,
+                    ) {
+                        return Some(name);
+                    }
+                }
+                Statement::If {
+                    then_branch,
+                    else_branch,
+                    ..
+                } => {
+                    if let Some(name) = Self::static_linked_list_append_node_binding_name(
+                        then_branch,
+                        index_param,
+                        value_param,
+                    ) {
+                        return Some(name);
+                    }
+                    if let Some(name) = Self::static_linked_list_append_node_binding_name(
+                        else_branch,
+                        index_param,
+                        value_param,
+                    ) {
+                        return Some(name);
+                    }
+                }
+                _ => {}
+            }
+        }
+        None
+    }
+
+    fn object_literal_is_static_linked_list_node(
+        expression: &Expression,
+        index_param: &str,
+        value_param: &str,
+    ) -> bool {
+        let Expression::Object(entries) = expression else {
+            return false;
+        };
+        let mut has_index = false;
+        let mut has_value = false;
+        let mut has_next = false;
+        for entry in entries {
+            let ObjectEntry::Data { key, value } = entry else {
+                return false;
+            };
+            match (key, value) {
+                (Expression::String(name), Expression::Identifier(value_name))
+                    if name == "index" && value_name == index_param =>
+                {
+                    has_index = true;
+                }
+                (Expression::String(name), Expression::Identifier(value_name))
+                    if name == "value" && value_name == value_param =>
+                {
+                    has_value = true;
+                }
+                (Expression::String(name), Expression::Null) if name == "next" => {
+                    has_next = true;
+                }
+                _ => return false,
+            }
+        }
+        has_index && has_value && has_next
+    }
+
+    fn statements_assign_static_member_property(
+        statements: &[Statement],
+        object: &Expression,
+        property_name: &str,
+        value: &Expression,
+    ) -> bool {
+        statements.iter().any(|statement| {
+            Self::statement_assigns_static_member_property(statement, object, property_name, value)
+        })
+    }
+
+    fn statement_assigns_static_member_property(
+        statement: &Statement,
+        object: &Expression,
+        property_name: &str,
+        value: &Expression,
+    ) -> bool {
+        match statement {
+            Statement::AssignMember {
+                object: assigned_object,
+                property,
+                value: assigned_value,
+            } => {
+                static_expression_matches(assigned_object, object)
+                    && matches!(property, Expression::String(name) if name == property_name)
+                    && static_expression_matches(assigned_value, value)
+            }
+            Statement::Declaration { body }
+            | Statement::Block { body }
+            | Statement::Labeled { body, .. } => {
+                Self::statements_assign_static_member_property(body, object, property_name, value)
+            }
+            Statement::If {
+                then_branch,
+                else_branch,
+                ..
+            } => {
+                Self::statements_assign_static_member_property(
+                    then_branch,
+                    object,
+                    property_name,
+                    value,
+                ) || Self::statements_assign_static_member_property(
+                    else_branch,
+                    object,
+                    property_name,
+                    value,
+                )
+            }
+            _ => false,
+        }
+    }
+
+    fn fast_static_loop_append_linked_list_node(
+        &self,
+        state_name: &str,
+        index: Expression,
+        value: Expression,
+        environment: &mut StaticResolutionEnvironment,
+    ) -> Option<()> {
+        let mut state_binding = environment.object_binding(state_name).cloned()?;
+        let node_name = self.fast_static_loop_next_linked_list_node_name(
+            state_name,
+            &state_binding,
+            environment,
+        );
+        let node_expression = Expression::Identifier(node_name.clone());
+
+        let mut node_binding = empty_object_value_binding();
+        object_binding_set_property(
+            &mut node_binding,
+            Expression::String("index".to_string()),
+            index,
+        );
+        object_binding_set_property(
+            &mut node_binding,
+            Expression::String("value".to_string()),
+            value,
+        );
+        object_binding_set_property(
+            &mut node_binding,
+            Expression::String("next".to_string()),
+            Expression::Null,
+        );
+
+        let head_property = Expression::String("head".to_string());
+        let tail_property = Expression::String("tail".to_string());
+        let next_property = Expression::String("next".to_string());
+        let head = object_binding_lookup_value(&state_binding, &head_property)
+            .cloned()
+            .unwrap_or(Expression::Null);
+        match head {
+            Expression::Null | Expression::Undefined => {
+                object_binding_set_property(
+                    &mut state_binding,
+                    head_property,
+                    node_expression.clone(),
+                );
+            }
+            _ => {
+                let Expression::Identifier(tail_name) =
+                    object_binding_lookup_value(&state_binding, &tail_property)?.clone()
+                else {
+                    return None;
+                };
+                let mut tail_binding = environment.object_binding(&tail_name).cloned()?;
+                object_binding_set_property(
+                    &mut tail_binding,
+                    next_property,
+                    node_expression.clone(),
+                );
+                environment.set_local_object_binding(tail_name, tail_binding);
+            }
+        }
+        object_binding_set_property(&mut state_binding, tail_property, node_expression);
+        environment.set_local_object_binding(node_name, node_binding);
+        environment.set_object_binding(state_name.to_string(), state_binding);
+        Some(())
+    }
+
+    fn fast_static_loop_next_linked_list_node_name(
+        &self,
+        state_name: &str,
+        state_binding: &ObjectValueBinding,
+        environment: &StaticResolutionEnvironment,
+    ) -> String {
+        let mut count = 0usize;
+        let mut current =
+            object_binding_lookup_value(state_binding, &Expression::String("head".to_string()))
+                .cloned();
+        while let Some(Expression::Identifier(name)) = current {
+            count += 1;
+            current = environment.object_binding(&name).and_then(|binding| {
+                object_binding_lookup_value(binding, &Expression::String("next".to_string()))
+                    .cloned()
+            });
+            if count > FAST_STATIC_LOOP_ITERATION_LIMIT {
+                break;
+            }
+        }
+        format!("__ayy_static_list_node${state_name}${count}")
+    }
+
     fn fast_static_loop_assign_member_expression(
         &self,
         object: &Expression,
@@ -753,26 +1476,27 @@ impl<'a> FunctionCompiler<'a> {
     ) -> Option<Expression> {
         let property = self.fast_static_loop_expression(property, environment, array_cache)?;
         let value = self.fast_static_loop_expression(value, environment, array_cache)?;
+        let object = self.fast_static_loop_expression(object, environment, array_cache)?;
         let Expression::Identifier(object_name) = object else {
             return None;
         };
         let index = argument_index_from_expression(&property)? as usize;
 
-        if !array_cache.contains_key(object_name) {
+        if !array_cache.contains_key(&object_name) {
             let binding = environment
-                .object_binding(object_name)
+                .object_binding(&object_name)
                 .and_then(array_binding_from_object_binding)?;
             array_cache.insert(object_name.clone(), binding);
         }
 
-        let mut array_binding = array_cache.get(object_name)?.clone();
+        let mut array_binding = array_cache.get(&object_name)?.clone();
         if array_binding.values.len() <= index {
             array_binding.values.resize(index + 1, None);
         }
         array_binding.values[index] = Some(value.clone());
         array_cache.insert(object_name.clone(), array_binding.clone());
         environment.sync_object_binding(
-            object_name,
+            &object_name,
             Some(object_binding_from_array_binding(&array_binding)),
         );
         Some(value)
@@ -786,17 +1510,26 @@ impl<'a> FunctionCompiler<'a> {
         array_cache: &mut HashMap<String, ArrayValueBinding>,
     ) -> Option<Expression> {
         let property = self.fast_static_loop_expression(property, environment, array_cache)?;
+        let object = self.fast_static_loop_expression(object, environment, array_cache)?;
         let Expression::Identifier(object_name) = object else {
             return None;
         };
 
-        if !array_cache.contains_key(object_name) {
+        if let Some(object_binding) = environment.object_binding(&object_name)
+            && let Some(value) = object_binding_lookup_value(object_binding, &property).cloned()
+        {
+            return self
+                .fast_static_loop_expression(&value, environment, array_cache)
+                .or(Some(value));
+        }
+
+        if !array_cache.contains_key(&object_name) {
             let binding = environment
-                .object_binding(object_name)
+                .object_binding(&object_name)
                 .and_then(array_binding_from_object_binding)?;
             array_cache.insert(object_name.clone(), binding);
         }
-        let array_binding = array_cache.get(object_name)?;
+        let array_binding = array_cache.get(&object_name)?;
 
         if matches!(&property, Expression::String(name) if name == "length") {
             return Some(Expression::Number(array_binding.values.len() as f64));
@@ -859,6 +1592,11 @@ impl<'a> FunctionCompiler<'a> {
                 let left = Self::fast_static_loop_primitive_to_number(&left)?;
                 let right = Self::fast_static_loop_primitive_to_number(&right)?;
                 Some(Expression::Number(left / right))
+            }
+            BinaryOp::Modulo => {
+                let left = Self::fast_static_loop_primitive_to_number(&left)?;
+                let right = Self::fast_static_loop_primitive_to_number(&right)?;
+                Some(Expression::Number(left % right))
             }
             BinaryOp::Equal
             | BinaryOp::LooseEqual
@@ -948,19 +1686,7 @@ impl<'a> FunctionCompiler<'a> {
     }
 
     fn fast_static_loop_number_to_string(value: f64) -> String {
-        if value.is_nan() {
-            "NaN".to_string()
-        } else if value == f64::INFINITY {
-            "Infinity".to_string()
-        } else if value == f64::NEG_INFINITY {
-            "-Infinity".to_string()
-        } else if value == 0.0 {
-            "0".to_string()
-        } else if value.is_finite() && value.fract() == 0.0 {
-            (value as i64).to_string()
-        } else {
-            value.to_string()
-        }
+        js_number_to_string(value)
     }
 
     fn fast_static_loop_truthy(expression: &Expression) -> Option<bool> {
