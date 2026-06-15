@@ -10,6 +10,18 @@ struct RuntimeShadowFallbackGuard {
     _memo: crate::backend::direct_wasm::memo::ResolutionGuardScope,
 }
 
+struct RuntimeMemberShadowAliasOwner {
+    owner: String,
+    guard: Option<RuntimeMemberShadowAliasGuard>,
+}
+
+struct RuntimeMemberShadowAliasGuard {
+    parent_owner: String,
+    parent_property: Expression,
+    assigned_property: Expression,
+    depth: usize,
+}
+
 impl RuntimeShadowFallbackGuard {
     fn enter(fallback_value: &Expression) -> Option<Self> {
         let key = format!("{fallback_value:?}");
@@ -34,6 +46,7 @@ impl Drop for RuntimeShadowFallbackGuard {
 }
 
 const RUNTIME_SHADOW_OWNER_EXPRESSION_RECURSION_LIMIT: usize = 64;
+const RUNTIME_MEMBER_SHADOW_NULL_TAIL_ALIAS_DEPTH_LIMIT: usize = 2;
 
 thread_local! {
     static RUNTIME_SHADOW_OWNER_EXPRESSION_DEPTH: std::cell::Cell<usize> =
@@ -2826,11 +2839,17 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(());
         }
 
-        let sibling_alias_owners = self.runtime_member_shadow_sibling_alias_owners(
+        let mut sibling_alias_owners = self.runtime_member_shadow_sibling_alias_owners(
             target_object,
             &target_owner,
             &property,
         );
+        sibling_alias_owners.sort_by(|left, right| match (&left.guard, &right.guard) {
+            (Some(left_guard), Some(right_guard)) => right_guard.depth.cmp(&left_guard.depth),
+            (Some(_), None) => std::cmp::Ordering::Greater,
+            (None, Some(_)) => std::cmp::Ordering::Less,
+            (None, None) => std::cmp::Ordering::Equal,
+        });
         let source_object_bindings = source_owners
             .iter()
             .filter_map(|source_owner| {
@@ -2880,17 +2899,27 @@ impl<'a> FunctionCompiler<'a> {
                 object_binding,
             );
         }
-        for alias_owner in sibling_alias_owners {
+        for alias in sibling_alias_owners {
+            let alias_owner = alias.owner;
             if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                 eprintln!(
                     "runtime_member_shadow_alias_update source={target_owner} alias={alias_owner} property={property:?}"
                 );
             }
-            self.emit_runtime_object_property_shadow_property_copy_between_exact_owners(
-                &target_owner,
-                &alias_owner,
-                &property,
-            )?;
+            if let Some(guard) = alias.guard.as_ref() {
+                self.emit_guarded_runtime_member_shadow_alias_property_copy(
+                    &target_owner,
+                    &alias_owner,
+                    &property,
+                    guard,
+                )?;
+            } else {
+                self.emit_runtime_object_property_shadow_property_copy_between_exact_owners(
+                    &target_owner,
+                    &alias_owner,
+                    &property,
+                )?;
+            }
             let alias_member_owner =
                 Self::runtime_object_member_shadow_owner_name(&alias_owner, &property);
             let alias_shadow_binding_name =
@@ -2936,7 +2965,7 @@ impl<'a> FunctionCompiler<'a> {
         target_object: &Expression,
         target_owner: &str,
         assigned_property: &Expression,
-    ) -> Vec<String> {
+    ) -> Vec<RuntimeMemberShadowAliasOwner> {
         let Expression::Member {
             object: parent_object,
             property: target_property,
@@ -2970,7 +2999,7 @@ impl<'a> FunctionCompiler<'a> {
             );
         }
 
-        let mut aliases = Vec::new();
+        let mut aliases: Vec<RuntimeMemberShadowAliasOwner> = Vec::new();
         for (candidate_property, _) in
             self.runtime_object_property_shadow_copy_entries(&parent_owner)
         {
@@ -2982,7 +3011,7 @@ impl<'a> FunctionCompiler<'a> {
             let candidate_owner =
                 Self::runtime_object_member_shadow_owner_name(&parent_owner, &candidate_property);
             if candidate_owner == target_owner
-                || aliases.iter().any(|alias| alias == &candidate_owner)
+                || aliases.iter().any(|alias| alias.owner == candidate_owner)
                 || !self.runtime_object_property_shadow_owner_has_bindings(&candidate_owner)
             {
                 continue;
@@ -2998,6 +3027,8 @@ impl<'a> FunctionCompiler<'a> {
                                 Some(assigned_property),
                             ))
                 });
+            let null_tail_aliases = self
+                .runtime_member_shadow_null_next_tail_aliases(&candidate_owner, assigned_property);
             let value_aliases = target_parent_value
                 .as_ref()
                 .zip(
@@ -3016,11 +3047,23 @@ impl<'a> FunctionCompiler<'a> {
                     &candidate_property,
                 );
                 eprintln!(
-                    "runtime_member_shadow_alias_candidate parent={parent_owner} candidate_owner={candidate_owner} candidate_property={candidate_property:?} structural={structurally_aliases} value={value_aliases} candidate_value={candidate_value:?}"
+                    "runtime_member_shadow_alias_candidate parent={parent_owner} candidate_owner={candidate_owner} candidate_property={candidate_property:?} structural={structurally_aliases} value={value_aliases} null_tail={null_tail_aliases} candidate_value={candidate_value:?}"
                 );
             }
-            if structurally_aliases || value_aliases {
-                aliases.push(candidate_owner);
+            if structurally_aliases || value_aliases || null_tail_aliases {
+                let guard =
+                    (!structurally_aliases && !value_aliases && null_tail_aliases).then(|| {
+                        RuntimeMemberShadowAliasGuard {
+                            parent_owner: parent_owner.clone(),
+                            parent_property: candidate_property.clone(),
+                            assigned_property: assigned_property.clone(),
+                            depth: 1,
+                        }
+                    });
+                aliases.push(RuntimeMemberShadowAliasOwner {
+                    owner: candidate_owner,
+                    guard,
+                });
             }
         }
         let mut visited_alias_owners = HashSet::new();
@@ -3046,7 +3089,7 @@ impl<'a> FunctionCompiler<'a> {
         target_owner: &str,
         target_binding: &ObjectValueBinding,
         target_parent_value: Option<&Expression>,
-        aliases: &mut Vec<String>,
+        aliases: &mut Vec<RuntimeMemberShadowAliasOwner>,
         visited: &mut HashSet<String>,
         remaining_depth: usize,
     ) {
@@ -3069,7 +3112,7 @@ impl<'a> FunctionCompiler<'a> {
                 && !(visited.len() == 1
                     && static_expression_matches(&candidate_property, root_target_property))
                 && candidate_owner_has_bindings
-                && !aliases.iter().any(|alias| alias == &candidate_owner)
+                && !aliases.iter().any(|alias| alias.owner == candidate_owner)
             {
                 let candidate_binding =
                     self.resolve_runtime_shadow_object_binding(&candidate_owner);
@@ -3097,6 +3140,13 @@ impl<'a> FunctionCompiler<'a> {
                                 Some(assigned_property),
                             )
                     });
+                let alias_depth = 17 - remaining_depth;
+                let null_tail_aliases = alias_depth
+                    <= RUNTIME_MEMBER_SHADOW_NULL_TAIL_ALIAS_DEPTH_LIMIT
+                    && self.runtime_member_shadow_null_next_tail_aliases(
+                        &candidate_owner,
+                        assigned_property,
+                    );
                 let value_aliases = target_parent_value
                     .zip(candidate_value.as_ref())
                     .is_some_and(|(target_value, candidate_value)| {
@@ -3107,11 +3157,21 @@ impl<'a> FunctionCompiler<'a> {
                     });
                 if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                     eprintln!(
-                        "runtime_member_shadow_nested_alias_candidate owner={owner_name} candidate_owner={candidate_owner} candidate_property={candidate_property:?} structural={structurally_aliases} value={value_aliases} candidate_value={candidate_value:?}"
+                        "runtime_member_shadow_nested_alias_candidate owner={owner_name} candidate_owner={candidate_owner} candidate_property={candidate_property:?} structural={structurally_aliases} value={value_aliases} null_tail={null_tail_aliases} candidate_value={candidate_value:?}"
                     );
                 }
-                if structurally_aliases || value_aliases {
-                    aliases.push(candidate_owner.clone());
+                if structurally_aliases || value_aliases || null_tail_aliases {
+                    let guard = (!structurally_aliases && !value_aliases && null_tail_aliases)
+                        .then(|| RuntimeMemberShadowAliasGuard {
+                            parent_owner: owner_name.to_string(),
+                            parent_property: candidate_property.clone(),
+                            assigned_property: assigned_property.clone(),
+                            depth: alias_depth,
+                        });
+                    aliases.push(RuntimeMemberShadowAliasOwner {
+                        owner: candidate_owner.clone(),
+                        guard,
+                    });
                 }
             }
             if candidate_owner_has_bindings {
@@ -3128,6 +3188,49 @@ impl<'a> FunctionCompiler<'a> {
                 );
             }
         }
+    }
+
+    fn runtime_member_shadow_null_next_tail_aliases(
+        &self,
+        candidate_owner: &str,
+        assigned_property: &Expression,
+    ) -> bool {
+        if !matches!(assigned_property, Expression::String(property_name) if property_name == "next")
+        {
+            return false;
+        }
+        match self.runtime_object_property_shadow_static_value_for_owner(
+            candidate_owner,
+            assigned_property,
+        ) {
+            Some(Expression::Null | Expression::Undefined) => true,
+            Some(Expression::Identifier(owner_name))
+                if owner_name.starts_with("__ayy_member_object__") =>
+            {
+                self.runtime_member_shadow_owner_has_no_concrete_static_entries(&owner_name)
+            }
+            None if candidate_owner.starts_with("__ayy_member_object__") => {
+                self.runtime_member_shadow_owner_has_no_concrete_static_entries(candidate_owner)
+            }
+            _ => false,
+        }
+    }
+
+    fn runtime_member_shadow_owner_has_no_concrete_static_entries(&self, owner_name: &str) -> bool {
+        if self
+            .resolve_runtime_shadow_object_binding(owner_name)
+            .is_some_and(|binding| {
+                !self
+                    .object_runtime_shadow_entries_from_binding(&binding)
+                    .is_empty()
+            })
+        {
+            return false;
+        }
+
+        self.runtime_object_property_shadow_copy_entries(owner_name)
+            .into_iter()
+            .all(|(_, fallback_value)| fallback_value.is_none())
     }
 
     fn runtime_shadow_object_binding_entries_match_ignoring_property(
@@ -4782,6 +4885,99 @@ impl<'a> FunctionCompiler<'a> {
             false,
             None,
         )
+    }
+
+    fn emit_guarded_runtime_member_shadow_alias_property_copy(
+        &mut self,
+        source_owner: &str,
+        target_owner: &str,
+        property: &Expression,
+        guard: &RuntimeMemberShadowAliasGuard,
+    ) -> DirectResult<()> {
+        let owner_binding = self.runtime_object_property_shadow_binding_by_property(
+            &guard.parent_owner,
+            &guard.parent_property,
+        );
+
+        self.push_global_get(owner_binding.present_index);
+        self.state.emission.output.instructions.push(0x04);
+        self.state
+            .emission
+            .output
+            .instructions
+            .push(EMPTY_BLOCK_TYPE);
+        self.push_control_frame();
+
+        self.push_global_get(owner_binding.value_index);
+        self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
+        self.state.emission.output.instructions.push(0x46);
+        self.state.emission.output.instructions.push(0x04);
+        self.state
+            .emission
+            .output
+            .instructions
+            .push(EMPTY_BLOCK_TYPE);
+        self.push_control_frame();
+
+        self.emit_runtime_member_shadow_alias_nullish_slot_condition(
+            target_owner,
+            &guard.assigned_property,
+        );
+        self.state.emission.output.instructions.push(0x04);
+        self.state
+            .emission
+            .output
+            .instructions
+            .push(EMPTY_BLOCK_TYPE);
+        self.push_control_frame();
+
+        self.emit_runtime_object_property_shadow_property_copy_between_exact_owners(
+            source_owner,
+            target_owner,
+            property,
+        )?;
+
+        self.state.emission.output.instructions.push(0x0b);
+        self.pop_control_frame();
+        self.state.emission.output.instructions.push(0x0b);
+        self.pop_control_frame();
+        self.state.emission.output.instructions.push(0x0b);
+        self.pop_control_frame();
+        Ok(())
+    }
+
+    fn emit_runtime_member_shadow_alias_nullish_slot_condition(
+        &mut self,
+        owner_name: &str,
+        property: &Expression,
+    ) {
+        let slot_binding =
+            self.runtime_object_property_shadow_binding_by_property(owner_name, property);
+
+        self.push_global_get(slot_binding.present_index);
+        self.state.emission.output.instructions.push(0x45);
+        self.state.emission.output.instructions.push(0x04);
+        self.state.emission.output.instructions.push(I32_TYPE);
+        self.push_control_frame();
+        self.push_i32_const(1);
+        self.state.emission.output.instructions.push(0x05);
+
+        self.push_global_get(slot_binding.value_index);
+        self.push_i32_const(JS_NULL_TAG);
+        self.state.emission.output.instructions.push(0x46);
+        self.state.emission.output.instructions.push(0x04);
+        self.state.emission.output.instructions.push(I32_TYPE);
+        self.push_control_frame();
+        self.push_i32_const(1);
+        self.state.emission.output.instructions.push(0x05);
+        self.push_global_get(slot_binding.value_index);
+        self.push_i32_const(JS_UNDEFINED_TAG);
+        self.state.emission.output.instructions.push(0x46);
+        self.state.emission.output.instructions.push(0x0b);
+        self.pop_control_frame();
+
+        self.state.emission.output.instructions.push(0x0b);
+        self.pop_control_frame();
     }
 
     fn emit_runtime_object_property_shadow_property_copy_between_exact_owners(
