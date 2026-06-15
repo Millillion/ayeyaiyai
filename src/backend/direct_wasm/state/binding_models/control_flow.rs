@@ -22,6 +22,7 @@ pub(in crate::backend::direct_wasm) struct LoopContext {
     pub(in crate::backend::direct_wasm) direct_step_iterators: HashSet<String>,
     pub(in crate::backend::direct_wasm) numeric_binding_candidates: HashMap<String, Vec<i64>>,
     pub(in crate::backend::direct_wasm) numeric_spec: Option<NumericLoopSpec>,
+    pub(in crate::backend::direct_wasm) string_binding_candidates: HashMap<String, Vec<String>>,
     /// Loop-body bindings that alias the current for-in key
     /// (`name = __ayy_for_in_keys_N[index]`) and are assigned nowhere else in
     /// the loop body, so the alias stays valid for the whole iteration.

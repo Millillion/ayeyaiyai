@@ -840,6 +840,19 @@ impl<'a> FunctionCompiler<'a> {
                 };
                 self.resolve_identifier_store_shadow_source_owner_with_depth(spread, depth + 1)
             }
+            Expression::Member { .. } => self
+                .runtime_object_property_shadow_owner_name_for_expression(expression)
+                .or_else(|| {
+                    let materialized = self.materialize_static_expression(expression);
+                    (!static_expression_matches(&materialized, expression))
+                        .then(|| {
+                            self.resolve_identifier_store_shadow_source_owner_with_depth(
+                                &materialized,
+                                depth + 1,
+                            )
+                        })
+                        .flatten()
+                }),
             Expression::Call { callee, arguments } => {
                 let Expression::Identifier(function_name) = callee.as_ref() else {
                     return self
@@ -1240,6 +1253,34 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    fn sync_identifier_store_runtime_object_shadow_alias_backup(
+        &mut self,
+        source_owner: &str,
+        alias_owner: &str,
+        object_binding: Option<&ObjectValueBinding>,
+    ) -> DirectResult<()> {
+        if alias_owner == source_owner || alias_owner.starts_with("__ayy") {
+            return Ok(());
+        }
+        self.clear_runtime_object_property_shadow_prefix(alias_owner);
+        self.clear_runtime_object_property_shadow_static_metadata_prefix(alias_owner);
+        self.emit_runtime_object_property_shadow_copy_to_exact_target(source_owner, alias_owner)?;
+        if let Some(object_binding) = object_binding {
+            self.sync_runtime_object_property_shadow_static_metadata_from_binding(
+                alias_owner,
+                object_binding,
+            );
+        } else if let Some(source_object_binding) =
+            self.resolve_runtime_shadow_object_binding(source_owner)
+        {
+            self.sync_runtime_object_property_shadow_static_metadata_from_binding(
+                alias_owner,
+                &source_object_binding,
+            );
+        }
+        Ok(())
+    }
+
     pub(super) fn sync_identifier_store_runtime_object_shadows(
         &mut self,
         target_name: &str,
@@ -1260,15 +1301,34 @@ impl<'a> FunctionCompiler<'a> {
                 &state.canonical_value_expression,
                 &mut referenced_names,
             );
-            if referenced_names.contains(target_name)
-                || referenced_names.contains(&state.resolved_name)
-            {
+            let has_self_reference = referenced_names.contains(target_name)
+                || referenced_names.contains(&state.resolved_name);
+            let self_reference_member_source_owner = has_self_reference
+                .then(|| {
+                    self.resolve_identifier_store_shadow_source_owner(
+                        &state.canonical_value_expression,
+                    )
+                })
+                .flatten()
+                .filter(|source_owner| {
+                    source_owner != target_name
+                        && source_owner != &state.resolved_name
+                        && source_owner != fallback_owner
+                });
+            if has_self_reference && self_reference_member_source_owner.is_none() {
                 if trace_identifier_store {
                     eprintln!(
                         "identifier_store:{target_name}:runtime_shadows skipped_self_reference"
                     );
                 }
                 return Ok(());
+            }
+            if let Some(source_owner) = self_reference_member_source_owner.as_deref()
+                && trace_identifier_store
+            {
+                eprintln!(
+                    "identifier_store:{target_name}:runtime_shadows self_reference_member_source={source_owner}"
+                );
             }
         }
         if Self::expression_contains_await_for_user_call_runtime(&state.canonical_value_expression)
@@ -1332,16 +1392,43 @@ impl<'a> FunctionCompiler<'a> {
             }
             return Ok(());
         }
-        let target_owner = self
-            .runtime_object_property_shadow_owner_name_for_identifier(target_name)
-            .unwrap_or_else(|| fallback_owner.to_string());
+        let self_referential_member_source_owner = {
+            let mut referenced_names = HashSet::new();
+            collect_referenced_binding_names_from_expression(
+                &state.canonical_value_expression,
+                &mut referenced_names,
+            );
+            (referenced_names.contains(target_name)
+                || referenced_names.contains(&state.resolved_name))
+            .then(|| {
+                self.resolve_identifier_store_shadow_source_owner(&state.canonical_value_expression)
+            })
+            .flatten()
+            .filter(|source_owner| {
+                source_owner != target_name
+                    && source_owner != &state.resolved_name
+                    && source_owner != fallback_owner
+            })
+        };
+        let target_owner = if self_referential_member_source_owner.is_some() {
+            fallback_owner.to_string()
+        } else {
+            self.runtime_object_property_shadow_owner_name_for_identifier(target_name)
+                .unwrap_or_else(|| fallback_owner.to_string())
+        };
         let constructor_returned_function_object_binding = state.function_binding.is_some()
             && matches!(state.canonical_value_expression, Expression::New { .. })
             && state.object_binding.is_some();
         let source_owner = if constructor_returned_function_object_binding {
             None
         } else {
-            self.resolve_identifier_store_shadow_source_owner(&state.canonical_value_expression)
+            self_referential_member_source_owner
+                .clone()
+                .or_else(|| {
+                    self.resolve_identifier_store_shadow_source_owner(
+                        &state.canonical_value_expression,
+                    )
+                })
                 .or_else(|| {
                     self.resolve_identifier_store_shadow_source_owner(
                         &state.module_assignment_expression,
@@ -1467,6 +1554,56 @@ impl<'a> FunctionCompiler<'a> {
                     object_binding,
                 );
             }
+            self.sync_identifier_store_runtime_object_shadow_alias_backup(
+                &target_owner,
+                fallback_owner,
+                object_binding.as_ref(),
+            )?;
+            return Ok(());
+        }
+
+        let object_literal_runtime_properties_seeded_by_initializer = matches!(
+            &state.tracked_value_expression,
+            Expression::Object(entries)
+                if self.object_literal_entries_need_runtime_property_value_seed(entries)
+        ) || matches!(
+            &state.canonical_value_expression,
+            Expression::Object(entries)
+                if self.object_literal_entries_need_runtime_property_value_seed(entries)
+        );
+        let simple_call_return_runtime_properties_seeded_by_initializer = self
+            .simple_user_call_return_object_needs_runtime_seed(&state.tracked_value_expression)
+            || self.simple_user_call_return_object_needs_runtime_seed(
+                &state.canonical_value_expression,
+            );
+        let object_literal_uses_static_metadata_only = matches!(
+            &state.tracked_value_expression,
+            Expression::Object(entries)
+                if Self::object_literal_entries_can_seed_runtime_property_values(entries)
+        ) || matches!(
+            &state.canonical_value_expression,
+            Expression::Object(entries)
+                if Self::object_literal_entries_can_seed_runtime_property_values(entries)
+        );
+        if source_owner.is_none()
+            && (object_literal_runtime_properties_seeded_by_initializer
+                || simple_call_return_runtime_properties_seeded_by_initializer
+                || object_literal_uses_static_metadata_only)
+        {
+            if object_literal_runtime_properties_seeded_by_initializer
+                || simple_call_return_runtime_properties_seeded_by_initializer
+            {
+                self.clear_runtime_object_property_shadow_static_metadata_prefix(&target_owner);
+            } else {
+                self.clear_runtime_object_property_shadow_prefix(&target_owner);
+                self.clear_runtime_object_property_shadow_static_metadata_prefix(&target_owner);
+                if let Some(object_binding) = object_binding.as_ref() {
+                    self.sync_runtime_object_property_shadow_static_metadata_from_binding(
+                        &target_owner,
+                        object_binding,
+                    );
+                }
+            }
             return Ok(());
         }
 
@@ -1523,6 +1660,11 @@ impl<'a> FunctionCompiler<'a> {
                     object_binding,
                 );
             }
+            self.sync_identifier_store_runtime_object_shadow_alias_backup(
+                &source_owner,
+                fallback_owner,
+                object_binding.as_ref(),
+            )?;
             return Ok(());
         }
 

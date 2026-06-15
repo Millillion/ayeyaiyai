@@ -165,7 +165,7 @@ impl GlobalNameService {
             )
             .max()
             .map(|index| index + 1)
-            .unwrap_or(PENDING_PROMISE_REJECTION_VALUE_GLOBAL_INDEX + 1)
+            .unwrap_or(FIXED_GLOBAL_COUNT)
     }
 
     pub(in crate::backend::direct_wasm) fn ensure_implicit_binding(

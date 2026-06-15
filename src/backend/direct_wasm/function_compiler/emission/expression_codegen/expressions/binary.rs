@@ -843,19 +843,7 @@ impl<'a> FunctionCompiler<'a> {
     }
 
     fn static_template_number_to_string(value: f64) -> String {
-        if value.is_nan() {
-            "NaN".to_string()
-        } else if value == f64::INFINITY {
-            "Infinity".to_string()
-        } else if value == f64::NEG_INFINITY {
-            "-Infinity".to_string()
-        } else if value == 0.0 {
-            "0".to_string()
-        } else if value.is_finite() && value.fract() == 0.0 {
-            (value as i64).to_string()
-        } else {
-            value.to_string()
-        }
+        js_number_to_string(value)
     }
 
     fn emit_static_template_update_addition(
@@ -1475,6 +1463,96 @@ impl<'a> FunctionCompiler<'a> {
         candidates
     }
 
+    fn runtime_string_candidate_from_static_value(
+        &mut self,
+        value: &Expression,
+        active_loop_value: bool,
+    ) -> Option<(Expression, String)> {
+        if active_loop_value {
+            return match value {
+                Expression::String(text) => Some((value.clone(), text.clone())),
+                Expression::Number(number) if number.fract() == 0.0 => {
+                    Some((value.clone(), (*number as i64).to_string()))
+                }
+                Expression::Bool(boolean) => Some((value.clone(), boolean.to_string())),
+                Expression::Null => Some((Expression::Null, "null".to_string())),
+                Expression::Undefined => Some((Expression::Undefined, "undefined".to_string())),
+                _ => None,
+            };
+        }
+
+        if !inline_summary_side_effect_free_expression(value) {
+            return None;
+        }
+        let text = self.resolve_static_string_concat_value(value, self.current_function_name())?;
+        let candidate_value = match value {
+            Expression::String(_)
+            | Expression::Number(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined => value.clone(),
+            _ => self.materialize_static_expression(value),
+        };
+        Some((candidate_value, text))
+    }
+
+    fn push_active_loop_member_shadow_string_candidates(
+        &mut self,
+        object: &Expression,
+        property: &Expression,
+        candidates: &mut Vec<(Expression, String)>,
+    ) {
+        let Some(root_owner) =
+            self.runtime_object_property_shadow_owner_name_for_expression(object)
+        else {
+            return;
+        };
+        let requested_property = self.canonical_object_property_expression(property);
+        let mut owners = vec![(root_owner, 0usize)];
+        let mut seen_owners = HashSet::new();
+        let mut index = 0usize;
+
+        while index < owners.len() && candidates.len() < RUNTIME_STRING_ADDITION_CANDIDATE_LIMIT {
+            let (owner, depth) = owners[index].clone();
+            index += 1;
+            if !seen_owners.insert(owner.clone()) {
+                continue;
+            }
+
+            if let Some(object_binding) = self.resolve_runtime_shadow_object_binding(&owner)
+                && let Some(value) =
+                    object_binding_lookup_value(&object_binding, &requested_property).cloned()
+                && let Some((candidate_value, candidate_text)) =
+                    self.runtime_string_candidate_from_static_value(&value, true)
+            {
+                Self::push_unique_runtime_string_value_candidate(
+                    candidates,
+                    candidate_value,
+                    candidate_text,
+                );
+            }
+
+            if depth >= 6 {
+                continue;
+            }
+            for (member_property, _) in self.runtime_object_property_shadow_copy_entries(&owner) {
+                let member_owner =
+                    Self::runtime_object_member_shadow_owner_name(&owner, &member_property);
+                if self.runtime_object_property_shadow_owner_has_bindings(&member_owner)
+                    && !seen_owners.contains(&member_owner)
+                    && !owners
+                        .iter()
+                        .any(|(existing_owner, _)| existing_owner == &member_owner)
+                {
+                    owners.push((member_owner, depth + 1));
+                }
+                if owners.len() >= RUNTIME_STRING_ADDITION_CANDIDATE_LIMIT {
+                    break;
+                }
+            }
+        }
+    }
+
     pub(in crate::backend::direct_wasm) fn runtime_string_addition_right_candidates(
         &mut self,
         expression: &Expression,
@@ -1485,6 +1563,26 @@ impl<'a> FunctionCompiler<'a> {
         let mut candidates = Vec::new();
         if self.push_active_loop_string_expression_candidates(expression, &mut candidates) {
             return candidates;
+        }
+        if let Expression::Identifier(name) = expression
+            && let Some(string_candidates) = self.active_loop_string_binding_candidates(name)
+        {
+            for text in string_candidates {
+                Self::push_unique_runtime_string_value_candidate(
+                    &mut candidates,
+                    Expression::String(text.clone()),
+                    text,
+                );
+                if candidates.len() >= RUNTIME_STRING_ADDITION_CANDIDATE_LIMIT {
+                    break;
+                }
+            }
+            if !candidates.is_empty() {
+                for (_, text) in &candidates {
+                    self.intern_runtime_string_candidate_text(text);
+                }
+                return candidates;
+            }
         }
         if let Expression::Identifier(name) = expression
             && let Some(numeric_candidates) = self.active_loop_numeric_binding_candidates(name)
@@ -1694,6 +1792,15 @@ impl<'a> FunctionCompiler<'a> {
                 }
             }
         }
+        if let Expression::Member { object, property } = expression
+            && self.expression_depends_on_active_loop_assignment(expression)
+        {
+            self.push_active_loop_member_shadow_string_candidates(
+                object,
+                property,
+                &mut candidates,
+            );
+        }
 
         if candidates.is_empty()
             && self.infer_value_kind(expression) == Some(StaticValueKind::String)
@@ -1897,8 +2004,75 @@ impl<'a> FunctionCompiler<'a> {
         candidates
     }
 
+    fn expression_is_numeric_runtime_shadow_member(&self, expression: &Expression) -> bool {
+        let Expression::Member { object, property } = expression else {
+            return false;
+        };
+        let materialized_property = self.materialize_static_expression(property);
+        if self.runtime_object_property_shadow_deletion_is_statically_present(
+            object,
+            &materialized_property,
+        ) || self.runtime_object_property_shadow_deletion_may_affect_property(
+            object,
+            &materialized_property,
+        ) {
+            return false;
+        }
+        let Some(owner_name) = self.runtime_object_property_shadow_owner_name_for_expression(object)
+        else {
+            return false;
+        };
+        let Some(shadow_binding_name) =
+            self.runtime_object_property_shadow_binding_name_for_expression(
+                object,
+                &materialized_property,
+            )
+        else {
+            return false;
+        };
+        if !self
+            .runtime_object_property_shadow_binding_should_defer_static_resolution(
+                &shadow_binding_name,
+            )
+        {
+            return false;
+        }
+        self.resolve_runtime_shadow_object_binding(&owner_name)
+            .and_then(|object_binding| {
+                object_binding_lookup_value(&object_binding, &materialized_property).cloned()
+            })
+            .is_some_and(|value| self.infer_value_kind(&value) == Some(StaticValueKind::Number))
+    }
+
+    fn expression_is_numeric_addition_operand(&self, expression: &Expression) -> bool {
+        self.infer_value_kind(expression) == Some(StaticValueKind::Number)
+            || self.expression_is_numeric_runtime_shadow_member(expression)
+    }
+
     fn emit_runtime_string_candidate_value(&mut self, value: &Expression) -> DirectResult<()> {
         self.emit_numeric_expression(value)
+    }
+
+    fn emit_runtime_string_candidate_match_from_local(
+        &mut self,
+        value_local: u32,
+        candidate: &Expression,
+    ) -> DirectResult<()> {
+        if let Expression::String(text) = candidate {
+            self.emit_runtime_string_literal_memory_comparison(value_local, text)?;
+            if text.is_empty() {
+                self.push_local_get(value_local);
+                self.push_i32_const(0);
+                self.push_binary_op(BinaryOp::Equal)?;
+                self.state.emission.output.instructions.push(0x72);
+            }
+            return Ok(());
+        }
+
+        self.push_local_get(value_local);
+        self.emit_runtime_string_candidate_value(candidate)?;
+        self.push_binary_op(BinaryOp::Equal)?;
+        Ok(())
     }
 
     fn emit_string_append_transition(
@@ -1910,13 +2084,11 @@ impl<'a> FunctionCompiler<'a> {
         right_value: &Expression,
         suffix: &str,
     ) -> DirectResult<String> {
-        self.push_local_get(left_local);
-        self.emit_numeric_expression(&Expression::String(prefix.to_string()))?;
-        self.push_binary_op(BinaryOp::Equal)?;
-
-        self.push_local_get(right_local);
-        self.emit_runtime_string_candidate_value(right_value)?;
-        self.push_binary_op(BinaryOp::Equal)?;
+        self.emit_runtime_string_candidate_match_from_local(
+            left_local,
+            &Expression::String(prefix.to_string()),
+        )?;
+        self.emit_runtime_string_candidate_match_from_local(right_local, right_value)?;
         self.state.emission.output.instructions.push(0x71);
 
         self.state.emission.output.instructions.push(0x04);
@@ -1927,11 +2099,445 @@ impl<'a> FunctionCompiler<'a> {
             .push(EMPTY_BLOCK_TYPE);
         self.push_control_frame();
         let next_prefix = format!("{prefix}{suffix}");
-        self.emit_numeric_expression(&Expression::String(next_prefix.clone()))?;
+        self.emit_static_string_literal(&next_prefix)?;
         self.push_local_set(result_local);
         self.state.emission.output.instructions.push(0x0b);
         self.pop_control_frame();
         Ok(next_prefix)
+    }
+
+    fn emit_runtime_string_length_to_local(
+        &mut self,
+        value_local: u32,
+        length_local: u32,
+    ) -> DirectResult<()> {
+        self.push_i32_const(0);
+        self.push_local_set(length_local);
+
+        self.push_local_get(value_local);
+        self.push_i32_const(0);
+        self.push_binary_op(BinaryOp::GreaterThan)?;
+        self.state.emission.output.instructions.push(0x04);
+        self.state
+            .emission
+            .output
+            .instructions
+            .push(EMPTY_BLOCK_TYPE);
+        self.push_control_frame();
+        self.push_local_get(value_local);
+        self.push_i32_const(STRING_LENGTH_PREFIX_SIZE as i32);
+        self.push_binary_op(BinaryOp::Subtract)?;
+        self.push_memory_i32_load(0);
+        self.push_local_set(length_local);
+        self.state.emission.output.instructions.push(0x0b);
+        self.pop_control_frame();
+        Ok(())
+    }
+
+    fn emit_runtime_string_copy_loop(
+        &mut self,
+        source_local: u32,
+        target_local: u32,
+        length_local: u32,
+    ) -> DirectResult<()> {
+        let index_local = self.allocate_temp_local();
+        self.push_i32_const(0);
+        self.push_local_set(index_local);
+
+        self.state.emission.output.instructions.push(0x02);
+        self.state
+            .emission
+            .output
+            .instructions
+            .push(EMPTY_BLOCK_TYPE);
+        let break_target = self.push_control_frame();
+        self.state.emission.output.instructions.push(0x03);
+        self.state
+            .emission
+            .output
+            .instructions
+            .push(EMPTY_BLOCK_TYPE);
+        let loop_target = self.push_control_frame();
+
+        self.push_local_get(index_local);
+        self.push_local_get(length_local);
+        self.push_binary_op(BinaryOp::GreaterThanOrEqual)?;
+        self.push_br_if(self.relative_depth(break_target));
+
+        self.push_local_get(target_local);
+        self.push_local_get(index_local);
+        self.push_binary_op(BinaryOp::Add)?;
+        self.push_local_get(source_local);
+        self.push_local_get(index_local);
+        self.push_binary_op(BinaryOp::Add)?;
+        self.push_memory_i32_load8_u(0);
+        self.push_memory_i32_store8(0);
+
+        self.push_local_get(index_local);
+        self.push_i32_const(1);
+        self.push_binary_op(BinaryOp::Add)?;
+        self.push_local_set(index_local);
+        self.push_br(self.relative_depth(loop_target));
+
+        self.state.emission.output.instructions.push(0x0b);
+        self.pop_control_frame();
+        self.state.emission.output.instructions.push(0x0b);
+        self.pop_control_frame();
+        Ok(())
+    }
+
+    fn emit_runtime_string_heap_allocation(
+        &mut self,
+        total_length_local: u32,
+        result_local: u32,
+    ) -> DirectResult<()> {
+        let header_local = self.allocate_temp_local();
+        let end_offset_local = self.allocate_temp_local();
+        let current_pages_local = self.allocate_temp_local();
+        let required_pages_local = self.allocate_temp_local();
+
+        self.push_global_get(NEXT_STRING_HEAP_OFFSET_GLOBAL_INDEX);
+        self.push_local_set(header_local);
+
+        self.push_local_get(header_local);
+        self.push_i32_const(STRING_LENGTH_PREFIX_SIZE as i32);
+        self.push_binary_op(BinaryOp::Add)?;
+        self.push_local_set(result_local);
+
+        self.push_local_get(result_local);
+        self.push_local_get(total_length_local);
+        self.push_binary_op(BinaryOp::Add)?;
+        self.push_local_set(end_offset_local);
+
+        self.push_local_get(end_offset_local);
+        self.push_i32_const((WASM_MEMORY_PAGE_SIZE - 1) as i32);
+        self.push_binary_op(BinaryOp::Add)?;
+        self.push_i32_const(WASM_MEMORY_PAGE_SIZE as i32);
+        self.push_binary_op(BinaryOp::Divide)?;
+        self.push_local_set(required_pages_local);
+
+        self.state.emission.output.instructions.push(0x3f);
+        self.state.emission.output.instructions.push(0x00);
+        self.push_local_set(current_pages_local);
+
+        self.push_local_get(required_pages_local);
+        self.push_local_get(current_pages_local);
+        self.push_binary_op(BinaryOp::GreaterThan)?;
+        self.state.emission.output.instructions.push(0x04);
+        self.state
+            .emission
+            .output
+            .instructions
+            .push(EMPTY_BLOCK_TYPE);
+        self.push_control_frame();
+        self.push_local_get(required_pages_local);
+        self.push_local_get(current_pages_local);
+        self.push_binary_op(BinaryOp::Subtract)?;
+        self.state.emission.output.instructions.push(0x40);
+        self.state.emission.output.instructions.push(0x00);
+        self.state.emission.output.instructions.push(0x1a);
+        self.state.emission.output.instructions.push(0x0b);
+        self.pop_control_frame();
+
+        self.push_local_get(header_local);
+        self.push_local_get(total_length_local);
+        self.push_memory_i32_store(0);
+
+        self.push_local_get(end_offset_local);
+        self.push_i32_const(3);
+        self.push_binary_op(BinaryOp::Add)?;
+        self.push_i32_const(-4);
+        self.push_binary_op(BinaryOp::BitwiseAnd)?;
+        self.push_global_set(NEXT_STRING_HEAP_OFFSET_GLOBAL_INDEX);
+        Ok(())
+    }
+
+    fn emit_runtime_string_prepend_candidate(
+        &mut self,
+        right_local: u32,
+        result_local: u32,
+        prefix: &str,
+    ) -> DirectResult<()> {
+        let right_length_local = self.allocate_temp_local();
+        let total_length_local = self.allocate_temp_local();
+        let suffix_target_local = self.allocate_temp_local();
+
+        self.emit_runtime_string_length_to_local(right_local, right_length_local)?;
+        self.push_i32_const(prefix.len() as i32);
+        self.push_local_get(right_length_local);
+        self.push_binary_op(BinaryOp::Add)?;
+        self.push_local_set(total_length_local);
+        self.emit_runtime_string_heap_allocation(total_length_local, result_local)?;
+
+        for (index, byte) in prefix.as_bytes().iter().copied().enumerate() {
+            self.push_local_get(result_local);
+            self.push_i32_const(index as i32);
+            self.push_binary_op(BinaryOp::Add)?;
+            self.push_i32_const(byte as i32);
+            self.push_memory_i32_store8(0);
+        }
+
+        self.push_local_get(result_local);
+        self.push_i32_const(prefix.len() as i32);
+        self.push_binary_op(BinaryOp::Add)?;
+        self.push_local_set(suffix_target_local);
+        self.emit_runtime_string_copy_loop(right_local, suffix_target_local, right_length_local)
+    }
+
+    fn emit_runtime_i32_decimal_length_to_local(
+        &mut self,
+        value_local: u32,
+        length_local: u32,
+    ) -> DirectResult<()> {
+        let work_local = self.allocate_temp_local();
+
+        self.push_local_get(value_local);
+        self.push_local_set(work_local);
+        self.push_i32_const(0);
+        self.push_local_set(length_local);
+
+        self.push_local_get(value_local);
+        self.push_i32_const(0);
+        self.push_binary_op(BinaryOp::LessThan)?;
+        self.state.emission.output.instructions.push(0x04);
+        self.state
+            .emission
+            .output
+            .instructions
+            .push(EMPTY_BLOCK_TYPE);
+        self.push_control_frame();
+        self.push_i32_const(1);
+        self.push_local_set(length_local);
+        self.push_i32_const(0);
+        self.push_local_get(value_local);
+        self.push_binary_op(BinaryOp::Subtract)?;
+        self.push_local_set(work_local);
+        self.state.emission.output.instructions.push(0x0b);
+        self.pop_control_frame();
+
+        self.push_local_get(work_local);
+        self.state.emission.output.instructions.push(0x45);
+        self.state.emission.output.instructions.push(0x04);
+        self.state
+            .emission
+            .output
+            .instructions
+            .push(EMPTY_BLOCK_TYPE);
+        self.push_control_frame();
+        self.push_local_get(length_local);
+        self.push_i32_const(1);
+        self.push_binary_op(BinaryOp::Add)?;
+        self.push_local_set(length_local);
+        self.state.emission.output.instructions.push(0x05);
+
+        self.state.emission.output.instructions.push(0x02);
+        self.state
+            .emission
+            .output
+            .instructions
+            .push(EMPTY_BLOCK_TYPE);
+        let break_target = self.push_control_frame();
+        self.state.emission.output.instructions.push(0x03);
+        self.state
+            .emission
+            .output
+            .instructions
+            .push(EMPTY_BLOCK_TYPE);
+        let loop_target = self.push_control_frame();
+
+        self.push_local_get(work_local);
+        self.push_i32_const(0);
+        self.push_binary_op(BinaryOp::LessThanOrEqual)?;
+        self.push_br_if(self.relative_depth(break_target));
+
+        self.push_local_get(length_local);
+        self.push_i32_const(1);
+        self.push_binary_op(BinaryOp::Add)?;
+        self.push_local_set(length_local);
+
+        self.push_local_get(work_local);
+        self.push_i32_const(10);
+        self.push_binary_op(BinaryOp::Divide)?;
+        self.push_local_set(work_local);
+        self.push_br(self.relative_depth(loop_target));
+
+        self.state.emission.output.instructions.push(0x0b);
+        self.pop_control_frame();
+        self.state.emission.output.instructions.push(0x0b);
+        self.pop_control_frame();
+
+        self.state.emission.output.instructions.push(0x0b);
+        self.pop_control_frame();
+        Ok(())
+    }
+
+    fn emit_runtime_i32_decimal_copy(
+        &mut self,
+        value_local: u32,
+        target_local: u32,
+        length_local: u32,
+    ) -> DirectResult<()> {
+        let work_local = self.allocate_temp_local();
+        let digits_start_local = self.allocate_temp_local();
+        let digit_index_local = self.allocate_temp_local();
+
+        self.push_local_get(value_local);
+        self.push_local_set(work_local);
+        self.push_local_get(target_local);
+        self.push_local_set(digits_start_local);
+        self.push_local_get(length_local);
+        self.push_local_set(digit_index_local);
+
+        self.push_local_get(value_local);
+        self.push_i32_const(0);
+        self.push_binary_op(BinaryOp::LessThan)?;
+        self.state.emission.output.instructions.push(0x04);
+        self.state
+            .emission
+            .output
+            .instructions
+            .push(EMPTY_BLOCK_TYPE);
+        self.push_control_frame();
+        self.push_local_get(target_local);
+        self.push_i32_const(b'-' as i32);
+        self.push_memory_i32_store8(0);
+        self.push_local_get(target_local);
+        self.push_i32_const(1);
+        self.push_binary_op(BinaryOp::Add)?;
+        self.push_local_set(digits_start_local);
+        self.push_i32_const(0);
+        self.push_local_get(value_local);
+        self.push_binary_op(BinaryOp::Subtract)?;
+        self.push_local_set(work_local);
+        self.push_local_get(length_local);
+        self.push_i32_const(1);
+        self.push_binary_op(BinaryOp::Subtract)?;
+        self.push_local_set(digit_index_local);
+        self.state.emission.output.instructions.push(0x0b);
+        self.pop_control_frame();
+
+        self.push_local_get(work_local);
+        self.state.emission.output.instructions.push(0x45);
+        self.state.emission.output.instructions.push(0x04);
+        self.state
+            .emission
+            .output
+            .instructions
+            .push(EMPTY_BLOCK_TYPE);
+        self.push_control_frame();
+        self.push_local_get(digits_start_local);
+        self.push_i32_const(b'0' as i32);
+        self.push_memory_i32_store8(0);
+        self.state.emission.output.instructions.push(0x05);
+
+        self.state.emission.output.instructions.push(0x02);
+        self.state
+            .emission
+            .output
+            .instructions
+            .push(EMPTY_BLOCK_TYPE);
+        let break_target = self.push_control_frame();
+        self.state.emission.output.instructions.push(0x03);
+        self.state
+            .emission
+            .output
+            .instructions
+            .push(EMPTY_BLOCK_TYPE);
+        let loop_target = self.push_control_frame();
+
+        self.push_local_get(work_local);
+        self.push_i32_const(0);
+        self.push_binary_op(BinaryOp::LessThanOrEqual)?;
+        self.push_br_if(self.relative_depth(break_target));
+
+        self.push_local_get(digit_index_local);
+        self.push_i32_const(1);
+        self.push_binary_op(BinaryOp::Subtract)?;
+        self.push_local_set(digit_index_local);
+
+        self.push_local_get(digits_start_local);
+        self.push_local_get(digit_index_local);
+        self.push_binary_op(BinaryOp::Add)?;
+        self.push_i32_const(b'0' as i32);
+        self.push_local_get(work_local);
+        self.push_i32_const(10);
+        self.push_binary_op(BinaryOp::Modulo)?;
+        self.push_binary_op(BinaryOp::Add)?;
+        self.push_memory_i32_store8(0);
+
+        self.push_local_get(work_local);
+        self.push_i32_const(10);
+        self.push_binary_op(BinaryOp::Divide)?;
+        self.push_local_set(work_local);
+        self.push_br(self.relative_depth(loop_target));
+
+        self.state.emission.output.instructions.push(0x0b);
+        self.pop_control_frame();
+        self.state.emission.output.instructions.push(0x0b);
+        self.pop_control_frame();
+
+        self.state.emission.output.instructions.push(0x0b);
+        self.pop_control_frame();
+        Ok(())
+    }
+
+    fn emit_runtime_string_append_number(
+        &mut self,
+        left_local: u32,
+        number_local: u32,
+        result_local: u32,
+    ) -> DirectResult<()> {
+        let left_length_local = self.allocate_temp_local();
+        let number_length_local = self.allocate_temp_local();
+        let total_length_local = self.allocate_temp_local();
+        let number_target_local = self.allocate_temp_local();
+
+        self.emit_runtime_string_length_to_local(left_local, left_length_local)?;
+        self.emit_runtime_i32_decimal_length_to_local(number_local, number_length_local)?;
+        self.push_local_get(left_length_local);
+        self.push_local_get(number_length_local);
+        self.push_binary_op(BinaryOp::Add)?;
+        self.push_local_set(total_length_local);
+        self.emit_runtime_string_heap_allocation(total_length_local, result_local)?;
+
+        self.emit_runtime_string_copy_loop(left_local, result_local, left_length_local)?;
+        self.push_local_get(result_local);
+        self.push_local_get(left_length_local);
+        self.push_binary_op(BinaryOp::Add)?;
+        self.push_local_set(number_target_local);
+        self.emit_runtime_i32_decimal_copy(number_local, number_target_local, number_length_local)
+    }
+
+    fn emit_runtime_string_append_text(
+        &mut self,
+        left_local: u32,
+        result_local: u32,
+        suffix: &str,
+    ) -> DirectResult<()> {
+        let left_length_local = self.allocate_temp_local();
+        let total_length_local = self.allocate_temp_local();
+        let suffix_target_local = self.allocate_temp_local();
+
+        self.emit_runtime_string_length_to_local(left_local, left_length_local)?;
+        self.push_local_get(left_length_local);
+        self.push_i32_const(suffix.len() as i32);
+        self.push_binary_op(BinaryOp::Add)?;
+        self.push_local_set(total_length_local);
+        self.emit_runtime_string_heap_allocation(total_length_local, result_local)?;
+
+        self.emit_runtime_string_copy_loop(left_local, result_local, left_length_local)?;
+        self.push_local_get(result_local);
+        self.push_local_get(left_length_local);
+        self.push_binary_op(BinaryOp::Add)?;
+        self.push_local_set(suffix_target_local);
+        for (index, byte) in suffix.as_bytes().iter().copied().enumerate() {
+            self.push_local_get(suffix_target_local);
+            self.push_i32_const(index as i32);
+            self.push_binary_op(BinaryOp::Add)?;
+            self.push_i32_const(byte as i32);
+            self.push_memory_i32_store8(0);
+        }
+        Ok(())
     }
 
     fn emit_active_loop_string_append_sequence(
@@ -2013,6 +2619,200 @@ impl<'a> FunctionCompiler<'a> {
         Ok(true)
     }
 
+    fn emit_active_loop_string_prepend_sequence(
+        &mut self,
+        left: &Expression,
+        right: &Expression,
+        sequence: &[(Expression, String)],
+    ) -> DirectResult<bool> {
+        if sequence.is_empty()
+            || !matches!(right, Expression::Identifier(_))
+            || !self.expression_depends_on_active_loop_assignment(right)
+            || self.infer_value_kind(right) != Some(StaticValueKind::String)
+        {
+            return Ok(false);
+        }
+
+        let left_local = self.allocate_temp_local();
+        let right_local = self.allocate_temp_local();
+        let result_local = self.allocate_temp_local();
+        let handled_local = self.allocate_temp_local();
+
+        self.emit_numeric_expression(left)?;
+        self.push_local_set(left_local);
+        self.emit_numeric_expression(right)?;
+        self.push_local_set(right_local);
+        self.push_i32_const(0);
+        self.push_local_set(handled_local);
+
+        self.push_local_get(left_local);
+        self.push_local_get(right_local);
+        self.push_binary_op(BinaryOp::Add)?;
+        self.push_local_set(result_local);
+
+        let mut emitted = HashSet::new();
+        for (_, prefix) in sequence {
+            if !emitted.insert(prefix.clone()) {
+                continue;
+            }
+
+            self.push_local_get(handled_local);
+            self.state.emission.output.instructions.push(0x45);
+            self.state.emission.output.instructions.push(0x04);
+            self.state
+                .emission
+                .output
+                .instructions
+                .push(EMPTY_BLOCK_TYPE);
+            self.push_control_frame();
+
+            self.emit_runtime_string_candidate_match_from_local(
+                left_local,
+                &Expression::String(prefix.clone()),
+            )?;
+            self.state.emission.output.instructions.push(0x04);
+            self.state
+                .emission
+                .output
+                .instructions
+                .push(EMPTY_BLOCK_TYPE);
+            self.push_control_frame();
+            self.emit_runtime_string_prepend_candidate(right_local, result_local, prefix)?;
+            self.push_i32_const(1);
+            self.push_local_set(handled_local);
+            self.state.emission.output.instructions.push(0x0b);
+            self.pop_control_frame();
+
+            self.state.emission.output.instructions.push(0x0b);
+            self.pop_control_frame();
+
+            if emitted.len() >= RUNTIME_STRING_ADDITION_CANDIDATE_LIMIT {
+                break;
+            }
+        }
+
+        self.push_local_get(result_local);
+        Ok(true)
+    }
+
+    fn emit_runtime_string_append_from_candidates(
+        &mut self,
+        left: &Expression,
+        right: &Expression,
+        right_candidates: &[(Expression, String)],
+    ) -> DirectResult<bool> {
+        if right_candidates.is_empty() || self.infer_value_kind(left) != Some(StaticValueKind::String)
+        {
+            return Ok(false);
+        }
+        if let Expression::String(text) = left
+            && !text.is_empty()
+            && parse_string_to_i32(text).is_ok()
+        {
+            return Ok(false);
+        }
+
+        let left_local = self.allocate_temp_local();
+        let right_local = self.allocate_temp_local();
+        let result_local = self.allocate_temp_local();
+        let handled_local = self.allocate_temp_local();
+
+        self.emit_numeric_expression(left)?;
+        self.push_local_set(left_local);
+        self.emit_numeric_expression(right)?;
+        self.push_local_set(right_local);
+        self.push_i32_const(0);
+        self.push_local_set(handled_local);
+
+        self.push_local_get(left_local);
+        self.push_local_get(right_local);
+        self.push_binary_op(BinaryOp::Add)?;
+        self.push_local_set(result_local);
+
+        let mut emitted = Vec::<Expression>::new();
+        for (right_value, suffix) in right_candidates {
+            if emitted
+                .iter()
+                .any(|existing| static_expression_matches(existing, right_value))
+            {
+                continue;
+            }
+            emitted.push(right_value.clone());
+
+            self.push_local_get(handled_local);
+            self.state.emission.output.instructions.push(0x45);
+            self.state.emission.output.instructions.push(0x04);
+            self.state
+                .emission
+                .output
+                .instructions
+                .push(EMPTY_BLOCK_TYPE);
+            self.push_control_frame();
+
+            self.emit_runtime_string_candidate_match_from_local(right_local, right_value)?;
+            self.state.emission.output.instructions.push(0x04);
+            self.state
+                .emission
+                .output
+                .instructions
+                .push(EMPTY_BLOCK_TYPE);
+            self.push_control_frame();
+            self.emit_runtime_string_append_text(left_local, result_local, suffix)?;
+            self.push_i32_const(1);
+            self.push_local_set(handled_local);
+            self.state.emission.output.instructions.push(0x0b);
+            self.pop_control_frame();
+
+            self.state.emission.output.instructions.push(0x0b);
+            self.pop_control_frame();
+
+            if emitted.len() >= RUNTIME_STRING_ADDITION_CANDIDATE_LIMIT {
+                break;
+            }
+        }
+
+        self.push_local_get(result_local);
+        Ok(true)
+    }
+
+    fn expression_is_runtime_string_append_number_rhs(&self, expression: &Expression) -> bool {
+        self.infer_value_kind(expression) == Some(StaticValueKind::Number)
+            || self.print_runtime_shadow_static_value_kind(expression) == Some(StaticValueKind::Number)
+            || self.expression_is_numeric_runtime_shadow_member(expression)
+            || (matches!(expression, Expression::Member { .. })
+                && self.expression_depends_on_active_loop_assignment(expression))
+    }
+
+    fn emit_runtime_string_append_number_expression(
+        &mut self,
+        left: &Expression,
+        right: &Expression,
+    ) -> DirectResult<bool> {
+        if self.infer_value_kind(left) != Some(StaticValueKind::String)
+            || !self.expression_is_runtime_string_append_number_rhs(right)
+        {
+            return Ok(false);
+        }
+        if let Expression::String(text) = left
+            && !text.is_empty()
+            && parse_string_to_i32(text).is_ok()
+        {
+            return Ok(false);
+        }
+
+        let left_local = self.allocate_temp_local();
+        let number_local = self.allocate_temp_local();
+        let result_local = self.allocate_temp_local();
+
+        self.emit_numeric_expression(left)?;
+        self.push_local_set(left_local);
+        self.emit_numeric_expression(right)?;
+        self.push_local_set(number_local);
+        self.emit_runtime_string_append_number(left_local, number_local, result_local)?;
+        self.push_local_get(result_local);
+        Ok(true)
+    }
+
     fn emit_runtime_string_addition_from_candidates(
         &mut self,
         left: &Expression,
@@ -2031,8 +2831,32 @@ impl<'a> FunctionCompiler<'a> {
             }
             return Ok(true);
         }
+        let prepend_sequence = self
+            .active_loop_stringified_candidate_sequence(left)
+            .filter(|sequence| !sequence.is_empty())
+            .unwrap_or_else(|| self.runtime_string_addition_right_candidates(left));
+        if self.emit_active_loop_string_prepend_sequence(left, right, &prepend_sequence)? {
+            if crate::ayy_env_flag!("AYY_TRACE_ADDITION") {
+                eprintln!("addition:prepend_sequence handled");
+            }
+            return Ok(true);
+        }
 
         let right_candidates = self.runtime_string_addition_right_candidates(right);
+        if self.emit_runtime_string_append_from_candidates(left, right, &right_candidates)? {
+            if crate::ayy_env_flag!("AYY_TRACE_ADDITION") {
+                eprintln!("addition:dynamic_append_candidates handled");
+            }
+            return Ok(true);
+        }
+        if right_candidates.is_empty()
+            && self.emit_runtime_string_append_number_expression(left, right)?
+        {
+            if crate::ayy_env_flag!("AYY_TRACE_ADDITION") {
+                eprintln!("addition:dynamic_append_number handled");
+            }
+            return Ok(true);
+        }
         if crate::ayy_env_flag!("AYY_TRACE_ADDITION") {
             eprintln!(
                 "addition:candidate_sets right={:?} ",
@@ -2046,6 +2870,15 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(false);
         }
         let left_candidates = self.runtime_string_addition_left_candidates(left, &right_candidates);
+        if crate::ayy_env_flag!("AYY_TRACE_ADDITION") {
+            eprintln!(
+                "addition:candidate_sets left={:?} ",
+                left_candidates
+                    .iter()
+                    .map(|(value, text)| format!("{value:?}->{text}"))
+                    .collect::<Vec<_>>()
+            );
+        }
         if left_candidates.is_empty() {
             return Ok(false);
         }
@@ -2069,13 +2902,8 @@ impl<'a> FunctionCompiler<'a> {
 
         for (left_value, left_text) in left_candidates {
             for (right_value, right_text) in &right_candidates {
-                self.push_local_get(left_local);
-                self.emit_runtime_string_candidate_value(&left_value)?;
-                self.push_binary_op(BinaryOp::Equal)?;
-
-                self.push_local_get(right_local);
-                self.emit_runtime_string_candidate_value(right_value)?;
-                self.push_binary_op(BinaryOp::Equal)?;
+                self.emit_runtime_string_candidate_match_from_local(left_local, &left_value)?;
+                self.emit_runtime_string_candidate_match_from_local(right_local, right_value)?;
                 self.state.emission.output.instructions.push(0x71);
 
                 self.state.emission.output.instructions.push(0x04);
@@ -2085,9 +2913,7 @@ impl<'a> FunctionCompiler<'a> {
                     .instructions
                     .push(EMPTY_BLOCK_TYPE);
                 self.push_control_frame();
-                self.emit_numeric_expression(&Expression::String(format!(
-                    "{left_text}{right_text}"
-                )))?;
+                self.emit_static_string_literal(&format!("{left_text}{right_text}"))?;
                 self.push_local_set(result_local);
                 self.push_i32_const(1);
                 self.push_local_set(handled_local);
@@ -3133,9 +3959,9 @@ impl<'a> FunctionCompiler<'a> {
                 if self.emit_active_loop_string_expression_from_sequence(expression)? {
                     return Ok(());
                 }
-                let addition_operands_are_definitely_numeric = self.infer_value_kind(left)
-                    == Some(StaticValueKind::Number)
-                    && self.infer_value_kind(right) == Some(StaticValueKind::Number);
+                let addition_operands_are_definitely_numeric =
+                    self.expression_is_numeric_addition_operand(left)
+                        && self.expression_is_numeric_addition_operand(right);
                 if trace_addition {
                     eprintln!(
                         "addition:fallthrough definitely_numeric={addition_operands_are_definitely_numeric} left_kind={:?} right_kind={:?}",

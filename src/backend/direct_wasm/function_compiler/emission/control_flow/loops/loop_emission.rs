@@ -1,6 +1,8 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    const STATIC_WHILE_UNROLL_LIMIT: usize = 64;
+
     pub(in crate::backend::direct_wasm) fn active_loop_numeric_binding_candidates(
         &self,
         name: &str,
@@ -43,6 +45,30 @@ impl<'a> FunctionCompiler<'a> {
                     .or_else(|| {
                         (source_name != name)
                             .then(|| loop_context.string_member_alias_bindings.get(source_name))
+                            .flatten()
+                    })
+                    .cloned()
+            })
+    }
+
+    pub(in crate::backend::direct_wasm) fn active_loop_string_binding_candidates(
+        &self,
+        name: &str,
+    ) -> Option<Vec<String>> {
+        let source_name = scoped_binding_source_name(name).unwrap_or(name);
+        self.state
+            .emission
+            .control_flow
+            .loop_stack
+            .iter()
+            .rev()
+            .find_map(|loop_context| {
+                loop_context
+                    .string_binding_candidates
+                    .get(name)
+                    .or_else(|| {
+                        (source_name != name)
+                            .then(|| loop_context.string_binding_candidates.get(source_name))
                             .flatten()
                     })
                     .cloned()
@@ -221,6 +247,70 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    fn push_string_binding_candidate(
+        candidates: &mut HashMap<String, Vec<String>>,
+        name: &str,
+        value: &Expression,
+    ) {
+        let Expression::String(text) = value else {
+            return;
+        };
+        let values = candidates.entry(name.to_string()).or_default();
+        if !values.iter().any(|existing| existing == text) {
+            values.push(text.clone());
+        }
+    }
+
+    fn scan_loop_string_binding_candidates(
+        statements: &[Statement],
+        candidates: &mut HashMap<String, Vec<String>>,
+    ) {
+        for statement in statements {
+            match statement {
+                Statement::Assign { name, value }
+                | Statement::Var { name, value }
+                | Statement::Let { name, value, .. } => {
+                    Self::push_string_binding_candidate(candidates, name, value);
+                }
+                Statement::Expression(Expression::Assign { name, value }) => {
+                    Self::push_string_binding_candidate(candidates, name, value);
+                }
+                Statement::If {
+                    then_branch,
+                    else_branch,
+                    ..
+                } => {
+                    Self::scan_loop_string_binding_candidates(then_branch, candidates);
+                    Self::scan_loop_string_binding_candidates(else_branch, candidates);
+                }
+                Statement::Block { body }
+                | Statement::Labeled { body, .. }
+                | Statement::Declaration { body } => {
+                    Self::scan_loop_string_binding_candidates(body, candidates);
+                }
+                Statement::Try {
+                    body,
+                    catch_setup,
+                    catch_body,
+                    ..
+                } => {
+                    Self::scan_loop_string_binding_candidates(body, candidates);
+                    Self::scan_loop_string_binding_candidates(catch_setup, candidates);
+                    Self::scan_loop_string_binding_candidates(catch_body, candidates);
+                }
+                _ => {}
+            }
+        }
+    }
+
+    pub(in crate::backend::direct_wasm) fn collect_loop_string_binding_candidates(
+        body: &[Statement],
+    ) -> HashMap<String, Vec<String>> {
+        let mut candidates = HashMap::new();
+        Self::scan_loop_string_binding_candidates(body, &mut candidates);
+        candidates
+    }
+
     fn integer_number_literal(expression: &Expression) -> Option<i64> {
         let Expression::Number(value) = expression else {
             return None;
@@ -397,8 +487,61 @@ impl<'a> FunctionCompiler<'a> {
                 };
                 self.resolve_loop_expression_truthy(branch)
             }
+            Expression::Binary {
+                op:
+                    op @ (BinaryOp::Equal
+                    | BinaryOp::LooseEqual
+                    | BinaryOp::NotEqual
+                    | BinaryOp::LooseNotEqual),
+                left,
+                right,
+            } => self.resolve_static_loop_nullish_object_comparison(*op, left, right),
             _ => self.resolve_static_boolean_expression(expression),
         }
+    }
+
+    fn resolve_static_loop_nullish_object_comparison(
+        &self,
+        op: BinaryOp,
+        left: &Expression,
+        right: &Expression,
+    ) -> Option<bool> {
+        let left_nullish = self.static_loop_expression_is_nullish(left);
+        let right_nullish = self.static_loop_expression_is_nullish(right);
+        let left_object = self.static_loop_expression_has_object_shadow(left);
+        let right_object = self.static_loop_expression_has_object_shadow(right);
+        let equal = if left_nullish == Some(true) && right_nullish == Some(true) {
+            true
+        } else if left_nullish == Some(true) && right_object {
+            false
+        } else if right_nullish == Some(true) && left_object {
+            false
+        } else {
+            return None;
+        };
+        Some(match op {
+            BinaryOp::Equal | BinaryOp::LooseEqual => equal,
+            BinaryOp::NotEqual | BinaryOp::LooseNotEqual => !equal,
+            _ => unreachable!(),
+        })
+    }
+
+    fn static_loop_expression_is_nullish(&self, expression: &Expression) -> Option<bool> {
+        let materialized = self.materialize_static_expression(expression);
+        match materialized {
+            Expression::Null | Expression::Undefined => Some(true),
+            Expression::Object(_) | Expression::Array(_) => Some(false),
+            _ if self.static_loop_expression_has_object_shadow(expression) => Some(false),
+            _ => None,
+        }
+    }
+
+    fn static_loop_expression_has_object_shadow(&self, expression: &Expression) -> bool {
+        self.runtime_object_property_shadow_owner_name_for_expression(expression)
+            .is_some_and(|owner| self.runtime_object_property_shadow_owner_has_bindings(&owner))
+            || self
+                .resolve_object_binding_from_expression(expression)
+                .is_some()
     }
 
     fn merge_loop_function_assignment_candidate(
@@ -1571,6 +1714,10 @@ impl<'a> FunctionCompiler<'a> {
         labels: &[String],
         body: &[Statement],
     ) -> DirectResult<()> {
+        let trace_loop_cleanup = crate::ayy_env_flag!("AYY_TRACE_LOOP_CLEANUP");
+        if self.try_emit_static_while_unroll(condition, break_hook, body)? {
+            return Ok(());
+        }
         if self.resolve_loop_expression_truthy(condition) == Some(false) {
             self.emit_numeric_expression(condition)?;
             self.state.emission.output.instructions.push(0x1a);
@@ -1581,6 +1728,9 @@ impl<'a> FunctionCompiler<'a> {
             .collect_loop_assigned_binding_names_with_effectful_iterators(
                 condition, break_hook, body, None, None,
             );
+        if crate::ayy_env_flag!("AYY_TRACE_LOOP_INVALIDATION") {
+            eprintln!("loop_invalidated while={invalidated_bindings:?}");
+        }
         let preserved_kinds = self.preserved_binding_kinds_for_loop(
             &invalidated_bindings,
             condition,
@@ -1625,6 +1775,7 @@ impl<'a> FunctionCompiler<'a> {
                 direct_step_iterators: Self::direct_loop_step_iterators(body),
                 numeric_binding_candidates,
                 numeric_spec,
+                string_binding_candidates: Self::collect_loop_string_binding_candidates(body),
                 string_member_alias_bindings: HashMap::new(),
                 eval_source_alias_bindings: HashMap::new(),
             });
@@ -1648,16 +1799,25 @@ impl<'a> FunctionCompiler<'a> {
             .then(|| self.backend.snapshot_global_static_semantics());
         self.push_br(self.relative_depth(continue_target));
 
+        if trace_loop_cleanup {
+            eprintln!("loop_cleanup=pop_contexts");
+        }
         self.state.emission.control_flow.loop_stack.pop();
         self.state.emission.control_flow.break_stack.pop();
         self.state.emission.output.instructions.push(0x0b);
         self.pop_control_frame();
         self.state.emission.output.instructions.push(0x0b);
         self.pop_control_frame();
+        if trace_loop_cleanup {
+            eprintln!("loop_cleanup=invalidate_after");
+        }
         self.invalidate_static_binding_metadata_for_names_with_preserved_kinds(
             &invalidated_bindings,
             &preserved_kinds,
         );
+        if trace_loop_cleanup {
+            eprintln!("loop_cleanup=active_with_object");
+        }
         let active_with_object = self
             .state
             .emission
@@ -1665,10 +1825,16 @@ impl<'a> FunctionCompiler<'a> {
             .with_scopes
             .last()
             .cloned();
+        if trace_loop_cleanup {
+            eprintln!("loop_cleanup=mark_shadow_dynamics");
+        }
         self.mark_loop_with_scope_shadow_dynamics_from_statements(
             body,
             active_with_object.as_ref(),
         );
+        if trace_loop_cleanup {
+            eprintln!("loop_cleanup=terminal_break_metadata");
+        }
         if let (Some(local_snapshot), Some(global_snapshot)) = (
             terminal_break_local_static_metadata,
             terminal_break_global_static_semantics,
@@ -1678,6 +1844,195 @@ impl<'a> FunctionCompiler<'a> {
                 .restore_global_static_semantics(global_snapshot);
         }
         Ok(())
+    }
+
+    fn try_emit_static_while_unroll(
+        &mut self,
+        condition: &Expression,
+        break_hook: Option<&Expression>,
+        body: &[Statement],
+    ) -> DirectResult<bool> {
+        if !crate::ayy_env_flag!("AYY_ENABLE_STATIC_WHILE_UNROLL") {
+            return Ok(false);
+        }
+        if break_hook.is_some()
+            || !inline_summary_side_effect_free_expression(condition)
+            || body.iter().any(Self::statement_blocks_static_while_unroll)
+        {
+            return Ok(false);
+        }
+
+        let trace_static_while = crate::ayy_env_flag!("AYY_TRACE_STATIC_WHILE");
+        for iteration in 0..Self::STATIC_WHILE_UNROLL_LIMIT {
+            match self.resolve_static_boolean_expression(condition) {
+                Some(false) => {
+                    if trace_static_while {
+                        eprintln!("static_while_unroll:done iterations={iteration}");
+                    }
+                    return Ok(true);
+                }
+                Some(true) => {
+                    if trace_static_while {
+                        eprintln!("static_while_unroll:emit iteration={iteration}");
+                    }
+                    self.emit_statements(body)?;
+                }
+                None => {
+                    if trace_static_while {
+                        eprintln!(
+                            "static_while_unroll:condition_dynamic_after iterations={iteration} condition={condition:?} materialized={:?}",
+                            self.materialize_static_expression(condition)
+                        );
+                    }
+                    return Ok(iteration > 0);
+                }
+            }
+        }
+
+        if trace_static_while {
+            eprintln!(
+                "static_while_unroll:limit iterations={}",
+                Self::STATIC_WHILE_UNROLL_LIMIT
+            );
+        }
+        Ok(true)
+    }
+
+    fn statement_blocks_static_while_unroll(statement: &Statement) -> bool {
+        match statement {
+            Statement::Break { .. }
+            | Statement::Continue { .. }
+            | Statement::Return(_)
+            | Statement::Throw(_)
+            | Statement::Yield { .. }
+            | Statement::YieldDelegate { .. }
+            | Statement::For { .. }
+            | Statement::While { .. }
+            | Statement::DoWhile { .. }
+            | Statement::Try { .. }
+            | Statement::Switch { .. }
+            | Statement::With { .. }
+            | Statement::Let { .. } => true,
+            Statement::Declaration { body }
+            | Statement::Block { body }
+            | Statement::Labeled { body, .. } => {
+                body.iter().any(Self::statement_blocks_static_while_unroll)
+            }
+            Statement::If {
+                then_branch,
+                else_branch,
+                ..
+            } => {
+                then_branch
+                    .iter()
+                    .any(Self::statement_blocks_static_while_unroll)
+                    || else_branch
+                        .iter()
+                        .any(Self::statement_blocks_static_while_unroll)
+            }
+            Statement::Var { value, .. }
+            | Statement::Assign { value, .. }
+            | Statement::Expression(value) => Self::expression_blocks_static_while_unroll(value),
+            Statement::Print { values } => values
+                .iter()
+                .any(Self::expression_blocks_static_while_unroll),
+            Statement::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                Self::expression_blocks_static_while_unroll(object)
+                    || Self::expression_blocks_static_while_unroll(property)
+                    || Self::expression_blocks_static_while_unroll(value)
+            }
+        }
+    }
+
+    fn expression_blocks_static_while_unroll(expression: &Expression) -> bool {
+        match expression {
+            Expression::Await(_)
+            | Expression::EnumerateKeys(_)
+            | Expression::GetIterator(_)
+            | Expression::IteratorClose(_)
+            | Expression::Update { .. } => true,
+            Expression::Assign { value, .. } => Self::expression_blocks_static_while_unroll(value),
+            Expression::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                Self::expression_blocks_static_while_unroll(object)
+                    || Self::expression_blocks_static_while_unroll(property)
+                    || Self::expression_blocks_static_while_unroll(value)
+            }
+            Expression::AssignSuperMember { property, value } => {
+                Self::expression_blocks_static_while_unroll(property)
+                    || Self::expression_blocks_static_while_unroll(value)
+            }
+            Expression::Unary { expression, .. }
+            | Expression::Member {
+                object: expression, ..
+            } => Self::expression_blocks_static_while_unroll(expression),
+            Expression::SuperMember { property } => {
+                Self::expression_blocks_static_while_unroll(property)
+            }
+            Expression::Binary { left, right, .. } => {
+                Self::expression_blocks_static_while_unroll(left)
+                    || Self::expression_blocks_static_while_unroll(right)
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                Self::expression_blocks_static_while_unroll(condition)
+                    || Self::expression_blocks_static_while_unroll(then_expression)
+                    || Self::expression_blocks_static_while_unroll(else_expression)
+            }
+            Expression::Sequence(expressions) => expressions
+                .iter()
+                .any(Self::expression_blocks_static_while_unroll),
+            Expression::Call { callee, arguments }
+            | Expression::SuperCall { callee, arguments }
+            | Expression::New { callee, arguments } => {
+                Self::expression_blocks_static_while_unroll(callee)
+                    || arguments.iter().any(|argument| {
+                        Self::expression_blocks_static_while_unroll(argument.expression())
+                    })
+            }
+            Expression::Array(elements) => elements.iter().any(|element| match element {
+                ArrayElement::Expression(expression) | ArrayElement::Spread(expression) => {
+                    Self::expression_blocks_static_while_unroll(expression)
+                }
+            }),
+            Expression::Object(entries) => entries.iter().any(|entry| match entry {
+                ObjectEntry::Data { key, value } => {
+                    Self::expression_blocks_static_while_unroll(key)
+                        || Self::expression_blocks_static_while_unroll(value)
+                }
+                ObjectEntry::Getter { key, getter } => {
+                    Self::expression_blocks_static_while_unroll(key)
+                        || Self::expression_blocks_static_while_unroll(getter)
+                }
+                ObjectEntry::Setter { key, setter } => {
+                    Self::expression_blocks_static_while_unroll(key)
+                        || Self::expression_blocks_static_while_unroll(setter)
+                }
+                ObjectEntry::Spread(expression) => {
+                    Self::expression_blocks_static_while_unroll(expression)
+                }
+            }),
+            Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined
+            | Expression::Identifier(_)
+            | Expression::This
+            | Expression::NewTarget
+            | Expression::Sent => false,
+        }
     }
 
     pub(in crate::backend::direct_wasm) fn emit_do_while(
@@ -1691,6 +2046,9 @@ impl<'a> FunctionCompiler<'a> {
             .collect_loop_assigned_binding_names_with_effectful_iterators(
                 condition, break_hook, body, None, None,
             );
+        if crate::ayy_env_flag!("AYY_TRACE_LOOP_INVALIDATION") {
+            eprintln!("loop_invalidated do_while={invalidated_bindings:?}");
+        }
         let preserved_kinds = self.preserved_binding_kinds_for_loop(
             &invalidated_bindings,
             condition,
@@ -1744,6 +2102,7 @@ impl<'a> FunctionCompiler<'a> {
                 direct_step_iterators: Self::direct_loop_step_iterators(body),
                 numeric_binding_candidates,
                 numeric_spec,
+                string_binding_candidates: Self::collect_loop_string_binding_candidates(body),
                 string_member_alias_bindings: HashMap::new(),
                 eval_source_alias_bindings: HashMap::new(),
             });
@@ -1900,6 +2259,7 @@ impl<'a> FunctionCompiler<'a> {
                     direct_step_iterators: Self::direct_loop_step_iterators(body),
                     numeric_binding_candidates,
                     numeric_spec,
+                    string_binding_candidates: Self::collect_loop_string_binding_candidates(body),
                     string_member_alias_bindings: Self::collect_for_in_key_alias_bindings(body),
                     eval_source_alias_bindings: HashMap::new(),
                 });

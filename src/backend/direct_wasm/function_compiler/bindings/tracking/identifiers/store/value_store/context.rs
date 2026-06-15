@@ -2903,7 +2903,7 @@ impl<'a> FunctionCompiler<'a> {
         } else {
             None
         };
-        let object_binding_expression = if canonical_object_binding
+        let mut object_binding_expression = if canonical_object_binding
             .as_ref()
             .is_some_and(|binding| self.object_binding_is_static_map(binding))
         {
@@ -2941,6 +2941,12 @@ impl<'a> FunctionCompiler<'a> {
                     .clone()
             }
         };
+        if self.expression_depends_on_active_loop_assignment(&object_binding_expression) {
+            if trace_identifier_store {
+                eprintln!("identifier_store:{name}:object_binding skipped_active_loop_dependency");
+            }
+            object_binding_expression = Expression::Undefined;
+        }
         let object_binding =
             if static_expression_matches(&object_binding_expression, &canonical_value_expression) {
                 canonical_object_binding

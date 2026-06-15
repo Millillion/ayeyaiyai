@@ -166,7 +166,9 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         value: &Expression,
     ) -> DirectResult<bool> {
-        if self.infer_value_kind(value) == Some(StaticValueKind::String) {
+        if self.infer_value_kind(value) == Some(StaticValueKind::String)
+            || self.print_runtime_shadow_static_value_kind(value) == Some(StaticValueKind::String)
+        {
             let value_local = self.allocate_temp_local();
             self.emit_numeric_expression(value)?;
             self.push_local_set(value_local);

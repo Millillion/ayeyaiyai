@@ -46,6 +46,7 @@ pub(in crate::backend::direct_wasm) const TEST262_REALM_GLOBAL_IDENTIFIER_PREFIX
     "__ayy_test262_realm_global_";
 pub(in crate::backend::direct_wasm) const TEST262_REALM_EVAL_BUILTIN_PREFIX: &str =
     "__ayyTest262RealmEval";
+pub(in crate::backend::direct_wasm) const INTERNAL_BINDING_PREFIX: &str = "__ayy";
 
 pub(in crate::backend::direct_wasm) const WASI_FD_WRITE_TYPE_INDEX: u32 = 0;
 pub(in crate::backend::direct_wasm) const WASI_ARGS_TYPE_INDEX: u32 = 1;
@@ -72,6 +73,8 @@ pub(in crate::backend::direct_wasm) const NEXT_PRIVATE_BRAND_GLOBAL_INDEX: u32 =
 pub(in crate::backend::direct_wasm) const NEXT_RUNTIME_OBJECT_VALUE_GLOBAL_INDEX: u32 = 5;
 pub(in crate::backend::direct_wasm) const PENDING_PROMISE_REJECTION_TAG_GLOBAL_INDEX: u32 = 6;
 pub(in crate::backend::direct_wasm) const PENDING_PROMISE_REJECTION_VALUE_GLOBAL_INDEX: u32 = 7;
+pub(in crate::backend::direct_wasm) const NEXT_STRING_HEAP_OFFSET_GLOBAL_INDEX: u32 = 8;
+pub(in crate::backend::direct_wasm) const FIXED_GLOBAL_COUNT: u32 = 9;
 pub(in crate::backend::direct_wasm) const TRACKED_ARGUMENT_SLOT_LIMIT: u32 = 64;
 pub(in crate::backend::direct_wasm) const TRACKED_ARRAY_SLOT_LIMIT: u32 = 32;
 

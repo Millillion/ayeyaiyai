@@ -15,7 +15,8 @@ pub(in crate::backend::direct_wasm) struct ModuleAssemblyInputs {
 
 impl ModuleAssemblyInputs {
     pub(in crate::backend::direct_wasm) fn assemble(self) -> Vec<u8> {
-        let initial_memory_pages = required_memory_pages(self.next_data_offset);
+        let string_heap_start_offset = align_to_u32(self.next_data_offset, 4);
+        let initial_memory_pages = required_memory_pages(string_heap_start_offset);
 
         let mut module = Vec::from(WASM_MAGIC_AND_VERSION);
         push_section(&mut module, 1, encode_type_section(&self.user_type_arities));
@@ -29,7 +30,7 @@ impl ModuleAssemblyInputs {
         push_section(
             &mut module,
             6,
-            encode_global_section(&self.global_initial_values),
+            encode_global_section(&self.global_initial_values, string_heap_start_offset),
         );
         push_section(&mut module, 7, encode_export_section());
         push_section(
@@ -45,6 +46,11 @@ impl ModuleAssemblyInputs {
         push_section(&mut module, 11, encode_data_section(&self.string_data));
         module
     }
+}
+
+fn align_to_u32(value: u32, alignment: u32) -> u32 {
+    let padding = (alignment - (value % alignment)) % alignment;
+    value + padding
 }
 
 impl EmittedBackendProgram {

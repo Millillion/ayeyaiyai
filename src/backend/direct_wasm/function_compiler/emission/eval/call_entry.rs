@@ -163,6 +163,7 @@ impl<'a> FunctionCompiler<'a> {
                 direct_step_iterators: std::collections::HashSet::new(),
                 numeric_binding_candidates: HashMap::new(),
                 numeric_spec: None,
+                string_binding_candidates: HashMap::new(),
                 string_member_alias_bindings: HashMap::new(),
                 eval_source_alias_bindings: HashMap::new(),
             });
@@ -260,6 +261,7 @@ impl<'a> FunctionCompiler<'a> {
                 direct_step_iterators: std::collections::HashSet::new(),
                 numeric_binding_candidates: HashMap::new(),
                 numeric_spec: None,
+                string_binding_candidates: HashMap::new(),
                 string_member_alias_bindings: HashMap::new(),
                 eval_source_alias_bindings: HashMap::new(),
             });
@@ -377,6 +379,7 @@ impl<'a> FunctionCompiler<'a> {
                     direct_step_iterators: std::collections::HashSet::new(),
                     numeric_binding_candidates,
                     numeric_spec,
+                    string_binding_candidates: Self::collect_loop_string_binding_candidates(body),
                     string_member_alias_bindings: Self::collect_for_in_key_alias_bindings(body),
                     eval_source_alias_bindings: HashMap::new(),
                 });

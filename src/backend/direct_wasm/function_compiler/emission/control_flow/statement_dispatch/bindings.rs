@@ -63,6 +63,316 @@ impl<'a> FunctionCompiler<'a> {
         Ok(())
     }
 
+    pub(in crate::backend::direct_wasm) fn object_literal_entries_can_seed_runtime_property_values(
+        entries: &[ObjectEntry],
+    ) -> bool {
+        entries.iter().all(|entry| {
+            matches!(
+                entry,
+                ObjectEntry::Data {
+                    key: Expression::String(name),
+                    ..
+                } if name != "__proto__"
+            )
+        })
+    }
+
+    fn object_literal_property_value_needs_runtime_seed(&self, value: &Expression) -> bool {
+        if self.expression_depends_on_active_loop_assignment(value) {
+            return true;
+        }
+        if !inline_summary_side_effect_free_expression(value) {
+            return true;
+        }
+        let Expression::Identifier(name) = value else {
+            return false;
+        };
+        self.state
+            .speculation
+            .static_semantics
+            .local_value_binding(name)
+            .or_else(|| self.global_value_binding(name))
+            .is_some_and(|binding| !inline_summary_side_effect_free_expression(binding))
+    }
+
+    pub(in crate::backend::direct_wasm) fn object_literal_entries_need_runtime_property_value_seed(
+        &self,
+        entries: &[ObjectEntry],
+    ) -> bool {
+        Self::object_literal_entries_can_seed_runtime_property_values(entries)
+            && entries.iter().any(|entry| {
+                let ObjectEntry::Data { value, .. } = entry else {
+                    return false;
+                };
+                self.object_literal_property_value_needs_runtime_seed(value)
+            })
+    }
+
+    fn emit_object_literal_binding_initializer(
+        &mut self,
+        name: &str,
+        entries: &[ObjectEntry],
+    ) -> DirectResult<bool> {
+        if !self.object_literal_entries_need_runtime_property_value_seed(entries) {
+            return Ok(false);
+        }
+
+        let mut property_values = Vec::new();
+        for entry in entries {
+            let ObjectEntry::Data {
+                key: Expression::String(property_name),
+                value,
+            } = entry
+            else {
+                unreachable!("filtered by object_literal_entries_can_seed_runtime_property_values")
+            };
+            let value_local = self.allocate_temp_local();
+            self.emit_numeric_expression(value)?;
+            self.push_local_set(value_local);
+            property_values.push((property_name.clone(), value_local));
+        }
+
+        let target_owner = self
+            .resolve_current_local_binding(name)
+            .map(|(resolved_name, _)| resolved_name)
+            .unwrap_or_else(|| name.to_string());
+        self.clear_runtime_object_property_shadow_prefix(&target_owner);
+        self.clear_runtime_object_property_shadow_static_metadata_prefix(&target_owner);
+
+        for (property_name, value_local) in property_values {
+            let property = Expression::String(property_name.clone());
+            let target_binding =
+                self.runtime_object_property_shadow_binding_by_property(&target_owner, &property);
+            let target_deleted = self.runtime_object_property_shadow_deleted_binding_by_property(
+                &target_owner,
+                &property,
+            );
+            self.push_i32_const(JS_UNDEFINED_TAG);
+            self.push_global_set(target_deleted.value_index);
+            self.push_i32_const(0);
+            self.push_global_set(target_deleted.present_index);
+            self.push_local_get(value_local);
+            self.push_global_set(target_binding.value_index);
+            self.push_i32_const(1);
+            self.push_global_set(target_binding.present_index);
+        }
+
+        self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
+        Ok(true)
+    }
+
+    fn simple_call_return_expression_is_supported(expression: &Expression) -> bool {
+        match expression {
+            Expression::Number(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined
+            | Expression::Identifier(_) => true,
+            Expression::Member { object, property } => {
+                Self::simple_call_return_expression_is_supported(object)
+                    && Self::simple_call_return_expression_is_supported(property)
+            }
+            Expression::Unary { expression, .. } => {
+                Self::simple_call_return_expression_is_supported(expression)
+            }
+            Expression::Binary { left, right, .. } => {
+                Self::simple_call_return_expression_is_supported(left)
+                    && Self::simple_call_return_expression_is_supported(right)
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                Self::simple_call_return_expression_is_supported(condition)
+                    && Self::simple_call_return_expression_is_supported(then_expression)
+                    && Self::simple_call_return_expression_is_supported(else_expression)
+            }
+            Expression::Sequence(expressions) => expressions
+                .iter()
+                .all(Self::simple_call_return_expression_is_supported),
+            _ => false,
+        }
+    }
+
+    fn expression_references_only_bindings(
+        expression: &Expression,
+        allowed_bindings: &HashSet<String>,
+    ) -> bool {
+        let mut referenced_bindings = HashSet::new();
+        collect_referenced_binding_names_from_expression(expression, &mut referenced_bindings);
+        referenced_bindings
+            .iter()
+            .all(|binding| allowed_bindings.contains(binding))
+    }
+
+    pub(in crate::backend::direct_wasm) fn simple_user_call_return_object_property_values(
+        &self,
+        value: &Expression,
+    ) -> Option<Vec<(String, Expression)>> {
+        let Expression::Call { callee, arguments } = value else {
+            return None;
+        };
+        if arguments
+            .iter()
+            .any(|argument| matches!(argument, CallArgument::Spread(_)))
+        {
+            return None;
+        }
+        let Expression::Identifier(function_name) = callee.as_ref() else {
+            return None;
+        };
+        let user_function = self.user_function(&function_name)?;
+        if user_function.kind != FunctionKind::Ordinary
+            || user_function.has_parameter_defaults()
+            || user_function.has_lowered_pattern_parameters()
+        {
+            return None;
+        }
+        let function = self.resolve_registered_function_declaration(&function_name)?;
+        if function.kind != FunctionKind::Ordinary
+            || function.params.iter().any(|param| {
+                param.default.is_some() || param.rest || param.name == "arguments"
+            })
+        {
+            return None;
+        }
+
+        let expanded_arguments = arguments
+            .iter()
+            .map(|argument| match argument {
+                CallArgument::Expression(expression) => expression.clone(),
+                CallArgument::Spread(_) => unreachable!("spread arguments filtered above"),
+            })
+            .collect::<Vec<_>>();
+        let mut bindings = HashMap::new();
+        let mut allowed_bindings = HashSet::new();
+        for (index, parameter) in function.params.iter().enumerate() {
+            let argument = expanded_arguments
+                .get(index)
+                .cloned()
+                .unwrap_or(Expression::Undefined);
+            if !Self::simple_call_return_expression_is_supported(&argument)
+                || !inline_summary_side_effect_free_expression(&argument)
+            {
+                return None;
+            }
+            allowed_bindings.insert(parameter.name.clone());
+            bindings.insert(parameter.name.clone(), argument);
+        }
+
+        for (index, statement) in function.body.iter().enumerate() {
+            match statement {
+                Statement::Var { name, value } | Statement::Let { name, value, .. } => {
+                    if !Self::simple_call_return_expression_is_supported(value)
+                        || !Self::expression_references_only_bindings(value, &allowed_bindings)
+                    {
+                        return None;
+                    }
+                    let substituted = self.substitute_expression_bindings(value, &bindings);
+                    if !Self::simple_call_return_expression_is_supported(&substituted)
+                        || !inline_summary_side_effect_free_expression(&substituted)
+                    {
+                        return None;
+                    }
+                    allowed_bindings.insert(name.clone());
+                    bindings.insert(name.clone(), substituted);
+                }
+                Statement::Return(Expression::Object(entries)) if index + 1 == function.body.len() =>
+                {
+                    if !Self::object_literal_entries_can_seed_runtime_property_values(entries) {
+                        return None;
+                    }
+                    let mut property_values = Vec::new();
+                    for entry in entries {
+                        let ObjectEntry::Data {
+                            key: Expression::String(property_name),
+                            value,
+                        } = entry
+                        else {
+                            unreachable!(
+                                "filtered by object_literal_entries_can_seed_runtime_property_values"
+                            )
+                        };
+                        if !Self::simple_call_return_expression_is_supported(value)
+                            || !Self::expression_references_only_bindings(value, &allowed_bindings)
+                        {
+                            return None;
+                        }
+                        let substituted = self.substitute_expression_bindings(value, &bindings);
+                        if !Self::simple_call_return_expression_is_supported(&substituted)
+                            || !inline_summary_side_effect_free_expression(&substituted)
+                        {
+                            return None;
+                        }
+                        property_values.push((property_name.clone(), substituted));
+                    }
+                    return Some(property_values);
+                }
+                _ => return None,
+            }
+        }
+
+        None
+    }
+
+    pub(in crate::backend::direct_wasm) fn simple_user_call_return_object_needs_runtime_seed(
+        &self,
+        value: &Expression,
+    ) -> bool {
+        self.simple_user_call_return_object_property_values(value)
+            .is_some()
+    }
+
+    fn emit_simple_user_call_return_object_binding_initializer(
+        &mut self,
+        name: &str,
+        value: &Expression,
+    ) -> DirectResult<bool> {
+        let Some(property_expressions) =
+            self.simple_user_call_return_object_property_values(value)
+        else {
+            return Ok(false);
+        };
+
+        let mut property_values = Vec::new();
+        for (property_name, property_expression) in property_expressions {
+            let value_local = self.allocate_temp_local();
+            self.emit_numeric_expression(&property_expression)?;
+            self.push_local_set(value_local);
+            property_values.push((property_name, value_local));
+        }
+
+        let target_owner = self
+            .resolve_current_local_binding(name)
+            .map(|(resolved_name, _)| resolved_name)
+            .unwrap_or_else(|| name.to_string());
+        self.clear_runtime_object_property_shadow_prefix(&target_owner);
+        self.clear_runtime_object_property_shadow_static_metadata_prefix(&target_owner);
+
+        for (property_name, value_local) in property_values {
+            let property = Expression::String(property_name.clone());
+            let target_binding =
+                self.runtime_object_property_shadow_binding_by_property(&target_owner, &property);
+            let target_deleted = self.runtime_object_property_shadow_deleted_binding_by_property(
+                &target_owner,
+                &property,
+            );
+            self.push_i32_const(JS_UNDEFINED_TAG);
+            self.push_global_set(target_deleted.value_index);
+            self.push_i32_const(0);
+            self.push_global_set(target_deleted.present_index);
+            self.push_local_get(value_local);
+            self.push_global_set(target_binding.value_index);
+            self.push_i32_const(1);
+            self.push_global_set(target_binding.present_index);
+        }
+
+        self.push_i32_const(JS_TYPEOF_OBJECT_TAG);
+        Ok(true)
+    }
+
     fn tracked_array_step_initializer_parts<'b>(
         &self,
         name: &str,
@@ -722,6 +1032,14 @@ impl<'a> FunctionCompiler<'a> {
     ) -> DirectResult<()> {
         if self.is_private_brand_binding_initializer(name, value) {
             return self.emit_fresh_private_brand_value();
+        }
+        if let Expression::Object(entries) = value
+            && self.emit_object_literal_binding_initializer(name, entries)?
+        {
+            return Ok(());
+        }
+        if self.emit_simple_user_call_return_object_binding_initializer(name, value)? {
+            return Ok(());
         }
         if let Some(resolved_value) =
             self.static_test262_assert_deep_equal_helper_initializer_result(value)
