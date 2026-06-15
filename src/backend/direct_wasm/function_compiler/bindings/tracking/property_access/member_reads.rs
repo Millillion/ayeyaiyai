@@ -160,6 +160,38 @@ impl<'a> FunctionCompiler<'a> {
         )
     }
 
+    fn member_read_should_defer_static_materialization(
+        &self,
+        object: &Expression,
+        property: &Expression,
+    ) -> bool {
+        let canonical_property = self.canonical_object_property_expression(property);
+        if static_property_name_from_expression(&canonical_property).is_none() {
+            return false;
+        }
+
+        let Some(shadow_binding_name) = self
+            .runtime_object_property_shadow_binding_name_for_expression(
+                object,
+                &canonical_property,
+            )
+        else {
+            return false;
+        };
+
+        self.global_has_implicit_binding(&shadow_binding_name)
+            || self.runtime_object_property_shadow_binding_should_defer_static_resolution(
+                &shadow_binding_name,
+            )
+            || matches!(
+                object,
+                Expression::Identifier(name)
+                    if self.current_user_function().is_some_and(|function| {
+                        function.params.iter().any(|param| param == name)
+                    })
+            )
+    }
+
     pub(in crate::backend::direct_wasm) fn emit_member_read_without_prelude(
         &mut self,
         object: &Expression,
@@ -412,6 +444,7 @@ impl<'a> FunctionCompiler<'a> {
             && !object_is_runtime_array_element_base
             && inline_summary_side_effect_free_expression(object)
             && inline_summary_side_effect_free_expression(property)
+            && !self.member_read_should_defer_static_materialization(object, &static_array_property)
         {
             let member_expression = Expression::Member {
                 object: Box::new(object.clone()),
@@ -438,8 +471,12 @@ impl<'a> FunctionCompiler<'a> {
                     && matches!(object, Expression::This)
                     && (self.state.speculation.execution_context.top_level_function
                         || self.current_function_name().is_none())
-                    && self.resolve_current_local_binding(materialized_name).is_none()
-                    && self.resolve_global_binding_index(materialized_name).is_none()
+                    && self
+                        .resolve_current_local_binding(materialized_name)
+                        .is_none()
+                    && self
+                        .resolve_global_binding_index(materialized_name)
+                        .is_none()
                     && !self.global_has_binding(materialized_name)
                     && !self.backend.global_has_lexical_binding(materialized_name)
                     && self

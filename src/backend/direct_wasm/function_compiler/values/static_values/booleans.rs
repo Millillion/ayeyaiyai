@@ -168,6 +168,9 @@ impl<'a> FunctionCompiler<'a> {
         if self.boolean_expression_reads_runtime_nonlocal_binding(expression) {
             return None;
         }
+        if self.expression_reads_runtime_object_shadow_member(expression) {
+            return None;
+        }
 
         // Resolve `delete` against the unmaterialized operand: materializing
         // replaces the property reference with its value, which destroys the

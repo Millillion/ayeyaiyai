@@ -458,6 +458,134 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    pub(in crate::backend::direct_wasm) fn expression_reads_runtime_object_shadow_member(
+        &self,
+        expression: &Expression,
+    ) -> bool {
+        match expression {
+            Expression::Member { object, property } => {
+                let materialized_property = self
+                    .resolve_property_key_expression(property)
+                    .unwrap_or_else(|| self.materialize_static_expression(property));
+                let reads_this_shadow_member = self
+                    .runtime_object_property_shadow_binding_name_for_expression(
+                        object,
+                        &materialized_property,
+                    )
+                    .is_some_and(|shadow_binding_name| {
+                        self.global_has_implicit_binding(&shadow_binding_name)
+                            || self
+                                .runtime_object_property_shadow_binding_should_defer_static_resolution(
+                                    &shadow_binding_name,
+                                )
+                    })
+                    || self.runtime_object_property_shadow_deletion_may_affect_property(
+                        object,
+                        &materialized_property,
+                    )
+                    || matches!(
+                        object.as_ref(),
+                        Expression::Identifier(name)
+                            if self.current_user_function().is_some_and(|function| {
+                                function.params.iter().any(|param| param == name)
+                            })
+                            && self
+                                .runtime_object_property_shadow_binding_name_for_expression(
+                                    object,
+                                    &materialized_property,
+                                )
+                                .is_some()
+                    );
+                reads_this_shadow_member
+                    || self.expression_reads_runtime_object_shadow_member(object)
+                    || self.expression_reads_runtime_object_shadow_member(property)
+            }
+            Expression::Unary { expression, .. }
+            | Expression::Await(expression)
+            | Expression::EnumerateKeys(expression)
+            | Expression::GetIterator(expression)
+            | Expression::IteratorClose(expression)
+            | Expression::Assign {
+                value: expression, ..
+            } => self.expression_reads_runtime_object_shadow_member(expression),
+            Expression::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                self.expression_reads_runtime_object_shadow_member(object)
+                    || self.expression_reads_runtime_object_shadow_member(property)
+                    || self.expression_reads_runtime_object_shadow_member(value)
+            }
+            Expression::AssignSuperMember { property, value } => {
+                self.expression_reads_runtime_object_shadow_member(property)
+                    || self.expression_reads_runtime_object_shadow_member(value)
+            }
+            Expression::Binary { left, right, .. } => {
+                self.expression_reads_runtime_object_shadow_member(left)
+                    || self.expression_reads_runtime_object_shadow_member(right)
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                self.expression_reads_runtime_object_shadow_member(condition)
+                    || self.expression_reads_runtime_object_shadow_member(then_expression)
+                    || self.expression_reads_runtime_object_shadow_member(else_expression)
+            }
+            Expression::Sequence(expressions) => expressions
+                .iter()
+                .any(|expression| self.expression_reads_runtime_object_shadow_member(expression)),
+            Expression::Array(elements) => elements.iter().any(|element| match element {
+                ArrayElement::Expression(expression) | ArrayElement::Spread(expression) => {
+                    self.expression_reads_runtime_object_shadow_member(expression)
+                }
+            }),
+            Expression::Object(entries) => entries.iter().any(|entry| match entry {
+                ObjectEntry::Data { key, value } => {
+                    self.expression_reads_runtime_object_shadow_member(key)
+                        || self.expression_reads_runtime_object_shadow_member(value)
+                }
+                ObjectEntry::Getter { key, getter } => {
+                    self.expression_reads_runtime_object_shadow_member(key)
+                        || self.expression_reads_runtime_object_shadow_member(getter)
+                }
+                ObjectEntry::Setter { key, setter } => {
+                    self.expression_reads_runtime_object_shadow_member(key)
+                        || self.expression_reads_runtime_object_shadow_member(setter)
+                }
+                ObjectEntry::Spread(expression) => {
+                    self.expression_reads_runtime_object_shadow_member(expression)
+                }
+            }),
+            Expression::Call { callee, arguments }
+            | Expression::SuperCall { callee, arguments }
+            | Expression::New { callee, arguments } => {
+                self.expression_reads_runtime_object_shadow_member(callee)
+                    || arguments.iter().any(|argument| match argument {
+                        CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                            self.expression_reads_runtime_object_shadow_member(expression)
+                        }
+                    })
+            }
+            Expression::SuperMember { property } => {
+                self.expression_reads_runtime_object_shadow_member(property)
+            }
+            Expression::Identifier(_)
+            | Expression::Update { .. }
+            | Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined
+            | Expression::NewTarget
+            | Expression::This
+            | Expression::Sent => false,
+        }
+    }
+
     fn static_boxed_primitive_constructor_call_is_side_effect_free(
         &self,
         expression: &Expression,
@@ -2018,23 +2146,22 @@ impl<'a> FunctionCompiler<'a> {
         ) {
             return false;
         }
-        let Some(owner_name) = self.runtime_object_property_shadow_owner_name_for_expression(object)
+        let Some(owner_name) =
+            self.runtime_object_property_shadow_owner_name_for_expression(object)
         else {
             return false;
         };
-        let Some(shadow_binding_name) =
-            self.runtime_object_property_shadow_binding_name_for_expression(
+        let Some(shadow_binding_name) = self
+            .runtime_object_property_shadow_binding_name_for_expression(
                 object,
                 &materialized_property,
             )
         else {
             return false;
         };
-        if !self
-            .runtime_object_property_shadow_binding_should_defer_static_resolution(
-                &shadow_binding_name,
-            )
-        {
+        if !self.runtime_object_property_shadow_binding_should_defer_static_resolution(
+            &shadow_binding_name,
+        ) {
             return false;
         }
         self.resolve_runtime_shadow_object_binding(&owner_name)
@@ -2701,7 +2828,8 @@ impl<'a> FunctionCompiler<'a> {
         right: &Expression,
         right_candidates: &[(Expression, String)],
     ) -> DirectResult<bool> {
-        if right_candidates.is_empty() || self.infer_value_kind(left) != Some(StaticValueKind::String)
+        if right_candidates.is_empty()
+            || self.infer_value_kind(left) != Some(StaticValueKind::String)
         {
             return Ok(false);
         }
@@ -2777,7 +2905,8 @@ impl<'a> FunctionCompiler<'a> {
 
     fn expression_is_runtime_string_append_number_rhs(&self, expression: &Expression) -> bool {
         self.infer_value_kind(expression) == Some(StaticValueKind::Number)
-            || self.print_runtime_shadow_static_value_kind(expression) == Some(StaticValueKind::Number)
+            || self.print_runtime_shadow_static_value_kind(expression)
+                == Some(StaticValueKind::Number)
             || self.expression_is_numeric_runtime_shadow_member(expression)
             || (matches!(expression, Expression::Member { .. })
                 && self.expression_depends_on_active_loop_assignment(expression))
@@ -3795,6 +3924,10 @@ impl<'a> FunctionCompiler<'a> {
         let equality_reads_runtime_nonlocal_binding = self
             .binary_expression_reads_runtime_nonlocal_binding(left)
             || self.binary_expression_reads_runtime_nonlocal_binding(right);
+        let equality_reads_runtime_object_shadow_member =
+            matches!(op, BinaryOp::Equal | BinaryOp::NotEqual)
+                && (self.expression_reads_runtime_object_shadow_member(left)
+                    || self.expression_reads_runtime_object_shadow_member(right));
         if equality_references_internal_iterator_step
             && matches!(op, BinaryOp::Equal | BinaryOp::NotEqual)
         {
@@ -3809,6 +3942,7 @@ impl<'a> FunctionCompiler<'a> {
         if !equality_depends_on_active_loop_assignment
             && !equality_references_internal_iterator_step
             && !equality_reads_runtime_nonlocal_binding
+            && !equality_reads_runtime_object_shadow_member
             && !Self::expression_references_internal_assignment_temp(left)
             && !Self::expression_references_internal_assignment_temp(right)
             && !Self::expression_contains_assignment_or_update(left)
@@ -3833,6 +3967,7 @@ impl<'a> FunctionCompiler<'a> {
             return self.emit_literal_expression(&Expression::Bool(value));
         }
         if !equality_reads_runtime_nonlocal_binding
+            && !equality_reads_runtime_object_shadow_member
             && self.emit_static_strict_type_mismatch_comparison(op, left, right)?
         {
             return Ok(());
@@ -3959,9 +4094,9 @@ impl<'a> FunctionCompiler<'a> {
                 if self.emit_active_loop_string_expression_from_sequence(expression)? {
                     return Ok(());
                 }
-                let addition_operands_are_definitely_numeric =
-                    self.expression_is_numeric_addition_operand(left)
-                        && self.expression_is_numeric_addition_operand(right);
+                let addition_operands_are_definitely_numeric = self
+                    .expression_is_numeric_addition_operand(left)
+                    && self.expression_is_numeric_addition_operand(right);
                 if trace_addition {
                     eprintln!(
                         "addition:fallthrough definitely_numeric={addition_operands_are_definitely_numeric} left_kind={:?} right_kind={:?}",

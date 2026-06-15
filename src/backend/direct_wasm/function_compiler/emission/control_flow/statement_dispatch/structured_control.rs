@@ -644,6 +644,129 @@ impl<'a> FunctionCompiler<'a> {
         })
     }
 
+    fn static_if_condition_reads_runtime_object_shadow_member(
+        &self,
+        expression: &Expression,
+    ) -> bool {
+        match expression {
+            Expression::Member { object, property } => {
+                let materialized_property = self
+                    .resolve_property_key_expression(property)
+                    .unwrap_or_else(|| self.materialize_static_expression(property));
+                self.runtime_object_property_shadow_binding_name_for_expression(
+                    object,
+                    &materialized_property,
+                )
+                .is_some_and(|shadow_binding_name| {
+                    self.global_has_implicit_binding(&shadow_binding_name)
+                        || self
+                            .runtime_object_property_shadow_binding_should_defer_static_resolution(
+                                &shadow_binding_name,
+                            )
+                }) || self.runtime_object_property_shadow_deletion_may_affect_property(
+                    object,
+                    &materialized_property,
+                ) || matches!(
+                    object.as_ref(),
+                    Expression::Identifier(name)
+                        if self.current_user_function().is_some_and(|function| {
+                            function.params.iter().any(|param| param == name)
+                        })
+                        && self
+                            .runtime_object_property_shadow_binding_name_for_expression(
+                                object,
+                                &materialized_property,
+                            )
+                            .is_some()
+                ) || self.static_if_condition_reads_runtime_object_shadow_member(object)
+                    || self.static_if_condition_reads_runtime_object_shadow_member(property)
+            }
+            Expression::Unary { expression, .. }
+            | Expression::Await(expression)
+            | Expression::EnumerateKeys(expression)
+            | Expression::GetIterator(expression)
+            | Expression::IteratorClose(expression)
+            | Expression::Assign {
+                value: expression, ..
+            } => self.static_if_condition_reads_runtime_object_shadow_member(expression),
+            Expression::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                self.static_if_condition_reads_runtime_object_shadow_member(object)
+                    || self.static_if_condition_reads_runtime_object_shadow_member(property)
+                    || self.static_if_condition_reads_runtime_object_shadow_member(value)
+            }
+            Expression::AssignSuperMember { property, value } => {
+                self.static_if_condition_reads_runtime_object_shadow_member(property)
+                    || self.static_if_condition_reads_runtime_object_shadow_member(value)
+            }
+            Expression::Binary { left, right, .. } => {
+                self.static_if_condition_reads_runtime_object_shadow_member(left)
+                    || self.static_if_condition_reads_runtime_object_shadow_member(right)
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                self.static_if_condition_reads_runtime_object_shadow_member(condition)
+                    || self.static_if_condition_reads_runtime_object_shadow_member(then_expression)
+                    || self.static_if_condition_reads_runtime_object_shadow_member(else_expression)
+            }
+            Expression::Sequence(expressions) => expressions.iter().any(|expression| {
+                self.static_if_condition_reads_runtime_object_shadow_member(expression)
+            }),
+            Expression::Array(elements) => elements.iter().any(|element| match element {
+                ArrayElement::Expression(expression) | ArrayElement::Spread(expression) => {
+                    self.static_if_condition_reads_runtime_object_shadow_member(expression)
+                }
+            }),
+            Expression::Object(entries) => entries.iter().any(|entry| match entry {
+                ObjectEntry::Data { key, value } => {
+                    self.static_if_condition_reads_runtime_object_shadow_member(key)
+                        || self.static_if_condition_reads_runtime_object_shadow_member(value)
+                }
+                ObjectEntry::Getter { key, getter } => {
+                    self.static_if_condition_reads_runtime_object_shadow_member(key)
+                        || self.static_if_condition_reads_runtime_object_shadow_member(getter)
+                }
+                ObjectEntry::Setter { key, setter } => {
+                    self.static_if_condition_reads_runtime_object_shadow_member(key)
+                        || self.static_if_condition_reads_runtime_object_shadow_member(setter)
+                }
+                ObjectEntry::Spread(expression) => {
+                    self.static_if_condition_reads_runtime_object_shadow_member(expression)
+                }
+            }),
+            Expression::Call { callee, arguments }
+            | Expression::SuperCall { callee, arguments }
+            | Expression::New { callee, arguments } => {
+                self.static_if_condition_reads_runtime_object_shadow_member(callee)
+                    || arguments.iter().any(|argument| match argument {
+                        CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                            self.static_if_condition_reads_runtime_object_shadow_member(expression)
+                        }
+                    })
+            }
+            Expression::SuperMember { property } => {
+                self.static_if_condition_reads_runtime_object_shadow_member(property)
+            }
+            Expression::Identifier(_)
+            | Expression::Update { .. }
+            | Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined
+            | Expression::NewTarget
+            | Expression::This
+            | Expression::Sent => false,
+        }
+    }
+
     fn static_if_condition_calls_user_function(&self, expression: &Expression) -> bool {
         match expression {
             Expression::Call { callee, arguments }
@@ -2206,10 +2329,13 @@ impl<'a> FunctionCompiler<'a> {
                 let calls_user_function = self.static_if_condition_calls_user_function(condition);
                 let reads_runtime_nonlocal =
                     self.static_if_condition_reads_runtime_nonlocal_binding(condition);
+                let reads_runtime_object_shadow =
+                    self.static_if_condition_reads_runtime_object_shadow_member(condition);
                 let static_condition_value = if references_finally
                     || contains_assignment_or_update
                     || calls_user_function
                     || reads_runtime_nonlocal
+                    || reads_runtime_object_shadow
                 {
                     None
                 } else if control_if_condition_references_internal_iterator_temp(condition) {

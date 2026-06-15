@@ -46,6 +46,7 @@ impl<'a> FunctionCompiler<'a> {
             && !Self::expression_contains_assignment_or_update(expression)
             && !Self::expression_references_internal_assignment_temp(expression)
             && !truthy_expression_references_internal_iterator_temp(expression)
+            && !self.expression_reads_runtime_object_shadow_member(expression)
             && let Some(value) = self.resolve_static_boolean_expression(expression)
         {
             self.push_i32_const(value as i32);

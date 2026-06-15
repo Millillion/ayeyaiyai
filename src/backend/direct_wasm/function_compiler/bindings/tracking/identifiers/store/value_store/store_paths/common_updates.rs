@@ -1659,11 +1659,13 @@ impl<'a> FunctionCompiler<'a> {
                     object_binding,
                 );
             }
-            self.sync_identifier_store_runtime_object_shadow_alias_backup(
-                &source_owner,
-                fallback_owner,
-                object_binding.as_ref(),
-            )?;
+            if fallback_owner != target_owner {
+                self.sync_identifier_store_runtime_object_shadow_alias_backup(
+                    &source_owner,
+                    fallback_owner,
+                    object_binding.as_ref(),
+                )?;
+            }
             return Ok(());
         }
 
