@@ -67,6 +67,14 @@ impl<'b, 'a> FunctionStaticEvalContext<'b, 'a> {
             .resolve_function_binding_from_expression(expression)
     }
 
+    pub(in crate::backend::direct_wasm) fn expression_contains_user_function_call_with_source_loop(
+        &self,
+        expression: &Expression,
+    ) -> bool {
+        self.compiler
+            .expression_contains_user_function_call_with_source_loop(expression)
+    }
+
     pub(in crate::backend::direct_wasm) fn has_local_prototype_object_binding(
         &self,
         name: &str,

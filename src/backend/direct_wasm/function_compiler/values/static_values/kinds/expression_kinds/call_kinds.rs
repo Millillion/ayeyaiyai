@@ -138,7 +138,8 @@ impl<'a> FunctionCompiler<'a> {
             arguments,
             self.current_function_name(),
         ) {
-            return self.infer_value_kind(&value);
+            let kind = self.infer_value_kind(&value);
+            return kind;
         }
         if let Expression::Member { object, property } = callee
             && matches!(object.as_ref(), Expression::Identifier(name) if name == "Reflect")

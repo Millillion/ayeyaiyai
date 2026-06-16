@@ -158,8 +158,9 @@ impl<'a> FunctionCompiler<'a> {
             || self
                 .resolve_typed_array_view_binding_from_expression(source_expression)
                 .is_some();
-        if !has_view_binding && let Some(array_binding) =
-            self.static_typed_array_values_from_expression(source_expression)
+        if !has_view_binding
+            && let Some(array_binding) =
+                self.static_typed_array_values_from_expression(source_expression)
         {
             let length_local = self.ensure_runtime_array_length_local(name);
             self.push_i32_const(array_binding.values.len() as i32);

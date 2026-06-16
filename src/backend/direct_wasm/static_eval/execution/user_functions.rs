@@ -25,6 +25,8 @@ pub(in crate::backend::direct_wasm) trait StaticUserFunctionBindingExecutor:
         arguments: &[CallArgument],
     ) -> Expression;
 
+    fn static_user_function_argument_requires_runtime(&self, expression: &Expression) -> bool;
+
     fn materialize_inline_static_user_function_return(
         &self,
         expression: &Expression,
@@ -76,6 +78,10 @@ pub(in crate::backend::direct_wasm) trait StaticUserFunctionBindingSource {
         user_function: &UserFunction,
         arguments: &[CallArgument],
     ) -> Expression;
+
+    fn static_user_function_argument_requires_runtime(&self, _expression: &Expression) -> bool {
+        false
+    }
 }
 
 impl<T> StaticUserFunctionBindingExecutor for T
@@ -101,6 +107,50 @@ where
     ) -> Expression {
         self.substitute_static_user_function_arguments(expression, user_function, arguments)
     }
+
+    fn static_user_function_argument_requires_runtime(&self, expression: &Expression) -> bool {
+        StaticUserFunctionBindingSource::static_user_function_argument_requires_runtime(
+            self, expression,
+        )
+    }
+}
+
+fn static_user_function_statement_contains_loop(statement: &Statement) -> bool {
+    match statement {
+        Statement::For { .. } | Statement::While { .. } | Statement::DoWhile { .. } => true,
+        Statement::Declaration { body }
+        | Statement::Block { body }
+        | Statement::Labeled { body, .. }
+        | Statement::With { body, .. } => static_user_function_body_contains_loop(body),
+        Statement::If {
+            then_branch,
+            else_branch,
+            ..
+        } => {
+            static_user_function_body_contains_loop(then_branch)
+                || static_user_function_body_contains_loop(else_branch)
+        }
+        Statement::Try {
+            body,
+            catch_setup,
+            catch_body,
+            ..
+        } => {
+            static_user_function_body_contains_loop(body)
+                || static_user_function_body_contains_loop(catch_setup)
+                || static_user_function_body_contains_loop(catch_body)
+        }
+        Statement::Switch { cases, .. } => cases
+            .iter()
+            .any(|case| static_user_function_body_contains_loop(&case.body)),
+        _ => false,
+    }
+}
+
+fn static_user_function_body_contains_loop(statements: &[Statement]) -> bool {
+    statements
+        .iter()
+        .any(static_user_function_statement_contains_loop)
 }
 
 pub(in crate::backend::direct_wasm) fn execute_static_function_body<Executor, Environment>(
@@ -165,6 +215,14 @@ where
     {
         return Some(result);
     }
+    if arguments.iter().any(|argument| {
+        executor.static_user_function_argument_requires_runtime(argument.expression())
+    }) {
+        return None;
+    }
     let statements = executor.resolve_static_user_function_body(function_name)?;
+    if static_user_function_body_contains_loop(statements) {
+        return None;
+    }
     execute_static_function_body_in_environment(executor, statements, environment, effect_mode)
 }

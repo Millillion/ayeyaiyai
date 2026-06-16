@@ -359,10 +359,8 @@ impl<'a> FunctionCompiler<'a> {
             }
             _ => return None,
         };
-        match object_binding_lookup_value(
-            &object_binding,
-            &Expression::String("name".to_string()),
-        )? {
+        match object_binding_lookup_value(&object_binding, &Expression::String("name".to_string()))?
+        {
             Expression::String(name) if *name == constructor => Some(constructor),
             _ => None,
         }
@@ -376,9 +374,12 @@ impl<'a> FunctionCompiler<'a> {
         if constructor_name == "Error" {
             return NATIVE_ERROR_NAMES.iter().any(|candidate| {
                 self.expression_is_known_constructor_instance_for_instanceof(expression, candidate)
-            }) || self.static_native_error_constructor_marker(expression).is_some();
+            }) || self
+                .static_native_error_constructor_marker(expression)
+                .is_some();
         }
-        if self.expression_is_known_constructor_instance_for_instanceof(expression, constructor_name)
+        if self
+            .expression_is_known_constructor_instance_for_instanceof(expression, constructor_name)
         {
             return true;
         }

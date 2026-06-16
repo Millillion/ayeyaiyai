@@ -58,9 +58,7 @@ impl DirectWasmCompiler {
                     let resolved =
                         self.resolve_function_binding_from_expression_with_aliases(callee, aliases);
                     if crate::ayy_env_flag!("AYY_TRACE_PARAM_ANALYSIS") {
-                        eprintln!(
-                            "param_analysis:call callee={callee:?} resolved={resolved:?}"
-                        );
+                        eprintln!("param_analysis:call callee={callee:?} resolved={resolved:?}");
                     }
                     let Some(LocalFunctionBinding::User(called_function_name)) = resolved else {
                         return;
@@ -278,8 +276,7 @@ impl DirectWasmCompiler {
         if name.contains("__ayy_array_rest_") {
             return Some(argument.clone());
         }
-        if let Some(Some(Expression::Identifier(alias))) =
-            current_function_value_bindings.get(name)
+        if let Some(Some(Expression::Identifier(alias))) = current_function_value_bindings.get(name)
             && alias.contains("__ayy_array_rest_")
         {
             return Some(Expression::Identifier(alias.clone()));
@@ -460,7 +457,7 @@ impl DirectWasmCompiler {
     ) -> Option<String> {
         match expression {
             Expression::String(text) => Some(text.clone()),
-            Expression::Number(value) => Some(value.to_string()),
+            Expression::Number(value) => Some(js_number_to_string(*value)),
             Expression::Bool(value) => Some(value.to_string()),
             Expression::Null => Some("null".to_string()),
             Expression::Undefined => Some("undefined".to_string()),

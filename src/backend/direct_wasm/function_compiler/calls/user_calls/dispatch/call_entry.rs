@@ -142,7 +142,14 @@ impl<'a> FunctionCompiler<'a> {
         } else {
             expanded_arguments
                 .iter()
-                .map(|argument| self.materialize_static_expression(argument))
+                .map(|argument| {
+                    let materialized = self.materialize_static_expression(argument);
+                    (self.infer_value_kind(&materialized) == Some(StaticValueKind::Number))
+                        .then(|| self.resolve_static_number_value(&materialized))
+                        .flatten()
+                        .map(Expression::Number)
+                        .unwrap_or(materialized)
+                })
                 .collect::<Vec<_>>()
         };
         if trace_user_calls {
@@ -188,34 +195,53 @@ impl<'a> FunctionCompiler<'a> {
             && self
                 .can_direct_call_use_explicit_frame_without_rebinding_lexical_state(user_function)
             && !arguments_require_runtime_only
-            && self.can_inline_user_function_call_with_explicit_call_frame(
-                user_function,
-                &materialized_inline_arguments,
-                &static_this_expression,
-            )
         {
-            let result_local = self.allocate_temp_local();
-            if self.emit_inline_user_function_summary_with_explicit_call_frame(
+            let explicit_inline_arguments = if expanded_arguments
+                .iter()
+                .all(inline_summary_side_effect_free_expression)
+            {
+                &materialized_inline_arguments
+            } else {
+                &expanded_arguments
+            };
+            if self.can_inline_user_function_call_with_explicit_call_frame(
                 user_function,
-                &expanded_arguments,
+                explicit_inline_arguments,
                 &static_this_expression,
-                result_local,
-            )? {
-                self.push_local_get(result_local);
-                return Ok(());
+            ) {
+                let result_local = self.allocate_temp_local();
+                if self.emit_inline_user_function_summary_with_explicit_call_frame(
+                    user_function,
+                    explicit_inline_arguments,
+                    &static_this_expression,
+                    result_local,
+                )? {
+                    self.push_local_get(result_local);
+                    return Ok(());
+                }
             }
         }
-        if new_target_value == JS_UNDEFINED_TAG
+        let can_inline_materialized = new_target_value == JS_UNDEFINED_TAG
             && !arguments_require_runtime_only
-            && self.can_inline_user_function_call(user_function, &expanded_arguments)
-        {
+            && self.can_inline_user_function_call_with_materialized_arguments(
+                user_function,
+                &expanded_arguments,
+                &materialized_inline_arguments,
+            );
+        if trace_user_calls {
+            eprintln!(
+                "user_call_entry:direct_inline_check target={} can={} materialized={materialized_inline_arguments:?}",
+                user_function.name, can_inline_materialized
+            );
+        }
+        if can_inline_materialized {
             for argument in &expanded_arguments {
                 self.emit_numeric_expression(argument)?;
                 self.state.emission.output.instructions.push(0x1a);
             }
             if self.emit_inline_user_function_summary_with_arguments(
                 user_function,
-                &expanded_arguments,
+                &materialized_inline_arguments,
             )? {
                 return Ok(());
             }

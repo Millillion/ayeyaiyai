@@ -2180,6 +2180,77 @@ impl<'a> FunctionCompiler<'a> {
                 || self.user_function_has_inlineable_terminal_body(user_function))
     }
 
+    pub(in crate::backend::direct_wasm) fn can_inline_user_function_call_with_materialized_arguments(
+        &self,
+        user_function: &UserFunction,
+        raw_arguments: &[Expression],
+        materialized_arguments: &[Expression],
+    ) -> bool {
+        if raw_arguments.len() != materialized_arguments.len() {
+            return false;
+        }
+        if Self::user_function_is_module_init_like(user_function) {
+            return false;
+        }
+        if !user_function.lexical_this
+            && self
+                .resolve_registered_function_declaration(&user_function.name)
+                .is_some_and(|function| {
+                    function
+                        .body
+                        .iter()
+                        .any(Self::statement_mentions_call_frame_state)
+                })
+        {
+            return false;
+        }
+        self.state.emission.control_flow.try_stack.is_empty()
+            && !self.current_function_contains_try_statement()
+            && raw_arguments.iter().zip(materialized_arguments).all(
+                |(raw_argument, materialized_argument)| {
+                    let raw_materialized = self.materialize_static_expression(raw_argument);
+                    (static_expression_matches(&raw_materialized, raw_argument)
+                        && self.inline_safe_argument_expression(raw_argument))
+                        || (inline_summary_side_effect_free_expression(raw_argument)
+                            && self.inline_safe_argument_expression(materialized_argument))
+                },
+            )
+            && !raw_arguments
+                .iter()
+                .chain(materialized_arguments.iter())
+                .any(|argument| self.inline_argument_mentions_shadowed_implicit_global(argument))
+            && !user_function.is_async()
+            && !user_function.is_generator()
+            && !user_function
+                .inline_summary
+                .as_ref()
+                .is_some_and(inline_summary_mentions_assertion_builtin)
+            && !self.user_function_mentions_private_member_access(user_function)
+            && !self.user_function_mentions_direct_eval(user_function)
+            && !self.user_function_contains_with_statement(user_function)
+            && !self.user_function_contains_identifier_callee_call(user_function)
+            && !self.user_function_may_read_restricted_function_property(user_function)
+            && !self
+                .backend
+                .function_registry
+                .analysis
+                .user_function_capture_bindings
+                .contains_key(&user_function.name)
+            && !self.user_function_references_captured_user_function(user_function)
+            && user_function.extra_argument_indices.is_empty()
+            && !user_function.has_parameter_defaults()
+            && !user_function.has_lowered_pattern_parameters()
+            && (user_function
+                .inline_summary
+                .as_ref()
+                .is_some_and(|summary| {
+                    !inline_summary_mentions_assertion_builtin(summary)
+                        && (user_function.lexical_this
+                            || !inline_summary_mentions_call_frame_state(summary))
+                })
+                || self.user_function_has_inlineable_terminal_body(user_function))
+    }
+
     pub(in crate::backend::direct_wasm) fn can_inline_user_function_call_with_explicit_call_frame(
         &self,
         user_function: &UserFunction,

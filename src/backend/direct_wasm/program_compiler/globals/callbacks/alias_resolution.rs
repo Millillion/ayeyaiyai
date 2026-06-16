@@ -74,8 +74,7 @@ impl DirectWasmCompiler {
                     // into the recursive callee.
                     if let Some(function_binding) = aliases.get(source_name) {
                         function_binding.clone()
-                    } else if let Some(function_binding) =
-                        self.global_function_binding(source_name)
+                    } else if let Some(function_binding) = self.global_function_binding(source_name)
                     {
                         Some(function_binding.clone())
                     } else {

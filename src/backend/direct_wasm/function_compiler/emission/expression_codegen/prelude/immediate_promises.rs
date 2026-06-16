@@ -1225,7 +1225,9 @@ impl<'a> FunctionCompiler<'a> {
         let body = function.body.clone();
         // Legacy break-close/throw shapes apply their side effects through
         // the chain-site machinery; only full protocol folds store here.
-        if self.lowered_for_await_throw_completion_outcome(&body).is_some()
+        if self
+            .lowered_for_await_throw_completion_outcome(&body)
+            .is_some()
             || self.lowered_for_await_break_close_outcome(&body).is_some()
             || self
                 .lowered_for_await_protocol_completion_outcome(&body)
@@ -1292,7 +1294,10 @@ impl<'a> FunctionCompiler<'a> {
         // A folded for-await protocol loop's observable side effects
         // (pre-throw increments, consumed tracked iterators) must still apply
         // at the call site.
-        if self.lowered_for_await_throw_completion_outcome(&body).is_none() {
+        if self
+            .lowered_for_await_throw_completion_outcome(&body)
+            .is_none()
+        {
             if !apply_protocol_effects
                 && self
                     .lowered_for_await_protocol_completion_outcome(&body)
@@ -4752,9 +4757,7 @@ impl<'a> FunctionCompiler<'a> {
                     rejected_handler.as_ref(),
                     &Expression::Undefined,
                 )?;
-                self.emit_ignored_promise_handler_arguments(
-                    arguments.get(2..).unwrap_or(&[]),
-                )?;
+                self.emit_ignored_promise_handler_arguments(arguments.get(2..).unwrap_or(&[]))?;
             }
             "catch" if runtime_rejection_dispatch => {
                 let rejected_handler = self.promise_handler_expression(arguments.first());
@@ -4763,9 +4766,7 @@ impl<'a> FunctionCompiler<'a> {
                     rejected_handler.as_ref(),
                     &Expression::Undefined,
                 )?;
-                self.emit_ignored_promise_handler_arguments(
-                    arguments.get(1..).unwrap_or(&[]),
-                )?;
+                self.emit_ignored_promise_handler_arguments(arguments.get(1..).unwrap_or(&[]))?;
             }
             "then" => {
                 if let Some(handler) = self.promise_handler_expression(arguments.first()) {
@@ -5985,8 +5986,7 @@ impl<'a> FunctionCompiler<'a> {
                     if property_name == "then"
                         && self.promise_protocol_object_may_reject_at_runtime(object)
                     {
-                        let rejected_handler =
-                            self.promise_handler_expression(arguments.get(1));
+                        let rejected_handler = self.promise_handler_expression(arguments.get(1));
                         let handler_argument = handler_argument.clone();
                         self.emit_runtime_promise_rejection_dispatch(
                             Some(&handler),
@@ -6006,9 +6006,10 @@ impl<'a> FunctionCompiler<'a> {
                                 "consume_immediate_promise_outcome:value-handler-dispatched property={property_name}"
                             );
                         }
-                        return Ok(Some(returned_outcome.unwrap_or(StaticEvalOutcome::Value(
-                            Expression::Undefined,
-                        ))));
+                        return Ok(Some(
+                            returned_outcome
+                                .unwrap_or(StaticEvalOutcome::Value(Expression::Undefined)),
+                        ));
                     }
                     let allow_inline_handler = !handlers_require_runtime_chain
                         || self.can_inline_immediate_promise_callback_in_current_frame(

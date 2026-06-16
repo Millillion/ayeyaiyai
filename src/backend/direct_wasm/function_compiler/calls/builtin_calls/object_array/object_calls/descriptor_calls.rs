@@ -1239,9 +1239,7 @@ impl<'a> FunctionCompiler<'a> {
         // earlier-pass static application (the local `this` binding persists
         // across compile passes), so a no-change conclusion would suppress
         // the real store. Fall through to real emission instead.
-        if no_change
-            && matches!(target, Expression::This)
-            && self.current_function_name().is_some()
+        if no_change && matches!(target, Expression::This) && self.current_function_name().is_some()
         {
             return None;
         }
@@ -2061,8 +2059,10 @@ impl<'a> FunctionCompiler<'a> {
             );
         }
         if bind_call_target.is_some() {
-            return self
-                .emit_class_heritage_bound_function_prototype_validation(superclass, &materialized);
+            return self.emit_class_heritage_bound_function_prototype_validation(
+                superclass,
+                &materialized,
+            );
         }
 
         let function_binding = self
@@ -2194,9 +2194,9 @@ impl<'a> FunctionCompiler<'a> {
             return self.emit_class_heritage_type_error();
         }
         match self.infer_value_kind(&prototype_value) {
-            Some(
-                StaticValueKind::Object | StaticValueKind::Function | StaticValueKind::Null,
-            ) => Ok(false),
+            Some(StaticValueKind::Object | StaticValueKind::Function | StaticValueKind::Null) => {
+                Ok(false)
+            }
             Some(_) => self.emit_class_heritage_type_error(),
             None => Ok(false),
         }
@@ -2207,7 +2207,6 @@ impl<'a> FunctionCompiler<'a> {
         self.push_i32_const(JS_UNDEFINED_TAG);
         Ok(true)
     }
-
 
     pub(in crate::backend::direct_wasm) fn emit_runtime_known_object_has_property_check(
         &mut self,
@@ -2642,7 +2641,9 @@ impl<'a> FunctionCompiler<'a> {
             materialized_property,
             Expression::String(ref property_name) if property_name == "name"
         ) && inline_summary_side_effect_free_expression(value)
-            && self.resolve_function_binding_from_expression(target).is_some()
+            && self
+                .resolve_function_binding_from_expression(target)
+                .is_some()
         {
             return true;
         }

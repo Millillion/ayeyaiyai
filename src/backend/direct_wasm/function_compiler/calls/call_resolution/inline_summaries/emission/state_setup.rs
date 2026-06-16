@@ -257,7 +257,10 @@ impl<'a> FunctionCompiler<'a> {
                 );
             }
             let alias_owners = self.runtime_object_reference_alias_owner_names(source_owner);
-            self.emit_runtime_object_property_shadow_copy(hidden_name, source_owner)?;
+            self.emit_runtime_object_property_shadow_copy_between_exact_owners(
+                hidden_name,
+                source_owner,
+            )?;
             self.sync_runtime_object_shadow_owner_static_metadata_from_expression(
                 source_owner,
                 &Expression::Identifier(hidden_name.clone()),
@@ -268,7 +271,10 @@ impl<'a> FunctionCompiler<'a> {
                         "inline_param_writeback_alias hidden={hidden_name} alias_owner={alias_owner}"
                     );
                 }
-                self.emit_runtime_object_property_shadow_copy(hidden_name, &alias_owner)?;
+                self.emit_runtime_object_property_shadow_copy_between_exact_owners(
+                    hidden_name,
+                    &alias_owner,
+                )?;
                 self.sync_runtime_object_shadow_owner_static_metadata_from_expression(
                     &alias_owner,
                     &Expression::Identifier(hidden_name.clone()),

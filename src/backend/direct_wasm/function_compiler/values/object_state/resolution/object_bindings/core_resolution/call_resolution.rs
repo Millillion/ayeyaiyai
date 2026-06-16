@@ -155,6 +155,9 @@ impl<'a> FunctionCompiler<'a> {
         callee: &Expression,
         arguments: &[CallArgument],
     ) -> Option<ObjectValueBinding> {
+        if self.call_targets_user_function_with_source_loop(callee) {
+            return None;
+        }
         if let Some(result_expression) =
             self.resolve_optional_member_call_sequence_result_expression(callee, arguments)
             && let Some(object_binding) =

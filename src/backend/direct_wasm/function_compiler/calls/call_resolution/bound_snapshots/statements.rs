@@ -575,6 +575,106 @@ impl<'a> FunctionCompiler<'a> {
                         return None;
                     }
                 }
+                Statement::While {
+                    labels,
+                    condition,
+                    break_hook,
+                    body,
+                } => {
+                    if break_hook.is_some() {
+                        return None;
+                    }
+
+                    let mut completed = false;
+                    for _ in 0..BOUND_SNAPSHOT_LOOP_ITERATION_LIMIT {
+                        let condition = self.evaluate_bound_snapshot_expression(
+                            condition,
+                            bindings,
+                            current_function_name,
+                        )?;
+                        match condition {
+                            Expression::Bool(true) => {}
+                            Expression::Bool(false) => {
+                                completed = true;
+                                break;
+                            }
+                            _ => return None,
+                        }
+
+                        let body_result = self.execute_bound_snapshot_statements(
+                            body,
+                            bindings,
+                            current_function_name,
+                        )?;
+                        match body_result {
+                            BoundSnapshotControlFlow::None => {}
+                            BoundSnapshotControlFlow::Break(label)
+                                if Self::bound_snapshot_break_targets_loop(
+                                    labels,
+                                    label.as_ref(),
+                                ) =>
+                            {
+                                completed = true;
+                                break;
+                            }
+                            other => return Some(other),
+                        }
+                    }
+
+                    if !completed {
+                        return None;
+                    }
+                }
+                Statement::DoWhile {
+                    labels,
+                    condition,
+                    break_hook,
+                    body,
+                } => {
+                    if break_hook.is_some() {
+                        return None;
+                    }
+
+                    let mut completed = false;
+                    for _ in 0..BOUND_SNAPSHOT_LOOP_ITERATION_LIMIT {
+                        let body_result = self.execute_bound_snapshot_statements(
+                            body,
+                            bindings,
+                            current_function_name,
+                        )?;
+                        match body_result {
+                            BoundSnapshotControlFlow::None => {}
+                            BoundSnapshotControlFlow::Break(label)
+                                if Self::bound_snapshot_break_targets_loop(
+                                    labels,
+                                    label.as_ref(),
+                                ) =>
+                            {
+                                completed = true;
+                                break;
+                            }
+                            other => return Some(other),
+                        }
+
+                        let condition = self.evaluate_bound_snapshot_expression(
+                            condition,
+                            bindings,
+                            current_function_name,
+                        )?;
+                        match condition {
+                            Expression::Bool(true) => {}
+                            Expression::Bool(false) => {
+                                completed = true;
+                                break;
+                            }
+                            _ => return None,
+                        }
+                    }
+
+                    if !completed {
+                        return None;
+                    }
+                }
                 Statement::Return(value) => {
                     let value = match self.evaluate_bound_snapshot_statement_value(
                         value,

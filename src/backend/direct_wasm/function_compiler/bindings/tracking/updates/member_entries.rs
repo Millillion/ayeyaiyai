@@ -283,7 +283,9 @@ impl<'a> FunctionCompiler<'a> {
             Expression::Identifier(name) => {
                 self.runtime_object_property_shadow_owner_name_for_identifier(name)
             }
-            Expression::This => self.runtime_object_property_shadow_owner_name_for_identifier("this"),
+            Expression::This => {
+                self.runtime_object_property_shadow_owner_name_for_identifier("this")
+            }
             _ => None,
         };
         let Some(owner_name) = owner_name else {

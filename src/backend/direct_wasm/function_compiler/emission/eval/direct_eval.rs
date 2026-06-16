@@ -138,8 +138,8 @@ impl<'a> FunctionCompiler<'a> {
                 // Drain the spread operand through the runtime iterator
                 // protocol so GetIterator/next() calls (and their errors)
                 // are observable, mirroring ArgumentListEvaluation.
-                let drained_name = self
-                    .allocate_named_hidden_local("eval_spread_drain", StaticValueKind::Object);
+                let drained_name =
+                    self.allocate_named_hidden_local("eval_spread_drain", StaticValueKind::Object);
                 let drained_local = self
                     .state
                     .runtime
@@ -227,146 +227,143 @@ impl<'a> FunctionCompiler<'a> {
         };
 
         let contextual_program =
-                    self.parse_eval_program_in_current_function_context(&argument_source);
-                let program = if let Some(program) = contextual_program {
-                    program
-                } else if let Ok(program) = frontend::parse_script_goal(&argument_source) {
-                    program
-                } else {
-                    self.emit_named_error_throw("SyntaxError")?;
-                    return Ok(());
-                };
-                if eval_program_contains_top_level_return(&program) {
-                    self.emit_named_error_throw("SyntaxError")?;
-                    return Ok(());
-                }
-                let mut program = lower_eval_static_function_constructors(program);
-                namespace_eval_program_internal_function_names(
-                    &mut program,
-                    self.current_function_name(),
-                    raw_source,
-                );
-                self.normalize_eval_scoped_bindings_to_source_names(&mut program);
+            self.parse_eval_program_in_current_function_context(&argument_source);
+        let program = if let Some(program) = contextual_program {
+            program
+        } else if let Ok(program) = frontend::parse_script_goal(&argument_source) {
+            program
+        } else {
+            self.emit_named_error_throw("SyntaxError")?;
+            return Ok(());
+        };
+        if eval_program_contains_top_level_return(&program) {
+            self.emit_named_error_throw("SyntaxError")?;
+            return Ok(());
+        }
+        let mut program = lower_eval_static_function_constructors(program);
+        namespace_eval_program_internal_function_names(
+            &mut program,
+            self.current_function_name(),
+            raw_source,
+        );
+        self.normalize_eval_scoped_bindings_to_source_names(&mut program);
 
-                if self.eval_arguments_initializer_conflict(&program) {
-                    self.emit_named_error_throw("SyntaxError")?;
-                    return Ok(());
-                }
+        if self.eval_arguments_initializer_conflict(&program) {
+            self.emit_named_error_throw("SyntaxError")?;
+            return Ok(());
+        }
 
-                if self.eval_arguments_declaration_conflicts(&program) {
-                    self.emit_named_error_throw("SyntaxError")?;
-                    return Ok(());
-                }
+        if self.eval_arguments_declaration_conflicts(&program) {
+            self.emit_named_error_throw("SyntaxError")?;
+            return Ok(());
+        }
 
-                if self.eval_parameter_var_declaration_conflicts(&program) {
-                    self.emit_named_error_throw("SyntaxError")?;
-                    return Ok(());
-                }
+        if self.eval_parameter_var_declaration_conflicts(&program) {
+            self.emit_named_error_throw("SyntaxError")?;
+            return Ok(());
+        }
 
-                if self.eval_program_declares_var_collision_with_global_lexical(&program) {
-                    self.emit_named_error_throw("SyntaxError")?;
-                    return Ok(());
-                }
+        if self.eval_program_declares_var_collision_with_global_lexical(&program) {
+            self.emit_named_error_throw("SyntaxError")?;
+            return Ok(());
+        }
 
-                if self.eval_program_declares_var_collision_with_active_lexical(&program) {
-                    self.emit_named_error_throw("SyntaxError")?;
-                    return Ok(());
-                }
+        if self.eval_program_declares_var_collision_with_active_lexical(&program) {
+            self.emit_named_error_throw("SyntaxError")?;
+            return Ok(());
+        }
 
-                if self.eval_program_declares_non_definable_global_function(&program) {
-                    self.emit_named_error_throw("TypeError")?;
-                    return Ok(());
-                }
+        if self.eval_program_declares_non_definable_global_function(&program) {
+            self.emit_named_error_throw("TypeError")?;
+            return Ok(());
+        }
 
-                if self.eval_program_declares_non_declarable_global_var(&program, false) {
-                    self.emit_named_error_throw("TypeError")?;
-                    return Ok(());
-                }
+        if self.eval_program_declares_non_declarable_global_var(&program, false) {
+            self.emit_named_error_throw("TypeError")?;
+            return Ok(());
+        }
 
-                let preexisting_locals = self
-                    .state
-                    .runtime
-                    .locals
-                    .keys()
-                    .cloned()
-                    .collect::<HashSet<_>>();
-                let eval_local_function_declarations = if program.strict {
-                    HashMap::new()
-                } else {
-                    collect_eval_local_function_declarations(
-                        &program.statements,
-                        &program
-                            .functions
-                            .iter()
-                            .filter(|function| is_eval_local_function_candidate(function))
-                            .map(|function| function.name.clone())
-                            .collect::<HashSet<_>>(),
-                    )
-                };
-                self.prepare_eval_lexical_bindings(
-                    &mut program.statements,
-                    &eval_local_function_declarations,
-                )?;
-                self.prepare_eval_var_bindings(&mut program.statements, program.strict)?;
-                self.register_bindings_skipping_eval_local_function_declarations(
-                    &program.statements,
-                    &eval_local_function_declarations,
-                )?;
-                self.instantiate_eval_var_bindings(&program, &preexisting_locals, true)?;
-                self.instantiate_eval_global_functions(&program.functions, true)?;
-                self.instantiate_eval_local_functions(&eval_local_function_declarations)?;
-                let class_field_initializer_eval = self
-                    .state
-                    .speculation
-                    .execution_context
-                    .direct_eval_in_class_field_initializer;
+        let preexisting_locals = self
+            .state
+            .runtime
+            .locals
+            .keys()
+            .cloned()
+            .collect::<HashSet<_>>();
+        let eval_local_function_declarations = if program.strict {
+            HashMap::new()
+        } else {
+            collect_eval_local_function_declarations(
+                &program.statements,
+                &program
+                    .functions
+                    .iter()
+                    .filter(|function| is_eval_local_function_candidate(function))
+                    .map(|function| function.name.clone())
+                    .collect::<HashSet<_>>(),
+            )
+        };
+        self.prepare_eval_lexical_bindings(
+            &mut program.statements,
+            &eval_local_function_declarations,
+        )?;
+        self.prepare_eval_var_bindings(&mut program.statements, program.strict)?;
+        self.register_bindings_skipping_eval_local_function_declarations(
+            &program.statements,
+            &eval_local_function_declarations,
+        )?;
+        self.instantiate_eval_var_bindings(&program, &preexisting_locals, true)?;
+        self.instantiate_eval_global_functions(&program.functions, true)?;
+        self.instantiate_eval_local_functions(&eval_local_function_declarations)?;
+        let class_field_initializer_eval = self
+            .state
+            .speculation
+            .execution_context
+            .direct_eval_in_class_field_initializer;
 
-                self.with_strict_mode(program.strict, |compiler| {
-                    compiler.with_class_field_initializer_eval_new_target_undefined(
+        self.with_strict_mode(program.strict, |compiler| {
+            compiler.with_class_field_initializer_eval_new_target_undefined(
+                class_field_initializer_eval,
+                |compiler| {
+                    compiler.with_static_class_field_initializer_eval_this(
                         class_field_initializer_eval,
                         |compiler| {
-                            compiler.with_static_class_field_initializer_eval_this(
-                                class_field_initializer_eval,
+                            compiler.with_active_eval_lexical_scope(
+                                collect_direct_eval_lexical_binding_names(&program.statements),
                                 |compiler| {
-                                    compiler.with_active_eval_lexical_scope(
-                                        collect_direct_eval_lexical_binding_names(
-                                            &program.statements,
-                                        ),
-                                        |compiler| {
-                                            compiler.with_eval_template_cache_epoch(|compiler| {
-                                                let completion_local =
-                                                    compiler.allocate_temp_local();
-                                                compiler.push_i32_const(JS_UNDEFINED_TAG);
-                                                compiler.push_local_set(completion_local);
-                                                let eval_statements = program
-                                                    .statements
-                                                    .iter()
-                                                    .filter(|statement| {
-                                                        !is_eval_local_function_declaration_statement(
-                                                            statement,
-                                                            &eval_local_function_declarations,
-                                                        )
-                                                    })
-                                                    .collect::<Vec<_>>();
-
-                                                for statement in eval_statements {
-                                                    compiler.emit_eval_statement_completion_value(
-                                                        statement,
-                                                        completion_local,
-                                                    )?;
-                                                }
-
-                                                compiler.push_local_get(completion_local);
-
-                                                Ok(())
+                                    compiler.with_eval_template_cache_epoch(|compiler| {
+                                        let completion_local = compiler.allocate_temp_local();
+                                        compiler.push_i32_const(JS_UNDEFINED_TAG);
+                                        compiler.push_local_set(completion_local);
+                                        let eval_statements = program
+                                            .statements
+                                            .iter()
+                                            .filter(|statement| {
+                                                !is_eval_local_function_declaration_statement(
+                                                    statement,
+                                                    &eval_local_function_declarations,
+                                                )
                                             })
-                                        },
-                                    )
+                                            .collect::<Vec<_>>();
+
+                                        for statement in eval_statements {
+                                            compiler.emit_eval_statement_completion_value(
+                                                statement,
+                                                completion_local,
+                                            )?;
+                                        }
+
+                                        compiler.push_local_get(completion_local);
+
+                                        Ok(())
+                                    })
                                 },
                             )
                         },
                     )
-                })?;
+                },
+            )
+        })?;
 
         Ok(())
     }

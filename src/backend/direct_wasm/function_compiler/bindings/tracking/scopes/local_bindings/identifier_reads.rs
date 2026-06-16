@@ -317,9 +317,10 @@ impl<'a> FunctionCompiler<'a> {
             .current_user_function_declaration()
             .filter(|function| {
                 let source_name = scoped_binding_source_name(name).unwrap_or(name);
-                function.self_binding.as_deref().is_some_and(|self_binding| {
-                    self_binding == name || self_binding == source_name
-                })
+                function
+                    .self_binding
+                    .as_deref()
+                    .is_some_and(|self_binding| self_binding == name || self_binding == source_name)
             })
             .map(|function| function.name.clone())
             && let Some(runtime_value) = self.user_function_runtime_value(&function_name)

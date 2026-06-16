@@ -1005,6 +1005,258 @@ impl<'a> FunctionCompiler<'a> {
         detector.found
     }
 
+    pub(in crate::backend::direct_wasm) fn statements_contain_source_loop(
+        statements: &[Statement],
+    ) -> bool {
+        statements.iter().any(Self::statement_contains_source_loop)
+    }
+
+    pub(in crate::backend::direct_wasm) fn statement_contains_source_loop(
+        statement: &Statement,
+    ) -> bool {
+        match statement {
+            Statement::For { .. } | Statement::While { .. } | Statement::DoWhile { .. } => {
+                !Self::statement_allows_static_loop_elision(statement)
+            }
+            Statement::Declaration { body }
+            | Statement::Block { body }
+            | Statement::Labeled { body, .. }
+            | Statement::With { body, .. } => Self::statements_contain_source_loop(body),
+            Statement::If {
+                then_branch,
+                else_branch,
+                ..
+            } => {
+                Self::statements_contain_source_loop(then_branch)
+                    || Self::statements_contain_source_loop(else_branch)
+            }
+            Statement::Try {
+                body,
+                catch_setup,
+                catch_body,
+                ..
+            } => {
+                Self::statements_contain_source_loop(body)
+                    || Self::statements_contain_source_loop(catch_setup)
+                    || Self::statements_contain_source_loop(catch_body)
+            }
+            Statement::Switch { cases, .. } => cases
+                .iter()
+                .any(|case| Self::statements_contain_source_loop(&case.body)),
+            _ => false,
+        }
+    }
+
+    pub(in crate::backend::direct_wasm) fn call_targets_user_function_with_source_loop(
+        &self,
+        callee: &Expression,
+    ) -> bool {
+        let Some(LocalFunctionBinding::User(function_name)) = self
+            .resolve_function_binding_from_expression_with_context(
+                callee,
+                self.current_function_name(),
+            )
+            .or_else(|| self.resolve_function_binding_from_expression(callee))
+        else {
+            return false;
+        };
+        self.resolve_registered_function_declaration(&function_name)
+            .is_some_and(|function| Self::statements_contain_source_loop(&function.body))
+    }
+
+    pub(in crate::backend::direct_wasm) fn expression_is_user_function_call_with_source_loop(
+        &self,
+        expression: &Expression,
+    ) -> bool {
+        matches!(
+            expression,
+            Expression::Call { callee, .. }
+                if self.call_targets_user_function_with_source_loop(callee)
+        )
+    }
+
+    pub(in crate::backend::direct_wasm) fn expression_contains_user_function_call_with_source_loop(
+        &self,
+        expression: &Expression,
+    ) -> bool {
+        self.expression_contains_user_function_call_with_source_loop_inner(
+            expression,
+            &mut HashSet::new(),
+        )
+    }
+
+    fn expression_contains_user_function_call_with_source_loop_inner(
+        &self,
+        expression: &Expression,
+        visited_identifiers: &mut HashSet<String>,
+    ) -> bool {
+        match expression {
+            Expression::Call { callee, arguments }
+            | Expression::SuperCall { callee, arguments }
+            | Expression::New { callee, arguments } => {
+                self.call_targets_user_function_with_source_loop(callee)
+                    || self.expression_contains_user_function_call_with_source_loop_inner(
+                        callee,
+                        visited_identifiers,
+                    )
+                    || arguments.iter().any(|argument| {
+                        self.expression_contains_user_function_call_with_source_loop_inner(
+                            argument.expression(),
+                            visited_identifiers,
+                        )
+                    })
+            }
+            Expression::Array(elements) => elements.iter().any(|element| match element {
+                ArrayElement::Expression(expression) | ArrayElement::Spread(expression) => self
+                    .expression_contains_user_function_call_with_source_loop_inner(
+                        expression,
+                        visited_identifiers,
+                    ),
+            }),
+            Expression::Object(entries) => entries.iter().any(|entry| match entry {
+                ObjectEntry::Data { key, value } => {
+                    self.expression_contains_user_function_call_with_source_loop_inner(
+                        key,
+                        visited_identifiers,
+                    ) || self.expression_contains_user_function_call_with_source_loop_inner(
+                        value,
+                        visited_identifiers,
+                    )
+                }
+                ObjectEntry::Getter { key, getter } => {
+                    self.expression_contains_user_function_call_with_source_loop_inner(
+                        key,
+                        visited_identifiers,
+                    ) || self.expression_contains_user_function_call_with_source_loop_inner(
+                        getter,
+                        visited_identifiers,
+                    )
+                }
+                ObjectEntry::Setter { key, setter } => {
+                    self.expression_contains_user_function_call_with_source_loop_inner(
+                        key,
+                        visited_identifiers,
+                    ) || self.expression_contains_user_function_call_with_source_loop_inner(
+                        setter,
+                        visited_identifiers,
+                    )
+                }
+                ObjectEntry::Spread(expression) => self
+                    .expression_contains_user_function_call_with_source_loop_inner(
+                        expression,
+                        visited_identifiers,
+                    ),
+            }),
+            Expression::Member { object, property }
+            | Expression::Binary {
+                left: object,
+                right: property,
+                ..
+            } => {
+                self.expression_contains_user_function_call_with_source_loop_inner(
+                    object,
+                    visited_identifiers,
+                ) || self.expression_contains_user_function_call_with_source_loop_inner(
+                    property,
+                    visited_identifiers,
+                )
+            }
+            Expression::Assign { value, .. }
+            | Expression::Await(value)
+            | Expression::EnumerateKeys(value)
+            | Expression::GetIterator(value)
+            | Expression::IteratorClose(value)
+            | Expression::Unary {
+                expression: value, ..
+            } => self.expression_contains_user_function_call_with_source_loop_inner(
+                value,
+                visited_identifiers,
+            ),
+            Expression::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                self.expression_contains_user_function_call_with_source_loop_inner(
+                    object,
+                    visited_identifiers,
+                ) || self.expression_contains_user_function_call_with_source_loop_inner(
+                    property,
+                    visited_identifiers,
+                ) || self.expression_contains_user_function_call_with_source_loop_inner(
+                    value,
+                    visited_identifiers,
+                )
+            }
+            Expression::AssignSuperMember { property, value } => {
+                self.expression_contains_user_function_call_with_source_loop_inner(
+                    property,
+                    visited_identifiers,
+                ) || self.expression_contains_user_function_call_with_source_loop_inner(
+                    value,
+                    visited_identifiers,
+                )
+            }
+            Expression::SuperMember { property } => self
+                .expression_contains_user_function_call_with_source_loop_inner(
+                    property,
+                    visited_identifiers,
+                ),
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                self.expression_contains_user_function_call_with_source_loop_inner(
+                    condition,
+                    visited_identifiers,
+                ) || self.expression_contains_user_function_call_with_source_loop_inner(
+                    then_expression,
+                    visited_identifiers,
+                ) || self.expression_contains_user_function_call_with_source_loop_inner(
+                    else_expression,
+                    visited_identifiers,
+                )
+            }
+            Expression::Sequence(expressions) => expressions.iter().any(|expression| {
+                self.expression_contains_user_function_call_with_source_loop_inner(
+                    expression,
+                    visited_identifiers,
+                )
+            }),
+            Expression::Identifier(name) => {
+                if !visited_identifiers.insert(name.clone()) {
+                    return false;
+                }
+                let result = self
+                    .state
+                    .speculation
+                    .static_semantics
+                    .local_value_binding(name)
+                    .or_else(|| self.global_value_binding(name))
+                    .filter(|value| !static_expression_matches(value, expression))
+                    .is_some_and(|value| {
+                        self.expression_contains_user_function_call_with_source_loop_inner(
+                            value,
+                            visited_identifiers,
+                        )
+                    });
+                visited_identifiers.remove(name);
+                result
+            }
+            Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined
+            | Expression::NewTarget
+            | Expression::This
+            | Expression::Sent
+            | Expression::Update { .. } => false,
+        }
+    }
+
     pub(in crate::backend::direct_wasm) fn resolve_static_return_expression_from_user_function_call(
         &self,
         function_name: &str,
@@ -1013,6 +1265,9 @@ impl<'a> FunctionCompiler<'a> {
     ) -> Option<Expression> {
         let user_function = self.user_function(function_name)?;
         let function = self.resolve_registered_function_declaration(function_name)?;
+        if Self::statements_contain_source_loop(&function.body) {
+            return None;
+        }
         if !self.state.emission.lexical_scopes.with_scopes.is_empty() {
             return None;
         }

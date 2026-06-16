@@ -299,7 +299,8 @@ impl<'a> FunctionCompiler<'a> {
         expression: &Expression,
         bindings: &HashMap<String, Expression>,
     ) -> Option<Expression> {
-        if let Some(value) = self.evaluate_simple_static_expression_with_bindings(expression, bindings)
+        if let Some(value) =
+            self.evaluate_simple_static_expression_with_bindings(expression, bindings)
         {
             return Some(value);
         }
@@ -759,18 +760,17 @@ impl<'a> FunctionCompiler<'a> {
                     Some(value) => value,
                     None => {
                         if trace_static_iterable {
-                            eprintln!(
-                                "static_iterable:bail:{} expression={expression:?}",
-                                $label
-                            );
+                            eprintln!("static_iterable:bail:{} expression={expression:?}", $label);
                         }
                         return None;
                     }
                 }
             };
         }
-        let object_binding =
-            trace_bail!("object", self.resolve_object_binding_from_expression(expression));
+        let object_binding = trace_bail!(
+            "object",
+            self.resolve_object_binding_from_expression(expression)
+        );
         let symbol_iterator = self.materialize_static_expression(&Expression::Member {
             object: Box::new(Expression::Identifier("Symbol".to_string())),
             property: Box::new(Expression::String("iterator".to_string())),

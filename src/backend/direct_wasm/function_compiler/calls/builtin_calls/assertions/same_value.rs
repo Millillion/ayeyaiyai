@@ -124,19 +124,7 @@ impl<'a> FunctionCompiler<'a> {
     }
 
     fn same_value_static_number_to_string(value: f64) -> String {
-        if value.is_nan() {
-            "NaN".to_string()
-        } else if value == f64::INFINITY {
-            "Infinity".to_string()
-        } else if value == f64::NEG_INFINITY {
-            "-Infinity".to_string()
-        } else if value == 0.0 {
-            "0".to_string()
-        } else if value.is_finite() && value.fract() == 0.0 {
-            (value as i64).to_string()
-        } else {
-            value.to_string()
-        }
+        js_number_to_string(value)
     }
 
     fn same_value_static_primitive_to_string(expression: &Expression) -> Option<String> {

@@ -206,12 +206,33 @@ impl<'a> FunctionCompiler<'a> {
         // runtime; the static executor and the define-property applier both
         // resolve lexically, so any static execution of a with-containing
         // body would mis-route scope-sensitive reads and writes.
+        let trace_static_call_guard = crate::ayy_env_flag!("AYY_TRACE_STATIC_CALL_GUARD");
         if function
             .body
             .iter()
             .any(Self::static_execution_statement_contains_with)
         {
+            if trace_static_call_guard {
+                eprintln!("static_call_guard reject_with function={function_name}");
+            }
             return None;
+        }
+        if Self::statements_contain_source_loop(&function.body) {
+            if trace_static_call_guard {
+                eprintln!("static_call_guard reject_source_loop function={function_name}");
+            }
+            return None;
+        }
+        if arguments.iter().any(|argument| {
+            self.expression_contains_user_function_call_with_source_loop(argument.expression())
+        }) {
+            if trace_static_call_guard {
+                eprintln!("static_call_guard reject_runtime_arg function={function_name}");
+            }
+            return None;
+        }
+        if trace_static_call_guard {
+            eprintln!("static_call_guard allow function={function_name}");
         }
         let call_arguments = self.expand_static_user_function_call_arguments(arguments);
         let arguments_binding = Self::static_user_function_arguments_binding(&call_arguments);

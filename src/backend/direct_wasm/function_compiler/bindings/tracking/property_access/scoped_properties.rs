@@ -485,6 +485,11 @@ impl<'a> FunctionCompiler<'a> {
                 }
             }
         }
+        self.emit_refresh_runtime_member_value_shadow_from_store(
+            scope_object,
+            &property,
+            value_expression,
+        )?;
         let captured_receiver_source_name = match scope_object {
             Expression::This => self
                 .resolve_user_function_capture_hidden_name("this")
@@ -765,6 +770,11 @@ impl<'a> FunctionCompiler<'a> {
                     value_local,
                     value_expression,
                 )?;
+                self.emit_refresh_runtime_member_value_shadow_from_store(
+                    scope_object,
+                    &property,
+                    value_expression,
+                )?;
                 self.push_local_get(value_local);
                 return Ok(());
             }
@@ -832,6 +842,11 @@ impl<'a> FunctionCompiler<'a> {
                     value_local,
                     value_expression,
                 )?;
+                self.emit_refresh_runtime_member_value_shadow_from_store(
+                    scope_object,
+                    &property,
+                    value_expression,
+                )?;
                 self.push_local_get(value_local);
                 return Ok(());
             }
@@ -874,6 +889,11 @@ impl<'a> FunctionCompiler<'a> {
                     value_local,
                     value_expression,
                 )?;
+                self.emit_refresh_runtime_member_value_shadow_from_store(
+                    scope_object,
+                    &property,
+                    value_expression,
+                )?;
                 self.push_local_get(value_local);
                 return Ok(());
             }
@@ -893,6 +913,11 @@ impl<'a> FunctionCompiler<'a> {
                     value_local,
                     value_expression,
                 )?;
+                self.emit_refresh_runtime_member_value_shadow_from_store(
+                    scope_object,
+                    &property,
+                    value_expression,
+                )?;
                 self.push_local_get(value_local);
                 return Ok(());
             }
@@ -909,6 +934,11 @@ impl<'a> FunctionCompiler<'a> {
             name,
             &materialized_value,
         );
+        self.emit_refresh_runtime_member_value_shadow_from_store(
+            scope_object,
+            &property,
+            value_expression,
+        )?;
         self.push_local_get(value_local);
         Ok(())
     }
@@ -949,8 +979,7 @@ impl<'a> FunctionCompiler<'a> {
                             // still produce their constant return value at the
                             // emitted read; PutValue requires the update to be
                             // computed from that value.
-                            compiler
-                                .resolve_effectful_getter_constant_return_value(&getter_binding)
+                            compiler.resolve_effectful_getter_constant_return_value(&getter_binding)
                         }))
                 })?;
             if let Some(previous_number) = getter_value

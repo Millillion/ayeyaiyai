@@ -170,7 +170,8 @@ impl ModuleLinker {
             .join(source);
         let module_index = self.reserve_module_slot(placeholder_path);
         self.lower_failed_module_with_error(module_index, "TypeError", format!("{error:#}"));
-        self.unresolved_dynamic_import_indices.insert(key, module_index);
+        self.unresolved_dynamic_import_indices
+            .insert(key, module_index);
         module_index
     }
 

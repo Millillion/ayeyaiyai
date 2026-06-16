@@ -13,6 +13,20 @@ pub(in crate::backend::direct_wasm) fn evaluate_static_binary_expression<
     let left = executor
         .evaluate_expression(left, environment)
         .or_else(|| executor.materialize_expression(left, environment))?;
+    if matches!(op, BinaryOp::LogicalAnd | BinaryOp::LogicalOr) {
+        let left_truthy = static_eval_truthy(&left)?;
+        return match op {
+            BinaryOp::LogicalAnd if left_truthy => executor
+                .evaluate_expression(right, environment)
+                .or_else(|| executor.materialize_expression(right, environment)),
+            BinaryOp::LogicalAnd => Some(left),
+            BinaryOp::LogicalOr if left_truthy => Some(left),
+            BinaryOp::LogicalOr => executor
+                .evaluate_expression(right, environment)
+                .or_else(|| executor.materialize_expression(right, environment)),
+            _ => unreachable!("logical operator filtered above"),
+        };
+    }
     let right = executor
         .evaluate_expression(right, environment)
         .or_else(|| executor.materialize_expression(right, environment))?;
@@ -48,6 +62,13 @@ pub(in crate::backend::direct_wasm) fn evaluate_static_binary_expression<
             (Expression::Number(lhs), Expression::Number(rhs)) => {
                 Some(Expression::Number(lhs / rhs))
             }
+            _ => None,
+        },
+        BinaryOp::Modulo => match (
+            static_eval_primitive_to_number(&left),
+            static_eval_primitive_to_number(&right),
+        ) {
+            (Some(lhs), Some(rhs)) => Some(Expression::Number(lhs % rhs)),
             _ => None,
         },
         BinaryOp::Equal | BinaryOp::LooseEqual | BinaryOp::NotEqual | BinaryOp::LooseNotEqual => {
@@ -104,6 +125,55 @@ pub(in crate::backend::direct_wasm) fn evaluate_static_binary_expression<
     }
 }
 
+pub(in crate::backend::direct_wasm) fn evaluate_static_unary_expression<
+    Executor: StaticExpressionEvaluation + ?Sized,
+>(
+    executor: &Executor,
+    expression: &Expression,
+    environment: &mut Executor::Environment,
+) -> Option<Expression> {
+    let Expression::Unary { op, expression } = expression else {
+        return None;
+    };
+    match op {
+        UnaryOp::Plus => {
+            let value = executor
+                .evaluate_expression(expression, environment)
+                .or_else(|| executor.materialize_expression(expression, environment))?;
+            static_eval_primitive_to_number(&value).map(Expression::Number)
+        }
+        UnaryOp::Negate => {
+            let value = executor
+                .evaluate_expression(expression, environment)
+                .or_else(|| executor.materialize_expression(expression, environment))?;
+            static_eval_primitive_to_number(&value).map(|value| Expression::Number(-value))
+        }
+        UnaryOp::Not => {
+            let value = executor
+                .evaluate_expression(expression, environment)
+                .or_else(|| executor.materialize_expression(expression, environment))?;
+            static_eval_truthy(&value).map(|truthy| Expression::Bool(!truthy))
+        }
+        UnaryOp::Void => Some(Expression::Undefined),
+        _ => None,
+    }
+}
+
+fn static_eval_truthy(expression: &Expression) -> Option<bool> {
+    Some(match expression {
+        Expression::Bool(value) => *value,
+        Expression::Number(value) => *value != 0.0 && !value.is_nan(),
+        Expression::String(value) => !value.is_empty(),
+        Expression::Null | Expression::Undefined => false,
+        Expression::BigInt(value) => {
+            let digits = value.trim_end_matches('n');
+            digits != "0" && digits != "-0"
+        }
+        Expression::Array(_) | Expression::Object(_) => true,
+        _ => return None,
+    })
+}
+
 fn static_eval_primitive_to_string(expression: &Expression) -> Option<String> {
     match expression {
         Expression::String(value) => Some(value.clone()),
@@ -127,17 +197,5 @@ fn static_eval_primitive_to_number(expression: &Expression) -> Option<f64> {
 }
 
 fn static_eval_number_to_string(value: f64) -> String {
-    if value.is_nan() {
-        "NaN".to_string()
-    } else if value == f64::INFINITY {
-        "Infinity".to_string()
-    } else if value == f64::NEG_INFINITY {
-        "-Infinity".to_string()
-    } else if value == 0.0 {
-        "0".to_string()
-    } else if value.is_finite() && value.fract() == 0.0 {
-        (value as i64).to_string()
-    } else {
-        value.to_string()
-    }
+    js_number_to_string(value)
 }

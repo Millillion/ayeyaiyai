@@ -24,26 +24,7 @@ impl<'a> FunctionCompiler<'a> {
             return self.resolve_static_string_concat_value(&value, current_function_name);
         }
         match expression {
-            Expression::Number(value) => {
-                if value.is_nan() {
-                    Some("NaN".to_string())
-                } else if value.is_infinite() {
-                    Some(
-                        if value.is_sign_positive() {
-                            "Infinity"
-                        } else {
-                            "-Infinity"
-                        }
-                        .to_string(),
-                    )
-                } else if *value == 0.0 && value.is_sign_negative() {
-                    Some("-0".to_string())
-                } else if value.fract() == 0.0 {
-                    Some((*value as i64).to_string())
-                } else {
-                    Some(value.to_string())
-                }
-            }
+            Expression::Number(value) => Some(js_number_to_string(*value)),
             Expression::BigInt(value) => Some(parse_static_bigint_literal(value)?.to_string()),
             Expression::Unary {
                 op: UnaryOp::Negate,

@@ -197,9 +197,7 @@ impl<'a> FunctionCompiler<'a> {
         else {
             return None;
         };
-        if !labels.is_empty()
-            || !matches!(condition, Some(Expression::Bool(true)) | None)
-        {
+        if !labels.is_empty() || !matches!(condition, Some(Expression::Bool(true)) | None) {
             trace!("reject labels/condition");
             return None;
         }
@@ -224,7 +222,8 @@ impl<'a> FunctionCompiler<'a> {
             else {
                 return None;
             };
-            name.starts_with("__ayy_for_of_done_").then_some(name.as_str())
+            name.starts_with("__ayy_for_of_done_")
+                .then_some(name.as_str())
         })?;
         let mut outer_state = if let Expression::Array(elements) = source {
             if elements.len() > FOR_AWAIT_PROTOCOL_OUTER_VALUE_LIMIT {
@@ -344,23 +343,26 @@ impl<'a> FunctionCompiler<'a> {
                 .map(|(name, (index, _))| (name.clone(), *index))
                 .collect();
             // The loop shape's leading `step = iterator.next()` call.
-            let step = match self.for_await_protocol_iterator_next(&mut outer_state, &mut context)?
-            {
-                Ok(step) => step,
-                Err(throw_value) => {
-                    effects.extend(std::mem::take(&mut context.effects));
-                    if !self.static_iterator_throw_expression_is_portable(&throw_value) {
-                        return None;
+            let step =
+                match self.for_await_protocol_iterator_next(&mut outer_state, &mut context)? {
+                    Ok(step) => step,
+                    Err(throw_value) => {
+                        effects.extend(std::mem::take(&mut context.effects));
+                        if !self.static_iterator_throw_expression_is_portable(&throw_value) {
+                            return None;
+                        }
+                        return Some((ForAwaitProtocolControl::Throw(throw_value), effects));
                     }
-                    return Some((ForAwaitProtocolControl::Throw(throw_value), effects));
-                }
-            };
+                };
             let outer_throw = |effects: &mut Vec<Statement>,
                                context: &mut ForAwaitProtocolContext,
                                throw_value: Expression| {
                 effects.extend(std::mem::take(&mut context.effects));
                 self.static_iterator_throw_expression_is_portable(&throw_value)
-                    .then_some((ForAwaitProtocolControl::Throw(throw_value), std::mem::take(effects)))
+                    .then_some((
+                        ForAwaitProtocolControl::Throw(throw_value),
+                        std::mem::take(effects),
+                    ))
             };
             let done = match self.for_await_protocol_member_value(&step, &done_property)? {
                 Ok(done) => done,
@@ -477,11 +479,9 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         source: &Expression,
     ) -> Option<ForAwaitProtocolIterator> {
-        if let Some(state) = self.for_await_protocol_tracked_iterator_state_with_async(
-            source,
-            &HashMap::new(),
-            true,
-        ) {
+        if let Some(state) =
+            self.for_await_protocol_tracked_iterator_state_with_async(source, &HashMap::new(), true)
+        {
             return Some(state);
         }
         let resolved = self
@@ -556,8 +556,7 @@ impl<'a> FunctionCompiler<'a> {
         let Expression::Call { callee, arguments } = expression else {
             return false;
         };
-        arguments.is_empty()
-            && Self::for_await_protocol_is_member_of(callee, iterator_name, "next")
+        arguments.is_empty() && Self::for_await_protocol_is_member_of(callee, iterator_name, "next")
     }
 
     fn for_await_protocol_is_member_of(
@@ -613,31 +612,29 @@ impl<'a> FunctionCompiler<'a> {
                         && !name.starts_with("__ayy_")
                         && (!context.bindings.contains_key(name)
                             || context.effect_names.contains(name));
-                    let evaluated = match self.evaluate_for_await_protocol_expression(value, context)
-                    {
-                        Some(Ok(value)) => Some(value),
-                        Some(Err(throw_value)) => {
-                            return Some(ForAwaitProtocolFlow::Throw(throw_value));
-                        }
-                        // A nonlocal counter whose initial value is not
-                        // visible here (`count = count + 1` with invalidated
-                        // statics) still replays faithfully as a recorded
-                        // raw assignment; only the symbolic value is lost.
-                        None if targets_nonlocal
-                            && self.static_iterator_throw_expression_is_portable(value) =>
-                        {
-                            None
-                        }
-                        None => return None,
-                    };
+                    let evaluated =
+                        match self.evaluate_for_await_protocol_expression(value, context) {
+                            Some(Ok(value)) => Some(value),
+                            Some(Err(throw_value)) => {
+                                return Some(ForAwaitProtocolFlow::Throw(throw_value));
+                            }
+                            // A nonlocal counter whose initial value is not
+                            // visible here (`count = count + 1` with invalidated
+                            // statics) still replays faithfully as a recorded
+                            // raw assignment; only the symbolic value is lost.
+                            None if targets_nonlocal
+                                && self.static_iterator_throw_expression_is_portable(value) =>
+                            {
+                                None
+                            }
+                            None => return None,
+                        };
                     if targets_nonlocal {
                         // PutValue on an immutable binding (const assignment
                         // targets) throws TypeError after the value evaluates.
                         if self.assignment_targets_immutable_binding(name) {
                             return Some(ForAwaitProtocolFlow::Throw(Expression::New {
-                                callee: Box::new(Expression::Identifier(
-                                    "TypeError".to_string(),
-                                )),
+                                callee: Box::new(Expression::Identifier("TypeError".to_string())),
                                 arguments: Vec::new(),
                             }));
                         }
@@ -652,7 +649,9 @@ impl<'a> FunctionCompiler<'a> {
                         context.effect_names.insert(name.clone());
                     }
                     if let Some(evaluated) = evaluated {
-                        Self::for_await_protocol_apply_class_binding_name(name, &evaluated, context);
+                        Self::for_await_protocol_apply_class_binding_name(
+                            name, &evaluated, context,
+                        );
                         context.bindings.insert(name.clone(), evaluated);
                     } else {
                         context.bindings.remove(name);
@@ -842,7 +841,10 @@ impl<'a> FunctionCompiler<'a> {
                     ArrayElement::Spread(_) => None,
                 })
                 .collect::<Option<Vec<_>>>()?;
-            return Some(Ok(ForAwaitProtocolIterator::StaticArray { values, index: 0 }));
+            return Some(Ok(ForAwaitProtocolIterator::StaticArray {
+                values,
+                index: 0,
+            }));
         }
         if let Some(state) =
             self.for_await_protocol_tracked_iterator_state(&source, &context.committed_updates)
@@ -860,7 +862,10 @@ impl<'a> FunctionCompiler<'a> {
                 .iter()
                 .map(|value| value.clone().unwrap_or(Expression::Undefined))
                 .collect();
-            return Some(Ok(ForAwaitProtocolIterator::StaticArray { values, index: 0 }));
+            return Some(Ok(ForAwaitProtocolIterator::StaticArray {
+                values,
+                index: 0,
+            }));
         }
         if let Some((steps, completion_effects, completion_value)) = self
             .resolve_simple_generator_iterator_source_kind(&source)
@@ -897,7 +902,8 @@ impl<'a> FunctionCompiler<'a> {
         });
         if let Some(getter_binding) = self.resolve_member_getter_binding(&source, &symbol_iterator)
         {
-            let outcome = self.for_await_protocol_function_outcome(&getter_binding, &[], &source)?;
+            let outcome =
+                self.for_await_protocol_function_outcome(&getter_binding, &[], &source)?;
             match outcome {
                 Err(throw_value) => return Some(Err(throw_value)),
                 Ok(_) => return None,
@@ -912,10 +918,9 @@ impl<'a> FunctionCompiler<'a> {
                     let (steps, completion_effects, completion_value) = self
                         .resolve_static_iterator_object_simple_generator_source(&iterator_value)?;
                     if !self.for_await_protocol_effects_are_replayable(&completion_effects)
-                        || !self
-                            .for_await_protocol_steps_have_replayable_effects_with_close(
-                                &steps, true,
-                            )
+                        || !self.for_await_protocol_steps_have_replayable_effects_with_close(
+                            &steps, true,
+                        )
                     {
                         return None;
                     }
@@ -1238,13 +1243,15 @@ impl<'a> FunctionCompiler<'a> {
                 let binding_name = binding_name.clone();
                 let synthetic_next = move |context: &mut ForAwaitProtocolContext| {
                     if let Some(binding_name) = &binding_name {
-                        context.effects.push(Statement::Expression(Expression::Call {
-                            callee: Box::new(Expression::Member {
-                                object: Box::new(Expression::Identifier(binding_name.clone())),
-                                property: Box::new(Expression::String("next".to_string())),
-                            }),
-                            arguments: Vec::new(),
-                        }));
+                        context
+                            .effects
+                            .push(Statement::Expression(Expression::Call {
+                                callee: Box::new(Expression::Member {
+                                    object: Box::new(Expression::Identifier(binding_name.clone())),
+                                    property: Box::new(Expression::String("next".to_string())),
+                                }),
+                                arguments: Vec::new(),
+                            }));
                         true
                     } else {
                         false
@@ -1385,13 +1392,15 @@ impl<'a> FunctionCompiler<'a> {
                     }
                     let drained = steps.len().saturating_add(1);
                     for _ in *index..drained {
-                        context.effects.push(Statement::Expression(Expression::Call {
-                            callee: Box::new(Expression::Member {
-                                object: Box::new(Expression::Identifier(binding_name.clone())),
-                                property: Box::new(Expression::String("next".to_string())),
-                            }),
-                            arguments: Vec::new(),
-                        }));
+                        context
+                            .effects
+                            .push(Statement::Expression(Expression::Call {
+                                callee: Box::new(Expression::Member {
+                                    object: Box::new(Expression::Identifier(binding_name.clone())),
+                                    property: Box::new(Expression::String("next".to_string())),
+                                }),
+                                arguments: Vec::new(),
+                            }));
                     }
                     *index = drained;
                     *closed = true;
@@ -1428,11 +1437,9 @@ impl<'a> FunctionCompiler<'a> {
         context: &mut ForAwaitProtocolContext,
     ) -> Option<Result<Expression, Expression>> {
         let return_property = Expression::String("return".to_string());
-        let type_error = || {
-            Expression::New {
-                callee: Box::new(Expression::Identifier("TypeError".to_string())),
-                arguments: Vec::new(),
-            }
+        let type_error = || Expression::New {
+            callee: Box::new(Expression::Identifier("TypeError".to_string())),
+            arguments: Vec::new(),
         };
         if let Some(getter_binding) =
             self.resolve_member_getter_binding(close_target, &return_property)
@@ -1450,12 +1457,14 @@ impl<'a> FunctionCompiler<'a> {
             )? {
                 Err(throw_value) => Some(Err(throw_value)),
                 Ok(Expression::Null | Expression::Undefined) => Some(Ok(Expression::Undefined)),
-                Ok(Expression::Number(_)
-                | Expression::BigInt(_)
-                | Expression::String(_)
-                | Expression::Bool(_)
-                | Expression::Object(_)
-                | Expression::Array(_)) => Some(Err(type_error())),
+                Ok(
+                    Expression::Number(_)
+                    | Expression::BigInt(_)
+                    | Expression::String(_)
+                    | Expression::Bool(_)
+                    | Expression::Object(_)
+                    | Expression::Array(_),
+                ) => Some(Err(type_error())),
                 Ok(_) => None,
             };
         }
@@ -1480,12 +1489,14 @@ impl<'a> FunctionCompiler<'a> {
             Ok(Expression::Object(_) | Expression::Array(_) | Expression::New { .. }) => {
                 Some(Ok(Expression::Undefined))
             }
-            Ok(Expression::Number(_)
-            | Expression::BigInt(_)
-            | Expression::String(_)
-            | Expression::Bool(_)
-            | Expression::Null
-            | Expression::Undefined) => Some(Err(type_error())),
+            Ok(
+                Expression::Number(_)
+                | Expression::BigInt(_)
+                | Expression::String(_)
+                | Expression::Bool(_)
+                | Expression::Null
+                | Expression::Undefined,
+            ) => Some(Err(type_error())),
             Ok(_) => None,
         }
     }
@@ -1679,11 +1690,10 @@ impl<'a> FunctionCompiler<'a> {
                 self.for_await_protocol_await_value(value)
             }
             Expression::Member { object, property } => {
-                let property_key =
-                    match self.for_await_protocol_property_key(property, context)? {
-                        Ok(key) => key,
-                        Err(throw_value) => return Some(Err(throw_value)),
-                    };
+                let property_key = match self.for_await_protocol_property_key(property, context)? {
+                    Ok(key) => key,
+                    Err(throw_value) => return Some(Err(throw_value)),
+                };
                 let object = match self.evaluate_for_await_protocol_expression(object, context)? {
                     Ok(value) => value,
                     Err(throw_value) => return Some(Err(throw_value)),
@@ -1711,10 +1721,11 @@ impl<'a> FunctionCompiler<'a> {
                     let CallArgument::Expression(argument) = arguments.first()? else {
                         return None;
                     };
-                    let value = match self.evaluate_for_await_protocol_expression(argument, context)? {
-                        Ok(value) => value,
-                        Err(throw_value) => return Some(Err(throw_value)),
-                    };
+                    let value =
+                        match self.evaluate_for_await_protocol_expression(argument, context)? {
+                            Ok(value) => value,
+                            Err(throw_value) => return Some(Err(throw_value)),
+                        };
                     let passed = matches!(value, Expression::Bool(true));
                     if !passed
                         && !matches!(
@@ -1761,11 +1772,11 @@ impl<'a> FunctionCompiler<'a> {
                     else {
                         return None;
                     };
-                    let object = match self.evaluate_for_await_protocol_expression(object, context)?
-                    {
-                        Ok(value) => value,
-                        Err(throw_value) => return Some(Err(throw_value)),
-                    };
+                    let object =
+                        match self.evaluate_for_await_protocol_expression(object, context)? {
+                            Ok(value) => value,
+                            Err(throw_value) => return Some(Err(throw_value)),
+                        };
                     let Expression::Object(entries) = &object else {
                         return None;
                     };
@@ -1805,11 +1816,11 @@ impl<'a> FunctionCompiler<'a> {
                     let Some(actual) = actual else {
                         return Some(Err(test262_error()));
                     };
-                    let actual = match self.evaluate_for_await_protocol_expression(&actual, context)?
-                    {
-                        Ok(value) => value,
-                        Err(throw_value) => return Some(Err(throw_value)),
-                    };
+                    let actual =
+                        match self.evaluate_for_await_protocol_expression(&actual, context)? {
+                            Ok(value) => value,
+                            Err(throw_value) => return Some(Err(throw_value)),
+                        };
                     for expected_entry in expected_entries {
                         let ObjectEntry::Data {
                             key: expected_key,
@@ -1893,40 +1904,47 @@ impl<'a> FunctionCompiler<'a> {
                         // self-equal and signed zeros are distinct. Matching
                         // non-number value expressions (the same identifier
                         // binding on both sides) are identity-equal.
-                        let equal = if let (Expression::Number(actual), Expression::Number(expected)) =
-                            (actual, expected)
-                        {
-                            (actual.is_nan() && expected.is_nan())
-                                || (actual == expected
-                                    && actual.is_sign_positive() == expected.is_sign_positive())
-                        } else if static_expression_matches(actual, expected)
-                            && matches!(
-                                actual,
-                                Expression::Identifier(_)
-                                    | Expression::String(_)
-                                    | Expression::BigInt(_)
-                                    | Expression::Bool(_)
-                                    | Expression::Null
-                                    | Expression::Undefined
-                            )
-                        {
-                            true
-                        } else if matches!(
-                            (actual, expected),
-                            (Expression::Array(_) | Expression::Object(_), Expression::Identifier(_))
-                                | (Expression::Identifier(_), Expression::Array(_) | Expression::Object(_))
-                        ) {
-                            // A literal array/object value was constructed
-                            // during this replay (identifier reads stay in
-                            // identifier form), so it is identity-distinct
-                            // from any pre-existing named binding.
-                            false
-                        } else {
-                            let actual = self.for_await_protocol_comparable_value(actual.clone());
-                            let expected =
-                                self.for_await_protocol_comparable_value(expected.clone());
-                            Self::for_await_protocol_values_equal(&actual, &expected, false)?
-                        };
+                        let equal =
+                            if let (Expression::Number(actual), Expression::Number(expected)) =
+                                (actual, expected)
+                            {
+                                (actual.is_nan() && expected.is_nan())
+                                    || (actual == expected
+                                        && actual.is_sign_positive() == expected.is_sign_positive())
+                            } else if static_expression_matches(actual, expected)
+                                && matches!(
+                                    actual,
+                                    Expression::Identifier(_)
+                                        | Expression::String(_)
+                                        | Expression::BigInt(_)
+                                        | Expression::Bool(_)
+                                        | Expression::Null
+                                        | Expression::Undefined
+                                )
+                            {
+                                true
+                            } else if matches!(
+                                (actual, expected),
+                                (
+                                    Expression::Array(_) | Expression::Object(_),
+                                    Expression::Identifier(_)
+                                ) | (
+                                    Expression::Identifier(_),
+                                    Expression::Array(_) | Expression::Object(_)
+                                )
+                            ) {
+                                // A literal array/object value was constructed
+                                // during this replay (identifier reads stay in
+                                // identifier form), so it is identity-distinct
+                                // from any pre-existing named binding.
+                                false
+                            } else {
+                                let actual =
+                                    self.for_await_protocol_comparable_value(actual.clone());
+                                let expected =
+                                    self.for_await_protocol_comparable_value(expected.clone());
+                                Self::for_await_protocol_values_equal(&actual, &expected, false)?
+                            };
                         let passed = if method_name == "sameValue" {
                             equal
                         } else {
@@ -1982,11 +2000,7 @@ impl<'a> FunctionCompiler<'a> {
                                 };
                                 let function =
                                     self.resolve_registered_function_declaration(function_name)?;
-                                if !self
-                                    .user_function(function_name)?
-                                    .params
-                                    .is_empty()
-                                {
+                                if !self.user_function(function_name)?.params.is_empty() {
                                     return None;
                                 }
                                 let [Statement::Expression(Expression::Identifier(read_name))] =
@@ -2003,9 +2017,7 @@ impl<'a> FunctionCompiler<'a> {
                                 })
                             })?;
                         let test262_error = || Expression::New {
-                            callee: Box::new(Expression::Identifier(
-                                "Test262Error".to_string(),
-                            )),
+                            callee: Box::new(Expression::Identifier("Test262Error".to_string())),
                             arguments: Vec::new(),
                         };
                         return Some(match outcome {
@@ -2017,8 +2029,7 @@ impl<'a> FunctionCompiler<'a> {
                                 else {
                                     return None;
                                 };
-                                let Expression::Identifier(thrown_name) = callee.as_ref()
-                                else {
+                                let Expression::Identifier(thrown_name) = callee.as_ref() else {
                                     return None;
                                 };
                                 if thrown_name == expected_name {
@@ -2064,12 +2075,11 @@ impl<'a> FunctionCompiler<'a> {
                         {
                             return Some(Ok(target.clone()));
                         }
-                        let target = match self
-                            .evaluate_for_await_protocol_expression(target, context)?
-                        {
-                            Ok(value) => value,
-                            Err(throw_value) => return Some(Err(throw_value)),
-                        };
+                        let target =
+                            match self.evaluate_for_await_protocol_expression(target, context)? {
+                                Ok(value) => value,
+                                Err(throw_value) => return Some(Err(throw_value)),
+                            };
                         let Expression::Identifier(target_name) = &target else {
                             return None;
                         };
@@ -2151,9 +2161,7 @@ impl<'a> FunctionCompiler<'a> {
                                 Err(throw_value) => return Some(Err(throw_value)),
                             };
                         let value = match &value {
-                            Expression::Identifier(_) => {
-                                self.materialize_static_expression(&value)
-                            }
+                            Expression::Identifier(_) => self.materialize_static_expression(&value),
                             _ => value,
                         };
                         let result = match value {
@@ -2189,9 +2197,7 @@ impl<'a> FunctionCompiler<'a> {
                             let CallArgument::Expression(argument) = argument else {
                                 return None;
                             };
-                            match self
-                                .evaluate_for_await_protocol_expression(argument, context)?
-                            {
+                            match self.evaluate_for_await_protocol_expression(argument, context)? {
                                 Ok(value) => pushed.push(ArrayElement::Expression(value)),
                                 Err(throw_value) => return Some(Err(throw_value)),
                             }
@@ -2219,9 +2225,8 @@ impl<'a> FunctionCompiler<'a> {
                         ..
                     }) = self.resolve_simple_generator_iterator_source_kind(expression)
                     && self.for_await_protocol_effects_are_replayable(&completion_effects)
-                    && self.for_await_protocol_steps_have_replayable_effects_with_close(
-                        &steps, true,
-                    )
+                    && self
+                        .for_await_protocol_steps_have_replayable_effects_with_close(&steps, true)
                 {
                     return Some(Ok(expression.clone()));
                 }
@@ -2272,12 +2277,11 @@ impl<'a> FunctionCompiler<'a> {
                     eprintln!("for_await_protocol:reject-call-binding {callee:?}");
                 }
                 let binding = binding?;
-                let outcome = self
-                    .resolve_static_function_outcome_from_binding_with_context(
-                        &binding,
-                        &call_arguments,
-                        self.current_function_name(),
-                    );
+                let outcome = self.resolve_static_function_outcome_from_binding_with_context(
+                    &binding,
+                    &call_arguments,
+                    self.current_function_name(),
+                );
                 let Some(outcome) = outcome else {
                     // An effect-bearing no-argument user function (nonlocal
                     // counter increments around a terminal return) replays
@@ -2367,11 +2371,11 @@ impl<'a> FunctionCompiler<'a> {
                 op: UnaryOp::Not,
                 expression,
             } => {
-                let value = match self.evaluate_for_await_protocol_expression(expression, context)?
-                {
-                    Ok(value) => value,
-                    Err(throw_value) => return Some(Err(throw_value)),
-                };
+                let value =
+                    match self.evaluate_for_await_protocol_expression(expression, context)? {
+                        Ok(value) => value,
+                        Err(throw_value) => return Some(Err(throw_value)),
+                    };
                 // Identifier operands materialize through the static binding
                 // state (stale effect-mutated reads were already rejected).
                 let value = match &value {
@@ -2391,11 +2395,10 @@ impl<'a> FunctionCompiler<'a> {
                 let Expression::Member { object, property } = expression.as_ref() else {
                     return None;
                 };
-                let property_key =
-                    match self.for_await_protocol_property_key(property, context)? {
-                        Ok(key) => key,
-                        Err(throw_value) => return Some(Err(throw_value)),
-                    };
+                let property_key = match self.for_await_protocol_property_key(property, context)? {
+                    Ok(key) => key,
+                    Err(throw_value) => return Some(Err(throw_value)),
+                };
                 let Expression::Identifier(object_name) = object.as_ref() else {
                     return None;
                 };
@@ -2403,8 +2406,12 @@ impl<'a> FunctionCompiler<'a> {
                     return None;
                 };
                 if entries.iter().any(|entry| {
-                    !matches!(entry, ObjectEntry::Data { .. } | ObjectEntry::Getter { .. }
-                        | ObjectEntry::Setter { .. })
+                    !matches!(
+                        entry,
+                        ObjectEntry::Data { .. }
+                            | ObjectEntry::Getter { .. }
+                            | ObjectEntry::Setter { .. }
+                    )
                 }) {
                     return None;
                 }
@@ -2434,9 +2441,7 @@ impl<'a> FunctionCompiler<'a> {
                 context.iterators.insert(name.clone(), state);
                 // A close evaluated with a throw completion swallows its own
                 // errors: the original throw wins (its effects still ran).
-                if context.throw_completion_close
-                    && matches!(result, Some(Err(_)))
-                {
+                if context.throw_completion_close && matches!(result, Some(Err(_))) {
                     return Some(Ok(Expression::Undefined));
                 }
                 result
@@ -2572,9 +2577,9 @@ impl<'a> FunctionCompiler<'a> {
                 .resolve_static_await_resolution_outcome(&Expression::Await(Box::new(value)))?
             {
                 StaticEvalOutcome::Value(value) => Some(Ok(value)),
-                StaticEvalOutcome::Throw(throw_value) => {
-                    Some(Err(self.resolve_static_throw_value_expression(&throw_value)?))
-                }
+                StaticEvalOutcome::Throw(throw_value) => Some(Err(
+                    self.resolve_static_throw_value_expression(&throw_value)?
+                )),
             },
         }
     }
@@ -2891,13 +2896,8 @@ impl<'a> FunctionCompiler<'a> {
             }
             Expression::Null | Expression::Undefined => None,
             _ => {
-                if let Some(getter_binding) = self.resolve_member_getter_binding(object, property)
-                {
-                    return self.for_await_protocol_function_outcome(
-                        &getter_binding,
-                        &[],
-                        object,
-                    );
+                if let Some(getter_binding) = self.resolve_member_getter_binding(object, property) {
+                    return self.for_await_protocol_function_outcome(&getter_binding, &[], object);
                 }
                 // `name` reads on function values (fn-name destructuring
                 // assertions) resolve through the static function-name
@@ -2984,9 +2984,7 @@ impl<'a> FunctionCompiler<'a> {
                 let materialized = self.materialize_static_expression(value);
                 match materialized {
                     Expression::Number(value) => Some(value),
-                    Expression::Identifier(materialized_name) if &materialized_name == name => {
-                        None
-                    }
+                    Expression::Identifier(materialized_name) if &materialized_name == name => None,
                     materialized => self.for_await_protocol_number_value(&materialized),
                 }
             }
@@ -3074,10 +3072,7 @@ impl<'a> FunctionCompiler<'a> {
         }
         if !matches!(
             op,
-            BinaryOp::Equal
-                | BinaryOp::NotEqual
-                | BinaryOp::LooseEqual
-                | BinaryOp::LooseNotEqual
+            BinaryOp::Equal | BinaryOp::NotEqual | BinaryOp::LooseEqual | BinaryOp::LooseNotEqual
         ) {
             return None;
         }
@@ -3207,7 +3202,11 @@ impl<'a> FunctionCompiler<'a> {
             | (Expression::Object(_) | Expression::Array(_), Expression::Number(_))
             | (Expression::String(_), Expression::Object(_) | Expression::Array(_))
             | (Expression::Object(_) | Expression::Array(_), Expression::String(_)) => {
-                if loose { None } else { Some(false) }
+                if loose {
+                    None
+                } else {
+                    Some(false)
+                }
             }
             // Strict comparison across distinct primitive types is always
             // unequal; loose comparison coerces and stays undecided.
@@ -3215,7 +3214,11 @@ impl<'a> FunctionCompiler<'a> {
             | (Expression::Number(_) | Expression::String(_), Expression::Bool(_))
             | (Expression::Number(_), Expression::String(_))
             | (Expression::String(_), Expression::Number(_)) => {
-                if loose { None } else { Some(false) }
+                if loose {
+                    None
+                } else {
+                    Some(false)
+                }
             }
             _ => None,
         }

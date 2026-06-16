@@ -256,8 +256,7 @@ impl RefinedAotValidator<'_> {
             return false;
         }
 
-        let Some(CallArgument::Expression(Expression::Identifier(name))) = arguments.first()
-        else {
+        let Some(CallArgument::Expression(Expression::Identifier(name))) = arguments.first() else {
             return false;
         };
 

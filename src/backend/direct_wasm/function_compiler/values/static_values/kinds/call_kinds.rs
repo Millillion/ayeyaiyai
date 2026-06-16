@@ -29,7 +29,9 @@ impl<'a> FunctionCompiler<'a> {
         expression: &Expression,
     ) -> Expression {
         Expression::Call {
-            callee: Box::new(Expression::Identifier(SPREAD_ITERATE_HELPER_NAME.to_string())),
+            callee: Box::new(Expression::Identifier(
+                SPREAD_ITERATE_HELPER_NAME.to_string(),
+            )),
             arguments: vec![CallArgument::Expression(expression.clone())],
         }
     }

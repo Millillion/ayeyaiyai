@@ -1299,14 +1299,14 @@ impl<'a> FunctionCompiler<'a> {
         let constructor_updated_bindings = (!constructor_ordinary_direct_eval
             && constructor_static_resolution_allowed
             && (capture_slots.is_none() || constructor_direct_eval_in_class_field_initializer))
-        .then(|| {
-            self.resolve_user_constructor_updated_bindings_for_function(
-                user_function,
-                arguments,
-                capture_source_bindings.as_ref(),
-            )
-        })
-        .flatten();
+            .then(|| {
+                self.resolve_user_constructor_updated_bindings_for_function(
+                    user_function,
+                    arguments,
+                    capture_source_bindings.as_ref(),
+                )
+            })
+            .flatten();
         if crate::ayy_env_flag!("AYY_TRACE_CONSTRUCT_CALLS") {
             eprintln!(
                 "construct_call:static_updates function={} direct_eval={} static_allowed={} updated={constructor_updated_bindings:?}",

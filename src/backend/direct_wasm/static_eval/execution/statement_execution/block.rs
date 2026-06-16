@@ -181,7 +181,13 @@ where
                 }
 
                 let mut completed = false;
-                for _ in 0..STATIC_LOOP_ITERATION_LIMIT {
+                for iteration in 0..STATIC_LOOP_ITERATION_LIMIT {
+                    if (trace_static_exec || trace_static_loop) && iteration % 128 == 0 {
+                        eprintln!("static_exec:while iteration={iteration}");
+                    }
+                    if trace_static_condition {
+                        eprintln!("static_exec:while condition_start={condition:?}");
+                    }
                     match trace_unwrap!(executor.evaluate_condition(condition, environment)) {
                         Expression::Bool(true) => {}
                         Expression::Bool(false) => {
@@ -189,6 +195,9 @@ where
                             break;
                         }
                         _ => return None,
+                    }
+                    if trace_static_condition {
+                        eprintln!("static_exec:while condition_value=Bool(true)");
                     }
 
                     if let StaticStatementControl::Return(result) =
@@ -217,13 +226,19 @@ where
                 }
 
                 let mut completed = false;
-                for _ in 0..STATIC_LOOP_ITERATION_LIMIT {
+                for iteration in 0..STATIC_LOOP_ITERATION_LIMIT {
+                    if (trace_static_exec || trace_static_loop) && iteration % 128 == 0 {
+                        eprintln!("static_exec:do_while iteration={iteration}");
+                    }
                     if let StaticStatementControl::Return(result) =
                         trace_unwrap!(execute_static_statement_block(executor, body, environment))
                     {
                         return Some(StaticStatementControl::Return(result));
                     }
 
+                    if trace_static_condition {
+                        eprintln!("static_exec:do_while condition_start={condition:?}");
+                    }
                     match trace_unwrap!(executor.evaluate_condition(condition, environment)) {
                         Expression::Bool(true) => {}
                         Expression::Bool(false) => {
@@ -231,6 +246,9 @@ where
                             break;
                         }
                         _ => return None,
+                    }
+                    if trace_static_condition {
+                        eprintln!("static_exec:do_while condition_value=Bool(true)");
                     }
                 }
                 if !completed {

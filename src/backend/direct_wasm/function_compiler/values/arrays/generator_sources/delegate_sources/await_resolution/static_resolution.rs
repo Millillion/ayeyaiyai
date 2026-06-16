@@ -490,7 +490,8 @@ impl<'a> FunctionCompiler<'a> {
         if !matches!(callee, Expression::Identifier(name) if name == "__ayyDynamicImport") {
             return None;
         }
-        if let Some(throw_value) = self.static_dynamic_import_specifier_tostring_rejection(arguments)
+        if let Some(throw_value) =
+            self.static_dynamic_import_specifier_tostring_rejection(arguments)
         {
             return Some(StaticEvalOutcome::Throw(throw_value));
         }
@@ -678,8 +679,7 @@ impl<'a> FunctionCompiler<'a> {
                 && let Some(primitive) = self
                     .resolve_static_primitive_expression_with_context(value, current_function_name)
             {
-                return self
-                    .resolve_static_string_concat_value(&primitive, current_function_name);
+                return self.resolve_static_string_concat_value(&primitive, current_function_name);
             }
         }
 
@@ -1585,11 +1585,10 @@ impl<'a> FunctionCompiler<'a> {
         if !visited.insert(module_index) {
             return Expression::Identifier(format!("__ayy_module_namespace_{module_index}"));
         }
-        let local_bindings = self
-            .static_dynamic_import_module_local_bindings_with_continuations(
-                module_index,
-                init_function,
-            );
+        let local_bindings = self.static_dynamic_import_module_local_bindings_with_continuations(
+            module_index,
+            init_function,
+        );
         if import_type == Some("text")
             && let Some(value) = local_bindings.get(&format!("__ayy_text_default_{module_index}"))
         {
@@ -1617,11 +1616,8 @@ impl<'a> FunctionCompiler<'a> {
                 value: Expression::Number(module_index as f64),
             },
         ];
-        for statement in
-            &self.static_dynamic_import_module_statements_with_continuations(
-                module_index,
-                init_function,
-            )
+        for statement in &self
+            .static_dynamic_import_module_statements_with_continuations(module_index, init_function)
         {
             let Some((export_name, getter_name, namespace_module_index, reexport_source)) =
                 self.static_dynamic_import_export_getter(statement)
@@ -1852,9 +1848,7 @@ impl<'a> FunctionCompiler<'a> {
                 // assignments instead of folding to stale pre-init global
                 // values.
                 let value = match value {
-                    Expression::Identifier(alias)
-                        if alias.starts_with("__ayy_module_binding_") =>
-                    {
+                    Expression::Identifier(alias) if alias.starts_with("__ayy_module_binding_") => {
                         value.clone()
                     }
                     _ => self.materialize_static_expression(value),
@@ -2087,11 +2081,8 @@ impl<'a> FunctionCompiler<'a> {
             module_index,
             init_function,
         );
-        for statement in
-            &self.static_dynamic_import_module_statements_with_continuations(
-                module_index,
-                init_function,
-            )
+        for statement in &self
+            .static_dynamic_import_module_statements_with_continuations(module_index, init_function)
         {
             let Some((candidate_name, getter_name, namespace_module_index, reexport_source)) =
                 self.static_dynamic_import_export_getter(statement)
@@ -2165,11 +2156,8 @@ impl<'a> FunctionCompiler<'a> {
             "__ayy_module_init_{module_index}"
         ))?;
         let mut names = Vec::new();
-        for statement in
-            &self.static_dynamic_import_module_statements_with_continuations(
-                module_index,
-                init_function,
-            )
+        for statement in &self
+            .static_dynamic_import_module_statements_with_continuations(module_index, init_function)
         {
             let Some((export_name, _, _, _)) = self.static_dynamic_import_export_getter(statement)
             else {
@@ -2268,11 +2256,8 @@ impl<'a> FunctionCompiler<'a> {
             module_index,
             init_function,
         );
-        for statement in
-            &self.static_dynamic_import_module_statements_with_continuations(
-                module_index,
-                init_function,
-            )
+        for statement in &self
+            .static_dynamic_import_module_statements_with_continuations(module_index, init_function)
         {
             let Some((candidate_name, getter_name, namespace_module_index, reexport_source)) =
                 self.static_dynamic_import_export_getter(statement)
@@ -2299,16 +2284,14 @@ impl<'a> FunctionCompiler<'a> {
     }
 
     fn module_hidden_binding_name_module_index(name: &str) -> Option<usize> {
-        let suffix = name
-            .strip_prefix("__ayy_module_binding_")
-            .or_else(|| {
-                name.strip_prefix("__ayy_capture_binding__")
-                    .and_then(|rest| {
-                        rest.split_once("__ayy_module_export_getter_")
-                            .map(|(_, suffix)| suffix)
-                            .or_else(|| rest.strip_prefix("__ayy_module_export_getter_"))
-                    })
-            })?;
+        let suffix = name.strip_prefix("__ayy_module_binding_").or_else(|| {
+            name.strip_prefix("__ayy_capture_binding__")
+                .and_then(|rest| {
+                    rest.split_once("__ayy_module_export_getter_")
+                        .map(|(_, suffix)| suffix)
+                        .or_else(|| rest.strip_prefix("__ayy_module_export_getter_"))
+                })
+        })?;
         let digit_count = suffix
             .bytes()
             .take_while(|byte| byte.is_ascii_digit())

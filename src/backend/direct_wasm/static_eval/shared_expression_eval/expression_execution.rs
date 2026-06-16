@@ -8,6 +8,19 @@ pub(in crate::backend::direct_wasm) fn evaluate_shared_static_expression<
     environment: &mut Executor::Environment,
 ) -> Option<Expression> {
     match expression {
+        Expression::Identifier(name) => {
+            let value = executor.lookup_binding_value(name, environment)?;
+            if static_expression_matches(&value, expression) {
+                return None;
+            }
+            if !inline_summary_side_effect_free_expression(&value) {
+                return Some(value);
+            }
+            executor
+                .evaluate_expression(&value, environment)
+                .or_else(|| executor.materialize_expression(&value, environment))
+                .or(Some(value))
+        }
         Expression::Assign { name, value } => {
             let value = executor
                 .evaluate_expression(value, environment)

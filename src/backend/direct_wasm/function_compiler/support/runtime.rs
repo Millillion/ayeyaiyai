@@ -4,6 +4,8 @@ use super::*;
 mod builtin_catalog;
 #[path = "runtime/function_metadata.rs"]
 mod function_metadata;
+#[path = "runtime/number_format.rs"]
+mod number_format;
 #[path = "runtime/value_parsing.rs"]
 mod value_parsing;
 
@@ -18,6 +20,9 @@ pub(in crate::backend::direct_wasm) use function_metadata::internal_function_nam
 pub(in crate::backend::direct_wasm) use function_metadata::{
     builtin_function_display_name, builtin_function_length, function_display_name,
     user_function_runtime_value,
+};
+pub(in crate::backend::direct_wasm) use number_format::{
+    js_console_number_to_string, js_number_to_string,
 };
 pub(in crate::backend::direct_wasm) use value_parsing::{
     f64_to_i32, is_reserved_js_runtime_value, parse_bigint_to_i32, parse_static_bigint_literal,

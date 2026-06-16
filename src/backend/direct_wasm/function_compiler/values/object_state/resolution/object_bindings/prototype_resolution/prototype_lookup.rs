@@ -738,6 +738,66 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         expression: &Expression,
     ) -> Option<Expression> {
+        if let Expression::Identifier(name) = expression
+            && self.identifier_static_value_is_call_expression(name)
+            && !self.runtime_object_property_shadow_owner_has_bindings(name)
+            && !self
+                .state
+                .speculation
+                .static_semantics
+                .has_local_object_binding(name)
+            && self.backend.global_object_binding(name).is_none()
+        {
+            return None;
+        }
+        if let Expression::Call { callee, .. } = expression
+            && self
+                .resolve_static_call_callee_user_function(callee.as_ref())
+                .is_some_and(|user_function| matches!(user_function.kind, FunctionKind::Ordinary))
+            && self.call_targets_user_function_with_source_loop(callee.as_ref())
+        {
+            return None;
+        }
+        if let Expression::Binary { op, left, right } = expression {
+            let primitive_prototype = match op {
+                BinaryOp::Subtract
+                | BinaryOp::Multiply
+                | BinaryOp::Divide
+                | BinaryOp::Modulo
+                | BinaryOp::Exponentiate
+                | BinaryOp::UnsignedRightShift => Some(Self::prototype_member_expression("Number")),
+                BinaryOp::BitwiseAnd
+                | BinaryOp::BitwiseOr
+                | BinaryOp::BitwiseXor
+                | BinaryOp::LeftShift
+                | BinaryOp::RightShift => {
+                    if self.infer_value_kind(left) == Some(StaticValueKind::BigInt)
+                        && self.infer_value_kind(right) == Some(StaticValueKind::BigInt)
+                    {
+                        Some(Self::prototype_member_expression("BigInt"))
+                    } else {
+                        Some(Self::prototype_member_expression("Number"))
+                    }
+                }
+                BinaryOp::LessThan
+                | BinaryOp::LessThanOrEqual
+                | BinaryOp::GreaterThan
+                | BinaryOp::GreaterThanOrEqual
+                | BinaryOp::Equal
+                | BinaryOp::NotEqual
+                | BinaryOp::In
+                | BinaryOp::InstanceOf
+                | BinaryOp::LooseEqual
+                | BinaryOp::LooseNotEqual => Some(Self::prototype_member_expression("Boolean")),
+                BinaryOp::Add
+                | BinaryOp::LogicalAnd
+                | BinaryOp::LogicalOr
+                | BinaryOp::NullishCoalescing => None,
+            };
+            if primitive_prototype.is_some() {
+                return primitive_prototype;
+            }
+        }
         self.with_static_object_prototype_resolution_guard(expression, |this| {
             if let Expression::Unary { op, .. } = expression {
                 return match op {
@@ -915,6 +975,12 @@ impl<'a> FunctionCompiler<'a> {
                 }
                 return Some(prototype);
             }
+            if this.expression_is_user_function_call_with_source_loop(expression) {
+                return None;
+            }
+            if matches!(expression, Expression::Call { .. }) {
+                return None;
+            }
             if let Some(snapshot_result) = this
                 .resolve_call_snapshot_result_expression(expression)
                 .filter(|resolved| !static_expression_matches(resolved, expression))
@@ -935,6 +1001,18 @@ impl<'a> FunctionCompiler<'a> {
                 return Some(prototype.clone());
             }
             if let Expression::Identifier(name) = expression
+                && this.identifier_static_value_is_call_expression(name)
+                && !this.runtime_object_property_shadow_owner_has_bindings(name)
+                && !this
+                    .state
+                    .speculation
+                    .static_semantics
+                    .has_local_object_binding(name)
+                && this.backend.global_object_binding(name).is_none()
+            {
+                return None;
+            }
+            if let Expression::Identifier(name) = expression
                 && let Some(value) = this
                     .state
                     .speculation
@@ -944,6 +1022,8 @@ impl<'a> FunctionCompiler<'a> {
                     .filter(|value| {
                         !matches!(value, Expression::Identifier(alias) if alias == name)
                     })
+                    .filter(|value| !matches!(value, Expression::Call { .. }))
+                    .filter(|value| !this.expression_is_user_function_call_with_source_loop(value))
                 && let Some(prototype) = this.resolve_static_object_prototype_expression(value)
             {
                 return Some(prototype);
@@ -1045,6 +1125,8 @@ impl<'a> FunctionCompiler<'a> {
                         .filter(
                             |value| !matches!(value, Expression::Identifier(alias) if alias == name),
                         )
+                        .filter(|value| !matches!(value, Expression::Call { .. }))
+                        .filter(|value| !this.expression_is_user_function_call_with_source_loop(value))
                         && let Some(prototype) =
                             this.resolve_static_object_prototype_expression(value)
                     {

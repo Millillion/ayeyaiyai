@@ -467,17 +467,5 @@ fn bound_snapshot_primitive_to_number(expression: &Expression) -> Option<f64> {
 }
 
 fn bound_snapshot_number_to_string(value: f64) -> String {
-    if value.is_nan() {
-        "NaN".to_string()
-    } else if value == f64::INFINITY {
-        "Infinity".to_string()
-    } else if value == f64::NEG_INFINITY {
-        "-Infinity".to_string()
-    } else if value == 0.0 {
-        "0".to_string()
-    } else if value.is_finite() && value.fract() == 0.0 {
-        (value as i64).to_string()
-    } else {
-        value.to_string()
-    }
+    js_number_to_string(value)
 }

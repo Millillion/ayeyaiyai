@@ -30,6 +30,9 @@ pub(in crate::backend::direct_wasm) trait StaticBindingMutationExecutor:
         value: Expression,
         environment: &mut Self::Environment,
     ) -> Option<()> {
+        if crate::ayy_env_flag!("AYY_TRACE_STATIC_BINDINGS") {
+            eprintln!("static_exec:initialize name={name} value={value:?}");
+        }
         let binding_expression = environment.set_local_binding(name.to_string(), value);
         let object_binding =
             self.resolve_environment_object_binding(&binding_expression, environment);
@@ -49,6 +52,9 @@ pub(in crate::backend::direct_wasm) trait StaticBindingMutationExecutor:
         value: Expression,
         environment: &mut Self::Environment,
     ) -> Option<()> {
+        if crate::ayy_env_flag!("AYY_TRACE_STATIC_BINDINGS") {
+            eprintln!("static_exec:assign name={name} value={value:?}");
+        }
         assign_static_binding_with_object_sync(
             name,
             value,

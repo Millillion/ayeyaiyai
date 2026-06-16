@@ -1,6 +1,6 @@
 use crate::backend::direct_wasm::{
     Expression, evaluate_shared_static_expression, evaluate_static_binary_expression,
-    inline_summary_side_effect_free_expression,
+    evaluate_static_unary_expression, inline_summary_side_effect_free_expression,
 };
 
 use super::{StaticExpressionHooks, StaticExpressionMaterialization};
@@ -46,6 +46,7 @@ where
         environment: &mut Self::Environment,
     ) -> Option<Expression> {
         self.evaluate_special_expression(expression, environment)
+            .or_else(|| evaluate_static_unary_expression(self, expression, environment))
             .or_else(|| evaluate_static_binary_expression(self, expression, environment))
             .or_else(|| self.materialize_expression(expression, environment))
     }

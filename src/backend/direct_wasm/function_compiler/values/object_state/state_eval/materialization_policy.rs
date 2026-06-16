@@ -124,8 +124,14 @@ impl StaticMaterializationPolicySource for FunctionStaticEvalContext<'_, '_> {
     fn static_materialize_post_structural_fallback_expression(
         &self,
         expression: &Expression,
-        _environment: &Self::Environment,
+        environment: &Self::Environment,
     ) -> Option<Expression> {
-        Some(self.materialize_expression(expression))
+        materialize_recursive_expression(expression, true, true, &|nested| {
+            let mut nested_environment = environment.clone();
+            self.evaluate_expression_with_state(nested, &mut nested_environment)
+                .or_else(|| self.materialize_expression_with_state(nested, &nested_environment))
+                .or_else(|| Some(self.materialize_expression(nested)))
+        })
+        .or_else(|| Some(self.materialize_expression(expression)))
     }
 }

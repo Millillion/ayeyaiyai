@@ -1149,9 +1149,7 @@ impl<'a> FunctionCompiler<'a> {
             // assignments could not be replayed statically (e.g. it throws):
             // demote those bindings to runtime reads so later folds do not
             // observe stale pre-close values.
-            if static_update_missing
-                && let Some(user_function) = user_return_function.as_ref()
-            {
+            if static_update_missing && let Some(user_function) = user_return_function.as_ref() {
                 let assigned_nonlocals =
                     self.collect_user_function_assigned_nonlocal_bindings(user_function);
                 if !assigned_nonlocals.is_empty() {

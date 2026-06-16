@@ -120,6 +120,7 @@ impl<'a> FunctionCompiler<'a> {
                     let descriptor_value = if self
                         .object_literal_value_reads_runtime_nonlocal_binding(value)
                         || self.object_literal_value_should_preserve_reference(value)
+                        || self.infer_value_kind(value) == Some(StaticValueKind::Bool)
                     {
                         value.clone()
                     } else {

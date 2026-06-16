@@ -290,7 +290,10 @@ impl<'a> FunctionCompiler<'a> {
             }
         }
         let mut visited = HashSet::new();
-        self.register_transitive_member_delete_shadows_for_function(&user_function.name, &mut visited);
+        self.register_transitive_member_delete_shadows_for_function(
+            &user_function.name,
+            &mut visited,
+        );
     }
 
     /// Registers runtime delete-shadow pairs for every `delete obj.prop` a
@@ -463,11 +466,9 @@ impl<'a> FunctionCompiler<'a> {
             else {
                 continue;
             };
-            for candidate in Self::iterator_iterated_value_candidates_in_statements(
-                &function.body,
-                &iterated,
-                0,
-            ) {
+            for candidate in
+                Self::iterator_iterated_value_candidates_in_statements(&function.body, &iterated, 0)
+            {
                 let candidate = self.substitute_user_function_argument_bindings(
                     &candidate,
                     user_function,

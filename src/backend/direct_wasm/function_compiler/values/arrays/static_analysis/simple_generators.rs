@@ -1755,7 +1755,9 @@ impl<'a> FunctionCompiler<'a> {
                 Statement::For { .. }
                     if async_generator
                         && !Self::statement_contains_generator_yield(statement)
-                        && self.lowered_for_await_protocol_throw_step(statement).is_some() =>
+                        && self
+                            .lowered_for_await_protocol_throw_step(statement)
+                            .is_some() =>
                 {
                     let (throw_value, protocol_effects) = self
                         .lowered_for_await_protocol_throw_step(statement)

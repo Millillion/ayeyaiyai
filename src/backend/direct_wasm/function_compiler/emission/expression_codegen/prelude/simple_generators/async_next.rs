@@ -3658,8 +3658,7 @@ impl<'a> FunctionCompiler<'a> {
                                 compiler.sync_visible_runtime_bindings_for_statements(
                                     std::slice::from_ref(effect),
                                 )?;
-                                compiler
-                                    .emit_inline_async_generator_effect_statement(effect)?;
+                                compiler.emit_inline_async_generator_effect_statement(effect)?;
                             }
                         }
                         prior_effects.push(effect.clone());
@@ -3819,8 +3818,7 @@ impl<'a> FunctionCompiler<'a> {
                                 compiler.sync_visible_runtime_bindings_for_statements(
                                     std::slice::from_ref(effect),
                                 )?;
-                                compiler
-                                    .emit_inline_async_generator_effect_statement(effect)?;
+                                compiler.emit_inline_async_generator_effect_statement(effect)?;
                             }
                         }
                         prior_effects.push(effect.clone());

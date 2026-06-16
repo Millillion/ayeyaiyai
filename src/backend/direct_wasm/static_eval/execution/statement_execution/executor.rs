@@ -141,7 +141,18 @@ where
         condition: &Expression,
         environment: &mut Self::Environment,
     ) -> Option<Expression> {
-        self.evaluate_expression(condition, environment)
+        let evaluated = self.evaluate_expression(condition, environment);
+        if crate::ayy_env_flag!("AYY_TRACE_STATIC_CONDITION") {
+            eprintln!("static_exec:condition evaluated={evaluated:?}");
+        }
+        if evaluated.is_some() {
+            return evaluated;
+        }
+        let materialized = self.materialize_expression(condition, environment);
+        if crate::ayy_env_flag!("AYY_TRACE_STATIC_CONDITION") {
+            eprintln!("static_exec:condition materialized={materialized:?}");
+        }
+        materialized
     }
 
     fn initialize_binding(

@@ -412,15 +412,34 @@ impl<'a> FunctionCompiler<'a> {
         name: &str,
         value: &Expression,
     ) -> DirectResult<()> {
+        let source_owner = self.runtime_object_property_shadow_owner_name_for_expression(value);
+        if source_owner.as_deref() == Some(name) {
+            return Ok(());
+        }
+        let has_runtime_object_shadow = source_owner
+            .as_ref()
+            .is_some_and(|owner| self.runtime_object_property_shadow_owner_has_bindings(owner));
+        let has_static_object_binding =
+            self.resolve_object_binding_from_expression(value).is_some();
+
+        self.clear_runtime_object_property_shadow_prefix(name);
+        self.clear_runtime_object_property_shadow_static_metadata_prefix(name);
+        if !has_runtime_object_shadow && !has_static_object_binding {
+            return Ok(());
+        }
+
         match value {
             Expression::Identifier(source_name) => {
-                self.emit_runtime_object_property_shadow_copy(source_name, name)?;
+                self.emit_runtime_object_property_shadow_copy_to_exact_target(source_name, name)?;
             }
             Expression::This => {
                 if let Some(owner_name) =
                     self.runtime_object_property_shadow_owner_name_for_identifier("this")
                 {
-                    self.emit_runtime_object_property_shadow_copy(&owner_name, name)?;
+                    self.emit_runtime_object_property_shadow_copy_to_exact_target(
+                        &owner_name,
+                        name,
+                    )?;
                 } else if let Some(object_binding) =
                     self.resolve_object_binding_from_expression(value)
                 {
@@ -433,7 +452,16 @@ impl<'a> FunctionCompiler<'a> {
                 }
             }
             _ => {
-                if let Some(object_binding) = self.resolve_object_binding_from_expression(value) {
+                if let Some(source_owner) = source_owner.as_ref()
+                    && has_runtime_object_shadow
+                {
+                    self.emit_runtime_object_property_shadow_copy_to_exact_target(
+                        source_owner,
+                        name,
+                    )?;
+                } else if let Some(object_binding) =
+                    self.resolve_object_binding_from_expression(value)
+                {
                     let object_binding = self
                         .object_binding_with_constructed_constructor_shadow(object_binding, value);
                     self.emit_runtime_object_property_shadow_seed_from_binding(

@@ -21,4 +21,8 @@ impl StaticUserFunctionBindingSource for FunctionStaticEvalContext<'_, '_> {
     ) -> Expression {
         self.substitute_user_function_arguments(expression, user_function, arguments)
     }
+
+    fn static_user_function_argument_requires_runtime(&self, expression: &Expression) -> bool {
+        self.expression_contains_user_function_call_with_source_loop(expression)
+    }
 }
