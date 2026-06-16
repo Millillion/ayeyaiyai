@@ -83,6 +83,15 @@ impl<'a> FunctionCompiler<'a> {
         true
     }
 
+    pub(in crate::backend::direct_wasm) fn addition_operand_has_symbol_to_primitive_getter(
+        &self,
+        expression: &Expression,
+    ) -> bool {
+        let symbol_property = symbol_to_primitive_expression();
+        self.resolve_member_getter_binding(expression, &symbol_property)
+            .is_some()
+    }
+
     pub(in crate::backend::direct_wasm) fn symbol_to_primitive_callable_terminal_effect(
         &self,
         expression: &Expression,

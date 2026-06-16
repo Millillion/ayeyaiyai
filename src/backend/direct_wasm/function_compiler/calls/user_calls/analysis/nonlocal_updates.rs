@@ -117,4 +117,32 @@ impl<'a> FunctionCompiler<'a> {
         }
         names
     }
+
+    pub(in crate::backend::direct_wasm) fn preserved_binding_kinds_for_user_function_assignments(
+        &self,
+        user_function: &UserFunction,
+        invalidated_bindings: &HashSet<String>,
+    ) -> HashMap<String, StaticValueKind> {
+        let mut preserved_kinds = invalidated_bindings
+            .iter()
+            .filter_map(|name| {
+                self.current_binding_kind_for_preservation(name)
+                    .map(|kind| (name.clone(), kind))
+            })
+            .collect::<HashMap<_, _>>();
+        let Some(function) = self.resolve_registered_function_declaration(&user_function.name)
+        else {
+            return preserved_kinds;
+        };
+        let mut blocked_bindings = HashSet::new();
+        for statement in &function.body {
+            self.collect_preserved_binding_kinds_from_statement(
+                invalidated_bindings,
+                &mut preserved_kinds,
+                &mut blocked_bindings,
+                statement,
+            );
+        }
+        preserved_kinds
+    }
 }

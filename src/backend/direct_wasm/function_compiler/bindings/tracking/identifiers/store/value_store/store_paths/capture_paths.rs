@@ -59,6 +59,11 @@ impl<'a> FunctionCompiler<'a> {
             || self.global_has_implicit_binding(name)
             || self.backend.global_function_binding(name).is_some()
         {
+            let kind = state.kind.unwrap_or(StaticValueKind::Unknown);
+            self.backend.set_global_binding_kind(name, kind);
+            self.backend
+                .shared_global_semantics
+                .set_global_binding_kind(name, kind);
             self.preserve_identifier_function_capture_slots_for_global_store(name, state)?;
         }
         self.emit_store_user_function_capture_binding_from_local(name, value_local)?;

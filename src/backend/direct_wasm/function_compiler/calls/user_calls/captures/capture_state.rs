@@ -1370,7 +1370,7 @@ impl<'a> FunctionCompiler<'a> {
                 self.sync_bound_capture_source_binding_metadata(source_name, value)?;
                 return Ok(false);
             }
-            invalidate_source(self, false);
+            invalidate_source(self, true);
             return Ok(true);
         }
 

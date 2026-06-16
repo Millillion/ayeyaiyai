@@ -91,9 +91,11 @@ impl<'a> FunctionCompiler<'a> {
         if names.is_empty() {
             return;
         }
+        let preserved_kinds =
+            self.preserved_binding_kinds_for_user_function_assignments(user_function, &names);
         self.invalidate_static_binding_metadata_for_names_with_preserved_kinds(
             &names,
-            &HashMap::new(),
+            &preserved_kinds,
         );
     }
 }

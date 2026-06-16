@@ -2,6 +2,65 @@ use super::*;
 
 const INSTANCE_FIELD_INITIALIZER_LABEL: &str = "__ayy_instance_field_initializers";
 
+struct CallEffectPreservedKindCollector<'compiler, 'program, 'state> {
+    compiler: &'compiler FunctionCompiler<'program>,
+    invalidated_bindings: &'state HashSet<String>,
+    preserved_kinds: &'state mut HashMap<String, StaticValueKind>,
+    blocked_bindings: &'state mut HashSet<String>,
+    visited_functions: &'state mut HashSet<String>,
+}
+
+impl<'compiler, 'program, 'state> CallEffectPreservedKindCollector<'compiler, 'program, 'state> {
+    fn collect_user_function_body(&mut self, function_name: &str) {
+        if !self.visited_functions.insert(function_name.to_string()) {
+            return;
+        }
+        let Some(function) = self
+            .compiler
+            .prepared_function_declaration(function_name)
+            .or_else(|| {
+                self.compiler
+                    .resolve_registered_function_declaration(function_name)
+            })
+        else {
+            return;
+        };
+        for statement in &function.body {
+            crate::ir::visit::Visitor::visit_statement(self, statement);
+        }
+    }
+}
+
+impl crate::ir::visit::Visitor for CallEffectPreservedKindCollector<'_, '_, '_> {
+    fn visit_statement(&mut self, statement: &Statement) {
+        self.compiler
+            .collect_preserved_binding_kinds_from_statement(
+                self.invalidated_bindings,
+                self.preserved_kinds,
+                self.blocked_bindings,
+                statement,
+            );
+        crate::ir::visit::walk_statement(self, statement);
+    }
+
+    fn visit_expression(&mut self, expression: &Expression) {
+        match expression {
+            Expression::Call { callee, .. }
+            | Expression::SuperCall { callee, .. }
+            | Expression::New { callee, .. } => {
+                if let Some(LocalFunctionBinding::User(function_name)) = self
+                    .compiler
+                    .resolve_function_binding_from_expression(callee)
+                {
+                    self.collect_user_function_body(&function_name);
+                }
+            }
+            _ => {}
+        }
+        crate::ir::visit::walk_expression(self, expression);
+    }
+}
+
 fn is_using_completion_binding(name: &str) -> bool {
     name.starts_with("__ayy_using_error_")
 }
@@ -39,6 +98,26 @@ struct DestructuringDefaultIteratorClosePattern {
 }
 
 impl<'a> FunctionCompiler<'a> {
+    fn collect_call_effect_preserved_binding_kinds_from_statements(
+        &self,
+        invalidated_bindings: &HashSet<String>,
+        preserved_kinds: &mut HashMap<String, StaticValueKind>,
+        statements: &[Statement],
+    ) {
+        let mut blocked_bindings = HashSet::new();
+        let mut visited_functions = HashSet::new();
+        let mut collector = CallEffectPreservedKindCollector {
+            compiler: self,
+            invalidated_bindings,
+            preserved_kinds,
+            blocked_bindings: &mut blocked_bindings,
+            visited_functions: &mut visited_functions,
+        };
+        for statement in statements {
+            crate::ir::visit::Visitor::visit_statement(&mut collector, statement);
+        }
+    }
+
     fn static_caught_bytes_module_array_buffer_mutation_argument_safe(
         argument: &CallArgument,
     ) -> bool {
@@ -2639,17 +2718,35 @@ impl<'a> FunctionCompiler<'a> {
                     return Ok(());
                 }
                 let mut try_body_assigned_bindings = HashSet::new();
+                let mut try_body_call_effect_visited = HashSet::new();
                 for statement in body {
                     collect_assigned_binding_names_from_statement(
                         statement,
                         &mut try_body_assigned_bindings,
                     );
+                    self.collect_statement_call_effect_nonlocal_bindings(
+                        statement,
+                        self.current_function_name(),
+                        &mut try_body_assigned_bindings,
+                        &mut try_body_call_effect_visited,
+                    );
                 }
+                self.collect_iterator_close_updated_binding_names_from_statements(
+                    body,
+                    &mut try_body_assigned_bindings,
+                );
                 let mut catch_assigned_bindings = HashSet::new();
+                let mut catch_call_effect_visited = HashSet::new();
                 for statement in catch_setup {
                     collect_assigned_binding_names_from_statement(
                         statement,
                         &mut catch_assigned_bindings,
+                    );
+                    self.collect_statement_call_effect_nonlocal_bindings(
+                        statement,
+                        self.current_function_name(),
+                        &mut catch_assigned_bindings,
+                        &mut catch_call_effect_visited,
                     );
                 }
                 for statement in catch_body {
@@ -2657,7 +2754,21 @@ impl<'a> FunctionCompiler<'a> {
                         statement,
                         &mut catch_assigned_bindings,
                     );
+                    self.collect_statement_call_effect_nonlocal_bindings(
+                        statement,
+                        self.current_function_name(),
+                        &mut catch_assigned_bindings,
+                        &mut catch_call_effect_visited,
+                    );
                 }
+                self.collect_iterator_close_updated_binding_names_from_statements(
+                    catch_setup,
+                    &mut catch_assigned_bindings,
+                );
+                self.collect_iterator_close_updated_binding_names_from_statements(
+                    catch_body,
+                    &mut catch_assigned_bindings,
+                );
                 if let Some(catch_binding) = catch_binding {
                     catch_assigned_bindings.insert(catch_binding.clone());
                 }
@@ -2800,7 +2911,22 @@ impl<'a> FunctionCompiler<'a> {
 
                 self.state.emission.output.instructions.push(0x0b);
                 self.pop_control_frame();
-                self.invalidate_static_binding_metadata_for_names(&try_body_assigned_bindings);
+                let mut try_body_preserved_kinds = try_body_assigned_bindings
+                    .iter()
+                    .filter_map(|name| {
+                        self.lookup_identifier_kind(name)
+                            .map(|kind| (name.clone(), kind))
+                    })
+                    .collect::<HashMap<_, _>>();
+                self.collect_call_effect_preserved_binding_kinds_from_statements(
+                    &try_body_assigned_bindings,
+                    &mut try_body_preserved_kinds,
+                    body,
+                );
+                self.invalidate_static_binding_metadata_for_names_with_preserved_kinds(
+                    &try_body_assigned_bindings,
+                    &try_body_preserved_kinds,
+                );
                 let catch_assigned_bindings_to_invalidate = if static_catch_value.is_some() {
                     catch_binding
                         .iter()
@@ -2814,8 +2940,26 @@ impl<'a> FunctionCompiler<'a> {
                         .cloned()
                         .collect::<HashSet<_>>()
                 };
-                self.invalidate_static_binding_metadata_for_names(
+                let mut catch_preserved_kinds = catch_assigned_bindings_to_invalidate
+                    .iter()
+                    .filter_map(|name| {
+                        self.lookup_identifier_kind(name)
+                            .map(|kind| (name.clone(), kind))
+                    })
+                    .collect::<HashMap<_, _>>();
+                self.collect_call_effect_preserved_binding_kinds_from_statements(
                     &catch_assigned_bindings_to_invalidate,
+                    &mut catch_preserved_kinds,
+                    catch_setup,
+                );
+                self.collect_call_effect_preserved_binding_kinds_from_statements(
+                    &catch_assigned_bindings_to_invalidate,
+                    &mut catch_preserved_kinds,
+                    catch_body,
+                );
+                self.invalidate_static_binding_metadata_for_names_with_preserved_kinds(
+                    &catch_assigned_bindings_to_invalidate,
+                    &catch_preserved_kinds,
                 );
                 if let (Some(local_snapshot), Some(global_snapshot)) = (
                     try_body_local_static_metadata.as_ref(),

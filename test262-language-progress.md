@@ -1,4 +1,4 @@
-22961/23668 (97.01%)
+22964/23668 (97.03%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -15,7 +15,7 @@ Sub-category progress
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
 - statements: 9051/9337 (96.94%)
-- expressions: 10747/11061 (97.16%)
+- expressions: 10750/11061 (97.19%)
 - types: 113/113 (100.00%)
 - function-code: 217/217 (100.00%)
 - global-code: 42/42 (100.00%)
@@ -10748,12 +10748,12 @@ Sub-category progress
   - [x] test/language/expressions/addition/bigint-toprimitive.js
   - [x] test/language/expressions/addition/bigint-wrapped-values.js
   - [x] test/language/expressions/addition/coerce-bigint-to-string.js
-  - [ ] test/language/expressions/addition/coerce-symbol-to-prim-err.js
+  - [x] test/language/expressions/addition/coerce-symbol-to-prim-err.js
   - [x] test/language/expressions/addition/coerce-symbol-to-prim-invocation.js
   - [x] test/language/expressions/addition/coerce-symbol-to-prim-return-obj.js
   - [x] test/language/expressions/addition/coerce-symbol-to-prim-return-prim.js
-  - [ ] test/language/expressions/addition/get-symbol-to-prim-err.js
-  - [ ] test/language/expressions/addition/order-of-evaluation.js
+  - [x] test/language/expressions/addition/get-symbol-to-prim-err.js
+  - [x] test/language/expressions/addition/order-of-evaluation.js
   - [x] test/language/expressions/addition/symbol-to-string.js
   - [x] test/language/expressions/array/11.1.4-0.js
   - [x] test/language/expressions/array/11.1.4_4-5-1.js

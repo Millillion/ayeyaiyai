@@ -413,17 +413,6 @@ impl<'a> FunctionCompiler<'a> {
                 key.as_ref()
                     .and_then(|key| self.scoped_source_alias_member_getter_binding(key))
             });
-        if is_private_property_name_expression(property) && resolved.is_some() {
-            return resolved;
-        }
-        if self.object_has_own_non_getter_property_binding(object, property) {
-            if trace_member_bindings {
-                eprintln!(
-                    "member_getter_binding:own_non_getter_blocks_direct object={object:?} property={property:?}"
-                );
-            }
-            return None;
-        }
         if trace_member_bindings {
             eprintln!(
                 "member_getter_binding:direct object={object:?} property={property:?} key={key:?} resolved={resolved:?}"
@@ -438,6 +427,14 @@ impl<'a> FunctionCompiler<'a> {
         }
         if resolved.is_some() {
             return resolved;
+        }
+        if self.object_has_own_non_getter_property_binding(object, property) {
+            if trace_member_bindings {
+                eprintln!(
+                    "member_getter_binding:own_non_getter_blocks_direct object={object:?} property={property:?}"
+                );
+            }
+            return None;
         }
         for candidate in self.iterator_step_member_static_value_binding_candidates(object) {
             if let Some(binding) = self.resolve_member_getter_binding(&candidate, property) {

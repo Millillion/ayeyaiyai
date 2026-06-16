@@ -3813,6 +3813,8 @@ impl<'a> FunctionCompiler<'a> {
             || Self::expression_contains_assignment_or_update(right)
             || self.binary_expression_calls_user_function(left)
             || self.binary_expression_calls_user_function(right)
+            || self.addition_operand_has_symbol_to_primitive_getter(left)
+            || self.addition_operand_has_symbol_to_primitive_getter(right)
         {
             return Ok(false);
         }
@@ -4095,6 +4097,9 @@ impl<'a> FunctionCompiler<'a> {
                         || Self::expression_contains_assignment_or_update(right);
                 let addition_calls_user_function = self.binary_expression_calls_user_function(left)
                     || self.binary_expression_calls_user_function(right);
+                let addition_has_symbol_to_primitive_getter = self
+                    .addition_operand_has_symbol_to_primitive_getter(left)
+                    || self.addition_operand_has_symbol_to_primitive_getter(right);
                 let addition_operand_side_effect_free = |operand: &Expression| {
                     !self.binary_expression_calls_user_function(operand)
                         && (inline_summary_side_effect_free_expression(operand)
@@ -4109,11 +4114,12 @@ impl<'a> FunctionCompiler<'a> {
                     && !addition_depends_on_active_loop_assignment
                     && !addition_contains_assignment_or_update
                     && !addition_calls_user_function
+                    && !addition_has_symbol_to_primitive_getter
                     && addition_operands_side_effect_free;
                 let trace_addition = crate::ayy_env_flag!("AYY_TRACE_ADDITION");
                 if trace_addition {
                     eprintln!(
-                        "addition:flags left={left:?} right={right:?} loop_dep={addition_depends_on_active_loop_assignment} assign={addition_contains_assignment_or_update} calls={addition_calls_user_function} sefree={addition_operands_side_effect_free} runtime={addition_requires_runtime_value} allow_static={allow_static_addition}"
+                        "addition:flags left={left:?} right={right:?} loop_dep={addition_depends_on_active_loop_assignment} assign={addition_contains_assignment_or_update} calls={addition_calls_user_function} symbol_getter={addition_has_symbol_to_primitive_getter} sefree={addition_operands_side_effect_free} runtime={addition_requires_runtime_value} allow_static={allow_static_addition}"
                     );
                 }
                 if allow_static_addition
@@ -4134,6 +4140,7 @@ impl<'a> FunctionCompiler<'a> {
                 if !addition_depends_on_active_loop_assignment
                     && !addition_contains_assignment_or_update
                     && !addition_calls_user_function
+                    && !addition_has_symbol_to_primitive_getter
                     && addition_operands_side_effect_free
                     && !addition_requires_runtime_value
                     && let Some(text) = self.resolve_static_string_addition_value_with_context(

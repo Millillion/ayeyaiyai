@@ -4655,6 +4655,17 @@ impl<'a> FunctionCompiler<'a> {
                 };
                 self.push_i32_const(assertion_fails as i32);
                 self.push_local_set(actual_local);
+            } else if self.emit_runtime_static_string_equality_comparison(
+                actual,
+                expected,
+                BinaryOp::Equal,
+            )? {
+                self.push_local_set(actual_local);
+                if assertion_failure == BinaryOp::NotEqual {
+                    self.push_local_get(actual_local);
+                    self.state.emission.output.instructions.push(0x45);
+                    self.push_local_set(actual_local);
+                }
             } else if !needs_runtime_identifier_check
                 && (matches!(actual, Expression::String(_))
                     || matches!(expected, Expression::String(_)))
@@ -4665,19 +4676,6 @@ impl<'a> FunctionCompiler<'a> {
                     left: Box::new(actual.clone()),
                     right: Box::new(expected.clone()),
                 })?;
-                self.push_local_set(actual_local);
-                if assertion_failure == BinaryOp::NotEqual {
-                    self.push_local_get(actual_local);
-                    self.state.emission.output.instructions.push(0x45);
-                    self.push_local_set(actual_local);
-                }
-            } else if !needs_runtime_identifier_check
-                && self.emit_runtime_static_string_equality_comparison(
-                    actual,
-                    expected,
-                    BinaryOp::Equal,
-                )?
-            {
                 self.push_local_set(actual_local);
                 if assertion_failure == BinaryOp::NotEqual {
                     self.push_local_get(actual_local);

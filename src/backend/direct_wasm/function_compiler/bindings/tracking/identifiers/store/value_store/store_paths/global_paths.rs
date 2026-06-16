@@ -372,6 +372,10 @@ fn state_stores_unresolved_constructor_instance(state: &PreparedIdentifierStoreS
 }
 
 impl<'a> FunctionCompiler<'a> {
+    fn clear_local_static_metadata_for_global_store(&mut self, name: &str) {
+        self.state.clear_local_static_binding_metadata(name);
+    }
+
     fn preserve_internal_iterator_temp_global_metadata(
         &mut self,
         name: &str,
@@ -1911,6 +1915,7 @@ impl<'a> FunctionCompiler<'a> {
                     state,
                 )?;
             } else {
+                self.clear_local_static_metadata_for_global_store(name);
                 self.preserve_identifier_store_global_metadata(name, state, false)?;
                 self.push_local_get(value_local);
                 self.push_global_set(global_index);
@@ -1921,11 +1926,13 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(true);
         }
         if let Some(binding) = self.backend.implicit_global_binding(name) {
+            self.clear_local_static_metadata_for_global_store(name);
             self.preserve_identifier_store_global_metadata(name, state, true)?;
             self.emit_store_implicit_global_from_local(binding, value_local)?;
             return Ok(true);
         }
         let binding = self.ensure_implicit_global_binding(name);
+        self.clear_local_static_metadata_for_global_store(name);
         self.preserve_identifier_store_global_metadata(name, state, true)?;
         self.emit_store_implicit_global_from_local(binding, value_local)?;
         Ok(true)
@@ -1938,6 +1945,7 @@ impl<'a> FunctionCompiler<'a> {
         global_index: u32,
         state: &PreparedIdentifierStoreState,
     ) -> DirectResult<()> {
+        self.clear_local_static_metadata_for_global_store(name);
         if (state.is_internal_iterator_temp || state_stores_internal_iterator_step_value(state))
             && (name.starts_with("__ayy_") || self.backend.lexical_global_binding(name).is_none())
         {
@@ -2073,6 +2081,7 @@ impl<'a> FunctionCompiler<'a> {
         global_index: u32,
         state: &PreparedIdentifierStoreState,
     ) -> DirectResult<()> {
+        self.clear_local_static_metadata_for_global_store(name);
         if state.is_internal_iterator_temp || state_stores_internal_iterator_step_value(state) {
             if state.is_internal_iterator_temp {
                 self.preserve_internal_iterator_temp_global_metadata(name, state);
@@ -2143,6 +2152,7 @@ impl<'a> FunctionCompiler<'a> {
         binding: ImplicitGlobalBinding,
         state: &PreparedIdentifierStoreState,
     ) -> DirectResult<()> {
+        self.clear_local_static_metadata_for_global_store(name);
         if state.is_internal_iterator_temp || state_stores_internal_iterator_step_value(state) {
             if state.is_internal_iterator_temp {
                 self.preserve_internal_iterator_temp_global_metadata(name, state);

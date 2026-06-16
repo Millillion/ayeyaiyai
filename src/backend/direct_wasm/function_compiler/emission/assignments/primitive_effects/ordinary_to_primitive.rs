@@ -325,6 +325,18 @@ impl<'a> FunctionCompiler<'a> {
         result_local: u32,
     ) -> DirectResult<SymbolToPrimitiveHandling> {
         for step in &plan.steps {
+            if let Some(handling) = self.emit_ordinary_to_primitive_step_inline_effects(
+                expression,
+                &step.binding,
+                &step.outcome,
+                result_local,
+            )? {
+                match handling {
+                    SymbolToPrimitiveHandling::Handled => return Ok(handling),
+                    SymbolToPrimitiveHandling::AlwaysThrows => return Ok(handling),
+                    SymbolToPrimitiveHandling::NotHandled => continue,
+                }
+            }
             if matches!(step.binding, LocalFunctionBinding::Builtin(_)) {
                 match &step.outcome {
                     StaticEvalOutcome::Throw(_) => {
@@ -368,6 +380,145 @@ impl<'a> FunctionCompiler<'a> {
         Ok(SymbolToPrimitiveHandling::AlwaysThrows)
     }
 
+    fn emit_ordinary_to_primitive_step_inline_effects(
+        &mut self,
+        expression: &Expression,
+        binding: &LocalFunctionBinding,
+        outcome: &StaticEvalOutcome,
+        result_local: u32,
+    ) -> DirectResult<Option<SymbolToPrimitiveHandling>> {
+        let LocalFunctionBinding::User(function_name) = binding else {
+            return Ok(None);
+        };
+        let Some(user_function) = self.user_function(function_name).cloned() else {
+            return Ok(None);
+        };
+        let rejects = [
+            ("params", user_function.visible_param_count() != 0),
+            (
+                "extra_args",
+                !user_function.extra_argument_indices.is_empty(),
+            ),
+            ("defaults", user_function.has_parameter_defaults()),
+            ("patterns", user_function.has_lowered_pattern_parameters()),
+            ("async", user_function.is_async()),
+            ("generator", user_function.is_generator()),
+            (
+                "arguments_delete",
+                self.user_function_deletes_call_frame_arguments_member(&user_function),
+            ),
+            (
+                "eval",
+                self.user_function_mentions_direct_eval(&user_function),
+            ),
+            (
+                "private",
+                self.user_function_mentions_private_member_access(&user_function),
+            ),
+            (
+                "captures",
+                !self.ordinary_to_primitive_inline_captures_are_safe(&user_function),
+            ),
+        ];
+        if rejects.iter().any(|(_, rejected)| *rejected) {
+            return Ok(None);
+        }
+        let Some(function) = self
+            .resolve_registered_function_declaration(&user_function.name)
+            .cloned()
+        else {
+            return Ok(None);
+        };
+        if !collect_declared_bindings_from_statements_recursive(&function.body).is_empty() {
+            return Ok(None);
+        }
+        let Some((_terminal_statement, effect_statements)) = function.body.split_last() else {
+            return Ok(None);
+        };
+        let value_primitive_status = match outcome {
+            StaticEvalOutcome::Value(value) => {
+                let Some(status) = self.static_expression_is_non_object_primitive(value) else {
+                    return Ok(None);
+                };
+                Some(status)
+            }
+            StaticEvalOutcome::Throw(_) => None,
+        };
+
+        let call_arguments = Vec::new();
+        let arguments_binding = Expression::Array(Vec::new());
+        for statement in effect_statements {
+            if !self.emit_inline_user_function_effect_statement_with_explicit_call_frame(
+                statement,
+                &user_function,
+                &call_arguments,
+                expression,
+                &arguments_binding,
+                &[],
+            )? {
+                return Ok(None);
+            }
+        }
+
+        match outcome {
+            StaticEvalOutcome::Throw(throw_value) => {
+                self.emit_static_throw_value(throw_value)?;
+                Ok(Some(SymbolToPrimitiveHandling::AlwaysThrows))
+            }
+            StaticEvalOutcome::Value(value) => {
+                self.emit_numeric_expression(value)?;
+                self.push_local_set(result_local);
+                match value_primitive_status {
+                    Some(true) => Ok(Some(SymbolToPrimitiveHandling::Handled)),
+                    Some(false) => Ok(Some(SymbolToPrimitiveHandling::NotHandled)),
+                    None => unreachable!("value primitive status checked before effect emission"),
+                }
+            }
+        }
+    }
+
+    fn ordinary_to_primitive_inline_captures_are_safe(&self, user_function: &UserFunction) -> bool {
+        self.backend
+            .function_registry
+            .analysis
+            .user_function_capture_bindings
+            .get(&user_function.name)
+            .is_none_or(|captures| {
+                captures.keys().all(|name| {
+                    let locally_shadowed_without_capture_slot = name == "this"
+                        || name == "new.target"
+                        || self.parameter_scope_arguments_local_for(name).is_some()
+                        || (self.is_current_arguments_binding_name(name)
+                            && self.has_arguments_object())
+                        || self.resolve_current_local_binding(name).is_some()
+                        || self
+                            .state
+                            .speculation
+                            .static_semantics
+                            .has_local_function_binding(name)
+                        || (is_internal_user_function_identifier(name)
+                            && self.contains_user_function(name))
+                        || self.resolve_eval_local_function_hidden_name(name).is_some();
+                    name == "assert"
+                        || name == "verifyProperty"
+                        || name.starts_with("__ayy_class_brand_")
+                        || (!locally_shadowed_without_capture_slot
+                            && (self.resolve_global_binding_index(name).is_some()
+                                || self.global_has_binding(name)
+                                || self.global_has_implicit_binding(name)
+                                || self.backend.global_has_lexical_binding(name)
+                                || self.user_function(name).is_some()
+                                || self.backend.global_function_binding(name).is_some()
+                                || matches!(
+                                    self.resolve_function_binding_from_expression(
+                                        &Expression::Identifier(name.clone())
+                                    ),
+                                    Some(LocalFunctionBinding::User(_))
+                                )))
+                })
+            })
+    }
+
     pub(in crate::backend::direct_wasm) fn emit_effectful_ordinary_to_primitive_addition(
         &mut self,
         left: &Expression,
@@ -375,8 +526,6 @@ impl<'a> FunctionCompiler<'a> {
     ) -> DirectResult<bool> {
         if self.expression_depends_on_active_loop_assignment(left)
             || self.expression_depends_on_active_loop_assignment(right)
-            || self.binary_expression_calls_user_function(left)
-            || self.binary_expression_calls_user_function(right)
         {
             return Ok(false);
         }
@@ -411,17 +560,18 @@ impl<'a> FunctionCompiler<'a> {
             .as_ref()
             .map(|plan| self.analyze_ordinary_to_primitive_plan(plan))
             .unwrap_or(OrdinaryToPrimitiveAnalysis::Unknown);
-
-        let left_type_error = matches!(
+        let left_symbol_type_error = matches!(
             left_analysis,
             OrdinaryToPrimitiveAnalysis::Primitive(StaticValueKind::Symbol)
-                | OrdinaryToPrimitiveAnalysis::TypeError
         );
-        let right_type_error = matches!(
+        let right_symbol_type_error = matches!(
             right_analysis,
             OrdinaryToPrimitiveAnalysis::Primitive(StaticValueKind::Symbol)
-                | OrdinaryToPrimitiveAnalysis::TypeError
         );
+        let left_type_error = left_symbol_type_error
+            || matches!(left_analysis, OrdinaryToPrimitiveAnalysis::TypeError);
+        let right_type_error = right_symbol_type_error
+            || matches!(right_analysis, OrdinaryToPrimitiveAnalysis::TypeError);
         let final_type_error = left_type_error || right_type_error;
 
         if !(left_eval_throw
@@ -460,12 +610,6 @@ impl<'a> FunctionCompiler<'a> {
             }
         }
 
-        if left_type_error {
-            self.emit_named_error_throw("TypeError")?;
-            self.push_i32_const(JS_UNDEFINED_TAG);
-            return Ok(true);
-        }
-
         if let Some(plan) = right_plan.as_ref() {
             match self.emit_ordinary_to_primitive_from_plan(right, plan, right_local)? {
                 SymbolToPrimitiveHandling::AlwaysThrows => {
@@ -477,7 +621,7 @@ impl<'a> FunctionCompiler<'a> {
             }
         }
 
-        if right_type_error {
+        if left_symbol_type_error || right_symbol_type_error {
             self.emit_named_error_throw("TypeError")?;
             self.push_i32_const(JS_UNDEFINED_TAG);
             return Ok(true);
