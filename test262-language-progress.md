@@ -1,4 +1,4 @@
-22964/23668 (97.03%)
+22966/23668 (97.03%)
 Sub-category progress
 
 - comments: 52/52 (100.00%)
@@ -15,7 +15,7 @@ Sub-category progress
 - asi: 102/102 (100.00%)
 - statementList: 80/80 (100.00%)
 - statements: 9051/9337 (96.94%)
-- expressions: 10750/11061 (97.19%)
+- expressions: 10752/11061 (97.21%)
 - types: 113/113 (100.00%)
 - function-code: 217/217 (100.00%)
 - global-code: 42/42 (100.00%)
@@ -10784,7 +10784,7 @@ Sub-category progress
   - [x] test/language/expressions/array/spread-err-sngl-err-unresolvable.js
   - [x] test/language/expressions/array/spread-mult-empty.js
   - [x] test/language/expressions/array/spread-mult-expr.js
-  - [ ] test/language/expressions/array/spread-mult-iter.js
+  - [x] test/language/expressions/array/spread-mult-iter.js
   - [x] test/language/expressions/array/spread-mult-literal.js
   - [x] test/language/expressions/array/spread-mult-obj-ident.js
   - [x] test/language/expressions/array/spread-mult-obj-null.js
@@ -10804,7 +10804,7 @@ Sub-category progress
   - [x] test/language/expressions/array/spread-obj-with-overrides.js
   - [x] test/language/expressions/array/spread-sngl-empty.js
   - [x] test/language/expressions/array/spread-sngl-expr.js
-  - [ ] test/language/expressions/array/spread-sngl-iter.js
+  - [x] test/language/expressions/array/spread-sngl-iter.js
   - [x] test/language/expressions/array/spread-sngl-literal.js
   - [x] test/language/expressions/array/spread-sngl-obj-ident.js
   - [x] test/language/expressions/arrow-function/ArrowFunction_restricted-properties.js

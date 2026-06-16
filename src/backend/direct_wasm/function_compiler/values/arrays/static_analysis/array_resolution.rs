@@ -6,6 +6,66 @@ thread_local! {
 }
 
 impl<'a> FunctionCompiler<'a> {
+    fn array_binding_from_iterator_source_kind(
+        &self,
+        source: IteratorSourceKind,
+    ) -> Option<ArrayValueBinding> {
+        match source {
+            IteratorSourceKind::StaticArray {
+                values, keys_only, ..
+            } => Some(ArrayValueBinding {
+                values: values
+                    .into_iter()
+                    .enumerate()
+                    .map(|(index, value)| {
+                        Some(if keys_only {
+                            Expression::Number(index as f64)
+                        } else {
+                            value.unwrap_or(Expression::Undefined)
+                        })
+                    })
+                    .collect(),
+            }),
+            IteratorSourceKind::SimpleGenerator {
+                steps,
+                completion_effects,
+                ..
+            } => {
+                if !completion_effects.is_empty() {
+                    return None;
+                }
+                let mut values = Vec::new();
+                for step in steps {
+                    if !step.effects.is_empty() || !step.close_effects.is_empty() {
+                        return None;
+                    }
+                    match step.outcome {
+                        SimpleGeneratorStepOutcome::Yield(_)
+                        | SimpleGeneratorStepOutcome::YieldResult(_) => {
+                            let value = self.simple_generator_step_yield_value(
+                                &step.outcome,
+                                &Expression::Undefined,
+                            )?;
+                            values.push(Some(value));
+                        }
+                        SimpleGeneratorStepOutcome::Throw(_) => return None,
+                    }
+                }
+                Some(ArrayValueBinding { values })
+            }
+            _ => None,
+        }
+    }
+
+    fn resolve_array_spread_binding(&self, expression: &Expression) -> Option<ArrayValueBinding> {
+        self.resolve_array_binding_from_expression(expression)
+            .or_else(|| self.resolve_static_iterable_binding_from_expression(expression))
+            .or_else(|| {
+                let source = self.resolve_iterator_source_kind(expression)?;
+                self.array_binding_from_iterator_source_kind(source)
+            })
+    }
+
     pub(in crate::backend::direct_wasm) fn resolve_test262_to_numbers_call_binding(
         &self,
         callee: &Expression,
@@ -988,13 +1048,7 @@ impl<'a> FunctionCompiler<'a> {
                             values.push(Some(self.materialize_static_expression(expression)));
                         }
                         crate::ir::hir::ArrayElement::Spread(expression) => {
-                            if let Some(binding) =
-                                self.resolve_array_binding_from_expression(expression)
-                            {
-                                values.extend(binding.values);
-                            } else if let Some(binding) =
-                                self.resolve_static_iterable_binding_from_expression(expression)
-                            {
+                            if let Some(binding) = self.resolve_array_spread_binding(expression) {
                                 values.extend(binding.values);
                             } else {
                                 values.push(Some(self.materialize_static_expression(expression)));
